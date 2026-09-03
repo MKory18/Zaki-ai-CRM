@@ -1,11 +1,13 @@
 #!/bin/sh
-
 set -e
 
-echo "==> Applying Prisma migrations (deploy, safe & idempotent)..."
+echo "===== CHECKING PRISMA MIGRATIONS ====="
+find /app/prisma -type f -print
+
+echo "==> Applying Prisma migrations..."
 
 ./node_modules/.bin/prisma migrate deploy
 
-echo "==> Starting Zaki AI CRM on 0.0.0.0:${PORT:-3000}..."
+echo "==> Starting application on port ${PORT:-3000}..."
 
 exec node server.js
