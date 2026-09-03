@@ -1,31 +1,28 @@
-# Production Dockerfile for Zaki AI CRM
-# Next.js + Prisma + PostgreSQL
-
 FROM node:24-alpine AS base
 
-# ============================================================
-# 1. Dependencies
-# ============================================================
-
+# =========================
+# Dependencies
+# =========================
 FROM base AS deps
 
 RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 
-RUN npm ci --prefer-offline || npm install
+RUN npm ci
 
-RUN npx prisma generate
+RUN ./node_modules/.bin/prisma generate
 
 
-# ============================================================
-# 2. Build Application
-# ============================================================
-
+# =========================
+# Build
+# =========================
 FROM base AS builder
+
+RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
@@ -36,15 +33,14 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-RUN npx prisma generate
+RUN ./node_modules/.bin/prisma generate
 
 RUN npm run build
 
 
-# ============================================================
-# 3. Production Runner
-# ============================================================
-
+# =========================
+# Production
+# =========================
 FROM base AS runner
 
 WORKDIR /app
@@ -52,49 +48,33 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV HOSTNAME=0.0.0.0
 
-RUN apk add --no-cache openssl libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 
-# Create secure application user
 RUN addgroup --system --gid 1001 nodejs
-
 RUN adduser --system --uid 1001 nextjs
 
 
-# ------------------------------------------------------------
-# Application files
-# ------------------------------------------------------------
-
 COPY --from=builder /app/public ./public
-
 COPY --from=builder /app/prisma ./prisma
 
-# IMPORTANT:
-# Copy the complete local Prisma installation
+# نسخ node_modules بالكامل لضمان Prisma CLI
 COPY --from=builder /app/node_modules ./node_modules
 
-# Next.js standalone application
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 
-# ------------------------------------------------------------
-# Startup script
-# ------------------------------------------------------------
+# فحص مهم جداً لمعرفة هل migration.sql وصل للـ Container
+RUN echo "===== PRISMA FILES =====" && \
+    find /app/prisma -type f -print
+
 
 COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-
-# ------------------------------------------------------------
-# Security
-# ------------------------------------------------------------
-
 USER nextjs
-
 
 EXPOSE 3000
 
-
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
