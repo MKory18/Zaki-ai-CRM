@@ -8,9 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:migrate": "prisma migrate deploy",
+    "db:migrate": "npx --no-install prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "npx --no-install prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
