@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" fill="none">
+  <defs>
+    <linearGradient id="dolphinBody" x1="40" y1="10" x2="150" y2="110" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5BC9D6"/>
+      <stop offset="0.45" stop-color="#2E9BB5"/>
+      <stop offset="1" stop-color="#1B6E8F"/>
+    </linearGradient>
+    <linearGradient id="dolphinDark" x1="60" y1="90" x2="110" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1B6E8F"/>
+      <stop offset="1" stop-color="#14506B"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="55" y1="95" x2="165" y2="145" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#35A7C2"/>
+      <stop offset="1" stop-color="#17708F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Geometric dolphin -->
+  <g fill="url(#dolphinBody)">
+    <polygon points="86,8 112,22 92,34"/>
+    <polygon points="112,22 128,44 104,44 92,34"/>
+    <polygon points="92,34 104,44 84,52"/>
+    <polygon points="104,44 128,44 118,66 96,60"/>
+    <polygon points="84,52 96,60 74,70"/>
+    <polygon points="96,60 118,66 108,86 88,80"/>
+    <polygon points="74,70 88,80 66,92"/>
+    <polygon points="88,80 108,86 96,104 78,96"/>
+    <polygon points="66,92 78,96 60,112"/>
+    <polygon points="78,96 96,104 88,120 70,112"/>
+    <polygon points="60,112 70,112 64,130"/>
+    <polygon points="70,112 88,120 80,136 64,130"/>
+    <!-- dorsal fin -->
+    <polygon points="104,44 118,66 126,40"/>
+  </g>
+  <!-- snout -->
+  <polygon points="128,44 148,52 126,58" fill="#2E9BB5"/>
+  <!-- darker belly facets -->
+  <g fill="url(#dolphinDark)" opacity="0.55">
+    <polygon points="96,60 88,80 74,70"/>
+    <polygon points="108,86 96,104 88,80"/>
+    <polygon points="88,120 80,136 70,112"/>
+  </g>
+  <!-- glowing nodes -->
+  <g fill="#BDEDF5">
+    <circle cx="104" cy="44" r="2.6"/>
+    <circle cx="108" cy="86" r="2.2"/>
+    <circle cx="88" cy="120" r="2"/>
+    <circle cx="84" cy="52" r="1.8"/>
+  </g>
+  <g stroke="#BDEDF5" stroke-width="1.1" opacity="0.65">
+    <line x1="104" y1="44" x2="108" y2="86"/>
+    <line x1="108" y1="86" x2="88" y2="120"/>
+    <line x1="104" y1="44" x2="84" y2="52"/>
+  </g>
+
+  <!-- circuit wave -->
+  <g fill="url(#wave)">
+    <path d="M56 118 C 74 100, 100 96, 122 104 C 144 112, 158 106, 164 92 C 168 104, 162 122, 140 130 C 116 139, 84 134, 56 118 Z"/>
+  </g>
+  <g stroke="#9FE3EF" stroke-width="1.4" fill="none" opacity="0.85">
+    <path d="M66 116 C 84 104, 104 102, 120 108"/>
+    <path d="M78 124 C 96 114, 116 112, 134 118"/>
+  </g>
+  <g fill="#CFF4FA">
+    <circle cx="84" cy="112" r="2.4"/>
+    <circle cx="112" cy="110" r="2.4"/>
+    <circle cx="136" cy="112" r="2.4"/>
+    <circle cx="124" cy="122" r="2"/>
+  </g>
+</svg>

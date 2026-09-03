@@ -1,0 +1,375 @@
+// SALESFLOW - E-Commerce Sales, Orders, Profit & Business Intelligence System
+// Multi-Tenant, RBAC, Manufacturing, Inventory, CRM, Orders, Profit & AI
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  currency    String   @default("USD")
+  country     String   @default("US")
+  logo        String?
+  settings    String?  // JSON configuration: shipping defaults, commissions, AI prefs
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users              User[]
+  products           Product[]
+  batches            ProductionBatch[]
+  inventoryMovements InventoryMovement[]
+  offers             Offer[]
+  customers          Customer[]
+  orders             Order[]
+  callLogs           CallLog[]
+  activities         OrderActivity[]
+  expenses           Expense[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  aiSummaries        AiDailySummary[]
+  productImages      ProductImage[]
+
+  @@map("companies")
+}
+
+model User {
+  id                String    @id @default(uuid())
+  companyId         String?
+  email             String    @unique
+  name              String
+  passwordHash      String
+  role              String    @default("PENDING_USER") // SUPER_ADMIN, COMPANY_ADMIN, MANAGER, MODERATOR, ACCOUNTANT, DELIVERY_MANAGER, PENDING_USER
+  phone             String?
+  avatar            String?
+  commissionRate    Float     @default(0.0)
+  status            String    @default("PENDING") // PENDING, ACTIVE, SUSPENDED, DISABLED
+  tokenVersion      Int       @default(0)
+  lastLoginAt       DateTime?
+  assignedById      String?
+  assignedAt        DateTime?
+  resetToken        String?
+  resetTokenExpires DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company        Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedOrders Order[]   @relation("ModeratorOrders")
+  callLogs       CallLog[]
+  auditLogs      AuditLog[]
+  assignedBy     User?     @relation("UserAssigner", fields: [assignedById], references: [id])
+  assignedUsers  User[]    @relation("UserAssigner")
+
+  @@index([companyId])
+  @@index([role])
+  @@map("users")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  nameEn      String?
+  sku         String
+  description String?
+  descriptionEn String?
+  image       String?
+  status      String   @default("ACTIVE") // ACTIVE, INACTIVE, OUT_OF_STOCK
+  basePrice   Float    @default(0.0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  batches            ProductionBatch[]
+  inventoryMovements InventoryMovement[]
+  offers             Offer[]
+  orders             Order[]
+  images             ProductImage[]
+
+  @@unique([companyId, sku])
+  @@index([companyId])
+  @@map("products")
+}
+
+model ProductImage {
+  id         String   @id @default(uuid())
+  companyId  String
+  productId  String
+  url        String
+  storageKey String
+  fileName   String
+  mimeType   String
+  fileSize   Int
+  altText    String?
+  isPrimary  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, productId])
+  @@map("product_images")
+}
+
+model ProductionBatch {
+  id                  String   @id @default(uuid())
+  companyId           String
+  productId           String
+  batchNumber         String
+  quantityProduced    Int
+  quantitySold        Int      @default(0)
+  quantityRemaining   Int
+  manufacturingCost   Float    @default(0.0)
+  packagingCost       Float    @default(0.0)
+  rawMaterialCost     Float    @default(0.0)
+  otherCosts          Float    @default(0.0)
+  totalProductionCost Float    @default(0.0)
+  costPerUnit         Float    @default(0.0)
+  productionDate      DateTime @default(now())
+  notes               String?
+  status              String   @default("COMPLETED") // IN_PROGRESS, COMPLETED
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryMovements InventoryMovement[]
+
+  @@unique([companyId, batchNumber])
+  @@index([companyId, productId])
+  @@map("production_batches")
+}
+
+model InventoryMovement {
+  id           String   @id @default(uuid())
+  companyId    String
+  productId    String
+  batchId      String?
+  type         String   // PRODUCTION, SALE, RETURN, MANUAL_ADJUSTMENT
+  quantity     Int      // positive for addition, negative for deduction
+  balanceAfter Int
+  referenceId  String?  // orderId, batchId, etc.
+  reason       String?
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch   ProductionBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, productId])
+  @@index([batchId])
+  @@map("inventory_movements")
+}
+
+model Offer {
+  id               String   @id @default(uuid())
+  companyId        String
+  productId        String
+  name             String
+  quantity         Int      @default(1)
+  sellingPrice     Float
+  discount         Float    @default(0.0)
+  deliveryIncluded Boolean  @default(true)
+  status           String   @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orders  Order[]
+
+  @@index([companyId, productId])
+  @@map("offers")
+}
+
+model Customer {
+  id                 String    @id @default(uuid())
+  companyId          String
+  fullName           String
+  phone              String    // Normalized digits only for duplicate search
+  rawPhone           String    // Display formatted
+  altPhone           String?
+  address            String
+  city               String
+  country            String    @default("EG")
+  notes              String?
+  totalOrders        Int       @default(0)
+  confirmedOrders    Int       @default(0)
+  deliveredOrders    Int       @default(0)
+  cancelledOrders    Int       @default(0)
+  totalPurchaseValue Float     @default(0.0)
+  firstOrderDate     DateTime?
+  lastOrderDate      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orders  Order[]
+
+  @@unique([companyId, phone])
+  @@index([companyId, phone])
+  @@map("customers")
+}
+
+model Order {
+  id                   String    @id @default(uuid())
+  companyId            String
+  orderNumber          String
+  customerId           String
+  productId            String
+  offerId              String?
+  quantity             Int       @default(1)
+  sellingPrice         Float
+  shippingCost         Float     @default(0.0)
+  discountAmount       Float     @default(0.0)
+  totalAmount          Float
+  currency             String    @default("USD")
+  moderatorId          String?
+  moderatorCommission  Float     @default(0.0)
+  estimatedCostOfGoods Float     @default(0.0)
+  productNameSnapshot  String?
+  productImageSnapshot String?
+  status               String    @default("NEW") // NEW, CONTACTING, NO_ANSWER, CONFIRMED, POSTPONED, REJECTED, READY_FOR_SHIPPING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, RETURNED, FAILED_DELIVERY
+  source               String    @default("Manual") // Facebook Ads, TikTok, Instagram, WhatsApp, Manual, Website
+  internalNotes        String?
+  customerNotes        String?
+  postponedUntil       DateTime?
+  confirmedAt          DateTime?
+  shippedAt            DateTime?
+  deliveredAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  offer      Offer?          @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  moderator  User?           @relation("ModeratorOrders", fields: [moderatorId], references: [id], onDelete: SetNull)
+  callLogs   CallLog[]
+  activities OrderActivity[]
+
+  @@unique([companyId, orderNumber])
+  @@index([companyId, status])
+  @@index([companyId, customerId])
+  @@index([companyId, moderatorId])
+  @@index([companyId, productId])
+  @@map("orders")
+}
+
+model CallLog {
+  id               String    @id @default(uuid())
+  companyId        String
+  orderId          String
+  moderatorId      String
+  callDate         DateTime  @default(now())
+  result           String    // NO_ANSWER, CONFIRMED, REJECTED, POSTPONED, WRONG_NUMBER, CALLBACK_REQUESTED
+  notes            String?
+  nextFollowUpDate DateTime?
+  createdAt        DateTime  @default(now())
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  moderator User    @relation(fields: [moderatorId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, orderId])
+  @@index([moderatorId])
+  @@map("call_logs")
+}
+
+model OrderActivity {
+  id             String   @id @default(uuid())
+  companyId      String
+  orderId        String
+  userId         String?
+  action         String   // ORDER_CREATED, CUSTOMER_UPDATED, MODERATOR_ASSIGNED, CALL_MADE, STATUS_CHANGED, ORDER_UPDATED, NOTE_ADDED, SHIPPING_UPDATED
+  previousStatus String?
+  newStatus      String?
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, orderId])
+  @@map("order_activities")
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  companyId   String
+  title       String
+  category    String   // MANUFACTURING, PACKAGING, SHIPPING, MARKETING, COMMISSION, SALARIES, OFFICE, OTHER
+  amount      Float
+  expenseDate DateTime @default(now())
+  referenceId String?  // batchId or orderId
+  notes       String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, category])
+  @@map("expenses")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  companyId String
+  userId    String?  // null for all managers/admins
+  title     String
+  message   String
+  type      String   // ORDER_NEW, FOLLOW_UP, LOW_STOCK, HIGH_REJECTION, SYSTEM_ALERT, PERFORMANCE
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  companyId    String
+  userId       String?
+  action       String
+  entity       String
+  entityId     String
+  previousData String?  // JSON
+  newData      String?  // JSON
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, entity, entityId])
+  @@map("audit_logs")
+}
+
+model AiDailySummary {
+  id              String   @id @default(uuid())
+  companyId       String
+  date            String   // YYYY-MM-DD
+  summaryText     String
+  metricsJson     String   // JSON string of all KPI counts and calculations
+  observations    String?
+  risks           String?
+  recommendations String?
+  createdAt       DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, date])
+  @@index([companyId, date])
+  @@map("ai_daily_summaries")
+}

@@ -1,0 +1,108 @@
+'use client';
+
+import React, { Suspense, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Card, CardContent } from '@/components/ui/Card';
+import { AlertCircle, LockKeyhole } from 'lucide-react';
+
+function ResetForm() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const token = searchParams.get('token') || '';
+
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password, confirmPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      router.push(data.status === 'PENDING' ? '/pending' : '/');
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!token) {
+    return (
+      <div className="p-3 bg-red-950/50 border border-red-900 text-red-300 text-xs rounded-lg">
+        رابط إعادة التعيين غير صالح — اطلب رابطاً جديداً من صفحة استعادة كلمة المرور.
+      </div>
+    );
+  }
+
+  return (
+    <Card className="shadow-2xl border-zinc-800 bg-zinc-900">
+      <CardContent className="p-6 space-y-4">
+        {error && (
+          <div className="p-3 bg-red-950/50 border border-red-900 text-red-300 text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="كلمة المرور الجديدة *"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="bg-zinc-950 border-zinc-700 text-white"
+          />
+          <Input
+            label="تأكيد كلمة المرور *"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            className="bg-zinc-950 border-zinc-700 text-white"
+          />
+          <Button type="submit" loading={loading} className="w-full bg-red-600 hover:bg-red-700">
+            <LockKeyhole className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+            تعيين كلمة المرور الجديدة
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <div className="min-h-screen bg-zinc-950 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center space-y-2">
+          <img src="/logo.svg" alt="Zaki AI" className="w-20 h-16 object-contain" />
+          <h1 className="text-2xl font-bold tracking-tight text-white">تعيين كلمة مرور جديدة</h1>
+        </div>
+
+        <Suspense fallback={null}>
+          <ResetForm />
+        </Suspense>
+
+        <p className="text-center text-xs text-zinc-500">
+          <Link href="/login" className="text-red-400 font-semibold hover:underline">
+            العودة لتسجيل الدخول
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}

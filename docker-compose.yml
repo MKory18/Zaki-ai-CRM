@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  salesflow-db:
+    image: postgres:16-alpine
+    container_name: salesflow-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: salesflow_user
+      POSTGRES_PASSWORD: salesflow_password_2026
+      POSTGRES_DB: salesflow
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U salesflow_user -d salesflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  salesflow-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: salesflow-app
+    restart: always
+    depends_on:
+      salesflow-db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://salesflow_user:salesflow_password_2026@salesflow-db:5432/salesflow?schema=public
+      JWT_SECRET: salesflow_production_jwt_secret_key_super_secure_2026_xyz
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-meta-llama/llama-3.3-70b-instruct:free}
+
+volumes:
+  postgres_data:
