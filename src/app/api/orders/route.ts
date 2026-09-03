@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireCompanyTenant, requirePermission } from '@/lib/auth';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -91,6 +92,33 @@ export async function POST(req: Request) {
     await requirePermission('orders.create');
 
     const body = await req.json();
+
+    // Server-side Zod validation — never trust client input
+    const orderSchema = z.object({
+      customerName: z.string().trim().min(2).max(80),
+      customerPhone: z.string().trim().min(7).max(20),
+      customerAltPhone: z.string().trim().max(20).optional().nullable(),
+      customerAddress: z.string().trim().max(200).optional().nullable(),
+      customerCity: z.string().trim().max(60).optional().nullable(),
+      productId: z.string().min(10).max(64),
+      offerId: z.string().min(10).max(64).optional().nullable(),
+      quantity: z.coerce.number().int().min(1).max(999),
+      sellingPrice: z.coerce.number().min(0).max(100000),
+      shippingCost: z.coerce.number().min(0).max(1000).optional(),
+      source: z.string().trim().max(40).optional(),
+      moderatorId: z.string().max(64).optional().nullable(),
+      customerNotes: z.string().trim().max(500).optional().nullable(),
+      internalNotes: z.string().trim().max(500).optional().nullable(),
+    });
+    const parsed = orderSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || 'بيانات الطلب غير صالحة' },
+        { status: 400 }
+      );
+    }
+    const v = parsed.data;
+
     const {
       customerName,
       customerPhone,
@@ -106,7 +134,7 @@ export async function POST(req: Request) {
       moderatorId,
       customerNotes,
       internalNotes,
-    } = body;
+    } = v;
 
     if (!customerName || !customerPhone || !productId) {
       return NextResponse.json(
@@ -157,9 +185,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    const qty = parseInt(quantity, 10) || 1;
-    const price = parseFloat(sellingPrice) || product.basePrice;
-    const shipCost = parseFloat(shippingCost) || 0;
+    const qty = quantity || 1;
+    const price = sellingPrice || product.basePrice;
+    const shipCost = shippingCost || 0;
     const totalAmount = price;
 
     // Unit cost estimation

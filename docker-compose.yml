@@ -10,7 +10,8 @@ services:
       POSTGRES_PASSWORD: salesflow_password_2026
       POSTGRES_DB: salesflow
     ports:
-      - "5434:5432"
+      # Bind only to localhost — never expose PostgreSQL publicly
+      - "127.0.0.1:5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

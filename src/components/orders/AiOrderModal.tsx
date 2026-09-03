@@ -287,7 +287,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               >
                 <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span>
-                  تمت مطابقة "«{result.parsed.productQuery}»" مع: <strong>{result.matchedProduct.name}</strong>
+                  تمت مطابقة «{result.parsed.productQuery}» مع: <strong>{result.matchedProduct.name}</strong>
                   {result.suggestedOfferName && <> — العرض المقترح: {result.suggestedOfferName}</>}
                   {!result.productMatchConfident && ' (تأكد من المنتج المختار)'}
                 </span>

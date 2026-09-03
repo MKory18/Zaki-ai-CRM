@@ -4,9 +4,17 @@ import bcrypt from 'bcryptjs';
 import { db } from './db';
 import { SessionUser, UserRole, UserStatus, Permission, ROLE_PERMISSIONS } from '@/types/auth';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'salesflow_super_secret_jwt_key_2026_xyz_production_key_safe'
-);
+const JWT_SECRET = (() => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'SECURITY: JWT_SECRET environment variable is required in production. refusing to start with the insecure fallback.'
+    );
+  }
+  return new TextEncoder().encode(
+    secret || 'salesflow_super_secret_jwt_key_2026_xyz_production_key_safe'
+  );
+})();
 
 const COOKIE_NAME = 'salesflow_session';
 

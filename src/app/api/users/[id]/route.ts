@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { db } from '@/lib/db';
-import { requirePermission, requireAuth } from '@/lib/auth';
+import { requirePermission, hashPassword } from '@/lib/auth';
 import { ASSIGNABLE_ROLES, UserRole, UserStatus } from '@/types/auth';
 import { logAudit } from '@/lib/audit';
 
 /**
  * PATCH /api/users/:id — admin actions on a user account:
- * assignRole, changeStatus, forceLogout (tokenVersion bump)
- * All actions are recorded in Audit Logs with previous/new values.
+ * assignRole, changeStatus, forceLogout, resetPassword, delete
+ * All actions are recorded in Audit Logs. Passwords are never logged.
  */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -28,24 +29,28 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه إدارة حسابات المدراء الأعلى' }, { status: 403 });
     }
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     let auditAction = '';
 
     if (action === 'assignRole') {
       if (!role || !ASSIGNABLE_ROLES.includes(role as UserRole)) {
         return NextResponse.json({ error: 'الدور غير صالح' }, { status: 400 });
       }
+      if (target.id === admin.id && role !== admin.role) {
+        return NextResponse.json({ error: 'لا يمكنك تغيير دورك الشخصي' }, { status: 400 });
+      }
       updateData.role = role;
-      // Assigning a real role implicitly grants company access when admin belongs to a company
       if (!target.companyId && admin.companyId) updateData.companyId = admin.companyId;
       auditAction = 'USER_ROLE_CHANGED';
     } else if (action === 'changeStatus') {
       if (!['PENDING', 'ACTIVE', 'SUSPENDED', 'DISABLED'].includes(status)) {
         return NextResponse.json({ error: 'الحالة غير صالحة' }, { status: 400 });
       }
+      if (target.id === admin.id) {
+        return NextResponse.json({ error: 'لا يمكنك تغيير حالة حسابك الشخصي' }, { status: 400 });
+      }
       updateData.status = status;
       if (status === 'ACTIVE') {
-        // Activating a still-pending role user keeps PENDING_USER role but grants login
         updateData.assignedById = admin.id;
         updateData.assignedAt = new Date();
       }
@@ -57,6 +62,41 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     } else if (action === 'forceLogout') {
       updateData.tokenVersion = { increment: 1 };
       auditAction = 'USER_FORCED_LOGOUT';
+    } else if (action === 'resetPassword') {
+      // Secure one-time temp password; admin relays it to the user out-of-band
+      const tempPassword = crypto.randomBytes(9).toString('base64url').slice(0, 12) + 'Aa1';
+      updateData.passwordHash = await hashPassword(tempPassword);
+      updateData.tokenVersion = { increment: 1 };
+      await db.user.update({ where: { id }, data: updateData });
+      await logAudit({
+        companyId: target.companyId || admin.companyId || 'platform',
+        userId: admin.id,
+        action: 'USER_PASSWORD_RESET_BY_ADMIN',
+        entity: 'User',
+        entityId: id,
+        previousData: { user: target.name, email: target.email },
+        newData: { resetBy: admin.name }, // password intentionally NOT logged
+      });
+      // Returned once over the authenticated response only
+      return NextResponse.json({ success: true, temporaryPassword: tempPassword });
+    } else if (action === 'delete') {
+      if (target.id === admin.id) {
+        return NextResponse.json({ error: 'لا يمكنك حذف حسابك الشخصي' }, { status: 400 });
+      }
+      if (target.role === 'SUPER_ADMIN') {
+        return NextResponse.json({ error: 'لا يمكن حذف حساب المدير الأعلى' }, { status: 400 });
+      }
+      await db.user.delete({ where: { id } });
+      await logAudit({
+        companyId: target.companyId || admin.companyId || 'platform',
+        userId: admin.id,
+        action: 'USER_DELETED',
+        entity: 'User',
+        entityId: id,
+        previousData: { user: target.name, email: target.email, role: target.role, status: target.status },
+        newData: { deletedBy: admin.name },
+      });
+      return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: 'إجراء غير معروف' }, { status: 400 });
     }
@@ -98,7 +138,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     });
 
     return NextResponse.json({ success: true, user: updated });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'حدث خطأ داخلي';
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
