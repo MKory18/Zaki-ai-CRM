@@ -1,12 +1,12 @@
 # ==========================================
 # Zaki AI CRM - Production Dockerfile
-# Next.js + Prisma + PostgreSQL
 # ==========================================
 
 FROM node:24-alpine AS base
 
+
 # ==========================================
-# 1. Install dependencies
+# Dependencies
 # ==========================================
 
 FROM base AS deps
@@ -17,18 +17,22 @@ RUN apk add --no-cache \
     libc6-compat \
     openssl
 
+# نسخ package files
 COPY package.json package-lock.json ./
 
-RUN npm ci
+# مهم جداً: نسخ Prisma قبل npm ci
+# لأن postinstall يشغل prisma generate
+COPY prisma ./prisma/
 
-COPY prisma ./prisma
+# تثبيت Dependencies
+RUN npm ci
 
 # Generate Prisma Client
 RUN ./node_modules/.bin/prisma generate
 
 
 # ==========================================
-# 2. Build application
+# Build
 # ==========================================
 
 FROM base AS builder
@@ -40,6 +44,7 @@ RUN apk add --no-cache \
     openssl
 
 COPY --from=deps /app/node_modules ./node_modules
+
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -51,7 +56,7 @@ RUN npm run build
 
 
 # ==========================================
-# 3. Production Runner
+# Production
 # ==========================================
 
 FROM base AS runner
@@ -67,25 +72,24 @@ RUN apk add --no-cache \
     libc6-compat \
     openssl
 
-# Create non-root user
+# إنشاء المستخدم
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 
 # ==========================================
-# Copy Prisma and dependencies
+# Prisma + Dependencies
 # ==========================================
 
-# IMPORTANT:
-# Copy the COMPLETE node_modules including Prisma CLI
+# نسخ node_modules
 COPY --from=builder /app/node_modules ./node_modules
 
-# Copy Prisma including migrations
+# نسخ Prisma بالكامل مع migrations
 COPY --from=builder /app/prisma ./prisma
 
 
 # ==========================================
-# Copy Next.js production files
+# Next.js
 # ==========================================
 
 COPY --from=builder /app/public ./public
