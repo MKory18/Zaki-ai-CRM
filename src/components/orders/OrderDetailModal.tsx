@@ -24,6 +24,8 @@ import {
   Tag,
   UserCheck,
   Send,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 /* ─── Status config: Arabic label + color + icon per status ─── */
@@ -86,14 +88,21 @@ interface OrderDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRefresh: () => void;
+  /** Current list filters so prev/next navigation matches the list context */
+  filters?: { q?: string; status?: string; productId?: string; moderatorId?: string };
 }
 
-export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh }: OrderDetailModalProps) {
+export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters }: OrderDetailModalProps) {
   const { t, locale, isRtl } = useApp();
   const ar = locale === 'ar';
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [navLoading, setNavLoading] = useState<'prev' | 'next' | null>(null);
+  const [navIds, setNavIds] = useState<{ previousOrderId: string | null; nextOrderId: string | null }>({
+    previousOrderId: null,
+    nextOrderId: null,
+  });
 
   const [selectedStatus, setSelectedStatus] = useState('');
   const [statusNote, setStatusNote] = useState('');
@@ -109,11 +118,26 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh }: OrderD
   const loadOrder = async (id: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/orders/${id}`);
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.q) params.set('q', filters.q);
+        if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+        if (filters.productId && filters.productId !== 'all') params.set('productId', filters.productId);
+        if (filters.moderatorId && filters.moderatorId !== 'all') params.set('moderatorId', filters.moderatorId);
+      }
+      const res = await fetch(`/api/orders/${id}?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setOrder(data.order);
         setSelectedStatus(data.order.status);
+        setNavIds({
+          previousOrderId: data.previousOrderId ?? null,
+          nextOrderId: data.nextOrderId ?? null,
+        });
+        // Reset in-progress forms so stale input from the previous order never leaks
+        setStatusNote('');
+        setCallNotes('');
+        setNextFollowUpDate('');
       }
     } catch (e) {
       console.error(e);
@@ -122,11 +146,25 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh }: OrderD
     }
   };
 
+  const navigateToOrder = async (targetId: string, direction: 'prev' | 'next') => {
+    if (navLoading || loading) return;
+    setNavLoading(direction);
+    try {
+      await loadOrder(targetId);
+      // Scroll modal body back to top so the user sees the new order's header
+      document.querySelector('.max-h-\\[90vh\\] .overflow-y-auto')?.scrollTo({ top: 0 });
+    } finally {
+      setNavLoading(null);
+    }
+  };
+
   const handleStatusUpdate = async () => {
-    if (!orderId || selectedStatus === order.status) return;
+    // Use order.id (current displayed order), not the orderId prop — after
+    // prev/next navigation the prop still holds the originally opened order.
+    if (!order?.id || selectedStatus === order.status) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -137,7 +175,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh }: OrderD
         }),
       });
       if (res.ok) {
-        await loadOrder(orderId);
+        await loadOrder(order.id);
         onRefresh();
         setStatusNote('');
       }
@@ -148,16 +186,16 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh }: OrderD
 
   const handleRecordCall = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderId) return;
+    if (!order?.id) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}/call-logs`, {
+      const res = await fetch(`/api/orders/${order.id}/call-logs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ result: callResult, notes: callNotes, nextFollowUpDate: nextFollowUpDate || null }),
       });
       if (res.ok) {
-        await loadOrder(orderId);
+        await loadOrder(order.id);
         onRefresh();
         setCallNotes('');
         setNextFollowUpDate('');
@@ -180,6 +218,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh }: OrderD
 
   const currentCfg = STATUS_CONFIG[order.status];
   const CurrentIcon = currentCfg?.icon ?? Clock;
+  const isNavigating = navLoading !== null || loading;
 
   const money = (n: number) =>
     `$${n.toLocaleString(ar ? 'ar-EG' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -192,6 +231,45 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh }: OrderD
       subtitle={`أُنشئ في ${format(new Date(order.createdAt), 'd MMMM yyyy — h:mm a', {})} • المصدر: ${order.source}`}
       maxWidth="4xl"
     >
+      {/* ─── Prev/Next order navigation (below the header, inside the modal) ─── */}
+      <div
+        className={`flex items-center justify-between gap-2 mb-4 -mt-1 ${isRtl ? 'flex-row-reverse' : ''}`}
+        dir={isRtl ? 'rtl' : 'ltr'}
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!navIds.nextOrderId || isNavigating}
+          onClick={() => navIds.nextOrderId && navigateToOrder(navIds.nextOrderId, 'next')}
+          title={ar ? 'الطلب التالي (الأحدث)' : 'Next order (newer)'}
+        >
+          {navLoading === 'next' ? (
+            <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-red-600" />
+          ) : (
+            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+          )}
+          <span className="hidden sm:inline">{ar ? 'الطلب التالي' : 'Next Order'}</span>
+        </Button>
+
+        <span className="text-[11px] text-slate-400 font-medium">
+          {navLoading || loading ? (ar ? 'جارٍ التحميل…' : 'Loading…') : ''}
+        </span>
+
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!navIds.previousOrderId || isNavigating}
+          onClick={() => navIds.previousOrderId && navigateToOrder(navIds.previousOrderId, 'prev')}
+          title={ar ? 'الطلب السابق (الأقدم)' : 'Previous order (older)'}
+        >
+          {navLoading === 'prev' ? (
+            <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-red-600" />
+          ) : (
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+          )}
+          <span className="hidden sm:inline">{ar ? 'الطلب السابق' : 'Previous Order'}</span>
+        </Button>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5" dir={isRtl ? 'rtl' : 'ltr'}>
         {/* ─── Left column ─── */}
         <div className="lg:col-span-2 space-y-5">

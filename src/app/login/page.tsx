@@ -10,8 +10,8 @@ import { AlertCircle, LogIn, Clock, ShieldX } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@bioderma.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,36 +135,6 @@ export default function LoginPage() {
                 تسجيل الدخول
               </Button>
             </form>
-
-            {/* Quick Demo Logins */}
-            <div className="pt-4 border-t border-zinc-800 space-y-2">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 text-center">
-                دخول تجريبي فوري (كلمة المرور: password123)
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {[
-                  { label: 'مدير الشركة', email: 'admin@bioderma.com' },
-                  { label: 'مدير المبيعات', email: 'manager@bioderma.com' },
-                  { label: 'سارة (مودريتور)', email: 'sara@bioderma.com' },
-                  { label: 'المحاسب', email: 'finance@bioderma.com' },
-                  { label: 'مدير التوصيل', email: 'shipping@bioderma.com' },
-                  { label: 'مدير أعلى', email: 'superadmin@salesflow.io' },
-                ].map((d) => (
-                  <button
-                    key={d.email}
-                    type="button"
-                    onClick={() => {
-                      setEmail(d.email);
-                      setPassword('password123');
-                    }}
-                    className="p-2 text-left rtl:text-right bg-zinc-950 hover:bg-red-950/60 hover:text-red-300 rounded-lg border border-zinc-800 transition-colors text-[11px] truncate cursor-pointer text-zinc-300"
-                  >
-                    <span className="font-semibold block truncate">{d.label}</span>
-                    <span className="text-[10px] text-zinc-500 truncate block">{d.email}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </CardContent>
         </Card>
 

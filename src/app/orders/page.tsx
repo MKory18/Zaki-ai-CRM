@@ -372,6 +372,7 @@ export default function OrdersPage() {
         isOpen={!!selectedOrderId}
         onClose={() => setSelectedOrderId(null)}
         onRefresh={() => loadOrders(pagination.page)}
+        filters={{ q: search, status, productId, moderatorId }}
       />
     </AppLayout>
   );

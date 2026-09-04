@@ -2,6 +2,43 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireCompanyTenant, requirePermission } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { normalizePhoneNumber } from '@/lib/phone';
+
+/**
+ * Builds the same WHERE clause used by the orders list API (/api/orders)
+ * so prev/next navigation matches the exact list context (filters + tenant + RBAC).
+ */
+async function buildNavigationWhere(order: { createdAt: Date; companyId: string }, searchParams: URLSearchParams) {
+  const { user, companyId } = await requireCompanyTenant();
+  const where: any = { companyId: order.companyId };
+
+  // RBAC: moderators only navigate within their own assigned orders
+  if (user.role === 'MODERATOR') {
+    where.moderatorId = user.id;
+  } else {
+    const moderatorId = searchParams.get('moderatorId')?.trim();
+    if (moderatorId && moderatorId !== 'all') where.moderatorId = moderatorId;
+  }
+
+  const status = searchParams.get('status')?.trim();
+  if (status && status !== 'all') where.status = status;
+
+  const productId = searchParams.get('productId')?.trim();
+  if (productId && productId !== 'all') where.productId = productId;
+
+  const search = searchParams.get('q')?.trim();
+  if (search) {
+    const normalizedSearch = normalizePhoneNumber(search);
+    where.OR = [
+      { orderNumber: { contains: search } },
+      { customer: { fullName: { contains: search } } },
+      { customer: { phone: { contains: normalizedSearch || search } } },
+      { customer: { rawPhone: { contains: search } } },
+    ];
+  }
+
+  return where;
+}
 
 export async function GET(
   req: Request,
@@ -10,6 +47,7 @@ export async function GET(
   try {
     const { id } = await params;
     const { companyId } = await requireCompanyTenant();
+    const { searchParams } = new URL(req.url);
 
     const order = await db.order.findUnique({
       where: { id },
@@ -32,7 +70,47 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ order });
+    // Prev/next ids following the list order (createdAt DESC), scoped to the
+    // same company + current list filters so navigation mirrors the list view.
+    // "next" = newer (comes first in a DESC list), "previous" = older.
+    let previousOrderId: string | null = null;
+    let nextOrderId: string | null = null;
+    try {
+      const ctxWhere = await buildNavigationWhere(order, searchParams);
+      const tieBreaker = { id: 'desc' as const };
+      const [newer, older] = await Promise.all([
+        // Nearest newer order (created after this one) → "next" in DESC list
+        db.order.findFirst({
+          where: {
+            ...ctxWhere,
+            OR: [
+              { createdAt: { gt: order.createdAt } },
+              { createdAt: order.createdAt, id: { lt: id } },
+            ],
+          },
+          orderBy: [{ createdAt: 'asc' }, tieBreaker],
+          select: { id: true },
+        }),
+        // Nearest older order (created before this one) → "previous" in DESC list
+        db.order.findFirst({
+          where: {
+            ...ctxWhere,
+            OR: [
+              { createdAt: { lt: order.createdAt } },
+              { createdAt: order.createdAt, id: { gt: id } },
+            ],
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+          select: { id: true },
+        }),
+      ]);
+      nextOrderId = newer?.id ?? null;
+      previousOrderId = older?.id ?? null;
+    } catch {
+      // Navigation is best-effort; never fail the order fetch because of it
+    }
+
+    return NextResponse.json({ order, previousOrderId, nextOrderId });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }

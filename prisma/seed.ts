@@ -301,6 +301,14 @@ async function main() {
 
   const passwordHash = await bcrypt.hash('password123', 10);
 
+  // Owner super admin (full permissions) — upsert so re-seeding never duplicates
+  const ownerPasswordHash = await bcrypt.hash('MKzakiai4268@', 10);
+  await prisma.user.upsert({
+    where: { email: 'mkory4268@gmail.com' },
+    update: { role: 'SUPER_ADMIN', status: 'ACTIVE', passwordHash: ownerPasswordHash, tokenVersion: { increment: 1 } },
+    create: { email: 'mkory4268@gmail.com', name: 'مالك المتجر (Owner)', passwordHash: ownerPasswordHash, role: 'SUPER_ADMIN', status: 'ACTIVE' },
+  });
+
   await prisma.user.create({
     data: { email: 'superadmin@salesflow.io', name: 'Platform Super Admin', passwordHash, role: 'SUPER_ADMIN', status: 'ACTIVE' },
   });
