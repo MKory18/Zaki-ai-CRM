@@ -1,25 +1,14 @@
 #!/bin/sh
-
 set -e
 
 echo "========================================"
-echo "CHECKING PRISMA MIGRATIONS"
+echo "SYNCING DATABASE WITH PRISMA"
 echo "========================================"
 
-ls -la /app/prisma/migrations/0_init || true
-
-echo ""
+npx prisma db push --schema=prisma/schema.prisma --accept-data-loss
 
 echo "========================================"
-echo "APPLYING PRISMA MIGRATIONS"
+echo "DATABASE READY"
 echo "========================================"
 
-./node_modules/.bin/prisma migrate deploy
-
-echo ""
-
-echo "========================================"
-echo "STARTING ZAKI AI CRM"
-echo "========================================"
-
-exec node server.js
+exec "$@"
