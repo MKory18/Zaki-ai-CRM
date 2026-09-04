@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { ROLE_PERMISSIONS, type Permission } from '@/types/auth';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'salesflow_super_secret_jwt_key_2026_xyz_production_key_safe'
-);
+let cachedJwtSecret: Uint8Array | null = null;
+function getJwtSecret(): Uint8Array {
+  if (!cachedJwtSecret) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret && process.env.NODE_ENV === 'production') {
+      throw new Error('SECURITY: JWT_SECRET environment variable is required in production.');
+    }
+    // Development-only fallback, never used in production.
+    cachedJwtSecret = new TextEncoder().encode(secret || 'development_only_insecure_jwt_secret_key_0000');
+  }
+  return cachedJwtSecret;
+}
 
 const COOKIE_NAME = 'salesflow_session';
 
@@ -55,7 +64,7 @@ export async function proxy(req: Request) {
 
   let payload: any;
   try {
-    ({ payload } = await jwtVerify(token, JWT_SECRET));
+    ({ payload } = await jwtVerify(token, getJwtSecret()));
   } catch {
     return redirectTo(req, '/login');
   }

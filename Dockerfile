@@ -1,4 +1,4 @@
-# Production Dockerfile for Zaki AI CRM
+# Production Dockerfile for Zaki AI CRM (Next.js standalone + Prisma PostgreSQL)
 
 FROM node:24-alpine AS base
 
@@ -14,12 +14,10 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-# IMPORTANT:
-# Copy Prisma BEFORE npm ci because postinstall runs prisma generate
+# Copy Prisma schema BEFORE npm ci because the postinstall hook runs `prisma generate`
 COPY prisma ./prisma
 
 RUN npm ci
-
 
 # ========================================
 # Builder
@@ -38,10 +36,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV JWT_SECRET=build-time-secret-not-used-in-production
 
-RUN npx prisma generate
-
+# prisma generate + next build (via package.json build script)
 RUN npm run build
-
 
 # ========================================
 # Production Runner
@@ -58,35 +54,34 @@ ENV HOSTNAME=0.0.0.0
 
 RUN apk add --no-cache libc6-compat openssl
 
-# Create application user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-
-# Copy public files
-COPY --from=builder /app/public ./public
-
-# Copy Prisma completely
-COPY --from=builder /app/prisma ./prisma
-
-# Copy Prisma runtime and CLI dependencies
-COPY --from=builder /app/node_modules ./node_modules
-
-
-# Copy Next.js standalone application
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-
-# Copy static files
+# Copy static/public assets
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy the standalone server FIRST (it contains its own trimmed node_modules)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+
+# Copy Prisma schema + migrations for `migrate deploy` at container start
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+# Copy the FULL node_modules (superset of standalone's) so the prisma CLI
+# is available for migrations. Copied AFTER standalone on purpose.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Writable uploads directory for local product image storage
+RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
 
 # Copy entrypoint
 COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-
-# Use non-root user
 USER nextjs
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/login >/dev/null 2>&1 || exit 1
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

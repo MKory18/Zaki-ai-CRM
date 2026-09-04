@@ -34,7 +34,8 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://salesflow_user:salesflow_password_2026@salesflow-db:5432/salesflow?schema=public
-      JWT_SECRET: salesflow_production_jwt_secret_key_super_secure_2026_xyz
+      # REQUIRED — provide in your shell / .env before running docker compose up
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (openssl rand -base64 32)}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-meta-llama/llama-3.3-70b-instruct:free}
 

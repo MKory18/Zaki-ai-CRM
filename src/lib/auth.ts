@@ -1,20 +1,32 @@
-import { cookies } from 'next/headers';
+﻿import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
 import { db } from './db';
 import { SessionUser, UserRole, UserStatus, Permission, ROLE_PERMISSIONS } from '@/types/auth';
 
-const JWT_SECRET = (() => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret && process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'SECURITY: JWT_SECRET environment variable is required in production. refusing to start with the insecure fallback.'
-    );
+/**
+ * Resolved lazily on first use (request time), never at module load.
+ * This keeps `next build` working without a JWT_SECRET, while production
+ * runtime still refuses to sign/verify tokens without a real secret.
+ */
+let cachedJwtSecret: Uint8Array | null = null;
+function getJwtSecret(): Uint8Array {
+  if (!cachedJwtSecret) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret || secret.length < 32) {
+      if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+        throw new Error(
+          'SECURITY: JWT_SECRET environment variable is required in production (min 32 chars). refusing to start with the insecure fallback.'
+        );
+      }
+      // Development / build-time only placeholder. Never used in production runtime.
+      cachedJwtSecret = new TextEncoder().encode('development_only_insecure_jwt_secret_key_0000');
+    } else {
+      cachedJwtSecret = new TextEncoder().encode(secret);
+    }
   }
-  return new TextEncoder().encode(
-    secret || 'salesflow_super_secret_jwt_key_2026_xyz_production_key_safe'
-  );
-})();
+  return cachedJwtSecret;
+}
 
 const COOKIE_NAME = 'salesflow_session';
 
@@ -39,7 +51,7 @@ export async function createSessionToken(payload: {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(payload.remember ? '30d' : '7d')
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function verifySessionToken(token: string): Promise<{
@@ -51,7 +63,7 @@ export async function verifySessionToken(token: string): Promise<{
   tv: number;
 } | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return payload as unknown as {
       userId: string;
       email: string;
@@ -119,7 +131,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
 /**
  * Server-side guard for API routes. Only ACTIVE users may use business APIs.
- * PENDING / SUSPENDED / DISABLED accounts are rejected here — never trust the client.
+ * PENDING / SUSPENDED / DISABLED accounts are rejected here â€” never trust the client.
  */
 export async function requireAuth(): Promise<SessionUser> {
   const user = await getCurrentUser();
