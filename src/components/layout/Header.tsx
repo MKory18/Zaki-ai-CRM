@@ -67,7 +67,8 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <span>{currentUser?.companyName || 'BioDerma International'}</span>
         </div>
 
-        {/* Demo Role Switcher Dropdown */}
+        {/* Demo Role Switcher Dropdown — SUPER_ADMIN only */}
+        {currentUser?.role === 'SUPER_ADMIN' && (
         <div className="relative">
           <button
             onClick={() => setRoleMenuOpen(!roleMenuOpen)}
@@ -105,6 +106,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
             </div>
           )}
         </div>
+        )}
 
         {/* Language Switcher */}
         <button
