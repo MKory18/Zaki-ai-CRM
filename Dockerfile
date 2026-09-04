@@ -36,6 +36,7 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV JWT_SECRET=build-time-secret-not-used-in-production
 
 RUN npx prisma generate
 
