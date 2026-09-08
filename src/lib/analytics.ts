@@ -8,15 +8,36 @@ export interface DateFilter {
   endDate?: string;
 }
 
+// Hard safety clamp: any computed window wider than 90 days is reduced to the
+// last 90 days server-side. This bounds every aggregate query below via the
+// orders_companyId_createdAt_idx and keeps memory/CPU predictable. 'all' is
+// clamped internally to 90 days too (the frontend keeps sending 'all').
+const MAX_WINDOW_DAYS = 90;
+
+const CONFIRMED_STATUSES = ['CONFIRMED', 'READY_FOR_SHIPPING', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+const REJECTED_STATUSES = ['REJECTED', 'CANCELLED', 'RETURNED', 'FAILED_DELIVERY'];
+const PRODUCT_REJECTED_STATUSES = ['REJECTED', 'CANCELLED', 'RETURNED'];
+const SHIPPED_STATUSES = ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+
+function clampStart(start: Date): Date {
+  const min = new Date();
+  min.setHours(23, 59, 59, 999);
+  min.setDate(min.getDate() - MAX_WINDOW_DAYS);
+  return start < min ? min : start;
+}
+
 export function getDateRange(filter: DateFilter): { start?: Date; end?: Date } {
   const now = new Date();
   const period = filter.period || 'all';
 
   if (filter.startDate && filter.endDate) {
-    return {
-      start: new Date(filter.startDate),
-      end: new Date(filter.endDate),
-    };
+    // Explicit ranges are also clamped to the 90-day safety window
+    let start = new Date(filter.startDate);
+    const end = new Date(filter.endDate);
+    if (end.getTime() - start.getTime() > MAX_WINDOW_DAYS * 24 * 60 * 60 * 1000) {
+      start = clampStart(start);
+    }
+    return { start, end };
   }
 
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -53,14 +74,23 @@ export function getDateRange(filter: DateFilter): { start?: Date; end?: Date } {
     }
     case 'all':
     default:
-      return {};
+      // 'all' is clamped to the last 90 days (see MAX_WINDOW_DAYS above)
+      return { start: clampStart(todayStart), end: todayEnd };
   }
+}
+
+function round1(n: number): number {
+  return Number(n.toFixed(1));
+}
+
+function round2(n: number): number {
+  return Number(n.toFixed(2));
 }
 
 export async function getCompanyAnalytics(companyId: string, filter: DateFilter = {}) {
   const { start, end } = getDateRange(filter);
 
-  const dateQuery =
+  const dateFilter =
     start && end
       ? {
           createdAt: {
@@ -70,61 +100,97 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
         }
       : {};
 
-  // Fetch all orders for this company in date range
-  const orders = await db.order.findMany({
-    where: {
-      companyId,
-      ...dateQuery,
-    },
-    include: {
-      product: { select: { id: true, name: true, sku: true, image: true } },
-      customer: { select: { id: true, fullName: true, phone: true, city: true } },
-      moderator: { select: { id: true, name: true, email: true } },
-      offer: { select: { id: true, name: true } },
-    },
-    orderBy: { createdAt: 'desc' },
+  const baseWhere = { companyId, ...dateFilter };
+
+  // ─── 1. Status breakdown: single GROUP BY instead of fetching all rows ───
+  const statusGroups = await db.order.groupBy({
+    by: ['status'],
+    where: baseWhere,
+    _count: { _all: true },
   });
 
-  // Fetch expenses
-  const expenses = await db.expense.findMany({
-    where: {
-      companyId,
-      ...(start && end ? { expenseDate: { gte: start, lte: end } } : {}),
-    },
-  });
+  const statusCount = new Map<string, number>();
+  let totalOrders = 0;
+  for (const g of statusGroups) {
+    const c = g._count._all;
+    statusCount.set(g.status, c);
+    totalOrders += c;
+  }
+  const countOf = (statuses: string[]) =>
+    statuses.reduce((sum, s) => sum + (statusCount.get(s) || 0), 0);
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-
-  // Group orders by status
-  const totalOrders = orders.length;
-  const newOrders = orders.filter((o) => o.status === 'NEW').length;
-  const contactingOrders = orders.filter((o) => o.status === 'CONTACTING').length;
-  const noAnswerOrders = orders.filter((o) => o.status === 'NO_ANSWER').length;
-  const confirmedOrders = orders.filter((o) =>
-    ['CONFIRMED', 'READY_FOR_SHIPPING', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(
-      o.status
-    )
-  ).length;
-  const postponedOrders = orders.filter((o) => o.status === 'POSTPONED').length;
-  const rejectedOrders = orders.filter((o) =>
-    ['REJECTED', 'CANCELLED', 'RETURNED', 'FAILED_DELIVERY'].includes(o.status)
-  ).length;
-  const shippedOrders = orders.filter((o) =>
-    ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(o.status)
-  ).length;
-  const deliveredOrdersList = orders.filter((o) => o.status === 'DELIVERED');
-  const deliveredOrders = deliveredOrdersList.length;
+  const newOrders = statusCount.get('NEW') || 0;
+  const contactingOrders = statusCount.get('CONTACTING') || 0;
+  const noAnswerOrders = statusCount.get('NO_ANSWER') || 0;
+  const confirmedOrders = countOf(CONFIRMED_STATUSES);
+  const postponedOrders = statusCount.get('POSTPONED') || 0;
+  const rejectedOrders = countOf(REJECTED_STATUSES);
+  const shippedOrders = countOf(SHIPPED_STATUSES);
+  const deliveredOrders = statusCount.get('DELIVERED') || 0;
 
   const confirmationRate = totalOrders > 0 ? (confirmedOrders / totalOrders) * 100 : 0;
   const deliveryRate = confirmedOrders > 0 ? (deliveredOrders / confirmedOrders) * 100 : 0;
 
-  // Real profit calculation (exclusively on delivered orders)
+  // ─── 2. Delivered-order financial aggregates + expenses (SUM in PostgreSQL) ───
+  const [deliveredAgg, expensesAgg] = await Promise.all([
+    db.order.aggregate({
+      where: { ...baseWhere, status: 'DELIVERED' },
+      _sum: {
+        totalAmount: true,
+        estimatedCostOfGoods: true,
+        shippingCost: true,
+        moderatorCommission: true,
+      },
+      _count: { _all: true },
+    }),
+    db.expense.aggregate({
+      where: {
+        companyId,
+        ...(start && end ? { expenseDate: { gte: start, lte: end } } : {}),
+      },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const totalExpenses = expensesAgg._sum.amount || 0;
+
+  // calculateRealProfit works on an order list; feeding it the pre-aggregated
+  // sums reproduces the exact same arithmetic (and rounding) without loading rows.
   const profitBreakdown = calculateRealProfit({
-    deliveredOrders: deliveredOrdersList,
+    deliveredOrders: [
+      {
+        sellingPrice: 0,
+        totalAmount: deliveredAgg._sum.totalAmount || 0,
+        quantity: deliveredAgg._count._all || 1,
+        shippingCost: deliveredAgg._sum.shippingCost || 0,
+        moderatorCommission: deliveredAgg._sum.moderatorCommission || 0,
+        estimatedCostOfGoods: deliveredAgg._sum.estimatedCostOfGoods || 0,
+      },
+    ],
     operationalExpenses: totalExpenses,
   });
 
-  // Product Analysis & Ranking
+  // ─── 3. Product stats: GROUP BY (productId, status) with conditional sums ───
+  const productGroups = await db.order.groupBy({
+    by: ['productId', 'status'],
+    where: baseWhere,
+    _count: { _all: true },
+    _sum: {
+      totalAmount: true,
+      estimatedCostOfGoods: true,
+      shippingCost: true,
+    },
+  });
+
+  const productIds = Array.from(new Set(productGroups.map((g) => g.productId)));
+  const products = productIds.length
+    ? await db.product.findMany({
+        where: { id: { in: productIds }, companyId },
+        select: { id: true, name: true, sku: true, image: true },
+      })
+    : [];
+  const productInfo = new Map(products.map((p) => [p.id, p]));
+
   const productsMap = new Map<
     string,
     {
@@ -144,13 +210,14 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
     }
   >();
 
-  orders.forEach((o) => {
-    if (!productsMap.has(o.productId)) {
-      productsMap.set(o.productId, {
-    id: o.productId,
-    name: o.product.name,
-    image: o.product.image || null,
-        sku: o.product.sku,
+  for (const g of productGroups) {
+    if (!productsMap.has(g.productId)) {
+      const info = productInfo.get(g.productId);
+      productsMap.set(g.productId, {
+        id: g.productId,
+        name: info?.name || 'منتج محذوف',
+        image: info?.image || null,
+        sku: info?.sku || 'N/A',
         totalOrders: 0,
         confirmedOrders: 0,
         deliveredOrders: 0,
@@ -162,39 +229,28 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
         profitMargin: 0,
       });
     }
-
-    const p = productsMap.get(o.productId)!;
-    p.totalOrders += 1;
-
-    if (
-      ['CONFIRMED', 'READY_FOR_SHIPPING', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(
-        o.status
-      )
-    ) {
-      p.confirmedOrders += 1;
+    const p = productsMap.get(g.productId)!;
+    p.totalOrders += g._count._all;
+    if (CONFIRMED_STATUSES.includes(g.status)) p.confirmedOrders += g._count._all;
+    if (PRODUCT_REJECTED_STATUSES.includes(g.status)) p.rejectedOrders += g._count._all;
+    if (g.status === 'DELIVERED') {
+      p.deliveredOrders += g._count._all;
+      p.revenue += g._sum.totalAmount || 0;
+      p.cogs += g._sum.estimatedCostOfGoods || 0;
+      p.shippingCost += g._sum.shippingCost || 0;
     }
-    if (['REJECTED', 'CANCELLED', 'RETURNED'].includes(o.status)) {
-      p.rejectedOrders += 1;
-    }
-    if (o.status === 'DELIVERED') {
-      p.deliveredOrders += 1;
-      p.revenue += o.totalAmount;
-      p.cogs += o.estimatedCostOfGoods;
-      p.shippingCost += o.shippingCost;
-    }
-  });
+  }
 
   const productStats = Array.from(productsMap.values()).map((p) => {
     const netProfit = p.revenue - p.cogs - p.shippingCost;
     const profitMargin = p.revenue > 0 ? (netProfit / p.revenue) * 100 : 0;
     return {
       ...p,
-      netProfit: Number(netProfit.toFixed(2)),
-      profitMargin: Number(profitMargin.toFixed(1)),
+      netProfit: round2(netProfit),
+      profitMargin: round1(profitMargin),
     };
   });
 
-  // Top Product Rankings
   const mostRequestedProduct = [...productStats].sort((a, b) => b.totalOrders - a.totalOrders)[0];
   const mostConfirmedProduct = [...productStats].sort(
     (a, b) => b.confirmedOrders - a.confirmedOrders
@@ -209,7 +265,28 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
       (a, b) => b.rejectedOrders / (b.totalOrders || 1) - a.rejectedOrders / (a.totalOrders || 1)
     )[0];
 
-  // Moderator Leaderboard
+  // ─── 4. Moderator leaderboard: GROUP BY (moderatorId, status) ───
+  const moderatorGroups = await db.order.groupBy({
+    by: ['moderatorId', 'status'],
+    where: { ...baseWhere, moderatorId: { not: null } },
+    _count: { _all: true },
+    _sum: {
+      totalAmount: true,
+      moderatorCommission: true,
+    },
+  });
+
+  const moderatorIds = Array.from(
+    new Set(moderatorGroups.map((g) => g.moderatorId).filter((id): id is string => !!id))
+  );
+  const moderators = moderatorIds.length
+    ? await db.user.findMany({
+        where: { id: { in: moderatorIds }, companyId },
+        select: { id: true, name: true, email: true },
+      })
+    : [];
+  const moderatorInfo = new Map(moderators.map((m) => [m.id, m]));
+
   const moderatorsMap = new Map<
     string,
     {
@@ -227,62 +304,62 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
     }
   >();
 
-  orders.forEach((o) => {
-    if (o.moderatorId && o.moderator) {
-      if (!moderatorsMap.has(o.moderatorId)) {
-        moderatorsMap.set(o.moderatorId, {
-          id: o.moderatorId,
-          name: o.moderator.name,
-          email: o.moderator.email,
-          totalOrders: 0,
-          confirmedOrders: 0,
-          rejectedOrders: 0,
-          deliveredOrders: 0,
-          sales: 0,
-          commissions: 0,
-          confirmationRate: 0,
-          deliveryRate: 0,
-        });
-      }
-
-      const m = moderatorsMap.get(o.moderatorId)!;
-      m.totalOrders += 1;
-
-      if (
-        ['CONFIRMED', 'READY_FOR_SHIPPING', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(
-          o.status
-        )
-      ) {
-        m.confirmedOrders += 1;
-      }
-      if (['REJECTED', 'CANCELLED', 'RETURNED'].includes(o.status)) {
-        m.rejectedOrders += 1;
-      }
-      if (o.status === 'DELIVERED') {
-        m.deliveredOrders += 1;
-        m.sales += o.totalAmount;
-        m.commissions += o.moderatorCommission;
-      }
+  for (const g of moderatorGroups) {
+    if (!g.moderatorId) continue;
+    if (!moderatorsMap.has(g.moderatorId)) {
+      const info = moderatorInfo.get(g.moderatorId);
+      moderatorsMap.set(g.moderatorId, {
+        id: g.moderatorId,
+        name: info?.name || 'Unknown',
+        email: info?.email || 'N/A',
+        totalOrders: 0,
+        confirmedOrders: 0,
+        rejectedOrders: 0,
+        deliveredOrders: 0,
+        sales: 0,
+        commissions: 0,
+        confirmationRate: 0,
+        deliveryRate: 0,
+      });
     }
-  });
+    const m = moderatorsMap.get(g.moderatorId)!;
+    m.totalOrders += g._count._all;
+    if (CONFIRMED_STATUSES.includes(g.status)) m.confirmedOrders += g._count._all;
+    if (PRODUCT_REJECTED_STATUSES.includes(g.status)) m.rejectedOrders += g._count._all;
+    if (g.status === 'DELIVERED') {
+      m.deliveredOrders += g._count._all;
+      m.sales += g._sum.totalAmount || 0;
+      m.commissions += g._sum.moderatorCommission || 0;
+    }
+  }
 
   const moderatorLeaderboard = Array.from(moderatorsMap.values())
     .map((m) => ({
       ...m,
-      sales: Number(m.sales.toFixed(2)),
-      commissions: Number(m.commissions.toFixed(2)),
-      confirmationRate:
-        m.totalOrders > 0 ? Number(((m.confirmedOrders / m.totalOrders) * 100).toFixed(1)) : 0,
+      sales: round2(m.sales),
+      commissions: round2(m.commissions),
+      confirmationRate: m.totalOrders > 0 ? round1((m.confirmedOrders / m.totalOrders) * 100) : 0,
       deliveryRate:
-        m.confirmedOrders > 0
-          ? Number(((m.deliveredOrders / m.confirmedOrders) * 100).toFixed(1))
-          : 0,
+        m.confirmedOrders > 0 ? round1((m.deliveredOrders / m.confirmedOrders) * 100) : 0,
     }))
     .sort((a, b) => b.confirmedOrders - a.confirmedOrders);
 
   const topModerator = moderatorLeaderboard[0];
 
-  // AI Business Context
+  // ─── 5. Recent orders: bounded take:10 (the dashboard renders only the first 8) ───
+  const orders = await db.order.findMany({
+    where: baseWhere,
+    include: {
+      product: { select: { id: true, name: true, sku: true, image: true } },
+      customer: { select: { id: true, fullName: true, phone: true, city: true } },
+      moderator: { select: { id: true, name: true, email: true } },
+      offer: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+  });
+
+  // ─── 6. AI Business Context ───
   const aiContext: AiBusinessContext = {
     period: filter.period || 'all',
     total_orders: totalOrders,
@@ -290,8 +367,8 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
     rejected_orders: rejectedOrders,
     postponed_orders: postponedOrders,
     delivered_orders: deliveredOrders,
-    confirmation_rate: Number(confirmationRate.toFixed(1)),
-    delivery_rate: Number(deliveryRate.toFixed(1)),
+    confirmation_rate: round1(confirmationRate),
+    delivery_rate: round1(deliveryRate),
     revenue: profitBreakdown.deliveredRevenue,
     production_cost: profitBreakdown.costOfGoodsSold,
     shipping_cost: profitBreakdown.shippingCosts,
@@ -319,8 +396,8 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
       delivered: deliveredOrders,
     },
     rates: {
-      confirmationRate: Number(confirmationRate.toFixed(1)),
-      deliveryRate: Number(deliveryRate.toFixed(1)),
+      confirmationRate: round1(confirmationRate),
+      deliveryRate: round1(deliveryRate),
     },
     financials: profitBreakdown,
     productStats,

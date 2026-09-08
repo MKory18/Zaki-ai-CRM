@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit } from '@/lib/audit';
+import { createNotification } from '@/lib/notification';
+import { apiError } from '@/lib/api-error';
+import { requirePermission } from '@/lib/authorization';
 
 /**
  * POST /api/orders/ai-intake
@@ -74,7 +77,7 @@ Rules: keep original Arabic text, quantity is a number, price is a number withou
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    requirePermission('orders.create');
+    await requirePermission('orders.create');
 
     const body = await req.json();
 
@@ -111,8 +114,9 @@ export async function POST(req: Request) {
         });
       }
 
-      const product = await db.product.findUnique({
-        where: { id: p.productId },
+      // Tenant-validate — products must belong to THIS company
+      const product = await db.product.findFirst({
+        where: { id: p.productId, companyId },
         include: { batches: { where: { quantityRemaining: { gt: 0 } }, orderBy: { productionDate: 'asc' }, take: 1 } },
       });
       if (!product) {
@@ -178,6 +182,20 @@ export async function POST(req: Request) {
         entityId: order.id,
         newData: order,
       });
+
+      // Notify company managers — after commit, non-fatal
+      try {
+        await createNotification({
+          companyId,
+          userId: null,
+          title: 'طلب جديد',
+          message: `تم إنشاء طلب جديد #${order.orderNumber} عبر الذكاء الاصطناعي بواسطة ${user.name}.`,
+          type: 'ORDER_NEW',
+          link: '/orders',
+        });
+      } catch (e) {
+        console.error('AI-intake notification failed (non-fatal):', e);
+      }
 
       return NextResponse.json({ success: true, order });
     }
@@ -255,7 +273,8 @@ export async function POST(req: Request) {
       suggestedOfferName,
       existingCustomer,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error) {
+    const { body, status } = apiError(error);
+    return NextResponse.json(body, { status });
   }
 }

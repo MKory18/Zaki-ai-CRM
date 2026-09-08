@@ -1,7 +1,9 @@
 ﻿import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission, hashPassword } from '@/lib/auth';
+import { requireCompanyTenant, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { requirePermission } from '@/lib/authorization';
 
 export async function GET() {
   try {
@@ -83,7 +85,7 @@ export async function GET() {
 
     return NextResponse.json({ moderators: enriched });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }
 
@@ -107,7 +109,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
     }
 
-    const pwdHash = await hashPassword(password || 'password123');
+// Phase S: no default passwords - a password is mandatory
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json({ error: 'Password is required (min 8 chars)' }, { status: 400 });
+    }
+    const pwdHash = await hashPassword(password);
 
     const moderator = await db.user.create({
       data: {
@@ -133,6 +139,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, moderator });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

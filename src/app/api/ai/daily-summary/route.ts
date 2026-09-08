@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
 import { getCompanyAnalytics } from '@/lib/analytics';
 import { generateAiBusinessAnalysis } from '@/lib/ai';
+import { requirePermission } from '@/lib/authorization';
 
 export async function GET() {
   try {
@@ -29,14 +31,14 @@ export async function GET() {
 
     return NextResponse.json({ summary });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }
 
 export async function POST() {
   try {
     const { companyId } = await requireCompanyTenant();
-    requirePermission('ai.use');
+    await requirePermission('ai.use');
 
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -75,6 +77,6 @@ export async function POST() {
 
     return NextResponse.json({ success: true, summary, analysis, metrics: aiContext });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

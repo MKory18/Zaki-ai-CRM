@@ -75,8 +75,8 @@ export default function ModeratorsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.moderators}</h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.moderators}</h1>
+            <p className="text-xs text-[#6b7177] mt-1">
               Section 15 Sales agents, call confirmation rates, order delivery conversions & commission tracking
             </p>
           </div>
@@ -94,13 +94,13 @@ export default function ModeratorsPage() {
         {/* Section 15 Moderator Leaderboard Table */}
         <Card>
           <CardHeader
-            title={<span className="flex items-center space-x-2"><Award className="w-5 h-5 text-red-600" /><span>Moderator Performance Leaderboard</span></span>}
+            title={<span className="flex items-center space-x-2"><Award className="w-5 h-5 text-[#d13b4c]" /><span>Moderator Performance Leaderboard</span></span>}
             subtitle="Ranked by total confirmed volume, conversion efficiency & delivered sales"
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Rank & Agent</th>
                     <th className="px-6 py-3.5">Assigned Orders</th>
@@ -112,54 +112,54 @@ export default function ModeratorsPage() {
                     <th className="px-6 py-3.5">Commission Earned</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#eef0f3]">
                   {moderators.map((m, idx) => (
-                    <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={m.id} className="hover:bg-[#f8f9fa] transition-colors">
                       <td className="px-6 py-3.5">
                         <div className="flex items-center space-x-3 rtl:space-x-reverse">
                           <span className={`w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center ${
-                            idx === 0 ? 'bg-amber-100 text-amber-800' : idx === 1 ? 'bg-slate-200 text-slate-800' : 'bg-slate-100 text-slate-600'
+                            idx === 0 ? 'bg-amber-100 text-amber-800' : idx === 1 ? 'bg-[#e8eaef] text-[#252f4a]' : 'bg-[#f3f4f6] text-[#4b5675]'
                           }`}>
                             {idx + 1}
                           </span>
                           <div>
-                            <p className="font-bold text-slate-900 text-sm">{m.name}</p>
-                            <p className="text-[11px] text-slate-400">{m.email}</p>
+                            <p className="font-bold text-[#252f4a] text-sm">{m.name}</p>
+                            <p className="text-[11px] text-[#9ca3af]">{m.email}</p>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-6 py-3.5 font-bold text-slate-800">
+                      <td className="px-6 py-3.5 font-bold text-[#252f4a]">
                         {m.stats.totalOrders}
                       </td>
 
-                      <td className="px-6 py-3.5 font-bold text-red-600">
+                      <td className="px-6 py-3.5 font-bold text-[#d13b4c]">
                         {m.stats.confirmedOrders}
                       </td>
 
-                      <td className="px-6 py-3.5 font-bold text-red-600">
+                      <td className="px-6 py-3.5 font-bold text-[#d13b4c]">
                         {m.stats.deliveredOrders}
                       </td>
 
                       <td className="px-6 py-3.5">
-                        <span className="font-black text-red-700 bg-red-50 px-2.5 py-1 rounded-md text-xs">
+                        <span className="font-black text-[#d13b4c] bg-[#fbe9ea] px-2.5 py-1 rounded-md text-xs">
                           {m.stats.confirmationRate}%
                         </span>
                       </td>
 
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-md text-xs">
+                        <span className="font-bold text-[#d13b4c] bg-[#fbe9ea] px-2 py-0.5 rounded-md text-xs">
                           {m.stats.deliveryRate}%
                         </span>
                       </td>
 
-                      <td className="px-6 py-3.5 font-bold text-slate-900">
+                      <td className="px-6 py-3.5 font-bold text-[#252f4a]">
                         ${m.stats.sales.toFixed(2)}
                       </td>
 
-                      <td className="px-6 py-3.5 font-bold text-red-700">
+                      <td className="px-6 py-3.5 font-bold text-[#d13b4c]">
                         ${m.stats.commissions.toFixed(2)}{' '}
-                        <span className="text-[10px] text-slate-400 font-normal">
+                        <span className="text-[10px] text-[#9ca3af] font-normal">
                           ({m.commissionRate}%)
                         </span>
                       </td>
@@ -181,7 +181,7 @@ export default function ModeratorsPage() {
       >
         <form onSubmit={handleCreateModerator} className="space-y-4">
           {modalError && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
+            <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-lg">
               {modalError}
             </div>
           )}

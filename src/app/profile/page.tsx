@@ -61,11 +61,11 @@ export default function ProfilePage() {
     <AppLayout>
       <div className="space-y-6 max-w-3xl">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center space-x-2 rtl:space-x-reverse">
-            <User className="w-6 h-6 text-red-600" />
+          <h1 className="text-2xl font-bold tracking-tight text-[#252f4a] flex items-center space-x-2 rtl:space-x-reverse">
+            <User className="w-6 h-6 text-[#d13b4c]" />
             <span>الملف الشخصي</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[#6b7177] mt-1">
             تحديث بياناتك الشخصية وكلمة المرور — الدور والصلاحيات يديرها المدير فقط
           </p>
         </div>
@@ -74,8 +74,8 @@ export default function ProfilePage() {
           <div
             className={`p-3 rounded-xl text-xs flex items-center space-x-2 rtl:space-x-reverse ${
               message.type === 'success'
-                ? 'bg-green-50 border border-green-200 text-green-800'
-                : 'bg-red-50 border border-red-200 text-red-700'
+                ? 'bg-emerald-100 border-0 text-[#25b865]'
+                : 'bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c]'
             }`}
           >
             {message.type === 'success' ? (
@@ -95,16 +95,16 @@ export default function ProfilePage() {
               subtitle="تُدار من قِبل مدير النظام — للقراءة فقط"
             />
             <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div className="bg-slate-50 p-3 rounded-xl">
-                <span className="text-slate-400 block">البريد الإلكتروني</span>
-                <span className="font-bold text-slate-800">{currentUser?.email}</span>
+              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+                <span className="text-[#9ca3af] block">البريد الإلكتروني</span>
+                <span className="font-bold text-[#252f4a]">{currentUser?.email}</span>
               </div>
-              <div className="bg-slate-50 p-3 rounded-xl">
-                <span className="text-slate-400 block">الدور</span>
+              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+                <span className="text-[#9ca3af] block">الدور</span>
                 <Badge variant="info">{currentUser?.role}</Badge>
               </div>
-              <div className="bg-slate-50 p-3 rounded-xl">
-                <span className="text-slate-400 block">حالة الحساب</span>
+              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+                <span className="text-[#9ca3af] block">حالة الحساب</span>
                 <Badge variant={currentUser?.status === 'ACTIVE' ? 'success' : 'warning'}>
                   {currentUser?.status}
                 </Badge>
@@ -135,7 +135,7 @@ export default function ProfilePage() {
                 <img
                   src={avatar}
                   alt="معاينة الصورة"
-                  className="w-16 h-16 rounded-full object-cover border-2 border-red-200"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-[#f5c6cb]"
                 />
               )}
             </CardContent>
@@ -168,15 +168,15 @@ export default function ProfilePage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
-              <p className="text-[11px] text-slate-500 flex items-center space-x-1.5 rtl:space-x-reverse">
-                <ShieldCheck className="w-3.5 h-3.5 text-red-500" />
+              <p className="text-[11px] text-[#6b7177] flex items-center space-x-1.5 rtl:space-x-reverse">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#d13b4c]" />
                 <span>تغيير كلمة المرور يُنهي جميع الجلسات النشطة على حسابك.</span>
               </p>
             </CardContent>
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" loading={loading} className="bg-red-600 hover:bg-red-700">
+            <Button type="submit" loading={loading} className="bg-[#d13b4c] hover:bg-[#d13b4c]/85">
               حفظ التغييرات
             </Button>
           </div>

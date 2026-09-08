@@ -1,8 +1,10 @@
 ﻿import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
 import { calculateBatchCosts } from '@/lib/financial';
 import { logAudit } from '@/lib/audit';
+import { requirePermission } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
@@ -20,7 +22,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ batches });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }
 
@@ -80,6 +82,12 @@ export async function POST(req: Request) {
       otherCosts: other,
     });
 
+    // Phase S: tenant-validate the referenced product
+    const prodCheck = await db.product.findFirst({ where: { id: productId, companyId } });
+    if (!prodCheck) {
+      return NextResponse.json({ error: "Product not found in your company" }, { status: 404 });
+    }
+
     const batch = await db.productionBatch.create({
       data: {
         companyId,
@@ -126,6 +134,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, batch });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

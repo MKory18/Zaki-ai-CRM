@@ -1,10 +1,32 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { createSessionToken, sessionCookieOptions, COOKIE_NAME } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 import { UserRole, UserStatus, ROLE_PERMISSIONS } from '@/types/auth';
 
+/**
+ * DEMO-ONLY account switcher — STRICTLY DISABLED IN PRODUCTION.
+ *
+ * Security: this endpoint mints a session for an arbitrary email and must
+ * never be reachable in production. Fail-closed: NODE_ENV must be a
+ * non-production value AND ALLOW_DEMO_SWITCH must be explicitly "true".
+ * The server rejects — never rely on hiding UI elements.
+ */
 export async function POST(req: Request) {
+  // Fail closed: only explicit opt-in outside production
+  const allowed =
+    process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEMO_SWITCH === 'true';
+  if (!allowed) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   try {
+    // Even in dev, require an authenticated SUPER_ADMIN to perform switches
+    const actor = await getCurrentUser();
+    if (!actor || actor.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { email } = await req.json();
     if (!email) {
       return NextResponse.json({ error: 'Email required' }, { status: 400 });
@@ -54,6 +76,6 @@ export async function POST(req: Request) {
 
     return response;
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

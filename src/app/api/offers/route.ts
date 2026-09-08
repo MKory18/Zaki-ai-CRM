@@ -1,7 +1,9 @@
 ﻿import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { requirePermission } from '@/lib/authorization';
 
 export async function GET() {
   try {
@@ -19,7 +21,7 @@ export async function GET() {
 
     return NextResponse.json({ offers });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }
 
@@ -36,6 +38,12 @@ export async function POST(req: Request) {
         { error: 'Product, Offer Name, and Selling Price are required' },
         { status: 400 }
       );
+    }
+
+    // Phase S: tenant-validate the referenced product
+    const prodCheck = await db.product.findFirst({ where: { id: productId, companyId } });
+    if (!prodCheck) {
+      return NextResponse.json({ error: "Product not found in your company" }, { status: 404 });
     }
 
     const offer = await db.offer.create({
@@ -62,6 +70,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, offer });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

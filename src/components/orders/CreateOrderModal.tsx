@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
+import { apiFetch } from '@/lib/api-client';
 import { SYRIAN_GOVERNORATES } from '@/lib/syria';
 import { productName } from '@/lib/product-name';
 import {
@@ -72,7 +73,30 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   });
 
   useEffect(() => {
-    if (isOpen) loadFormData();
+    if (isOpen) {
+      // Reset ALL form state first so stale customer data / selections from a
+      // previous open never persist, then load fresh dropdown data
+      setError(null);
+      setLoading(false);
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerAltPhone('');
+      setCustomerAddress('');
+      setCustomerCity('دمشق');
+      setProductId('');
+      setOfferId('');
+      setQuantity(1);
+      setSellingPrice(20);
+      setSource('Facebook Ads');
+      setModeratorId('');
+      setCustomerNotes('');
+      setInternalNotes('');
+      setExistingCustomerAlert(null);
+      setProductSearch('');
+      setProductDropdownOpen(false);
+      loadFormData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const loadFormData = async () => {
@@ -105,7 +129,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const handlePhoneBlur = async () => {
     if (!customerPhone || customerPhone.length < 7) return;
     try {
-      const res = await fetch(`/api/customers?q=${encodeURIComponent(customerPhone)}`);
+      const res = await apiFetch(`/api/customers?q=${encodeURIComponent(customerPhone)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.customers && data.customers.length > 0) {
@@ -155,7 +179,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/orders', {
+      const res = await apiFetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

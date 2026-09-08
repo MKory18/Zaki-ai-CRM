@@ -88,18 +88,18 @@ export default function SettingsPage() {
       <div className="space-y-6 max-w-4xl">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center space-x-2">
-            <Settings className="w-6 h-6 text-slate-700" />
+          <h1 className="text-2xl font-bold tracking-tight text-[#252f4a] flex items-center space-x-2">
+            <Settings className="w-6 h-6 text-[#4b5675]" />
             <span>{t.settings}</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[#6b7177] mt-1">
             Section 1 Multi-Tenant Organization, OpenRouter AI Model & Automation Endpoints
           </p>
         </div>
 
         {savedSuccess && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs rounded-xl flex items-center space-x-2">
-            <Check className="w-4 h-4 text-red-600" />
+          <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-xl flex items-center space-x-2">
+            <Check className="w-4 h-4 text-[#d13b4c]" />
             <span>Settings saved successfully!</span>
           </div>
         )}
@@ -108,7 +108,7 @@ export default function SettingsPage() {
           {/* Company Profile */}
           <Card>
             <CardHeader
-              title={<span className="flex items-center space-x-2"><Building2 className="w-4 h-4 text-red-600" /><span>Organization Profile & Currency</span></span>}
+              title={<span className="flex items-center space-x-2"><Building2 className="w-4 h-4 text-[#d13b4c]" /><span>Organization Profile & Currency</span></span>}
               subtitle="Company tenancy settings"
             />
             <CardContent className="space-y-4">
@@ -161,7 +161,7 @@ export default function SettingsPage() {
           {/* OpenRouter AI Integration */}
           <Card>
             <CardHeader
-              title={<span className="flex items-center space-x-2"><Key className="w-4 h-4 text-red-600" /><span>OpenRouter AI Integration (Section 26)</span></span>}
+              title={<span className="flex items-center space-x-2"><Key className="w-4 h-4 text-[#d13b4c]" /><span>OpenRouter AI Integration (Section 26)</span></span>}
               subtitle="Configures the Business Intelligence LLM engine"
             />
             <CardContent className="space-y-4">
@@ -178,11 +178,11 @@ export default function SettingsPage() {
                 <option value="openai/gpt-4o-mini">OpenAI GPT-4o-mini (Cost Optimized)</option>
               </Select>
 
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 space-y-1">
-                <p className="font-semibold text-slate-800">Security & Environment Isolation:</p>
+              <div className="p-3 bg-[#f8f9fa] border border-[#eef0f3] rounded-xl text-xs text-[#4b5675] space-y-1">
+                <p className="font-semibold text-[#252f4a]">Security & Environment Isolation:</p>
                 <p>
                   API keys are strictly managed via server environment variable{' '}
-                  <code className="bg-slate-200 px-1 py-0.5 rounded font-mono text-[11px]">
+                  <code className="bg-[#e8eaef] px-1 py-0.5 rounded font-mono text-[11px]">
                     OPENROUTER_API_KEY
                   </code>{' '}
                   and never exposed to client-side scripts.
@@ -194,30 +194,30 @@ export default function SettingsPage() {
           {/* n8n Automation Ready Endpoints */}
           <Card>
             <CardHeader
-              title={<span className="flex items-center space-x-2"><Webhook className="w-4 h-4 text-red-600" /><span>Automation & n8n Integration Webhooks</span></span>}
+              title={<span className="flex items-center space-x-2"><Webhook className="w-4 h-4 text-[#d13b4c]" /><span>Automation & n8n Integration Webhooks</span></span>}
               subtitle="Ready-to-connect webhooks for social ad leads & delivery couriers"
             />
             <CardContent className="space-y-3 text-xs">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="p-3 bg-[#f8f9fa] rounded-lg border border-[#eef0f3]">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800">New Order Ingestion Webhook:</span>
-                  <span className="bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                  <span className="font-bold text-[#252f4a]">New Order Ingestion Webhook:</span>
+                  <span className="bg-[#fbe9ea] text-[#d13b4c] font-bold px-2 py-0.5 rounded text-[10px]">
                     READY
                   </span>
                 </div>
-                <p className="font-mono text-slate-500 mt-1 text-[11px]">
+                <p className="font-mono text-[#6b7177] mt-1 text-[11px]">
                   POST /api/orders (Accepts JSON leads from Facebook Lead Ads, TikTok, Shopify, or n8n)
                 </p>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="p-3 bg-[#f8f9fa] rounded-lg border border-[#eef0f3]">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800">Courier Tracking Webhook:</span>
-                  <span className="bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                  <span className="font-bold text-[#252f4a]">Courier Tracking Webhook:</span>
+                  <span className="bg-[#fbe9ea] text-[#d13b4c] font-bold px-2 py-0.5 rounded text-[10px]">
                     READY
                   </span>
                 </div>
-                <p className="font-mono text-slate-500 mt-1 text-[11px]">
+                <p className="font-mono text-[#6b7177] mt-1 text-[11px]">
                   PATCH /api/orders/:id (Accepts automated status changes: SHIPPED, DELIVERED, RETURNED)
                 </p>
               </div>

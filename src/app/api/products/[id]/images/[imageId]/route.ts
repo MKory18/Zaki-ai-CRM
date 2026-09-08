@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
 import { deleteStoredFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
+import { requirePermission } from '@/lib/authorization';
 
 /**
  * DELETE /api/products/:id/images/:imageId
@@ -58,6 +60,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

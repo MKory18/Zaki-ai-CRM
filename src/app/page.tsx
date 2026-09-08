@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +10,7 @@ import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { AiOrderModal } from '@/components/orders/AiOrderModal';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { useApp } from '@/context/AppContext';
+import { apiFetch } from '@/lib/api-client';
 import { productName } from '@/lib/product-name';
 import { format } from 'date-fns';
 import {
@@ -59,21 +60,47 @@ export default function DashboardPage() {
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAnalytics();
-  }, [period]);
+  // Monotonic request counter — stale (out-of-order) analytics responses are
+  // discarded so an older poll can never overwrite a newer result
+  const loadAnalyticsSeq = useRef(0);
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
+    const seq = ++loadAnalyticsSeq.current;
     setLoading(true);
     try {
-      const res = await fetch(`/api/analytics?period=${period}`);
+      const res = await apiFetch(`/api/analytics?period=${period}`);
+      if (seq !== loadAnalyticsSeq.current) return; // stale — discard
       if (res.ok) setAnalytics(await res.json());
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      // Only the latest request may clear the shared loading flag
+      if (seq === loadAnalyticsSeq.current) setLoading(false);
     }
-  };
+  }, [period]);
+  useEffect(() => {
+    loadAnalytics();
+  }, [loadAnalytics]);
+
+  // Ref mirror so the 30s polling interval + visibility handler always call
+  // the latest loadAnalytics (current period) without re-subscribing
+  const loadAnalyticsRef = useRef<() => Promise<void>>(async () => {});
+  useEffect(() => { loadAnalyticsRef.current = loadAnalytics; }, [loadAnalytics]);
+
+  // Light polling (30s) + refetch when the tab becomes visible again
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!document.hidden) loadAnalyticsRef.current();
+    }, 30_000);
+    const onVisibility = () => {
+      if (!document.hidden) loadAnalyticsRef.current();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
 
   const fin = analytics?.financials ?? {
     deliveredRevenue: 0, costOfGoodsSold: 0, shippingCosts: 0,
@@ -92,28 +119,28 @@ export default function DashboardPage() {
     })}`;
 
   const statusTiles = [
-    { label: t.NEW, value: counts.new, color: 'text-blue-600', dot: 'bg-blue-500' },
-    { label: t.CONTACTING, value: counts.contacting, color: 'text-purple-600', dot: 'bg-purple-500' },
-    { label: t.CONFIRMED, value: counts.confirmed, color: 'text-green-600', dot: 'bg-green-500' },
-    { label: t.POSTPONED, value: counts.postponed, color: 'text-amber-600', dot: 'bg-amber-500' },
-    { label: t.SHIPPED, value: counts.shipped, color: 'text-indigo-600', dot: 'bg-indigo-500' },
-    { label: t.DELIVERED, value: counts.delivered, color: 'text-emerald-700', dot: 'bg-emerald-600' },
-    { label: t.REJECTED, value: counts.rejected, color: 'text-red-600', dot: 'bg-red-500' },
+    { label: t.NEW, value: counts.new, color: 'text-[#3e97ff]', dot: 'bg-[#3e97ff]' },
+    { label: t.CONTACTING, value: counts.contacting, color: 'text-[#3e97ff]', dot: 'bg-[#02a0e4]' },
+    { label: t.CONFIRMED, value: counts.confirmed, color: 'text-[#25b865]', dot: 'bg-[#25b865]' },
+    { label: t.POSTPONED, value: counts.postponed, color: 'text-[#e49e3d]', dot: 'bg-[#e49e3d]' },
+    { label: t.SHIPPED, value: counts.shipped, color: 'text-[#3e97ff]', dot: 'bg-[#3e97ff]' },
+    { label: t.DELIVERED, value: counts.delivered, color: 'text-[#25b865]', dot: 'bg-[#25b865]' },
+    { label: t.REJECTED, value: counts.rejected, color: 'text-[#d13b4c]', dot: 'bg-[#d13b4c]' },
   ];
 
   const rankings = [
-    { icon: '🏆', label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', sub: analytics?.rankings?.mostRequested?.totalOrders ?? 0, subSuffix: locale === 'ar' ? 'طلب' : 'orders', name: analytics?.rankings?.mostRequested?.name, tint: 'bg-blue-50 border-blue-100', text: 'text-blue-700' },
-    { icon: '💰', label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', sub: analytics?.rankings?.mostProfitable?.netProfit ?? 0, prefix: '+$', name: analytics?.rankings?.mostProfitable?.name, tint: 'bg-green-50 border-green-100', text: 'text-green-700' },
-    { icon: '🚚', label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', sub: analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0, subSuffix: locale === 'ar' ? 'توصيل' : 'delivered', name: analytics?.rankings?.mostDelivered?.name, tint: 'bg-amber-50 border-amber-100', text: 'text-amber-700' },
-    { icon: '⚠️', label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', sub: analytics?.rankings?.highestRejection?.rejectedOrders ?? 0, subSuffix: locale === 'ar' ? 'رفض' : 'rejected', name: analytics?.rankings?.highestRejection?.name, tint: 'bg-red-50 border-red-100', text: 'text-red-700' },
+    { icon: '🏆', label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', sub: analytics?.rankings?.mostRequested?.totalOrders ?? 0, subSuffix: locale === 'ar' ? 'طلب' : 'orders', name: analytics?.rankings?.mostRequested?.name, tint: 'bg-blue-50 border-[#b9dcff]', text: 'text-[#3e97ff]' },
+    { icon: '💰', label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', sub: analytics?.rankings?.mostProfitable?.netProfit ?? 0, prefix: '+$', name: analytics?.rankings?.mostProfitable?.name, tint: 'bg-emerald-100', text: 'text-[#25b865]' },
+    { icon: '🚚', label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', sub: analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0, subSuffix: locale === 'ar' ? 'توصيل' : 'delivered', name: analytics?.rankings?.mostDelivered?.name, tint: 'bg-amber-50 border-amber-100', text: 'text-[#c07f2a]' },
+    { icon: '⚠️', label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', sub: analytics?.rankings?.highestRejection?.rejectedOrders ?? 0, subSuffix: locale === 'ar' ? 'رفض' : 'rejected', name: analytics?.rankings?.highestRejection?.name, tint: 'bg-[#fbe9ea] border-[#f5c6cb]', text: 'text-[#d13b4c]' },
   ];
 
   const profitFlow = [
-    { label: locale === 'ar' ? 'إيراد التوصيل' : 'Delivered Revenue', value: `+${fmt(fin.deliveredRevenue)}`, cls: 'text-green-700 bg-green-50 border-green-200' },
-    { label: locale === 'ar' ? 'تكلفة البضاعة' : 'COGS', value: `-${fmt(fin.costOfGoodsSold)}`, cls: 'text-red-700 bg-red-50 border-red-200' },
-    { label: locale === 'ar' ? 'الشحن' : 'Shipping', value: `-${fmt(fin.shippingCosts)}`, cls: 'text-red-700 bg-red-50 border-red-200' },
-    { label: locale === 'ar' ? 'العمولات' : 'Commissions', value: `-${fmt(fin.moderatorCommissions)}`, cls: 'text-red-700 bg-red-50 border-red-200' },
-    { label: locale === 'ar' ? 'المصروفات' : 'Expenses', value: `-${fmt(fin.operationalExpenses)}`, cls: 'text-red-700 bg-red-50 border-red-200' },
+    { label: locale === 'ar' ? 'إيراد التوصيل' : 'Delivered Revenue', value: `+${fmt(fin.deliveredRevenue)}`, cls: 'text-[#25b865] bg-emerald-100 border-0' },
+    { label: locale === 'ar' ? 'تكلفة البضاعة' : 'COGS', value: `-${fmt(fin.costOfGoodsSold)}`, cls: 'text-[#d13b4c] bg-[#fbe9ea] border-[#f5c6cb]' },
+    { label: locale === 'ar' ? 'الشحن' : 'Shipping', value: `-${fmt(fin.shippingCosts)}`, cls: 'text-[#d13b4c] bg-[#fbe9ea] border-[#f5c6cb]' },
+    { label: locale === 'ar' ? 'العمولات' : 'Commissions', value: `-${fmt(fin.moderatorCommissions)}`, cls: 'text-[#d13b4c] bg-[#fbe9ea] border-[#f5c6cb]' },
+    { label: locale === 'ar' ? 'المصروفات' : 'Expenses', value: `-${fmt(fin.operationalExpenses)}`, cls: 'text-[#d13b4c] bg-[#fbe9ea] border-[#f5c6cb]' },
   ];
 
   return (
@@ -122,8 +149,8 @@ export default function DashboardPage() {
         {/* ─── Header ─── */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.dashboard}</h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.dashboard}</h1>
+            <p className="text-xs text-[#6b7177] mt-1">
               {locale === 'ar'
                 ? 'متابعة المبيعات والتكاليف وأداء الفريق والأرباح الحقيقية — لحظة بلحظة'
                 : 'Real-time sales, cost analysis, team performance & real net profit'}
@@ -132,13 +159,13 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Period selector */}
-            <div className="bg-white border border-slate-200 rounded-xl p-1 flex text-xs font-medium text-slate-600 shadow-xs">
+            <div className="bg-white border border-[#eef0f3] rounded-xl p-1 flex text-xs font-medium text-[#4b5675] shadow-xs">
               {PERIODS.map((p) => (
                 <button
                   key={p.key}
                   onClick={() => setPeriod(p.key)}
                   className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    period === p.key ? 'bg-red-600 text-white font-bold shadow-sm' : 'hover:bg-slate-100'
+                    period === p.key ? 'bg-[#d13b4c] text-white font-bold shadow-sm' : 'hover:bg-[#f3f4f6]'
                   }`}
                 >
                   {locale === 'ar' ? p.ar : p.en}
@@ -149,13 +176,13 @@ export default function DashboardPage() {
             <Button
               variant="outline"
               onClick={() => setAiModalOpen(true)}
-              className="items-center bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+              className="items-center bg-emerald-50 text-[#25b865] border-[#bfe8d0] hover:bg-emerald-100"
             >
               <Sparkles className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
             </Button>
 
-            <Button onClick={() => setCreateModalOpen(true)} className="bg-red-600 hover:bg-red-700 items-center">
+            <Button onClick={() => setCreateModalOpen(true)} className="bg-[#d13b4c] hover:bg-[#d13b4c]/85 items-center">
               <Plus className="w-4 h-4" />
               <span>طلب سريع</span>
             </Button>
@@ -164,7 +191,7 @@ export default function DashboardPage() {
 
         {/* ─── AI Executive Banner ─── */}
         {canFinance && (
-          <div className="relative overflow-hidden bg-gradient-to-l rtl:bg-gradient-to-r from-red-700 via-red-800 to-zinc-900 rounded-2xl p-5 text-white shadow-md">
+          <div className="relative overflow-hidden bg-gradient-to-l rtl:bg-gradient-to-r from-[#3e97ff] to-[#0b0c10] rounded-2xl p-5 text-white shadow-md">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="p-2.5 rounded-xl bg-white/10 border border-white/15 shrink-0">
@@ -179,7 +206,7 @@ export default function DashboardPage() {
                       {locale === 'ar' ? 'مبني على بيانات حقيقية' : 'Grounded on real data'}
                     </span>
                   </div>
-                  <p className="text-sm mt-1.5 max-w-3xl leading-relaxed text-red-50">
+                  <p className="text-sm mt-1.5 max-w-3xl leading-relaxed text-white/90">
                     {locale === 'ar' ? (
                       <>
                         إيراد التوصيل <strong className="text-white">{fmt(fin.deliveredRevenue)}</strong> — صافي ربح حقيقي{' '}
@@ -199,7 +226,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <Link href="/ai-assistant" className="shrink-0">
-                <Button size="sm" variant="secondary" className="bg-white text-red-800 hover:bg-red-50 border-0">
+                <Button size="sm" variant="secondary" className="bg-white text-[#3e97ff] hover:bg-blue-50 border-0">
                   {locale === 'ar' ? 'المستشار الذكي' : 'AI Advisor'}
                   <ArrowRight className={`w-3.5 h-3.5 ${isRtl ? '' : 'rotate-180'}`} />
                 </Button>
@@ -211,60 +238,60 @@ export default function DashboardPage() {
         {/* ─── KPI Cards ─── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {canFinance && (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+            <div className="bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500">{t.netProfit}</span>
-                <div className="p-2 rounded-xl bg-green-50 border border-green-100">
-                  <Wallet className="w-5 h-5 text-green-600" />
+                <span className="text-[11px] font-semibold text-[#6b7177]">{t.netProfit}</span>
+                <div className="h-14 w-14 rounded-[10px] bg-emerald-100 text-[#25b865] flex items-center justify-center">
+                  <Wallet className="w-6 h-6" />
                 </div>
               </div>
-              <div className="mt-2.5 text-2xl font-black text-slate-900">{fmt(fin.netProfit)}</div>
+              <div className="mt-2.5 text-2xl font-black text-[#252f4a]">{fmt(fin.netProfit)}</div>
               <div className="mt-1.5 flex items-center gap-1.5">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#25b865] border-0">
                   {fin.profitMargin}%
                 </span>
-                <span className="text-[11px] text-slate-400">{t.profitMargin}</span>
+                <span className="text-[11px] text-[#9ca3af]">{t.profitMargin}</span>
               </div>
             </div>
           )}
 
           {canFinance && (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+            <div className="bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500">{t.deliveredRevenue}</span>
-                <div className="p-2 rounded-xl bg-blue-50 border border-blue-100">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                <span className="text-[11px] font-semibold text-[#6b7177]">{t.deliveredRevenue}</span>
+                <div className="h-14 w-14 rounded-[10px] bg-blue-100 text-[#3e97ff] flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6" />
                 </div>
               </div>
-              <div className="mt-2.5 text-2xl font-black text-slate-900">{fmt(fin.deliveredRevenue)}</div>
-              <p className="mt-1.5 text-[11px] text-slate-400">
+              <div className="mt-2.5 text-2xl font-black text-[#252f4a]">{fmt(fin.deliveredRevenue)}</div>
+              <p className="mt-1.5 text-[11px] text-[#9ca3af]">
                 {counts.delivered} {locale === 'ar' ? 'طلب موصّل' : 'delivered orders'}
               </p>
             </div>
           )}
 
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+          <div className="bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500">{t.confirmationRate}</span>
-              <div className="p-2 rounded-xl bg-purple-50 border border-purple-100">
-                <Percent className="w-5 h-5 text-purple-600" />
+              <span className="text-[11px] font-semibold text-[#6b7177]">{t.confirmationRate}</span>
+              <div className="h-14 w-14 rounded-[10px] bg-[#02a0e4]/10 text-[#02a0e4] flex items-center justify-center">
+                <Percent className="w-6 h-6" />
               </div>
             </div>
-            <div className="mt-2.5 text-2xl font-black text-slate-900">{rates.confirmationRate}%</div>
-            <p className="mt-1.5 text-[11px] text-slate-400">
+            <div className="mt-2.5 text-2xl font-black text-[#252f4a]">{rates.confirmationRate}%</div>
+            <p className="mt-1.5 text-[11px] text-[#9ca3af]">
               {counts.confirmed} / {counts.total} {t.totalOrders}
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+          <div className="bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500">{t.deliveryRate}</span>
-              <div className="p-2 rounded-xl bg-amber-50 border border-amber-100">
-                <Truck className="w-5 h-5 text-amber-600" />
+              <span className="text-[11px] font-semibold text-[#6b7177]">{t.deliveryRate}</span>
+              <div className="h-14 w-14 rounded-[10px] bg-amber-100 text-[#e49e3d] flex items-center justify-center">
+                <Truck className="w-6 h-6" />
               </div>
             </div>
-            <div className="mt-2.5 text-2xl font-black text-slate-900">{rates.deliveryRate}%</div>
-            <p className="mt-1.5 text-[11px] text-slate-400">
+            <div className="mt-2.5 text-2xl font-black text-[#252f4a]">{rates.deliveryRate}%</div>
+            <p className="mt-1.5 text-[11px] text-[#9ca3af]">
               {counts.delivered} / {counts.confirmed} {t.confirmedOrders}
             </p>
           </div>
@@ -276,7 +303,7 @@ export default function DashboardPage() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-red-600" />
+                  <DollarSign className="w-4 h-4 text-[#d13b4c]" />
                   {locale === 'ar' ? 'معادلة صافي الربح الحقيقي' : 'Real Net Profit Breakdown'}
                 </span>
               }
@@ -295,13 +322,13 @@ export default function DashboardPage() {
                       <span className="block text-sm font-black mt-0.5" dir="ltr">{f.value}</span>
                     </div>
                     {i < profitFlow.length - 1 && (
-                      <Minus className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                      <Minus className="w-3.5 h-3.5 text-[#c3c8d4] shrink-0" />
                     )}
                   </React.Fragment>
                 ))}
-                <Equal className="w-4 h-4 text-slate-400 shrink-0" />
-                <div className="px-4 py-2.5 rounded-xl bg-zinc-900 border border-red-500/40 text-center">
-                  <span className="block text-[10px] font-bold text-red-300">
+                <Equal className="w-4 h-4 text-[#9ca3af] shrink-0" />
+                <div className="px-4 py-2.5 rounded-xl bg-[#3e97ff] text-center">
+                  <span className="block text-[10px] font-bold text-white/80">
                     {locale === 'ar' ? 'صافي الربح' : 'NET PROFIT'}
                   </span>
                   <span className="block text-base font-black text-white mt-0.5" dir="ltr">{fmt(fin.netProfit)}</span>
@@ -314,10 +341,10 @@ export default function DashboardPage() {
         {/* ─── Order Status Tiles ─── */}
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
           {statusTiles.map((s) => (
-            <div key={s.label} className="bg-white rounded-xl border border-slate-200/80 p-3.5 text-center shadow-xs">
+            <div key={s.label} className="bg-white rounded-xl border border-[#eef0f3]/80 p-3.5 text-center shadow-xs">
               <span className={`inline-block w-2 h-2 rounded-full ${s.dot} mb-1.5`} />
-              <span className="block text-[10px] font-semibold text-slate-500 leading-tight">{s.label}</span>
-              <span className={`block text-xl font-black mt-1 ${s.value > 0 ? s.color : 'text-slate-300'}`}>
+              <span className="block text-[10px] font-semibold text-[#6b7177] leading-tight">{s.label}</span>
+              <span className={`block text-xl font-black mt-1 ${s.value > 0 ? s.color : 'text-[#c3c8d4]'}`}>
                 {s.value}
               </span>
             </div>
@@ -330,12 +357,12 @@ export default function DashboardPage() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-red-500" />
+                  <Flame className="w-4 h-4 text-[#d13b4c]" />
                   {locale === 'ar' ? 'ترتيب المنتجات والأرباح' : 'Product Rankings & Profit'}
                 </span>
               }
               action={
-                <Link href="/products" className="text-xs text-red-600 font-medium hover:underline">
+                <Link href="/products" className="text-xs text-[#d13b4c] font-medium hover:underline">
                   {locale === 'ar' ? 'المنتجات ←' : 'View Products →'}
                 </Link>
               }
@@ -347,7 +374,7 @@ export default function DashboardPage() {
                     <span className="text-lg">{r.icon}</span>
                     <div>
                       <p className={`text-[10px] font-bold uppercase tracking-wide ${r.text}`}>{r.label}</p>
-                      <p className="text-sm font-bold text-slate-900 line-clamp-1">
+                      <p className="text-sm font-bold text-[#252f4a] line-clamp-1">
                         {r.name ? productName(r.name, locale) : '—'}
                       </p>
                     </div>
@@ -365,45 +392,45 @@ export default function DashboardPage() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-amber-500" />
+                  <Award className="w-4 h-4 text-[#e49e3d]" />
                   {t.moderatorLeaderboard}
                 </span>
               }
               action={
-                <Link href="/moderators" className="text-xs text-red-600 font-medium hover:underline">
+                <Link href="/moderators" className="text-xs text-[#d13b4c] font-medium hover:underline">
                   {locale === 'ar' ? 'الفريق ←' : 'View Team →'}
                 </Link>
               }
             />
             <CardContent className="p-0">
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[#eef0f3]">
                 {analytics?.moderatorLeaderboard?.map((mod: any, idx: number) => (
                   <div key={mod.id} className="px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span
                         className={`w-7 h-7 rounded-full text-xs font-black flex items-center justify-center ${
                           idx === 0
-                            ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-300'
+                            ? 'bg-amber-100 text-[#c07f2a] ring-2 ring-amber-300'
                             : idx === 1
-                            ? 'bg-slate-200 text-slate-700'
-                            : 'bg-slate-100 text-slate-500'
+                            ? 'bg-[#e8eaef] text-[#4b5675]'
+                            : 'bg-[#f3f4f6] text-[#6b7177]'
                         }`}
                       >
                         {idx + 1}
                       </span>
                       <div>
-                        <p className="text-sm font-bold text-slate-900">{mod.name}</p>
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-sm font-bold text-[#252f4a]">{mod.name}</p>
+                        <p className="text-[11px] text-[#9ca3af]">
                           {mod.totalOrders} {locale === 'ar' ? 'طلب' : 'orders'} • {mod.confirmedOrders}{' '}
                           {locale === 'ar' ? 'مؤكد' : 'confirmed'}
                         </p>
                       </div>
                     </div>
                     <div className="text-end">
-                      <span className="text-[11px] font-bold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                      <span className="text-[11px] font-bold text-[#25b865] bg-emerald-100 border-0 px-2 py-0.5 rounded-full">
                         {mod.confirmationRate}%
                       </span>
-                      <p className="text-[11px] font-semibold text-slate-600 mt-1" dir="ltr">
+                      <p className="text-[11px] font-semibold text-[#4b5675] mt-1" dir="ltr">
                         ${mod.sales.toFixed(2)}
                       </p>
                     </div>
@@ -419,7 +446,7 @@ export default function DashboardPage() {
           <CardHeader
             title={
               <span className="flex items-center gap-2">
-                <ShoppingBag className="w-4 h-4 text-red-600" />
+                <ShoppingBag className="w-4 h-4 text-[#d13b4c]" />
                 {t.recentOrders}
               </span>
             }
@@ -432,7 +459,7 @@ export default function DashboardPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-start text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3 text-start">{t.thOrderNumber}</th>
                     <th className="px-6 py-3 text-start">{t.thProduct}</th>
@@ -442,14 +469,14 @@ export default function DashboardPage() {
                     <th className="px-6 py-3 text-start">{t.thDate}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#eef0f3]">
                   {analytics?.orders?.slice(0, 8).map((order: any) => (
                     <tr
                       key={order.id}
-                      className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                      className="hover:bg-[#f8f9fa] transition-colors cursor-pointer"
                       onClick={() => setSelectedOrderId(order.id)}
                     >
-                      <td className="px-6 py-3 font-bold text-red-600">{order.orderNumber}</td>
+                      <td className="px-6 py-3 font-bold text-[#d13b4c]">{order.orderNumber}</td>
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-2.5">
                           <ProductThumb
@@ -458,21 +485,21 @@ export default function DashboardPage() {
                             size="sm"
                           />
                           <div>
-                            <p className="font-semibold text-slate-800 line-clamp-1 max-w-[200px]">
+                            <p className="font-semibold text-[#252f4a] line-clamp-1 max-w-[200px]">
                               {order.productNameSnapshot || order.product?.name}
                             </p>
-                            <p className="text-[11px] text-slate-400">
+                            <p className="text-[11px] text-[#9ca3af]">
                               {order.customer?.fullName} • {order.quantity} {t.units}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-3 font-bold text-slate-900" dir="ltr">
+                      <td className="px-6 py-3 font-bold text-[#252f4a]" dir="ltr">
                         {fmt(order.totalAmount)}
                       </td>
                       <td className="px-6 py-3"><OrderStatusBadge status={order.status} /></td>
-                      <td className="px-6 py-3 text-slate-600">{order.moderator?.name || '—'}</td>
-                      <td className="px-6 py-3 text-slate-400 whitespace-nowrap">
+                      <td className="px-6 py-3 text-[#4b5675]">{order.moderator?.name || '—'}</td>
+                      <td className="px-6 py-3 text-[#9ca3af] whitespace-nowrap">
                         {format(new Date(order.createdAt), 'MMM d, HH:mm')}
                       </td>
                     </tr>

@@ -44,7 +44,17 @@ export function rateLimit(
 }
 
 export function getClientIp(req: Request): string {
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0].trim();
-  return req.headers.get('x-real-ip') || 'unknown';
+  // Only trust proxy headers when the deployment explicitly sits behind a
+  // trusted reverse proxy (Coolify) that sets TRUST_PROXY=true. Without it,
+  // x-forwarded-for / x-real-ip are client-spoofable and must be ignored.
+  if (process.env.TRUST_PROXY === 'true') {
+    const fwd = req.headers.get('x-forwarded-for');
+    if (fwd) return fwd.split(',')[0].trim();
+    return req.headers.get('x-real-ip') || 'local';
+  }
+  // Next.js route handlers do not expose the raw socket IP. Without a
+  // trusted proxy every client therefore shares one conservative bucket
+  // ('local') — a deliberate SAFE default for an internet-exposed single
+  // node: rate limits cannot be bypassed by header spoofing.
+  return 'local';
 }

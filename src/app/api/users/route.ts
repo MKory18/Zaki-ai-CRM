@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requirePermission, hashPassword } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { ASSIGNABLE_ROLES, UserRole } from '@/types/auth';
+import { requirePermission } from '@/lib/authorization';
 
 const createUserSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80),
@@ -70,8 +72,7 @@ export async function POST(req: Request) {
     if ((error as { code?: string })?.code === 'P2002') {
       return NextResponse.json({ error: 'هذا البريد الإلكتروني مسجل مسبقاً' }, { status: 409 });
     }
-    const message = error instanceof Error ? error.message : 'حدث خطأ داخلي';
-    return NextResponse.json({ error: message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }
 
@@ -140,6 +141,6 @@ export async function GET(req: Request) {
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

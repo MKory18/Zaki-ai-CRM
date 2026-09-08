@@ -57,24 +57,24 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-[#f3f4f6] flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <img src="/logo.svg" alt="Zaki AI" className="w-20 h-16 object-contain" />
-          <h1 className="text-2xl font-bold tracking-tight text-white">Zaki AI Store</h1>
-          <p className="text-xs text-zinc-500">
+          <h1 className="text-2xl font-semibold text-[#252f4a]">Zaki AI Store</h1>
+          <p className="text-xs text-[#6b7177]">
             نظام المبيعات والطلبات والأرباح والذكاء الاصطناعي
           </p>
         </div>
 
-        <Card className="shadow-2xl border-zinc-800 bg-zinc-900">
+        <Card className="shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
           <CardContent className="p-6 space-y-4">
             {error && (
               <div
                 className={`p-3 text-xs rounded-lg flex items-start space-x-2 rtl:space-x-reverse ${
                   pendingFlag
-                    ? 'bg-amber-950/50 border border-amber-900 text-amber-300'
-                    : 'bg-red-950/50 border border-red-900 text-red-300'
+                    ? 'bg-[#fdf4e8] border border-[#f9e6cc] text-[#e49e3d]'
+                    : 'bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c]'
                 }`}
               >
                 {pendingFlag ? (
@@ -103,7 +103,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-zinc-950 border-zinc-700 text-white"
+                className="bg-white"
               />
 
               <Input
@@ -112,25 +112,25 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-zinc-950 border-zinc-700 text-white"
+                className="bg-white"
               />
 
               <div className="flex items-center justify-between text-xs">
-                <label className="flex items-center space-x-2 rtl:space-x-reverse text-zinc-400 cursor-pointer">
+                <label className="flex items-center space-x-2 rtl:space-x-reverse text-[#4b5675] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={remember}
                     onChange={(e) => setRemember(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-zinc-600 bg-zinc-950 accent-red-600"
+                    className="w-3.5 h-3.5 rounded border-[#eef0f3] bg-white accent-[#3e97ff]"
                   />
                   <span>تذكرني</span>
                 </label>
-                <Link href="/forgot-password" className="text-red-400 hover:underline">
+                <Link href="/forgot-password" className="text-[#3e97ff] hover:underline">
                   نسيت كلمة المرور؟
                 </Link>
               </div>
 
-              <Button type="submit" loading={loading} className="w-full bg-red-600 hover:bg-red-700">
+              <Button type="submit" loading={loading} className="w-full">
                 <LogIn className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 تسجيل الدخول
               </Button>
@@ -138,9 +138,9 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-zinc-500">
+        <p className="text-center text-xs text-[#6b7177]">
           ليس لديك حساب؟{' '}
-          <Link href="/register" className="text-red-400 font-semibold hover:underline">
+          <Link href="/register" className="text-[#3e97ff] font-semibold hover:underline">
             أنشئ حساباً جديداً
           </Link>{' '}
           — سيكون بانتظار موافقة المدير

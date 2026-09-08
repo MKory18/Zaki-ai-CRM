@@ -22,6 +22,19 @@ import {
   ChevronRight,
   UserCog,
   CircleUser,
+  ShieldCheck,
+  Lock,
+  Building2,
+  UserPlus,
+  Handshake,
+  KanbanSquare,
+  ListChecks,
+  Activity,
+  Calendar,
+  StickyNote,
+  FileText,
+  BarChart3,
+  Settings2,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
@@ -38,7 +51,9 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
     { href: '/inventory', label: t.inventory, icon: Boxes, permission: 'inventory.manage' },
     { href: '/offers', label: t.offers, icon: Tag, permission: 'offers.manage' },
     { href: '/moderators', label: t.moderators, icon: Headphones, permission: 'moderators.manage' },
-    { href: '/users', label: 'المستخدمون والأدوار', icon: UserCog, permission: 'users.manage' },
+    { href: '/users', label: t.employees, icon: UserCog, permission: 'users.manage' },
+    { href: '/roles', label: t.roles, icon: ShieldCheck, permission: 'audit.view' },
+    { href: '/permissions', label: 'الصلاحيات', icon: Lock, permission: 'audit.view' },
     { href: '/analytics', label: t.analytics, icon: TrendingUp, permission: 'reports.view' },
     { href: '/finance', label: t.finance, icon: DollarSign, permission: 'finance.view' },
     { href: '/ai-assistant', label: t.aiAssistant, icon: Sparkles, permission: 'ai.use', badge: 'AI' },
@@ -48,8 +63,32 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
     { href: '/settings', label: t.settings, icon: Settings, permission: 'settings.manage' },
   ];
 
+  const crmNavItems = [
+    { href: '/dashboards/crm', label: 'لوحة CRM', icon: LayoutDashboard, permission: 'crm.view' },
+    { href: '/dashboards/crm/contacts', label: 'جهات الاتصال', icon: Users, permission: 'crm.view' },
+    { href: '/dashboards/crm/companies', label: 'الشركات', icon: Building2, permission: 'crm.view' },
+    { href: '/dashboards/crm/leads', label: 'العملاء المحتملون', icon: UserPlus, permission: 'crm.view' },
+    { href: '/dashboards/crm/deals', label: 'الصفقات', icon: Handshake, permission: 'crm.view' },
+    { href: '/dashboards/crm/pipeline', label: 'خط الصفقات', icon: KanbanSquare, permission: 'crm.view' },
+    { href: '/dashboards/crm/tasks', label: 'المهام', icon: ListChecks, permission: 'crm.view' },
+    { href: '/dashboards/crm/activities', label: 'الأنشطة', icon: Activity, permission: 'crm.view' },
+    { href: '/dashboards/crm/calendar', label: 'التقويم', icon: Calendar, permission: 'crm.view' },
+    { href: '/dashboards/crm/notes', label: 'الملاحظات', icon: StickyNote, permission: 'crm.view' },
+    { href: '/dashboards/crm/invoices', label: 'الفواتير', icon: FileText, permission: 'crm.view' },
+    { href: '/dashboards/crm/products', label: 'المنتجات', icon: Package, permission: 'crm.view' },
+    { href: '/dashboards/crm/reports', label: 'التقارير', icon: BarChart3, permission: 'crm.view' },
+    { href: '/dashboards/crm/settings', label: 'إعدادات CRM', icon: Settings2, permission: 'crm.view' },
+  ];
+
   // Filter based on user role and permissions
   const visibleNavItems = navItems.filter((item) => {
+    if (!currentUser) return true;
+    if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'COMPANY_ADMIN') return true;
+    if (item.permission === null) return true;
+    return currentUser.permissions.includes(item.permission as any);
+  });
+
+  const visibleCrmItems = crmNavItems.filter((item) => {
     if (!currentUser) return true;
     if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'COMPANY_ADMIN') return true;
     if (item.permission === null) return true;
@@ -61,28 +100,28 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
       {/* Mobile Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
         className={clsx(
-          'fixed top-0 bottom-0 z-40 flex flex-col w-64 bg-zinc-950 text-zinc-300 border-red-900 transition-transform duration-200 md:translate-x-0',
-          isRtl ? 'right-0 border-l' : 'left-0 border-r',
+          'fixed top-0 bottom-0 z-40 flex flex-col w-[280px] bg-[#0b0c10] text-[#6b7177] transition-transform duration-200 md:translate-x-0',
+          isRtl ? 'right-0' : 'left-0',
           mobileOpen ? 'translate-x-0' : isRtl ? 'translate-x-full md:translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between h-16 px-5 border-b border-zinc-800/80 bg-zinc-900/40">
+        <div className="flex items-center h-[72px] px-5 border-b border-[#1a1c22] shrink-0">
           <Link href="/" className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="Zaki AI" className="w-11 h-9 object-contain" />
             <div>
-              <span className="font-black text-white tracking-wide text-base leading-tight block" dir="ltr">
-                Zaki <span className="text-cyan-300">AI</span> Store
+              <span className="font-bold text-white tracking-wide text-base leading-tight block" dir="ltr">
+                Zaki <span className="text-[#3e97ff]">AI</span> Store
               </span>
-              <span className="block text-[10px] text-cyan-400/80 font-semibold uppercase tracking-[0.18em]" dir="ltr">
+              <span className="block text-[10px] text-[#6b7177] font-semibold uppercase tracking-[0.18em]" dir="ltr">
                 Intelligent Systems
               </span>
             </div>
@@ -90,55 +129,73 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
         </div>
 
         {/* Navigation List */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {visibleNavItems.map((item) => {
+        <div className="flex-1 overflow-y-auto sidebar-scroll py-4 space-y-0.5">
+          <p className="px-5 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#4a4f57]">
+            Menu
+          </p>
+          {[...visibleNavItems, ...visibleCrmItems.map((item) => ({ ...item, isCrm: true }))].map((item, idx) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isCrm = (item as any).isCrm === true;
+            const crmDashboard = isCrm && item.href === '/dashboards/crm';
+            const isActive = isCrm
+              ? crmDashboard
+                ? pathname === item.href
+                : pathname === item.href || pathname.startsWith(item.href + '/')
+              : pathname === item.href;
+            const showGroupLabel = isCrm && idx === visibleNavItems.length;
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={clsx(
-                  'flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors group',
-                  isActive
-                    ? 'bg-red-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white hover:bg-red-950/60'
+              <React.Fragment key={item.href}>
+                {showGroupLabel && (
+                  <p className="px-5 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#4a4f57]">
+                    CRM
+                  </p>
                 )}
-              >
-                <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                  <Icon
-                    className={clsx(
-                      'w-5 h-5 transition-colors',
-                      isActive ? 'text-white' : 'text-slate-400 group-hover:text-red-400'
-                    )}
-                  />
-                  <span>{item.label}</span>
-                </div>
-                {item.badge ? (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-gradient-to-r from-red-500 to-red-500 text-white shadow-xs">
-                    {item.badge}
-                  </span>
-                ) : (
-                  isActive && <ChevronRight className="w-4 h-4 opacity-70 rtl:rotate-180" />
-                )}
-              </Link>
+                <Link
+                  href={item.href}
+                  onClick={onClose}
+                  className={clsx(
+                    'flex items-center justify-between mx-3 px-2 py-2.5 rounded-[5px] text-sm font-medium transition-colors group',
+                    isActive
+                      ? 'bg-[#3e97ff] text-white'
+                      : 'text-[#6b7177] hover:text-white hover:bg-[#16181e]'
+                  )}
+                >
+                  <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                    <span
+                      className={clsx(
+                        'w-8 h-8 rounded-[5px] flex items-center justify-center shrink-0 transition-colors',
+                        isActive ? 'bg-white/10 text-white' : 'bg-[#14161b] text-[#6b7177] group-hover:text-white'
+                      )}
+                    >
+                      <Icon className="w-[18px] h-[18px]" />
+                    </span>
+                    <span>{item.label}</span>
+                  </div>
+                  {(item as any).badge ? (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#3e97ff] text-white">
+                      {(item as any).badge}
+                    </span>
+                  ) : (
+                    isActive && <ChevronRight className="w-4 h-4 opacity-70 rtl:rotate-180" />
+                  )}
+                </Link>
+              </React.Fragment>
             );
           })}
         </div>
 
         {/* Current User Info / Company Badge */}
-        <div className="p-4 border-t border-zinc-800/80 bg-zinc-900/40">
+        <div className="p-3 border-t border-[#1a1c22]">
           <div className="flex items-center space-x-3 rtl:space-x-reverse">
-            <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-slate-200 font-bold text-xs uppercase">
+            <div className="w-8 h-8 rounded-full bg-[#14161b] border border-[#26282e] flex items-center justify-center text-[#9aa0aa] font-bold text-xs uppercase">
               {currentUser?.name ? currentUser.name.slice(0, 2) : 'SF'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-white truncate">
                 {currentUser?.name || 'BioDerma User'}
               </p>
-              <p className="text-[10px] text-zinc-500 truncate">
+              <p className="text-[10px] text-[#6b7177] truncate">
                 {currentUser?.role || 'COMPANY_ADMIN'} • {currentUser?.companyName || 'BioDerma'}
               </p>
             </div>

@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
 import { saveProductImage, validateImageFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
+import { requirePermission } from '@/lib/authorization';
+import { rateLimit } from '@/lib/rate-limit';
+
+// Batch limits: hard cap on number of files and total upload size per request
+const MAX_FILES_PER_REQUEST = 8;
+const MAX_TOTAL_BYTES = 25 * 1024 * 1024; // 25MB summed across all files
+// Rate limit: 20 uploads per user per 5 minutes
+const UPLOAD_RATE_LIMIT = 20;
+const UPLOAD_RATE_WINDOW_MS = 5 * 60 * 1000;
 
 async function getOwnedProduct(companyId: string, productId: string) {
   const product = await db.product.findUnique({ where: { id: productId } });
@@ -20,6 +30,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { user, companyId } = await requireCompanyTenant();
     await requirePermission('products.manage');
 
+    // Rate limit uploads per user (20 / 5 minutes)
+    const rl = rateLimit(`uploads:${user.id}`, UPLOAD_RATE_LIMIT, UPLOAD_RATE_WINDOW_MS);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'عدد محاولات رفع الصور كبير جداً، يرجى المحاولة لاحقاً' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+      );
+    }
+
     const product = await getOwnedProduct(companyId, productId);
     if (!product) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
@@ -29,6 +48,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const files = formData.getAll('files') as File[];
     if (files.length === 0) {
       return NextResponse.json({ error: 'لم يتم اختيار أي صورة' }, { status: 400 });
+    }
+
+    // Batch limits enforced BEFORE reading any arrayBuffers into memory
+    if (files.length > MAX_FILES_PER_REQUEST) {
+      return NextResponse.json({ error: 'عدد أو حجم الصور يتجاوز الحد المسموح' }, { status: 400 });
+    }
+    const totalBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
+    if (totalBytes > MAX_TOTAL_BYTES) {
+      return NextResponse.json({ error: 'عدد أو حجم الصور يتجاوز الحد المسموح' }, { status: 400 });
     }
 
     const existingCount = await db.productImage.count({ where: { productId } });
@@ -99,7 +127,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     return NextResponse.json({ success: true, images: created });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }
 
@@ -165,6 +193,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({ success: true, images });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

@@ -1,6 +1,8 @@
 ﻿import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
+import { requirePermission } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
@@ -18,6 +20,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ logs });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

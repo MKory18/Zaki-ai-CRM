@@ -41,17 +41,17 @@ function ResetForm() {
 
   if (!token) {
     return (
-      <div className="p-3 bg-red-950/50 border border-red-900 text-red-300 text-xs rounded-lg">
+      <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg">
         رابط إعادة التعيين غير صالح — اطلب رابطاً جديداً من صفحة استعادة كلمة المرور.
       </div>
     );
   }
 
   return (
-    <Card className="shadow-2xl border-zinc-800 bg-zinc-900">
+    <Card className="shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
       <CardContent className="p-6 space-y-4">
         {error && (
-          <div className="p-3 bg-red-950/50 border border-red-900 text-red-300 text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
+          <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -64,7 +64,7 @@ function ResetForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="bg-zinc-950 border-zinc-700 text-white"
+            className="bg-white"
           />
           <Input
             label="تأكيد كلمة المرور *"
@@ -72,9 +72,9 @@ function ResetForm() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-            className="bg-zinc-950 border-zinc-700 text-white"
+            className="bg-white"
           />
-          <Button type="submit" loading={loading} className="w-full bg-red-600 hover:bg-red-700">
+          <Button type="submit" loading={loading} className="w-full">
             <LockKeyhole className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
             تعيين كلمة المرور الجديدة
           </Button>
@@ -86,19 +86,19 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-[#f3f4f6] flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <img src="/logo.svg" alt="Zaki AI" className="w-20 h-16 object-contain" />
-          <h1 className="text-2xl font-bold tracking-tight text-white">تعيين كلمة مرور جديدة</h1>
+          <h1 className="text-2xl font-semibold text-[#252f4a]">تعيين كلمة مرور جديدة</h1>
         </div>
 
         <Suspense fallback={null}>
           <ResetForm />
         </Suspense>
 
-        <p className="text-center text-xs text-zinc-500">
-          <Link href="/login" className="text-red-400 font-semibold hover:underline">
+        <p className="text-center text-xs text-[#6b7177]">
+          <Link href="/login" className="text-[#3e97ff] font-semibold hover:underline">
             العودة لتسجيل الدخول
           </Link>
         </p>

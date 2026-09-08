@@ -12,19 +12,19 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const variantStyles = {
-    default: 'bg-slate-100 text-slate-800 border-slate-200',
-    success: 'bg-green-50 text-green-700 border-green-200',
-    warning: 'bg-amber-50 text-amber-700 border-amber-200',
-    danger: 'bg-red-50 text-red-700 border-red-200',
-    info: 'bg-blue-50 text-blue-700 border-blue-200',
-    purple: 'bg-purple-50 text-purple-700 border-purple-200',
-    outline: 'bg-transparent text-slate-600 border-slate-300',
+    default: 'bg-[#f8f9fa] text-[#252f4a] border-[#eef0f3]',
+    success: 'bg-[#e8f8ef] text-[#25b865] border-[#d2f0de]',
+    warning: 'bg-[#fdf4e8] text-[#e49e3d] border-[#f9e6cc]',
+    danger: 'bg-[#fbeeef] text-[#d13b4c] border-[#f4d7da]',
+    info: 'bg-[#e7f6fd] text-[#02a0e4] border-[#cfeefa]',
+    purple: 'bg-[#f1edfb] text-[#7c5cd6] border-[#e2d9f5]',
+    outline: 'bg-transparent text-[#4b5675] border-[#eef0f3]',
   };
 
   return (
     <span
       className={clsx(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
+        'inline-flex items-center px-2.5 py-0.5 rounded-[5px] text-xs font-medium border',
         variantStyles[variant],
         className
       )}

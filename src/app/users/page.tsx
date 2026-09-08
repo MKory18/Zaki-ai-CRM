@@ -24,11 +24,14 @@ import {
 import { format } from 'date-fns';
 
 const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: 'مدير أعلى',
+  SUPER_ADMIN: 'مدير النظام',
+  CONFIRMATION_AGENT: 'موظف التأكيد',
+  FOLLOW_UP_AGENT: 'موظف المتابعة',
+  SETTLEMENT_OFFICER: 'مدقق التسويات',
   COMPANY_ADMIN: 'مدير الشركة',
   MANAGER: 'مدير',
-  MODERATOR: 'مودريتور',
-  ACCOUNTANT: 'محاسب',
+  MODERATOR: 'موديريتور',
+  ACCOUNTANT: 'المحاسب',
   DELIVERY_MANAGER: 'مدير التوصيل',
   PENDING_USER: 'بانتظار التعيين',
 };
@@ -59,6 +62,8 @@ export default function UsersManagementPage() {
   const [selectedRole, setSelectedRole] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  // Critical-action confirmation (suspend/disable/role change)
+  const [pendingAction, setPendingAction] = useState<{ action: string; extra?: any; title: string; msg: string } | null>(null);
 
   const loadUsers = useCallback(
     async (pageToLoad = 1) => {
@@ -96,6 +101,18 @@ export default function UsersManagementPage() {
     setManageUser(u);
     setSelectedRole(u.role);
     setModalError(null);
+    setPendingAction(null);
+  };
+
+  /** Critical actions require explicit confirmation (Decision 7 safety) */
+  const requestAction = (action: string, title: string, msg: string, extra: any = {}) => {
+    setPendingAction({ action, extra, title, msg });
+  };
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction) return;
+    await handleAction(pendingAction.action, pendingAction.extra);
+    setPendingAction(null);
   };
 
   const handleAction = async (action: string, extra: any = {}) => {
@@ -127,11 +144,11 @@ export default function UsersManagementPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center space-x-2 rtl:space-x-reverse">
-              <Users className="w-6 h-6 text-red-600" />
+            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a] flex items-center space-x-2 rtl:space-x-reverse">
+              <Users className="w-6 h-6 text-[#d13b4c]" />
               <span>إدارة المستخدمين والأدوار</span>
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-[#6b7177] mt-1">
               مراجعة طلبات التسجيل، تعيين الأدوار، تنشيط/إيقاف الحسابات — كل إجراء يُسجَّل في سجل التدقيق
             </p>
           </div>
@@ -141,19 +158,19 @@ export default function UsersManagementPage() {
         </div>
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">{error}</div>
+          <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-lg">{error}</div>
         )}
 
         {/* Filters */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white border border-[#eef0f3] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative sm:col-span-2">
-            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
             <input
               type="text"
               placeholder="بحث بالاسم أو البريد الإلكتروني..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[#f8f9fa] border border-[#eef0f3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e97ff]/30 focus:border-[#3e97ff]"
             />
           </div>
           <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="text-xs py-2">
@@ -183,7 +200,7 @@ export default function UsersManagementPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">المستخدم</th>
                     <th className="px-6 py-3.5">الدور الحالي</th>
@@ -194,12 +211,12 @@ export default function UsersManagementPage() {
                     <th className="px-6 py-3.5 text-right rtl:text-left">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#eef0f3]">
                   {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={u.id} className="hover:bg-[#f8f9fa] transition-colors">
                       <td className="px-6 py-3.5">
-                        <p className="font-bold text-slate-900">{u.name}</p>
-                        <p className="text-[11px] text-slate-400">{u.email}</p>
+                        <p className="font-bold text-[#252f4a]">{u.name}</p>
+                        <p className="text-[11px] text-[#9ca3af]">{u.email}</p>
                       </td>
                       <td className="px-6 py-3.5">
                         <Badge variant={u.role === 'PENDING_USER' ? 'warning' : u.role === 'SUPER_ADMIN' ? 'purple' : 'info'}>
@@ -209,13 +226,13 @@ export default function UsersManagementPage() {
                       <td className="px-6 py-3.5">
                         <Badge variant={statusVariant(u.status) as any}>{STATUS_LABELS[u.status] || u.status}</Badge>
                       </td>
-                      <td className="px-6 py-3.5 text-slate-500">
+                      <td className="px-6 py-3.5 text-[#6b7177]">
                         {format(new Date(u.createdAt), 'yyyy-MM-dd')}
                       </td>
-                      <td className="px-6 py-3.5 text-slate-500">
+                      <td className="px-6 py-3.5 text-[#6b7177]">
                         {u.lastLoginAt ? format(new Date(u.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—'}
                       </td>
-                      <td className="px-6 py-3.5 text-slate-500">
+                      <td className="px-6 py-3.5 text-[#6b7177]">
                         {u.assignedBy?.name || '—'}
                       </td>
                       <td className="px-6 py-3.5 text-right rtl:text-left">
@@ -230,7 +247,7 @@ export default function UsersManagementPage() {
               </table>
             </div>
 
-            <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <div className="px-6 py-3 border-t border-[#eef0f3] flex items-center justify-between text-xs text-[#6b7177]">
               <span>
                 إجمالي <strong>{pagination.total}</strong> مستخدم
               </span>
@@ -260,12 +277,12 @@ export default function UsersManagementPage() {
         {manageUser && (
           <div className="space-y-5">
             {modalError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">{modalError}</div>
+              <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-lg">{modalError}</div>
             )}
 
             {/* Assign role */}
-            <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50/50">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">تعيين / تغيير الدور</h4>
+            <div className="border border-[#eef0f3] rounded-xl p-4 space-y-3 bg-[#f8f9fa]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#4b5675]">تعيين / تغيير الدور</h4>
               <div className="flex items-end space-x-2 rtl:space-x-reverse">
                 <Select
                   label="الدور الجديد"
@@ -280,40 +297,77 @@ export default function UsersManagementPage() {
                   ))}
                 </Select>
                 <Button
-                  onClick={() => handleAction('assignRole', { role: selectedRole })}
+                  onClick={() =>
+                    requestAction(
+                      'assignRole',
+                      'تغيير الرتبة؟',
+                      'سيتم تسجيل تغيير الرتبة في سجل التدقيق وسيؤثر فوراً على صلاحيات هذا الموظف.',
+                      { role: selectedRole }
+                    )
+                  }
                   loading={actionLoading}
                   disabled={selectedRole === manageUser.role}
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-[#d13b4c] hover:bg-[#d13b4c]/85"
                 >
                   <ShieldCheck className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                   تعيين
                 </Button>
               </div>
               {manageUser.role !== selectedRole && selectedRole !== 'PENDING_USER' && (
-                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                <p className="text-[11px] text-[#c07f2a] bg-amber-50 border border-[#f4dcb8] rounded-lg p-2">
                   سيتم تسجيل تغيير الدور في سجل التدقيق: {ROLE_LABELS[manageUser.role]} → {ROLE_LABELS[selectedRole]}
                 </p>
               )}
             </div>
 
             {/* Status actions */}
-            <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50/50">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">حالة الحساب</h4>
+            <div className="border border-[#eef0f3] rounded-xl p-4 space-y-3 bg-[#f8f9fa]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#4b5675]">حالة الحساب</h4>
               <div className="flex flex-wrap gap-2">
-                {manageUser.status !== 'ACTIVE' && (
+                {manageUser.status === 'PENDING' && (
+                  <Button size="sm" variant="success" loading={actionLoading} onClick={() => handleAction('changeStatus', { status: 'ACTIVE' })}>
+                    <PlayCircle className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                    اعتماد الحساب
+                  </Button>
+                )}
+                {manageUser.status !== 'ACTIVE' && manageUser.status !== 'PENDING' && (
                   <Button size="sm" variant="success" loading={actionLoading} onClick={() => handleAction('changeStatus', { status: 'ACTIVE' })}>
                     <PlayCircle className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
                     تنشيط الحساب
                   </Button>
                 )}
                 {manageUser.status !== 'SUSPENDED' && (
-                  <Button size="sm" variant="secondary" loading={actionLoading} onClick={() => handleAction('changeStatus', { status: 'SUSPENDED' })}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={actionLoading}
+                    onClick={() =>
+                      requestAction(
+                        'changeStatus',
+                        'إيقاف المستخدم؟',
+                        'سيفقد هذا الموظف وصوله الفوري للموارد المحمية في النظام. سيتم إنهاء جميع جلساته النشطة.',
+                        { status: 'SUSPENDED' }
+                      )
+                    }
+                  >
                     <ShieldOff className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
                     إيقاف مؤقت
                   </Button>
                 )}
                 {manageUser.status !== 'DISABLED' && (
-                  <Button size="sm" variant="danger" loading={actionLoading} onClick={() => handleAction('changeStatus', { status: 'DISABLED' })}>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    loading={actionLoading}
+                    onClick={() =>
+                      requestAction(
+                        'changeStatus',
+                        'تعطيل المستخدم؟',
+                        'سيتم تعطيل الحساب نهائياً وإنهاء جميع جلساته فوراً.',
+                        { status: 'DISABLED' }
+                      )
+                    }
+                  >
                     <Ban className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
                     تعطيل
                   </Button>
@@ -323,12 +377,53 @@ export default function UsersManagementPage() {
                   إنهاء الجلسات (Force Logout)
                 </Button>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-[#6b7177]">
                 إيقاف/تعطيل الحساب ينهي جميع الجلسات النشطة فوراً عبر إبطال التوكن الحالي.
               </p>
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Critical-action confirmation dialog */}
+      <Modal
+        isOpen={!!pendingAction}
+        onClose={() => setPendingAction(null)}
+        title={pendingAction?.title || ''}
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-[#4b5675] leading-relaxed">{pendingAction?.msg}</p>
+          {pendingAction?.action === 'assignRole' && (
+            <div className="text-xs bg-amber-50 border border-[#f4dcb8] rounded-xl p-3 space-y-1">
+              <p>
+                <span className="text-[#6b7177]">الرتبة الحالية:</span>{' '}
+                <span className="font-bold">{ROLE_LABELS[manageUser?.role] || manageUser?.role}</span>
+              </p>
+              <p>
+                <span className="text-[#6b7177]">الرتبة الجديدة:</span>{' '}
+                <span className="font-bold text-[#d13b4c]">{ROLE_LABELS[pendingAction.extra?.role] || pendingAction.extra?.role}</span>
+              </p>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPendingAction(null)}>
+              إلغاء
+            </Button>
+            <Button
+              size="sm"
+              loading={actionLoading}
+              onClick={confirmPendingAction}
+              className={
+                pendingAction?.action === 'changeStatus' && pendingAction.extra?.status === 'ACTIVE'
+                  ? 'bg-[#25b865] hover:bg-[#25b865]/85'
+                  : 'bg-[#d13b4c] hover:bg-[#d13b4c]/85'
+              }
+            >
+              تأكيد
+            </Button>
+          </div>
+        </div>
       </Modal>
     </AppLayout>
   );

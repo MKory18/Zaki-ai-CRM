@@ -37,11 +37,11 @@ export default function AuditLogsPage() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center space-x-2">
-            <History className="w-6 h-6 text-slate-700" />
+          <h1 className="text-2xl font-bold tracking-tight text-[#252f4a] flex items-center space-x-2">
+            <History className="w-6 h-6 text-[#4b5675]" />
             <span>{t.auditLogs}</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[#6b7177] mt-1">
             Section 29 Complete immutable system audit trail: entity modifications, order mutations, batch creation & security actions
           </p>
         </div>
@@ -51,7 +51,7 @@ export default function AuditLogsPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Timestamp</th>
                     <th className="px-6 py-3.5">User</th>
@@ -61,23 +61,23 @@ export default function AuditLogsPage() {
                     <th className="px-6 py-3.5">Mutation Details</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-mono">
+                <tbody className="divide-y divide-[#eef0f3] font-mono">
                   {logs.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-slate-400 font-sans">
+                      <td colSpan={6} className="py-12 text-center text-[#9ca3af] font-sans">
                         No audit events recorded yet.
                       </td>
                     </tr>
                   ) : (
                     logs.map((l) => (
-                      <tr key={l.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-3.5 text-slate-500">
+                      <tr key={l.id} className="hover:bg-[#f8f9fa] transition-colors">
+                        <td className="px-6 py-3.5 text-[#6b7177]">
                           {format(new Date(l.createdAt), 'MMM d, yyyy HH:mm:ss')}
                         </td>
 
-                        <td className="px-6 py-3.5 font-sans font-medium text-slate-900">
+                        <td className="px-6 py-3.5 font-sans font-medium text-[#252f4a]">
                           {l.user?.name || 'System Auto'}
-                          <span className="block text-[10px] text-slate-400 font-mono">
+                          <span className="block text-[10px] text-[#9ca3af] font-mono">
                             {l.user?.role || 'SYSTEM'}
                           </span>
                         </td>
@@ -86,17 +86,17 @@ export default function AuditLogsPage() {
                           <Badge variant="purple">{l.action}</Badge>
                         </td>
 
-                        <td className="px-6 py-3.5 font-sans font-semibold text-slate-800">
+                        <td className="px-6 py-3.5 font-sans font-semibold text-[#252f4a]">
                           {l.entity}
                         </td>
 
-                        <td className="px-6 py-3.5 text-slate-400 max-w-[120px] truncate">
+                        <td className="px-6 py-3.5 text-[#9ca3af] max-w-[120px] truncate">
                           {l.entityId}
                         </td>
 
-                        <td className="px-6 py-3.5 text-slate-600 font-sans max-w-xs truncate text-[11px]">
+                        <td className="px-6 py-3.5 text-[#4b5675] font-sans max-w-xs truncate text-[11px]">
                           {l.newData ? (
-                            <span title={l.newData} className="bg-slate-100 px-2 py-0.5 rounded">
+                            <span title={l.newData} className="bg-[#f3f4f6] px-2 py-0.5 rounded">
                               {l.newData.slice(0, 60)}...
                             </span>
                           ) : (

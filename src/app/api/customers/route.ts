@@ -1,12 +1,68 @@
 ﻿import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
+import { can, requirePermission } from '@/lib/authorization';
 import { normalizePhoneNumber } from '@/lib/phone';
-import { logAudit } from '@/lib/audit';
+import { logAudit, redactCustomerForAudit } from '@/lib/audit';
+import { apiErrorResponse } from '@/lib/api-error';
+
+/**
+ * Full PII projection for users holding 'customers.view'.
+ * Includes contact details, address, notes and order stats.
+ */
+const FULL_CUSTOMER_SELECT = {
+  id: true,
+  fullName: true,
+  phone: true,
+  rawPhone: true,
+  altPhone: true,
+  address: true,
+  city: true,
+  country: true,
+  notes: true,
+  createdAt: true,
+  updatedAt: true,
+  orders: {
+    select: {
+      id: true,
+      orderNumber: true,
+      totalAmount: true,
+      status: true,
+      createdAt: true,
+      product: { select: { name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  },
+};
+
+/**
+ * Limited projection for agents holding only 'customers.view_basic'
+ * (CONFIRMATION_AGENT / FOLLOW_UP_AGENT): they need name + phone + city
+ * to make calls, but must not see address, notes, altPhone or stats.
+ */
+const BASIC_CUSTOMER_SELECT = {
+  id: true,
+  fullName: true,
+  phone: true,
+  rawPhone: true,
+  city: true,
+  country: true,
+};
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireCompanyTenant();
+
+    // Permission-tiered PII: full data for customers.view, limited
+    // call-relevant fields for customers.view_basic, 403 for everyone else.
+    const canViewFull = can(user, 'customers.view');
+    if (!canViewFull && !can(user, 'customers.view_basic')) {
+      return NextResponse.json(
+        { error: 'Forbidden: missing required permission customers.view' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('q')?.trim();
 
@@ -23,26 +79,14 @@ export async function GET(req: Request) {
 
     const customers = await db.customer.findMany({
       where: whereClause,
-      include: {
-        orders: {
-          select: {
-            id: true,
-            orderNumber: true,
-            totalAmount: true,
-            status: true,
-            createdAt: true,
-            product: { select: { name: true } },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
+      select: canViewFull ? FULL_CUSTOMER_SELECT : BASIC_CUSTOMER_SELECT,
       orderBy: { updatedAt: 'desc' },
       take: 100,
     });
 
-    return NextResponse.json({ customers });
+    return NextResponse.json({ customers, limited: !canViewFull });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }
 
@@ -109,11 +153,13 @@ export async function POST(req: Request) {
       action: 'CUSTOMER_CREATED',
       entity: 'Customer',
       entityId: customer.id,
-      newData: customer,
+      // Audit redaction: PII-heavy fields (address, altPhone, notes)
+      // are stripped before persisting the audit snapshot.
+      newData: redactCustomerForAudit(customer),
     });
 
     return NextResponse.json({ isExisting: false, customer });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

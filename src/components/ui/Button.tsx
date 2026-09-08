@@ -23,19 +23,19 @@ export function Button({
   };
 
   const variantStyles = {
-    primary: 'bg-red-600 text-white hover:bg-red-700 shadow-sm border border-transparent',
-    secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 border border-slate-200',
-    outline: 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-300 shadow-sm',
-    danger: 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm border border-transparent',
-    ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 border border-transparent',
-    success: 'bg-red-600 text-white hover:bg-red-700 shadow-sm border border-transparent',
+    primary: 'bg-[#3e97ff] text-white hover:bg-[#3e97ff]/85 border border-transparent',
+    secondary: 'bg-[#f8f9fa] text-[#252f4a] hover:bg-[#eef0f3] border border-[#eef0f3]',
+    outline: 'bg-white text-[#252f4a] hover:bg-[#f8f9fa] border border-[#eef0f3]',
+    danger: 'bg-[#d13b4c] text-white hover:bg-[#d13b4c]/85 border border-transparent',
+    ghost: 'bg-transparent text-[#4b5675] hover:bg-[#f8f9fa] border border-transparent',
+    success: 'bg-[#25b865] text-white hover:bg-[#25b865]/85 border border-transparent',
   };
 
   return (
     <button
       disabled={disabled || loading}
       className={clsx(
-        'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
+        'inline-flex items-center justify-center font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-[#3e97ff] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
         sizeStyles[size],
         variantStyles[variant],
         className

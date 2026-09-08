@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { OrderStatusBadge } from '@/components/ui/Badge';
 import { Select, Textarea, Input } from '@/components/ui/Input';
 import { ProductThumb } from '@/components/ui/ProductThumb';
+import { useOrderOwnership } from '@/hooks/useOrderOwnership';
+import { OwnershipSection } from '@/components/orders/OwnershipSection';
+import { ConfirmationActions } from '@/components/orders/ConfirmationActions';
+import { ShippingSection } from '@/components/orders/ShippingSection';
 import { useApp } from '@/context/AppContext';
+import { apiFetch } from '@/lib/api-client';
 import { format } from 'date-fns';
 import {
   User,
@@ -26,6 +31,8 @@ import {
   Send,
   ChevronLeft,
   ChevronRight,
+  Lock,
+  Pencil,
 } from 'lucide-react';
 
 /* ─── Status config: Arabic label + color + icon per status ─── */
@@ -89,20 +96,54 @@ interface OrderDetailModalProps {
   onClose: () => void;
   onRefresh: () => void;
   /** Current list filters so prev/next navigation matches the list context */
-  filters?: { q?: string; status?: string; productId?: string; moderatorId?: string };
+  filters?: { q?: string; status?: string; productId?: string; moderatorId?: string; queue?: string };
 }
 
 export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters }: OrderDetailModalProps) {
-  const { t, locale, isRtl } = useApp();
+  const { t, locale, isRtl, currentUser } = useApp();
   const ar = locale === 'ar';
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // 30s tick so lockActive (expiry-based) re-renders and expired locks clear.
+  // Stores the current server clock read inside the interval (not during render)
+  // so render stays pure: expiry comparisons use this cached `nowMs`.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(interval);
+  }, []);
   const [navLoading, setNavLoading] = useState<'prev' | 'next' | null>(null);
   const [navIds, setNavIds] = useState<{ previousOrderId: string | null; nextOrderId: string | null }>({
     previousOrderId: null,
     nextOrderId: null,
   });
+  // Phase C: ownership + editing lock client integration
+  const ownership = useOrderOwnership(orderId);
+
+  // Release the editing lock when the modal closes/unmounts while in edit mode.
+  // keepalive lets the request survive page navigation during unmount.
+  const { inEditMode, releaseLock } = ownership;
+  const releaseLockRef = useRef(releaseLock);
+  useEffect(() => { releaseLockRef.current = releaseLock; }, [releaseLock]);
+
+  useEffect(() => {
+    return () => {
+      if (inEditMode && orderId) {
+        // Exactly ONE release request on unmount — keepalive lets it survive
+        // page navigation during unmount.
+        fetch(`/api/orders/${orderId}/lock`, { method: 'DELETE', keepalive: true }).catch(() => {});
+      }
+    };
+  }, [inEditMode, orderId]);
+  // Also release when the modal is closed without unmounting (stays mounted)
+  useEffect(() => {
+    if (!isOpen && inEditMode && orderId) {
+      releaseLockRef.current(orderId).catch(() => {});
+    }
+  }, [isOpen, inEditMode, orderId]);
 
   const [selectedStatus, setSelectedStatus] = useState('');
   const [statusNote, setStatusNote] = useState('');
@@ -111,12 +152,120 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   const [callNotes, setCallNotes] = useState('');
   const [nextFollowUpDate, setNextFollowUpDate] = useState('');
 
+  // ─── Order data editing form (customer info + price fields) ───
+  // Expiry-based lock state (same rule as the render-time check below) but
+  // available before the early returns for the edit-form open handler.
+  const lockActiveNow =
+    !!order?.lockedById && !!order.lockExpiresAt && new Date(order.lockExpiresAt).getTime() > nowMs;
+  const [editOpen, setEditOpen] = useState(false);
+  const emptyEdit = {
+    customerName: '', customerPhone: '', customerAddress: '',
+    sellingPrice: '', quantity: '', discountAmount: '', shippingCost: '',
+  };
+  const [editForm, setEditForm] = useState(emptyEdit);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<string | null>(null);
+
+  const openEditForm = async () => {
+    if (!order?.id) return;
+    setEditOpen((v) => !v);
+    setEditError(null);
+    setEditSuccess(null);
+    if (!editOpen) {
+      // Reuse the same backend lock as status editing so concurrent editors are blocked
+      if (!(order.lockedById === currentUser?.id && lockActiveNow)) {        const lock = await ownership.acquireLock(order.id);
+        if (!lock.ok) return;
+        setOrder((prev: any) => ({
+          ...prev,
+          lockedById: currentUser?.id,
+          lockHolder: { id: currentUser?.id, name: currentUser?.name },
+          lockExpiresAt: lock.lockExpiresAt ?? prev.lockExpiresAt,
+        }));
+      }
+      setEditForm({
+        customerName: order.customer?.fullName || '',
+        customerPhone: order.customer?.rawPhone || order.customer?.phone || '',
+        customerAddress: order.customer?.address || '',
+        sellingPrice: String(order.sellingPrice ?? ''),
+        quantity: String(order.quantity ?? ''),
+        discountAmount: String(order.discountAmount ?? '0'),
+        shippingCost: String(order.shippingCost ?? '0'),
+      });
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!order?.id) return;
+    setEditLoading(true);
+    setEditError(null);
+    setEditSuccess(null);
+    try {
+      const body: any = { expectedVersion: order.version };
+      const name = editForm.customerName.trim();
+      const phone = editForm.customerPhone.trim();
+      const address = editForm.customerAddress.trim();
+      if (name && name !== order.customer?.fullName) body.customerName = name;
+      if (phone && phone !== (order.customer?.rawPhone || order.customer?.phone)) body.customerPhone = phone;
+      if (address && address !== order.customer?.address) body.customerAddress = address;
+      const num = (v: string) => (v === '' ? undefined : Number(v));
+      if (num(editForm.sellingPrice) !== undefined && num(editForm.sellingPrice) !== order.sellingPrice) body.sellingPrice = num(editForm.sellingPrice);
+      if (num(editForm.quantity) !== undefined && num(editForm.quantity) !== order.quantity) body.quantity = num(editForm.quantity);
+      if (num(editForm.discountAmount) !== undefined && num(editForm.discountAmount) !== order.discountAmount) body.discountAmount = num(editForm.discountAmount);
+      if (num(editForm.shippingCost) !== undefined && num(editForm.shippingCost) !== order.shippingCost) body.shippingCost = num(editForm.shippingCost);
+      const fields = Object.keys(body).filter((k) => k !== 'expectedVersion');
+      if (fields.length === 0) {
+        setEditError('لا توجد تغييرات للحفظ');
+        return;
+      }
+      if (body.sellingPrice !== undefined && (isNaN(body.sellingPrice) || body.sellingPrice < 0)) {
+        setEditError('السعر يجب أن يكون رقماً موجباً');
+        return;
+      }
+      if (body.quantity !== undefined && (!Number.isInteger(body.quantity) || body.quantity < 1)) {
+        setEditError('الكمية يجب أن تكون رقماً صحيحاً ≥ 1');
+        return;
+      }
+      const res = await apiFetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        setEditError('تم تعديل هذا الطلب بواسطة مستخدم آخر. يرجى تحديث البيانات قبل الحفظ.');
+        return;
+      }
+      if (res.status === 423) {
+        setEditError(data.errorAr || data.error || 'الطلب محتجز للتحرير من موظف آخر');
+        return;
+      }
+      if (!res.ok) {
+        setEditError(data.errorAr || data.error || `فشل حفظ التعديلات (HTTP ${res.status})`);
+        return;
+      }
+      setEditSuccess('تم حفظ التعديلات بنجاح ✓');
+      await loadOrder(order.id);
+      onRefresh();
+    } catch (e: any) {
+      setEditError(e?.message || 'فشل حفظ التعديلات');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen && orderId) loadOrder(orderId);
   }, [isOpen, orderId]);
 
+  // Monotonic request counter for loadOrder — guards against out-of-order
+  // responses when navigating prev/next rapidly (stale response discarded)
+  const loadOrderSeq = useRef(0);
+
   const loadOrder = async (id: string) => {
+    const seq = ++loadOrderSeq.current;
     setLoading(true);
+    setLoadError(null);
     try {
       const params = new URLSearchParams();
       if (filters) {
@@ -124,8 +273,11 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         if (filters.status && filters.status !== 'all') params.set('status', filters.status);
         if (filters.productId && filters.productId !== 'all') params.set('productId', filters.productId);
         if (filters.moderatorId && filters.moderatorId !== 'all') params.set('moderatorId', filters.moderatorId);
+        if (filters.queue) params.set('queue', filters.queue);
       }
-      const res = await fetch(`/api/orders/${id}?${params.toString()}`);
+      const res = await apiFetch(`/api/orders/${id}?${params.toString()}`);
+      // Discard stale response — a newer loadOrder (rapid prev/next) superseded it
+      if (seq !== loadOrderSeq.current) return;
       if (res.ok) {
         const data = await res.json();
         setOrder(data.order);
@@ -138,11 +290,31 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         setStatusNote('');
         setCallNotes('');
         setNextFollowUpDate('');
+        setEditForm({
+          customerName: data.order.customer?.fullName || '',
+          customerPhone: data.order.customer?.rawPhone || data.order.customer?.phone || '',
+          customerAddress: data.order.customer?.address || '',
+          sellingPrice: String(data.order.sellingPrice ?? ''),
+          quantity: String(data.order.quantity ?? ''),
+          discountAmount: String(data.order.discountAmount ?? '0'),
+          shippingCost: String(data.order.shippingCost ?? '0'),
+        });
+        setEditOpen(false);
+        setEditError(null);
+        setEditSuccess(null);
+      } else {
+        // 403/404 (not found / not assigned) — show a clear error panel
+        const data = await res.json().catch(() => ({}));
+        setOrder(null);
+        setLoadError(data.errorAr || data.error || `HTTP ${res.status}`);
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (seq !== loadOrderSeq.current) return;
       console.error(e);
+      setLoadError(e?.message || 'فشل تحميل الطلب');
     } finally {
-      setLoading(false);
+      // Only the latest request may clear the shared loading flag
+      if (seq === loadOrderSeq.current) setLoading(false);
     }
   };
 
@@ -163,22 +335,42 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     // prev/next navigation the prop still holds the originally opened order.
     if (!order?.id || selectedStatus === order.status) return;
     setActionLoading(true);
+    setActionFeedback(null);
     try {
-      const res = await fetch(`/api/orders/${order.id}`, {
+      const res = await apiFetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: selectedStatus,
+          expectedVersion: order.version, // optimistic concurrency (Phase B)
           internalNotes: statusNote
             ? `${order.internalNotes ? order.internalNotes + '\n' : ''}[${new Date().toLocaleTimeString(ar ? 'ar-EG' : 'en-US')}]: ${statusNote}`
             : order.internalNotes,
         }),
       });
+      if (res.status === 409) {
+        // Version conflict — never silently overwrite
+        ownership.setMessage({ type: 'conflict', text: t.conflictMessage });
+        return;
+      }
+      if (res.status === 423) {
+        const data = await res.json().catch(() => ({}));
+        ownership.setMessage({ type: 'error', text: data.errorAr || data.error || t.editingBy });
+        return;
+      }
       if (res.ok) {
+        setActionFeedback({ type: 'success', text: 'تم تحديث الحالة بنجاح ✓' });
         await loadOrder(order.id);
         onRefresh();
         setStatusNote('');
+        // Save complete → release the editing lock
+        await ownership.releaseLock(order.id);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionFeedback({ type: 'error', text: data.errorAr || data.error || `HTTP ${res.status}` });
       }
+    } catch (e: any) {
+      setActionFeedback({ type: 'error', text: e?.message || 'فشل تحديث الحالة' });
     } finally {
       setActionLoading(false);
     }
@@ -188,18 +380,30 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     e.preventDefault();
     if (!order?.id) return;
     setActionLoading(true);
+    setActionFeedback(null);
     try {
-      const res = await fetch(`/api/orders/${order.id}/call-logs`, {
+      const res = await apiFetch(`/api/orders/${order.id}/call-logs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result: callResult, notes: callNotes, nextFollowUpDate: nextFollowUpDate || null }),
+        body: JSON.stringify({
+          result: callResult,
+          notes: callNotes,
+          nextFollowUpDate: nextFollowUpDate || null,
+          expectedVersion: order.version, // concurrency hint for the status change path
+        }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        setActionFeedback({ type: 'success', text: data.warning || 'تم تسجيل نتيجة الاتصال ✓' });
         await loadOrder(order.id);
         onRefresh();
         setCallNotes('');
         setNextFollowUpDate('');
+      } else {
+        setActionFeedback({ type: 'error', text: data.errorAr || data.error || `HTTP ${res.status}` });
       }
+    } catch (e: any) {
+      setActionFeedback({ type: 'error', text: e?.message || 'فشل تسجيل الاتصال' });
     } finally {
       setActionLoading(false);
     }
@@ -214,11 +418,48 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       </Modal>
     );
   }
+  if (loadError) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title={t.orders} maxWidth="md">
+        <div className="py-6 text-center space-y-4" dir={isRtl ? 'rtl' : 'ltr'}>
+          <p className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 inline-block">
+            {loadError}
+          </p>
+          <div className="flex justify-center gap-2">
+            <Button size="sm" variant="outline" onClick={onClose}>
+              {ar ? 'إغلاق' : 'Close'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
   if (!order) return null;
 
   const currentCfg = STATUS_CONFIG[order.status];
   const CurrentIcon = currentCfg?.icon ?? Clock;
   const isNavigating = navLoading !== null || loading;
+
+  // ─── Phase C: lock state helpers ───
+  const lockActive = !!order.lockedById && !!order.lockExpiresAt && new Date(order.lockExpiresAt).getTime() > nowMs;
+  const editingLockedByOther = lockActive && order.lockedById !== currentUser?.id;
+  const lockHolderName = order.lockHolder?.name || order.lockedById || '';
+
+  /** Enter edit mode: acquire the backend lock first (Phase B), only then allow edits */
+  const handleEnterEditMode = async () => {
+    if (!order?.id) return;
+    const lock = await ownership.acquireLock(order.id);
+    if (lock.ok) {
+      setOrder((prev: any) => ({
+        ...prev,
+        lockedById: currentUser?.id,
+        lockHolder: { id: currentUser?.id, name: currentUser?.name },
+        // Refresh the expiry from the server — otherwise lockActive stays false
+        // when the previous lock had already expired and Save never appears
+        lockExpiresAt: lock.lockExpiresAt ?? prev.lockExpiresAt,
+      }));
+    }
+  };
 
   const money = (n: number) =>
     `$${n.toLocaleString(ar ? 'ar-EG' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -270,9 +511,36 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           <span className="hidden sm:inline">{ar ? 'الطلب السابق' : 'Previous Order'}</span>
         </Button>
       </div>
+      {/* Action feedback (status update / call log) */}
+      {actionFeedback && (
+        <div
+          className={`mb-4 rounded-xl border p-2.5 text-xs flex items-center justify-between gap-2 ${
+            actionFeedback.type === 'success'
+              ? 'border-green-300 bg-green-50 text-green-800'
+              : 'border-rose-300 bg-rose-50 text-rose-800'
+          }`}
+          dir={isRtl ? 'rtl' : 'ltr'}
+        >
+          <span className="leading-relaxed">{actionFeedback.text}</span>
+          <button onClick={() => setActionFeedback(null)} className="opacity-60 hover:opacity-100 cursor-pointer shrink-0">✕</button>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5" dir={isRtl ? 'rtl' : 'ltr'}>
         {/* ─── Left column ─── */}
         <div className="lg:col-span-2 space-y-5">
+
+          {/* ─── Phase C: Order responsibility / claim / editing lock ─── */}
+          <OwnershipSection
+            order={order}
+            ar={ar}
+            isRtl={isRtl}
+            ownership={ownership}
+            nowMs={nowMs}
+            onRefreshOrder={async () => {
+              if (order?.id) await loadOrder(order.id);
+              onRefresh();
+            }}
+          />
 
           {/* Current Status — colored with icon */}
           <div className="rounded-2xl border border-slate-200 p-4 bg-gradient-to-l from-slate-50 to-white">
@@ -293,7 +561,8 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="px-3 py-2 text-xs font-bold rounded-xl border-2 border-slate-200 focus:border-red-500 focus:outline-none transition-colors cursor-pointer"
+                  disabled={editingLockedByOther}
+                  className="px-3 py-2 text-xs font-bold rounded-xl border-2 border-slate-200 focus:border-red-500 focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
                     <option key={key} value={key} className={cfg.select}>
@@ -301,18 +570,39 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                     </option>
                   ))}
                 </select>
-                <Button
-                  size="sm"
-                  onClick={handleStatusUpdate}
-                  loading={actionLoading}
-                  disabled={selectedStatus === order.status}
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  تحديث
-                </Button>
+                {order.lockedById === currentUser?.id && lockActive ? (
+                  <Button
+                    size="sm"
+                    onClick={handleStatusUpdate}
+                    loading={actionLoading}
+                    disabled={selectedStatus === order.status}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    تحديث
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={handleEnterEditMode}
+                    loading={ownership.actionLoading === 'lock'}
+                    disabled={lockActive && order.lockedById !== currentUser?.id}
+                    className="bg-red-600 hover:bg-red-700"
+                    title={t.acquiringLock}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    {t.enterEditMode}
+                  </Button>
+                )}
               </div>
             </div>
+
+            {editingLockedByOther && (
+              <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5 mt-3 inline-flex items-center gap-1.5">
+                <Lock className="w-3 h-3" />
+                {t.editingBy} {lockHolderName}
+              </p>
+            )}
 
             {selectedStatus !== order.status && (
               <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-3 inline-flex items-center gap-1.5">
@@ -390,6 +680,86 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 <div>
                   <p className="text-[11px] font-bold text-slate-600 mb-0.5">ملاحظات داخلية</p>
                   <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">{order.internalNotes}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ─── Phase D2: Shipping & delivery section ─── */}
+          <ShippingSection
+            order={order}
+            ar={ar}
+            isRtl={isRtl}
+            onRefreshOrder={async () => {
+              if (order?.id) await loadOrder(order.id);
+              onRefresh();
+            }}
+          />
+
+          {/* ─── Phase D1: Quick confirmation actions + contact history ─── */}
+          <ConfirmationActions
+            order={order}
+            ar={ar}
+            isRtl={isRtl}
+            onRefreshOrder={async () => {
+              if (order?.id) await loadOrder(order.id);
+              onRefresh();
+            }}
+          />
+
+          {/* ─── Order data editing (customer info + price fields) ─── */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-[#3e97ff]" />
+                تعديل بيانات الطلب
+              </h4>
+              <Button size="sm" variant="outline" onClick={openEditForm} loading={ownership.actionLoading === 'lock'}>
+                {editOpen ? 'إغلاق النموذج' : 'تعديل'}
+              </Button>
+            </div>
+
+            {editOpen && (
+              <div className="space-y-3">
+                {editingLockedByOther && (
+                  <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+                    <Lock className="w-3 h-3 inline ml-1" />
+                    {t.editingBy} {lockHolderName}
+                  </p>
+                )}
+                {editError && (
+                  <p className="text-[11px] text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+                    {editError}
+                  </p>
+                )}
+                {editSuccess && (
+                  <p className="text-[11px] text-green-800 bg-green-50 border border-green-300 rounded-lg px-2.5 py-1.5">
+                    {editSuccess}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input label="اسم العميل" value={editForm.customerName} onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })} />
+                  <Input label="رقم الهاتف" dir="ltr" value={editForm.customerPhone} onChange={(e) => setEditForm({ ...editForm, customerPhone: e.target.value })} />
+                  <Input label="عنوان التوصيل" value={editForm.customerAddress} onChange={(e) => setEditForm({ ...editForm, customerAddress: e.target.value })} />
+                  <div />
+                  <Input label="سعر البيع" type="number" min="0" step="0.01" dir="ltr" value={editForm.sellingPrice} onChange={(e) => setEditForm({ ...editForm, sellingPrice: e.target.value })} />
+                  <Input label="الكمية" type="number" min="1" step="1" dir="ltr" value={editForm.quantity} onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })} />
+                  <Input label="الخصم" type="number" min="0" step="0.01" dir="ltr" value={editForm.discountAmount} onChange={(e) => setEditForm({ ...editForm, discountAmount: e.target.value })} />
+                  <Input label="تكلفة الشحن" type="number" min="0" step="0.01" dir="ltr" value={editForm.shippingCost} onChange={(e) => setEditForm({ ...editForm, shippingCost: e.target.value })} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleEditSave}
+                    loading={editLoading}
+                    disabled={editingLockedByOther || !(order.lockedById === currentUser?.id && lockActiveNow)}
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    حفظ التعديلات
+                  </Button>
+                  <span className="text-[11px] text-slate-400">
+                    الحفظ يتطلب الاحتفاظ بقفل التحرير — الإجمالي الجديد = السعر × الكمية − الخصم + الشحن
+                  </span>
                 </div>
               </div>
             )}

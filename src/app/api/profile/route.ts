@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireAuth, hashPassword, verifyPassword } from '@/lib/auth';
@@ -65,6 +66,6 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Tajawal } from 'next/font/google';
+import { Tajawal, Public_Sans } from 'next/font/google';
 import './globals.css';
 import { getCurrentUser } from '@/lib/auth';
 import { AppProvider } from '@/context/AppContext';
@@ -8,6 +8,11 @@ const tajawal = Tajawal({
   variable: '--font-arabic',
   subsets: ['arabic', 'latin'],
   weight: ['400', '500', '700', '800'],
+});
+
+const publicSans = Public_Sans({
+  variable: '--font-public-sans',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
@@ -25,8 +30,8 @@ export default async function RootLayout({
   const user = await getCurrentUser();
 
   return (
-    <html lang="en" dir="ltr" className={`h-full ${tajawal.variable}`}>
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+    <html lang="en" dir="ltr" className={`h-full ${tajawal.variable} ${publicSans.variable}`}>
+      <body className="min-h-full flex flex-col bg-[#f3f4f6] text-[#4b5675]">
         <AppProvider initialUser={user}>{children}</AppProvider>
       </body>
     </html>

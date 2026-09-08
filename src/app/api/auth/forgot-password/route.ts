@@ -38,8 +38,12 @@ export async function POST(req: Request) {
       },
     });
 
-    // In production: send via email provider. Here: surfaced to admin/dev safely.
-    console.log(`[PASSWORD RESET] Token for ${user.email}: ${token}`);
+    // In production: send via email provider.
+    // Phase S: NEVER log plaintext reset tokens — logging them in production
+    // allowed account takeover by anyone with log access. Dev-only console hint:
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[PASSWORD RESET] Token for ${user.email}: ${token}`);
+    }
 
     await (await import('@/lib/audit')).logAudit({
       companyId: user.companyId || 'platform',

@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { apiErrorResponse } from '@/lib/api-error';
+import { requireCompanyTenant } from '@/lib/auth';
 import { getCompanyAnalytics } from '@/lib/analytics';
 import { askAiAssistant } from '@/lib/ai';
+import { requirePermission } from '@/lib/authorization';
 
 export async function POST(req: Request) {
   try {
     const { companyId } = await requireCompanyTenant();
-    requirePermission('ai.use');
+    await requirePermission('ai.use');
 
     const body = await req.json();
     const { question, period = 'all' } = body;
@@ -25,6 +27,6 @@ export async function POST(req: Request) {
       context: analytics.aiContext,
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

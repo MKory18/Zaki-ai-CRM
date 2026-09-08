@@ -2,32 +2,41 @@
 
 @layer base {
   :root {
-    --background: #f8fafc;
-    --foreground: #0f172a;
+    --background: #f3f4f6;
+    --foreground: #252f4a;
     --card: #ffffff;
-    --card-foreground: #0f172a;
-    --primary: #059669;
+    --card-foreground: #252f4a;
+    --primary: #3e97ff;
     --primary-foreground: #ffffff;
-    --secondary: #f1f5f9;
-    --secondary-foreground: #1e293b;
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
-    --accent: #f8fafc;
-    --accent-foreground: #0f172a;
-    --destructive: #ef4444;
+    --secondary: #f8f9fa;
+    --secondary-foreground: #252f4a;
+    --muted: #f8f9fa;
+    --muted-foreground: #6b7177;
+    --accent: #eaf3ff;
+    --accent-foreground: #3e97ff;
+    --destructive: #d13b4c;
     --destructive-foreground: #ffffff;
-    --border: #e2e8f0;
-    --input: #e2e8f0;
-    --ring: #10b981;
+    --success: #25b865;
+    --warning: #e49e3d;
+    --info: #02a0e4;
+    --border: #eef0f3;
+    --input: #eef0f3;
+    --ring: #3e97ff;
     --radius: 0.5rem;
   }
 }
 
 body {
-  background-color: #f8fafc;
-  color: #0f172a;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #f3f4f6;
+  color: #4b5675;
+  font-family: var(--font-public-sans), "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Headings and key values use the template's darker semibold tone */
+h1, h2, h3, h4, h5, h6, strong {
+  color: #252f4a;
+  font-weight: 600;
 }
 
 /* Arabic native typography: proper font, line-height and letter spacing */
@@ -35,6 +44,15 @@ html[lang="ar"] body {
   font-family: var(--font-arabic), "Tajawal", "Segoe UI", sans-serif;
   line-height: 1.8;
   letter-spacing: 0;
+}
+html[lang="ar"] h1,
+html[lang="ar"] h2,
+html[lang="ar"] h3,
+html[lang="ar"] h4,
+html[lang="ar"] h5,
+html[lang="ar"] h6,
+html[lang="ar"] strong {
+  color: #252f4a;
 }
 html[lang="ar"] table,
 html[lang="ar"] th,
@@ -51,11 +69,19 @@ html[lang="ar"] td {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #d5d9e0;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #b9bfc9;
+}
+
+/* Sidebar dark scrollbar */
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #26282e;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: #34363d;
 }
 
 /* RTL Helpers */

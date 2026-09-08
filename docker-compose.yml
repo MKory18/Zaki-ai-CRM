@@ -6,9 +6,11 @@ services:
     container_name: salesflow-postgres
     restart: always
     environment:
-      POSTGRES_USER: salesflow_user
-      POSTGRES_PASSWORD: salesflow_password_2026
-      POSTGRES_DB: salesflow
+      POSTGRES_USER: ${POSTGRES_USER:-salesflow_user}
+      # REQUIRED — provide in your shell / deployment secret store. NEVER commit a real password.
+      # Local dev: put it in .env (git-ignored). Production: Coolify/Vault secret.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -base64 24)}
+      POSTGRES_DB: ${POSTGRES_DB:-salesflow}
     ports:
       # Bind only to localhost — never expose PostgreSQL publicly
       - "127.0.0.1:5434:5432"
@@ -33,7 +35,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://salesflow_user:salesflow_password_2026@salesflow-db:5432/salesflow?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-salesflow_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@salesflow-db:5432/${POSTGRES_DB:-salesflow}?schema=public&connection_limit=10&pool_timeout=20
       # REQUIRED — provide in your shell / .env before running docker compose up
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (openssl rand -base64 32)}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}

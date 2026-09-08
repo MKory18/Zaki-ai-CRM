@@ -29,6 +29,8 @@ const PERMISSION_MAP: Record<string, Permission> = {
   '/offers': 'offers.manage',
   '/moderators': 'moderators.manage',
   '/users': 'users.manage',
+  '/roles': 'audit.view',
+  '/permissions': 'audit.view',
   '/analytics': 'reports.view',
   '/finance': 'finance.view',
   '/ai-assistant': 'ai.use',
@@ -43,8 +45,66 @@ function redirectTo(req: Request, path: string) {
   return NextResponse.redirect(url);
 }
 
+/**
+ * Origin validation for mutating API requests (CSRF defense-in-depth).
+ *
+ * Trade-off (documented): browsers attach an Origin header to cross-site
+ * mutations and to same-origin POST/PUT/PATCH/DELETE fetches, so a forged
+ * cross-site request is always rejected. Requests WITHOUT an Origin header
+ * (server-to-server clients, curl) pass through — they cannot be produced
+ * by a victim's browser on a cross-site form/image submission.
+ *
+ * - ALLOWED_ORIGINS set (comma-separated) → Origin must be same-origin or listed.
+ * - ALLOWED_ORIGINS empty (default) → same-origin only.
+ */
+function validateApiOrigin(req: Request): NextResponse | null {
+  const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+  if (!mutating) return null;
+
+  const origin = req.headers.get('origin');
+  if (!origin) return null; // non-browser / server-to-server client
+
+  const host = req.headers.get('host');
+  let originHost: string | null = null;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    originHost = null;
+  }
+
+  const sameOrigin = !!originHost && !!host && originHost === host;
+  if (sameOrigin) return null;
+
+  const allowedList = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const inList =
+    allowedList.length > 0 &&
+    allowedList.some((allowed) => {
+      try {
+        return new URL(allowed).host === originHost;
+      } catch {
+        return allowed === origin;
+      }
+    });
+
+  if (!inList) {
+    return NextResponse.json({ errorAr: 'طلب غير موثوق المصدر' }, { status: 403 });
+  }
+  return null;
+}
+
 export async function proxy(req: Request) {
   const { pathname } = new URL(req.url);
+
+  // API routes: enforce origin validation on mutations, then pass through —
+  // authentication/authorization is handled inside each route handler.
+  if (pathname.startsWith('/api/')) {
+    const originError = validateApiOrigin(req);
+    if (originError) return originError;
+    return NextResponse.next();
+  }
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
@@ -102,6 +162,8 @@ export async function proxy(req: Request) {
 
 export const config = {
   matcher: [
+    // API routes run through the proxy for origin validation on mutations only
+    '/api/:path*',
     '/orders/:path*',
     '/customers/:path*',
     '/products/:path*',
@@ -110,6 +172,8 @@ export const config = {
     '/offers/:path*',
     '/moderators/:path*',
     '/users/:path*',
+    '/roles/:path*',
+    '/permissions/:path*',
     '/analytics/:path*',
     '/finance/:path*',
     '/ai-assistant/:path*',

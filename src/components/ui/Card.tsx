@@ -12,7 +12,7 @@ export function Card({ children, className, onClick }: CardProps) {
     <div
       onClick={onClick}
       className={clsx(
-        'bg-white rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all',
+        'bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] transition-all',
         className
       )}
     >
@@ -35,13 +35,13 @@ export function CardHeader({
   return (
     <div
       className={clsx(
-        'flex items-center justify-between px-6 py-4 border-b border-slate-100',
+        'flex items-center justify-between px-6 py-4 border-b border-[#eef0f3]',
         className
       )}
     >
       <div>
-        <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-        {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        <h3 className="text-base font-semibold text-[#252f4a]">{title}</h3>
+        {subtitle && <p className="text-xs text-[#6b7177] mt-0.5">{subtitle}</p>}
       </div>
       {action && <div>{action}</div>}
     </div>
@@ -74,18 +74,18 @@ export function KpiCard({
   color?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'slate';
 }) {
   const colorMap = {
-    blue: 'bg-red-50 text-red-600 border-red-100',
-    emerald: 'bg-red-50 text-red-600 border-red-100',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-    rose: 'bg-rose-50 text-rose-600 border-rose-100',
-    purple: 'bg-red-50 text-red-600 border-red-100',
-    slate: 'bg-slate-50 text-slate-600 border-slate-100',
+    blue: 'bg-[#eaf3ff] text-[#3e97ff] border-[#d6e8ff]',
+    emerald: 'bg-[#e8f8ef] text-[#25b865] border-[#d2f0de]',
+    amber: 'bg-[#fdf4e8] text-[#e49e3d] border-[#f9e6cc]',
+    rose: 'bg-[#fbeeef] text-[#d13b4c] border-[#f4d7da]',
+    purple: 'bg-[#eaf3ff] text-[#02a0e4] border-[#d6e8ff]',
+    slate: 'bg-[#f8f9fa] text-[#6b7177] border-[#eef0f3]',
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs">
+    <div className="bg-white rounded-[10px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{title}</span>
+        <span className="text-xs font-medium text-[#6b7177] uppercase tracking-wider">{title}</span>
         {Icon && (
           <div className={clsx('p-2 rounded-lg border', colorMap[color])}>
             <Icon className="w-5 h-5" />
@@ -93,19 +93,19 @@ export function KpiCard({
         )}
       </div>
       <div className="mt-3 flex items-baseline justify-between">
-        <div className="text-2xl font-bold text-slate-900">{value}</div>
+        <div className="text-2xl font-semibold text-[#252f4a]">{value}</div>
         {trend && (
           <span
             className={clsx(
               'text-xs font-semibold px-2 py-0.5 rounded-full',
-              trend.positive ? 'bg-red-50 text-red-700' : 'bg-rose-50 text-rose-700'
+              trend.positive ? 'bg-[#e8f8ef] text-[#25b865]' : 'bg-[#fbeeef] text-[#d13b4c]'
             )}
           >
             {trend.value}
           </span>
         )}
       </div>
-      {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
+      {subtitle && <p className="text-xs text-[#6b7177] mt-1">{subtitle}</p>}
     </div>
   );
 }

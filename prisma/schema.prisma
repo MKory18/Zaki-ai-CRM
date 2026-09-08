@@ -34,6 +34,17 @@ model Company {
   auditLogs          AuditLog[]
   aiSummaries        AiDailySummary[]
   productImages      ProductImage[]
+  deliveryProviders  DeliveryProvider[]
+  shippingBatches    ShippingBatch[]
+  financialTransactions FinancialTransaction[]
+  crmCompanies      CrmCompany[]
+  crmContacts       CrmContact[]
+  crmLeads          CrmLead[]
+  crmDeals          CrmDeal[]
+  crmTasks          CrmTask[]
+  crmActivities     CrmActivity[]
+  crmNotes          CrmNote[]
+  crmInvoices       CrmInvoice[]
 
   @@map("companies")
 }
@@ -44,7 +55,7 @@ model User {
   email             String    @unique
   name              String
   passwordHash      String
-  role              String    @default("PENDING_USER") // SUPER_ADMIN, COMPANY_ADMIN, MANAGER, MODERATOR, ACCOUNTANT, DELIVERY_MANAGER, PENDING_USER
+  role              String    @default("PENDING_USER") // SUPER_ADMIN, COMPANY_ADMIN, MANAGER, MODERATOR, CONFIRMATION_AGENT, FOLLOW_UP_AGENT, SETTLEMENT_OFFICER, ACCOUNTANT, DELIVERY_MANAGER, PENDING_USER
   phone             String?
   avatar            String?
   commissionRate    Float     @default(0.0)
@@ -60,13 +71,34 @@ model User {
 
   company        Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   assignedOrders Order[]   @relation("ModeratorOrders")
+  claimedOrders  Order[]   @relation("OrderClaimer")
+  ownedOrders    Order[]   @relation("OrderCurrentOwner")
+  lockedOrders   Order[]   @relation("OrderLockHolder")
+  assignedWork   Order[]   @relation("OrderAssignee")
+  signedOrders   Order[]   @relation("OrderSignedBy")
   callLogs       CallLog[]
   auditLogs      AuditLog[]
+  claimHistory   OrderClaimHistory[]
+  statusLogs     OrderStatusLog[]
+  contactAttempts OrderContactAttempt[]
+  confirmedOrders Order[]              @relation("OrderConfirmedBy")
+  resolvedFollowUps Order[]            @relation("FollowUpResolvedBy")
+  createdShippingBatches ShippingBatch[] @relation("ShippingBatchCreator")
+  deliveryAgentAttempts DeliveryAttempt[] @relation("DeliveryAttemptAgent")
+  financialTransactions FinancialTransaction[] @relation("FinanceTransactionActor")
+  assignedDeliveryOrders Order[]      @relation("DeliveryAssignedBy")
   assignedBy     User?     @relation("UserAssigner", fields: [assignedById], references: [id])
   assignedUsers  User[]    @relation("UserAssigner")
+  crmContactOwners    CrmContact[]  @relation("CrmContactOwner")
+  crmLeadAssignees    CrmLead[]     @relation("CrmLeadAssignee")
+  crmDealAssignees    CrmDeal[]     @relation("CrmDealAssignee")
+  crmTaskAssignees    CrmTask[]     @relation("CrmTaskAssignee")
+  crmActivities       CrmActivity[] @relation("CrmActivityUser")
+  crmNotes            CrmNote[]     @relation("CrmNoteUser")
 
   @@index([companyId])
   @@index([role])
+  @@index([status])
   @@map("users")
 }
 
@@ -232,18 +264,81 @@ model Order {
   discountAmount       Float     @default(0.0)
   totalAmount          Float
   currency             String    @default("USD")
+  // â”€â”€â”€ Ownership model (Decision 1) â”€â”€â”€
+  // moderatorId = original MODERATOR who created/entered the order (semantic preserved)
   moderatorId          String?
   moderatorCommission  Float     @default(0.0)
+  // assignedToId = employee currently assigned to work on the order
+  assignedToId         String?
+  assignedAt           DateTime?
+  // claimedById = employee who officially claimed/signed responsibility
+  claimedById          String?
+  claimedAt            DateTime?
+  // currentOwnerId = employee currently responsible for operational handling
+  currentOwnerId       String?
+  // â”€â”€â”€ Editing lock (server-enforced expiration) â”€â”€â”€
+  lockedById           String?
+  lockedAt             DateTime?
+  lockExpiresAt        DateTime?
+  // â”€â”€â”€ Digital signature / claim â”€â”€â”€
+  signatureStatus      String    @default("UNSIGNED") // UNSIGNED, SIGNED
+  signedById           String?
+  signedAt             DateTime?
+  signatureNote        String?
+  // â”€â”€â”€ Optimistic concurrency â”€â”€â”€
+  version              Int       @default(1)
   estimatedCostOfGoods Float     @default(0.0)
   productNameSnapshot  String?
   productImageSnapshot String?
-  status               String    @default("NEW") // NEW, CONTACTING, NO_ANSWER, CONFIRMED, POSTPONED, REJECTED, READY_FOR_SHIPPING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, RETURNED, FAILED_DELIVERY
+  status               String    @default("NEW") // legacy combined status (kept for compatibility)
+  confirmationStatus   String    @default("NEW") // NEW, IN_PROGRESS, NO_ANSWER, FOLLOW_UP_REQUIRED, POSTPONED, CONFIRMED, REJECTED, CANCELLED
+  shippingStatus       String    @default("NOT_READY") // NOT_READY, READY_FOR_SHIPPING, PACKING, READY_FOR_PICKUP, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, FAILED_DELIVERY, RETURN_REQUESTED, RETURNED, CANCELLED
+  settlementStatus     String    @default("NOT_APPLICABLE") // NOT_APPLICABLE, PENDING, PARTIALLY_SETTLED, SETTLED, REFUNDED, PARTIALLY_REFUNDED, CANCELLED, PENDING_COLLECTION, COLLECTED, UNSETTLED
+  // â”€â”€â”€ Phase D1: confirmation workflow â”€â”€â”€
+  rejectionReason      String?   // PRICE_TOO_HIGH, CUSTOMER_CHANGED_MIND, CUSTOMER_DOES_NOT_WANT_PRODUCT, DUPLICATE_ORDER, WRONG_NUMBER, FAKE_ORDER, OUT_OF_SERVICE_AREA, OTHER
+  rejectionNote        String?
+  confirmedById        String?
+  // â”€â”€â”€ Phase D1: follow-up system (server-time authoritative) â”€â”€â”€
+  nextFollowUpAt       DateTime?
+  followUpReason       String?   // NO_ANSWER, CUSTOMER_REQUESTED_CALLBACK, POSTPONED, FAILED_CONFIRMATION, OTHER
+  followUpStatus       String?   // SCHEDULED, DUE, OVERDUE, COMPLETED, CANCELLED (SCHEDULED/COMPLETED stored; DUE/OVERDUE derived from nextFollowUpAt)
+  followUpResolvedAt   DateTime?
+  followUpResolvedById String?
+  // â”€â”€â”€ Phase D2: shipping & delivery â”€â”€â”€
+  deliveryProviderId   String?
+  deliveryAssignedAt   DateTime?
+  deliveryAssignedById String?
+  trackingNumber       String?
+  shippingReference    String?
+  deliveryFee          Float?
+  shippingNote         String?
+  shippingBatchId      String?
+  shippedAt            DateTime?
+  outForDeliveryAt     DateTime?
+  failedAt             DateTime?
+  returnedAt           DateTime?
+  deliveryFailureReason String?  // CUSTOMER_NOT_AVAILABLE, PHONE_UNREACHABLE, WRONG_ADDRESS, CUSTOMER_REFUSED, ADDRESS_NOT_FOUND, AREA_NOT_SERVICED, CUSTOMER_REQUESTED_DELAY, OTHER
+  deliveryNote         String?
+  returnReason         String?  // CUSTOMER_REFUSED, FAILED_DELIVERY, DAMAGED_PRODUCT, WRONG_PRODUCT, CUSTOMER_REQUEST, OTHER
+  // â”€â”€â”€ Phase D3: financial snapshot (Decimal â€” never floats for money) â”€â”€â”€
+  subtotal             Decimal? @db.Decimal(12, 2)
+  discount             Decimal? @db.Decimal(12, 2)
+  shippingRevenue      Decimal? @db.Decimal(12, 2)
+  totalRevenue         Decimal? @db.Decimal(12, 2)
+  productCost          Decimal? @db.Decimal(12, 2)
+  packagingCost        Decimal? @db.Decimal(12, 2)
+  advertisingCost      Decimal? @db.Decimal(12, 2)
+  otherCost            Decimal? @db.Decimal(12, 2)
+  refundAmount         Decimal? @db.Decimal(12, 2)
+  grossProfit          Decimal? @db.Decimal(12, 2)
+  netProfit            Decimal? @db.Decimal(12, 2)
+  financeFinalizedAt   DateTime?
+  financeFinalizedById String?
   source               String    @default("Manual") // Facebook Ads, TikTok, Instagram, WhatsApp, Manual, Website
   internalNotes        String?
   customerNotes        String?
   postponedUntil       DateTime?
   confirmedAt          DateTime?
-  shippedAt            DateTime?
   deliveredAt          DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
@@ -253,14 +348,43 @@ model Order {
   product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   offer      Offer?          @relation(fields: [offerId], references: [id], onDelete: SetNull)
   moderator  User?           @relation("ModeratorOrders", fields: [moderatorId], references: [id], onDelete: SetNull)
+  assignee   User?           @relation("OrderAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  claimer    User?           @relation("OrderClaimer", fields: [claimedById], references: [id], onDelete: SetNull)
+  owner      User?           @relation("OrderCurrentOwner", fields: [currentOwnerId], references: [id], onDelete: SetNull)
+  lockHolder User?           @relation("OrderLockHolder", fields: [lockedById], references: [id], onDelete: SetNull)
+  signer     User?           @relation("OrderSignedBy", fields: [signedById], references: [id], onDelete: SetNull)
+  deliveryAssigner User?    @relation("DeliveryAssignedBy", fields: [deliveryAssignedById], references: [id], onDelete: SetNull)
+  deliveryProvider DeliveryProvider? @relation(fields: [deliveryProviderId], references: [id], onDelete: SetNull)
+  shippingBatch    ShippingBatch?   @relation(fields: [shippingBatchId], references: [id], onDelete: SetNull)
+  confirmer  User?           @relation("OrderConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+  followUpResolver User?     @relation("FollowUpResolvedBy", fields: [followUpResolvedById], references: [id], onDelete: SetNull)
   callLogs   CallLog[]
   activities OrderActivity[]
+  deliveryAttempts DeliveryAttempt[]
+  financialTransactions FinancialTransaction[]
+  claimHistory OrderClaimHistory[]
+  statusLogs   OrderStatusLog[]
+  contactAttempts OrderContactAttempt[]
 
   @@unique([companyId, orderNumber])
+  @@index([companyId, createdAt]) // hot path: list ordering + prev/next navigation + analytics windows
   @@index([companyId, status])
+  @@index([companyId, confirmationStatus, claimedById])
+  @@index([companyId, nextFollowUpAt])
+  @@index([companyId, shippingStatus])
+  @@index([companyId, deliveryProviderId])
+  @@index([companyId, trackingNumber])
+  @@index([companyId, shippingBatchId])
   @@index([companyId, customerId])
   @@index([companyId, moderatorId])
   @@index([companyId, productId])
+  @@index([companyId, assignedToId])
+  @@index([companyId, claimedById])
+  @@index([companyId, currentOwnerId])
+  @@index([companyId, lockedById])
+  @@index([companyId, confirmationStatus])
+  @@index([companyId, settlementStatus])
+  @@index([lockedById, lockExpiresAt])
   @@map("orders")
 }
 
@@ -372,4 +496,390 @@ model AiDailySummary {
   @@unique([companyId, date])
   @@index([companyId, date])
   @@map("ai_daily_summaries")
+}
+
+
+// â”€â”€â”€ Order Claim / Signature history â€” never overwrite ownership events â”€â”€â”€
+model OrderClaimHistory {
+  id        String   @id @default(uuid())
+  companyId String
+  orderId   String
+  userId    String
+  action    String   // CLAIMED, RELEASED, TRANSFERRED, OVERRIDDEN, UNLOCKED
+  reason    String?
+  metadata  String?  // JSON snapshot (previousOwner, newOwner, performedBy...)
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@index([companyId, userId])
+  @@map("order_claim_history")
+}
+
+// â”€â”€â”€ Order status audit â€” separate log per status category â”€â”€â”€
+model OrderStatusLog {
+  id           String   @id @default(uuid())
+  companyId    String
+  orderId      String
+  statusType   String   // CONFIRMATION, SHIPPING, SETTLEMENT, LEGACY
+  previousValue String?
+  newValue     String?
+  changedById  String
+  changedByRole String
+  note         String?
+  createdAt    DateTime @default(now())
+
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changer User  @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@index([companyId, statusType])
+  @@map("order_status_logs")
+}
+
+
+// â”€â”€â”€ Phase D1: Customer contact attempt history â€” append-only, never overwritten â”€â”€â”€
+model OrderContactAttempt {
+  id             String   @id @default(uuid())
+  companyId      String
+  orderId        String
+  employeeId     String
+  employeeRole   String
+  attemptNumber  Int
+  contactMethod  String   // PHONE, WHATSAPP, SMS, OTHER
+  result         String   // ANSWERED, NO_ANSWER, BUSY, WRONG_NUMBER, CALLBACK_REQUESTED, CONFIRMED, REJECTED, OTHER
+  note           String?
+  nextFollowUpAt DateTime?
+  createdAt      DateTime @default(now())
+
+  order    Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  employee User  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, attemptNumber])
+  @@index([companyId, orderId, createdAt])
+  @@index([companyId, employeeId])
+  @@map("order_contact_attempts")
+}
+
+
+// â”€â”€â”€ Phase D2: Delivery providers (per company) â”€â”€â”€
+model DeliveryProvider {
+  id         String   @id @default(uuid())
+  companyId  String
+  name       String
+  code       String   @unique
+  phone      String?
+  email      String?
+  address    String?
+  isActive   Boolean  @default(true)
+  apiEnabled Boolean  @default(false)
+  apiBaseUrl String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orders  Order[]
+  batches ShippingBatch[]
+  attempts DeliveryAttempt[]
+
+  @@index([companyId, isActive])
+  @@map("delivery_providers")
+}
+
+// â”€â”€â”€ Phase D2: Shipping batches (group orders per provider) â”€â”€â”€
+model ShippingBatch {
+  id                String    @id @default(uuid())
+  companyId         String
+  batchNumber       String
+  deliveryProviderId String?
+  status            String    @default("READY") // READY, SHIPPED, CLOSED
+  createdById       String
+  createdAt         DateTime  @default(now())
+  shippedAt         DateTime?
+  notes             String?
+
+  company  Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  provider DeliveryProvider? @relation(fields: [deliveryProviderId], references: [id], onDelete: SetNull)
+  creator  User             @relation("ShippingBatchCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  orders   Order[]
+
+  @@unique([companyId, batchNumber])
+  @@index([companyId, status])
+  @@map("shipping_batches")
+}
+
+// â”€â”€â”€ Phase D2: Delivery attempt history â€” append-only â”€â”€â”€
+model DeliveryAttempt {
+  id                String   @id @default(uuid())
+  companyId         String
+  orderId           String
+  deliveryProviderId String?
+  deliveryAgentId   String?
+  attemptNumber     Int
+  result            String   // DELIVERED, FAILED, CUSTOMER_UNAVAILABLE, CUSTOMER_REFUSED, RESCHEDULED, OTHER
+  failureReason     String?  // structured reason when FAILED
+  note              String?
+  createdAt         DateTime @default(now())
+
+  order    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider DeliveryProvider? @relation(fields: [deliveryProviderId], references: [id], onDelete: SetNull)
+  agent    User?            @relation("DeliveryAttemptAgent", fields: [deliveryAgentId], references: [id], onDelete: SetNull)
+
+  @@unique([orderId, attemptNumber])
+  @@index([companyId, orderId, createdAt])
+  @@index([companyId, deliveryProviderId])
+  @@map("delivery_attempts")
+}
+
+
+// â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
+// CRM MODULE â€” Contacts, Companies, Leads, Deals, Tasks, Activities, Notes, Invoices
+// â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
+
+model CrmCompany {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  industry  String?
+  website   String?
+  phone     String?
+  email     String?
+  address   String?
+  city      String?
+  country   String?
+  size      String?  // SMALL, MEDIUM, LARGE, ENTERPRISE
+  status    String   @default("ACTIVE") // ACTIVE, INACTIVE, PROSPECT
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contacts CrmContact[]
+  deals    CrmDeal[]
+  invoices CrmInvoice[]
+  crmNotes CrmNote[]
+
+  @@index([companyId, name])
+  @@index([companyId, status])
+  @@map("crm_companies")
+}
+
+model CrmContact {
+  id            String    @id @default(uuid())
+  companyId     String
+  crmCompanyId  String?
+  firstName     String
+  lastName      String?
+  email         String?
+  phone         String
+  position      String?
+  status        String    @default("ACTIVE") // ACTIVE, INACTIVE
+  ownerId       String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  crmCompany CrmCompany? @relation(fields: [crmCompanyId], references: [id], onDelete: SetNull)
+  owner      User?       @relation("CrmContactOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  deals      CrmDeal[]
+  tasks      CrmTask[]
+  activities CrmActivity[]
+  crmNotes CrmNote[]
+  invoices   CrmInvoice[]
+
+  @@index([companyId, phone])
+  @@index([companyId, email])
+  @@index([companyId, crmCompanyId])
+  @@map("crm_contacts")
+}
+
+model CrmLead {
+  id                 String    @id @default(uuid())
+  companyId          String
+  name               String
+  email              String?
+  phone              String?
+  companyName        String?
+  source             String    @default("MANUAL") // MANUAL, WEBSITE, REFERRAL, SOCIAL_MEDIA, CAMPAIGN, OTHER
+  status             String    @default("NEW") // NEW, CONTACTED, QUALIFIED, UNQUALIFIED, CONVERTED
+  score              Int       @default(0)
+  assignedToId       String?
+  convertedContactId String?
+  convertedDealId    String?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedTo  User?       @relation("CrmLeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  activities  CrmActivity[]
+  crmNotes CrmNote[]
+
+  @@index([companyId, status])
+  @@index([companyId, assignedToId])
+  @@map("crm_leads")
+}
+
+model CrmDeal {
+  id                String    @id @default(uuid())
+  companyId         String
+  title             String
+  value             Float     @default(0.0)
+  currency          String    @default("USD")
+  stage             String    @default("NEW") // NEW, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST
+  probability       Int       @default(10) // 0-100
+  expectedCloseDate DateTime?
+  closedAt          DateTime?
+  crmContactId      String?
+  crmCompanyId      String?
+  assignedToId      String?
+  position          Int       @default(0)
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  crmContact CrmContact?  @relation(fields: [crmContactId], references: [id], onDelete: SetNull)
+  crmCompany CrmCompany?  @relation(fields: [crmCompanyId], references: [id], onDelete: SetNull)
+  assignedTo User?        @relation("CrmDealAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  activities CrmActivity[]
+  crmNotes CrmNote[]
+  tasks      CrmTask[]
+  invoices   CrmInvoice[]
+
+  @@index([companyId, stage])
+  @@index([companyId, crmContactId])
+  @@index([companyId, assignedToId])
+  @@map("crm_deals")
+}
+
+model CrmTask {
+  id            String    @id @default(uuid())
+  companyId     String
+  title         String
+  description   String?
+  dueDate       DateTime?
+  priority      String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status        String    @default("TODO") // TODO, IN_PROGRESS, DONE, CANCELLED
+  assignedToId  String?
+  crmContactId  String?
+  crmDealId     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedTo  User?       @relation("CrmTaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  crmContact  CrmContact? @relation(fields: [crmContactId], references: [id], onDelete: SetNull)
+  crmDeal     CrmDeal?    @relation(fields: [crmDealId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status])
+  @@index([companyId, dueDate])
+  @@index([companyId, assignedToId])
+  @@map("crm_tasks")
+}
+
+model CrmActivity {
+  id           String   @id @default(uuid())
+  companyId    String
+  type         String   // CALL, EMAIL, MEETING, NOTE, STATUS_CHANGE, DEAL_STAGE
+  subject      String
+  description  String?
+  crmContactId String?
+  crmDealId    String?
+  crmLeadId    String?
+  userId       String?
+  occurredAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  crmContact CrmContact? @relation(fields: [crmContactId], references: [id], onDelete: Cascade)
+  crmDeal    CrmDeal?    @relation(fields: [crmDealId], references: [id], onDelete: Cascade)
+  crmLead    CrmLead?    @relation(fields: [crmLeadId], references: [id], onDelete: Cascade)
+  user       User?       @relation("CrmActivityUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, occurredAt])
+  @@index([companyId, type])
+  @@map("crm_activities")
+}
+
+model CrmNote {
+  id            String   @id @default(uuid())
+  companyId     String
+  body          String
+  crmContactId  String?
+  crmCompanyId  String?
+  crmDealId     String?
+  crmLeadId     String?
+  userId        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  crmContact CrmContact? @relation(fields: [crmContactId], references: [id], onDelete: Cascade)
+  crmCompany CrmCompany? @relation(fields: [crmCompanyId], references: [id], onDelete: Cascade)
+  crmDeal    CrmDeal?    @relation(fields: [crmDealId], references: [id], onDelete: Cascade)
+  crmLead    CrmLead?    @relation(fields: [crmLeadId], references: [id], onDelete: Cascade)
+  user       User?       @relation("CrmNoteUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, crmContactId])
+  @@index([companyId, crmDealId])
+  @@map("crm_notes")
+}
+
+model CrmInvoice {
+  id             String    @id @default(uuid())
+  companyId      String
+  invoiceNumber  String
+  crmContactId   String?
+  crmCompanyId   String?
+  crmDealId      String?
+  status         String    @default("DRAFT") // DRAFT, SENT, PAID, PARTIALLY_PAID, OVERDUE, CANCELLED
+  issueDate      DateTime  @default(now())
+  dueDate        DateTime?
+  subtotal       Float     @default(0.0)
+  taxRate        Float     @default(0.0)
+  taxAmount      Float     @default(0.0)
+  total          Float     @default(0.0)
+  amountPaid     Float     @default(0.0)
+  currency       String    @default("USD")
+  itemsJson      String    @default("[]") // JSON: [{description, quantity, unitPrice}]
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  crmContact CrmContact? @relation(fields: [crmContactId], references: [id], onDelete: SetNull)
+  crmCompany CrmCompany? @relation(fields: [crmCompanyId], references: [id], onDelete: SetNull)
+  crmDeal    CrmDeal?    @relation(fields: [crmDealId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, status])
+  @@index([companyId, crmContactId])
+  @@map("crm_invoices")
+}
+
+// â”€â”€â”€ Phase D3: Financial transactions â€” append-only audit-grade money records â”€â”€â”€
+model FinancialTransaction {
+  id          String   @id @default(uuid())
+  companyId   String
+  orderId     String?
+  type        String   // REVENUE, REFUND, EXPENSE, COMMISSION, SETTLEMENT, ADJUSTMENT
+  amount      Decimal  @db.Decimal(12, 2)
+  currency    String   @default("USD")
+  note        String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  order   Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  actor   User             @relation("FinanceTransactionActor", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([companyId, createdAt])
+  @@index([companyId, type])
+  @@index([orderId])
+  @@map("financial_transactions")
 }

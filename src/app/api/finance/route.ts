@@ -1,7 +1,9 @@
 ﻿import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { requirePermission } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
@@ -55,14 +57,15 @@ export async function GET(req: Request) {
       recentDeliveredOrders: deliveredOrders.slice(0, 20),
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }
 
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('finance.view');
+    // Phase S: writing expenses requires finance.create (not just view)
+    await requirePermission('finance.create');
 
     const body = await req.json();
     const { title, category, amount, expenseDate, notes } = body;
@@ -97,6 +100,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, expense });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

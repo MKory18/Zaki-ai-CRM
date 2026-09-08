@@ -42,3 +42,14 @@ next-env.d.ts
 
 uploads/
 *.db
+
+# security: local database dumps
+# vendored reference template (not part of the app)
+# scratch files
+
+# security: local database dumps
+backups/
+# vendored reference template (not part of the app)
+واجهة/
+# scratch files
+tmp*.cjs

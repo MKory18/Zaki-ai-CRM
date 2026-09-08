@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/api-error';
 import crypto from 'crypto';
 import { db } from '@/lib/db';
-import { requirePermission, hashPassword } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
 import { ASSIGNABLE_ROLES, UserRole, UserStatus } from '@/types/auth';
 import { logAudit } from '@/lib/audit';
+import { requirePermission } from '@/lib/authorization';
 
 /**
  * PATCH /api/users/:id — admin actions on a user account:
@@ -24,9 +26,30 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
     }
 
-    // Safety: only SUPER_ADMIN can manage SUPER_ADMIN accounts
+    // ── Multi-tenant isolation: admins may only manage users inside their
+    // own company. SUPER_ADMIN (platform, companyId=null) is exempt. ──
+    const isPlatformSuper = admin.role === 'SUPER_ADMIN' && !admin.companyId;
+    if (!isPlatformSuper) {
+      const adminCo = admin.companyId;
+      const targetCo = target.companyId;
+      const sameCompany =
+        (adminCo && targetCo === adminCo) ||
+        // company admin may adopt a platform-level (companyId: null) account
+        // into their company only through an explicit action — reading is allowed:
+        (adminCo && targetCo === null);
+      if (!sameCompany) {
+        return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
+      }
+    }
+
+    // ── Privilege-escalation guards ──
+    // Only SUPER_ADMIN may manage SUPER_ADMIN accounts
     if (target.role === 'SUPER_ADMIN' && admin.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه إدارة حسابات المدراء الأعلى' }, { status: 403 });
+    }
+    // Only SUPER_ADMIN may assign the SUPER_ADMIN role to anyone
+    if (action === 'assignRole' && role === 'SUPER_ADMIN' && admin.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه تعيين رتبة المدير الأعلى' }, { status: 403 });
     }
 
     const updateData: Record<string, unknown> = {};
@@ -40,7 +63,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ error: 'لا يمكنك تغيير دورك الشخصي' }, { status: 400 });
       }
       updateData.role = role;
-      if (!target.companyId && admin.companyId) updateData.companyId = admin.companyId;
+      // Adopting a platform-level (companyId: null) account is allowed ONLY for
+      // a PENDING account by a company admin (onboarding). Never for ACTIVE
+      // accounts — that would be cross-tenant account capture.
+      if (!target.companyId && admin.companyId && admin.role !== 'SUPER_ADMIN') {
+        if (target.status !== 'PENDING') {
+          return NextResponse.json({ error: 'غير مسموح بإسناد حساب من شركة أخرى' }, { status: 403 });
+        }
+        updateData.companyId = admin.companyId;
+      }
       auditAction = 'USER_ROLE_CHANGED';
     } else if (action === 'changeStatus') {
       if (!['PENDING', 'ACTIVE', 'SUSPENDED', 'DISABLED'].includes(status)) {
@@ -139,7 +170,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({ success: true, user: updated });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'حدث خطأ داخلي';
-    return NextResponse.json({ error: message }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

@@ -91,8 +91,8 @@ export default function CustomersPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.customers}</h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.customers}</h1>
+            <p className="text-xs text-[#6b7177] mt-1">
               ملف العملاء مع توحيد أرقام الهاتف، كشف التكرار وسجل الطلبات الكامل
             </p>
           </div>
@@ -100,7 +100,7 @@ export default function CustomersPage() {
           <Button
             size="sm"
             onClick={() => setCreateModalOpen(true)}
-            className="flex items-center space-x-1.5 bg-red-600 hover:bg-red-700"
+            className="flex items-center space-x-1.5 bg-[#d13b4c] hover:bg-[#d13b4c]/85"
           >
             <Plus className="w-4 h-4" />
             <span>إضافة عميل</span>
@@ -109,13 +109,13 @@ export default function CustomersPage() {
 
         {/* Search */}
         <div className="relative max-w-md">
-          <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
           <input
             type="text"
             placeholder="بحث بالاسم، رقم الهاتف، المحافظة..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 shadow-xs"
+            className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-white border border-[#eef0f3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e97ff]/30 focus:border-[#3e97ff] shadow-xs"
           />
         </div>
 
@@ -124,52 +124,52 @@ export default function CustomersPage() {
           {customers.map((c) => (
             <Card
               key={c.id}
-              className="cursor-pointer hover:border-red-400 transition-colors"
+              className="cursor-pointer hover:border-[#3e97ff]/40 transition-colors"
               onClick={() => setSelectedCustomer(c)}
             >
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-1.5 rtl:space-x-reverse">
-                      <User className="w-3.5 h-3.5 text-red-600" />
+                    <h3 className="font-bold text-[#252f4a] text-sm flex items-center space-x-1.5 rtl:space-x-reverse">
+                      <User className="w-3.5 h-3.5 text-[#d13b4c]" />
                       <span>{c.fullName}</span>
                     </h3>
-                    <p className="text-xs text-slate-500 flex items-center space-x-1 mt-1">
-                      <MapPin className="w-3 h-3 text-slate-400" />
+                    <p className="text-xs text-[#6b7177] flex items-center space-x-1 mt-1">
+                      <MapPin className="w-3 h-3 text-[#9ca3af]" />
                       <span>
                         {c.city}، {c.address}
                       </span>
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-bold text-[#d13b4c] bg-[#fbe9ea] px-2 py-0.5 rounded-md">
                     ${c.totalPurchaseValue.toFixed(2)}
                   </span>
                 </div>
 
-                <div className="flex items-center space-x-2 text-xs pt-2 border-t border-slate-100">
+                <div className="flex items-center space-x-2 text-xs pt-2 border-t border-[#eef0f3]">
                   <a
                     href={`tel:${c.phone}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center space-x-1 rtl:space-x-reverse font-mono font-bold text-slate-800 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200"
+                    className="inline-flex items-center space-x-1 rtl:space-x-reverse font-mono font-bold text-[#252f4a] bg-[#f3f4f6] px-2 py-1 rounded hover:bg-[#e8eaef]"
                   >
-                    <Phone className="w-3 h-3 text-red-600" />
+                    <Phone className="w-3 h-3 text-[#d13b4c]" />
                     <span dir="ltr">{c.rawPhone || c.phone}</span>
                   </a>
-                  {c.altPhone && <span className="text-slate-400">بديل: {c.altPhone}</span>}
+                  {c.altPhone && <span className="text-[#9ca3af]">بديل: {c.altPhone}</span>}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center text-[11px]">
-                  <div className="bg-slate-50 p-1.5 rounded-lg">
-                    <span className="text-slate-400 block">الكل</span>
-                    <span className="font-bold text-slate-800">{c.totalOrders}</span>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#eef0f3] text-center text-[11px]">
+                  <div className="bg-[#f8f9fa] p-1.5 rounded-lg">
+                    <span className="text-[#9ca3af] block">الكل</span>
+                    <span className="font-bold text-[#252f4a]">{c.totalOrders}</span>
                   </div>
-                  <div className="bg-green-50 p-1.5 rounded-lg">
-                    <span className="text-green-600 block">موصّل</span>
-                    <span className="font-bold text-green-700">{c.deliveredOrders}</span>
+                  <div className="bg-emerald-100 p-1.5 rounded-lg">
+                    <span className="text-[#25b865] block">موصّل</span>
+                    <span className="font-bold text-[#25b865]">{c.deliveredOrders}</span>
                   </div>
-                  <div className="bg-red-50 p-1.5 rounded-lg">
-                    <span className="text-red-500 block">ملغي</span>
-                    <span className="font-bold text-red-700">{c.cancelledOrders}</span>
+                  <div className="bg-[#fbe9ea] p-1.5 rounded-lg">
+                    <span className="text-[#d13b4c] block">ملغي</span>
+                    <span className="font-bold text-[#d13b4c]">{c.cancelledOrders}</span>
                   </div>
                 </div>
               </CardContent>
@@ -188,44 +188,44 @@ export default function CustomersPage() {
           maxWidth="2xl"
         >
           <div className="space-y-4">
-            <div className="p-4 bg-slate-50 rounded-xl grid grid-cols-2 gap-3 text-xs">
+            <div className="p-4 bg-[#f8f9fa] rounded-xl grid grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-slate-400">رقم الهاتف:</span>
-                <p className="font-bold font-mono text-slate-800 text-sm" dir="ltr">
+                <span className="text-[#9ca3af]">رقم الهاتف:</span>
+                <p className="font-bold font-mono text-[#252f4a] text-sm" dir="ltr">
                   {selectedCustomer.rawPhone || selectedCustomer.phone}
                 </p>
               </div>
               <div>
-                <span className="text-slate-400">إجمالي المشتريات:</span>
-                <p className="font-bold text-red-600 text-sm">
+                <span className="text-[#9ca3af]">إجمالي المشتريات:</span>
+                <p className="font-bold text-[#d13b4c] text-sm">
                   ${selectedCustomer.totalPurchaseValue.toFixed(2)}
                 </p>
               </div>
               <div>
-                <span className="text-slate-400">العنوان:</span>
-                <p className="font-medium text-slate-800">{selectedCustomer.address}</p>
+                <span className="text-[#9ca3af]">العنوان:</span>
+                <p className="font-medium text-[#252f4a]">{selectedCustomer.address}</p>
               </div>
               <div>
-                <span className="text-slate-400">المحافظة / الدولة:</span>
-                <p className="font-medium text-slate-800">
+                <span className="text-[#9ca3af]">المحافظة / الدولة:</span>
+                <p className="font-medium text-[#252f4a]">
                   {selectedCustomer.city}، {selectedCustomer.country}
                 </p>
               </div>
             </div>
 
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mt-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#4b5675] mt-2">
               سجل الطلبات ({selectedCustomer.orders?.length || 0})
             </h4>
 
-            <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+            <div className="divide-y divide-[#eef0f3] max-h-60 overflow-y-auto">
               {selectedCustomer.orders?.map((ord: any) => (
                 <div key={ord.id} className="py-2.5 flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-bold text-red-600">{ord.orderNumber}</span>
-                    <span className="text-slate-500 ml-2 rtl:ml-0 rtl:mr-2">{ord.product?.name}</span>
+                    <span className="font-bold text-[#d13b4c]">{ord.orderNumber}</span>
+                    <span className="text-[#6b7177] ml-2 rtl:ml-0 rtl:mr-2">{ord.product?.name}</span>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                    <span className="font-bold text-slate-900">${ord.totalAmount.toFixed(2)}</span>
+                    <span className="font-bold text-[#252f4a]">${ord.totalAmount.toFixed(2)}</span>
                     <OrderStatusBadge status={ord.status} />
                   </div>
                 </div>
@@ -245,7 +245,7 @@ export default function CustomersPage() {
       >
         <form onSubmit={handleCreateCustomer} className="space-y-4">
           {modalMsg && (
-            <div className="p-3 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-lg">
+            <div className="p-3 bg-blue-50 border border-[#b9dcff] text-[#3e97ff] text-xs rounded-lg">
               {modalMsg}
             </div>
           )}
@@ -305,7 +305,7 @@ export default function CustomersPage() {
             <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" loading={modalLoading} className="bg-red-600 hover:bg-red-700">
+            <Button type="submit" loading={modalLoading} className="bg-[#d13b4c] hover:bg-[#d13b4c]/85">
               حفظ العميل
             </Button>
           </div>

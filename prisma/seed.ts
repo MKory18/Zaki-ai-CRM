@@ -1,6 +1,40 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
+// ─── Production safety gate ───
+// This seed is DESTRUCTIVE (deleteMany over every business table below) and
+// creates accounts with known dev passwords. It must NEVER run against a
+// production database. Explicit escape hatch: SEED_ALLOW_DESTRUCTIVE=1
+const isProduction = process.env.NODE_ENV === 'production';
+if (isProduction && process.env.SEED_ALLOW_DESTRUCTIVE !== '1') {
+  console.error(
+    '\n⛔ BLOCKED: prisma seed is DESTRUCTIVE (it deletes ALL companies, users, orders,\n' +
+    '   customers and products) and creates accounts with known development passwords.\n' +
+    '   Running it against NODE_ENV=production is forbidden.\n\n' +
+    '   If you are ABSOLUTELY certain (e.g. a disposable environment), set\n' +
+    '   SEED_ALLOW_DESTRUCTIVE=1 — and never do this against a production database.\n'
+  );
+  process.exit(1);
+}
+if (process.env.SEED_ALLOW_DESTRUCTIVE === '1' && !isProduction) {
+  console.warn('⚠️  SEED_ALLOW_DESTRUCTIVE=1 — running destructive seed anyway (non-production).');
+}
+
+// ─── No production credentials in source code ───
+// Dev-only default kept for local seeding; production bootstrap must inject
+// SEED_OWNER_EMAIL / SEED_OWNER_PASSWORD (initial password is NOT logged).
+const DEV_DEMO_PASSWORD = 'password123';
+if (isProduction) {
+  console.error('⛔ BLOCKED: demo password seeding is not allowed in production.');
+  process.exit(1);
+}
+const ownerEmail = process.env.SEED_OWNER_EMAIL || 'mkory4268@gmail.com';
+const ownerPassword = process.env.SEED_OWNER_PASSWORD;
+if (isProduction && !ownerPassword) {
+  console.error('⛔ SEED_OWNER_PASSWORD is required to bootstrap the owner account in production.');
+  process.exit(1);
+}
+
 const prisma = new PrismaClient();
 
 interface SheetOffer {
@@ -299,14 +333,15 @@ async function main() {
   });
   console.log('✅ Company:', company.name);
 
-  const passwordHash = await bcrypt.hash('password123', 10);
+  const passwordHash = await bcrypt.hash(DEV_DEMO_PASSWORD, 10);
 
-  // Owner super admin (full permissions) — upsert so re-seeding never duplicates
-  const ownerPasswordHash = await bcrypt.hash('MKzakiai4268@', 10);
+  // Owner super admin (full permissions) — upsert so re-seeding never duplicates.
+  // Password comes from SEED_OWNER_PASSWORD env (never hardcoded, never logged).
+  const ownerPasswordHash = await bcrypt.hash(ownerPassword || DEV_DEMO_PASSWORD, 10);
   await prisma.user.upsert({
-    where: { email: 'mkory4268@gmail.com' },
+    where: { email: ownerEmail },
     update: { role: 'SUPER_ADMIN', status: 'ACTIVE', passwordHash: ownerPasswordHash, tokenVersion: { increment: 1 } },
-    create: { email: 'mkory4268@gmail.com', name: 'مالك المتجر (Owner)', passwordHash: ownerPasswordHash, role: 'SUPER_ADMIN', status: 'ACTIVE' },
+    create: { email: ownerEmail, name: 'مالك المتجر (Owner)', passwordHash: ownerPasswordHash, role: 'SUPER_ADMIN', status: 'ACTIVE' },
   });
 
   await prisma.user.create({

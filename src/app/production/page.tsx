@@ -108,8 +108,8 @@ export default function ProductionPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.production}</h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.production}</h1>
+            <p className="text-xs text-[#6b7177] mt-1">
               Section 5 Manufacturing & Cost per unit calculation engine with inventory movement linkage
             </p>
           </div>
@@ -136,7 +136,7 @@ export default function ProductionPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Batch Number</th>
                     <th className="px-6 py-3.5">Product</th>
@@ -148,36 +148,36 @@ export default function ProductionPage() {
                     <th className="px-6 py-3.5">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#eef0f3]">
                   {batches.map((b) => (
-                    <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-6 py-3.5 font-bold font-mono text-red-600">
+                    <tr key={b.id} className="hover:bg-[#f8f9fa] transition-colors">
+                      <td className="px-6 py-3.5 font-bold font-mono text-[#d13b4c]">
                         {b.batchNumber}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-semibold text-slate-900 block">{b.product?.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{b.product?.sku}</span>
+                        <span className="font-semibold text-[#252f4a] block">{b.product?.name}</span>
+                        <span className="text-[10px] text-[#9ca3af] font-mono">{b.product?.sku}</span>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-slate-800">
+                      <td className="px-6 py-3.5 font-bold text-[#252f4a]">
                         {b.quantityProduced} units
                       </td>
-                      <td className="px-6 py-3.5 text-red-600 font-medium">
+                      <td className="px-6 py-3.5 text-[#d13b4c] font-medium">
                         {b.quantitySold} units
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                        <span className="font-bold text-[#d13b4c] bg-[#fbe9ea] px-2 py-0.5 rounded-full">
                           {b.quantityRemaining} units
                         </span>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-slate-900">
+                      <td className="px-6 py-3.5 font-bold text-[#252f4a]">
                         ${b.totalProductionCost.toFixed(2)}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-black text-red-700 bg-red-50 px-2.5 py-1 rounded-md text-xs">
+                        <span className="font-black text-[#d13b4c] bg-[#fbe9ea] px-2.5 py-1 rounded-md text-xs">
                           ${b.costPerUnit.toFixed(2)}
                         </span>
                       </td>
-                      <td className="px-6 py-3.5 text-slate-400">
+                      <td className="px-6 py-3.5 text-[#9ca3af]">
                         {format(new Date(b.productionDate), 'MMM d, yyyy')}
                       </td>
                     </tr>
@@ -199,7 +199,7 @@ export default function ProductionPage() {
       >
         <form onSubmit={handleCreateBatch} className="space-y-4">
           {modalError && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
+            <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-lg">
               {modalError}
             </div>
           )}
@@ -236,8 +236,8 @@ export default function ProductionPage() {
           />
 
           {/* Cost Items Grid */}
-          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/60 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+          <div className="border border-[#eef0f3] rounded-xl p-4 bg-[#f8f9fa]/60 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#4b5675]">
               Direct Cost Breakdown ($)
             </h4>
 
@@ -274,20 +274,20 @@ export default function ProductionPage() {
           </div>
 
           {/* Section 5 Live Real-time Calculator Box */}
-          <div className="p-4 bg-gradient-to-r from-red-50 to-red-50 border border-red-200 rounded-xl flex items-center justify-between text-xs">
+          <div className="p-4 bg-[#fbe9ea] border border-[#f5c6cb] rounded-xl flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2">
-              <Calculator className="w-5 h-5 text-red-600" />
+              <Calculator className="w-5 h-5 text-[#d13b4c]" />
               <div>
-                <p className="font-bold text-slate-800">Total Production Cost: ${totalProductionCost.toFixed(2)}</p>
-                <p className="text-slate-500">
+                <p className="font-bold text-[#252f4a]">Total Production Cost: ${totalProductionCost.toFixed(2)}</p>
+                <p className="text-[#6b7177]">
                   Formula: Mfg (${manufacturingCost}) + Packaging (${packagingCost}) + Raw (${rawMaterialCost})
                 </p>
               </div>
             </div>
 
             <div className="text-right">
-              <span className="text-slate-500 block">Calculated Cost Per Unit:</span>
-              <span className="text-xl font-black text-red-700 block">
+              <span className="text-[#6b7177] block">Calculated Cost Per Unit:</span>
+              <span className="text-xl font-black text-[#d13b4c] block">
                 ${costPerUnit}
               </span>
             </div>

@@ -1,5 +1,38 @@
 import { db } from './db';
 
+/**
+ * Fields stripped from customer snapshots before they are persisted
+ * in audit logs. Phone + fullName are kept (operationally needed);
+ * physical address, secondary phone and free-text notes are redacted.
+ */
+const CUSTOMER_REDACTED_FIELDS = ['address', 'altPhone', 'notes'] as const;
+
+export function redactCustomerForAudit<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
+  if (!obj || typeof obj !== 'object') return obj;
+  const copy: Record<string, unknown> = { ...obj };
+  for (const field of CUSTOMER_REDACTED_FIELDS) {
+    if (field in copy) copy[field] = '[REDACTED]';
+  }
+  return copy;
+}
+
+/**
+ * Recursive redaction for arbitrary settings/metadata objects: any key
+ * matching password/secret/token/key has its value replaced with
+ * '[REDACTED]' before being written to the audit log.
+ */
+const SENSITIVE_KEY_PATTERN = /password|secret|token|key/i;
+
+export function redactSensitiveValues(value: unknown, depth = 0): unknown {
+  if (depth > 6 || value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((v) => redactSensitiveValues(v, depth + 1));
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    out[k] = SENSITIVE_KEY_PATTERN.test(k) ? '[REDACTED]' : redactSensitiveValues(v, depth + 1);
+  }
+  return out;
+}
+
 export async function logAudit({
   companyId,
   userId,

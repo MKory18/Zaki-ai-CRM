@@ -1,9 +1,13 @@
 ﻿import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, requirePermission } from '@/lib/auth';
+import { requireCompanyTenant } from '@/lib/auth';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit } from '@/lib/audit';
+import { applyQueueFilter } from '@/lib/rbac';
+import { createNotification } from '@/lib/notification';
+import { apiError } from '@/lib/api-error';
+import { requirePermission } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
@@ -15,14 +19,14 @@ export async function GET(req: Request) {
     const productId = searchParams.get('productId')?.trim();
     const moderatorId = searchParams.get('moderatorId')?.trim();
     const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    // Cap page size (hard server-side limit) with a NaN guard
+    const parsedLimit = parseInt(searchParams.get('limit') || '25', 10);
+    const limit = Math.min(Number.isNaN(parsedLimit) ? 25 : parsedLimit, 100);
 
     const whereClause: any = { companyId };
 
-    // If user is MODERATOR, only show their assigned orders (Section 15)
-    if (user.role === 'MODERATOR') {
-      whereClause.moderatorId = user.id;
-    } else if (moderatorId && moderatorId !== 'all') {
+    // Explicit moderatorId filter (used by admin dashboards) — RBAC still applies below
+    if (moderatorId && moderatorId !== 'all') {
       whereClause.moderatorId = moderatorId;
     }
 
@@ -44,10 +48,16 @@ export async function GET(req: Request) {
       ];
     }
 
+    // ─── Role-based visibility + workflow queues (backend-enforced) ───
+    // applyQueueFilter enforces per-role visibility envelopes; never trust the
+    // requested queue blindly — the server decides which queues a role may use.
+    const queue = searchParams.get('queue');
+    const visibleWhere = applyQueueFilter(user, whereClause, queue);
+
     const [total, orders] = await Promise.all([
-      db.order.count({ where: whereClause }),
+      db.order.count({ where: visibleWhere }),
       db.order.findMany({
-        where: whereClause,
+        where: visibleWhere,
         include: {
           customer: {
             select: { id: true, fullName: true, phone: true, rawPhone: true, city: true, address: true },
@@ -80,9 +90,10 @@ export async function GET(req: Request) {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+      });
+  } catch (error) {
+    const { body, status } = apiError(error);
+    return NextResponse.json(body, { status });
   }
 }
 
@@ -143,7 +154,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Duplicate check / Customer creation
+    // 1. Duplicate check / Customer creation (reuse on a P2002 race)
     const normalizedPhone = normalizePhoneNumber(customerPhone);
     let customer = await db.customer.findUnique({
       where: {
@@ -155,34 +166,44 @@ export async function POST(req: Request) {
     });
 
     if (!customer) {
-      customer = await db.customer.create({
-        data: {
-          companyId,
-          fullName: customerName.trim(),
-          phone: normalizedPhone,
-          rawPhone: customerPhone.trim(),
-          altPhone: customerAltPhone?.trim() || null,
-          address: customerAddress?.trim() || '',
-          city: customerCity?.trim() || 'Cairo',
-          totalOrders: 0,
-        },
-      });
+      try {
+        customer = await db.customer.create({
+          data: {
+            companyId,
+            fullName: customerName.trim(),
+            phone: normalizedPhone,
+            rawPhone: customerPhone.trim(),
+            altPhone: customerAltPhone?.trim() || null,
+            address: customerAddress?.trim() || '',
+            city: customerCity?.trim() || 'Cairo',
+            totalOrders: 0,
+          },
+        });
+      } catch (e: any) {
+        // Concurrent create with the same phone → reuse the winner
+        if (e?.code === 'P2002') {
+          customer = await db.customer.findUnique({
+            where: { companyId_phone: { companyId, phone: normalizedPhone } },
+          });
+        }
+        if (!customer) throw e;
+      }
     }
 
     // 2. Fetch product & compute estimated unit cost from latest batch
-    const product = await db.product.findUnique({
-      where: { id: productId },
+    // Phase S: tenant-validate — orders must reference a product of THIS company
+    const product = await db.product.findFirst({
+      where: { id: productId, companyId },
       include: {
         batches: {
-          where: { quantityRemaining: { gt: 0 } },
-          orderBy: { productionDate: 'asc' },
+          where: { companyId },
+          orderBy: { productionDate: 'desc' },
           take: 1,
         },
       },
     });
-
     if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
     }
 
     const qty = quantity || 1;
@@ -194,68 +215,113 @@ export async function POST(req: Request) {
     const unitCost = product.batches[0]?.costPerUnit || 0;
     const estimatedCostOfGoods = Number((unitCost * qty).toFixed(2));
 
-    // Moderator assignment
+    // Moderator assignment — Phase S: moderator must belong to THIS company
     const assignedModeratorId = moderatorId || (user.role === 'MODERATOR' ? user.id : null);
     let moderatorCommission = 0;
     if (assignedModeratorId) {
-      const mod = await db.user.findUnique({ where: { id: assignedModeratorId } });
-      if (mod && mod.commissionRate > 0) {
+      const mod = await db.user.findFirst({ where: { id: assignedModeratorId, companyId } });
+      if (!mod) {
+        return NextResponse.json({ error: 'الموديريتور غير موجود في شركتك' }, { status: 404 });
+      }
+      if (mod.commissionRate > 0) {
         moderatorCommission = Number(((price * mod.commissionRate) / 100).toFixed(2));
       }
     }
 
-    // Generate unique Order Number
-    const count = await db.order.count({ where: { companyId } });
-    const orderNumber = `ORD-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+    // 3. Create Order (with product snapshot for historical accuracy).
+    // Workflow defaults (Step 4): NEW + unowned → lands in the claimable
+    // Confirmation Queue for eligible employees immediately.
+    // Everything (order + customer counters + activity + status log) is one
+    // atomic transaction; the sequential order number retries on a P2002 race.
+    const now = new Date();
+    const order = await db.$transaction(async (tx) => {
+      let created: any = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const count = await tx.order.count({ where: { companyId } });
+          const orderNumber = `ORD-${new Date().getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
 
-    // 3. Create Order (with product snapshot for historical accuracy)
-    const order = await db.order.create({
-      data: {
-        companyId,
-        orderNumber,
-        customerId: customer.id,
-        productId,
-        offerId: offerId || null,
-        quantity: qty,
-        sellingPrice: price,
-        shippingCost: shipCost,
-        totalAmount,
-        currency: 'USD',
-        moderatorId: assignedModeratorId,
-        moderatorCommission,
-        estimatedCostOfGoods,
-        productNameSnapshot: product.name,
-        productImageSnapshot: product.image || null,
-        status: 'NEW',
-        source: source || 'Manual',
-        customerNotes: customerNotes?.trim() || null,
-        internalNotes: internalNotes?.trim() || null,
-      },
-    });
+          created = await tx.order.create({
+            data: {
+              companyId,
+              orderNumber,
+              customerId: customer.id,
+              productId,
+              offerId: offerId || null,
+              quantity: qty,
+              sellingPrice: price,
+              shippingCost: shipCost,
+              totalAmount,
+              currency: 'USD',
+              moderatorId: assignedModeratorId,
+              moderatorCommission,
+              estimatedCostOfGoods,
+              productNameSnapshot: product.name,
+              productImageSnapshot: product.image || null,
+              status: 'NEW',
+              confirmationStatus: 'NEW',
+              shippingStatus: 'NOT_READY',
+              settlementStatus: 'NOT_APPLICABLE',
+              // Ownership: created but unclaimed — appears in the AVAILABLE queue
+              assignedToId: null,
+              claimedById: null,
+              currentOwnerId: null,
+              signatureStatus: 'UNSIGNED',
+              version: 1,
+              source: source || 'Manual',
+              customerNotes: customerNotes?.trim() || null,
+              internalNotes: internalNotes?.trim() || null,
+            },
+          });
+          break;
+        } catch (e: any) {
+          // Duplicate order number race → retry with the next number
+          if (e?.code === 'P2002' && attempt < 4) continue;
+          throw e;
+        }
+      }
+      if (!created) throw new Error('Failed to generate a unique order number');
 
-    // 4. Update Customer Stats
-    await db.customer.update({
-      where: { id: customer.id },
-      data: {
-        totalOrders: { increment: 1 },
-        lastOrderDate: new Date(),
-        firstOrderDate: customer.firstOrderDate || new Date(),
-      },
-    });
+      // 4. Update Customer Stats
+      await tx.customer.update({
+        where: { id: customer.id },
+        data: {
+          totalOrders: { increment: 1 },
+          lastOrderDate: now,
+          firstOrderDate: customer.firstOrderDate || now,
+        },
+      });
 
-    // 5. Activity Timeline entry
-    await db.orderActivity.create({
-      data: {
-        companyId,
-        orderId: order.id,
-        userId: user.id,
-        action: 'ORDER_CREATED',
-        newStatus: 'NEW',
-        metadata: JSON.stringify({
-          source: order.source,
-          createdBy: user.name,
-        }),
-      },
+      // 5. Activity Timeline entry
+      await tx.orderActivity.create({
+        data: {
+          companyId,
+          orderId: created.id,
+          userId: user.id,
+          action: 'ORDER_CREATED',
+          newStatus: 'NEW',
+          metadata: JSON.stringify({
+            source: created.source,
+            createdBy: user.name,
+          }),
+        },
+      });
+
+      // 6. Status log (confirmation workflow entry point)
+      await tx.orderStatusLog.create({
+        data: {
+          companyId,
+          orderId: created.id,
+          statusType: 'CONFIRMATION',
+          previousValue: null,
+          newValue: 'NEW',
+          changedById: user.id,
+          changedByRole: user.role,
+          note: 'Order created — entered confirmation queue',
+        },
+      });
+
+      return created;
     });
 
     await logAudit({
@@ -267,8 +333,23 @@ export async function POST(req: Request) {
       newData: order,
     });
 
+    // Notify company managers (userId null → broadcast) — non-fatal, after commit
+    try {
+      await createNotification({
+        companyId,
+        userId: null,
+        title: 'طلب جديد',
+        message: `تم إنشاء طلب جديد #${order.orderNumber} بواسطة ${user.name}.`,
+        type: 'ORDER_NEW',
+        link: '/orders',
+      });
+    } catch (e) {
+      console.error('Order-create notification failed (non-fatal):', e);
+    }
+
     return NextResponse.json({ success: true, order });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error) {
+    const { body, status } = apiError(error);
+    return NextResponse.json(body, { status });
   }
 }

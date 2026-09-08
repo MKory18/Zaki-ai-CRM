@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
+import { apiFetch } from '@/lib/api-client';
 import { SYRIAN_GOVERNORATES } from '@/lib/syria';
 import {
   Sparkles,
@@ -57,9 +58,24 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   const [productId, setProductId] = useState('');
   const [finalPrice, setFinalPrice] = useState(0);
 
+  // Reset ALL form state whenever the modal opens — no stale AI parse result
+  // or previous text should persist between opens
+  useEffect(() => {
+    if (isOpen) {
+      setText('');
+      setParsing(false);
+      setSaving(false);
+      setError(null);
+      setResult(null);
+      setProducts([]);
+      setProductId('');
+      setFinalPrice(0);
+    }
+  }, [isOpen]);
+
   const loadProducts = async () => {
     try {
-      const res = await fetch('/api/products');
+      const res = await apiFetch('/api/products');
       if (res.ok) {
         const data = await res.json();
         setProducts(data.products || []);
@@ -85,7 +101,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
     setResult(null);
     try {
       await loadProducts();
-      const res = await fetch('/api/orders/ai-intake', {
+      const res = await apiFetch('/api/orders/ai-intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -107,7 +123,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/orders/ai-intake', {
+      const res = await apiFetch('/api/orders/ai-intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

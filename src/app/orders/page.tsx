@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,7 @@ import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { AiOrderModal } from '@/components/orders/AiOrderModal';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { useApp } from '@/context/AppContext';
+import { apiFetch } from '@/lib/api-client';
 import {
   Search,
   Filter,
@@ -25,7 +26,8 @@ import {
 import { format } from 'date-fns';
 
 export default function OrdersPage() {
-  const { t } = useApp();
+  const { t, currentUser, locale } = useApp();
+  const ar = locale === 'ar';
   const [orders, setOrders] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 25, totalPages: 1 });
   const [loading, setLoading] = useState(true);
@@ -35,10 +37,22 @@ export default function OrdersPage() {
   const [status, setStatus] = useState('all');
   const [productId, setProductId] = useState('all');
   const [moderatorId, setModeratorId] = useState('all');
+  // Workflow queue (backend-enforced per role — server rejects unauthorized queues)
+  const [queue, setQueue] = useState('');
 
   // Metadata dropdowns
   const [products, setProducts] = useState<any[]>([]);
   const [moderators, setModerators] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  // ref mirror of pagination for polling without re-subscribing the interval
+  const paginationRef = useRef({ page: 1 });
+  useEffect(() => { paginationRef.current = pagination; }, [pagination]);
+  // ref mirror of loadOrders so the 30s polling interval always calls the
+  // latest closure (current filters) without re-subscribing the interval
+  const loadOrdersRef = useRef<(page?: number) => Promise<void>>(async () => {});
+  // Monotonic request counter — stale (out-of-order) responses are discarded
+  // so an older poll can never overwrite a newer result
+  const loadOrdersSeq = useRef(0);
 
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -65,7 +79,9 @@ export default function OrdersPage() {
   };
 
   const loadOrders = useCallback(async (pageToLoad = 1) => {
+    const seq = ++loadOrdersSeq.current;
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({
         page: pageToLoad.toString(),
@@ -75,19 +91,34 @@ export default function OrdersPage() {
         productId,
         moderatorId,
       });
+      if (queue) params.set('queue', queue);
 
-      const res = await fetch(`/api/orders?${params.toString()}`);
+      const res = await apiFetch(`/api/orders?${params.toString()}`);
+      // Discard stale response — a newer request (filter change / poll) started
+      // while this one was in flight
+      if (seq !== loadOrdersSeq.current) return;
       if (res.ok) {
         const data = await res.json();
         setOrders(data.orders || []);
         setPagination(data.pagination || { total: 0, page: 1, limit: 25, totalPages: 1 });
+      } else {
+        // Show a visible error instead of silently keeping stale data
+        // (401 is handled by apiFetch redirect)
+        const data = await res.json().catch(() => ({}));
+        setError(data.errorAr || data.error || `HTTP ${res.status}`);
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (seq !== loadOrdersSeq.current) return;
       console.error('Failed to load orders:', e);
+      setError(e?.message || 'فشل تحميل الطلبات');
     } finally {
-      setLoading(false);
+      // Only the latest request may clear the shared loading flag
+      if (seq === loadOrdersSeq.current) setLoading(false);
     }
-  }, [search, status, productId, moderatorId]);
+  }, [search, status, productId, moderatorId, queue]);
+
+  // Keep the ref in sync each render (after loadOrders exists)
+  useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
 
   useEffect(() => {
     loadMetadata();
@@ -100,8 +131,29 @@ export default function OrdersPage() {
     return () => clearTimeout(timer);
   }, [loadOrders]);
 
+  // Light polling (30s) — keeps queues in sync (claims by others appear without
+  // a manual refresh). No WebSockets needed; server RBAC stays the source of truth.
+  // Mirrors the dashboard: on visibilitychange, returning to the tab refetches
+  // immediately so data is fresh without waiting for the next tick.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!document.hidden) loadOrdersRef.current(paginationRef.current.page);
+    }, 30_000);
+    const onVisibility = () => {
+      if (!document.hidden) loadOrdersRef.current(paginationRef.current.page);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
   const handleExportCSV = () => {
-    window.open('/api/reports/export', '_blank');
+    // Export respects the current filters (same params as loadOrders)
+    const params = new URLSearchParams({ q: search, status, productId, moderatorId });
+    if (queue) params.set('queue', queue);
+    window.open(`/api/reports/export?${params.toString()}`, '_blank');
   };
 
   return (
@@ -110,8 +162,8 @@ export default function OrdersPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.orders}</h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.orders}</h1>
+            <p className="text-xs text-[#6b7177] mt-1">
               Complete order tracking, moderator calls, status transitions & fulfillment
             </p>
           </div>
@@ -140,7 +192,7 @@ export default function OrdersPage() {
             <Button
               size="sm"
               onClick={() => setAiModalOpen(true)}
-              className="flex items-center space-x-1.5 bg-red-600 hover:bg-red-700"
+              className="flex items-center space-x-1.5 bg-[#d13b4c] hover:bg-[#d13b4c]/85"
             >
               <Wand2 className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
@@ -158,15 +210,38 @@ export default function OrdersPage() {
         </div>
 
         {/* Filters & Search Bar */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white border border-[#eef0f3] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          {/* Workflow queue tabs (server-enforced per role) */}
+          <div className="sm:col-span-2 flex flex-wrap gap-1.5">
+            {[
+              { key: '', ar: 'الكل', en: 'All' },
+              { key: 'available', ar: '🟢 متاح للاستلام', en: '🟢 Available' },
+              { key: 'my_orders', ar: '🔵 طلباتي', en: '🔵 My Orders' },
+              { key: 'assigned_to_me', ar: '🟡 مسندة لي', en: '🟡 Assigned to Me' },
+              { key: 'processing', ar: '⚙️ قيد المعالجة', en: '⚙️ Processing' },
+              { key: 'all_company', ar: '🏢 كل الشركة', en: '🏢 All Company' },
+            ].map((q) => (
+              <button
+                key={q.key || 'all'}
+                onClick={() => { setQueue(q.key); }}
+                className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
+                  queue === q.key
+                    ? 'bg-[#3e97ff] text-white border-[#3e97ff]'
+                    : 'bg-white text-[#4b5675] border-[#eef0f3] hover:border-[#3e97ff]/40 hover:text-[#3e97ff]'
+                }`}
+              >
+                {ar ? q.ar : q.en}
+              </button>
+            ))}
+          </div>
           <div className="relative sm:col-span-2">
-            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
             <input
               type="text"
               placeholder={t.searchOrders}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[#f8f9fa] border border-[#eef0f3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e97ff]/30 focus:border-[#3e97ff]"
             />
           </div>
 
@@ -217,12 +292,20 @@ export default function OrdersPage() {
           </Select>
         </div>
 
+        {/* Load error banner */}
+        {error && (
+          <div className="rounded-xl border border-rose-300 bg-rose-50 text-rose-800 px-3 py-2.5 text-xs flex items-center justify-between gap-2">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
+          </div>
+        )}
+
         {/* Orders Table */}
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">{t.thOrderNumber}</th>
                     <th className="px-6 py-3.5">{t.thCustomer}</th>
@@ -234,10 +317,10 @@ export default function OrdersPage() {
                     <th className="px-6 py-3.5 text-right rtl:text-left">{t.thActions}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#eef0f3]">
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-400">
+                      <td colSpan={8} className="py-12 text-center text-[#9ca3af]">
                         {loading ? t.loading : t.noOrders}
                       </td>
                     </tr>
@@ -245,25 +328,25 @@ export default function OrdersPage() {
                     orders.map((order) => (
                       <tr
                         key={order.id}
-                        className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                        className="hover:bg-[#f8f9fa] transition-colors cursor-pointer"
                         onClick={() => setSelectedOrderId(order.id)}
                       >
                         <td className="px-6 py-3.5">
-                          <span className="font-bold text-red-600 block">
+                          <span className="font-bold text-[#d13b4c] block">
                             {order.orderNumber}
                           </span>
-                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                          <span className="text-[10px] text-[#9ca3af] block mt-0.5">
                             {order.source}
                           </span>
                         </td>
 
                         <td className="px-6 py-3.5">
-                          <p className="font-semibold text-slate-900">{order.customer?.fullName}</p>
+                          <p className="font-semibold text-[#252f4a]">{order.customer?.fullName}</p>
                           <div className="flex items-center space-x-1 mt-0.5">
-                            <span className="font-mono text-[11px] text-slate-500">
+                            <span className="font-mono text-[11px] text-[#6b7177]">
                               {order.customer?.rawPhone || order.customer?.phone}
                             </span>
-                            <span className="text-[11px] text-slate-400">• {order.customer?.city}</span>
+                            <span className="text-[11px] text-[#9ca3af]">• {order.customer?.city}</span>
                           </div>
                         </td>
 
@@ -275,16 +358,16 @@ export default function OrdersPage() {
                               size="sm"
                             />
                             <div>
-                              <p className="font-medium text-slate-800">{order.productNameSnapshot || order.product?.name}</p>
-                              <p className="text-[11px] text-slate-400">
+                              <p className="font-medium text-[#252f4a]">{order.productNameSnapshot || order.product?.name}</p>
+                              <p className="text-[11px] text-[#9ca3af]">
                                 {order.offer?.name || 'قياسي'} ({order.quantity} وحدة)
                               </p>
                             </div>
                           </div>
                         </td>
 
-                        <td className="px-6 py-3.5 font-bold text-slate-900">
-                          ${order.totalAmount.toFixed(2)}
+                        <td className="px-6 py-3.5 font-bold text-[#252f4a]">
+                          ${Number(order.totalAmount || 0).toFixed(2)}
                         </td>
 
                         <td className="px-6 py-3.5">
@@ -292,12 +375,12 @@ export default function OrdersPage() {
                         </td>
 
                         <td className="px-6 py-3.5">
-                          <span className="font-medium text-slate-700 block">
+                          <span className="font-medium text-[#4b5675] block">
                             {order.moderator?.name || 'Unassigned'}
                           </span>
                         </td>
 
-                        <td className="px-6 py-3.5 text-slate-400">
+                        <td className="px-6 py-3.5 text-[#9ca3af]">
                           {format(new Date(order.createdAt), 'MMM d, yyyy p')}
                         </td>
 
@@ -321,7 +404,7 @@ export default function OrdersPage() {
             </div>
 
             {/* Pagination Bar */}
-            <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <div className="px-6 py-3 border-t border-[#eef0f3] flex items-center justify-between text-xs text-[#6b7177]">
               <span>
                 Showing <strong>{orders.length}</strong> of <strong>{pagination.total}</strong> orders
               </span>
@@ -372,7 +455,7 @@ export default function OrdersPage() {
         isOpen={!!selectedOrderId}
         onClose={() => setSelectedOrderId(null)}
         onRefresh={() => loadOrders(pagination.page)}
-        filters={{ q: search, status, productId, moderatorId }}
+        filters={{ q: search, status, productId, moderatorId, queue }}
       />
     </AppLayout>
   );

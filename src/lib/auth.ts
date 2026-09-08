@@ -157,19 +157,13 @@ export async function requireCompanyTenant(): Promise<{ user: SessionUser; compa
   return { user, companyId: user.companyId };
 }
 
-export function hasPermission(user: SessionUser, permission: Permission): boolean {
-  if (user.status !== 'ACTIVE') return false;
-  if (user.role === 'SUPER_ADMIN' || user.role === 'COMPANY_ADMIN') return true;
-  return user.permissions.includes(permission);
-}
-
-export async function requirePermission(permission: Permission): Promise<SessionUser> {
-  const user = await requireAuth();
-  if (!hasPermission(user, permission)) {
-    throw new Error(`Forbidden: missing required permission ${permission}`);
-  }
-  return user;
-}
+/**
+ * Permission checks live in './authorization' (single source of truth).
+ * Re-exported here so existing imports keep compiling — do not re-implement.
+ */
+import { can as _can, requirePermission as _requirePermission } from './authorization';
+export const hasPermission: (user: SessionUser, permission: Permission) => boolean = _can;
+export const requirePermission: (permission: Permission) => Promise<SessionUser> = _requirePermission;
 
 /** Builds the HTTP-only session cookie settings */
 export function sessionCookieOptions(remember: boolean) {

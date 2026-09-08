@@ -74,8 +74,8 @@ export default function InventoryPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.inventory}</h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.inventory}</h1>
+            <p className="text-xs text-[#6b7177] mt-1">
               Section 6 Movement tracking: Production additions, delivery deductions, returns & adjustments
             </p>
           </div>
@@ -97,10 +97,10 @@ export default function InventoryPage() {
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="font-mono text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                    <span className="font-mono text-xs font-bold text-[#d13b4c] bg-[#fbe9ea] px-2 py-0.5 rounded">
                       {s.sku}
                     </span>
-                    <h3 className="font-bold text-slate-900 text-sm mt-1">{s.name}</h3>
+                    <h3 className="font-bold text-[#252f4a] text-sm mt-1">{s.name}</h3>
                   </div>
                   <Badge variant={s.remaining > 50 ? 'success' : 'danger'}>
                     {s.remaining > 50 ? 'In Stock' : 'Low Stock'}
@@ -108,17 +108,17 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
-                  <div className="bg-slate-50 p-2 rounded-lg">
-                    <span className="text-slate-400 block text-[10px]">Produced</span>
-                    <span className="font-bold text-slate-800">{s.produced}</span>
+                  <div className="bg-[#f8f9fa] p-2 rounded-lg">
+                    <span className="text-[#9ca3af] block text-[10px]">Produced</span>
+                    <span className="font-bold text-[#252f4a]">{s.produced}</span>
                   </div>
-                  <div className="bg-red-50 p-2 rounded-lg">
-                    <span className="text-red-500 block text-[10px]">Sold</span>
-                    <span className="font-bold text-red-700">{s.sold}</span>
+                  <div className="bg-[#fbe9ea] p-2 rounded-lg">
+                    <span className="text-[#d13b4c] block text-[10px]">Sold</span>
+                    <span className="font-bold text-[#d13b4c]">{s.sold}</span>
                   </div>
-                  <div className="bg-red-50 p-2 rounded-lg">
-                    <span className="text-red-600 block text-[10px]">Remaining</span>
-                    <span className="font-black text-red-700">{s.remaining}</span>
+                  <div className="bg-[#fbe9ea] p-2 rounded-lg">
+                    <span className="text-[#d13b4c] block text-[10px]">Remaining</span>
+                    <span className="font-black text-[#d13b4c]">{s.remaining}</span>
                   </div>
                 </div>
               </CardContent>
@@ -135,7 +135,7 @@ export default function InventoryPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Date</th>
                     <th className="px-6 py-3.5">Product</th>
@@ -146,16 +146,16 @@ export default function InventoryPage() {
                     <th className="px-6 py-3.5">Reason / Ref</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#eef0f3]">
                   {movements.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-6 py-3.5 text-slate-500 font-mono">
+                    <tr key={m.id} className="hover:bg-[#f8f9fa] transition-colors">
+                      <td className="px-6 py-3.5 text-[#6b7177] font-mono">
                         {format(new Date(m.createdAt), 'MMM d, h:mm a')}
                       </td>
-                      <td className="px-6 py-3.5 font-semibold text-slate-900">
+                      <td className="px-6 py-3.5 font-semibold text-[#252f4a]">
                         {m.product?.name}
                       </td>
-                      <td className="px-6 py-3.5 font-mono text-slate-500">
+                      <td className="px-6 py-3.5 font-mono text-[#6b7177]">
                         {m.batch?.batchNumber || '—'}
                       </td>
                       <td className="px-6 py-3.5">
@@ -172,14 +172,14 @@ export default function InventoryPage() {
                         </Badge>
                       </td>
                       <td className="px-6 py-3.5 font-bold">
-                        <span className={m.quantity > 0 ? 'text-red-600' : 'text-rose-600'}>
+                        <span className={m.quantity > 0 ? 'text-[#d13b4c]' : 'text-[#d13b4c]'}>
                           {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
                         </span>
                       </td>
-                      <td className="px-6 py-3.5 font-semibold text-slate-800">
+                      <td className="px-6 py-3.5 font-semibold text-[#252f4a]">
                         {m.balanceAfter}
                       </td>
-                      <td className="px-6 py-3.5 text-slate-500 max-w-xs truncate">
+                      <td className="px-6 py-3.5 text-[#6b7177] max-w-xs truncate">
                         {m.reason}
                       </td>
                     </tr>

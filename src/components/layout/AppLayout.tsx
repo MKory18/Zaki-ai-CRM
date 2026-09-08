@@ -17,25 +17,25 @@ export function PendingScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
-        <div className="mx-auto w-16 h-16 rounded-2xl bg-red-600/10 border border-red-500/30 flex items-center justify-center">
-          <Clock className="w-8 h-8 text-red-500" />
+    <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center p-4" dir="rtl">
+      <div className="w-full max-w-lg bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
+        <div className="mx-auto w-16 h-16 rounded-[10px] bg-[#fbeeef] border border-[#f4d7da] flex items-center justify-center">
+          <Clock className="w-8 h-8 text-[#d13b4c]" />
         </div>
 
         <div>
-          <h1 className="text-xl font-bold text-white">الحساب بانتظار موافقة المدير</h1>
-          <p className="text-sm text-zinc-400 mt-3 leading-relaxed">
-            تم إنشاء حسابك بنجاح <strong className="text-red-400">{currentUser?.email}</strong>
+          <h1 className="text-xl font-bold text-[#252f4a]">الحساب بانتظار موافقة المدير</h1>
+          <p className="text-sm text-[#4b5675] mt-3 leading-relaxed">
+            تم إنشاء حسابك بنجاح <strong className="text-[#d13b4c]">{currentUser?.email}</strong>
             <br />
             وهو الآن بانتظار موافقة المدير. سيتم منحك صلاحيات الوصول بعد أن يقوم المدير
             بتعيين دور حسابك وتنشيطه.
           </p>
         </div>
 
-        <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-500 space-y-1">
-          <p className="flex items-center justify-center space-x-2 rtl:space-x-reverse text-zinc-300">
-            <MailCheck className="w-4 h-4 text-red-500" />
+        <div className="bg-[#f8f9fa] border border-[#eef0f3] rounded-[8px] p-4 text-xs text-[#6b7177] space-y-1">
+          <p className="flex items-center justify-center space-x-2 rtl:space-x-reverse text-[#252f4a]">
+            <MailCheck className="w-4 h-4 text-[#e49e3d]" />
             <span>حالتك الحالية: قيد المراجعة (PENDING)</span>
           </p>
           <p>لن تتمكن من الوصول للطلبات أو العملاء أو المنتجات أو التقارير حتى يتم تنشيط حسابك.</p>
@@ -49,14 +49,14 @@ export function PendingScreen() {
               setChecking(false);
               window.location.reload();
             }}
-            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-4 py-2 text-sm font-medium rounded-lg bg-zinc-800 text-zinc-200 hover:bg-zinc-700 transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-white text-[#252f4a] border border-[#eef0f3] hover:bg-[#f8f9fa] transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
             <span>تحديث الحالة</span>
           </button>
           <button
             onClick={handleLogout}
-            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-[#d13b4c] text-white hover:bg-[#d13b4c]/85 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>تسجيل الخروج</span>
@@ -74,22 +74,22 @@ function BlockedScreen({ status }: { status: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
-        <div className="mx-auto w-16 h-16 rounded-2xl bg-red-600/10 border border-red-500/30 flex items-center justify-center">
-          <ShieldX className="w-8 h-8 text-red-500" />
+    <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center p-4" dir="rtl">
+      <div className="w-full max-w-lg bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
+        <div className="mx-auto w-16 h-16 rounded-[10px] bg-[#fbeeef] border border-[#f4d7da] flex items-center justify-center">
+          <ShieldX className="w-8 h-8 text-[#d13b4c]" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white">
+          <h1 className="text-xl font-bold text-[#252f4a]">
             {status === 'SUSPENDED' ? 'تم إيقاف حسابك مؤقتاً' : 'تم تعطيل حسابك'}
           </h1>
-          <p className="text-sm text-zinc-400 mt-3">
+          <p className="text-sm text-[#4b5675] mt-3">
             يرجى التواصل مع مدير النظام لاستعادة الوصول إلى حسابك.
           </p>
         </div>
         <button
           onClick={handleLogout}
-          className="inline-flex items-center space-x-2 rtl:space-x-reverse px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer"
+          className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-[#d13b4c] text-white hover:bg-[#d13b4c]/85 transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
           <span>تسجيل الخروج</span>
@@ -112,18 +112,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-[#f3f4f6] flex flex-col">
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <div
         className={clsx(
           'flex-1 flex flex-col min-w-0 transition-all duration-200',
-          isRtl ? 'md:mr-64' : 'md:ml-64'
+          isRtl ? 'md:mr-[280px]' : 'md:ml-[280px]'
         )}
       >
         <Header onMenuClick={() => setMobileOpen(true)} />
 
-        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 md:p-6 w-full">
           {children}
         </main>
       </div>

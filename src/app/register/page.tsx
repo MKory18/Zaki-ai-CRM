@@ -55,27 +55,27 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-[#f3f4f6] flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <img src="/logo.svg" alt="Zaki AI" className="w-20 h-16 object-contain" />
-          <h1 className="text-2xl font-bold tracking-tight text-white">إنشاء حساب جديد</h1>
-          <p className="text-xs text-zinc-500">
+          <h1 className="text-2xl font-semibold text-[#252f4a]">إنشاء حساب جديد</h1>
+          <p className="text-xs text-[#6b7177]">
             Zaki AI Store — نظام إدارة المبيعات والطلبات والأرباح
           </p>
         </div>
 
-        <Card className="shadow-2xl border-zinc-800 bg-zinc-900">
+        <Card className="shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
           <CardContent className="p-6 space-y-4">
             {error && (
-              <div className="p-3 bg-red-950/50 border border-red-900 text-red-300 text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
+              <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {success && (
-              <div className="p-3 bg-green-950/50 border border-green-900 text-green-300 text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
+              <div className="p-3 bg-[#e8f8ef] border border-[#d2f0de] text-[#25b865] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
                 <ShieldCheck className="w-4 h-4 shrink-0" />
                 <span>{success}</span>
               </div>
@@ -87,7 +87,7 @@ export default function RegisterPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="bg-zinc-950 border-zinc-700 text-white"
+                className="bg-white"
               />
 
               <Input
@@ -96,7 +96,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-zinc-950 border-zinc-700 text-white"
+                className="bg-white"
               />
 
               <div>
@@ -106,7 +106,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="bg-zinc-950 border-zinc-700 text-white"
+                  className="bg-white"
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {passwordChecks.map((c) => (
@@ -114,8 +114,8 @@ export default function RegisterPage() {
                       key={c.label}
                       className={`text-[10px] px-2 py-0.5 rounded-full border ${
                         c.ok
-                          ? 'bg-green-950/60 text-green-400 border-green-900'
-                          : 'bg-zinc-950 text-zinc-500 border-zinc-800'
+                          ? 'bg-[#e8f8ef] text-[#25b865] border-[#d2f0de]'
+                          : 'bg-[#f8f9fa] text-[#6b7177] border-[#eef0f3]'
                       }`}
                     >
                       {c.ok ? '✓' : '•'} {c.label}
@@ -130,32 +130,32 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="bg-zinc-950 border-zinc-700 text-white"
+                className="bg-white"
               />
 
-              <Button type="submit" loading={loading} className="w-full bg-red-600 hover:bg-red-700">
+              <Button type="submit" loading={loading} className="w-full">
                 <UserPlus className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 إنشاء الحساب
               </Button>
             </form>
 
-            <div className="p-3 bg-zinc-950 border border-zinc-800 rounded-xl flex items-start space-x-2 rtl:space-x-reverse text-[11px] text-zinc-400">
-              <Clock className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <div className="p-3 bg-[#f8f9fa] border border-[#eef0f3] rounded-[8px] flex items-start space-x-2 rtl:space-x-reverse text-[11px] text-[#4b5675]">
+              <Clock className="w-4 h-4 text-[#e49e3d] shrink-0 mt-0.5" />
               <span>
-                بعد التسجيل يكون حسابك بحالة <strong className="text-zinc-200">بانتظار الموافقة</strong>،
+                بعد التسجيل يكون حسابك بحالة <strong className="text-[#252f4a]">بانتظار الموافقة</strong>،
                 ويقوم مدير النظام بتعيين دورك وتنشيط حسابك قبل الوصول للوحدات.
               </span>
             </div>
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-zinc-500">
+        <p className="text-center text-xs text-[#6b7177]">
           لديك حساب؟{' '}
-          <Link href="/login" className="text-red-400 font-semibold hover:underline">
+          <Link href="/login" className="text-[#3e97ff] font-semibold hover:underline">
             تسجيل الدخول
           </Link>
           {' • '}
-          <Link href="/forgot-password" className="text-zinc-400 hover:underline">
+          <Link href="/forgot-password" className="text-[#4b5675] hover:underline">
             نسيت كلمة المرور؟
           </Link>
         </p>
