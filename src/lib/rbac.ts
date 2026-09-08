@@ -26,43 +26,23 @@ export const requirePermission: (permission: Permission) => Promise<SessionUser>
 // ─────────────────────────────────────────────────────
 
 /**
- * Roles that can see ALL orders in their company.
- * Everyone else sees only what is assigned/created by them (DB-level WHERE).
- */
-const ORDER_GLOBAL_VIEW_ROLES: UserRole[] = [
-  'SUPER_ADMIN',
-  'COMPANY_ADMIN',
-  'MANAGER',
-  'DELIVERY_MANAGER',
-  'SETTLEMENT_OFFICER',
-  'ACCOUNTANT',
-];
-
-/**
- * Roles restricted to their own assigned/claimed orders.
- * These map to `assignedToId` / `claimedById` / `currentOwnerId` filters.
- */
-const ORDER_SELF_SCOPED_ROLES: UserRole[] = ['CONFIRMATION_AGENT', 'FOLLOW_UP_AGENT', 'MODERATOR'];
-
-// ─────────────────────────────────────────────────────
-// Permission checks (pure, no DB)
-// ─────────────────────────────────────────────────────
-
-/**
- * Resolve the effective WHERE clause for order visibility per role.
- * MUST be used by every order-listing query — never filter in the frontend.
+ * Order visibility policy (BUSINESS RULE — approved decision, 2026-09):
+ * SHARED COMPANY VISIBILITY — `companyId` is the tenant boundary, NOT userId.
+ * Any ACTIVE user holding the `orders.view` permission sees ALL orders of
+ * their own company. Assignment fields (assignedToId / claimedById /
+ * currentOwnerId / moderatorId) describe WHO WORKS ON an order — they are
+ * workflow responsibility, never a visibility filter for `orders.view` holders.
  *
- * Model (Step 2):
- *  - Global-view roles: company scope only (applied by caller).
- *  - Self-scoped roles: own orders + CLAIMABLE QUEUE (unclaimed orders
- *    eligible for their workflow stage) — never another employee's private orders.
+ * Agents holding only `orders.view_assigned` (CONFIRMATION_AGENT /
+ * FOLLOW_UP_AGENT) keep their scoped envelope: own orders + the claimable
+ * queue (unclaimed, UNSIGNED, NEW, lock-free).
  */
 export function orderVisibilityWhere(user: SessionUser): Record<string, unknown> {
-  // SUPER_ADMIN / global-view roles: no extra restriction (company scope applied by caller)
-  if (ORDER_GLOBAL_VIEW_ROLES.includes(user.role)) return {};
+  // Company-wide view: permission-based, not role-based.
+  if (can(user, 'orders.view')) return {};
 
-  // Self-scoped roles: own orders + unclaimed queue items they may claim
-  if (ORDER_SELF_SCOPED_ROLES.includes(user.role)) {
+  // Self-scoped agents: own orders + unclaimed queue items they may claim
+  if (can(user, 'orders.view_assigned')) {
     return {
       OR: [
         // 1. Assigned specifically to me
@@ -106,10 +86,10 @@ export function applyQueueFilter(
         claimedById: null,
         signatureStatus: 'UNSIGNED',
       };
-      if (ORDER_GLOBAL_VIEW_ROLES.includes(user.role)) {
+      if (can(user, 'orders.view')) {
         return { ...where, AND: [...(where.AND ?? []), claimable] };
       }
-      if (ORDER_SELF_SCOPED_ROLES.includes(user.role)) {
+      if (can(user, 'orders.view_assigned')) {
         return {
           ...where,
           AND: [...(where.AND ?? []), claimable, { confirmationStatus: 'NEW' }],
@@ -124,8 +104,8 @@ export function applyQueueFilter(
     case 'processing':
       return { ...where, currentOwnerId: user.id };
     case 'all_company': {
-      // Only global-view roles may use this queue
-      if (!ORDER_GLOBAL_VIEW_ROLES.includes(user.role)) {
+      // Queue is available to any user with company-wide order visibility
+      if (!can(user, 'orders.view')) {
         return { ...where, id: '__no_access__' };
       }
       return where;
@@ -141,9 +121,9 @@ export function applyQueueFilter(
   }
 }
 
-/** Does this role see all orders company-wide (vs. only their own)? */
+/** Does this user see all orders company-wide (vs. only their own)? */
 export function hasGlobalOrderView(user: SessionUser): boolean {
-  return ORDER_GLOBAL_VIEW_ROLES.includes(user.role);
+  return can(user, 'orders.view');
 }
 
 // ─────────────────────────────────────────────────────
@@ -174,8 +154,10 @@ export async function assertOrderAccess(
   if (!order) return { allowed: false, reason: 'NOT_FOUND' };
   if (order.companyId !== companyId) return { allowed: false, reason: 'WRONG_COMPANY' };
 
-  // Self-scoped roles: must be related to the user (DB-backed ownership check)
-  if (ORDER_SELF_SCOPED_ROLES.includes(user.role)) {
+  // Agents without company-wide view (`orders.view_assigned` only): must be
+  // related to the user (DB-backed ownership check). `orders.view` holders
+  // pass with the tenant check alone (shared company visibility policy).
+  if (!can(user, 'orders.view') && can(user, 'orders.view_assigned')) {
     const mine =
       order.assignedToId === user.id ||
       order.claimedById === user.id ||
