@@ -46,21 +46,21 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
     { href: '/', label: t.dashboard, icon: LayoutDashboard, permission: null },
     { href: '/orders', label: t.orders, icon: ShoppingCart, permission: 'orders.view' },
     { href: '/customers', label: t.customers, icon: Users, permission: 'customers.view' },
-    { href: '/products', label: t.products, icon: Package, permission: 'products.manage' },
+    { href: '/products', label: t.products, icon: Package, permission: 'products.edit' },
     { href: '/production', label: t.production, icon: Factory, permission: 'production.manage' },
-    { href: '/inventory', label: t.inventory, icon: Boxes, permission: 'inventory.manage' },
+    { href: '/inventory', label: t.inventory, icon: Boxes, permission: 'inventory.view' },
     { href: '/offers', label: t.offers, icon: Tag, permission: 'offers.manage' },
-    { href: '/moderators', label: t.moderators, icon: Headphones, permission: 'moderators.manage' },
-    { href: '/users', label: t.employees, icon: UserCog, permission: 'users.manage' },
-    { href: '/roles', label: t.roles, icon: ShieldCheck, permission: 'audit.view' },
-    { href: '/permissions', label: 'الصلاحيات', icon: Lock, permission: 'audit.view' },
+    { href: '/moderators', label: t.moderators, icon: Headphones, permission: 'users.view' },
+    { href: '/users', label: t.employees, icon: UserCog, permission: 'users.view' },
+    { href: '/roles', label: t.roles, icon: ShieldCheck, permission: 'roles.view' },
+    { href: '/permissions', label: 'الصلاحيات', icon: Lock, permission: 'roles.view' },
     { href: '/analytics', label: t.analytics, icon: TrendingUp, permission: 'reports.view' },
     { href: '/finance', label: t.finance, icon: DollarSign, permission: 'finance.view' },
     { href: '/ai-assistant', label: t.aiAssistant, icon: Sparkles, permission: 'ai.use', badge: 'AI' },
     { href: '/notifications', label: t.notifications, icon: Bell, permission: null },
     { href: '/audit-logs', label: t.auditLogs, icon: History, permission: 'audit.view' },
     { href: '/profile', label: 'الملف الشخصي', icon: CircleUser, permission: null },
-    { href: '/settings', label: t.settings, icon: Settings, permission: 'settings.manage' },
+    { href: '/settings', label: t.settings, icon: Settings, permission: 'settings.edit' },
   ];
 
   const crmNavItems = [
@@ -196,7 +196,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
                 {currentUser?.name || 'BioDerma User'}
               </p>
               <p className="text-[10px] text-[#6b7177] truncate">
-                {currentUser?.role || 'COMPANY_ADMIN'} • {currentUser?.companyName || 'BioDerma'}
+                {currentUser?.role || 'COMPANY_ADMIN'}
               </p>
             </div>
           </div>

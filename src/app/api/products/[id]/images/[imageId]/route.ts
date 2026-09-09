@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { deleteStoredFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
-import { requirePermission } from '@/lib/authorization';
+import { authorize } from '@/lib/authorization';
 
 /**
  * DELETE /api/products/:id/images/:imageId
@@ -20,11 +20,23 @@ export async function DELETE(
   try {
     const { id: productId, imageId } = await params;
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('products.manage');
 
     const img = await db.productImage.findUnique({ where: { id: imageId } });
     if (!img || img.productId !== productId || img.companyId !== companyId) {
       return NextResponse.json({ error: 'الصورة غير موجودة' }, { status: 404 });
+    }
+
+    // Load the product first so image-upload authority is scope-evaluated
+    const product = await db.product.findUnique({ where: { id: productId } });
+    if (!product || product.companyId !== companyId) {
+      return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+    }
+    const uploadAuth = authorize(user, 'products.upload_images', product);
+    if (!uploadAuth.allowed) {
+      if (uploadAuth.reason === 'NO_TENANT' || uploadAuth.reason === 'OUT_OF_SCOPE') {
+        return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.upload_images' }, { status: 403 });
     }
 
     const wasPrimary = img.isPrimary;

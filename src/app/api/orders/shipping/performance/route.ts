@@ -22,9 +22,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const providerId = searchParams.get('providerId')?.trim();
 
-    // Access gate: reports/finance viewers, or management roles bypass
-    const adminBypass = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER', 'DELIVERY_MANAGER'].includes(user.role);
-    if (!adminBypass && !can(user, 'reports.view') && !can(user, 'finance.view')) {
+    // Access gate: canonical permission checks (role bypass replaced by the
+    // scope engine — management roles hold orders.change_status anyway)
+    if (!can(user, 'reports.view') && !can(user, 'finance.view') && !can(user, 'orders.change_status')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

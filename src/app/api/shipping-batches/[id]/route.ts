@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
-    if (!can(user, 'orders.shipping_status')) {
+    if (!can(user, 'orders.change_status')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

@@ -14,7 +14,9 @@ const providerSchema = z.object({
   notes: z.string().trim().max(500).optional(),
 });
 
-/** GET /api/delivery-providers — company-scoped list */
+/** GET /api/delivery-providers — company-scoped list.
+ *  Tenant-only on purpose (no permission gate): reference data needed by the
+ *  shipping UI for any employee who handles delivery. */
 export async function GET() {
   try {
     const { companyId } = await requireCompanyTenant();
@@ -30,11 +32,11 @@ export async function GET() {
   }
 }
 
-/** POST /api/delivery-providers — create (settings.manage or SUPER_ADMIN/COMPANY_ADMIN) */
+/** POST /api/delivery-providers — create (settings.edit or SUPER_ADMIN/COMPANY_ADMIN) */
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('settings.manage');
+    await requirePermission('settings.edit');
     const parsed = providerSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });

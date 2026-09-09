@@ -5,13 +5,14 @@ import { assertOrderAccess } from '@/lib/rbac';
 import { isValidTransition, CONTACT_RESULTS } from '@/lib/confirmation-workflow';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
-import { can } from '@/lib/authorization';
+import { can, authorize } from '@/lib/authorization';
 
 /**
  * POST /api/orders/[id]/call-logs — record a call + optionally drive workflow.
  *
  * SECURITY (Phase S):
- *  - Permission required: orders.update (any) or orders.update_own (self-scoped).
+ *  - Permission required: orders.edit with scope evaluation
+ *    (ASSIGNED scope enforces own-assignment).
  *  - Order access via assertOrderAccess (company isolation + role assignment scope).
  *  - Status changes here follow the SAME controlled transition map as the
  *    confirmation workflow — a call log can no longer bypass separation of duties.
@@ -25,19 +26,23 @@ export async function POST(
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
 
-    // Permission: callers must have order-update authority of some kind
-    const canUpdateAny = can(user, 'orders.update');
-    const canUpdateOwn = can(user, 'orders.update_own');
-    if (!canUpdateAny && !canUpdateOwn) {
-      return NextResponse.json({ error: 'Forbidden: cannot record calls' }, { status: 403 });
-    }
-
+    // Order access first, then editing authority evaluated against the order
     const access = await assertOrderAccess(id, user, companyId, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
     }
     const order = access.order;
+
+    // Permission: callers must have order-edit authority (scope-evaluated)
+    const editAuth = authorize(user, 'orders.edit', order);
+    if (!editAuth.allowed) {
+      // Secure policy: out-of-scope/other-tenant orders are reported as missing
+      if (editAuth.reason === 'NO_TENANT') {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Forbidden: cannot record calls' }, { status: 403 });
+    }
 
     const body = await req.json();
     const { result, notes, nextFollowUpDate, callDate } = body;
@@ -76,7 +81,7 @@ export async function POST(
     if (statusWillChange) {
       // Separation of duties: status change requires confirmation authority —
       // the call is still recorded, but the order status is NOT changed.
-      if (!can(user, 'orders.confirmation_status')) {
+      if (!authorize(user, 'orders.confirm', order).allowed) {
         const log = await db.$transaction(async (tx) => {
           const created = await tx.callLog.create({
             data: {
@@ -104,13 +109,8 @@ export async function POST(
         });
       }
 
-      // Self-scoped employees may only drive orders they own
-      if (!canUpdateAny && canUpdateOwn) {
-        const mine = order.currentOwnerId === user.id || order.claimedById === user.id || order.assignedToId === user.id || order.moderatorId === user.id;
-        if (!mine) {
-          return NextResponse.json({ error: 'Forbidden: you can only update your own orders' }, { status: 403 });
-        }
-      }
+      // Scope already enforced by authorize('orders.edit', order) above
+      // (ASSIGNED scope only passes for orders the user owns/claimed/assigned).
 
       // Workflow transition validation (same rules as the confirmation API).
       // The legacy combined status is mapped from confirmationStatus equivalents;

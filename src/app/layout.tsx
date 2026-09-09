@@ -29,9 +29,19 @@ export default async function RootLayout({
 }) {
   const user = await getCurrentUser();
 
+  // suppressHydrationWarning: browser extensions (translate/dark-mode/password
+  // managers) mutate <html>/<body> before hydration — React must not warn.
   return (
-    <html lang="en" dir="ltr" className={`h-full ${tajawal.variable} ${publicSans.variable}`}>
-      <body className="min-h-full flex flex-col bg-[#f3f4f6] text-[#4b5675]">
+    <html
+      lang="en"
+      dir="ltr"
+      suppressHydrationWarning
+      className={`h-full ${tajawal.variable} ${publicSans.variable}`}
+    >
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-[#f3f4f6] text-[#4b5675]"
+      >
         <AppProvider initialUser={user}>{children}</AppProvider>
       </body>
     </html>

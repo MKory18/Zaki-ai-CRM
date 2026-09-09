@@ -9,7 +9,7 @@ import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
-import { can } from '@/lib/authorization';
+import { authorize } from '@/lib/authorization';
 
 /** Legacy combined status whitelist (mirrors the UI status config) */
 const ALLOWED_COMBINED_STATUSES = [
@@ -213,13 +213,9 @@ export async function PATCH(
       sellingPrice, quantity, discountAmount, shippingCost, productId,
     } = parsed.data;
 
-    // ── Authorization chain: permission → visibility/assignment (RBAC engine) ──
-    const canUpdateAny = can(user, 'orders.update');
-    const canUpdateOwn = can(user, 'orders.update_own');
-    if (!canUpdateAny && !canUpdateOwn) {
-      return NextResponse.json({ error: 'Forbidden: missing order update permission' }, { status: 403 });
-    }
-
+    // ── Authorization chain: visibility/assignment (RBAC engine) → canonical
+    // orders.edit permission with scope evaluation (ASSIGNED scope enforces
+    // own-assignment, so no separate any/own check is needed) ──
     const access = await assertOrderAccess(id, user, companyId, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
@@ -227,16 +223,15 @@ export async function PATCH(
     }
     const existing = access.order;
 
-    // Self-scoped editors may only save orders they own/claimed/assigned
-    if (!canUpdateAny && canUpdateOwn) {
-      const mine =
-        existing.currentOwnerId === user.id ||
-        existing.claimedById === user.id ||
-        existing.assignedToId === user.id ||
-        existing.moderatorId === user.id;
-      if (!mine) {
-        return NextResponse.json({ error: 'Forbidden: you can only edit your own orders' }, { status: 403 });
+    const editAuth = authorize(user, 'orders.edit', existing);
+    if (!editAuth.allowed) {
+      // Secure policy: out-of-scope/other-tenant orders are reported as missing
+      if (editAuth.reason === 'NO_TENANT' || editAuth.reason === 'OUT_OF_SCOPE') {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
       }
+      return NextResponse.json(
+        { error: 'Forbidden: missing required permission orders.edit' }, { status: 403 }
+      );
     }
 
     // ── Editing-lock enforcement: an ACTIVE foreign lock blocks edits ──
@@ -261,14 +256,16 @@ export async function PATCH(
     const changingConfirmation = confirmationStatus !== undefined && confirmationStatus !== existing.confirmationStatus;
     const changingShipping = shippingStatus !== undefined && shippingStatus !== existing.shippingStatus;
     if (changingCombined || changingConfirmation) {
-      if (!can(user, 'orders.confirmation_status')) {
+      const confirmAuth = authorize(user, 'orders.confirm', existing);
+      if (!confirmAuth.allowed) {
         return NextResponse.json(
           { error: 'Forbidden: you are not allowed to change order confirmation status' }, { status: 403 }
         );
       }
     }
     if (changingShipping) {
-      if (!can(user, 'orders.shipping_status')) {
+      const shippingAuth = authorize(user, 'orders.change_status', existing);
+      if (!shippingAuth.allowed) {
         return NextResponse.json(
           { error: 'Forbidden: you are not allowed to change shipping status' }, { status: 403 }
         );
@@ -345,10 +342,13 @@ export async function PATCH(
     const derivedShippingWrite =
       (updateData.shippingStatus !== undefined || updateData.settlementStatus !== undefined) &&
       changingCombined;
-    if (derivedShippingWrite && !can(user, 'orders.shipping_status')) {
-      return NextResponse.json(
-        { error: 'Forbidden: orders.shipping_status required' }, { status: 403 }
-      );
+    if (derivedShippingWrite) {
+      const shippingAuth = authorize(user, 'orders.change_status', existing);
+      if (!shippingAuth.allowed) {
+        return NextResponse.json(
+          { error: 'Forbidden: orders.change_status required' }, { status: 403 }
+        );
+      }
     }
 
     if (moderatorId !== undefined) {

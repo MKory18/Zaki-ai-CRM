@@ -30,7 +30,7 @@ export default function ProductDetailsPage() {
   const params = useParams();
   const productId = params?.id as string;
   const { currentUser } = useApp();
-  const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('products.manage');
+  const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('products.edit');
 
   const [product, setProduct] = useState<any>(null);
   const [analytics, setAnalytics] = useState<any>(null);

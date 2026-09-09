@@ -7,7 +7,7 @@ import { can } from '@/lib/authorization';
 
 /**
  * GET  /api/shipping-batches — company-scoped list (with order counts)
- * POST /api/shipping-batches — create batch (orders.shipping_status holders)
+ * POST /api/shipping-batches — create batch (orders.change_status holders)
  *
  * Batch numbering is server-generated: SB-<year>-<####> per company.
  */
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    if (!can(user, 'orders.shipping_status')) {
+    if (!can(user, 'orders.change_status')) {
       return NextResponse.json({ error: 'Forbidden: cannot manage shipping batches' }, { status: 403 });
     }
 

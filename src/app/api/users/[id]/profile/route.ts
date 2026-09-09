@@ -6,12 +6,12 @@ import { requirePermission } from '@/lib/authorization';
 
 /**
  * GET /api/users/[id]/profile — employee profile + workload counts.
- * Server enforces users.manage; company isolation applied on workload queries.
+ * Server enforces users.view; company isolation applied on workload queries.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { companyId } = await requirePermission('users.manage');
+    const { companyId } = await requirePermission('users.view');
 
     const user = await db.user.findFirst({
       where: {

@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { requireCompanyTenant } from '@/lib/auth';
+import { requirePermission } from '@/lib/authorization';
 import { getCompanyAnalytics, DateFilter } from '@/lib/analytics';
 import { rateLimit } from '@/lib/rate-limit';
 
 export async function GET(req: Request) {
   try {
     const { companyId, user } = await requireCompanyTenant();
+    // Canonical gate — analytics access is explicit, not implicit by role
+    await requirePermission('analytics.view');
 
     // Heavy analytics query — rate limit generously (30/min per user) so the
     // dashboard's 30s polling never hits it, but runaway clients are capped.

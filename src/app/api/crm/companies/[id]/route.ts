@@ -37,7 +37,7 @@ async function getScoped(id: string, companyId: string) {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { companyId } = await requireCompanyTenant();
-    await requirePermission('crm.view');
+    await requirePermission('crm.companies.view');
     const { id } = await params;
 
     const record = await getScoped(id, companyId);
@@ -52,7 +52,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('crm.manage');
+    await requirePermission('crm.companies.edit');
     const { id } = await params;
 
     const existing = await db.crmCompany.findUnique({ where: { id } });
@@ -86,7 +86,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('crm.manage');
+    await requirePermission('crm.companies.delete');
     const { id } = await params;
 
     const existing = await db.crmCompany.findUnique({ where: { id } });

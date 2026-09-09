@@ -7,7 +7,7 @@ import {
   atomicAcquireLock, atomicRenewLock, atomicReleaseLock, isLockActive, lockConfig,
 } from '@/lib/order-locks';
 import { logAudit } from '@/lib/audit';
-import { can } from '@/lib/authorization';
+import { authorize } from '@/lib/authorization';
 
 /**
  * Editing-lock endpoint (server-enforced expiration).
@@ -20,16 +20,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
-    if (!can(user, 'orders.update') && !can(user, 'orders.update_own')) {
-      return NextResponse.json({ error: 'Forbidden: no order editing permission' }, { status: 403 });
-    }
-
     const access = await assertOrderAccess(id, user, companyId, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
     }
     const order = access.order;
+
+    // Editing authority — ASSIGNED scope of orders.edit enforces own-assignment
+    const editAuth = authorize(user, 'orders.edit', order);
+    if (!editAuth.allowed) {
+      // Secure policy: out-of-scope/other-tenant orders are reported as missing
+      if (editAuth.reason === 'NO_TENANT' || editAuth.reason === 'OUT_OF_SCOPE') {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Forbidden: no order editing permission' }, { status: 403 });
+    }
 
     // My own active lock → idempotent, just refresh it
     if (order.lockedById === user.id && isLockActive(order)) {

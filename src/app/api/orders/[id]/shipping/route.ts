@@ -9,7 +9,7 @@ import {
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
-import { can } from '@/lib/authorization';
+import { can, authorize } from '@/lib/authorization';
 
 /**
  * POST /api/orders/[id]/shipping — controlled shipping workflow action.
@@ -34,17 +34,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
 
-    // Permission: shipping authority
-    if (!can(user, 'orders.shipping_status')) {
-      return NextResponse.json({ error: 'Forbidden: you are not allowed to change shipping status' }, { status: 403 });
-    }
-
+    // Order access first, then shipping authority evaluated against the order
     const access = await assertOrderAccess(id, user, companyId, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
     }
     const order = access.order;
+
+    // Permission: shipping authority (scope evaluated against the loaded order)
+    const shippingAuth = authorize(user, 'orders.change_status', order);
+    if (!shippingAuth.allowed) {
+      return NextResponse.json({ error: 'Forbidden: you are not allowed to change shipping status' }, { status: 403 });
+    }
 
     // ── Editing-lock enforcement: an ACTIVE foreign lock blocks edits ──
     // (users with orders.unlock may bypass, same as the generic PATCH)

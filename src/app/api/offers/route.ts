@@ -7,7 +7,8 @@ import { requirePermission } from '@/lib/authorization';
 
 export async function GET() {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireCompanyTenant();
+    await requirePermission('offers.view');
 
     const offers = await db.offer.findMany({
       where: { companyId },

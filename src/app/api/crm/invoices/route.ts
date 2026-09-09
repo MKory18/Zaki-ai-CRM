@@ -36,7 +36,7 @@ const createSchema = z.object({
 export async function GET(req: Request) {
   try {
     const { companyId } = await requireCompanyTenant();
-    await requirePermission('crm.view');
+    await requirePermission('crm.invoices.view');
     const { q, sort, dir, page, pageSize, filters, from, to } = parseListParams(req, SORTABLE);
 
     const where: any = { companyId, ...dateRange('issueDate', from, to) };
@@ -81,7 +81,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('crm.manage');
+    await requirePermission('crm.invoices.create');
     const parsed = createSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid body' }, { status: 400 });

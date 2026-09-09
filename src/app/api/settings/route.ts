@@ -60,7 +60,8 @@ const settingsSchema = z
 
 export async function GET() {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireCompanyTenant();
+    await requirePermission('settings.view');
 
     const company = await db.company.findUnique({
       where: { id: companyId },
@@ -87,7 +88,7 @@ export async function GET() {
 export async function PATCH(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('settings.manage');
+    await requirePermission('settings.edit');
 
     const body = await req.json();
     const { name, currency, country, settings } = body;

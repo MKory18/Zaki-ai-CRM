@@ -9,7 +9,7 @@ import { can } from '@/lib/authorization';
  * GET /api/orders/confirmation/performance?employeeId=&scope=me|team
  *
  * Company-isolated metrics. Employees see their own numbers;
- * users.manage holders may request team/individual stats.
+ * users.view holders may request team/individual stats.
  * Definitions (no misleading math):
  *   processed  = orders that left NEW (any terminal or mid-workflow action by the employee)
  *   confirmationRate = confirmed / processed (NEW untouched NOT counted)
@@ -24,15 +24,15 @@ export async function GET(req: Request) {
     let employeeId = user.id;
 
     if (scope === 'team' || (requestedEmployeeId && requestedEmployeeId !== user.id)) {
-      // Viewing others requires users.manage OR global view roles
-      const mayViewTeam = can(user, 'users.manage') ||
+      // Viewing others requires users.view OR global view roles
+      const mayViewTeam = can(user, 'users.view') ||
         ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER'].includes(user.role);
       if (!mayViewTeam) {
         return NextResponse.json({ error: 'Forbidden: cannot view other employees\u2019 performance' }, { status: 403 });
       }
     }
     if (requestedEmployeeId) {
-      const mayViewTeam = can(user, 'users.manage') ||
+      const mayViewTeam = can(user, 'users.view') ||
         ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER'].includes(user.role);
       if (!mayViewTeam && requestedEmployeeId !== user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

@@ -13,6 +13,7 @@ import {
   Users,
   Search,
   ShieldCheck,
+  KeyRound,
   ShieldOff,
   Ban,
   PlayCircle,
@@ -236,10 +237,22 @@ export default function UsersManagementPage() {
                         {u.assignedBy?.name || '—'}
                       </td>
                       <td className="px-6 py-3.5 text-right rtl:text-left">
-                        <Button size="sm" variant="outline" onClick={() => openManage(u)} className="text-[11px]">
-                          <ShieldCheck className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
-                          إدارة
-                        </Button>
+                        <div className="flex items-center gap-1.5 justify-end rtl:justify-start">
+                          <Button size="sm" variant="outline" onClick={() => openManage(u)} className="text-[11px]">
+                            <ShieldCheck className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                            إدارة
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => (window.location.href = `/users/${u.id}`)}
+                            className="text-[11px]"
+                            title="صلاحيات الموظف"
+                          >
+                            <KeyRound className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                            الصلاحيات
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

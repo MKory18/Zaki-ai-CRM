@@ -4,18 +4,23 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { deleteStoredFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
-import { requirePermission } from '@/lib/authorization';
+import { can, authorize } from '@/lib/authorization';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireCompanyTenant();
     const product = await db.product.findUnique({
       where: { id },
       include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] } },
     });
-    if (!product || product.companyId !== companyId) {
+    // Scope-evaluated view authorization — out-of-scope products report 404
+    const viewAuth = product ? authorize(user, 'products.view', product) : { allowed: false, reason: 'NO_PERMISSION' as const };
+    if (!product || viewAuth.reason === 'NO_TENANT' || viewAuth.reason === 'OUT_OF_SCOPE') {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+    }
+    if (!viewAuth.allowed) {
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.view' }, { status: 403 });
     }
     return NextResponse.json({ product });
   } catch (error: any) {
@@ -28,7 +33,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('products.manage');
 
     const body = await req.json();
     const { name, nameEn, sku, description, descriptionEn, basePrice, status } = body;
@@ -36,6 +40,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const existing = await db.product.findUnique({ where: { id } });
     if (!existing || existing.companyId !== companyId) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+    }
+
+    // Scope-evaluated edit authorization (out-of-scope → 404)
+    const editAuth = authorize(user, 'products.edit', existing);
+    if (!editAuth.allowed) {
+      if (editAuth.reason === 'NO_TENANT' || editAuth.reason === 'OUT_OF_SCOPE') {
+        return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.edit' }, { status: 403 });
+    }
+
+    // Price changes are a separate authority (products.change_price)
+    if (basePrice !== undefined && Number(basePrice) !== existing.basePrice) {
+      const priceAuth = authorize(user, 'products.change_price', existing);
+      if (!priceAuth.allowed) {
+        return NextResponse.json({ error: 'Forbidden: products.change_price' }, { status: 403 });
+      }
     }
 
     // SKU uniqueness within company (excluding self)
@@ -82,7 +103,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   try {
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('products.manage');
 
     const product = await db.product.findUnique({
       where: { id },
@@ -90,6 +110,15 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     });
     if (!product || product.companyId !== companyId) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+    }
+
+    // Scope-evaluated delete authorization (out-of-scope → 404)
+    const deleteAuth = authorize(user, 'products.delete', product);
+    if (!deleteAuth.allowed) {
+      if (deleteAuth.reason === 'NO_TENANT' || deleteAuth.reason === 'OUT_OF_SCOPE') {
+        return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.delete' }, { status: 403 });
     }
 
     // Safety: block deletion when orders reference the product

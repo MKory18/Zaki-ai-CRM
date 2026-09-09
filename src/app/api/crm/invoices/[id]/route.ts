@@ -37,7 +37,7 @@ function safeParseItems(itemsJson: string) {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { companyId } = await requireCompanyTenant();
-    await requirePermission('crm.view');
+    await requirePermission('crm.invoices.view');
     const { id } = await params;
 
     let record = await db.crmInvoice.findUnique({ where: { id }, include: includeDetail });
@@ -60,7 +60,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('crm.manage');
+    await requirePermission('crm.invoices.edit');
     const { id } = await params;
 
     const existing = await db.crmInvoice.findUnique({ where: { id } });
@@ -109,7 +109,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('crm.manage');
+    await requirePermission('crm.invoices.delete');
     const { id } = await params;
 
     const existing = await db.crmInvoice.findUnique({ where: { id } });

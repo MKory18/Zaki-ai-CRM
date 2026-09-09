@@ -7,11 +7,16 @@ import { logAudit } from '@/lib/audit';
 import { applyQueueFilter } from '@/lib/rbac';
 import { createNotification } from '@/lib/notification';
 import { apiError } from '@/lib/api-error';
-import { requirePermission } from '@/lib/authorization';
+import { requirePermission, getPermissionScope } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
+
+    // Explicit canonical gate — orders.view scope decides order visibility
+    if (!getPermissionScope(user, 'orders.view')) {
+      return NextResponse.json({ error: 'Forbidden: missing required permission orders.view' }, { status: 403 });
+    }
     const { searchParams } = new URL(req.url);
 
     const search = searchParams.get('q')?.trim();

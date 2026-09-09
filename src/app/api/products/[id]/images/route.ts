@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { saveProductImage, validateImageFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
-import { requirePermission } from '@/lib/authorization';
+import { authorize } from '@/lib/authorization';
 import { rateLimit } from '@/lib/rate-limit';
 
 // Batch limits: hard cap on number of files and total upload size per request
@@ -28,7 +28,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const { id: productId } = await params;
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('products.manage');
 
     // Rate limit uploads per user (20 / 5 minutes)
     const rl = rateLimit(`uploads:${user.id}`, UPLOAD_RATE_LIMIT, UPLOAD_RATE_WINDOW_MS);
@@ -39,9 +38,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       );
     }
 
+    // Load the product first so image-upload authority is scope-evaluated
     const product = await getOwnedProduct(companyId, productId);
     if (!product) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+    }
+    const uploadAuth = authorize(user, 'products.upload_images', product);
+    if (!uploadAuth.allowed) {
+      if (uploadAuth.reason === 'NO_TENANT' || uploadAuth.reason === 'OUT_OF_SCOPE') {
+        return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.upload_images' }, { status: 403 });
     }
 
     const formData = await req.formData();
@@ -141,11 +148,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const { id: productId } = await params;
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('products.manage');
 
+    // Load the product first so image-upload authority is scope-evaluated
     const product = await getOwnedProduct(companyId, productId);
     if (!product) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+    }
+    const uploadAuth = authorize(user, 'products.upload_images', product);
+    if (!uploadAuth.allowed) {
+      if (uploadAuth.reason === 'NO_TENANT' || uploadAuth.reason === 'OUT_OF_SCOPE') {
+        return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.upload_images' }, { status: 403 });
     }
 
     const { action, imageId, order, altText } = await req.json();

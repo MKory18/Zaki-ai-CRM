@@ -82,6 +82,41 @@ export type Permission =
   // CRM module
   | 'crm.view'
   | 'crm.manage'
+  // Permission Engine catalog (canonical keys — Phase 3)
+  | 'dashboard.view'
+  | 'orders.cancel'
+  | 'orders.export'
+  | 'customers.delete'
+  | 'customers.export'
+  | 'products.change_stock'
+  | 'products.export'
+  | 'categories.view'
+  | 'categories.create'
+  | 'categories.edit'
+  | 'categories.delete'
+  | 'offers.view'
+  | 'inventory.view'
+  | 'production.view'
+  | 'reports.export'
+  | 'roles.view'
+  | 'roles.create'
+  | 'roles.edit'
+  | 'roles.delete'
+  | 'settings.edit'
+  | 'audit.export'
+  | 'crm.contacts.delete'
+  | 'crm.companies.delete'
+  | 'crm.leads.delete'
+  | 'crm.deals.delete'
+  | 'crm.tasks.delete'
+  | 'crm.invoices.delete'
+  | 'crm.notes.view'
+  | 'crm.notes.create'
+  | 'crm.notes.edit'
+  | 'crm.notes.delete'
+  | 'crm.activities.view'
+  | 'crm.activities.create'
+  | 'crm.activities.delete'
   | 'settings.view'
   | 'settings.manage'
   | 'audit.view';
@@ -294,6 +329,41 @@ export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string; gro
   'audit.view': { ar: 'عرض سجل التدقيق', en: 'View audit logs', group: 'SETTINGS' },
   'crm.view': { ar: 'عرض وحدة CRM', en: 'View CRM module', group: 'CRM' },
   'crm.manage': { ar: 'إدارة CRM (إنشاء/تعديل/حذف)', en: 'Manage CRM (create/update/delete)', group: 'CRM' },
+  // Permission Engine catalog (canonical keys — Phase 3)
+  'dashboard.view': { ar: 'عرض لوحة التحكم', en: 'View dashboard', group: 'CRM' },
+  'orders.cancel': { ar: 'إلغاء الطلبات', en: 'Cancel orders', group: 'ORDERS' },
+  'orders.export': { ar: 'تصدير الطلبات', en: 'Export orders', group: 'ORDERS' },
+  'customers.delete': { ar: 'حذف العملاء', en: 'Delete customers', group: 'CUSTOMERS' },
+  'customers.export': { ar: 'تصدير العملاء', en: 'Export customers', group: 'CUSTOMERS' },
+  'products.change_stock': { ar: 'تغيير مخزون المنتجات', en: 'Change product stock', group: 'PRODUCTS' },
+  'products.export': { ar: 'تصدير المنتجات', en: 'Export products', group: 'PRODUCTS' },
+  'categories.view': { ar: 'عرض الفئات', en: 'View categories', group: 'PRODUCTS' },
+  'categories.create': { ar: 'إنشاء فئات', en: 'Create categories', group: 'PRODUCTS' },
+  'categories.edit': { ar: 'تعديل الفئات', en: 'Edit categories', group: 'PRODUCTS' },
+  'categories.delete': { ar: 'حذف الفئات', en: 'Delete categories', group: 'PRODUCTS' },
+  'offers.view': { ar: 'عرض العروض', en: 'View offers', group: 'PRODUCTS' },
+  'inventory.view': { ar: 'عرض المخزون', en: 'View inventory', group: 'OPERATIONS' },
+  'production.view': { ar: 'عرض الإنتاج', en: 'View production', group: 'OPERATIONS' },
+  'reports.export': { ar: 'تصدير التقارير', en: 'Export reports', group: 'ANALYTICS' },
+  'roles.view': { ar: 'عرض الأدوار والصلاحيات', en: 'View roles & permissions', group: 'USERS' },
+  'roles.create': { ar: 'إنشاء أدوار', en: 'Create roles', group: 'USERS' },
+  'roles.edit': { ar: 'تعديل الأدوار والصلاحيات', en: 'Edit roles & permissions', group: 'USERS' },
+  'roles.delete': { ar: 'حذف أدوار', en: 'Delete roles', group: 'USERS' },
+  'settings.edit': { ar: 'تعديل إعدادات النظام', en: 'Edit system settings', group: 'SETTINGS' },
+  'audit.export': { ar: 'تصدير سجل التدقيق', en: 'Export audit logs', group: 'SETTINGS' },
+  'crm.contacts.delete': { ar: 'حذف جهات الاتصال', en: 'Delete CRM contacts', group: 'CRM' },
+  'crm.companies.delete': { ar: 'حذف الشركات', en: 'Delete CRM companies', group: 'CRM' },
+  'crm.leads.delete': { ar: 'حذف العملاء المحتملين', en: 'Delete CRM leads', group: 'CRM' },
+  'crm.deals.delete': { ar: 'حذف الصفقات', en: 'Delete CRM deals', group: 'CRM' },
+  'crm.tasks.delete': { ar: 'حذف مهام CRM', en: 'Delete CRM tasks', group: 'CRM' },
+  'crm.invoices.delete': { ar: 'حذف فواتير CRM', en: 'Delete CRM invoices', group: 'CRM' },
+  'crm.notes.view': { ar: 'عرض ملاحظات CRM', en: 'View CRM notes', group: 'CRM' },
+  'crm.notes.create': { ar: 'إنشاء ملاحظات CRM', en: 'Create CRM notes', group: 'CRM' },
+  'crm.notes.edit': { ar: 'تعديل ملاحظات CRM', en: 'Edit CRM notes', group: 'CRM' },
+  'crm.notes.delete': { ar: 'حذف ملاحظات CRM', en: 'Delete CRM notes', group: 'CRM' },
+  'crm.activities.view': { ar: 'عرض أنشطة CRM', en: 'View CRM activities', group: 'CRM' },
+  'crm.activities.create': { ar: 'إنشاء أنشطة CRM', en: 'Create CRM activities', group: 'CRM' },
+  'crm.activities.delete': { ar: 'حذف أنشطة CRM', en: 'Delete CRM activities', group: 'CRM' },
 };
 
 export interface SessionUser {
@@ -306,5 +376,10 @@ export interface SessionUser {
   companyId: string | null;
   companyName?: string;
   commissionRate?: number;
-  permissions: Permission[];
+  /** Effective permission KEYS from the Permission Engine (role + overrides). */
+  permissions: string[];
+  /** Attached by getCurrentUser — engine scope data (never sent to client). */
+  effectiveGrants?: { fullAccess: boolean; grants: Record<string, { scope: string; scopeIds?: unknown[] | null }> };
+  /** Set when grants came from the legacy fallback (user without roleId). */
+  legacyPermissions?: boolean;
 }

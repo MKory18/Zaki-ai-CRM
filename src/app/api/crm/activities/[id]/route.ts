@@ -16,7 +16,7 @@ const includeDetail = {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { companyId } = await requireCompanyTenant();
-    await requirePermission('crm.view');
+    await requirePermission('crm.activities.view');
     const { id } = await params;
 
     const record = await db.crmActivity.findUnique({ where: { id }, include: includeDetail });
@@ -33,7 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('crm.manage');
+    await requirePermission('crm.activities.delete');
     const { id } = await params;
 
     const existing = await db.crmActivity.findUnique({ where: { id } });

@@ -1,0 +1,221 @@
+﻿/**
+ * PERMISSION CORE â€” low-level effective-permission computation.
+ *
+ * Source of truth: RolePermission (via users.roleId) + UserPermission overrides,
+ * with a legacy fallback to ROLE_PERMISSIONS[role] mapped through LEGACY_PERMISSION_MAP
+ * for any user without a roleId (backward compatibility â€” never removes access).
+ *
+ * PRECEDENCE (documented contract):
+ *   1. SUPER_ADMIN                       â†’ full access (centralized here, nowhere else)
+ *   2. UserPermission effect=DENY        â†’ final DENY (beats role + ALLOW)
+ *   3. UserPermission effect=ALLOW       â†’ ALLOW (wins over role absence/scope)
+ *   4. RolePermission                    â†’ allowed with its scope
+ *   5. otherwise                         â†’ DENY
+ *
+ * TENANT BOUNDARY (non-negotiable): companyId comes from the authenticated
+ * server-side session only. No scope ever crosses it. SUPER_ADMIN bypasses
+ * resource ownership but is still tenant-scoped by requireCompanyTenant().
+ *
+ * CACHING POLICY: grants are computed per-request from indexed queries
+ * (role_permissions + user_permissions by roleId/userId). No long-lived cache â€”
+ * permission changes take effect on the next request.
+ */
+import { db } from './db';
+import { ROLE_PERMISSIONS, UserRole } from '../types/auth';
+
+export type Scope = 'ALL_COMPANY' | 'OWN' | 'ASSIGNED' | 'CATEGORY' | 'SPECIFIC';
+
+export interface Grant {
+  scope: Scope;
+  scopeIds?: unknown[] | null;
+}
+
+export interface EffectiveGrants {
+  fullAccess: boolean;
+  grants: Record<string, Grant>;
+}
+
+/** Legacy permission key â†’ new catalog key(s) + default scope (parity mapping,
+ *  identical to scripts/generate-permission-backfill.ts and the migration backfill). */
+export function mapLegacyPermission(legacy: string): Grant[] {
+  const A: Grant = { scope: 'ALL_COMPANY' };
+  const AS: Grant = { scope: 'ASSIGNED' };
+  const O: Grant = { scope: 'OWN' };
+  const M: Record<string, Grant[]> = {
+    'orders.view': [A], 'orders.view_assigned': [AS], 'orders.view_own': [O],
+    'orders.create': [A],
+    'orders.update': [A], 'orders.update_own': [AS],
+    'orders.assign': [A], 'orders.reassign': [A],
+    'orders.claim': [A], 'orders.release': [A], 'orders.unlock': [A], 'orders.delete': [A],
+    'orders.confirmation_status': [A], 'orders.shipping_status': [A],
+    'customers.view': [A], 'customers.view_basic': [A], 'customers.create': [A],
+    'customers.update': [A], 'customers.freeze': [A], 'customers.unfreeze': [A],
+    'products.view': [A], 'products.create': [A], 'products.update': [A], 'products.delete': [A],
+    'products.manage': [{ ...A }, { ...A }, { ...A }, { ...A }],
+    'offers.manage': [A],
+    'finance.view': [A], 'finance.create': [A], 'finance.update': [A], 'finance.cashbox': [A],
+    'settlement.view': [A], 'settlement.upload': [A], 'settlement.review': [A],
+    'production.manage': [A],
+    'inventory.manage': [A],
+    'reports.view': [A], 'analytics.view': [A], 'ai.use': [A],
+    'users.view': [A], 'users.create': [A], 'users.update': [A], 'users.delete': [A],
+    'users.manage': [A], 'users.manage_roles': [A], 'moderators.manage': [A],
+    'settings.view': [A], 'settings.manage': [A], 'audit.view': [A],
+    'crm.view': [A], 'crm.manage': [A],
+  };
+  const out = M[legacy];
+  if (out) return out;
+  // unknown legacy key â†’ keep as-is (defensive; never silently drops access)
+  return [A];
+}
+
+/** Legacy permission key â†’ expanded NEW-catalog keys (parity: identical to the
+ *  migration backfill mapping â€” single source of truth for renames/expansions). */
+function expandLegacyKey(legacy: string): string[] {
+  const E: Record<string, string[]> = {
+    // ORDERS
+    'orders.update': ['orders.edit'],
+    'orders.update_own': ['orders.edit'],
+    'orders.confirmation_status': ['orders.confirm'],
+    'orders.shipping_status': ['orders.change_status'],
+    'orders.reassign': ['orders.assign'],
+    'orders.view_assigned': ['orders.view'],
+    'orders.view_own': ['orders.view'],
+    // CUSTOMERS
+    'customers.update': ['customers.edit'],
+    'customers.freeze': ['customers.edit'],
+    'customers.unfreeze': ['customers.edit'],
+    // PRODUCTS
+    'products.update': ['products.edit'],
+    'products.manage': ['products.edit', 'products.delete', 'products.change_price', 'products.upload_images'],
+    // OPERATIONS
+    'production.manage': ['production.view', 'production.manage'],
+    'inventory.manage': ['inventory.view', 'inventory.adjust'],
+    // REPORTS
+    'analytics.view': ['reports.view'],
+    'reports.view': ['reports.view', 'reports.export'],
+    // USERS
+    'users.update': ['users.edit'],
+    'users.manage': ['users.view', 'users.create', 'users.edit', 'users.delete'],
+    'users.manage_roles': ['roles.view', 'roles.edit'],
+    'moderators.manage': ['users.view', 'users.edit'],
+    // SETTINGS
+    'settings.manage': ['settings.edit'],
+    // CRM
+    'crm.view': ['crm.view', 'crm.contacts.view', 'crm.companies.view', 'crm.leads.view', 'crm.deals.view', 'crm.tasks.view', 'crm.invoices.view'],
+    'crm.manage': [
+      'crm.view',
+      'crm.contacts.view', 'crm.contacts.create', 'crm.contacts.edit', 'crm.contacts.delete',
+      'crm.companies.view', 'crm.companies.create', 'crm.companies.edit', 'crm.companies.delete',
+      'crm.leads.view', 'crm.leads.create', 'crm.leads.edit', 'crm.leads.delete',
+      'crm.deals.view', 'crm.deals.create', 'crm.deals.edit', 'crm.deals.delete',
+      'crm.tasks.view', 'crm.tasks.create', 'crm.tasks.edit', 'crm.tasks.delete',
+      'crm.invoices.view', 'crm.invoices.create', 'crm.invoices.edit', 'crm.invoices.delete',
+    ],
+  };
+  return E[legacy] ?? [legacy];
+}
+
+/** Legacy view_assigned/update_own â†’ scoped keys (orders.view/edit keep the
+ *  scope in the Grant, so the key itself is unscoped). */
+function scopeAwareKey(legacy: string): string {
+  switch (legacy) {
+    case 'orders.view_assigned':
+    case 'orders.view_own':
+      return 'orders.view';
+    default:
+      return legacy;
+  }
+}
+
+/** DB-shaped user (subset needed). */
+export interface DbUserLike {
+  id: string;
+  role: string;
+  roleId?: string | null;
+}
+
+/** Compute effective grants for a user. 2 indexed queries max. */
+export async function computeEffectiveGrants(user: DbUserLike): Promise<EffectiveGrants> {
+  // 1. SUPER_ADMIN â†’ full access (centralized bypass)
+  if (user.role === 'SUPER_ADMIN') return { fullAccess: true, grants: {} };
+
+  const grants: Record<string, Grant> = {};
+
+  // 2. Role grants (DB) â€” fallback to legacy map when no roleId
+  if (user.roleId) {
+    const rows = await db.rolePermission.findMany({
+      where: { roleId: user.roleId },
+      select: { permission: true, scope: true, scopeIds: true },
+    });
+    for (const r of rows) {
+      grants[r.permission] = { scope: r.scope as Scope, scopeIds: (r.scopeIds as unknown[]) ?? null };
+    }
+  } else {
+    // Legacy fallback: ROLE_PERMISSIONS[role] mapped to new catalog keys.
+    for (const legacy of ROLE_PERMISSIONS[user.role as UserRole] ?? []) {
+      const key = scopeAwareKey(legacy);
+      const mapped = mapLegacyPermission(legacy)[0] ?? { scope: 'ALL_COMPANY' as Scope };
+      // keep the broadest scope if multiple legacy keys map to the same new key
+      const existing = grants[key];
+      if (!existing || (existing.scope !== 'ALL_COMPANY' && mapped.scope === 'ALL_COMPANY')) {
+        grants[key] = mapped;
+      }
+    }
+  }
+
+  // 3. User overrides â€” DENY wins, ALLOW wins over role absence/scope
+  const overrides = await db.userPermission.findMany({
+    where: { userId: user.id },
+    select: { permission: true, effect: true, scope: true, scopeIds: true },
+  });
+  for (const o of overrides) {
+    if (o.effect === 'DENY') {
+      delete grants[o.permission];
+    } else {
+      grants[o.permission] = { scope: (o.scope as Scope) ?? 'ALL_COMPANY', scopeIds: (o.scopeIds as unknown[]) ?? null };
+    }
+  }
+
+  return { fullAccess: false, grants };
+}
+
+/** Legacy parity check helper: keys a legacy role would have (mapped).
+ *  Includes the approved business-decision grants:
+ *  - products.view = ALL_COMPANY for ACCOUNTANT / SETTLEMENT_OFFICER (migration
+ *    accountant_settlement_products_view — shared product visibility, view only).
+ */
+export function legacyEffectiveKeys(role: UserRole): string[] {
+  const keys = new Set<string>(['dashboard.view']);
+  for (const legacy of ROLE_PERMISSIONS[role] ?? []) {
+    const scoped = scopeAwareKey(legacy); // view_assigned/view_own → 'orders.view' (scoped)
+    const expanded = expandLegacyKey(legacy);
+    // When the legacy key expands to different key(s), the raw key is REPLACED
+    // (orders.update → orders.edit), not kept alongside it.
+    if (expanded.length === 1 && expanded[0] === scoped) {
+      keys.add(scoped);
+    } else {
+      for (const k of expanded) keys.add(k);
+    }
+  }
+  if (role === 'ACCOUNTANT' || role === 'SETTLEMENT_OFFICER') keys.add('products.view');
+  return [...keys];
+}
+
+/** Companion keys implied by the catalog extensions (parity with migration
+ *  permission_catalog_extensions): CRM notes/activities granular keys and
+ *  offers.view as the read companion of offers.manage. */
+export function catalogExtensionKeys(keys: Set<string>): Set<string> {
+  const out = new Set(keys);
+  if (out.has('crm.manage')) {
+    for (const k of ['crm.notes.view', 'crm.notes.create', 'crm.notes.edit', 'crm.notes.delete', 'crm.activities.view', 'crm.activities.create', 'crm.activities.delete']) out.add(k);
+  }
+  if (out.has('crm.view')) {
+    out.add('crm.notes.view');
+    out.add('crm.activities.view');
+  }
+  if (out.has('offers.manage')) out.add('offers.view');
+  if (out.has('roles.edit')) { out.add('roles.create'); out.add('roles.delete'); }
+  return out;
+}
+

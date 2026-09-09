@@ -5,7 +5,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { assertOrderAccess } from '@/lib/rbac';
 import { CONTACT_METHODS, CONTACT_RESULTS } from '@/lib/confirmation-workflow';
 import { logAudit } from '@/lib/audit';
-import { can } from '@/lib/authorization';
+import { can, authorize } from '@/lib/authorization';
 
 /**
  * GET  /api/orders/[id]/contact-attempts — chronological attempt history
@@ -60,7 +60,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
 
-    if (!can(user, 'orders.update') && !can(user, 'orders.update_own') && !can(user, 'orders.claim')) {
+    if (!can(user, 'orders.edit') && !can(user, 'orders.claim')) {
       return NextResponse.json({ error: 'Forbidden: cannot record contact attempts' }, { status: 403 });
     }
 
@@ -68,6 +68,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
+    }
+    const order = access.order;
+
+    // Edit authority is scope-evaluated (ASSIGNED covers own-assignment);
+    // claim holders may record attempts on the claimable queue.
+    if (!authorize(user, 'orders.edit', order).allowed && !can(user, 'orders.claim')) {
+      return NextResponse.json({ error: 'Forbidden: cannot record contact attempts' }, { status: 403 });
     }
 
     const body = await req.json();

@@ -16,7 +16,7 @@ const convertSchema = z.object({
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('crm.manage');
+    await requirePermission('crm.leads.edit');
     const { id } = await params;
 
     const lead = await db.crmLead.findUnique({ where: { id } });

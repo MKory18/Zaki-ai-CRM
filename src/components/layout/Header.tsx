@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -10,7 +10,6 @@ import {
   Globe,
   UserCheck,
   LogOut,
-  Building2,
   ChevronDown,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
@@ -42,7 +41,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           }
         }
       } catch {
-        // non-fatal — keep last known count
+        // non-fatal â€” keep last known count
       }
     };
     loadUnread();
@@ -52,7 +51,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Global search: Enter, or debounce 400ms once ≥ 2 chars → orders page
+  // Global search: Enter, or debounce 400ms once â‰¥ 2 chars â†’ orders page
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -111,13 +110,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
       {/* Right: Actions, Language, Demo Role Switcher, Notifications, User */}
       <div className="flex items-center space-x-2 md:space-x-3 rtl:space-x-reverse">
-        {/* Company Name Badge */}
-        <div className="hidden lg:flex items-center space-x-1.5 rtl:space-x-reverse px-2.5 py-1 bg-[#eef0f3] rounded-[5px] text-xs font-medium text-[#252f4a]">
-          <Building2 className="w-3.5 h-3.5 text-[#6b7177]" />
-          <span>{currentUser?.companyName || 'BioDerma International'}</span>
-        </div>
-
-        {/* Demo Role Switcher Dropdown — SUPER_ADMIN only */}
+        {/* Demo Role Switcher Dropdown â€” SUPER_ADMIN only */}
         {currentUser?.role === 'SUPER_ADMIN' && (
         <div className="relative">
           <button
@@ -164,10 +157,10 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           className="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium text-[#252f4a] hover:text-[#3e97ff] hover:bg-white rounded-[5px] border border-[#eef0f3] transition-colors cursor-pointer"
         >
           <Globe className="w-3.5 h-3.5 text-[#6b7177]" />
-          <span>{locale === 'en' ? 'العربية' : 'English'}</span>
+          <span>{locale === 'en' ? 'ط§ظ„ط¹ط±ط¨ظٹط©' : 'English'}</span>
         </button>
 
-        {/* Notifications Icon — dot shows real unread count only */}
+        {/* Notifications Icon â€” dot shows real unread count only */}
         <Link
           href="/notifications"
           className="relative p-2 text-[#252f4a] hover:text-[#3e97ff] hover:bg-white rounded-[5px] transition-colors"
@@ -192,3 +185,4 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     </header>
   );
 }
+

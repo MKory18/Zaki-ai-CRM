@@ -21,7 +21,7 @@ const CHUNK_SIZE = 1000;
 export async function GET(req: Request) {
   try {
     const { companyId, user } = await requireCompanyTenant();
-    await requirePermission('orders.view');
+    await requirePermission('reports.export');
 
     // Rate limit heavy exports: generous window so normal usage is unaffected
     const rl = rateLimit(`export:${companyId}:${user.id}`, 30, 60 * 1000);

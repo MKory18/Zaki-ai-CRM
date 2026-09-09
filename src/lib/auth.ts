@@ -106,9 +106,14 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     if (user.tokenVersion !== decoded.tv) return null;
 
     const role = user.role as UserRole;
-    const permissions = ROLE_PERMISSIONS[role] || [];
+    // Permission Engine: effective grants from DB (role + overrides), legacy
+    // fallback for users without roleId. Permissions are re-read per request,
+    // so changes apply immediately (no stale session permissions).
+    const { computeEffectiveGrants } = await import('./permissions-core');
+    const { attachGrants } = await import('./authorization');
+    const effective = await computeEffectiveGrants({ id: user.id, role: user.role, roleId: user.roleId });
 
-    return {
+    const sessionUser: SessionUser = {
       id: user.id,
       email: user.email,
       name: user.name,
@@ -118,8 +123,12 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       companyId: user.companyId,
       companyName: user.company?.name,
       commissionRate: user.commissionRate,
-      permissions,
+      permissions: Object.keys(effective.grants),
+      legacyPermissions: !user.roleId,
     };
+    // Grants live in a WeakMap keyed on this per-request object — never serialized.
+    attachGrants(sessionUser, effective);
+    return sessionUser;
   } catch (error: any) {
     if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
       return null;
@@ -155,6 +164,23 @@ export async function requireCompanyTenant(): Promise<{ user: SessionUser; compa
     throw new Error('User has no assigned company tenant');
   }
   return { user, companyId: user.companyId };
+}
+
+/**
+ * SINGLE-COMPANY CRM: resolve the one active company server-side.
+ * Used when an actor without a company context (platform SUPER_ADMIN) creates
+ * records that require a companyId — never trust a client-supplied value.
+ * Fails explicitly if the single-company invariant cannot be resolved.
+ */
+export async function resolveSingleCompanyId(): Promise<string> {
+  const companies = await db.company.findMany({ select: { id: true }, take: 2 });
+  if (companies.length === 0) {
+    throw new Error('No company configured in platform');
+  }
+  if (companies.length > 1) {
+    throw new Error('Multiple companies exist but no explicit company context was provided');
+  }
+  return companies[0].id;
 }
 
 /**

@@ -7,7 +7,8 @@ import { requirePermission } from '@/lib/authorization';
 
 export async function GET() {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireCompanyTenant();
+    await requirePermission('users.view');
 
     const moderators = await db.user.findMany({
       where: {
@@ -92,7 +93,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('moderators.manage');
+    await requirePermission('users.create');
 
     const body = await req.json();
     const { name, email, phone, commissionRate, password } = body;

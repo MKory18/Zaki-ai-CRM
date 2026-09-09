@@ -4,7 +4,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { assertOrderAccess } from '@/lib/rbac';
 import { DELIVERY_ATTEMPT_RESULTS } from '@/lib/shipping-workflow';
 import { logAudit } from '@/lib/audit';
-import { can } from '@/lib/authorization';
+import { can, authorize } from '@/lib/authorization';
 
 /**
  * GET  /api/orders/[id]/delivery-attempts — chronological attempt history
@@ -43,16 +43,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
 
-    if (!can(user, 'orders.shipping_status')) {
-      return NextResponse.json({ error: 'Forbidden: cannot record delivery attempts' }, { status: 403 });
-    }
-
     const access = await assertOrderAccess(id, user, companyId, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
     }
     const order = access.order;
+
+    // Shipping authority — scope evaluated against the loaded order
+    if (!authorize(user, 'orders.change_status', order).allowed) {
+      return NextResponse.json({ error: 'Forbidden: cannot record delivery attempts' }, { status: 403 });
+    }
 
     const body = await req.json();
     const { result, failureReason, note, deliveryProviderId } = body as {

@@ -1,16 +1,50 @@
 ﻿import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
-import { requirePermission } from '@/lib/authorization';
+import { requirePermission, getPermissionScope } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireCompanyTenant();
+
+    // Canonical gate — products.view, resolved to its effective scope so the
+    // list query can filter at the SQL level (no JS filtering).
+    const scope = getPermissionScope(user, 'products.view');
+    if (!scope) {
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.view' }, { status: 403 });
+    }
+
+    const where: Prisma.ProductWhereInput = { companyId };
+    // Scope → SQL filters. CATEGORY/SPECIFIC read scopeIds that were
+    // tenant-validated when the grant was written. ALL_COMPANY / OWN → no
+    // extra filter (OWN is unsupported for products — documented in
+    // authorization.ts — and treated as company-wide).
+    if (scope.scope === 'CATEGORY') {
+      where.categoryId = { in: Array.isArray(scope.scopeIds) ? (scope.scopeIds as string[]) : [] };
+    } else if (scope.scope === 'SPECIFIC') {
+      where.id = { in: Array.isArray(scope.scopeIds) ? (scope.scopeIds as string[]) : [] };
+    }
+
+    // Optional search (q) + limit for scope pickers / search UIs.
+    // When absent the behavior is unchanged from before.
+    const url = new URL(req.url);
+    const q = url.searchParams.get('q')?.trim();
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { nameEn: { contains: q, mode: 'insensitive' } },
+        { sku: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+    const limitRaw = url.searchParams.get('limit');
+    const take = limitRaw ? Math.min(Math.max(Number.parseInt(limitRaw, 10) || 0, 1), 100) : undefined;
 
     const products = await db.product.findMany({
-      where: { companyId },
+      where,
+      take,
       include: {
         images: {
           orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
@@ -84,7 +118,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('products.manage');
+    await requirePermission('products.create');
 
     const body = await req.json();
     const { name, nameEn, sku, description, descriptionEn, basePrice, status } = body;

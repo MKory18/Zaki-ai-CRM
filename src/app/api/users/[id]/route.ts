@@ -15,8 +15,8 @@ import { requirePermission } from '@/lib/authorization';
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const admin = await requirePermission('users.manage');
-    const { action, role, status } = await req.json();
+    const admin = await requirePermission('users.edit');
+    const { action, role, status, roleId } = await req.json();
 
     const target = await db.user.findUnique({
       where: { id },
@@ -56,13 +56,47 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     let auditAction = '';
 
     if (action === 'assignRole') {
-      if (!role || !ASSIGNABLE_ROLES.includes(role as UserRole)) {
+      // roleId-based assignment (Permission Engine) takes precedence over the
+      // legacy `role` string. The legacy path below is kept for compatibility.
+      if (roleId) {
+        if (typeof roleId !== 'string') {
+          return NextResponse.json({ error: 'الدور غير صالح' }, { status: 400 });
+        }
+        const roleRow = await db.role.findUnique({ where: { id: roleId }, include: { _count: { select: { users: true } } } });
+        if (!roleRow) {
+          return NextResponse.json({ error: 'الدور غير موجود' }, { status: 400 });
+        }
+        // Tenant rule: system roles (companyId null) are assignable by anyone
+        // with the permission; company roles only within the same company.
+        const roleAllowed = roleRow.companyId === null || roleRow.companyId === admin.companyId;
+        if (!roleAllowed) {
+          return NextResponse.json({ error: 'الدور غير موجود' }, { status: 404 });
+        }
+        // Only SUPER_ADMIN may assign the SUPER_ADMIN role
+        if (roleRow.name === 'SUPER_ADMIN' && admin.role !== 'SUPER_ADMIN') {
+          return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه تعيين رتبة المدير الأعلى' }, { status: 403 });
+        }
+        if (target.id === admin.id && target.roleId !== roleId) {
+          return NextResponse.json({ error: 'لا يمكنك تغيير دورك الشخصي' }, { status: 400 });
+        }
+        updateData.roleId = roleId;
+        updateData.role = roleRow.name; // keep legacy role string in sync
+        updateData.permissionsVersion = { increment: 1 }; // invalidate cached grants
+        if (!target.companyId && admin.companyId && admin.role !== 'SUPER_ADMIN') {
+          if (target.status !== 'PENDING') {
+            return NextResponse.json({ error: 'غير مسموح بإسناد حساب من شركة أخرى' }, { status: 403 });
+          }
+          updateData.companyId = admin.companyId;
+        }
+        auditAction = 'USER_ROLE_CHANGED';
+      } else if (!role || !ASSIGNABLE_ROLES.includes(role as UserRole)) {
         return NextResponse.json({ error: 'الدور غير صالح' }, { status: 400 });
+      } else {
+        if (target.id === admin.id && role !== admin.role) {
+          return NextResponse.json({ error: 'لا يمكنك تغيير دورك الشخصي' }, { status: 400 });
+        }
+        updateData.role = role;
       }
-      if (target.id === admin.id && role !== admin.role) {
-        return NextResponse.json({ error: 'لا يمكنك تغيير دورك الشخصي' }, { status: 400 });
-      }
-      updateData.role = role;
       // Adopting a platform-level (companyId: null) account is allowed ONLY for
       // a PENDING account by a company admin (onboarding). Never for ACTIVE
       // accounts — that would be cross-tenant account capture.

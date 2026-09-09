@@ -9,7 +9,7 @@ import {
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
-import { can } from '@/lib/authorization';
+import { can, authorize } from '@/lib/authorization';
 
 /**
  * POST /api/orders/[id]/confirmation — controlled confirmation workflow action.
@@ -32,17 +32,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
 
-    // Permission: confirmation status authority
-    if (!can(user, 'orders.confirmation_status')) {
-      return NextResponse.json({ error: 'Forbidden: you are not allowed to change confirmation status' }, { status: 403 });
-    }
-
+    // Confirmation status authority (scope evaluated against the loaded order)
     const access = await assertOrderAccess(id, user, companyId, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
     }
     const order = access.order;
+
+    const confirmAuth = authorize(user, 'orders.confirm', order);
+    if (!confirmAuth.allowed) {
+      return NextResponse.json({ error: 'Forbidden: you are not allowed to change confirmation status' }, { status: 403 });
+    }
 
     // ── Editing-lock enforcement: an ACTIVE foreign lock blocks edits ──
     // (users with orders.unlock may bypass, same as the generic PATCH)
@@ -89,7 +90,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         if (from !== 'NEW') {
           return NextResponse.json({ error: `Cannot start from status ${from}` }, { status: 400 });
         }
-        if (order.claimedById !== user.id && !can(user, 'orders.update')) {
+        if (order.claimedById !== user.id && !authorize(user, 'orders.edit', order).allowed) {
           return NextResponse.json({ error: 'Forbidden: claim the order first' }, { status: 403 });
         }
         target = 'IN_PROGRESS';

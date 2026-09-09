@@ -5,14 +5,14 @@ import { assertOrderAccess } from '@/lib/rbac';
 import { ownershipSnapshot } from '@/lib/order-locks';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
-import { can } from '@/lib/authorization';
+import { can, authorize } from '@/lib/authorization';
 
 /**
  * POST /api/orders/[id]/transfer
  * Controlled order transfer — never allow order stealing.
  *
  * Authorization (server-side):
- *  - orders.reassign permission (SUPER_ADMIN / COMPANY_ADMIN / MANAGER), OR
+ *  - orders.assign permission with scope evaluation (admins/managers), OR
  *  - the current claimer releasing to a specific colleague (voluntary transfer)
  *
  * Body: { targetUserId, reason? }  — targetUserId is verified in DB,
@@ -32,13 +32,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'A reason is required for transferring an order.' }, { status: 400 });
     }
 
-    const isReassigner = can(user, 'orders.reassign');
     const access = await assertOrderAccess(id, user, companyId, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
     }
     const order = access.order;
+    const isReassigner = authorize(user, 'orders.assign', order).allowed;
 
     // Terminal orders are finalized — they can no longer be transferred
     if (['DELIVERED', 'RETURNED', 'CANCELLED', 'REJECTED'].includes(order.status)) {
@@ -51,7 +51,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // A non-reassigner may only transfer an order THEY currently own/claimed
     if (!isReassigner) {
       if (!can(user, 'orders.release')) {
-        return NextResponse.json({ error: 'Forbidden: missing required permission orders.reassign' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden: missing required permission orders.assign' }, { status: 403 });
       }
       if (order.currentOwnerId !== user.id && order.claimedById !== user.id) {
         return NextResponse.json({ error: 'You can only transfer an order you own.' }, { status: 403 });

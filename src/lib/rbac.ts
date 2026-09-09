@@ -1,12 +1,12 @@
-/**
- * SALESFLOW — Centralized Server-Side RBAC Engine
+﻿/**
+ * SALESFLOW â€” Centralized Server-Side RBAC Engine
  *
  * Every protected API must authorize through this module.
- * Frontend permission checks are UX only — never security.
+ * Frontend permission checks are UX only â€” never security.
  *
  * Enforcement chain for sensitive operations:
- *   authenticate → company tenant → role → permission
- *   → order scope (assignment) → lock ownership → version
+ *   authenticate â†’ company tenant â†’ role â†’ permission
+ *   â†’ order scope (assignment) â†’ lock ownership â†’ version
  */
 
 import { db } from './db';
@@ -15,34 +15,31 @@ import { ROLE_PERMISSIONS } from '@/types/auth';
 
 /**
  * Permission checks live in './authorization' (single source of truth).
- * Re-exported here for backward compatibility — do not re-implement.
+ * Re-exported here for backward compatibility â€” do not re-implement.
  */
-import { can as _can, requirePermission as _requirePermission } from './authorization';
+import { can as _can, requirePermission as _requirePermission, getPermissionScope } from './authorization';
 export const can: (user: SessionUser, permission: Permission) => boolean = _can;
 export const requirePermission: (permission: Permission) => Promise<SessionUser> = _requirePermission;
 
-// ─────────────────────────────────────────────────────
-// Permission checks (pure, no DB) — implemented in './authorization'
-// ─────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Permission checks (pure, no DB) â€” implemented in './authorization'
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
- * Order visibility policy (BUSINESS RULE — approved decision, 2026-09):
- * SHARED COMPANY VISIBILITY — `companyId` is the tenant boundary, NOT userId.
- * Any ACTIVE user holding the `orders.view` permission sees ALL orders of
- * their own company. Assignment fields (assignedToId / claimedById /
- * currentOwnerId / moderatorId) describe WHO WORKS ON an order — they are
- * workflow responsibility, never a visibility filter for `orders.view` holders.
- *
- * Agents holding only `orders.view_assigned` (CONFIRMATION_AGENT /
- * FOLLOW_UP_AGENT) keep their scoped envelope: own orders + the claimable
- * queue (unclaimed, UNSIGNED, NEW, lock-free).
+ * Order visibility â€” driven by the Permission Engine scope of `orders.view`:
+ *   ALL_COMPANY â†’ all company orders (SHARED COMPANY VISIBILITY default)
+ *   ASSIGNED    â†’ assigned/claimed/owned + claimable queue (agents)
+ *   OWN         â†’ orders the user entered (moderatorId)
+ *   none        â†’ no orders
+ * `companyId` remains the tenant boundary (applied by the caller).
  */
 export function orderVisibilityWhere(user: SessionUser): Record<string, unknown> {
-  // Company-wide view: permission-based, not role-based.
-  if (can(user, 'orders.view')) return {};
+  const scope = getPermissionScope(user, 'orders.view');
+  if (!scope) return { id: '__no_access__' };
 
-  // Self-scoped agents: own orders + unclaimed queue items they may claim
-  if (can(user, 'orders.view_assigned')) {
+  if (scope.scope === 'ALL_COMPANY') return {};
+
+  if (scope.scope === 'ASSIGNED') {
     return {
       OR: [
         // 1. Assigned specifically to me
@@ -51,7 +48,7 @@ export function orderVisibilityWhere(user: SessionUser): Record<string, unknown>
         { currentOwnerId: user.id },
         // Orders I entered as a moderator (legacy compat)
         { moderatorId: user.id },
-        // ─── Claimable queue: unclaimed orders in the workflow intake stage ───
+        // â”€â”€â”€ Claimable queue: unclaimed orders in the workflow intake stage â”€â”€â”€
         {
           claimedById: null,
           signatureStatus: 'UNSIGNED',
@@ -63,12 +60,16 @@ export function orderVisibilityWhere(user: SessionUser): Record<string, unknown>
     };
   }
 
-  // Unknown/default: deny all orders
+  if (scope.scope === 'OWN') {
+    return { moderatorId: user.id };
+  }
+
+  // CATEGORY / SPECIFIC are not meaningful for orders
   return { id: '__no_access__' };
 }
 
 /**
- * Explicit queue filters (Step 3). Backend-enforced — the frontend may only
+ * Explicit queue filters (Step 3). Backend-enforced â€” the frontend may only
  * REQUEST a queue; the server decides which queues the role may see.
  */
 export type OrderQueue = 'available' | 'assigned_to_me' | 'my_orders' | 'processing' | 'all_company';
@@ -80,16 +81,16 @@ export function applyQueueFilter(
 ): Record<string, any> {
   switch (queue) {
     case 'available': {
-      // Unclaimed + workflow-intake eligible; scoped by role visibility
-      const scope = orderVisibilityWhere(user);
+      // Unclaimed + workflow-intake eligible; scoped by engine visibility
       const claimable = {
         claimedById: null,
         signatureStatus: 'UNSIGNED',
       };
-      if (can(user, 'orders.view')) {
+      const scope = getPermissionScope(user, 'orders.view');
+      if (scope?.scope === 'ALL_COMPANY') {
         return { ...where, AND: [...(where.AND ?? []), claimable] };
       }
-      if (can(user, 'orders.view_assigned')) {
+      if (scope?.scope === 'ASSIGNED') {
         return {
           ...where,
           AND: [...(where.AND ?? []), claimable, { confirmationStatus: 'NEW' }],
@@ -105,13 +106,13 @@ export function applyQueueFilter(
       return { ...where, currentOwnerId: user.id };
     case 'all_company': {
       // Queue is available to any user with company-wide order visibility
-      if (!can(user, 'orders.view')) {
+      if (getPermissionScope(user, 'orders.view')?.scope !== 'ALL_COMPANY') {
         return { ...where, id: '__no_access__' };
       }
       return where;
     }
     default: {
-      // No explicit queue → apply the role's default visibility envelope.
+      // No explicit queue â†’ apply the role's default visibility envelope.
       // Always merge via AND so an existing search `OR` is never clobbered
       // by the spread of orderVisibilityWhere (which also contains an OR).
       const visibility = orderVisibilityWhere(user);
@@ -123,12 +124,12 @@ export function applyQueueFilter(
 
 /** Does this user see all orders company-wide (vs. only their own)? */
 export function hasGlobalOrderView(user: SessionUser): boolean {
-  return can(user, 'orders.view');
+  return getPermissionScope(user, 'orders.view')?.scope === 'ALL_COMPANY';
 }
 
-// ─────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Order-scoped authorization (DB-verified)
-// ─────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type OrderAccessResult =
   | { allowed: true; order: Record<string, any> }
@@ -154,31 +155,36 @@ export async function assertOrderAccess(
   if (!order) return { allowed: false, reason: 'NOT_FOUND' };
   if (order.companyId !== companyId) return { allowed: false, reason: 'WRONG_COMPANY' };
 
-  // Agents without company-wide view (`orders.view_assigned` only): must be
-  // related to the user (DB-backed ownership check). `orders.view` holders
-  // pass with the tenant check alone (shared company visibility policy).
-  if (!can(user, 'orders.view') && can(user, 'orders.view_assigned')) {
+  // Scope-driven detail access (Permission Engine):
+  //   ALL_COMPANY â†’ tenant check alone; ASSIGNED â†’ ownership check;
+  //   OWN â†’ creator check; denied scope â†’ NOT_ASSIGNED.
+  const viewScope = getPermissionScope(user, 'orders.view');
+  if (viewScope?.scope === 'ASSIGNED') {
     const mine =
       order.assignedToId === user.id ||
       order.claimedById === user.id ||
       order.currentOwnerId === user.id ||
       order.moderatorId === user.id;
     if (!mine) return { allowed: false, reason: 'NOT_ASSIGNED' };
+  } else if (viewScope?.scope === 'OWN') {
+    if (order.moderatorId !== user.id) return { allowed: false, reason: 'NOT_ASSIGNED' };
+  } else if (!viewScope) {
+    return { allowed: false, reason: 'NOT_ASSIGNED' };
   }
 
   return { allowed: true, order };
 }
 
-// ─────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Role helpers
-// ─────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Permissions granted to a role (used by /roles matrix + user management) */
 export function permissionsForRole(role: UserRole): Permission[] {
   return ROLE_PERMISSIONS[role] ?? [];
 }
 
-/** Default role for new registrations — never administrative */
+/** Default role for new registrations â€” never administrative */
 export const DEFAULT_REGISTRATION_ROLE: UserRole = 'PENDING_USER';
 
 /** Roles with financial authority (for separation-of-duties checks) */
@@ -201,3 +207,4 @@ export const LOCK_CONFIG_DEFAULTS = {
 } as const;
 
 export type LockConfig = typeof LOCK_CONFIG_DEFAULTS;
+

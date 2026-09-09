@@ -21,10 +21,10 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
 
+    // Canonical keys only — view_assigned is a legacy alias for orders.view
     const mayViewShipping =
-      can(user, 'orders.shipping_status') ||
-      can(user, 'orders.view') ||
-      can(user, 'orders.view_assigned');
+      can(user, 'orders.change_status') ||
+      can(user, 'orders.view');
     if (!mayViewShipping) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

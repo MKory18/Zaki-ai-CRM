@@ -8,7 +8,8 @@ import { requirePermission } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireCompanyTenant();
+    await requirePermission('production.view');
 
     const batches = await db.productionBatch.findMany({
       where: { companyId },

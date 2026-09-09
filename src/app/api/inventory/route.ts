@@ -7,7 +7,8 @@ import { requirePermission } from '@/lib/authorization';
 
 export async function GET() {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireCompanyTenant();
+    await requirePermission('inventory.view');
 
     const products = await db.product.findMany({
       where: { companyId },
@@ -60,7 +61,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('inventory.manage');
+    await requirePermission('inventory.adjust');
 
     const body = await req.json();
     const { productId, batchId, quantity, type, reason } = body;

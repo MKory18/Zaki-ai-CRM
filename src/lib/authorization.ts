@@ -1,84 +1,206 @@
-/**
- * SALESFLOW — Unified Authorization Engine (single source of truth)
+﻿/**
+ * AUTHORIZATION ENGINE â€” single source of truth for all permission checks.
  *
- * This module is the ONLY place permission checks are implemented.
- * `src/lib/auth.ts` and `src/lib/rbac.ts` re-export from here for
- * backward compatibility — never re-implement checks elsewhere.
+ * Every API route must authorize through this module. Frontend checks are UX only.
  *
- * ─── MODEL ──────────────────────────────────────────────────────────
- * Roles:
- *   SUPER_ADMIN        — platform-wide, everything
- *   COMPANY_ADMIN      — full company scope, everything (see below)
- *   MANAGER            — broad operational oversight, no finance writes
- *   MODERATOR          — order intake, self-scoped
- *   CONFIRMATION_AGENT — confirmation workflow, self-scoped
- *   FOLLOW_UP_AGENT    — follow-up on assigned cases
- *   SETTLEMENT_OFFICER — shipping settlements only
- *   ACCOUNTANT         — finance only, no order status writes
- *   DELIVERY_MANAGER   — shipping/delivery workflow
- *   PENDING_USER       — no permissions (awaiting activation)
+ * PRECEDENCE (see permissions-core.ts for the full contract):
+ *   1. SUPER_ADMIN â†’ full access
+ *   2. UserPermission DENY â†’ final deny
+ *   3. UserPermission ALLOW â†’ allow (overrides role absence/scope)
+ *   4. RolePermission â†’ allowed with its scope
+ *   5. otherwise â†’ DENY
  *
- * Tenant isolation flow:
- *   requireCompanyTenant() [auth.ts — session/tenant concern]
- *     → assertOrderAccess() [rbac.ts — order scope + company check]
- *     → authorize() [here — generic resource + permission composition]
+ * SUPER_ADMIN handling is centralized HERE â€” no route may add its own
+ * `if role === SUPER_ADMIN` bypass.
  *
- * Resource-level `authorize()` is scaffolding: routes should migrate
- * ad-hoc permission + tenant compositions to it over time. No granular
- * permissions exist yet by design.
- *
- * ─── ADMIN SEMANTICS (documented, do not change silently) ──────────
- * COMPANY_ADMIN is granted EVERYTHING by `can()` — identical to the
- * previous behavior of auth.hasPermission(), which is what live routes
- * enforce. COMPANY_ADMIN's ROLE_PERMISSIONS list is already
- * near-exhaustive, but it is NOT the enforcement source for admins.
- * Do NOT trim the ROLE_PERMISSIONS list to match `can()` — the list
- * still feeds UI matrices, user management, and permissionsForRole().
- *
- * PERMISSION DELTA — permissions granted by unified can() to
- * COMPANY_ADMIN but absent from its ROLE_PERMISSIONS list
- * (previously false under the old rbac.can; now true):
- *   - users.delete
- *   - orders.delete
- *   - orders.view_assigned
- *   - orders.view_own
- *   - customers.view_basic
- * Audit result: none of these are used in any live can() / requirePermission
- * check on its own in a way that changes a business outcome — the only
- * route referencing orders.view_assigned ('/api/orders/shipping') ORs it
- * with orders.view (already granted). No rule change in practice.
- * ────────────────────────────────────────────────────────────────────
+ * SESSION INTEGRATION: getCurrentUser() computes EffectiveGrants fresh from the
+ * DB on every request (permissions-core) and attaches them to the SessionUser â€”
+ * permission changes take effect on the next request, no stale caches.
+ * For SessionUser objects built outside getCurrentUser, can()/getPermissionScope
+ * fall back to async loading via loadUserGrants().
  */
-
-import type { Permission, SessionUser } from '@/types/auth';
+import type { SessionUser } from '@/types/auth';
+import { db } from './db';
 import { requireAuth } from './auth';
+import { computeEffectiveGrants, EffectiveGrants, Scope } from './permissions-core';
 
-/**
- * The ONLY permission check.
- * Rules (in order):
- *  1. User must be ACTIVE (PENDING/SUSPENDED/DISABLED → deny).
- *  2. SUPER_ADMIN → always allowed.
- *  3. COMPANY_ADMIN → always allowed (see ADMIN SEMANTICS above).
- *  4. Everyone else → their server-derived permission list.
- */
-export function can(
-  user: SessionUser,
-  permission: Permission,
-  // Reserved for future scoping (e.g. { companyId } for tenant-bound checks).
-  // Intentionally unused today — do not build granular permissions yet.
-  _opts?: { companyId?: string }
-): boolean {
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Grants access â€” sync when the session carries them (normal path),
+// async fallback (WeakMap) for externally-built SessionUser objects.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const grantsCache = new WeakMap<object, EffectiveGrants>();
+
+export function attachGrants<T extends SessionUser>(user: T, grants: EffectiveGrants): T {
+  grantsCache.set(user, grants);
+  return user;
+}
+
+function grantsOf(user: SessionUser): EffectiveGrants | null {
+  if ((user as any).effectiveGrants) return (user as any).effectiveGrants as EffectiveGrants;
+  return grantsCache.get(user) ?? null;
+}
+
+async function resolveGrants(user: SessionUser): Promise<EffectiveGrants> {
+  const g = grantsOf(user);
+  if (g) return g;
+  const computed = await computeEffectiveGrants({ id: user.id, role: user.role, roleId: (user as any).roleId ?? null });
+  attachGrants(user, computed);
+  return computed;
+}
+
+/** Pre-compute and attach grants for a session user (used by getCurrentUser). */
+export async function hydrateGrants(user: SessionUser): Promise<SessionUser> {
+  if (!grantsOf(user)) {
+    const computed = await computeEffectiveGrants({ id: user.id, role: user.role, roleId: (user as any).roleId ?? null });
+    attachGrants(user, computed);
+  }
+  return user;
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// can() â€” the ONLY permission check (sync; grants are session-attached)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+export function can(user: SessionUser, permission: string): boolean {
   if (user.status !== 'ACTIVE') return false;
-  if (user.role === 'SUPER_ADMIN' || user.role === 'COMPANY_ADMIN') return true;
-  return user.permissions.includes(permission);
+  const g = grantsOf(user);
+  if (!g) {
+    // Session without attached grants (should not happen for getCurrentUser
+    // sessions) â€” legacy role fallback so nothing silently loses access.
+    if (user.role === 'SUPER_ADMIN') return true;
+    return user.permissions.includes(permission);
+  }
+  if (g.fullAccess) return true;
+  return g.grants[permission] !== undefined || g.grants[LEGACY_ALIAS[permission] ?? permission] !== undefined;
+}
+
+/** Legacy key -> canonical new key. Transitional: routes still enforce legacy
+ * keys until PHASE 3 migrates them; the engine resolves both to the same grant. */
+const LEGACY_ALIAS: Record<string, string> = {
+  'orders.update': 'orders.edit',
+  'orders.update_own': 'orders.edit',
+  'orders.confirmation_status': 'orders.confirm',
+  'orders.shipping_status': 'orders.change_status',
+  'orders.reassign': 'orders.assign',
+  'orders.view_assigned': 'orders.view',
+  'orders.view_own': 'orders.view',
+  'customers.update': 'customers.edit',
+  'customers.freeze': 'customers.edit',
+  'customers.unfreeze': 'customers.edit',
+  'products.update': 'products.edit',
+  'products.manage': 'products.edit',
+  'users.update': 'users.edit',
+  'settings.manage': 'settings.edit',
+  'analytics.view': 'reports.view',
+};
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Scope resolution
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+export interface PermissionScope {
+  scope: Scope;
+  scopeIds?: unknown[] | null;
+}
+
+/** Resolve the effective scope of a permission for this user (null = denied). */
+export function getPermissionScope(user: SessionUser, permission: string): PermissionScope | null {
+  if (user.status !== 'ACTIVE') return null;
+  const g = grantsOf(user);
+  if (!g) return user.role === 'SUPER_ADMIN' ? { scope: 'ALL_COMPANY' } : null;
+  if (g.fullAccess) return { scope: 'ALL_COMPANY' };
+  const grant = g.grants[permission] ?? g.grants[LEGACY_ALIAS[permission] ?? permission];
+  if (!grant) return null;
+  return { scope: grant.scope, scopeIds: grant.scopeIds ?? null };
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Resource authorization
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+export interface AuthorizeResult {
+  allowed: boolean;
+  /** Safe reason for server logs/debugging â€” never contains PII or internals. */
+  reason?: 'NO_PERMISSION' | 'NO_TENANT' | 'OUT_OF_SCOPE' | 'NO_COMPANY_CONTEXT';
+}
+
+function orderMatchesScope(order: Record<string, any>, userId: string, scope: Scope, scopeIds?: unknown[] | null): boolean {
+  switch (scope) {
+    case 'ALL_COMPANY':
+      return true; // tenant boundary already enforced by caller
+    case 'ASSIGNED':
+      return (
+        order.assignedToId === userId ||
+        order.claimedById === userId ||
+        order.currentOwnerId === userId ||
+        order.moderatorId === userId
+      );
+    case 'OWN':
+      return order.moderatorId === userId;
+    default:
+      // CATEGORY / SPECIFIC are not meaningful for orders â€” company-wide only
+      return false;
+  }
+}
+
+function productMatchesScope(product: Record<string, any>, _userId: string, scope: Scope, scopeIds?: unknown[] | null): boolean {
+  switch (scope) {
+    case 'ALL_COMPANY':
+      return true;
+    case 'CATEGORY':
+      return Array.isArray(scopeIds) && product.categoryId != null && scopeIds.includes(product.categoryId);
+    case 'SPECIFIC':
+      return Array.isArray(scopeIds) && scopeIds.includes(product.id);
+    case 'OWN':
+      // Products have no per-user ownership column â€” OWN is not supported for
+      // products (documented); treated as company-wide.
+      return true;
+    default:
+      return false;
+  }
+}
+
+function genericMatchesScope(_resource: Record<string, any>, _userId: string, scope: Scope, _scopeIds?: unknown[] | null): boolean {
+  // Unknown resource types: only ALL_COMPANY scopes are evaluable.
+  return scope === 'ALL_COMPANY';
 }
 
 /**
- * Server-side guard for API routes.
- * Throws 'Unauthorized' / 'ACCOUNT_*' (via requireAuth) or
- * 'Forbidden: missing required permission X' — same messages as before.
+ * Authorize a permission against a specific resource (sync).
+ * - tenant: resource.companyId must equal the session companyId (never client input)
+ * - scope: evaluated per resource type by the engine
  */
-export async function requirePermission(permission: Permission): Promise<SessionUser> {
+export function authorize(
+  user: SessionUser,
+  permission: string,
+  resource?: Record<string, any>
+): AuthorizeResult {
+  if (user.status !== 'ACTIVE') return { allowed: false, reason: 'NO_PERMISSION' };
+  const scope = getPermissionScope(user, permission);
+  if (!scope) return { allowed: false, reason: 'NO_PERMISSION' };
+
+  if (resource) {
+    const g = grantsOf(user);
+    if (!g?.fullAccess) {
+      if (!user.companyId) return { allowed: false, reason: 'NO_COMPANY_CONTEXT' };
+      if (resource.companyId !== user.companyId) return { allowed: false, reason: 'NO_TENANT' };
+    }
+    const ok =
+      permission.startsWith('orders.')
+        ? orderMatchesScope(resource, user.id, scope.scope, scope.scopeIds)
+        : permission.startsWith('products.')
+          ? productMatchesScope(resource, user.id, scope.scope, scope.scopeIds)
+          : genericMatchesScope(resource, user.id, scope.scope, scope.scopeIds);
+    if (!ok) return { allowed: false, reason: 'OUT_OF_SCOPE' };
+  }
+  return { allowed: true };
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// requirePermission â€” throws like the legacy guard (message contract kept)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+export async function requirePermission(permission: string): Promise<SessionUser> {
   const user = await requireAuth();
   if (!can(user, permission)) {
     throw new Error(`Forbidden: missing required permission ${permission}`);
@@ -86,20 +208,6 @@ export async function requirePermission(permission: Permission): Promise<Session
   return user;
 }
 
-/**
- * Thin, generic resource-level check: composes a permission check with a
- * tenant (companyId) equality check on the resource. Scaffolding for later
- * adoption — no granular permissions, by design.
- *
- * Example: authorize('orders.edit', user, { resource: order, companyId })
- *   → { allowed: false, reason: 'PERMISSION' | 'WRONG_TENANT' }
- */
-export function authorize(
-  _resource: string,
-  user: SessionUser,
-  ctx: { permission: Permission; resource: { companyId?: string | null }; companyId: string }
-): { allowed: boolean; reason?: 'PERMISSION' | 'WRONG_TENANT' } {
-  if (!can(user, ctx.permission)) return { allowed: false, reason: 'PERMISSION' };
-  if (ctx.resource?.companyId !== ctx.companyId) return { allowed: false, reason: 'WRONG_TENANT' };
-  return { allowed: true };
-}
+export type { Scope };
+
+
