@@ -26,7 +26,8 @@ export async function POST(_req: Request, ctx: Ctx) {
     if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });
 
     const token = await signPreviewToken(lp.id);
-    return NextResponse.json({ success: true, token, previewPath: `/lp/${lp.slug}/raw?p=${token}` });
+    // Preview embeds the FULL public page (uploaded HTML + native order form)
+    return NextResponse.json({ success: true, token, previewPath: `/lp/${lp.slug}?p=${token}` });
   } catch (error) {
     const { body, status } = apiError(error);
     return NextResponse.json(body, { status });

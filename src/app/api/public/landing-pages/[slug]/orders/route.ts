@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { db } from '@/lib/db';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
-import { LANDING_PAGE_SOURCE, LANDING_PAGE_MIN_QTY, LANDING_PAGE_MAX_QTY } from '@/lib/landing-pages';
+import {
+  LANDING_PAGE_SOURCE,
+  signAddonToken,
+} from '@/lib/landing-pages';
+import {
+  publicOrderSchema,
+  mapZodFieldErrors,
+  ORDER_VALIDATION_ERROR_BODY,
+} from '@/lib/landing-order-schema';
 
 interface Ctx {
   params: Promise<{ slug: string }>;
@@ -22,25 +29,9 @@ export function OPTIONS() {
 
 const MAX_BODY_BYTES = 10 * 1024; // 10 KB hard request-size limit
 
-// Zod validation — the schema intentionally has NO fields for productId,
-// price, companyId, userId, status, moderatorId… anything a browser sends
-// beyond the listed fields is ignored (not just unvalidated).
-const publicOrderSchema = z.object({
-  full_name: z.string().trim().min(2).max(80),
-  phone: z
-    .string()
-    .trim()
-    .min(7)
-    .max(20)
-    .refine((v) => /^[+0-9()\s-]+$/.test(v), 'رقم الهاتف غير صالح'),
-  address: z.string().trim().min(3).max(200),
-  city: z.string().trim().min(2).max(60),
-  quantity: z.coerce.number().int().min(LANDING_PAGE_MIN_QTY).max(LANDING_PAGE_MAX_QTY).default(1),
-  notes: z.string().trim().max(500).optional().default(''),
-  // Spam protections (checked below, not passed to the DB)
-  website: z.string().max(0, 'Spam detected').optional().default(''),
-  ts: z.string().max(20).optional().default(''),
-});
+// Validation lives in the shared server-side module:
+// src/lib/landing-order-schema.ts (Arabic field errors, Syrian phone/city
+// validation). No raw Zod messages ever reach the visitor.
 
 export async function POST(req: Request, ctx: Ctx) {
   try {
@@ -93,8 +84,11 @@ export async function POST(req: Request, ctx: Ctx) {
     }
     const parsed = publicOrderSchema.safeParse(raw);
     if (!parsed.success) {
-      const msg = parsed.error.issues[0]?.message || 'بيانات الطلب غير صالحة';
-      return NextResponse.json({ error: msg }, { status: 400, headers: CORS });
+      // Safe Arabic field errors only — no Zod internals leak to the visitor
+      return NextResponse.json(
+        { ...ORDER_VALIDATION_ERROR_BODY, fieldErrors: mapZodFieldErrors(parsed.error) },
+        { status: 400, headers: CORS }
+      );
     }
     const v = parsed.data;
 
@@ -123,8 +117,45 @@ export async function POST(req: Request, ctx: Ctx) {
 
     const companyId = lp.company.id; // server-derived — NEVER from the browser
     const product = lp.product;
-    const price = product.basePrice; // server-side price — client price ignored by schema design
-    const qty = v.quantity;
+
+    // ─── Offer resolution (server-authoritative) ───
+    // If the client sends an offerId it MUST belong to THIS landing page;
+    // quantity / freeQuantity / price all come from the DB offer — any
+    // client-sent quantity/price is ignored by the schema design.
+    // Pages WITHOUT offers fall back to the base product price (qty 1).
+    let offer = null as
+      | { id: string; name: string; quantity: number; freeQuantity: number; price: number }
+      | null;
+    if (v.offerId) {
+      const found = await db.landingPageOffer.findFirst({
+        where: { id: v.offerId, landingPageId: lp.id, isActive: true },
+      });
+      if (!found) {
+        return NextResponse.json(
+          {
+            ...ORDER_VALIDATION_ERROR_BODY,
+            fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' },
+          },
+          { status: 400, headers: CORS }
+        );
+      }
+      offer = found;
+    } else {
+      const offerCount = await db.landingPageOffer.count({ where: { landingPageId: lp.id, isActive: true } });
+      if (offerCount > 0) {
+        // The page HAS offers — an explicit selection is required
+        return NextResponse.json(
+          {
+            ...ORDER_VALIDATION_ERROR_BODY,
+            fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' },
+          },
+          { status: 400, headers: CORS }
+        );
+      }
+    }
+    const price = offer ? offer.price : product.basePrice; // server-side price — never from the browser
+    const qty = offer ? offer.quantity : 1;
+    const freeQty = offer ? offer.freeQuantity : 0;
 
     // ─── Duplicate-submission protection (per phone, per page) ───
     const dup = rateLimit(`lp_order_dup:${lp.id}:${normalizedPhone}`, 1, 5 * 60_000);
@@ -165,7 +196,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
     // ─── Create the REAL order (same Order model, same defaults) ───
     const unitCost = 0; // public orders have no batch context; finance finalizes later
-    const totalAmount = Number((price * qty).toFixed(2));
+    const totalAmount = price; // offer price is the authoritative total
 
     const order = await db.$transaction(async (tx) => {
       let created: any = null;
@@ -180,6 +211,7 @@ export async function POST(req: Request, ctx: Ctx) {
               customerId: customer!.id,
               productId: product.id,
               quantity: qty,
+              freeQuantity: freeQty,
               sellingPrice: price,
               shippingCost: 0,
               totalAmount,
@@ -200,6 +232,7 @@ export async function POST(req: Request, ctx: Ctx) {
               version: 1,
               source: LANDING_PAGE_SOURCE,
               landingPageId: lp.id,
+              landingPageOfferId: offer?.id ?? null,
               customerNotes: v.notes || null,
               internalNotes: null,
             },
@@ -232,6 +265,9 @@ export async function POST(req: Request, ctx: Ctx) {
             source: LANDING_PAGE_SOURCE,
             landingPage: lp.name,
             landingPageSlug: lp.slug,
+            offer: offer
+              ? { name: offer.name, quantity: offer.quantity, freeQuantity: offer.freeQuantity, price: offer.price }
+              : { fallback: 'basePrice', price: product.basePrice },
             createdBy: 'Landing Page (public visitor)',
           }),
         },
@@ -261,8 +297,38 @@ export async function POST(req: Request, ctx: Ctx) {
       console.error('Landing-page order notification failed (non-fatal):', e);
     }
 
+    // Short-lived add-on capability token for the success screen (upsells).
+    // Stateless (no DB), LP+order scoped, 30-minute TTL.
+    let addonToken: string | null = null;
+    try {
+      addonToken = await signAddonToken({ orderId: order.id, orderNumber: order.orderNumber });
+    } catch (e) {
+      console.error('Addon token signing failed (non-fatal):', e);
+    }
+
+    // Server-provided upsells for the success screen (active recommendations
+    // of THIS landing page, with DB prices — client never chooses product/price)
+    const recommendations = await db.landingPageRecommendation.findMany({
+      where: { landingPageId: lp.id, isActive: true, product: { status: 'ACTIVE' } },
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        id: true,
+        product: { select: { id: true, name: true, basePrice: true, image: true } },
+      },
+    });
+
     return NextResponse.json(
-      { success: true, orderNumber: order.orderNumber },
+      {
+        success: true,
+        orderNumber: order.orderNumber,
+        addonToken,
+        recommendations: recommendations.map((r) => ({
+          id: r.id,
+          name: r.product?.name || null,
+          price: r.product?.basePrice ?? 0,
+          image: r.product?.image || null,
+        })),
+      },
       { headers: CORS }
     );
   } catch (error) {

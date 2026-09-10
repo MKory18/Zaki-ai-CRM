@@ -38,6 +38,7 @@ model Company {
   shippingBatches    ShippingBatch[]
   financialTransactions FinancialTransaction[]
   landingPages      LandingPage[]
+  orderAddOns       OrderAddOn[]
   crmCompanies      CrmCompany[]
   crmContacts       CrmContact[]
   crmLeads          CrmLead[]
@@ -133,6 +134,8 @@ model Product {
   offers             Offer[]
   orders             Order[]
   landingPages       LandingPage[]
+  recommendations    LandingPageRecommendation[]
+  addOns             OrderAddOn[]
   images             ProductImage[]
 
   @@unique([companyId, sku])
@@ -348,6 +351,8 @@ model Order {
   financeFinalizedById String?
   source               String    @default("Manual") // Facebook Ads, TikTok, Instagram, WhatsApp, Manual, Website, Landing Page
   landingPageId        String?
+  landingPageOfferId   String?
+  freeQuantity         Int       @default(0) // gift units from a landing-page offer (additive)
   internalNotes        String?
   customerNotes        String?
   postponedUntil       DateTime?
@@ -373,6 +378,8 @@ model Order {
   followUpResolver User?     @relation("FollowUpResolvedBy", fields: [followUpResolvedById], references: [id], onDelete: SetNull)
   callLogs   CallLog[]
   landingPage LandingPage? @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
+  landingPageOffer LandingPageOffer? @relation(fields: [landingPageOfferId], references: [id], onDelete: SetNull)
+  addOns     OrderAddOn[]
   activities OrderActivity[]
   deliveryAttempts DeliveryAttempt[]
   financialTransactions FinancialTransaction[]
@@ -399,6 +406,7 @@ model Order {
   @@index([companyId, confirmationStatus])
   @@index([companyId, settlementStatus])
   @@index([companyId, landingPageId])
+  @@index([companyId, landingPageOfferId])
   @@index([lockedById, lockExpiresAt])
   @@map("orders")
 }
@@ -983,6 +991,8 @@ model LandingPage {
   isPublished  Boolean  @default(false)
   viewsCount   Int      @default(0) // view = one successful public page render (no PII)
   ordersCount  Int      @default(0)
+  upsellAddsCount Int      @default(0) // recommendation add-ons accepted after order
+  upsellRevenue Float    @default(0) // revenue of accepted add-ons (server-side computed)
   createdById  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -991,9 +1001,77 @@ model LandingPage {
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   creator User?    @relation("LandingPageCreator", fields: [createdById], references: [id], onDelete: SetNull)
   orders  Order[]
+  offers  LandingPageOffer[]
+  recommendations LandingPageRecommendation[]
+  addOns  OrderAddOn[]
 
   @@unique([companyId, slug])
   @@index([companyId])
   @@index([companyId, isPublished])
   @@map("landing_pages")
+}
+// ─── LANDING PAGE OFFERS (additive) ───
+// Per-landing-page product offers (quantity bundles with gifts).
+// price is server-authoritative — never trusted from the browser.
+model LandingPageOffer {
+  id            String   @id @default(uuid())
+  landingPageId String
+  name          String
+  quantity      Int
+  freeQuantity  Int      @default(0)
+  price         Float
+  isDefault     Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  landingPage LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+  orders      Order[]
+
+  @@index([landingPageId, isActive])
+  @@map("landing_page_offers")
+}
+
+// ─── LANDING PAGE RECOMMENDATIONS (additive) ───
+// Products suggested on the post-order success screen (upsells).
+model LandingPageRecommendation {
+  id            String   @id @default(uuid())
+  landingPageId String
+  productId     String
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  landingPage LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([landingPageId, productId])
+  @@index([landingPageId, isActive, sortOrder])
+  @@map("landing_page_recommendations")
+}
+
+// ─── ORDER ADD-ONS (additive) ───
+// Upsell products added to an EXISTING order from the landing page success
+// screen. Uses the same Order model — no duplicate order system.
+model OrderAddOn {
+  id            String   @id @default(uuid())
+  companyId     String
+  orderId       String
+  productId     String
+  landingPageId String?
+  productName   String   // snapshot
+  quantity      Int      @default(1)
+  price         Float    // unit price from DB at add time
+  total         Float    // quantity * price (server-side)
+  createdAt     DateTime @default(now())
+
+  company     Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  order       Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  landingPage LandingPage?        @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([companyId, orderId])
+  @@map("order_add_ons")
 }

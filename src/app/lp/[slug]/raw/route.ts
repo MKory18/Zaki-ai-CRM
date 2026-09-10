@@ -1,19 +1,28 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { buildPublicHtml, clampStoredHtml, RAW_HTML_CSP, verifyPreviewToken } from '@/lib/landing-pages';
+import { clampStoredHtml, RAW_HTML_CSP, verifyPreviewToken } from '@/lib/landing-pages';
 
 interface Ctx {
   params: Promise<{ slug: string }>;
 }
 
-const DEFAULT_HTML = (name: string) => `<!doctype html>
+const DEFAULT_HTML = (name: string, productName?: string | null) => `<!doctype html>
 <html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${name.replace(/[<>&"]/g, '')}</title>
-<style>body{font-family:system-ui,sans-serif;background:#f7f7f8;color:#1f2937;max-width:520px;margin:40px auto;padding:0 16px}
-h1{font-size:24px} .box{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px}
-input,textarea{width:100%;box-sizing:border-box;margin:4px 0 12px;padding:10px;border:1px solid #d1d5db;border-radius:8px;font:inherit}
-button{background:#b8256e;color:#fff;border:0;border-radius:8px;padding:12px 20px;font:inherit;cursor:pointer;width:100%}</style>
-</head><body><h1>${name.replace(/[<>&"]/g, '')}</h1><div class="box" id="zaki-order-form" data-zaki-order-form></div>
+<style>*{margin:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(160deg,#121926 0%,#1a2232 60%,#b8256e22 100%);color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.hero{text-align:center;max-width:480px}
+.tag{display:inline-block;background:#b8256e;color:#fff;font-size:12px;font-weight:700;letter-spacing:.1em;padding:6px 14px;border-radius:99px;text-transform:uppercase}
+h1{font-size:32px;line-height:1.3;margin:18px 0 10px}
+p.sub{color:#9aa4b2;font-size:15px;line-height:1.7}
+.scroll{margin-top:28px;display:inline-flex;align-items:center;gap:8px;color:#fff;background:#ffffff14;border:1px solid #ffffff2e;padding:12px 22px;border-radius:99px;font-size:14px;font-weight:600;text-decoration:none}
+</style></head><body>
+<div class="hero">
+<span class="tag">عرض خاص</span>
+<h1>${name.replace(/[<>&"]/g, '')}</h1>
+<p class="sub">اطلب الآن واستفد من العرض — الدفع عند الاستلام وتوصيل لجميع المناطق.</p>
+<a class="scroll" href="#zaki-order-form">اطلب الآن ↓</a>
+</div>
 </body></html>`;
 
 /**
@@ -40,7 +49,7 @@ export async function GET(req: Request, ctx: Ctx) {
     if (tok) {
       lp = await db.landingPage.findFirst({
         where: { id: tok.lpId, slug },
-        select: { id: true, name: true, slug: true, htmlContent: true },
+        select: { id: true, name: true, slug: true, htmlContent: true, product: { select: { name: true } } },
       });
     }
     // Invalid/expired token → fall through to the published-only path
@@ -48,13 +57,15 @@ export async function GET(req: Request, ctx: Ctx) {
   if (!lp) {
     lp = await db.landingPage.findFirst({
       where: { slug, isPublished: true },
-      select: { id: true, name: true, slug: true, htmlContent: true },
+      select: { id: true, name: true, slug: true, htmlContent: true, product: { select: { name: true } } },
     });
   }
   if (!lp) return new NextResponse('Not found', { status: 404 });
 
+  // Serve the uploaded (untrusted) HTML as-is — NO form injection. The
+  // Trusted Native Order Form is rendered by /lp/[slug] OUTSIDE this iframe.
   const stored = clampStoredHtml(lp.htmlContent);
-  const html = buildPublicHtml(stored || DEFAULT_HTML(lp.name), lp.slug);
+  const html = stored || DEFAULT_HTML(lp.name, lp.product?.name);
 
   return new NextResponse(html, {
     headers: {

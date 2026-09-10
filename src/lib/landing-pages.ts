@@ -80,19 +80,10 @@ export const LANDING_PAGE_MIN_QTY = 1;
 export const LANDING_PAGE_MAX_QTY = 99;
 
 /**
- * Injects the public order-form bootstrap script into uploaded HTML.
- * The script tag is appended before </body> (or at the end) and is served
- * from the CRM origin; the uploaded HTML itself runs inside a sandboxed
- * opaque-origin iframe, so this script has NO access to CRM cookies/JWT.
+ * The Trusted Native Order Form is NOT injected into the uploaded HTML.
+ * It is rendered by the Zaki AI app itself in /lp/[slug] BELOW the sandboxed
+ * iframe, so the uploaded (untrusted) HTML can never touch or read it.
  */
-export function buildPublicHtml(htmlContent: string, slug: string): string {
-  const safeSlug = slug.replace(/[^a-z0-9-]/g, '');
-  const inject = `<script src="/api/public/landing-pages/${safeSlug}/form.js" defer></script>`;
-  if (/<\/body>/i.test(htmlContent)) {
-    return htmlContent.replace(/<\/body>/i, `${inject}\n</body>`);
-  }
-  return `${htmlContent}\n${inject}\n`;
-}
 
 /** CSP for the raw public HTML response (rendered inside a sandboxed iframe). */
 export const RAW_HTML_CSP =
@@ -133,6 +124,39 @@ export async function verifyPreviewToken(token: string): Promise<{ lpId: string 
     const { payload } = await jwtVerify(token, jwtSecret());
     if (payload.kind !== 'lp_preview' || typeof payload.lpId !== 'string') return null;
     return { lpId: payload.lpId };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Short-lived signed ADD-ON token: issued once right after a public order is
+ * created and handed to the success screen. It is the ONLY proof that this
+ * anonymous visitor owns the just-created order — knowing the orderNumber
+ * alone is NOT enough to add products (prevents tampering with other
+ * people's orders). Contains no sensitive data, TTL 30 minutes.
+ */
+export async function signAddonToken(payload: { orderId: string; orderNumber: string }): Promise<string> {
+  return new SignJWT({ kind: 'lp_addon', orderId: payload.orderId, orderNumber: payload.orderNumber })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('30m')
+    .sign(jwtSecret());
+}
+
+export async function verifyAddonToken(
+  token: string
+): Promise<{ orderId: string; orderNumber: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, jwtSecret());
+    if (
+      payload.kind !== 'lp_addon' ||
+      typeof payload.orderId !== 'string' ||
+      typeof payload.orderNumber !== 'string'
+    ) {
+      return null;
+    }
+    return { orderId: payload.orderId, orderNumber: payload.orderNumber };
   } catch {
     return null;
   }

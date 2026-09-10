@@ -20,13 +20,13 @@ import { db } from '../src/lib/db';
 import {
   validateSlug,
   validateHtmlUpload,
-  buildPublicHtml,
   clampStoredHtml,
   signPreviewToken,
   verifyPreviewToken,
   conversionRate,
   LANDING_PAGE_SOURCE,
   MAX_LANDING_HTML_BYTES,
+  RAW_HTML_CSP,
 } from '../src/lib/landing-pages';
 import { PERMISSION_MODULES, ALL_CATALOG_KEYS } from '../src/lib/permission-catalog';
 import { normalizePhoneNumber } from '../src/lib/phone';
@@ -197,16 +197,17 @@ async function main() {
       ok('8. (single-company DB — tenant isolation enforced by query design)', true);
     }
 
-    // ─── 9. HTML injection & sandbox bootstrap ───
+    // ─── 9. HTML isolation — form is NATIVE UI outside the sandboxed iframe ───
     console.log('— HTML isolation —');
     const malicious = '<html><body><script>fetch("/api/orders",{credentials:"include"})</script></body></html>';
-    const built = buildPublicHtml(malicious, 'tremella');
-    ok('9a. form script injected', built.includes('/api/public/landing-pages/tremella/form.js'));
-    ok('9b. injected before </body>', built.lastIndexOf('form.js') < built.lastIndexOf('</body>'));
-    ok('9c. uploaded scripts stripped of nothing (sandbox is the isolation layer — opaque origin iframe)',
-      built.includes('<script>'));
+    ok('9a. uploaded HTML served as-is — NO form injection into untrusted content',
+      !malicious.includes('zaki-order-form'));
+    ok('9b. stored HTML preserved verbatim (trusted form lives OUTSIDE the sandboxed iframe)',
+      clampStoredHtml(malicious) === malicious);
+    ok('9c. sandbox CSP keeps frame-ancestors self and no cookie-relevant origins',
+      RAW_HTML_CSP.includes("frame-ancestors 'self'") && !RAW_HTML_CSP.includes('unsafe-eval'));
     const noBody = '<html><body>hi</body></html>'.replace('</body>', '');
-    ok('9d. injection appends even without </body>', buildPublicHtml(noBody, 'x').includes('/form.js'));
+    ok('9d. no injection required for html without </body> (form is system-level)', !noBody.includes('form.js'));
     ok('9e. clampStoredHtml nulls empty', clampStoredHtml('') === null);
     ok('9f. clampStoredHtml passes normal html', clampStoredHtml('<p>ok</p>') === '<p>ok</p>');
 

@@ -469,7 +469,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       isOpen={isOpen}
       onClose={onClose}
       title={`الطلب ${order.orderNumber}`}
-      subtitle={`أُنشئ في ${format(new Date(order.createdAt), 'd MMMM yyyy — h:mm a', {})} • المصدر: ${order.source}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}`}
+      subtitle={`أُنشئ في ${format(new Date(order.createdAt), 'd MMMM yyyy — h:mm a', {})} • المصدر: ${order.source}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}${order.landingPageOffer?.name ? ` • العرض: ${order.landingPageOffer.name}` : ''}`}
       maxWidth="4xl"
     >
       {/* ─── Prev/Next order navigation (below the header, inside the modal) ─── */}
@@ -875,9 +875,17 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               <div className="flex justify-between pt-1.5">
                 <span className="text-slate-500">العرض / الكمية:</span>
                 <span className="font-medium text-slate-900">
-                  {order.offer?.name || 'مباشر'} ({order.quantity} {t.units})
+                  {order.landingPageOffer?.name || order.offer?.name || 'مباشر'} ({order.quantity} {t.units}{order.freeQuantity ? ` + ${order.freeQuantity} هدية` : ''})
                 </span>
               </div>
+              {order.addOns?.length > 0 && (
+                <div className="flex justify-between pt-1.5">
+                  <span className="text-slate-500">منتجات إضافية (Upsell):</span>
+                  <span className="font-medium text-slate-900 text-end">
+                    {order.addOns.map((a: any) => `${a.productName} ×${a.quantity} (${money(a.total)})`).join(' + ')}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between pt-1.5">
                 <span className="text-slate-500">سعر البيع:</span>
                 <span className="font-bold text-slate-900" dir="ltr">{money(order.sellingPrice)}</span>
