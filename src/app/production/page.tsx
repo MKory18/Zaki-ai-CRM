@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -108,8 +108,8 @@ export default function ProductionPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.production}</h1>
-            <p className="text-xs text-[#6b7177] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.production}</h1>
+            <p className="text-xs text-[#697586] mt-1">
               Section 5 Manufacturing & Cost per unit calculation engine with inventory movement linkage
             </p>
           </div>
@@ -136,7 +136,7 @@ export default function ProductionPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Batch Number</th>
                     <th className="px-6 py-3.5">Product</th>
@@ -148,32 +148,32 @@ export default function ProductionPage() {
                     <th className="px-6 py-3.5">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#eef0f3]">
+                <tbody className="divide-y divide-[#e3e8ef]">
                   {batches.map((b) => (
-                    <tr key={b.id} className="hover:bg-[#f8f9fa] transition-colors">
-                      <td className="px-6 py-3.5 font-bold font-mono text-[#d13b4c]">
+                    <tr key={b.id} className="hover:bg-[#f8fafc] transition-colors">
+                      <td className="px-6 py-3.5 font-bold font-mono text-[#fb323f]">
                         {b.batchNumber}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-semibold text-[#252f4a] block">{b.product?.name}</span>
+                        <span className="font-semibold text-[#121926] block">{b.product?.name}</span>
                         <span className="text-[10px] text-[#9ca3af] font-mono">{b.product?.sku}</span>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#252f4a]">
+                      <td className="px-6 py-3.5 font-bold text-[#121926]">
                         {b.quantityProduced} units
                       </td>
-                      <td className="px-6 py-3.5 text-[#d13b4c] font-medium">
+                      <td className="px-6 py-3.5 text-[#fb323f] font-medium">
                         {b.quantitySold} units
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-[#d13b4c] bg-[#fbe9ea] px-2 py-0.5 rounded-full">
+                        <span className="font-bold text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded-full">
                           {b.quantityRemaining} units
                         </span>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#252f4a]">
+                      <td className="px-6 py-3.5 font-bold text-[#121926]">
                         ${b.totalProductionCost.toFixed(2)}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-black text-[#d13b4c] bg-[#fbe9ea] px-2.5 py-1 rounded-md text-xs">
+                        <span className="font-black text-[#fb323f] bg-[#feecee] px-2.5 py-1 rounded-md text-xs">
                           ${b.costPerUnit.toFixed(2)}
                         </span>
                       </td>
@@ -199,7 +199,7 @@ export default function ProductionPage() {
       >
         <form onSubmit={handleCreateBatch} className="space-y-4">
           {modalError && (
-            <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-lg">
+            <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">
               {modalError}
             </div>
           )}
@@ -236,8 +236,8 @@ export default function ProductionPage() {
           />
 
           {/* Cost Items Grid */}
-          <div className="border border-[#eef0f3] rounded-xl p-4 bg-[#f8f9fa]/60 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#4b5675]">
+          <div className="border border-[#e3e8ef] rounded-xl p-4 bg-[#f8fafc]/60 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">
               Direct Cost Breakdown ($)
             </h4>
 
@@ -274,20 +274,20 @@ export default function ProductionPage() {
           </div>
 
           {/* Section 5 Live Real-time Calculator Box */}
-          <div className="p-4 bg-[#fbe9ea] border border-[#f5c6cb] rounded-xl flex items-center justify-between text-xs">
+          <div className="p-4 bg-[#feecee] border border-[#f5c6cb] rounded-xl flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2">
-              <Calculator className="w-5 h-5 text-[#d13b4c]" />
+              <Calculator className="w-5 h-5 text-[#fb323f]" />
               <div>
-                <p className="font-bold text-[#252f4a]">Total Production Cost: ${totalProductionCost.toFixed(2)}</p>
-                <p className="text-[#6b7177]">
+                <p className="font-bold text-[#121926]">Total Production Cost: ${totalProductionCost.toFixed(2)}</p>
+                <p className="text-[#697586]">
                   Formula: Mfg (${manufacturingCost}) + Packaging (${packagingCost}) + Raw (${rawMaterialCost})
                 </p>
               </div>
             </div>
 
             <div className="text-right">
-              <span className="text-[#6b7177] block">Calculated Cost Per Unit:</span>
-              <span className="text-xl font-black text-[#d13b4c] block">
+              <span className="text-[#697586] block">Calculated Cost Per Unit:</span>
+              <span className="text-xl font-black text-[#fb323f] block">
                 ${costPerUnit}
               </span>
             </div>

@@ -302,7 +302,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
               <div className="relative">
                 <MapPin className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
-                  placeholder="الشارع، البناء، المنطقة..."
+                  placeholder="الشارڡ البناء، المنطقة..."
                   value={customerAddress}
                   onChange={(e) => setCustomerAddress(e.target.value)}
                   required

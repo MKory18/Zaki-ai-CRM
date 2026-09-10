@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import clsx from 'clsx';
@@ -31,7 +31,7 @@ export function ProductThumb({
       <div
         className={clsx(
           sizeStyles[size],
-          'bg-[#f8f9fa] border border-[#eef0f3] flex items-center justify-center shrink-0 overflow-hidden',
+          'bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center shrink-0 overflow-hidden',
           className
         )}
       >
@@ -46,7 +46,7 @@ export function ProductThumb({
       src={src}
       alt={alt || 'صورة المنتج'}
       loading="lazy"
-      className={clsx(sizeStyles[size], 'object-cover border border-[#eef0f3] bg-white shrink-0', className)}
+      className={clsx(sizeStyles[size], 'object-cover border border-[#e3e8ef] bg-white shrink-0', className)}
     />
   );
 }

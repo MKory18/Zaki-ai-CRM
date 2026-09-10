@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -105,8 +105,8 @@ export default function ActivitiesPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">الأنشطة</h1>
-            <p className="text-xs text-[#6b7177] mt-1">سجل المكالمات، البريد، الاجتماعات والملاحظات</p>
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">الأنشطة</h1>
+            <p className="text-xs text-[#697586] mt-1">سجل المكالمات، البريد، الاجتماعات والملاحظات</p>
           </div>
           <Button size="sm" onClick={openCreate} className="flex items-center gap-1.5">
             <Plus className="w-4 h-4" />
@@ -126,13 +126,13 @@ export default function ActivitiesPage() {
             ) : !items.length ? (
               <p className="py-10 text-center text-xs text-[#9ca3af]">لا توجد نتائج</p>
             ) : (
-              <div className="space-y-3 border-r border-[#eef0f3] pr-5">
+              <div className="space-y-3 border-r border-[#e3e8ef] pr-5">
                 {items.map((a) => {
                   const Icon = typeIcons[a.type] || StickyNote;
                   return (
                     <div key={a.id} className="relative">
-                      <span className="absolute -right-[27px] top-3 w-2.5 h-2.5 rounded-full bg-[#3e97ff] ring-4 ring-[#f8f9fa]" />
-                      <div className="p-4 bg-[#f8f9fa] rounded-[10px] flex items-start justify-between gap-3">
+                      <span className="absolute -right-[27px] top-3 w-2.5 h-2.5 rounded-full bg-[#b8256e] ring-4 ring-[#f8fafc]" />
+                      <div className="p-4 bg-[#f8fafc] rounded-[8px] flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant={activityTypeLabels[a.type]?.variant || 'default'}>
@@ -140,14 +140,14 @@ export default function ActivitiesPage() {
                               {activityTypeLabels[a.type]?.ar || a.type}
                             </Badge>
                             <span className="text-[11px] text-[#9ca3af]">{formatDateTime(a.occurredAt)}</span>
-                            {relatedLabel(a) && <span className="text-[11px] font-semibold text-[#3e97ff]">→ {relatedLabel(a)}</span>}
+                            {relatedLabel(a) && <span className="text-[11px] font-semibold text-[#b8256e]">→ {relatedLabel(a)}</span>}
                             {a.user?.name && <span className="text-[11px] text-[#9ca3af]">بواسطة {a.user.name}</span>}
                           </div>
-                          <p className="text-sm font-semibold text-[#252f4a] mt-1.5">{a.subject}</p>
-                          {a.description && <p className="text-xs text-[#6b7177] mt-0.5">{a.description}</p>}
+                          <p className="text-sm font-semibold text-[#121926] mt-1.5">{a.subject}</p>
+                          {a.description && <p className="text-xs text-[#697586] mt-0.5">{a.description}</p>}
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setDeleting(a)} className="shrink-0">
-                          <Trash2 className="w-3.5 h-3.5 text-[#d13b4c]" />
+                          <Trash2 className="w-3.5 h-3.5 text-[#fb323f]" />
                         </Button>
                       </div>
                     </div>
@@ -156,7 +156,7 @@ export default function ActivitiesPage() {
               </div>
             )}
 
-            <div className="flex items-center justify-between text-xs text-[#6b7177]">
+            <div className="flex items-center justify-between text-xs text-[#697586]">
               <span>الإجمالي: {total}</span>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>السابق</Button>
@@ -170,7 +170,7 @@ export default function ActivitiesPage() {
 
       <Modal isOpen={formOpen} onClose={() => setFormOpen(false)} title="تسجيل نشاط جديد" maxWidth="lg">
         <form onSubmit={handleSave} className="space-y-4">
-          {apiError && <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg">{apiError}</div>}
+          {apiError && <div className="p-3 bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs rounded-lg">{apiError}</div>}
           <Select label="نوع النشاط" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
             {Object.entries(activityTypeLabels).map(([k, v]) => <option key={k} value={k}>{v.ar}</option>)}
           </Select>
@@ -198,7 +198,7 @@ export default function ActivitiesPage() {
       </Modal>
 
       <Modal isOpen={!!deleting} onClose={() => setDeleting(null)} title="تأكيد الحذف" maxWidth="sm">
-        <p className="text-sm text-[#4b5675]">هل أنت متأكد من حذف النشاط <span className="font-bold text-[#252f4a]">{deleting?.subject}</span>؟</p>
+        <p className="text-sm text-[#364152]">هل أنت متأكد من حذف النشاط <span className="font-bold text-[#121926]">{deleting?.subject}</span>؟</p>
         <div className="flex justify-end gap-2 mt-6">
           <Button variant="outline" onClick={() => setDeleting(null)}>إلغاء</Button>
           <Button variant="danger" loading={deleteLoading} onClick={handleDelete}>حذف</Button>

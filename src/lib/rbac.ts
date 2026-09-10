@@ -1,12 +1,12 @@
 ﻿/**
- * SALESFLOW â€” Centralized Server-Side RBAC Engine
+ * SALESFLOW — Centralized Server-Side RBAC Engine
  *
  * Every protected API must authorize through this module.
- * Frontend permission checks are UX only â€” never security.
+ * Frontend permission checks are UX only — never security.
  *
  * Enforcement chain for sensitive operations:
- *   authenticate â†’ company tenant â†’ role â†’ permission
- *   â†’ order scope (assignment) â†’ lock ownership â†’ version
+ *   authenticate → company tenant → role → permission
+ *   → order scope (assignment) → lock ownership → version
  */
 
 import { db } from './db';
@@ -15,22 +15,22 @@ import { ROLE_PERMISSIONS } from '@/types/auth';
 
 /**
  * Permission checks live in './authorization' (single source of truth).
- * Re-exported here for backward compatibility â€” do not re-implement.
+ * Re-exported here for backward compatibility — do not re-implement.
  */
 import { can as _can, requirePermission as _requirePermission, getPermissionScope } from './authorization';
 export const can: (user: SessionUser, permission: Permission) => boolean = _can;
 export const requirePermission: (permission: Permission) => Promise<SessionUser> = _requirePermission;
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Permission checks (pure, no DB) â€” implemented in './authorization'
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
+// Permission checks (pure, no DB) — implemented in './authorization'
+// ─────────────────────────────────────────────────────
 
 /**
- * Order visibility â€” driven by the Permission Engine scope of `orders.view`:
- *   ALL_COMPANY â†’ all company orders (SHARED COMPANY VISIBILITY default)
- *   ASSIGNED    â†’ assigned/claimed/owned + claimable queue (agents)
- *   OWN         â†’ orders the user entered (moderatorId)
- *   none        â†’ no orders
+ * Order visibility — driven by the Permission Engine scope of `orders.view`:
+ *   ALL_COMPANY → all company orders (SHARED COMPANY VISIBILITY default)
+ *   ASSIGNED    → assigned/claimed/owned + claimable queue (agents)
+ *   OWN         → orders the user entered (moderatorId)
+ *   none        → no orders
  * `companyId` remains the tenant boundary (applied by the caller).
  */
 export function orderVisibilityWhere(user: SessionUser): Record<string, unknown> {
@@ -48,7 +48,7 @@ export function orderVisibilityWhere(user: SessionUser): Record<string, unknown>
         { currentOwnerId: user.id },
         // Orders I entered as a moderator (legacy compat)
         { moderatorId: user.id },
-        // â”€â”€â”€ Claimable queue: unclaimed orders in the workflow intake stage â”€â”€â”€
+        // ─── Claimable queue: unclaimed orders in the workflow intake stage ───
         {
           claimedById: null,
           signatureStatus: 'UNSIGNED',
@@ -69,7 +69,7 @@ export function orderVisibilityWhere(user: SessionUser): Record<string, unknown>
 }
 
 /**
- * Explicit queue filters (Step 3). Backend-enforced â€” the frontend may only
+ * Explicit queue filters (Step 3). Backend-enforced — the frontend may only
  * REQUEST a queue; the server decides which queues the role may see.
  */
 export type OrderQueue = 'available' | 'assigned_to_me' | 'my_orders' | 'processing' | 'all_company';
@@ -112,7 +112,7 @@ export function applyQueueFilter(
       return where;
     }
     default: {
-      // No explicit queue â†’ apply the role's default visibility envelope.
+      // No explicit queue → apply the role's default visibility envelope.
       // Always merge via AND so an existing search `OR` is never clobbered
       // by the spread of orderVisibilityWhere (which also contains an OR).
       const visibility = orderVisibilityWhere(user);
@@ -127,9 +127,9 @@ export function hasGlobalOrderView(user: SessionUser): boolean {
   return getPermissionScope(user, 'orders.view')?.scope === 'ALL_COMPANY';
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 // Order-scoped authorization (DB-verified)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 
 export type OrderAccessResult =
   | { allowed: true; order: Record<string, any> }
@@ -156,8 +156,8 @@ export async function assertOrderAccess(
   if (order.companyId !== companyId) return { allowed: false, reason: 'WRONG_COMPANY' };
 
   // Scope-driven detail access (Permission Engine):
-  //   ALL_COMPANY â†’ tenant check alone; ASSIGNED â†’ ownership check;
-  //   OWN â†’ creator check; denied scope â†’ NOT_ASSIGNED.
+  //   ALL_COMPANY → tenant check alone; ASSIGNED → ownership check;
+  //   OWN → creator check; denied scope → NOT_ASSIGNED.
   const viewScope = getPermissionScope(user, 'orders.view');
   if (viewScope?.scope === 'ASSIGNED') {
     const mine =
@@ -175,16 +175,16 @@ export async function assertOrderAccess(
   return { allowed: true, order };
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 // Role helpers
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 
 /** Permissions granted to a role (used by /roles matrix + user management) */
 export function permissionsForRole(role: UserRole): Permission[] {
   return ROLE_PERMISSIONS[role] ?? [];
 }
 
-/** Default role for new registrations â€” never administrative */
+/** Default role for new registrations — never administrative */
 export const DEFAULT_REGISTRATION_ROLE: UserRole = 'PENDING_USER';
 
 /** Roles with financial authority (for separation-of-duties checks) */

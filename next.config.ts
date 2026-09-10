@@ -29,13 +29,41 @@ const securityHeaders = [
     : []),
 ];
 
+// The public landing-page HTML (/lp/:slug/raw) is rendered ONLY inside a
+// sandboxed opaque-origin iframe (same-origin parent, no credentials/cookies
+// are sent into the sandbox). Framing same-origin is safe here, so the
+// catch-all X-Frame-Options DENY / frame-ancestors 'none' are overridden
+// with SAMEORIGIN / 'self'. The route handler additionally sends its own
+// stricter per-response CSP.
+const lpRawOverrideHeaders = [
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data: https:",
+      "connect-src 'self'",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; '),
+  },
+];
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   serverExternalPackages: ['sharp'],
   // Do not advertise the framework version
   poweredByHeader: false,
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // After the catch-all so it overrides XFO / CSP for the LP raw HTML
+      { source: '/lp/:slug/raw', headers: lpRawOverrideHeaders },
+    ];
   },
   typescript: {
     ignoreBuildErrors: false,

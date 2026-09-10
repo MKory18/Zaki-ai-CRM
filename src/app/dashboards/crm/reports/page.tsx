@@ -41,12 +41,12 @@ export default function ReportsPage() {
     <AppLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">تقارير CRM</h1>
-          <p className="text-xs text-[#6b7177] mt-1">ملخص الأداء لجميع الفترات (بيانات تراكمية)</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#121926]">تقارير CRM</h1>
+          <p className="text-xs text-[#697586] mt-1">ملخص الأداء لجميع الفترات (بيانات تراكمية)</p>
         </div>
 
         {loading ? (
-          <Card><CardContent className="py-12 text-center text-sm text-[#6b7177]">جارٍ التحميل...</CardContent></Card>
+          <Card><CardContent className="py-12 text-center text-sm text-[#697586]">جارٍ التحميل...</CardContent></Card>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -62,11 +62,11 @@ export default function ReportsPage() {
                 <CardContent className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stageData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#eef0f3" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#4b5675' }} />
-                      <YAxis tick={{ fontSize: 11, fill: '#4b5675' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e3e8ef" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#364152' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#364152' }} />
                       <Tooltip formatter={(v: any) => [formatCurrency(v), 'القيمة']} />
-                      <Bar dataKey="value" fill="#3e97ff" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="value" fill="#b8256e" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -77,11 +77,11 @@ export default function ReportsPage() {
                 <CardContent className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={funnelData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#eef0f3" />
-                      <XAxis type="number" tick={{ fontSize: 11, fill: '#4b5675' }} />
-                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11, fill: '#4b5675' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e3e8ef" />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: '#364152' }} />
+                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11, fill: '#364152' }} />
                       <Tooltip />
-                      <Bar dataKey="count" name="العدد" fill="#7c5cd6" radius={[0, 6, 6, 0]} />
+                      <Bar dataKey="count" name="العدد" fill="#8c72f7" radius={[0, 6, 6, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -93,13 +93,13 @@ export default function ReportsPage() {
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data?.revenueByMonth || []}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#eef0f3" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#4b5675' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#4b5675' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e3e8ef" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#364152' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#364152' }} />
                     <Tooltip formatter={(v: any) => formatCurrency(v)} />
                     <Legend />
-                    <Line type="monotone" dataKey="won" name="صفقات مفقوحة" stroke="#25b865" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="invoiced" name="مفوتر" stroke="#3e97ff" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="won" name="صفقات مفقوحة" stroke="#00c853" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="invoiced" name="مفوتر" stroke="#b8256e" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -108,23 +108,23 @@ export default function ReportsPage() {
             <Card>
               <CardHeader title="أفضل الصفقات المفتوحة" />
               <CardContent className="p-4">
-                <div className="overflow-x-auto rounded-lg border border-[#eef0f3]">
+                <div className="overflow-x-auto rounded-lg border border-[#e3e8ef]">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#f8f9fa]">
+                    <thead className="bg-[#f8fafc]">
                       <tr>
                         {['العنوان', 'القيمة', 'المرحلة', 'الاحتمالية', 'جهة الاتصال'].map((h) => (
-                          <th key={h} className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-[#6b7177]">{h}</th>
+                          <th key={h} className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-[#697586]">{h}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#eef0f3] bg-white">
+                    <tbody className="divide-y divide-[#e3e8ef] bg-white">
                       {(data?.topOpenDeals || []).map((d: any) => (
                         <tr key={d.id}>
-                          <td className="px-4 py-3 font-semibold text-[#252f4a]">{d.title}</td>
-                          <td className="px-4 py-3 text-xs font-bold text-[#252f4a]">{formatCurrency(d.value, d.currency)}</td>
+                          <td className="px-4 py-3 font-semibold text-[#121926]">{d.title}</td>
+                          <td className="px-4 py-3 text-xs font-bold text-[#121926]">{formatCurrency(d.value, d.currency)}</td>
                           <td className="px-4 py-3"><Badge variant={stageLabels[d.stage]?.variant}>{stageLabels[d.stage]?.ar || d.stage}</Badge></td>
-                          <td className="px-4 py-3 text-xs text-[#6b7177]">{d.probability ?? 0}%</td>
-                          <td className="px-4 py-3 text-xs text-[#4b5675]">{d.crmContact ? `${d.crmContact.firstName} ${d.crmContact.lastName}` : '—'}</td>
+                          <td className="px-4 py-3 text-xs text-[#697586]">{d.probability ?? 0}%</td>
+                          <td className="px-4 py-3 text-xs text-[#364152]">{d.crmContact ? `${d.crmContact.firstName} ${d.crmContact.lastName}` : '—'}</td>
                         </tr>
                       ))}
                       {!data?.topOpenDeals?.length && (

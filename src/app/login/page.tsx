@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -57,12 +57,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <img src="/logo.svg" alt="Zaki AI" className="w-20 h-16 object-contain" />
-          <h1 className="text-2xl font-semibold text-[#252f4a]">Zaki AI Store</h1>
-          <p className="text-xs text-[#6b7177]">
+          <h1 className="text-2xl font-semibold text-[#121926]">Zaki AI Store</h1>
+          <p className="text-xs text-[#697586]">
             نظام المبيعات والطلبات والأرباح والذكاء الاصطناعي
           </p>
         </div>
@@ -73,8 +73,8 @@ export default function LoginPage() {
               <div
                 className={`p-3 text-xs rounded-lg flex items-start space-x-2 rtl:space-x-reverse ${
                   pendingFlag
-                    ? 'bg-[#fdf4e8] border border-[#f9e6cc] text-[#e49e3d]'
-                    : 'bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c]'
+                    ? 'bg-[#fff6e5] border border-[#ffe7b8] text-[#ffab00]'
+                    : 'bg-[#feecee] border border-[#fecdd1] text-[#fb323f]'
                 }`}
               >
                 {pendingFlag ? (
@@ -116,16 +116,16 @@ export default function LoginPage() {
               />
 
               <div className="flex items-center justify-between text-xs">
-                <label className="flex items-center space-x-2 rtl:space-x-reverse text-[#4b5675] cursor-pointer">
+                <label className="flex items-center space-x-2 rtl:space-x-reverse text-[#364152] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={remember}
                     onChange={(e) => setRemember(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-[#eef0f3] bg-white accent-[#3e97ff]"
+                    className="w-3.5 h-3.5 rounded border-[#e3e8ef] bg-white accent-[#b8256e]"
                   />
                   <span>تذكرني</span>
                 </label>
-                <Link href="/forgot-password" className="text-[#3e97ff] hover:underline">
+                <Link href="/forgot-password" className="text-[#b8256e] hover:underline">
                   نسيت كلمة المرور؟
                 </Link>
               </div>
@@ -138,9 +138,9 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-[#6b7177]">
+        <p className="text-center text-xs text-[#697586]">
           ليس لديك حساب؟{' '}
-          <Link href="/register" className="text-[#3e97ff] font-semibold hover:underline">
+          <Link href="/register" className="text-[#b8256e] font-semibold hover:underline">
             أنشئ حساباً جديداً
           </Link>{' '}
           — سيكون بانتظار موافقة المدير

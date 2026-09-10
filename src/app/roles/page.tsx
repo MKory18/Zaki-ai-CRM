@@ -298,11 +298,11 @@ export default function RolesPage() {
       <div className="space-y-6" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a] flex items-center gap-2">
-              <ShieldCheck className="w-6 h-6 text-[#3e97ff]" />
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926] flex items-center gap-2">
+              <ShieldCheck className="w-6 h-6 text-[#b8256e]" />
               {ar ? 'الأدوار والصلاحيات' : 'Roles & Permissions'}
             </h1>
-            <p className="text-xs text-[#6b7177] mt-1">
+            <p className="text-xs text-[#697586] mt-1">
               {ar
                 ? 'إدارة أدوار الفريق وصلاحياتهم — تُطبق التغييرات فورًا على الخادم.'
                 : 'Manage team roles and their permissions — changes apply server-side immediately.'}
@@ -310,7 +310,7 @@ export default function RolesPage() {
           </div>
           <div className="flex items-center gap-2">
             <div className="relative w-52">
-              <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[#9aa0aa]" />
+              <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[#9aa4b2]" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -328,7 +328,7 @@ export default function RolesPage() {
         </div>
 
         {savedFlash && (
-          <div className="rounded-lg bg-[#e8f8ef] border border-[#d2f0de] text-[#25b865] text-xs font-medium px-4 py-2.5">
+          <div className="rounded-lg bg-[#e6f9ee] border border-[#c8f2d8] text-[#00c853] text-xs font-medium px-4 py-2.5">
             {ar ? '✓ تم الحفظ بنجاح' : '✓ Saved successfully'}
           </div>
         )}
@@ -336,7 +336,7 @@ export default function RolesPage() {
         {loadError && (
           <Card>
             <CardContent className="text-center py-10 space-y-3">
-              <p className="text-sm text-[#d13b4c]">{loadError}</p>
+              <p className="text-sm text-[#fb323f]">{loadError}</p>
               <Button variant="outline" size="sm" onClick={loadRoles}>{ar ? 'إعادة المحاولة' : 'Retry'}</Button>
             </CardContent>
           </Card>
@@ -346,7 +346,7 @@ export default function RolesPage() {
           <Card>
             <CardContent className="text-center py-12">
               <ShieldCheck className="w-10 h-10 text-[#c3c8d4] mx-auto mb-3" />
-              <p className="text-sm text-[#6b7177]">
+              <p className="text-sm text-[#697586]">
                 {search ? (ar ? 'لا نتائج مطابقة للبحث' : 'No roles match your search') : (ar ? 'لا توجد أدوار بعد' : 'No roles yet')}
               </p>
             </CardContent>
@@ -364,7 +364,7 @@ export default function RolesPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-bold text-[#252f4a]">{role.name}</p>
+                        <p className="text-sm font-bold text-[#121926]">{role.name}</p>
                         <Badge variant={role.companyId === null ? 'info' : 'default'}>
                           {role.companyId === null ? (ar ? 'دور نظامي' : 'System') : (ar ? 'دور شركة' : 'Company')}
                         </Badge>
@@ -380,7 +380,7 @@ export default function RolesPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 mt-3 text-xs text-[#6b7177]">
+                  <div className="flex items-center gap-3 mt-3 text-xs text-[#697586]">
                     <span className="inline-flex items-center gap-1"><Users className="w-3.5 h-3.5" />{role.usersCount} {ar ? 'مستخدم' : 'users'}</span>
                     <span className="inline-flex items-center gap-1"><KeyRound className="w-3.5 h-3.5" />{role.permissionsCount} {ar ? 'صلاحية' : 'permissions'}</span>
                   </div>
@@ -403,7 +403,7 @@ export default function RolesPage() {
                           </Button>
                         )}
                         {canDeleteThis && (
-                          <Button variant="outline" size="sm" className="text-[#d13b4c]" onClick={() => { setDeletingRole(role); setReplacementRoleId(''); setDeleteError(null); }}>
+                          <Button variant="outline" size="sm" className="text-[#fb323f]" onClick={() => { setDeletingRole(role); setReplacementRoleId(''); setDeleteError(null); }}>
                             <Trash2 className="w-3.5 h-3.5" />{ar ? 'حذف' : 'Delete'}
                           </Button>
                         )}
@@ -435,7 +435,7 @@ export default function RolesPage() {
 
             <div className="flex items-center justify-between gap-3">
               <div className="relative flex-1 max-w-xs">
-                <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[#9aa0aa]" />
+                <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[#9aa4b2]" />
                 <Input
                   value={moduleSearch}
                   onChange={(e) => setModuleSearch(e.target.value)}
@@ -453,15 +453,15 @@ export default function RolesPage() {
                 const open = openModules[m.module] ?? false;
                 const moduleActive = m.items.filter((i) => draft[i.key]).length;
                 return (
-                  <div key={m.module} className="rounded-xl border border-[#eef0f3] overflow-hidden">
+                  <div key={m.module} className="rounded-xl border border-[#e3e8ef] overflow-hidden">
                     <button
                       onClick={() => setOpenModules((p) => ({ ...p, [m.module]: !p[m.module] }))}
-                      className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-[#f8f9fa] hover:bg-[#eef0f3]/60 transition-colors cursor-pointer text-start"
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-[#f8fafc] hover:bg-[#e3e8ef]/60 transition-colors cursor-pointer text-start"
                     >
-                      <span className="text-xs font-bold text-[#252f4a]">
+                      <span className="text-xs font-bold text-[#121926]">
                         {ar ? MODULE_LABELS[m.module]?.ar ?? m.module : MODULE_LABELS[m.module]?.en ?? m.module}
                         {moduleActive > 0 && (
-                          <span className="ms-2 text-[10px] font-bold text-[#25b865] bg-[#e8f8ef] rounded-md px-1.5 py-0.5">
+                          <span className="ms-2 text-[10px] font-bold text-[#00c853] bg-[#e6f9ee] rounded-md px-1.5 py-0.5">
                             {moduleActive}
                           </span>
                         )}
@@ -469,7 +469,7 @@ export default function RolesPage() {
                       {open ? <ChevronUp className="w-4 h-4 text-[#9ca3af]" /> : <ChevronDown className="w-4 h-4 text-[#9ca3af]" />}
                     </button>
                     {open && (
-                      <div className="divide-y divide-[#f3f4f6]">
+                      <div className="divide-y divide-[#f8fafc]">
                         {m.items.map((item) => {
                           const d = draft[item.key];
                           return (
@@ -480,9 +480,9 @@ export default function RolesPage() {
                                     type="checkbox"
                                     checked={!!d}
                                     onChange={() => togglePerm(item)}
-                                    className="w-4 h-4 accent-[#3e97ff] cursor-pointer shrink-0"
+                                    className="w-4 h-4 accent-[#b8256e] cursor-pointer shrink-0"
                                   />
-                                  <span className="text-xs text-[#252f4a] font-medium truncate">
+                                  <span className="text-xs text-[#121926] font-medium truncate">
                                     {ar ? item.ar : item.en}
                                   </span>
                                   <span className="text-[10px] text-[#9ca3af] font-mono hidden sm:inline truncate" dir="ltr">{item.key}</span>
@@ -503,18 +503,18 @@ export default function RolesPage() {
 
                               {/* CATEGORY scope → category checkboxes */}
                               {d && d.scope === 'CATEGORY' && (
-                                <div className="mt-2 ms-6 rounded-lg bg-[#f8f9fa] border border-[#eef0f3] p-3">
+                                <div className="mt-2 ms-6 rounded-lg bg-[#f8fafc] border border-[#e3e8ef] p-3">
                                   {categories.length === 0 ? (
                                     <p className="text-[11px] text-[#9ca3af]">{ar ? 'لا توجد فئات بعد' : 'No categories yet'}</p>
                                   ) : (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                                       {categories.map((c) => (
-                                        <label key={c.id} className="flex items-center gap-1.5 text-[11px] text-[#252f4a] cursor-pointer">
+                                        <label key={c.id} className="flex items-center gap-1.5 text-[11px] text-[#121926] cursor-pointer">
                                           <input
                                             type="checkbox"
                                             checked={d.scopeIds.includes(c.id)}
                                             onChange={() => toggleScopeId(item.key, c.id)}
-                                            className="w-3.5 h-3.5 accent-[#3e97ff] cursor-pointer"
+                                            className="w-3.5 h-3.5 accent-[#b8256e] cursor-pointer"
                                           />
                                           {c.name}
                                         </label>
@@ -526,9 +526,9 @@ export default function RolesPage() {
 
                               {/* SPECIFIC scope → product search + chips */}
                               {d && d.scope === 'SPECIFIC' && (
-                                <div className="mt-2 ms-6 rounded-lg bg-[#f8f9fa] border border-[#eef0f3] p-3 space-y-2">
+                                <div className="mt-2 ms-6 rounded-lg bg-[#f8fafc] border border-[#e3e8ef] p-3 space-y-2">
                                   <div className="relative">
-                                    <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-3.5 h-3.5 text-[#9aa0aa]" />
+                                    <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-3.5 h-3.5 text-[#9aa4b2]" />
                                     <Input
                                       value={productQuery}
                                       onChange={(e) => setProductQuery(e.target.value)}
@@ -538,12 +538,12 @@ export default function RolesPage() {
                                   </div>
                                   {productLoading && <p className="text-[11px] text-[#9ca3af]">{ar ? 'جارِ البحث…' : 'Searching…'}</p>}
                                   {productResults.length > 0 && (
-                                    <div className="max-h-36 overflow-y-auto rounded-lg border border-[#eef0f3] bg-white divide-y divide-[#f3f4f6]">
+                                    <div className="max-h-36 overflow-y-auto rounded-lg border border-[#e3e8ef] bg-white divide-y divide-[#f8fafc]">
                                       {productResults.slice(0, (productPage + 1) * 10).map((p) => (
                                         <button
                                           key={p.id}
                                           onClick={() => !d.scopeIds.includes(p.id) && toggleScopeId(item.key, p.id)}
-                                          className="w-full text-start px-3 py-2 text-xs text-[#252f4a] hover:bg-[#f8f9fa] cursor-pointer"
+                                          className="w-full text-start px-3 py-2 text-xs text-[#121926] hover:bg-[#f8fafc] cursor-pointer"
                                         >
                                           {p.name}
                                         </button>
@@ -551,7 +551,7 @@ export default function RolesPage() {
                                       {(productPage + 1) * 10 < productResults.length && (
                                         <button
                                           onClick={() => setProductPage((p) => p + 1)}
-                                          className="w-full px-3 py-2 text-[11px] font-bold text-[#3e97ff] hover:bg-[#f8f9fa] cursor-pointer"
+                                          className="w-full px-3 py-2 text-[11px] font-bold text-[#b8256e] hover:bg-[#f8fafc] cursor-pointer"
                                         >
                                           {ar ? 'تحميل المزيد' : 'Load more'}
                                         </button>
@@ -563,9 +563,9 @@ export default function RolesPage() {
                                       {d.scopeIds.map((id) => {
                                         const prod = productResults.find((p) => p.id === id);
                                         return (
-                                          <span key={id} className="inline-flex items-center gap-1 text-[10px] font-medium bg-[#eaf3ff] text-[#3e97ff] border border-[#d6e8ff] rounded-md px-1.5 py-0.5">
+                                          <span key={id} className="inline-flex items-center gap-1 text-[10px] font-medium bg-[#fdf5fa] text-[#b8256e] border border-[#f2c9dd] rounded-md px-1.5 py-0.5">
                                             {prod?.name ?? id}
-                                            <button onClick={() => toggleScopeId(item.key, id)} className="cursor-pointer hover:text-[#d13b4c]">
+                                            <button onClick={() => toggleScopeId(item.key, id)} className="cursor-pointer hover:text-[#fb323f]">
                                               <X className="w-3 h-3" />
                                             </button>
                                           </span>
@@ -588,7 +588,7 @@ export default function RolesPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#eef0f3]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#e3e8ef]">
               <Button variant="outline" onClick={() => setEditorOpen(false)}>{ar ? 'إلغاء' : 'Cancel'}</Button>
               <Button onClick={saveEditor} loading={saving}>
                 {editingRole ? (ar ? 'حفظ التغييرات' : 'Save changes') : (ar ? 'إنشاء الدور' : 'Create role')}
@@ -605,13 +605,13 @@ export default function RolesPage() {
           maxWidth="md"
         >
           <div className="space-y-4">
-            <p className="text-sm text-[#252f4a]">
+            <p className="text-sm text-[#121926]">
               {ar
-                ? `هل أنت متأكد من حذف الدور «${deletingRole?.name}»؟`
+                ? `هل أنت متأكد من حذف الدور آ«${deletingRole?.name}»؟`
                 : `Delete role "${deletingRole?.name}"?`}
             </p>
             {deletingRole && deletingRole.usersCount > 0 && (
-              <div className="rounded-lg bg-[#fdf4e8] border border-[#f9e6cc] p-3 space-y-2">
+              <div className="rounded-lg bg-[#fff6e5] border border-[#ffe7b8] p-3 space-y-2">
                 <p className="text-xs font-bold text-[#c07f2a]">
                   {ar
                     ? `هذا الدور مرتبط بـ ${deletingRole.usersCount} مستخدم. اختر دورًا بديلًا:`
@@ -629,7 +629,7 @@ export default function RolesPage() {
                 />
               </div>
             )}
-            {deleteError && <p className="text-xs text-[#d13b4c]">{deleteError}</p>}
+            {deleteError && <p className="text-xs text-[#fb323f]">{deleteError}</p>}
             <div className="flex items-center justify-end gap-2">
               <Button variant="outline" onClick={() => setDeletingRole(null)}>{ar ? 'إلغاء' : 'Cancel'}</Button>
               <Button variant="danger" onClick={confirmDelete} loading={deleting}>{ar ? 'حذف نهائي' : 'Delete'}</Button>

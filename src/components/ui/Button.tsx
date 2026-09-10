@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import clsx from 'clsx';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -23,19 +23,19 @@ export function Button({
   };
 
   const variantStyles = {
-    primary: 'bg-[#3e97ff] text-white hover:bg-[#3e97ff]/85 border border-transparent',
-    secondary: 'bg-[#f8f9fa] text-[#252f4a] hover:bg-[#eef0f3] border border-[#eef0f3]',
-    outline: 'bg-white text-[#252f4a] hover:bg-[#f8f9fa] border border-[#eef0f3]',
-    danger: 'bg-[#d13b4c] text-white hover:bg-[#d13b4c]/85 border border-transparent',
-    ghost: 'bg-transparent text-[#4b5675] hover:bg-[#f8f9fa] border border-transparent',
-    success: 'bg-[#25b865] text-white hover:bg-[#25b865]/85 border border-transparent',
+    primary: 'bg-[#b8256e] text-white hover:bg-[#b8256e]/85 border border-transparent',
+    secondary: 'bg-[#f8fafc] text-[#121926] hover:bg-[#e3e8ef] border border-[#e3e8ef]',
+    outline: 'bg-white text-[#121926] hover:bg-[#f8fafc] border border-[#e3e8ef]',
+    danger: 'bg-[#fb323f] text-white hover:bg-[#fb323f]/85 border border-transparent',
+    ghost: 'bg-transparent text-[#364152] hover:bg-[#f8fafc] border border-transparent',
+    success: 'bg-[#00c853] text-white hover:bg-[#00c853]/85 border border-transparent',
   };
 
   return (
     <button
       disabled={disabled || loading}
       className={clsx(
-        'inline-flex items-center justify-center font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-[#3e97ff] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
+        'inline-flex items-center justify-center font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-[#b8256e] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
         sizeStyles[size],
         variantStyles[variant],
         className

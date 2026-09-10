@@ -118,7 +118,7 @@ export default function ProductDetailsPage() {
     return (
       <AppLayout>
         <div className="flex justify-center py-24">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3e97ff]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#b8256e]"></div>
         </div>
       </AppLayout>
     );
@@ -127,7 +127,7 @@ export default function ProductDetailsPage() {
   if (error || !product) {
     return (
       <AppLayout>
-        <div className="p-6 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-sm rounded-xl text-center">
+        <div className="p-6 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-sm rounded-xl text-center">
           {error || 'المنتج غير موجود'}
         </div>
       </AppLayout>
@@ -145,14 +145,14 @@ export default function ProductDetailsPage() {
           <div>
             <button
               onClick={() => window.history.back()}
-              className="text-xs text-[#6b7177] hover:text-[#d13b4c] flex items-center space-x-1 rtl:space-x-reverse mb-1.5 cursor-pointer"
+              className="text-xs text-[#697586] hover:text-[#fb323f] flex items-center space-x-1 rtl:space-x-reverse mb-1.5 cursor-pointer"
             >
               <ArrowRight className="w-3.5 h-3.5" />
               <span>عودة للمنتجات</span>
             </button>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{product.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{product.name}</h1>
             <div className="flex items-center space-x-2 rtl:space-x-reverse mt-1.5">
-              <span className="font-mono text-xs font-bold text-[#d13b4c] bg-[#fbe9ea] px-2 py-0.5 rounded">{product.sku}</span>
+              <span className="font-mono text-xs font-bold text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded">{product.sku}</span>
               <Badge variant={product.status === 'ACTIVE' ? 'success' : 'warning'}>{product.status}</Badge>
               <span className="text-xs text-[#9ca3af]">{images.length} صورة</span>
             </div>
@@ -161,7 +161,7 @@ export default function ProductDetailsPage() {
           {canManage && (
             <div>
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleUpload} className="hidden" />
-              <Button size="sm" onClick={() => fileInputRef.current?.click()} loading={uploading} className="bg-[#d13b4c] hover:bg-[#d13b4c]/85">
+              <Button size="sm" onClick={() => fileInputRef.current?.click()} loading={uploading} className="bg-[#fb323f] hover:bg-[#fb323f]/85">
                 <ImagePlus className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 رفع صور جديدة
               </Button>
@@ -177,7 +177,7 @@ export default function ProductDetailsPage() {
             <CardContent className="space-y-4">
               {/* Primary large */}
               <div
-                className="relative w-full h-72 bg-[#f3f4f6] rounded-xl overflow-hidden border border-[#eef0f3] cursor-zoom-in"
+                className="relative w-full h-72 bg-[#f8fafc] rounded-xl overflow-hidden border border-[#e3e8ef] cursor-zoom-in"
                 onClick={() => primary && setLightbox(primary.url)}
               >
                 {primary ? (
@@ -189,7 +189,7 @@ export default function ProductDetailsPage() {
                   </div>
                 )}
                 {primary && (
-                  <span className="absolute top-3 left-3 rtl:left-auto rtl:right-3 bg-[#d13b4c] text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center space-x-1 rtl:space-x-reverse">
+                  <span className="absolute top-3 left-3 rtl:left-auto rtl:right-3 bg-[#fb323f] text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center space-x-1 rtl:space-x-reverse">
                     <Star className="w-3 h-3" />
                     <span>الصورة الرئيسية</span>
                   </span>
@@ -203,7 +203,7 @@ export default function ProductDetailsPage() {
                     <div
                       key={img.id}
                       className={`relative group rounded-lg overflow-hidden border-2 ${
-                        img.isPrimary ? 'border-[#3e97ff]' : 'border-[#eef0f3]'
+                        img.isPrimary ? 'border-[#b8256e]' : 'border-[#e3e8ef]'
                       }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -215,20 +215,20 @@ export default function ProductDetailsPage() {
                       />
                       {canManage && (
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-1 rtl:space-x-reverse">
-                          <button onClick={() => setPrimary(img.id)} title="تعيين كرئيسية" className="p-1 bg-white/90 rounded text-[#e49e3d] hover:bg-white cursor-pointer">
+                          <button onClick={() => setPrimary(img.id)} title="تعيين كرئيسية" className="p-1 bg-white/90 rounded text-[#ffab00] hover:bg-white cursor-pointer">
                             <Star className="w-3 h-3" />
                           </button>
                           {idx > 0 && !img.isPrimary && (
-                            <button onClick={() => moveImage(idx, -1)} title="تحريك يسار" className="p-1 bg-white/90 rounded text-[#4b5675] hover:bg-white cursor-pointer">
+                            <button onClick={() => moveImage(idx, -1)} title="تحريك يسار" className="p-1 bg-white/90 rounded text-[#364152] hover:bg-white cursor-pointer">
                               <ChevronUp className="w-3 h-3 rotate-[-90deg] rtl:rotate-[270deg]" />
                             </button>
                           )}
                           {idx < images.length - 1 && !img.isPrimary && (
-                            <button onClick={() => moveImage(idx, 1)} title="تحريك يمين" className="p-1 bg-white/90 rounded text-[#4b5675] hover:bg-white cursor-pointer">
+                            <button onClick={() => moveImage(idx, 1)} title="تحريك يمين" className="p-1 bg-white/90 rounded text-[#364152] hover:bg-white cursor-pointer">
                               <ChevronDown className="w-3 h-3 rotate-[-90deg] rtl:rotate-[270deg]" />
                             </button>
                           )}
-                          <button onClick={() => deleteImage(img.id)} title="حذف" className="p-1 bg-white/90 rounded text-[#d13b4c] hover:bg-white cursor-pointer">
+                          <button onClick={() => deleteImage(img.id)} title="حذف" className="p-1 bg-white/90 rounded text-[#fb323f] hover:bg-white cursor-pointer">
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
@@ -245,15 +245,15 @@ export default function ProductDetailsPage() {
             <Card>
               <CardHeader title="معلومات المنتج" />
               <CardContent className="text-xs space-y-2">
-                <p className="text-[#4b5675]">{product.description || '—'}</p>
-                <div className="pt-2 border-t border-[#eef0f3] grid grid-cols-2 gap-2 text-center">
-                  <div className="bg-[#f8f9fa] p-2 rounded-lg">
+                <p className="text-[#364152]">{product.description || '—'}</p>
+                <div className="pt-2 border-t border-[#e3e8ef] grid grid-cols-2 gap-2 text-center">
+                  <div className="bg-[#f8fafc] p-2 rounded-lg">
                     <span className="text-[#9ca3af] block">السعر الأساسي</span>
-                    <span className="font-bold text-[#252f4a]">${product.basePrice?.toFixed(2)}</span>
+                    <span className="font-bold text-[#121926]">${product.basePrice?.toFixed(2)}</span>
                   </div>
-                  <div className="bg-[#f8f9fa] p-2 rounded-lg">
+                  <div className="bg-[#f8fafc] p-2 rounded-lg">
                     <span className="text-[#9ca3af] block">متوسط تكلفة الوحدة</span>
-                    <span className="font-bold text-[#252f4a]">${analytics?.avgCostPerUnit}</span>
+                    <span className="font-bold text-[#121926]">${analytics?.avgCostPerUnit}</span>
                   </div>
                 </div>
               </CardContent>
@@ -263,20 +263,20 @@ export default function ProductDetailsPage() {
               <CardHeader title="أداء المبيعات" subtitle="الطلبات الموصّلة فقط" />
               <CardContent className="grid grid-cols-2 gap-2 text-center text-xs">
                 <div className="bg-blue-50 p-2.5 rounded-lg">
-                  <span className="text-[#3e97ff] block">الإيراد</span>
-                  <span className="font-black text-[#3e97ff]">${analytics?.revenue?.toFixed(2)}</span>
+                  <span className="text-[#b8256e] block">الإيراد</span>
+                  <span className="font-black text-[#b8256e]">${analytics?.revenue?.toFixed(2)}</span>
                 </div>
-                <div className="bg-[#fbe9ea] p-2.5 rounded-lg">
-                  <span className="text-[#d13b4c] block">صافي الربح</span>
-                  <span className="font-black text-[#d13b4c]">${analytics?.netProfit?.toFixed(2)}</span>
+                <div className="bg-[#feecee] p-2.5 rounded-lg">
+                  <span className="text-[#fb323f] block">صافي الربح</span>
+                  <span className="font-black text-[#fb323f]">${analytics?.netProfit?.toFixed(2)}</span>
                 </div>
-                <div className="bg-[#f8f9fa] p-2.5 rounded-lg">
+                <div className="bg-[#f8fafc] p-2.5 rounded-lg">
                   <span className="text-[#9ca3af] block">إجمالي الطلبات</span>
-                  <span className="font-bold text-[#252f4a]">{analytics?.totalOrders}</span>
+                  <span className="font-bold text-[#121926]">{analytics?.totalOrders}</span>
                 </div>
                 <div className="bg-emerald-50 p-2.5 rounded-lg">
-                  <span className="text-[#25b865] block">موصّل</span>
-                  <span className="font-bold text-[#25b865]">{analytics?.deliveredOrders}</span>
+                  <span className="text-[#00c853] block">موصّل</span>
+                  <span className="font-bold text-[#00c853]">{analytics?.deliveredOrders}</span>
                 </div>
               </CardContent>
             </Card>
@@ -284,20 +284,20 @@ export default function ProductDetailsPage() {
             <Card>
               <CardHeader title="المخزون" />
               <CardContent className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-[#f8f9fa] p-2.5 rounded-lg">
+                <div className="bg-[#f8fafc] p-2.5 rounded-lg">
                   <Boxes className="w-4 h-4 text-[#9ca3af] mx-auto" />
                   <span className="text-[#9ca3af] block mt-1">المنتج</span>
-                  <span className="font-bold text-[#252f4a]">{analytics?.totalProduced}</span>
+                  <span className="font-bold text-[#121926]">{analytics?.totalProduced}</span>
                 </div>
                 <div className="bg-blue-50 p-2.5 rounded-lg">
-                  <ShoppingCart className="w-4 h-4 text-[#3e97ff] mx-auto" />
-                  <span className="text-[#3e97ff] block mt-1">المبيع</span>
-                  <span className="font-bold text-[#3e97ff]">{analytics?.totalSold}</span>
+                  <ShoppingCart className="w-4 h-4 text-[#b8256e] mx-auto" />
+                  <span className="text-[#b8256e] block mt-1">المبيع</span>
+                  <span className="font-bold text-[#b8256e]">{analytics?.totalSold}</span>
                 </div>
                 <div className="bg-emerald-50 p-2.5 rounded-lg">
-                  <Boxes className="w-4 h-4 text-[#25b865] mx-auto" />
-                  <span className="text-[#25b865] block mt-1">المتبقي</span>
-                  <span className="font-black text-[#25b865]">{analytics?.totalRemaining}</span>
+                  <Boxes className="w-4 h-4 text-[#00c853] mx-auto" />
+                  <span className="text-[#00c853] block mt-1">المتبقي</span>
+                  <span className="font-black text-[#00c853]">{analytics?.totalRemaining}</span>
                 </div>
               </CardContent>
             </Card>
@@ -307,12 +307,12 @@ export default function ProductDetailsPage() {
         {/* Production Batches */}
         <Card>
           <CardHeader
-            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><Factory className="w-4 h-4 text-[#d13b4c]" /><span>تشغيلات الإنتاج</span></span>}
+            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><Factory className="w-4 h-4 text-[#fb323f]" /><span>تشغيلات الإنتاج</span></span>}
             action={<Link href="/production"><Button size="sm" variant="outline">إدارة التشغيلات</Button></Link>}
           />
           <CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-left rtl:text-right text-xs">
-              <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
+              <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                 <tr>
                   <th className="px-6 py-3">الرقم</th>
                   <th className="px-6 py-3">الكمية</th>
@@ -322,14 +322,14 @@ export default function ProductDetailsPage() {
                   <th className="px-6 py-3">التاريخ</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#eef0f3]">
+              <tbody className="divide-y divide-[#e3e8ef]">
                 {product.batches?.map((b: any) => (
-                  <tr key={b.id} className="hover:bg-[#f8f9fa]">
-                    <td className="px-6 py-3 font-mono font-bold text-[#d13b4c]">{b.batchNumber}</td>
+                  <tr key={b.id} className="hover:bg-[#f8fafc]">
+                    <td className="px-6 py-3 font-mono font-bold text-[#fb323f]">{b.batchNumber}</td>
                     <td className="px-6 py-3">{b.quantityProduced}</td>
-                    <td className="px-6 py-3 font-bold text-[#25b865]">{b.quantityRemaining}</td>
+                    <td className="px-6 py-3 font-bold text-[#00c853]">{b.quantityRemaining}</td>
                     <td className="px-6 py-3">${b.totalProductionCost?.toFixed(2)}</td>
-                    <td className="px-6 py-3 font-black text-[#252f4a]">${b.costPerUnit?.toFixed(2)}</td>
+                    <td className="px-6 py-3 font-black text-[#121926]">${b.costPerUnit?.toFixed(2)}</td>
                     <td className="px-6 py-3 text-[#9ca3af]">{format(new Date(b.productionDate), 'yyyy-MM-dd')}</td>
                   </tr>
                 ))}
@@ -341,17 +341,17 @@ export default function ProductDetailsPage() {
         {/* Offers */}
         <Card>
           <CardHeader
-            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><Tag className="w-4 h-4 text-[#d13b4c]" /><span>العروض الترويجية</span></span>}
+            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><Tag className="w-4 h-4 text-[#fb323f]" /><span>العروض الترويجية</span></span>}
             action={<Link href="/offers"><Button size="sm" variant="outline">إدارة العروض</Button></Link>}
           />
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {product.offers?.length === 0 && <p className="text-xs text-[#9ca3af]">لا توجد عروض بعد.</p>}
             {product.offers?.map((o: any) => (
-              <div key={o.id} className="border border-[#eef0f3] rounded-xl p-3 flex items-center space-x-3 rtl:space-x-reverse">
+              <div key={o.id} className="border border-[#e3e8ef] rounded-xl p-3 flex items-center space-x-3 rtl:space-x-reverse">
                 <ProductThumb src={primary?.url} size="sm" />
                 <div className="text-xs">
-                  <p className="font-bold text-[#252f4a]">{o.name}</p>
-                  <p className="text-[#d13b4c] font-bold">${o.sellingPrice.toFixed(2)} × {o.quantity}</p>
+                  <p className="font-bold text-[#121926]">{o.name}</p>
+                  <p className="text-[#fb323f] font-bold">${o.sellingPrice.toFixed(2)} × {o.quantity}</p>
                 </div>
               </div>
             ))}
@@ -361,11 +361,11 @@ export default function ProductDetailsPage() {
         {/* Recent Orders */}
         <Card>
           <CardHeader
-            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><TrendingUp className="w-4 h-4 text-[#d13b4c]" /><span>أحدث الطلبات على هذا المنتج</span></span>}
+            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><TrendingUp className="w-4 h-4 text-[#fb323f]" /><span>أحدث الطلبات على هذا المنتج</span></span>}
           />
           <CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-left rtl:text-right text-xs">
-              <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
+              <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                 <tr>
                   <th className="px-6 py-3">الطلب</th>
                   <th className="px-6 py-3">العميل</th>
@@ -375,14 +375,14 @@ export default function ProductDetailsPage() {
                   <th className="px-6 py-3">التاريخ</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#eef0f3]">
+              <tbody className="divide-y divide-[#e3e8ef]">
                 {product.orders?.map((o: any) => (
-                  <tr key={o.id} className="hover:bg-[#f8f9fa]">
-                    <td className="px-6 py-3 font-bold text-[#d13b4c]">{o.orderNumber}</td>
+                  <tr key={o.id} className="hover:bg-[#f8fafc]">
+                    <td className="px-6 py-3 font-bold text-[#fb323f]">{o.orderNumber}</td>
                     <td className="px-6 py-3">{o.customer?.fullName} <span className="text-[#9ca3af]">— {o.customer?.city}</span></td>
                     <td className="px-6 py-3 font-bold">${o.totalAmount.toFixed(2)}</td>
                     <td className="px-6 py-3"><OrderStatusBadge status={o.status} /></td>
-                    <td className="px-6 py-3 text-[#6b7177]">{o.moderator?.name || '—'}</td>
+                    <td className="px-6 py-3 text-[#697586]">{o.moderator?.name || '—'}</td>
                     <td className="px-6 py-3 text-[#9ca3af]">{format(new Date(o.createdAt), 'MMM d')}</td>
                   </tr>
                 ))}

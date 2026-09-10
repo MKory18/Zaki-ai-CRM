@@ -123,8 +123,8 @@ export default function TasksPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">المهام</h1>
-            <p className="text-xs text-[#6b7177] mt-1">متابعة المهام والمواعيد النهائية</p>
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">المهام</h1>
+            <p className="text-xs text-[#697586] mt-1">متابعة المهام والمواعيد النهائية</p>
           </div>
           <Button size="sm" onClick={openCreate} className="flex items-center gap-1.5">
             <Plus className="w-4 h-4" />
@@ -138,7 +138,7 @@ export default function TasksPage() {
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
                 <input type="text" placeholder="بحث بعنوان المهمة..." value={search} onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 rtl:pl-4 rtl:pr-9 pr-4 py-2 text-xs bg-white border border-[#eef0f3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e97ff]/30 focus:border-[#3e97ff]" />
+                  className="w-full pl-9 rtl:pl-4 rtl:pr-9 pr-4 py-2 text-xs bg-white border border-[#e3e8ef] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]" />
               </div>
               <Select value={status} onChange={(e) => setStatus(e.target.value)} className="max-w-[180px]">
                 <option value="all">كل الحالات</option>
@@ -150,7 +150,7 @@ export default function TasksPage() {
               </Select>
             </div>
 
-            <div className="divide-y divide-[#eef0f3] rounded-lg border border-[#eef0f3] bg-white">
+            <div className="divide-y divide-[#e3e8ef] rounded-lg border border-[#e3e8ef] bg-white">
               {loading ? (
                 <p className="py-10 text-center text-xs text-[#9ca3af]">جارٍ التحميل...</p>
               ) : !items.length ? (
@@ -158,35 +158,35 @@ export default function TasksPage() {
               ) : items.map((task) => {
                 const overdue = task.status !== 'DONE' && task.status !== 'CANCELLED' && isOverdue(task.dueDate);
                 return (
-                  <div key={task.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[#f8f9fa] cursor-pointer transition-colors" onClick={() => setSelected(task)}>
+                  <div key={task.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[#f8fafc] cursor-pointer transition-colors" onClick={() => setSelected(task)}>
                     <div className="flex items-center gap-3 min-w-0">
                       <button
                         onClick={(e) => { e.stopPropagation(); quickToggle(task); }}
                         title={task.status === 'DONE' ? 'إعادة فتح' : 'إنجاز'}
-                        className={`shrink-0 cursor-pointer transition-colors ${task.status === 'DONE' ? 'text-[#25b865]' : 'text-[#c9cdd4] hover:text-[#25b865]'}`}
+                        className={`shrink-0 cursor-pointer transition-colors ${task.status === 'DONE' ? 'text-[#00c853]' : 'text-[#c9cdd4] hover:text-[#00c853]'}`}
                       >
                         <CheckCircle2 className="w-5 h-5" />
                       </button>
                       <div className="min-w-0">
-                        <p className={`text-sm font-semibold truncate ${task.status === 'DONE' ? 'text-[#9ca3af] line-through' : 'text-[#252f4a]'}`}>{task.title}</p>
+                        <p className={`text-sm font-semibold truncate ${task.status === 'DONE' ? 'text-[#9ca3af] line-through' : 'text-[#121926]'}`}>{task.title}</p>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className={`text-[11px] flex items-center gap-1 ${overdue ? 'text-[#d13b4c] font-bold' : 'text-[#6b7177]'}`}>
+                          <span className={`text-[11px] flex items-center gap-1 ${overdue ? 'text-[#fb323f] font-bold' : 'text-[#697586]'}`}>
                             {overdue ? <AlertTriangle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                             {formatDateTime(task.dueDate)}
                             {overdue && ' (متأخرة)'}
                           </span>
-                          {task.crmContact && <span className="text-[11px] text-[#3e97ff]">{task.crmContact.firstName} {task.crmContact.lastName}</span>}
-                          {task.crmDeal && <span className="text-[11px] text-[#7c5cd6]">{task.crmDeal.title}</span>}
+                          {task.crmContact && <span className="text-[11px] text-[#b8256e]">{task.crmContact.firstName} {task.crmContact.lastName}</span>}
+                          {task.crmDeal && <span className="text-[11px] text-[#8c72f7]">{task.crmDeal.title}</span>}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-[#4b5675] hidden sm:block">{task.assignedTo?.name || '—'}</span>
+                      <span className="text-xs text-[#364152] hidden sm:block">{task.assignedTo?.name || '—'}</span>
                       <Badge variant={priorityLabels[task.priority]?.variant || 'default'}>{priorityLabels[task.priority]?.ar || task.priority}</Badge>
                       <Badge variant={taskStatusLabels[task.status]?.variant || 'default'}>{taskStatusLabels[task.status]?.ar || task.status}</Badge>
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(task)}><Pencil className="w-3.5 h-3.5 text-[#3e97ff]" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleting(task)}><Trash2 className="w-3.5 h-3.5 text-[#d13b4c]" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(task)}><Pencil className="w-3.5 h-3.5 text-[#b8256e]" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDeleting(task)}><Trash2 className="w-3.5 h-3.5 text-[#fb323f]" /></Button>
                       </div>
                     </div>
                   </div>
@@ -194,7 +194,7 @@ export default function TasksPage() {
               })}
             </div>
 
-            <div className="flex items-center justify-between text-xs text-[#6b7177]">
+            <div className="flex items-center justify-between text-xs text-[#697586]">
               <span>الإجمالي: {total}</span>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronRight className="w-3.5 h-3.5" /></Button>
@@ -208,7 +208,7 @@ export default function TasksPage() {
 
       <Modal isOpen={formOpen} onClose={() => setFormOpen(false)} title={editing ? 'تعديل مهمة' : 'إضافة مهمة'} maxWidth="lg">
         <form onSubmit={handleSave} className="space-y-4">
-          {apiError && <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg">{apiError}</div>}
+          {apiError && <div className="p-3 bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs rounded-lg">{apiError}</div>}
           <Input label="عنوان المهمة *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} error={errors.title} />
           <Textarea label="الوصف" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <div className="grid grid-cols-3 gap-3">
@@ -242,7 +242,7 @@ export default function TasksPage() {
       </Modal>
 
       <Modal isOpen={!!deleting} onClose={() => setDeleting(null)} title="تأكيد الحذف" maxWidth="sm">
-        <p className="text-sm text-[#4b5675]">هل أنت متأكد من حذف المهمة <span className="font-bold text-[#252f4a]">{deleting?.title}</span>؟</p>
+        <p className="text-sm text-[#364152]">هل أنت متأكد من حذف المهمة <span className="font-bold text-[#121926]">{deleting?.title}</span>؟</p>
         <div className="flex justify-end gap-2 mt-6">
           <Button variant="outline" onClick={() => setDeleting(null)}>إلغاء</Button>
           <Button variant="danger" loading={deleteLoading} onClick={handleDelete}>حذف</Button>
@@ -250,14 +250,14 @@ export default function TasksPage() {
       </Modal>
 
       <Modal isOpen={!!selected} onClose={() => setSelected(null)} title={selected?.title || ''} subtitle="تفاصيل المهمة" maxWidth="md">
-        <div className="p-4 bg-[#f8f9fa] rounded-xl grid grid-cols-2 gap-3 text-xs">
-          <div><span className="text-[#9ca3af]">الحالة:</span><p className="font-medium text-[#252f4a]">{taskStatusLabels[selected?.status]?.ar || selected?.status}</p></div>
-          <div><span className="text-[#9ca3af]">الأولوية:</span><p className="font-medium text-[#252f4a]">{priorityLabels[selected?.priority]?.ar || selected?.priority}</p></div>
-          <div><span className="text-[#9ca3af]">الاستحقاق:</span><p className="font-medium text-[#252f4a]">{formatDateTime(selected?.dueDate)}</p></div>
-          <div><span className="text-[#9ca3af]">المسؤول:</span><p className="font-medium text-[#252f4a]">{selected?.assignedTo?.name || '—'}</p></div>
-          {selected?.crmContact && <div><span className="text-[#9ca3af]">جهة الاتصال:</span><p className="font-medium text-[#252f4a]">{selected.crmContact.firstName} {selected.crmContact.lastName}</p></div>}
-          {selected?.crmDeal && <div><span className="text-[#9ca3af]">الصفقة:</span><p className="font-medium text-[#252f4a]">{selected.crmDeal.title}</p></div>}
-          <div className="col-span-2"><span className="text-[#9ca3af]">الوصف:</span><p className="font-medium text-[#252f4a]">{selected?.description || '—'}</p></div>
+        <div className="p-4 bg-[#f8fafc] rounded-xl grid grid-cols-2 gap-3 text-xs">
+          <div><span className="text-[#9ca3af]">الحالة:</span><p className="font-medium text-[#121926]">{taskStatusLabels[selected?.status]?.ar || selected?.status}</p></div>
+          <div><span className="text-[#9ca3af]">الأولوية:</span><p className="font-medium text-[#121926]">{priorityLabels[selected?.priority]?.ar || selected?.priority}</p></div>
+          <div><span className="text-[#9ca3af]">الاستحقاق:</span><p className="font-medium text-[#121926]">{formatDateTime(selected?.dueDate)}</p></div>
+          <div><span className="text-[#9ca3af]">المسؤول:</span><p className="font-medium text-[#121926]">{selected?.assignedTo?.name || '—'}</p></div>
+          {selected?.crmContact && <div><span className="text-[#9ca3af]">جهة الاتصال:</span><p className="font-medium text-[#121926]">{selected.crmContact.firstName} {selected.crmContact.lastName}</p></div>}
+          {selected?.crmDeal && <div><span className="text-[#9ca3af]">الصفقة:</span><p className="font-medium text-[#121926]">{selected.crmDeal.title}</p></div>}
+          <div className="col-span-2"><span className="text-[#9ca3af]">الوصف:</span><p className="font-medium text-[#121926]">{selected?.description || '—'}</p></div>
         </div>
       </Modal>
     </AppLayout>

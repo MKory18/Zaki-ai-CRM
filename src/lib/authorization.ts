@@ -1,20 +1,20 @@
 ﻿/**
- * AUTHORIZATION ENGINE â€” single source of truth for all permission checks.
+ * AUTHORIZATION ENGINE — single source of truth for all permission checks.
  *
  * Every API route must authorize through this module. Frontend checks are UX only.
  *
  * PRECEDENCE (see permissions-core.ts for the full contract):
- *   1. SUPER_ADMIN â†’ full access
- *   2. UserPermission DENY â†’ final deny
- *   3. UserPermission ALLOW â†’ allow (overrides role absence/scope)
- *   4. RolePermission â†’ allowed with its scope
- *   5. otherwise â†’ DENY
+ *   1. SUPER_ADMIN → full access
+ *   2. UserPermission DENY → final deny
+ *   3. UserPermission ALLOW → allow (overrides role absence/scope)
+ *   4. RolePermission → allowed with its scope
+ *   5. otherwise → DENY
  *
- * SUPER_ADMIN handling is centralized HERE â€” no route may add its own
+ * SUPER_ADMIN handling is centralized HERE — no route may add its own
  * `if role === SUPER_ADMIN` bypass.
  *
  * SESSION INTEGRATION: getCurrentUser() computes EffectiveGrants fresh from the
- * DB on every request (permissions-core) and attaches them to the SessionUser â€”
+ * DB on every request (permissions-core) and attaches them to the SessionUser —
  * permission changes take effect on the next request, no stale caches.
  * For SessionUser objects built outside getCurrentUser, can()/getPermissionScope
  * fall back to async loading via loadUserGrants().
@@ -24,10 +24,10 @@ import { db } from './db';
 import { requireAuth } from './auth';
 import { computeEffectiveGrants, EffectiveGrants, Scope } from './permissions-core';
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Grants access â€” sync when the session carries them (normal path),
+// ─────────────────────────────────────────────────────
+// Grants access — sync when the session carries them (normal path),
 // async fallback (WeakMap) for externally-built SessionUser objects.
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 const grantsCache = new WeakMap<object, EffectiveGrants>();
 
 export function attachGrants<T extends SessionUser>(user: T, grants: EffectiveGrants): T {
@@ -57,16 +57,16 @@ export async function hydrateGrants(user: SessionUser): Promise<SessionUser> {
   return user;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// can() â€” the ONLY permission check (sync; grants are session-attached)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
+// can() — the ONLY permission check (sync; grants are session-attached)
+// ─────────────────────────────────────────────────────
 
 export function can(user: SessionUser, permission: string): boolean {
   if (user.status !== 'ACTIVE') return false;
   const g = grantsOf(user);
   if (!g) {
     // Session without attached grants (should not happen for getCurrentUser
-    // sessions) â€” legacy role fallback so nothing silently loses access.
+    // sessions) — legacy role fallback so nothing silently loses access.
     if (user.role === 'SUPER_ADMIN') return true;
     return user.permissions.includes(permission);
   }
@@ -94,9 +94,9 @@ const LEGACY_ALIAS: Record<string, string> = {
   'analytics.view': 'reports.view',
 };
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 // Scope resolution
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 
 export interface PermissionScope {
   scope: Scope;
@@ -114,13 +114,13 @@ export function getPermissionScope(user: SessionUser, permission: string): Permi
   return { scope: grant.scope, scopeIds: grant.scopeIds ?? null };
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 // Resource authorization
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 
 export interface AuthorizeResult {
   allowed: boolean;
-  /** Safe reason for server logs/debugging â€” never contains PII or internals. */
+  /** Safe reason for server logs/debugging — never contains PII or internals. */
   reason?: 'NO_PERMISSION' | 'NO_TENANT' | 'OUT_OF_SCOPE' | 'NO_COMPANY_CONTEXT';
 }
 
@@ -138,7 +138,7 @@ function orderMatchesScope(order: Record<string, any>, userId: string, scope: Sc
     case 'OWN':
       return order.moderatorId === userId;
     default:
-      // CATEGORY / SPECIFIC are not meaningful for orders â€” company-wide only
+      // CATEGORY / SPECIFIC are not meaningful for orders — company-wide only
       return false;
   }
 }
@@ -152,7 +152,7 @@ function productMatchesScope(product: Record<string, any>, _userId: string, scop
     case 'SPECIFIC':
       return Array.isArray(scopeIds) && scopeIds.includes(product.id);
     case 'OWN':
-      // Products have no per-user ownership column â€” OWN is not supported for
+      // Products have no per-user ownership column — OWN is not supported for
       // products (documented); treated as company-wide.
       return true;
     default:
@@ -196,9 +196,9 @@ export function authorize(
   return { allowed: true };
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// requirePermission â€” throws like the legacy guard (message contract kept)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
+// requirePermission — throws like the legacy guard (message contract kept)
+// ─────────────────────────────────────────────────────
 
 export async function requirePermission(permission: string): Promise<SessionUser> {
   const user = await requireAuth();

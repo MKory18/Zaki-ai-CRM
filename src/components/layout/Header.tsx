@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -41,7 +41,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           }
         }
       } catch {
-        // non-fatal â€” keep last known count
+        // non-fatal — keep last known count
       }
     };
     loadUnread();
@@ -51,7 +51,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Global search: Enter, or debounce 400ms once â‰¥ 2 chars â†’ orders page
+  // Global search: Enter, or debounce 400ms once ≥ 2 chars → orders page
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -85,37 +85,37 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-[72px] px-3 bg-[#f8f9fa] border-b border-[#eef0f3]">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-[72px] px-3 bg-[#f8fafc] border-b border-[#e3e8ef]">
       {/* Left: Mobile Toggle & Global Search */}
       <div className="flex items-center space-x-3 rtl:space-x-reverse flex-1 max-w-md">
         <button
           onClick={onMenuClick}
-          className="p-2 -ml-2 rounded-[5px] text-[#252f4a] hover:text-[#3e97ff] hover:bg-white md:hidden cursor-pointer"
+          className="p-2 -ml-2 rounded-[8px] text-[#121926] hover:text-[#b8256e] hover:bg-white md:hidden cursor-pointer"
         >
           <Menu className="w-5 h-5" />
         </button>
 
         <div className="relative w-full hidden sm:block">
-          <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9aa0aa]" />
+          <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9aa4b2]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder={`${t.search} (Orders, Customers, Phone)...`}
-            className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-1.5 text-xs bg-white border border-[#eef0f3] rounded-[5px] focus:outline-none focus:ring-2 focus:ring-[#3e97ff]/25 focus:border-[#3e97ff] transition-colors"
+            className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-1.5 text-xs bg-white border border-[#e3e8ef] rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors"
           />
         </div>
       </div>
 
       {/* Right: Actions, Language, Demo Role Switcher, Notifications, User */}
       <div className="flex items-center space-x-2 md:space-x-3 rtl:space-x-reverse">
-        {/* Demo Role Switcher Dropdown â€” SUPER_ADMIN only */}
+        {/* Demo Role Switcher Dropdown — SUPER_ADMIN only */}
         {currentUser?.role === 'SUPER_ADMIN' && (
         <div className="relative">
           <button
             onClick={() => setRoleMenuOpen(!roleMenuOpen)}
-            className="flex items-center space-x-1.5 rtl:space-x-reverse px-2.5 py-1.5 text-xs font-semibold rounded-[5px] bg-[#eaf3ff] text-[#3e97ff] hover:bg-[#d6e8ff] border border-[#c6e1ff] transition-colors cursor-pointer"
+            className="flex items-center space-x-1.5 rtl:space-x-reverse px-2.5 py-1.5 text-xs font-semibold rounded-[8px] bg-[#fdf5fa] text-[#b8256e] hover:bg-[#f2c9dd] border border-[#c6e1ff] transition-colors cursor-pointer"
             title="Switch User Role for instant evaluation"
           >
             <UserCheck className="w-3.5 h-3.5" />
@@ -124,9 +124,9 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </button>
 
           {roleMenuOpen && (
-            <div className="absolute right-0 rtl:right-auto rtl:left-0 mt-2 w-64 bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] border border-[#eef0f3] py-1.5 z-50">
-              <div className="px-3 py-1.5 border-b border-[#eef0f3]">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa0aa]">
+            <div className="absolute right-0 rtl:right-auto rtl:left-0 mt-2 w-64 bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] border border-[#e3e8ef] py-1.5 z-50">
+              <div className="px-3 py-1.5 border-b border-[#e3e8ef]">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa4b2]">
                   Switch Active Role (RBAC Demo)
                 </p>
               </div>
@@ -138,12 +138,12 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
                     switchDemoRole(acc.email);
                   }}
                   className={clsx(
-                    'w-full text-left rtl:text-right px-3 py-2 text-xs flex flex-col hover:bg-[#f8f9fa] transition-colors cursor-pointer',
-                    currentUser?.email === acc.email ? 'bg-[#eaf3ff] text-[#3e97ff] font-semibold' : 'text-[#4b5675]'
+                    'w-full text-left rtl:text-right px-3 py-2 text-xs flex flex-col hover:bg-[#f8fafc] transition-colors cursor-pointer',
+                    currentUser?.email === acc.email ? 'bg-[#fdf5fa] text-[#b8256e] font-semibold' : 'text-[#364152]'
                   )}
                 >
                   <span>{acc.label}</span>
-                  <span className="text-[10px] text-[#9aa0aa]">{acc.role}</span>
+                  <span className="text-[10px] text-[#9aa4b2]">{acc.role}</span>
                 </button>
               ))}
             </div>
@@ -154,20 +154,20 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         {/* Language Switcher */}
         <button
           onClick={() => setLocale(locale === 'en' ? 'ar' : 'en')}
-          className="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium text-[#252f4a] hover:text-[#3e97ff] hover:bg-white rounded-[5px] border border-[#eef0f3] transition-colors cursor-pointer"
+          className="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium text-[#121926] hover:text-[#b8256e] hover:bg-white rounded-[8px] border border-[#e3e8ef] transition-colors cursor-pointer"
         >
-          <Globe className="w-3.5 h-3.5 text-[#6b7177]" />
-          <span>{locale === 'en' ? 'ط§ظ„ط¹ط±ط¨ظٹط©' : 'English'}</span>
+          <Globe className="w-3.5 h-3.5 text-[#697586]" />
+          <span>{locale === 'en' ? 'العربية' : 'English'}</span>
         </button>
 
-        {/* Notifications Icon â€” dot shows real unread count only */}
+        {/* Notifications Icon — dot shows real unread count only */}
         <Link
           href="/notifications"
-          className="relative p-2 text-[#252f4a] hover:text-[#3e97ff] hover:bg-white rounded-[5px] transition-colors"
+          className="relative p-2 text-[#121926] hover:text-[#b8256e] hover:bg-white rounded-[8px] transition-colors"
         >
           <Bell className="w-4 h-4" />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 min-w-[14px] h-[14px] px-1 flex items-center justify-center bg-[#d13b4c] text-white text-[9px] font-bold rounded-full">
+            <span className="absolute top-1 right-1 min-w-[14px] h-[14px] px-1 flex items-center justify-center bg-[#fb323f] text-white text-[9px] font-bold rounded-full">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
@@ -177,7 +177,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         <button
           onClick={handleLogout}
           title={t.logout}
-          className="p-2 text-[#252f4a] hover:text-[#d13b4c] hover:bg-[#fbeeef] rounded-[5px] transition-colors cursor-pointer"
+          className="p-2 text-[#121926] hover:text-[#fb323f] hover:bg-[#feecee] rounded-[8px] transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
         </button>

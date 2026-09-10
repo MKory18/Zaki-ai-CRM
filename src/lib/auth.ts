@@ -140,7 +140,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
 /**
  * Server-side guard for API routes. Only ACTIVE users may use business APIs.
- * PENDING / SUSPENDED / DISABLED accounts are rejected here â€” never trust the client.
+ * PENDING / SUSPENDED / DISABLED accounts are rejected here — never trust the client.
  */
 export async function requireAuth(): Promise<SessionUser> {
   const user = await getCurrentUser();

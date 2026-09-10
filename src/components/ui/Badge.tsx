@@ -12,19 +12,19 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const variantStyles = {
-    default: 'bg-[#f8f9fa] text-[#252f4a] border-[#eef0f3]',
-    success: 'bg-[#e8f8ef] text-[#25b865] border-[#d2f0de]',
-    warning: 'bg-[#fdf4e8] text-[#e49e3d] border-[#f9e6cc]',
-    danger: 'bg-[#fbeeef] text-[#d13b4c] border-[#f4d7da]',
-    info: 'bg-[#e7f6fd] text-[#02a0e4] border-[#cfeefa]',
-    purple: 'bg-[#f1edfb] text-[#7c5cd6] border-[#e2d9f5]',
-    outline: 'bg-transparent text-[#4b5675] border-[#eef0f3]',
+    default: 'bg-[#f8fafc] text-[#121926] border-[#e3e8ef]',
+    success: 'bg-[#e6f9ee] text-[#00c853] border-[#c8f2d8]',
+    warning: 'bg-[#fff6e5] text-[#ffab00] border-[#ffe7b8]',
+    danger: 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]',
+    info: 'bg-[#e7f6fd] text-[#13b5fe] border-[#cfeefa]',
+    purple: 'bg-[#f3effe] text-[#8c72f7] border-[#e4dafb]',
+    outline: 'bg-transparent text-[#364152] border-[#e3e8ef]',
   };
 
   return (
     <span
       className={clsx(
-        'inline-flex items-center px-2.5 py-0.5 rounded-[5px] text-xs font-medium border',
+        'inline-flex items-center px-2.5 py-0.5 rounded-[8px] text-xs font-medium border',
         variantStyles[variant],
         className
       )}

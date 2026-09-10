@@ -184,6 +184,17 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     ],
   },
   {
+    module: 'landing_pages',
+    items: [
+      { key: 'landing_pages.view', ar: 'عرض صفحات الهبوط', en: 'View landing pages' },
+      { key: 'landing_pages.create', ar: 'إنشاء صفحات هبوط', en: 'Create landing pages' },
+      { key: 'landing_pages.edit', ar: 'تعديل صفحات الهبوط', en: 'Edit landing pages' },
+      { key: 'landing_pages.delete', ar: 'حذف صفحات هبوط', en: 'Delete landing pages' },
+      { key: 'landing_pages.publish', ar: 'نشر / إلغاء نشر صفحات الهبوط', en: 'Publish / unpublish landing pages' },
+      { key: 'landing_pages.analytics', ar: 'عرض تحليلات صفحات الهبوط', en: 'View landing page analytics' },
+    ],
+  },
+  {
     module: 'audit',
     items: [{ key: 'audit.view', ar: 'عرض سجل التدقيق', en: 'View audit logs' }],
   },
@@ -226,6 +237,7 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   roles: { ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' },
   settings: { ar: 'الإعدادات', en: 'Settings' },
   audit: { ar: 'سجل التدقيق', en: 'Audit Logs' },
+  landing_pages: { ar: 'صفحات الهبوط', en: 'Landing Pages' },
 };
 
 /** Scope display labels (ar/en). */

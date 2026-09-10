@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -145,11 +145,11 @@ export default function UsersManagementPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a] flex items-center space-x-2 rtl:space-x-reverse">
-              <Users className="w-6 h-6 text-[#d13b4c]" />
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926] flex items-center space-x-2 rtl:space-x-reverse">
+              <Users className="w-6 h-6 text-[#fb323f]" />
               <span>إدارة المستخدمين والأدوار</span>
             </h1>
-            <p className="text-xs text-[#6b7177] mt-1">
+            <p className="text-xs text-[#697586] mt-1">
               مراجعة طلبات التسجيل، تعيين الأدوار، تنشيط/إيقاف الحسابات — كل إجراء يُسجَّل في سجل التدقيق
             </p>
           </div>
@@ -159,11 +159,11 @@ export default function UsersManagementPage() {
         </div>
 
         {error && (
-          <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-lg">{error}</div>
+          <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">{error}</div>
         )}
 
         {/* Filters */}
-        <div className="bg-white border border-[#eef0f3] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white border border-[#e3e8ef] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative sm:col-span-2">
             <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
             <input
@@ -171,7 +171,7 @@ export default function UsersManagementPage() {
               placeholder="بحث بالاسم أو البريد الإلكتروني..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[#f8f9fa] border border-[#eef0f3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e97ff]/30 focus:border-[#3e97ff]"
+              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]"
             />
           </div>
           <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="text-xs py-2">
@@ -201,7 +201,7 @@ export default function UsersManagementPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">المستخدم</th>
                     <th className="px-6 py-3.5">الدور الحالي</th>
@@ -212,11 +212,11 @@ export default function UsersManagementPage() {
                     <th className="px-6 py-3.5 text-right rtl:text-left">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#eef0f3]">
+                <tbody className="divide-y divide-[#e3e8ef]">
                   {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-[#f8f9fa] transition-colors">
+                    <tr key={u.id} className="hover:bg-[#f8fafc] transition-colors">
                       <td className="px-6 py-3.5">
-                        <p className="font-bold text-[#252f4a]">{u.name}</p>
+                        <p className="font-bold text-[#121926]">{u.name}</p>
                         <p className="text-[11px] text-[#9ca3af]">{u.email}</p>
                       </td>
                       <td className="px-6 py-3.5">
@@ -227,13 +227,13 @@ export default function UsersManagementPage() {
                       <td className="px-6 py-3.5">
                         <Badge variant={statusVariant(u.status) as any}>{STATUS_LABELS[u.status] || u.status}</Badge>
                       </td>
-                      <td className="px-6 py-3.5 text-[#6b7177]">
+                      <td className="px-6 py-3.5 text-[#697586]">
                         {format(new Date(u.createdAt), 'yyyy-MM-dd')}
                       </td>
-                      <td className="px-6 py-3.5 text-[#6b7177]">
+                      <td className="px-6 py-3.5 text-[#697586]">
                         {u.lastLoginAt ? format(new Date(u.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—'}
                       </td>
-                      <td className="px-6 py-3.5 text-[#6b7177]">
+                      <td className="px-6 py-3.5 text-[#697586]">
                         {u.assignedBy?.name || '—'}
                       </td>
                       <td className="px-6 py-3.5 text-right rtl:text-left">
@@ -260,7 +260,7 @@ export default function UsersManagementPage() {
               </table>
             </div>
 
-            <div className="px-6 py-3 border-t border-[#eef0f3] flex items-center justify-between text-xs text-[#6b7177]">
+            <div className="px-6 py-3 border-t border-[#e3e8ef] flex items-center justify-between text-xs text-[#697586]">
               <span>
                 إجمالي <strong>{pagination.total}</strong> مستخدم
               </span>
@@ -290,12 +290,12 @@ export default function UsersManagementPage() {
         {manageUser && (
           <div className="space-y-5">
             {modalError && (
-              <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-lg">{modalError}</div>
+              <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">{modalError}</div>
             )}
 
             {/* Assign role */}
-            <div className="border border-[#eef0f3] rounded-xl p-4 space-y-3 bg-[#f8f9fa]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#4b5675]">تعيين / تغيير الدور</h4>
+            <div className="border border-[#e3e8ef] rounded-xl p-4 space-y-3 bg-[#f8fafc]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">تعيين / تغيير الدور</h4>
               <div className="flex items-end space-x-2 rtl:space-x-reverse">
                 <Select
                   label="الدور الجديد"
@@ -320,7 +320,7 @@ export default function UsersManagementPage() {
                   }
                   loading={actionLoading}
                   disabled={selectedRole === manageUser.role}
-                  className="bg-[#d13b4c] hover:bg-[#d13b4c]/85"
+                  className="bg-[#fb323f] hover:bg-[#fb323f]/85"
                 >
                   <ShieldCheck className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                   تعيين
@@ -334,8 +334,8 @@ export default function UsersManagementPage() {
             </div>
 
             {/* Status actions */}
-            <div className="border border-[#eef0f3] rounded-xl p-4 space-y-3 bg-[#f8f9fa]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#4b5675]">حالة الحساب</h4>
+            <div className="border border-[#e3e8ef] rounded-xl p-4 space-y-3 bg-[#f8fafc]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">حالة الحساب</h4>
               <div className="flex flex-wrap gap-2">
                 {manageUser.status === 'PENDING' && (
                   <Button size="sm" variant="success" loading={actionLoading} onClick={() => handleAction('changeStatus', { status: 'ACTIVE' })}>
@@ -390,7 +390,7 @@ export default function UsersManagementPage() {
                   إنهاء الجلسات (Force Logout)
                 </Button>
               </div>
-              <p className="text-[11px] text-[#6b7177]">
+              <p className="text-[11px] text-[#697586]">
                 إيقاف/تعطيل الحساب ينهي جميع الجلسات النشطة فوراً عبر إبطال التوكن الحالي.
               </p>
             </div>
@@ -406,16 +406,16 @@ export default function UsersManagementPage() {
         maxWidth="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-[#4b5675] leading-relaxed">{pendingAction?.msg}</p>
+          <p className="text-sm text-[#364152] leading-relaxed">{pendingAction?.msg}</p>
           {pendingAction?.action === 'assignRole' && (
             <div className="text-xs bg-amber-50 border border-[#f4dcb8] rounded-xl p-3 space-y-1">
               <p>
-                <span className="text-[#6b7177]">الرتبة الحالية:</span>{' '}
+                <span className="text-[#697586]">الرتبة الحالية:</span>{' '}
                 <span className="font-bold">{ROLE_LABELS[manageUser?.role] || manageUser?.role}</span>
               </p>
               <p>
-                <span className="text-[#6b7177]">الرتبة الجديدة:</span>{' '}
-                <span className="font-bold text-[#d13b4c]">{ROLE_LABELS[pendingAction.extra?.role] || pendingAction.extra?.role}</span>
+                <span className="text-[#697586]">الرتبة الجديدة:</span>{' '}
+                <span className="font-bold text-[#fb323f]">{ROLE_LABELS[pendingAction.extra?.role] || pendingAction.extra?.role}</span>
               </p>
             </div>
           )}
@@ -429,8 +429,8 @@ export default function UsersManagementPage() {
               onClick={confirmPendingAction}
               className={
                 pendingAction?.action === 'changeStatus' && pendingAction.extra?.status === 'ACTIVE'
-                  ? 'bg-[#25b865] hover:bg-[#25b865]/85'
-                  : 'bg-[#d13b4c] hover:bg-[#d13b4c]/85'
+                  ? 'bg-[#00c853] hover:bg-[#00c853]/85'
+                  : 'bg-[#fb323f] hover:bg-[#fb323f]/85'
               }
             >
               تأكيد

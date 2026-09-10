@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
@@ -41,7 +41,7 @@ function ResetForm() {
 
   if (!token) {
     return (
-      <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg">
+      <div className="p-3 bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs rounded-lg">
         رابط إعادة التعيين غير صالح — اطلب رابطاً جديداً من صفحة استعادة كلمة المرور.
       </div>
     );
@@ -51,7 +51,7 @@ function ResetForm() {
     <Card className="shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
       <CardContent className="p-6 space-y-4">
         {error && (
-          <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
+          <div className="p-3 bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -86,19 +86,19 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen bg-[#f3f4f6] flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <img src="/logo.svg" alt="Zaki AI" className="w-20 h-16 object-contain" />
-          <h1 className="text-2xl font-semibold text-[#252f4a]">تعيين كلمة مرور جديدة</h1>
+          <h1 className="text-2xl font-semibold text-[#121926]">تعيين كلمة مرور جديدة</h1>
         </div>
 
         <Suspense fallback={null}>
           <ResetForm />
         </Suspense>
 
-        <p className="text-center text-xs text-[#6b7177]">
-          <Link href="/login" className="text-[#3e97ff] font-semibold hover:underline">
+        <p className="text-center text-xs text-[#697586]">
+          <Link href="/login" className="text-[#b8256e] font-semibold hover:underline">
             العودة لتسجيل الدخول
           </Link>
         </p>

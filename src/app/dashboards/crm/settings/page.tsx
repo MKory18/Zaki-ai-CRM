@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -60,7 +60,7 @@ export default function CrmSettingsPage() {
   if (loading) {
     return (
       <AppLayout>
-        <Card><CardContent className="py-12 text-center text-sm text-[#6b7177]">جارٍ التحميل...</CardContent></Card>
+        <Card><CardContent className="py-12 text-center text-sm text-[#697586]">جارٍ التحميل...</CardContent></Card>
       </AppLayout>
     );
   }
@@ -69,13 +69,13 @@ export default function CrmSettingsPage() {
     <AppLayout>
       <div className="space-y-6 max-w-2xl">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">إعدادات CRM</h1>
-          <p className="text-xs text-[#6b7177] mt-1">تفضيلات الشركة لنظام إدارة العلاقات</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#121926]">إعدادات CRM</h1>
+          <p className="text-xs text-[#697586] mt-1">تفضيلات الشركة لنظام إدارة العلاقات</p>
         </div>
 
-        {successMsg && <div className="p-3 bg-[#e8f8ef] border border-[#d2f0de] text-[#25b865] text-xs rounded-lg">{successMsg}</div>}
+        {successMsg && <div className="p-3 bg-[#e6f9ee] border border-[#c8f2d8] text-[#00c853] text-xs rounded-lg">{successMsg}</div>}
         {apiError && (
-          <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg flex items-center gap-2">
+          <div className="p-3 bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs rounded-lg flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             {apiError}
           </div>
@@ -91,11 +91,11 @@ export default function CrmSettingsPage() {
             <Input label="بادئة أرقام الصفقات (اختياري)" placeholder="مثال: DEAL-" value={dealPrefix} onChange={(e) => setDealPrefix(e.target.value)} disabled={readOnly} />
 
             <div>
-              <p className="text-xs font-medium text-[#252f4a] mb-2">ترتيب مراحل خط الصفقات</p>
+              <p className="text-xs font-medium text-[#121926] mb-2">ترتيب مراحل خط الصفقات</p>
               <div className="space-y-2">
                 {stageOrder.map((s, idx) => (
-                  <div key={s} className="flex items-center justify-between p-2.5 bg-[#f8f9fa] rounded-lg">
-                    <span className="text-sm font-medium text-[#252f4a]">{stageLabels[s]?.ar || s}</span>
+                  <div key={s} className="flex items-center justify-between p-2.5 bg-[#f8fafc] rounded-lg">
+                    <span className="text-sm font-medium text-[#121926]">{stageLabels[s]?.ar || s}</span>
                     <span className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" disabled={readOnly || idx === 0} onClick={() => moveStage(idx, -1)} title="أعلى">↑</Button>
                       <Button variant="ghost" size="sm" disabled={readOnly || idx === stageOrder.length - 1} onClick={() => moveStage(idx, 1)} title="أسفل">↓</Button>
@@ -106,7 +106,7 @@ export default function CrmSettingsPage() {
             </div>
 
             {readOnly ? (
-              <p className="text-xs text-[#6b7177] bg-[#f8f9fa] p-3 rounded-lg">
+              <p className="text-xs text-[#697586] bg-[#f8fafc] p-3 rounded-lg">
                 لا يمكن تعديل الإعدادات حالياً — تعديل تفضيلات الشركة متاح للمدراء فقط (صلاحية settings.manage).
               </p>
             ) : (
@@ -121,8 +121,8 @@ export default function CrmSettingsPage() {
         <Card>
           <CardHeader title="ملاحظة" />
           <CardContent>
-            <p className="text-xs text-[#6b7177] flex items-start gap-2">
-              <Settings2 className="w-4 h-4 text-[#3e97ff] shrink-0 mt-0.5" />
+            <p className="text-xs text-[#697586] flex items-start gap-2">
+              <Settings2 className="w-4 h-4 text-[#b8256e] shrink-0 mt-0.5" />
               تُحفظ هذه التفضيلات داخل إعدادات الشركة (Company.settings) وتؤثر على عرض CRM: العملة الافتراضية للصفقات والفواتير الجديدة، وترتيب أعمدة خط الصفقات.
             </p>
           </CardContent>

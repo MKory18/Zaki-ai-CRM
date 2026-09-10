@@ -17,25 +17,25 @@ export function PendingScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
-        <div className="mx-auto w-16 h-16 rounded-[10px] bg-[#fbeeef] border border-[#f4d7da] flex items-center justify-center">
-          <Clock className="w-8 h-8 text-[#d13b4c]" />
+    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4" dir="rtl">
+      <div className="w-full max-w-lg bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
+        <div className="mx-auto w-16 h-16 rounded-[8px] bg-[#feecee] border border-[#fecdd1] flex items-center justify-center">
+          <Clock className="w-8 h-8 text-[#fb323f]" />
         </div>
 
         <div>
-          <h1 className="text-xl font-bold text-[#252f4a]">الحساب بانتظار موافقة المدير</h1>
-          <p className="text-sm text-[#4b5675] mt-3 leading-relaxed">
-            تم إنشاء حسابك بنجاح <strong className="text-[#d13b4c]">{currentUser?.email}</strong>
+          <h1 className="text-xl font-bold text-[#121926]">الحساب بانتظار موافقة المدير</h1>
+          <p className="text-sm text-[#364152] mt-3 leading-relaxed">
+            تم إنشاء حسابك بنجاح <strong className="text-[#fb323f]">{currentUser?.email}</strong>
             <br />
             وهو الآن بانتظار موافقة المدير. سيتم منحك صلاحيات الوصول بعد أن يقوم المدير
             بتعيين دور حسابك وتنشيطه.
           </p>
         </div>
 
-        <div className="bg-[#f8f9fa] border border-[#eef0f3] rounded-[8px] p-4 text-xs text-[#6b7177] space-y-1">
-          <p className="flex items-center justify-center space-x-2 rtl:space-x-reverse text-[#252f4a]">
-            <MailCheck className="w-4 h-4 text-[#e49e3d]" />
+        <div className="bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-4 text-xs text-[#697586] space-y-1">
+          <p className="flex items-center justify-center space-x-2 rtl:space-x-reverse text-[#121926]">
+            <MailCheck className="w-4 h-4 text-[#ffab00]" />
             <span>حالتك الحالية: قيد المراجعة (PENDING)</span>
           </p>
           <p>لن تتمكن من الوصول للطلبات أو العملاء أو المنتجات أو التقارير حتى يتم تنشيط حسابك.</p>
@@ -49,14 +49,14 @@ export function PendingScreen() {
               setChecking(false);
               window.location.reload();
             }}
-            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-white text-[#252f4a] border border-[#eef0f3] hover:bg-[#f8f9fa] transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-white text-[#121926] border border-[#e3e8ef] hover:bg-[#f8fafc] transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
             <span>تحديث الحالة</span>
           </button>
           <button
             onClick={handleLogout}
-            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-[#d13b4c] text-white hover:bg-[#d13b4c]/85 transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-[#fb323f] text-white hover:bg-[#fb323f]/85 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>تسجيل الخروج</span>
@@ -74,22 +74,22 @@ function BlockedScreen({ status }: { status: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
-        <div className="mx-auto w-16 h-16 rounded-[10px] bg-[#fbeeef] border border-[#f4d7da] flex items-center justify-center">
-          <ShieldX className="w-8 h-8 text-[#d13b4c]" />
+    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4" dir="rtl">
+      <div className="w-full max-w-lg bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
+        <div className="mx-auto w-16 h-16 rounded-[8px] bg-[#feecee] border border-[#fecdd1] flex items-center justify-center">
+          <ShieldX className="w-8 h-8 text-[#fb323f]" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-[#252f4a]">
+          <h1 className="text-xl font-bold text-[#121926]">
             {status === 'SUSPENDED' ? 'تم إيقاف حسابك مؤقتاً' : 'تم تعطيل حسابك'}
           </h1>
-          <p className="text-sm text-[#4b5675] mt-3">
+          <p className="text-sm text-[#364152] mt-3">
             يرجى التواصل مع مدير النظام لاستعادة الوصول إلى حسابك.
           </p>
         </div>
         <button
           onClick={handleLogout}
-          className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-[#d13b4c] text-white hover:bg-[#d13b4c]/85 transition-colors cursor-pointer"
+          className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-[#fb323f] text-white hover:bg-[#fb323f]/85 transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
           <span>تسجيل الخروج</span>
@@ -112,7 +112,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] flex flex-col">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <div

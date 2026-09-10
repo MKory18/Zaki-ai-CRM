@@ -43,6 +43,12 @@ export async function GET(req: Request) {
       whereClause.productId = productId;
     }
 
+    // Source filter (Manual, Facebook Ads, WhatsApp, Landing Page, ...)
+    const source = searchParams.get('source')?.trim();
+    if (source && source !== 'all') {
+      whereClause.source = source;
+    }
+
     if (search) {
       const normalizedSearch = normalizePhoneNumber(search);
       whereClause.OR = [

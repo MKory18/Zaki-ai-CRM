@@ -10,12 +10,12 @@ import { crmApi, fetchAssignableUsers } from '@/lib/crm-client';
 import { formatCurrency, stageLabels, DEAL_STAGES, currencyOptions } from '@/lib/crm-format';
 
 const stageColors: Record<string, string> = {
-  NEW: 'bg-[#02a0e4]',
-  QUALIFIED: 'bg-[#7c5cd6]',
-  PROPOSAL: 'bg-[#e49e3d]',
-  NEGOTIATION: 'bg-[#3e97ff]',
-  WON: 'bg-[#25b865]',
-  LOST: 'bg-[#d13b4c]',
+  NEW: 'bg-[#13b5fe]',
+  QUALIFIED: 'bg-[#8c72f7]',
+  PROPOSAL: 'bg-[#ffab00]',
+  NEGOTIATION: 'bg-[#b8256e]',
+  WON: 'bg-[#00c853]',
+  LOST: 'bg-[#fb323f]',
 };
 
 export default function PipelinePage() {
@@ -100,8 +100,8 @@ export default function PipelinePage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">خط الصفقات</h1>
-            <p className="text-xs text-[#6b7177] mt-1">اسحب الصفقات بين المراحل لتحديثها</p>
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">خط الصفقات</h1>
+            <p className="text-xs text-[#697586] mt-1">اسحب الصفقات بين المراحل لتحديثها</p>
           </div>
           <Button size="sm" variant="outline" onClick={load} className="flex items-center gap-1.5">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -116,22 +116,22 @@ export default function PipelinePage() {
             return (
               <div
                 key={stage}
-                className={`min-w-[280px] w-[280px] shrink-0 rounded-[10px] border transition-colors ${dragOverStage === stage ? 'border-[#3e97ff] bg-[#eaf3ff]/50' : 'border-[#eef0f3] bg-[#f8f9fa]'}`}
+                className={`min-w-[280px] w-[280px] shrink-0 rounded-[8px] border transition-colors ${dragOverStage === stage ? 'border-[#b8256e] bg-[#fdf5fa]/50' : 'border-[#e3e8ef] bg-[#f8fafc]'}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverStage(stage); }}
                 onDragLeave={() => setDragOverStage((s) => (s === stage ? null : s))}
                 onDrop={() => handleDrop(stage)}
               >
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#eef0f3]">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[#e3e8ef]">
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full ${stageColors[stage]}`} />
-                    <span className="text-sm font-semibold text-[#252f4a]">{stageLabels[stage].ar}</span>
+                    <span className="text-sm font-semibold text-[#121926]">{stageLabels[stage].ar}</span>
                     <span className="text-xs text-[#9ca3af]">({stageDeals.length})</span>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => openCreate(stage)} title="إضافة صفقة">
-                    <Plus className="w-4 h-4 text-[#3e97ff]" />
+                    <Plus className="w-4 h-4 text-[#b8256e]" />
                   </Button>
                 </div>
-                <p className="px-4 py-2 text-xs font-bold text-[#4b5675]">{formatCurrency(totalValue)}</p>
+                <p className="px-4 py-2 text-xs font-bold text-[#364152]">{formatCurrency(totalValue)}</p>
 
                 <div className="p-2 space-y-2 max-h-[60vh] overflow-y-auto">
                   {stageDeals.map((d) => (
@@ -140,16 +140,16 @@ export default function PipelinePage() {
                       draggable
                       onDragStart={() => setDragging(d)}
                       onDragEnd={() => { setDragging(null); setDragOverStage(null); }}
-                      className={`bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-3 cursor-grab active:cursor-grabbing transition-opacity ${dragging?.id === d.id ? 'opacity-40' : 'hover:shadow-md'}`}
+                      className={`bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-3 cursor-grab active:cursor-grabbing transition-opacity ${dragging?.id === d.id ? 'opacity-40' : 'hover:shadow-md'}`}
                     >
-                      <p className="text-sm font-semibold text-[#252f4a] truncate">{d.title}</p>
-                      <p className="text-xs text-[#6b7177] mt-0.5">
+                      <p className="text-sm font-semibold text-[#121926] truncate">{d.title}</p>
+                      <p className="text-xs text-[#697586] mt-0.5">
                         {d.crmContact ? `${d.crmContact.firstName} ${d.crmContact.lastName}` : '—'}
                       </p>
-                      <p className="text-sm font-bold text-[#252f4a] mt-2">{formatCurrency(d.value, d.currency)}</p>
+                      <p className="text-sm font-bold text-[#121926] mt-2">{formatCurrency(d.value, d.currency)}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <div className="flex-1 h-1.5 bg-[#eef0f3] rounded-full overflow-hidden">
-                          <div className="h-full bg-[#3e97ff] rounded-full" style={{ width: `${d.probability ?? 0}%` }} />
+                        <div className="flex-1 h-1.5 bg-[#e3e8ef] rounded-full overflow-hidden">
+                          <div className="h-full bg-[#b8256e] rounded-full" style={{ width: `${d.probability ?? 0}%` }} />
                         </div>
                         <span className="text-[10px] text-[#9ca3af] font-bold">{d.probability ?? 0}%</span>
                       </div>
@@ -167,7 +167,7 @@ export default function PipelinePage() {
 
       <Modal isOpen={formOpen} onClose={() => setFormOpen(false)} title={`صفقة جديدة — ${stageLabels[preStage].ar}`} maxWidth="lg">
         <form onSubmit={handleCreate} className="space-y-4">
-          {apiError && <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg">{apiError}</div>}
+          {apiError && <div className="p-3 bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs rounded-lg">{apiError}</div>}
           <Input label="عنوان الصفقة *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} error={errors.title} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="القيمة *" type="number" min={0} step="any" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} error={errors.value} />
@@ -176,8 +176,8 @@ export default function PipelinePage() {
             </Select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#252f4a] mb-1.5">الاحتمالية: {form.probability}%</label>
-            <input type="range" min={0} max={100} value={form.probability} onChange={(e) => setForm({ ...form, probability: e.target.value })} className="w-full accent-[#3e97ff] cursor-pointer" />
+            <label className="block text-xs font-medium text-[#121926] mb-1.5">الاحتمالية: {form.probability}%</label>
+            <input type="range" min={0} max={100} value={form.probability} onChange={(e) => setForm({ ...form, probability: e.target.value })} className="w-full accent-[#b8256e] cursor-pointer" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Select label="جهة الاتصال" value={form.crmContactId} onChange={(e) => setForm({ ...form, crmContactId: e.target.value })}>

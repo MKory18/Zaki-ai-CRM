@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -90,8 +90,8 @@ export default function FinancePage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.finance}</h1>
-            <p className="text-xs text-[#6b7177] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.finance}</h1>
+            <p className="text-xs text-[#697586] mt-1">
               Section 17 Strict Financial Accounting: Real Delivered Profit, COGS, Shipping & Operational Expense Ledger
             </p>
           </div>
@@ -147,31 +147,31 @@ export default function FinancePage() {
           />
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-center">
-              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+              <div className="bg-[#f8fafc] p-3 rounded-xl">
                 <span className="text-xs text-[#9ca3af] block">Gross Revenue</span>
-                <span className="text-lg font-bold text-[#25b865] mt-1 block">
+                <span className="text-lg font-bold text-[#00c853] mt-1 block">
                   +${summary.totalRevenue.toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+              <div className="bg-[#f8fafc] p-3 rounded-xl">
                 <span className="text-xs text-[#9ca3af] block">COGS</span>
-                <span className="text-lg font-bold text-[#d13b4c] mt-1 block">
+                <span className="text-lg font-bold text-[#fb323f] mt-1 block">
                   -${summary.totalCOGS.toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+              <div className="bg-[#f8fafc] p-3 rounded-xl">
                 <span className="text-xs text-[#9ca3af] block">Shipping & Comm.</span>
-                <span className="text-lg font-bold text-[#d13b4c] mt-1 block">
+                <span className="text-lg font-bold text-[#fb323f] mt-1 block">
                   -${(summary.totalShipping + summary.totalCommissions).toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+              <div className="bg-[#f8fafc] p-3 rounded-xl">
                 <span className="text-xs text-[#9ca3af] block">Expenses</span>
-                <span className="text-lg font-bold text-[#d13b4c] mt-1 block">
+                <span className="text-lg font-bold text-[#fb323f] mt-1 block">
                   -${summary.totalOperationalExpenses.toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#3e97ff] p-3 rounded-xl">
+              <div className="bg-[#b8256e] p-3 rounded-xl">
                 <span className="text-xs text-white/80 block font-bold">NET CASH PROFIT</span>
                 <span className="text-xl font-black text-white mt-1 block">
                   ${summary.netProfit.toFixed(2)}
@@ -190,7 +190,7 @@ export default function FinancePage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Date</th>
                     <th className="px-6 py-3.5">Expense Title</th>
@@ -199,20 +199,20 @@ export default function FinancePage() {
                     <th className="px-6 py-3.5">Notes</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#eef0f3]">
+                <tbody className="divide-y divide-[#e3e8ef]">
                   {data?.expenses?.map((e: any) => (
-                    <tr key={e.id} className="hover:bg-[#f8f9fa] transition-colors">
-                      <td className="px-6 py-3.5 text-[#6b7177] font-mono">
+                    <tr key={e.id} className="hover:bg-[#f8fafc] transition-colors">
+                      <td className="px-6 py-3.5 text-[#697586] font-mono">
                         {format(new Date(e.expenseDate), 'MMM d, yyyy')}
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#252f4a]">{e.title}</td>
+                      <td className="px-6 py-3.5 font-bold text-[#121926]">{e.title}</td>
                       <td className="px-6 py-3.5">
                         <Badge variant="purple">{e.category}</Badge>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#d13b4c]">
+                      <td className="px-6 py-3.5 font-bold text-[#fb323f]">
                         ${e.amount.toFixed(2)}
                       </td>
-                      <td className="px-6 py-3.5 text-[#6b7177] max-w-sm truncate">
+                      <td className="px-6 py-3.5 text-[#697586] max-w-sm truncate">
                         {e.notes || '—'}
                       </td>
                     </tr>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -113,8 +113,8 @@ export default function NotesPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">الملاحظات</h1>
-            <p className="text-xs text-[#6b7177] mt-1">ملاحظات مرتبطة بجهات الاتصال والصفقات</p>
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">الملاحظات</h1>
+            <p className="text-xs text-[#697586] mt-1">ملاحظات مرتبطة بجهات الاتصال والصفقات</p>
           </div>
           <Button size="sm" onClick={openCreate} className="flex items-center gap-1.5">
             <Plus className="w-4 h-4" />
@@ -125,7 +125,7 @@ export default function NotesPage() {
         <div className="relative max-w-md">
           <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
           <input type="text" placeholder="بحث في الملاحظات..." value={search} onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 rtl:pl-4 rtl:pr-9 pr-4 py-2 text-xs bg-white border border-[#eef0f3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e97ff]/30 focus:border-[#3e97ff] shadow-[0_1px_3px_rgba(0,0,0,0.1)]" />
+            className="w-full pl-9 rtl:pl-4 rtl:pr-9 pr-4 py-2 text-xs bg-white border border-[#e3e8ef] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e] shadow-[0_1px_3px_rgba(0,0,0,0.1)]" />
         </div>
 
         {loading ? (
@@ -137,19 +137,19 @@ export default function NotesPage() {
             {items.map((n) => {
               const rel = relatedLabel(n);
               return (
-                <div key={n.id} className="bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5 space-y-3">
+                <div key={n.id} className="bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5 space-y-3">
                   <div className="flex items-start justify-between">
-                    <span className="p-2 rounded-lg bg-[#fdf4e8] text-[#e49e3d]"><StickyNote className="w-4 h-4" /></span>
+                    <span className="p-2 rounded-lg bg-[#fff6e5] text-[#ffab00]"><StickyNote className="w-4 h-4" /></span>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(n)}><Pencil className="w-3.5 h-3.5 text-[#3e97ff]" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleting(n)}><Trash2 className="w-3.5 h-3.5 text-[#d13b4c]" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(n)}><Pencil className="w-3.5 h-3.5 text-[#b8256e]" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleting(n)}><Trash2 className="w-3.5 h-3.5 text-[#fb323f]" /></Button>
                     </div>
                   </div>
-                  <p className="text-sm text-[#252f4a] whitespace-pre-wrap line-clamp-4">{n.body}</p>
-                  <div className="pt-2 border-t border-[#eef0f3] flex items-center justify-between text-[11px]">
+                  <p className="text-sm text-[#121926] whitespace-pre-wrap line-clamp-4">{n.body}</p>
+                  <div className="pt-2 border-t border-[#e3e8ef] flex items-center justify-between text-[11px]">
                     <span className="text-[#9ca3af]">{n.author?.name || ''} • {formatDateTime(n.createdAt)}</span>
                     {rel && (
-                      <a href={rel.href} className="font-semibold text-[#3e97ff] hover:underline">→ {rel.label}</a>
+                      <a href={rel.href} className="font-semibold text-[#b8256e] hover:underline">→ {rel.label}</a>
                     )}
                   </div>
                 </div>
@@ -158,7 +158,7 @@ export default function NotesPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs text-[#6b7177]">
+        <div className="flex items-center justify-between text-xs text-[#697586]">
           <span>الإجمالي: {total}</span>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>السابق</Button>
@@ -170,7 +170,7 @@ export default function NotesPage() {
 
       <Modal isOpen={formOpen} onClose={() => setFormOpen(false)} title={editing ? 'تعديل ملاحظة' : 'إضافة ملاحظة'} maxWidth="lg">
         <form onSubmit={handleSave} className="space-y-4">
-          {apiError && <div className="p-3 bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs rounded-lg">{apiError}</div>}
+          {apiError && <div className="p-3 bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs rounded-lg">{apiError}</div>}
           <Textarea label="نص الملاحظة *" rows={4} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} error={errors.body} />
           <div className="grid grid-cols-2 gap-3">
             <Select label="جهة الاتصال" value={form.crmContactId} onChange={(e) => setForm({ ...form, crmContactId: e.target.value })}>
@@ -198,7 +198,7 @@ export default function NotesPage() {
       </Modal>
 
       <Modal isOpen={!!deleting} onClose={() => setDeleting(null)} title="تأكيد الحذف" maxWidth="sm">
-        <p className="text-sm text-[#4b5675]">هل أنت متأكد من حذف هذه الملاحظة؟ لا يمكن التراجع.</p>
+        <p className="text-sm text-[#364152]">هل أنت متأكد من حذف هذه الملاحظة؟ لا يمكن التراجع.</p>
         <div className="flex justify-end gap-2 mt-6">
           <Button variant="outline" onClick={() => setDeleting(null)}>إلغاء</Button>
           <Button variant="danger" loading={deleteLoading} onClick={handleDelete}>حذف</Button>

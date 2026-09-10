@@ -37,6 +37,7 @@ model Company {
   deliveryProviders  DeliveryProvider[]
   shippingBatches    ShippingBatch[]
   financialTransactions FinancialTransaction[]
+  landingPages      LandingPage[]
   crmCompanies      CrmCompany[]
   crmContacts       CrmContact[]
   crmLeads          CrmLead[]
@@ -83,6 +84,7 @@ model User {
   claimHistory   OrderClaimHistory[]
   statusLogs     OrderStatusLog[]
   contactAttempts OrderContactAttempt[]
+  createdLandingPages LandingPage[] @relation("LandingPageCreator")
   confirmedOrders Order[]              @relation("OrderConfirmedBy")
   resolvedFollowUps Order[]            @relation("FollowUpResolvedBy")
   createdShippingBatches ShippingBatch[] @relation("ShippingBatchCreator")
@@ -130,6 +132,7 @@ model Product {
   inventoryMovements InventoryMovement[]
   offers             Offer[]
   orders             Order[]
+  landingPages       LandingPage[]
   images             ProductImage[]
 
   @@unique([companyId, sku])
@@ -343,7 +346,8 @@ model Order {
   netProfit            Decimal? @db.Decimal(12, 2)
   financeFinalizedAt   DateTime?
   financeFinalizedById String?
-  source               String    @default("Manual") // Facebook Ads, TikTok, Instagram, WhatsApp, Manual, Website
+  source               String    @default("Manual") // Facebook Ads, TikTok, Instagram, WhatsApp, Manual, Website, Landing Page
+  landingPageId        String?
   internalNotes        String?
   customerNotes        String?
   postponedUntil       DateTime?
@@ -368,6 +372,7 @@ model Order {
   confirmer  User?           @relation("OrderConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
   followUpResolver User?     @relation("FollowUpResolvedBy", fields: [followUpResolvedById], references: [id], onDelete: SetNull)
   callLogs   CallLog[]
+  landingPage LandingPage? @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
   activities OrderActivity[]
   deliveryAttempts DeliveryAttempt[]
   financialTransactions FinancialTransaction[]
@@ -393,6 +398,7 @@ model Order {
   @@index([companyId, lockedById])
   @@index([companyId, confirmationStatus])
   @@index([companyId, settlementStatus])
+  @@index([companyId, landingPageId])
   @@index([lockedById, lockExpiresAt])
   @@map("orders")
 }
@@ -962,4 +968,32 @@ model FinancialTransaction {
   @@index([companyId, type])
   @@index([orderId])
   @@map("financial_transactions")
+}
+
+// ─── LANDING PAGES (additive) ───
+// Public marketing pages that generate real CRM orders.
+// slug is unique per company; htmlContent is stored server-side (never client-trusted).
+model LandingPage {
+  id           String   @id @default(uuid())
+  companyId    String
+  name         String
+  slug         String
+  htmlContent  String?  @db.Text
+  productId    String?
+  isPublished  Boolean  @default(false)
+  viewsCount   Int      @default(0) // view = one successful public page render (no PII)
+  ordersCount  Int      @default(0)
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  creator User?    @relation("LandingPageCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  orders  Order[]
+
+  @@unique([companyId, slug])
+  @@index([companyId])
+  @@index([companyId, isPublished])
+  @@map("landing_pages")
 }

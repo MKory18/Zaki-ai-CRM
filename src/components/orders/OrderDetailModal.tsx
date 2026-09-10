@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/ui/Modal';
@@ -96,7 +96,7 @@ interface OrderDetailModalProps {
   onClose: () => void;
   onRefresh: () => void;
   /** Current list filters so prev/next navigation matches the list context */
-  filters?: { q?: string; status?: string; productId?: string; moderatorId?: string; queue?: string };
+  filters?: { q?: string; status?: string; productId?: string; moderatorId?: string; queue?: string; source?: string };
 }
 
 export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters }: OrderDetailModalProps) {
@@ -469,7 +469,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       isOpen={isOpen}
       onClose={onClose}
       title={`الطلب ${order.orderNumber}`}
-      subtitle={`أُنشئ في ${format(new Date(order.createdAt), 'd MMMM yyyy — h:mm a', {})} • المصدر: ${order.source}`}
+      subtitle={`أُنشئ في ${format(new Date(order.createdAt), 'd MMMM yyyy — h:mm a', {})} • المصدر: ${order.source}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}`}
       maxWidth="4xl"
     >
       {/* ─── Prev/Next order navigation (below the header, inside the modal) ─── */}
@@ -711,7 +711,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 flex items-center gap-2">
-                <Pencil className="w-4 h-4 text-[#3e97ff]" />
+                <Pencil className="w-4 h-4 text-[#b8256e]" />
                 تعديل بيانات الطلب
               </h4>
               <Button size="sm" variant="outline" onClick={openEditForm} loading={ownership.actionLoading === 'lock'}>

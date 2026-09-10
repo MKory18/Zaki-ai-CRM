@@ -19,7 +19,7 @@ const COOKIE_NAME = 'salesflow_session';
 
 const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];
 
-/** Route â†’ required permission (enforced at the edge, verified again in every API) */
+/** Route → required permission (enforced at the edge, verified again in every API) */
 const PERMISSION_MAP: Record<string, Permission> = {
   '/orders': 'orders.view',
   '/customers': 'customers.view',
@@ -51,11 +51,11 @@ function redirectTo(req: Request, path: string) {
  * Trade-off (documented): browsers attach an Origin header to cross-site
  * mutations and to same-origin POST/PUT/PATCH/DELETE fetches, so a forged
  * cross-site request is always rejected. Requests WITHOUT an Origin header
- * (server-to-server clients, curl) pass through â€” they cannot be produced
+ * (server-to-server clients, curl) pass through — they cannot be produced
  * by a victim's browser on a cross-site form/image submission.
  *
- * - ALLOWED_ORIGINS set (comma-separated) â†’ Origin must be same-origin or listed.
- * - ALLOWED_ORIGINS empty (default) â†’ same-origin only.
+ * - ALLOWED_ORIGINS set (comma-separated) → Origin must be same-origin or listed.
+ * - ALLOWED_ORIGINS empty (default) → same-origin only.
  */
 function validateApiOrigin(req: Request): NextResponse | null {
   const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
@@ -90,7 +90,7 @@ function validateApiOrigin(req: Request): NextResponse | null {
     });
 
   if (!inList) {
-    return NextResponse.json({ errorAr: 'ط·ظ„ط¨ ط؛ظٹط± ظ…ظˆط«ظˆظ‚ ط§ظ„ظ…طµط¯ط±' }, { status: 403 });
+    return NextResponse.json({ errorAr: 'طلب غير موثوق المصدر' }, { status: 403 });
   }
   return null;
 }
@@ -98,7 +98,7 @@ function validateApiOrigin(req: Request): NextResponse | null {
 export async function proxy(req: Request) {
   const { pathname } = new URL(req.url);
 
-  // API routes: enforce origin validation on mutations, then pass through â€”
+  // API routes: enforce origin validation on mutations, then pass through —
   // authentication/authorization is handled inside each route handler.
   if (pathname.startsWith('/api/')) {
     const originError = validateApiOrigin(req);

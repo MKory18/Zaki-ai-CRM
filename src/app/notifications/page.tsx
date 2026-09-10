@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -73,15 +73,15 @@ export default function NotificationsPage() {
   const getIcon = (type: string) => {
     switch (type) {
       case 'ORDER_NEW':
-        return <ShoppingBag className="w-4 h-4 text-[#d13b4c]" />;
+        return <ShoppingBag className="w-4 h-4 text-[#fb323f]" />;
       case 'FOLLOW_UP':
-        return <Clock className="w-4 h-4 text-[#e49e3d]" />;
+        return <Clock className="w-4 h-4 text-[#ffab00]" />;
       case 'LOW_STOCK':
-        return <Package className="w-4 h-4 text-[#d13b4c]" />;
+        return <Package className="w-4 h-4 text-[#fb323f]" />;
       case 'HIGH_REJECTION':
-        return <AlertTriangle className="w-4 h-4 text-[#d13b4c]" />;
+        return <AlertTriangle className="w-4 h-4 text-[#fb323f]" />;
       default:
-        return <Bell className="w-4 h-4 text-[#d13b4c]" />;
+        return <Bell className="w-4 h-4 text-[#fb323f]" />;
     }
   };
 
@@ -91,16 +91,16 @@ export default function NotificationsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a] flex items-center space-x-2">
-              <Bell className="w-6 h-6 text-[#d13b4c]" />
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926] flex items-center space-x-2">
+              <Bell className="w-6 h-6 text-[#fb323f]" />
               <span>{t.notifications}</span>
               {unreadCount > 0 && (
-                <span className="text-xs font-bold bg-[#d13b4c] text-white px-2 py-0.5 rounded-full ml-2">
+                <span className="text-xs font-bold bg-[#fb323f] text-white px-2 py-0.5 rounded-full ml-2">
                   {unreadCount} New
                 </span>
               )}
             </h1>
-            <p className="text-xs text-[#6b7177] mt-1">
+            <p className="text-xs text-[#697586] mt-1">
               Section 28 Operational notifications: new leads, callbacks required, low stock & rejection alerts
             </p>
           </div>
@@ -121,7 +121,7 @@ export default function NotificationsPage() {
         {/* Notifications List */}
         <Card>
           <CardContent className="p-0">
-            <div className="divide-y divide-[#eef0f3]">
+            <div className="divide-y divide-[#e3e8ef]">
               {notifications.length === 0 ? (
                 <div className="p-12 text-center text-[#9ca3af] text-xs">
                   No notifications at this time.
@@ -131,21 +131,21 @@ export default function NotificationsPage() {
                   <div
                     key={n.id}
                     className={`p-4 flex items-start justify-between gap-4 transition-colors ${
-                      n.isRead ? 'bg-white' : 'bg-[#fbe9ea]/40'
+                      n.isRead ? 'bg-white' : 'bg-[#feecee]/40'
                     }`}
                   >
                     <div className="flex items-start space-x-3 rtl:space-x-reverse">
-                      <div className="p-2 bg-[#f3f4f6] rounded-lg shrink-0 mt-0.5">
+                      <div className="p-2 bg-[#f8fafc] rounded-lg shrink-0 mt-0.5">
                         {getIcon(n.type)}
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <h4 className="text-xs font-bold text-[#252f4a]">{n.title}</h4>
+                          <h4 className="text-xs font-bold text-[#121926]">{n.title}</h4>
                           {!n.isRead && (
-                            <span className="w-2 h-2 rounded-full bg-[#d13b4c]" />
+                            <span className="w-2 h-2 rounded-full bg-[#fb323f]" />
                           )}
                         </div>
-                        <p className="text-xs text-[#4b5675] mt-1">{n.message}</p>
+                        <p className="text-xs text-[#364152] mt-1">{n.message}</p>
                         <p className="text-[10px] text-[#9ca3af] mt-1 font-mono">
                           {format(new Date(n.createdAt), 'PPP p')}
                         </p>

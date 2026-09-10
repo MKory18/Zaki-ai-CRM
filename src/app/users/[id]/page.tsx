@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * SALESFLOW â€” /users/[id]: employee profile.
+ * SALESFLOW — /users/[id]: employee profile.
  * Identity + role/status + workload (assigned & claimed orders).
  * All data comes from the server; actions link back to the manage modal on /users.
  */
@@ -72,7 +72,7 @@ export default function UserProfilePage() {
         }
         const data = await res.json();
         setUser(data);
-        // Load assignable roles (system + company) â€” server enforces roles.view
+        // Load assignable roles (system + company) — server enforces roles.view
         // via the same API used by /roles; failure is non-fatal here.
         try {
           const rolesRes = await fetch('/api/roles');
@@ -102,7 +102,7 @@ export default function UserProfilePage() {
     return (
       <AppLayout>
         <div className="flex justify-center py-24">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3e97ff]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#b8256e]" />
         </div>
       </AppLayout>
     );
@@ -112,9 +112,9 @@ export default function UserProfilePage() {
     return (
       <AppLayout>
         <div className="space-y-4 text-center py-16" dir={isRtl ? 'rtl' : 'ltr'}>
-          <p className="text-sm text-[#d13b4c]">{error || (ar ? 'ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯' : 'User not found')}</p>
+          <p className="text-sm text-[#fb323f]">{error || (ar ? 'المستخدم غير موجود' : 'User not found')}</p>
           <Button variant="outline" size="sm" onClick={() => router.push('/users')}>
-            {ar ? 'ط¹ظˆط¯ط© ظ„ظ„ظ…ظˆط¸ظپظٹظ†' : 'Back to Employees'}
+            {ar ? 'عودة للموظفين' : 'Back to Employees'}
           </Button>
         </div>
       </AppLayout>
@@ -122,10 +122,10 @@ export default function UserProfilePage() {
   }
 
   const statusCls: Record<string, string> = {
-    ACTIVE: 'bg-emerald-100 text-[#25b865] border-[#bfe8d0]',
+    ACTIVE: 'bg-emerald-100 text-[#00c853] border-[#bfe8d0]',
     PENDING: 'bg-amber-50 text-[#c07f2a] border-amber-300',
-    SUSPENDED: 'bg-[#fbe9ea] text-[#d13b4c] border-[#f5c6cb]',
-    DISABLED: 'bg-[#f3f4f6] text-[#6b7177] border-[#e2e5ec]',
+    SUSPENDED: 'bg-[#feecee] text-[#fb323f] border-[#f5c6cb]',
+    DISABLED: 'bg-[#f8fafc] text-[#697586] border-[#e2e5ec]',
   };
 
   const currentRoleRow = roles.find((r) => r.name === user.role);
@@ -144,11 +144,11 @@ export default function UserProfilePage() {
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || (ar ? 'ظپط´ظ„ ط­ظپط¸ ط§ظ„ط¯ظˆط±' : 'Failed to update role'));
+        throw new Error(d.error || (ar ? 'فشل حفظ الدور' : 'Failed to update role'));
       }
       const d = await res.json();
       setUser((prev: any) => ({ ...prev, role: d.user?.role ?? prev.role }));
-      setRoleFlash(ar ? 'طھظ… طھط­ط¯ظٹط« ط§ظ„ط¯ظˆط± ط¨ظ†ط¬ط§ط­' : 'Role updated successfully');
+      setRoleFlash(ar ? 'تم تحديث الدور بنجاح' : 'Role updated successfully');
       setTimeout(() => setRoleFlash(null), 2500);
     } catch (e: any) {
       setRoleError(e.message);
@@ -163,7 +163,7 @@ export default function UserProfilePage() {
         <div className="flex items-center justify-between gap-3">
           <Button variant="outline" size="sm" onClick={() => router.push('/users')}>
             <ArrowRight className="w-4 h-4 rtl:rotate-180" />
-            {ar ? 'ط¹ظˆط¯ط© ظ„ظ„ظ…ظˆط¸ظپظٹظ†' : 'Back to Employees'}
+            {ar ? 'عودة للموظفين' : 'Back to Employees'}
           </Button>
         </div>
 
@@ -171,12 +171,12 @@ export default function UserProfilePage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#fbe9ea] border-2 border-[#f5c6cb] flex items-center justify-center shrink-0">
-                <UserIcon className="w-7 h-7 text-[#d13b4c]" />
+              <div className="w-14 h-14 rounded-2xl bg-[#feecee] border-2 border-[#f5c6cb] flex items-center justify-center shrink-0">
+                <UserIcon className="w-7 h-7 text-[#fb323f]" />
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-lg font-bold text-[#252f4a] truncate">{user.name}</h1>
-                <p className="text-xs text-[#6b7177] flex items-center gap-1.5 mt-0.5" dir="ltr">
+                <h1 className="text-lg font-bold text-[#121926] truncate">{user.name}</h1>
+                <p className="text-xs text-[#697586] flex items-center gap-1.5 mt-0.5" dir="ltr">
                   <Mail className="w-3 h-3" />
                   {user.email}
                 </p>
@@ -187,19 +187,19 @@ export default function UserProfilePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 text-xs">
-              <div className="rounded-xl bg-[#f8f9fa] px-3 py-2.5">
-                <p className="text-[10px] text-[#9ca3af] flex items-center gap-1"><ShieldCheck className="w-3 h-3" />{ar ? 'ط§ظ„ط±طھط¨ط©' : 'Role'}</p>
-                <p className="font-bold text-[#252f4a]">{user.role}</p>
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-2.5">
+                <p className="text-[10px] text-[#9ca3af] flex items-center gap-1"><ShieldCheck className="w-3 h-3" />{ar ? 'الرتبة' : 'Role'}</p>
+                <p className="font-bold text-[#121926]">{user.role}</p>
               </div>
-              <div className="rounded-xl bg-[#f8f9fa] px-3 py-2.5">
-                <p className="text-[10px] text-[#9ca3af] flex items-center gap-1"><Clock className="w-3 h-3" />{ar ? 'ط¢ط®ط± ط¯ط®ظˆظ„' : 'Last Login'}</p>
-                <p className="font-bold text-[#252f4a]">
-                  {user.lastLoginAt ? format(new Date(user.lastLoginAt), 'yyyy-MM-dd HH:mm') : 'â€”'}
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-2.5">
+                <p className="text-[10px] text-[#9ca3af] flex items-center gap-1"><Clock className="w-3 h-3" />{ar ? 'آخر دخول' : 'Last Login'}</p>
+                <p className="font-bold text-[#121926]">
+                  {user.lastLoginAt ? format(new Date(user.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—'}
                 </p>
               </div>
-              <div className="rounded-xl bg-[#f8f9fa] px-3 py-2.5">
-                <p className="text-[10px] text-[#9ca3af]">{ar ? 'طھط§ط±ظٹط® ط§ظ„طھط³ط¬ظٹظ„' : 'Created'}</p>
-                <p className="font-bold text-[#252f4a]">{format(new Date(user.createdAt), 'yyyy-MM-dd')}</p>
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-2.5">
+                <p className="text-[10px] text-[#9ca3af]">{ar ? 'تاريخ التسجيل' : 'Created'}</p>
+                <p className="font-bold text-[#121926]">{format(new Date(user.createdAt), 'yyyy-MM-dd')}</p>
               </div>
             </div>
           </CardContent>
@@ -208,27 +208,27 @@ export default function UserProfilePage() {
         {/* Role assignment (roleId-based) */}
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-xs font-black uppercase tracking-wide text-[#4b5675] mb-3 flex items-center gap-1.5">
+            <h3 className="text-xs font-black uppercase tracking-wide text-[#364152] mb-3 flex items-center gap-1.5">
               <KeyRound className="w-3.5 h-3.5" />
-              {ar ? 'ط§ظ„ط¯ظˆط± ظˆط§ظ„طµظ„ط§ط­ظٹط§طھ' : 'Role & Permissions'}
+              {ar ? 'الدور والصلاحيات' : 'Role & Permissions'}
             </h3>
             {roleFlash && (
-              <div className="mb-3 rounded-lg bg-[#e8f8ef] border border-[#d2f0de] text-[#25b865] text-xs font-medium px-3 py-2">
+              <div className="mb-3 rounded-lg bg-[#e6f9ee] border border-[#c8f2d8] text-[#00c853] text-xs font-medium px-3 py-2">
                 {roleFlash}
               </div>
             )}
             {roleError && (
-              <div className="mb-3 rounded-lg bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs font-medium px-3 py-2">
+              <div className="mb-3 rounded-lg bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs font-medium px-3 py-2">
                 {roleError}
               </div>
             )}
             <div className="flex flex-col sm:flex-row sm:items-end gap-3">
               <div className="flex-1 space-y-1">
-                <p className="text-[10px] text-[#9ca3af]">{ar ? 'ط§ظ„ط¯ظˆط± ط§ظ„ط­ط§ظ„ظٹ' : 'Current role'}</p>
-                <p className="text-sm font-bold text-[#252f4a]">{user.role}</p>
+                <p className="text-[10px] text-[#9ca3af]">{ar ? 'الدور الحالي' : 'Current role'}</p>
+                <p className="text-sm font-bold text-[#121926]">{user.role}</p>
                 {effectivePermsCount !== null && (
-                  <p className="text-[11px] text-[#6b7177]">
-                    {ar ? `${effectivePermsCount} طµظ„ط§ط­ظٹط© ظپط¹ظ‘ط§ظ„ط©` : `${effectivePermsCount} effective permissions`}
+                  <p className="text-[11px] text-[#697586]">
+                    {ar ? `${effectivePermsCount} صلاحية فعّالة` : `${effectivePermsCount} effective permissions`}
                   </p>
                 )}
               </div>
@@ -236,20 +236,20 @@ export default function UserProfilePage() {
                 <>
                   <div className="flex-1 max-w-xs">
                     <Select
-                      label={ar ? 'طھط؛ظٹظٹط± ط§ظ„ط¯ظˆط±' : 'Change role'}
+                      label={ar ? 'تغيير الدور' : 'Change role'}
                       value={selectedRoleId}
                       onChange={(e) => setSelectedRoleId(e.target.value)}
                       options={[
-                        { value: '', label: ar ? 'â€” ط§ط®طھط± ط¯ظˆط±ظ‹ط§ â€”' : 'â€” Pick a role â€”' },
+                        { value: '', label: ar ? '— اختر دورًا —' : '— Pick a role —' },
                         ...roles.map((r) => ({
                           value: r.id,
-                          label: `${r.name}${r.isSystem ? (ar ? ' (ظ†ط¸ط§ظ…ظٹ)' : ' (system)') : ''}`,
+                          label: `${r.name}${r.isSystem ? (ar ? ' (نظامي)' : ' (system)') : ''}`,
                         })),
                       ]}
                     />
                   </div>
                   <Button onClick={saveRole} loading={savingRole} disabled={!selectedRoleId}>
-                    {ar ? 'ط­ظپط¸ ط§ظ„ط¯ظˆط±' : 'Save role'}
+                    {ar ? 'حفظ الدور' : 'Save role'}
                   </Button>
                 </>
               )}
@@ -257,7 +257,7 @@ export default function UserProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Effective permissions + user overrides (Phase 5) â€” gated server-side by users.view/users.edit */}
+        {/* Effective permissions + user overrides (Phase 5) — gated server-side by users.view/users.edit */}
         {userCan(currentUser, 'users.view') && userId && (
           <UserPermissionsSection userId={userId} canEdit={userCan(currentUser, 'users.edit')} />
         )}
@@ -265,21 +265,21 @@ export default function UserProfilePage() {
         {/* Workload */}
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-xs font-black uppercase tracking-wide text-[#4b5675] mb-3">
-              {ar ? 'ط­ط¬ظ… ط§ظ„ط¹ظ…ظ„ ط§ظ„ط­ط§ظ„ظٹ' : 'Current Workload'}
+            <h3 className="text-xs font-black uppercase tracking-wide text-[#364152] mb-3">
+              {ar ? 'حجم العمل الحالي' : 'Current Workload'}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-              <div className="rounded-xl border border-[#eef0f3] px-3 py-4">
-                <p className="text-2xl font-black text-[#d13b4c]">{user.workload?.assigned ?? 0}</p>
-                <p className="text-[11px] text-[#6b7177] mt-1">{ar ? 'ط·ظ„ط¨ط§طھ ظ…ط³ظ†ط¯ط©' : 'Assigned Orders'}</p>
+              <div className="rounded-xl border border-[#e3e8ef] px-3 py-4">
+                <p className="text-2xl font-black text-[#fb323f]">{user.workload?.assigned ?? 0}</p>
+                <p className="text-[11px] text-[#697586] mt-1">{ar ? 'طلبات مسندة' : 'Assigned Orders'}</p>
               </div>
-              <div className="rounded-xl bg-[#f8f9fa] px-3 py-4">
-                <p className="text-2xl font-black text-[#252f4a]">{user.workload?.claimed ?? 0}</p>
-                <p className="text-[11px] text-[#6b7177] mt-1">{ar ? 'ط·ظ„ط¨ط§طھ ظ…ط³طھظ„ظ…ط©' : 'Claimed Orders'}</p>
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-4">
+                <p className="text-2xl font-black text-[#121926]">{user.workload?.claimed ?? 0}</p>
+                <p className="text-[11px] text-[#697586] mt-1">{ar ? 'طلبات مستلمة' : 'Claimed Orders'}</p>
               </div>
-              <div className="rounded-xl bg-[#f8f9fa] px-3 py-4">
-                <p className="text-2xl font-black text-[#252f4a]">{user.workload?.created ?? 0}</p>
-                <p className="text-[11px] text-[#6b7177] mt-1">{ar ? 'ط·ظ„ط¨ط§طھ ظ…ظ†ط´ط£ط©' : 'Created Orders'}</p>
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-4">
+                <p className="text-2xl font-black text-[#121926]">{user.workload?.created ?? 0}</p>
+                <p className="text-[11px] text-[#697586] mt-1">{ar ? 'طلبات منشأة' : 'Created Orders'}</p>
               </div>
             </div>
           </CardContent>
@@ -289,7 +289,7 @@ export default function UserProfilePage() {
   );
 }
 
-// â”€â”€â”€ Phase 5: Effective permissions inspector + user override editor â”€â”€â”€
+// ─── Phase 5: Effective permissions inspector + user override editor ───
 // Server remains the source of truth: /api/users/:id/permissions (GET/PUT)
 // and /api/users/:id/permissions/:permission (DELETE) enforce users.view /
 // users.edit plus tenant and SUPER_ADMIN guards. This UI only gates affordances.
@@ -357,7 +357,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
       const res = await fetch(`/api/users/${userId}/permissions`);
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || (ar ? 'ظپط´ظ„ طھط­ظ…ظٹظ„ ط§ظ„طµظ„ط§ط­ظٹط§طھ' : 'Failed to load permissions'));
+        throw new Error(d.error || (ar ? 'فشل تحميل الصلاحيات' : 'Failed to load permissions'));
       }
       const data: PermsPayload = await res.json();
       setPayload(data);
@@ -381,7 +381,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
   );
   const isFullAccess = payload?.effective.fullAccess ?? false;
 
-  // â”€â”€ Effective-permission table rows: roleGrants âˆھ overrides âˆھ effective â”€â”€
+  // ── Effective-permission table rows: roleGrants ∪ overrides ∪ effective ──
   const rows = useMemo<EffectiveRow[]>(() => {
     if (!payload) return [];
     const keys = new Set<string>([
@@ -389,7 +389,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
       ...payload.overrides.map((o) => o.permission),
       ...(payload.effective.fullAccess ? [] : Object.keys(payload.effective.grants)),
     ]);
-    // Sort by catalog order (module â†’ item) for a predictable layout
+    // Sort by catalog order (module → item) for a predictable layout
     const order = new Map<string, number>();
     PERMISSION_MODULES.forEach((m, mi) => m.items.forEach((i, ii) => order.set(i.key, mi * 1000 + ii)));
     return [...keys].sort((a, b) => (order.get(a) ?? 999999) - (order.get(b) ?? 999999)).map((key) => {
@@ -417,7 +417,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
     );
   }, [rows, tableSearch]);
 
-  // â”€â”€ Modal helpers â”€â”€
+  // ── Modal helpers ──
   function openAddModal() {
     setDraftKey('');
     setDraftEffect('ALLOW');
@@ -435,7 +435,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
     setModalError(null);
     const existing = overridesMap.get(key);
     if (existing) {
-      // Permission already has an override â†’ prefill (edit-in-place semantics)
+      // Permission already has an override → prefill (edit-in-place semantics)
       setDraftEffect(existing.effect === 'DENY' ? 'DENY' : 'ALLOW');
       const declared: readonly string[] = catalogItem(key)?.scopes ?? ['ALL_COMPANY'];
       const s = (existing.scope as ScopeValue) ?? 'ALL_COMPANY';
@@ -471,7 +471,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
         return r.json();
       })
       .then((d) => setCategories(d.categories ?? []))
-      .catch(() => setCategoriesError(ar ? 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ظپط¦ط§طھ' : 'Failed to load categories'));
+      .catch(() => setCategoriesError(ar ? 'تعذر تحميل الفئات' : 'Failed to load categories'));
   }, [modalOpen, draftEffect, draftScope, categories.length, categoriesError, ar]);
 
   // Debounced product search for SPECIFIC scope
@@ -489,7 +489,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
           (data.products ?? []).map((p: any) => ({ id: p.id, name: p.name, sku: p.sku }))
         );
       } catch {
-        setProductsError(ar ? 'طھط¹ط°ط± ط§ظ„ط¨ط­ط« ظپظٹ ط§ظ„ظ…ظ†طھط¬ط§طھ' : 'Product search failed');
+        setProductsError(ar ? 'تعذر البحث في المنتجات' : 'Product search failed');
       } finally {
         setProductLoading(false);
       }
@@ -502,14 +502,14 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
   async function saveOverride() {
     if (!payload) return;
     if (!draftKey) {
-      setModalError(ar ? 'ط§ط®طھط± طµظ„ط§ط­ظٹط© ط£ظˆظ„ظ‹ط§' : 'Pick a permission first');
+      setModalError(ar ? 'اختر صلاحية أولًا' : 'Pick a permission first');
       return;
     }
     if (draftEffect === 'ALLOW' && (draftScope === 'CATEGORY' || draftScope === 'SPECIFIC') && draftScopeIds.length === 0) {
       setModalError(
         draftScope === 'CATEGORY'
-          ? (ar ? 'ط§ط®طھط± ظپط¦ط© ظˆط§ط­ط¯ط© ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„' : 'Pick at least one category')
-          : (ar ? 'ط§ط®طھط± ظ…ظ†طھط¬ظ‹ط§ ظˆط§ط­ط¯ظ‹ط§ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„' : 'Pick at least one product')
+          ? (ar ? 'اختر فئة واحدة على الأقل' : 'Pick at least one category')
+          : (ar ? 'اختر منتجًا واحدًا على الأقل' : 'Pick at least one product')
       );
       return;
     }
@@ -541,10 +541,10 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || (ar ? 'ظپط´ظ„ ط­ظپط¸ ط§ظ„ط§ط³طھط«ظ†ط§ط،ط§طھ' : 'Failed to save overrides'));
+        throw new Error(d.error || (ar ? 'فشل حفظ الاستثناءات' : 'Failed to save overrides'));
       }
       setModalOpen(false);
-      showFlash(ar ? 'طھظ… ط­ظپط¸ ط§ظ„ط§ط³طھط«ظ†ط§ط،ط§طھ ط¨ظ†ط¬ط§ط­' : 'Overrides saved successfully');
+      showFlash(ar ? 'تم حفظ الاستثناءات بنجاح' : 'Overrides saved successfully');
       await loadPerms();
     } catch (e: any) {
       setModalError(e.message);
@@ -561,9 +561,9 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || (ar ? 'ظپط´ظ„ ط¥ط²ط§ظ„ط© ط§ظ„ط§ط³طھط«ظ†ط§ط،' : 'Failed to remove override'));
+        throw new Error(d.error || (ar ? 'فشل إزالة الاستثناء' : 'Failed to remove override'));
       }
-      showFlash(ar ? 'طھظ… ط¥ط²ط§ظ„ط© ط§ظ„ط§ط³طھط«ظ†ط§ط،' : 'Override removed');
+      showFlash(ar ? 'تم إزالة الاستثناء' : 'Override removed');
       await loadPerms();
     } catch (e: any) {
       setLoadError(e.message);
@@ -578,110 +578,110 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
 
   return (
     <>
-      {/* Card 1 â€” Effective permissions */}
+      {/* Card 1 — Effective permissions */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-xs font-black uppercase tracking-wide text-[#4b5675] mb-3 flex items-center gap-1.5">
+          <h3 className="text-xs font-black uppercase tracking-wide text-[#364152] mb-3 flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5" />
-            {ar ? 'ط§ظ„طµظ„ط§ط­ظٹط§طھ ط§ظ„ظپط¹ظ‘ط§ظ„ط©' : 'Effective Permissions'}
+            {ar ? 'الصلاحيات الفعّالة' : 'Effective Permissions'}
           </h3>
 
           {loadError && (
-            <div className="rounded-lg bg-[#fbeeef] border border-[#f4d7da] text-[#d13b4c] text-xs font-medium px-3 py-2 mb-3 flex items-center justify-between gap-2">
+            <div className="rounded-lg bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs font-medium px-3 py-2 mb-3 flex items-center justify-between gap-2">
               <span>{loadError}</span>
               <Button variant="outline" size="sm" onClick={loadPerms}>
-                {ar ? 'ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©' : 'Retry'}
+                {ar ? 'إعادة المحاولة' : 'Retry'}
               </Button>
             </div>
           )}
 
           {!payload && !loadError && (
-            <p className="text-xs text-[#9ca3af] py-3">{ar ? 'ط¬ط§ط±ظگ ط§ظ„طھط­ظ…ظٹظ„â€¦' : 'Loadingâ€¦'}</p>
+            <p className="text-xs text-[#9ca3af] py-3">{ar ? 'جارِ التحميل…' : 'Loading…'}</p>
           )}
 
           {payload && (
             <>
               {/* Summary line */}
-              <div className="rounded-xl bg-[#f8f9fa] px-3 py-2.5 text-xs text-[#4b5675] mb-3 flex flex-wrap gap-x-3 gap-y-1">
-                <span className="font-bold text-[#252f4a]">
-                  {ar ? `ط§ظ„ط¯ظˆط±: ${payload.role.name}` : `Role: ${payload.role.name}`}
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-2.5 text-xs text-[#364152] mb-3 flex flex-wrap gap-x-3 gap-y-1">
+                <span className="font-bold text-[#121926]">
+                  {ar ? `الدور: ${payload.role.name}` : `Role: ${payload.role.name}`}
                 </span>
                 <span>
-                  â€¢{' '}
+                  •{' '}
                   {isFullAccess
-                    ? (ar ? 'ظˆطµظˆظ„ ظƒط§ظ…ظ„ (ظƒظ„ ط§ظ„طµظ„ط§ط­ظٹط§طھ)' : 'Full access (all permissions)')
-                    : (ar ? `${effectiveCount} طµظ„ط§ط­ظٹط© ظپط¹ظ‘ط§ظ„ط©` : `${effectiveCount} effective permissions`)}
+                    ? (ar ? 'وصول كامل (كل الصلاحيات)' : 'Full access (all permissions)')
+                    : (ar ? `${effectiveCount} صلاحية فعّالة` : `${effectiveCount} effective permissions`)}
                 </span>
-                <span>â€¢ {ar ? `${overrideCount} ط§ط³طھط«ظ†ط§ط،` : `${overrideCount} overrides`}</span>
+                <span>• {ar ? `${overrideCount} استثناء` : `${overrideCount} overrides`}</span>
               </div>
 
               {isFullAccess ? (
-                <p className="text-xs text-[#6b7177]">
+                <p className="text-xs text-[#697586]">
                   {ar
-                    ? 'ط­ط³ط§ط¨ SUPER_ADMIN â€” ظˆطµظˆظ„ ظƒط§ظ…ظ„ ظ…ط±ظƒط²ظٹظ‹ط§ ظˆظ„ط§ ظٹظ‚ط¨ظ„ ط§ط³طھط«ظ†ط§ط،ط§طھ.'
-                    : 'SUPER_ADMIN account â€” central full access; overrides do not apply.'}
+                    ? 'حساب SUPER_ADMIN — وصول كامل مركزيًا ولا يقبل استثناءات.'
+                    : 'SUPER_ADMIN account — central full access; overrides do not apply.'}
                 </p>
               ) : (
                 <>
                   <div className="relative max-w-xs mb-3">
-                    <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-3.5 h-3.5 text-[#9aa0aa]" />
+                    <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-3.5 h-3.5 text-[#9aa4b2]" />
                     <Input
                       value={tableSearch}
                       onChange={(e) => setTableSearch(e.target.value)}
-                      placeholder={ar ? 'ط¨ط­ط« ظپظٹ ط§ظ„طµظ„ط§ط­ظٹط§طھâ€¦' : 'Search permissionsâ€¦'}
+                      placeholder={ar ? 'بحث في الصلاحيات…' : 'Search permissions…'}
                       className="ps-8 text-xs"
                     />
                   </div>
-                  <div className="overflow-x-auto rounded-xl border border-[#eef0f3]">
+                  <div className="overflow-x-auto rounded-xl border border-[#e3e8ef]">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="bg-[#f8f9fa] text-[#4b5675]">
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'ط§ظ„طµظ„ط§ط­ظٹط©' : 'Permission'}</th>
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'ظ…ظ† ط§ظ„ط¯ظˆط±' : 'Role'}</th>
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'ط§ظ„ط§ط³طھط«ظ†ط§ط،' : 'Override'}</th>
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'ط§ظ„ظپط¹ظ‘ط§ظ„ط©' : 'Effective'}</th>
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'ط§ظ„ظ†ط·ط§ظ‚' : 'Scope'}</th>
+                        <tr className="bg-[#f8fafc] text-[#364152]">
+                          <th className="text-start font-bold px-3 py-2">{ar ? 'الصلاحية' : 'Permission'}</th>
+                          <th className="text-start font-bold px-3 py-2">{ar ? 'من الدور' : 'Role'}</th>
+                          <th className="text-start font-bold px-3 py-2">{ar ? 'الاستثناء' : 'Override'}</th>
+                          <th className="text-start font-bold px-3 py-2">{ar ? 'الفعّالة' : 'Effective'}</th>
+                          <th className="text-start font-bold px-3 py-2">{ar ? 'النطاق' : 'Scope'}</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#f3f4f6]">
+                      <tbody className="divide-y divide-[#f8fafc]">
                         {filteredRows.map((r) => (
-                          <tr key={r.key} className="hover:bg-[#f8f9fa]/60">
+                          <tr key={r.key} className="hover:bg-[#f8fafc]/60">
                             <td className="px-3 py-2 min-w-[160px]">
-                              <p className="font-medium text-[#252f4a]">{ar ? r.ar : r.en}</p>
+                              <p className="font-medium text-[#121926]">{ar ? r.ar : r.en}</p>
                               <p className="text-[10px] text-[#9ca3af] font-mono" dir="ltr">{r.key}</p>
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               {r.roleEffect ? (
-                                <span className="font-bold text-[#25b865]">ALLOW آ· {ar ? 'ظ…ظˆط±ظˆط«' : 'inherited'}</span>
+                                <span className="font-bold text-[#00c853]">ALLOW آ· {ar ? 'موروث' : 'inherited'}</span>
                               ) : (
-                                <span className="text-[#9ca3af]">{ar ? 'ط؛ظٹط± ظ…ظ…ظ†ظˆط­' : 'not granted'}</span>
+                                <span className="text-[#9ca3af]">{ar ? 'غير ممنوح' : 'not granted'}</span>
                               )}
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               {r.overrideEffect ? (
-                                <span className={`font-bold ${r.overrideEffect === 'DENY' ? 'text-[#d13b4c]' : 'text-[#25b865]'}`}>
-                                  {r.overrideEffect} آ· {r.overrideEffect === 'DENY' ? (ar ? 'ظ…ظ†ط¹' : 'deny') : (ar ? 'ط¥ط¶ط§ظپط©' : 'allow')}
+                                <span className={`font-bold ${r.overrideEffect === 'DENY' ? 'text-[#fb323f]' : 'text-[#00c853]'}`}>
+                                  {r.overrideEffect} آ· {r.overrideEffect === 'DENY' ? (ar ? 'منع' : 'deny') : (ar ? 'إضافة' : 'allow')}
                                 </span>
                               ) : (
-                                <span className="text-[#9ca3af]">â€”</span>
+                                <span className="text-[#9ca3af]">—</span>
                               )}
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               {r.effectiveEffect === 'ALLOW' ? (
-                                <span className="font-bold text-[#25b865]">ALLOW</span>
+                                <span className="font-bold text-[#00c853]">ALLOW</span>
                               ) : (
-                                <span className="font-bold text-[#d13b4c]">
-                                  DENY <span className="font-medium">آ· {ar ? 'ظ…ظ…ظ†ظˆط¹' : 'denied'}</span>
+                                <span className="font-bold text-[#fb323f]">
+                                  DENY <span className="font-medium">آ· {ar ? 'ممنوع' : 'denied'}</span>
                                 </span>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-[#6b7177] whitespace-nowrap">{r.scopeLabel ?? 'â€”'}</td>
+                            <td className="px-3 py-2 text-[#697586] whitespace-nowrap">{r.scopeLabel ?? '—'}</td>
                           </tr>
                         ))}
                         {filteredRows.length === 0 && (
                           <tr>
                             <td colSpan={5} className="px-3 py-6 text-center text-[#9ca3af]">
-                              {ar ? 'ظ„ط§ ظ†طھط§ط¦ط¬ ظ…ط·ط§ط¨ظ‚ط© ظ„ظ„ط¨ط­ط«' : 'No matching permissions'}
+                              {ar ? 'لا نتائج مطابقة للبحث' : 'No matching permissions'}
                             </td>
                           </tr>
                         )}
@@ -695,43 +695,43 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
         </CardContent>
       </Card>
 
-      {/* Card 2 â€” User overrides */}
+      {/* Card 2 — User overrides */}
       <Card>
         <CardContent className="p-5">
           <div className="flex items-center justify-between gap-3 mb-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-[#4b5675] flex items-center gap-1.5">
+            <h3 className="text-xs font-black uppercase tracking-wide text-[#364152] flex items-center gap-1.5">
               <KeyRound className="w-3.5 h-3.5" />
-              {ar ? 'ط§ط³طھط«ظ†ط§ط،ط§طھ ط§ظ„ظ…ط³طھط®ط¯ظ…' : 'User Overrides'}
+              {ar ? 'استثناءات المستخدم' : 'User Overrides'}
             </h3>
             {canEdit && !isFullAccess && (
               <Button size="sm" onClick={openAddModal}>
                 <Plus className="w-3.5 h-3.5" />
-                {ar ? 'ط¥ط¶ط§ظپط© ط§ط³طھط«ظ†ط§ط،' : 'Add override'}
+                {ar ? 'إضافة استثناء' : 'Add override'}
               </Button>
             )}
           </div>
 
           {flash && (
-            <div className="mb-3 rounded-lg bg-[#e8f8ef] border border-[#d2f0de] text-[#25b865] text-xs font-medium px-3 py-2">
+            <div className="mb-3 rounded-lg bg-[#e6f9ee] border border-[#c8f2d8] text-[#00c853] text-xs font-medium px-3 py-2">
               {flash}
             </div>
           )}
 
           {payload && isFullAccess && (
-            <p className="text-xs text-[#6b7177]">
-              {ar ? 'ظ„ط§ طھظˆط¬ط¯ ط§ط³طھط«ظ†ط§ط،ط§طھ â€” ط­ط³ط§ط¨ SUPER_ADMIN ظˆطµظˆظ„ ظƒط§ظ…ظ„.' : 'No overrides â€” SUPER_ADMIN has central full access.'}
+            <p className="text-xs text-[#697586]">
+              {ar ? 'لا توجد استثناءات — حساب SUPER_ADMIN وصول كامل.' : 'No overrides — SUPER_ADMIN has central full access.'}
             </p>
           )}
 
           {payload && !isFullAccess && (
             payload.overrides.length === 0 ? (
-              <p className="text-xs text-[#6b7177]">
+              <p className="text-xs text-[#697586]">
                 {ar
-                  ? 'ظ„ط§ طھظˆط¬ط¯ ط§ط³طھط«ظ†ط§ط،ط§طھ â€” ط§ظ„طµظ„ط§ط­ظٹط§طھ طھط£طھظٹ ظ…ظ† ط§ظ„ط¯ظˆط± ظƒظ…ط§ ظ‡ظٹ.'
-                  : 'No overrides â€” permissions come from the role as-is.'}
+                  ? 'لا توجد استثناءات — الصلاحيات تأتي من الدور كما هي.'
+                  : 'No overrides — permissions come from the role as-is.'}
               </p>
             ) : (
-              <ul className="divide-y divide-[#f3f4f6] rounded-xl border border-[#eef0f3]">
+              <ul className="divide-y divide-[#f8fafc] rounded-xl border border-[#e3e8ef]">
                 {payload.overrides.map((o) => {
                   const item = catalogItem(o.permission);
                   const scopeLabel = o.scope
@@ -740,34 +740,34 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                   return (
                     <li key={o.permission} className="flex items-center justify-between gap-3 px-3 py-2.5">
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-[#252f4a] truncate">
+                        <p className="text-xs font-medium text-[#121926] truncate">
                           {ar ? item?.ar ?? o.permission : item?.en ?? o.permission}
                         </p>
                         <p className="text-[10px] text-[#9ca3af] font-mono" dir="ltr">{o.permission}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span
-                          className={`text-[10px] font-bold rounded-[5px] px-2 py-0.5 border ${
+                          className={`text-[10px] font-bold rounded-[8px] px-2 py-0.5 border ${
                             o.effect === 'DENY'
-                              ? 'text-[#d13b4c] bg-[#fbeeef] border-[#f4d7da]'
-                              : 'text-[#25b865] bg-[#e8f8ef] border-[#d2f0de]'
+                              ? 'text-[#fb323f] bg-[#feecee] border-[#fecdd1]'
+                              : 'text-[#00c853] bg-[#e6f9ee] border-[#c8f2d8]'
                           }`}
                         >
-                          {o.effect === 'DENY' ? `DENY آ· ${ar ? 'ظ…ظ†ط¹' : 'deny'}` : `ALLOW آ· ${ar ? 'ط¥ط¶ط§ظپط©' : 'allow'}`}
+                          {o.effect === 'DENY' ? `DENY آ· ${ar ? 'منع' : 'deny'}` : `ALLOW آ· ${ar ? 'إضافة' : 'allow'}`}
                         </span>
                         {o.effect === 'ALLOW' && scopeLabel && (
-                          <span className="text-[10px] text-[#6b7177]">{scopeLabel}</span>
+                          <span className="text-[10px] text-[#697586]">{scopeLabel}</span>
                         )}
                         {canEdit && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-[#d13b4c]"
+                            className="text-[#fb323f]"
                             loading={removing === o.permission}
                             onClick={() => removeOverride(o.permission)}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            {ar ? 'ط¥ط²ط§ظ„ط©' : 'Remove'}
+                            {ar ? 'إزالة' : 'Remove'}
                           </Button>
                         )}
                       </div>
@@ -784,56 +784,56 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={draftIsEdit ? (ar ? 'طھط¹ط¯ظٹظ„ ط§ط³طھط«ظ†ط§ط، ظ‚ط§ط¦ظ…' : 'Edit existing override') : (ar ? 'ط¥ط¶ط§ظپط© ط§ط³طھط«ظ†ط§ط،' : 'Add Override')}
-        subtitle={ar ? 'ط§ظ„ط§ط³طھط«ظ†ط§ط، ظٹط®طµ ظ‡ط°ط§ ط§ظ„ظ…ط³طھط®ط¯ظ… ظپظ‚ط· ظˆظٹطھط¬ط§ظˆط² طµظ„ط§ط­ظٹط§طھ ط§ظ„ط¯ظˆط±' : 'Overrides apply to this user only, on top of the role'}
+        title={draftIsEdit ? (ar ? 'تعديل استثناء قائم' : 'Edit existing override') : (ar ? 'إضافة استثناء' : 'Add Override')}
+        subtitle={ar ? 'الاستثناء يخص هذا المستخدم فقط ويتجاوز صلاحيات الدور' : 'Overrides apply to this user only, on top of the role'}
         maxWidth="lg"
       >
         <div className="space-y-4">
-          {/* Permission picker â€” grouped by module from the catalog */}
+          {/* Permission picker — grouped by module from the catalog */}
           <Select
-            label={ar ? 'ط§ظ„طµظ„ط§ط­ظٹط©' : 'Permission'}
+            label={ar ? 'الصلاحية' : 'Permission'}
             value={draftKey}
             onChange={(e) => onDraftKeyChange(e.target.value)}
           >
-            <option value="">{ar ? 'â€” ط§ط®طھط± طµظ„ط§ط­ظٹط© â€”' : 'â€” Pick a permission â€”'}</option>
+            <option value="">{ar ? '— اختر صلاحية —' : '— Pick a permission —'}</option>
             {PERMISSION_MODULES.map((m) => (
               <optgroup key={m.module} label={ar ? MODULE_LABELS[m.module]?.ar ?? m.module : MODULE_LABELS[m.module]?.en ?? m.module}>
                 {m.items.map((i) => (
                   <option key={i.key} value={i.key}>
                     {ar ? i.ar : i.en}
-                    {overridesMap.has(i.key) ? (ar ? ' (ظ„ط¯ظٹظ‡ ط§ط³طھط«ظ†ط§ط،)' : ' (has override)') : ''}
+                    {overridesMap.has(i.key) ? (ar ? ' (لديه استثناء)' : ' (has override)') : ''}
                   </option>
                 ))}
               </optgroup>
             ))}
           </Select>
 
-          {/* Effect radio â€” text labels, never color alone */}
+          {/* Effect radio — text labels, never color alone */}
           <div>
-            <p className="block text-xs font-medium text-[#252f4a] mb-1.5">{ar ? 'ظ†ظˆط¹ ط§ظ„ط§ط³طھط«ظ†ط§ط،' : 'Effect'}</p>
+            <p className="block text-xs font-medium text-[#121926] mb-1.5">{ar ? 'نوع الاستثناء' : 'Effect'}</p>
             <div className="flex items-center gap-5">
-              <label className="flex items-center gap-1.5 text-xs text-[#252f4a] cursor-pointer">
+              <label className="flex items-center gap-1.5 text-xs text-[#121926] cursor-pointer">
                 <input
                   type="radio"
                   name="override-effect"
                   checked={draftEffect === 'ALLOW'}
                   onChange={() => setDraftEffect('ALLOW')}
-                  className="w-3.5 h-3.5 accent-[#25b865] cursor-pointer"
+                  className="w-3.5 h-3.5 accent-[#00c853] cursor-pointer"
                 />
-                ALLOW آ· {ar ? 'ظ…ظ†ط­ (ظٹطھط¬ط§ظˆط² ط§ظ„ط¯ظˆط±)' : 'grant'}
+                ALLOW آ· {ar ? 'منح (يتجاوز الدور)' : 'grant'}
               </label>
-              <label className="flex items-center gap-1.5 text-xs text-[#252f4a] cursor-pointer">
+              <label className="flex items-center gap-1.5 text-xs text-[#121926] cursor-pointer">
                 <input
                   type="radio"
                   name="override-effect"
                   checked={draftEffect === 'DENY'}
                   onChange={() => setDraftEffect('DENY')}
-                  className="w-3.5 h-3.5 accent-[#d13b4c] cursor-pointer"
+                  className="w-3.5 h-3.5 accent-[#fb323f] cursor-pointer"
                 />
-                DENY آ· {ar ? 'ظ…ظ†ط¹ (ظٹط­ط¬ط¨ ط­طھظ‰ ظ„ظˆ ط³ظ…ط­ ط§ظ„ط¯ظˆط±)' : 'deny'}
+                DENY آ· {ar ? 'منع (يحجب حتى لو سمح الدور)' : 'deny'}
               </label>
-              {/* Advanced toggle â€” scopes stay hidden for ordinary permission changes */}
-              <label className="flex items-center gap-1.5 text-xs text-[#6b7177] cursor-pointer ms-auto">
+              {/* Advanced toggle — scopes stay hidden for ordinary permission changes */}
+              <label className="flex items-center gap-1.5 text-xs text-[#697586] cursor-pointer ms-auto">
                 <input
                   type="checkbox"
                   checked={advancedScopes}
@@ -841,19 +841,19 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                     setAdvancedScopes(e.target.checked);
                     if (!e.target.checked) onDraftScopeChange('ALL_COMPANY');
                   }}
-                  className="w-3.5 h-3.5 accent-[#3e97ff] cursor-pointer"
+                  className="w-3.5 h-3.5 accent-[#b8256e] cursor-pointer"
                 />
-                {ar ? 'طھط®طµظٹطµ ظ†ط·ط§ظ‚ ط§ظ„ظˆطµظˆظ„' : 'Customize access scope'}
+                {ar ? 'تخصيص نطاق الوصول' : 'Customize access scope'}
               </label>
             </div>
           </div>
 
-          {/* Scope â€” only meaningful for ALLOW (DENY blocks regardless of scope);
+          {/* Scope — only meaningful for ALLOW (DENY blocks regardless of scope);
               hidden behind the advanced toggle for ordinary permission changes */}
           {draftEffect === 'ALLOW' && advancedScopes && (
             <>
               <Select
-                label={ar ? 'ط§ظ„ظ†ط·ط§ظ‚' : 'Scope'}
+                label={ar ? 'النطاق' : 'Scope'}
                 value={draftScope}
                 onChange={(e) => onDraftScopeChange(e.target.value as ScopeValue)}
                 options={(catalogItem(draftKey)?.scopes ?? ['ALL_COMPANY']).map((s) => ({
@@ -863,20 +863,20 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
               />
 
               {draftKey && draftScope === 'CATEGORY' && (
-                <div className="rounded-lg bg-[#f8f9fa] border border-[#eef0f3] p-3">
-                  {categoriesError && <p className="text-[11px] text-[#d13b4c]">{categoriesError}</p>}
+                <div className="rounded-lg bg-[#f8fafc] border border-[#e3e8ef] p-3">
+                  {categoriesError && <p className="text-[11px] text-[#fb323f]">{categoriesError}</p>}
                   {!categoriesError && categories.length === 0 && (
-                    <p className="text-[11px] text-[#9ca3af]">{ar ? 'ظ„ط§ طھظˆط¬ط¯ ظپط¦ط§طھ ط¨ط¹ط¯' : 'No categories yet'}</p>
+                    <p className="text-[11px] text-[#9ca3af]">{ar ? 'لا توجد فئات بعد' : 'No categories yet'}</p>
                   )}
                   {categories.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                       {categories.map((c) => (
-                        <label key={c.id} className="flex items-center gap-1.5 text-[11px] text-[#252f4a] cursor-pointer">
+                        <label key={c.id} className="flex items-center gap-1.5 text-[11px] text-[#121926] cursor-pointer">
                           <input
                             type="checkbox"
                             checked={draftScopeIds.includes(c.id)}
                             onChange={() => toggleScopeId(c.id)}
-                            className="w-3.5 h-3.5 accent-[#3e97ff] cursor-pointer"
+                            className="w-3.5 h-3.5 accent-[#b8256e] cursor-pointer"
                           />
                           {c.name}
                         </label>
@@ -887,27 +887,27 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
               )}
 
               {draftKey && draftScope === 'SPECIFIC' && (
-                <div className="rounded-lg bg-[#f8f9fa] border border-[#eef0f3] p-3 space-y-2">
+                <div className="rounded-lg bg-[#f8fafc] border border-[#e3e8ef] p-3 space-y-2">
                   <div className="relative">
-                    <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-3.5 h-3.5 text-[#9aa0aa]" />
+                    <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-3.5 h-3.5 text-[#9aa4b2]" />
                     <Input
                       value={productQuery}
                       onChange={(e) => setProductQuery(e.target.value)}
-                      placeholder={ar ? 'ط§ط¨ط­ط« ط¹ظ† ظ…ظ†طھط¬ ط¨ط§ظ„ط§ط³ظ… ط£ظˆ SKUâ€¦' : 'Search products by name or SKUâ€¦'}
+                      placeholder={ar ? 'ابحث عن منتج بالاسم أو SKU…' : 'Search products by name or SKU…'}
                       className="ps-8 text-xs"
                     />
                   </div>
-                  {productLoading && <p className="text-[11px] text-[#9ca3af]">{ar ? 'ط¬ط§ط±ظگ ط§ظ„ط¨ط­ط«â€¦' : 'Searchingâ€¦'}</p>}
-                  {productsError && <p className="text-[11px] text-[#d13b4c]">{productsError}</p>}
+                  {productLoading && <p className="text-[11px] text-[#9ca3af]">{ar ? 'جارِ البحث…' : 'Searching…'}</p>}
+                  {productsError && <p className="text-[11px] text-[#fb323f]">{productsError}</p>}
                   {productResults.length > 0 && (
-                    <div className="max-h-36 overflow-y-auto rounded-lg border border-[#eef0f3] bg-white divide-y divide-[#f3f4f6]">
+                    <div className="max-h-36 overflow-y-auto rounded-lg border border-[#e3e8ef] bg-white divide-y divide-[#f8fafc]">
                       {productResults.map((p) => (
                         <button
                           key={p.id}
                           type="button"
                           disabled={draftScopeIds.includes(p.id)}
                           onClick={() => toggleScopeId(p.id)}
-                          className="w-full text-start px-3 py-2 text-xs text-[#252f4a] hover:bg-[#f8f9fa] cursor-pointer disabled:opacity-50"
+                          className="w-full text-start px-3 py-2 text-xs text-[#121926] hover:bg-[#f8fafc] cursor-pointer disabled:opacity-50"
                         >
                           {p.name}{' '}
                           <span className="text-[10px] text-[#9ca3af] font-mono" dir="ltr">{p.sku}</span>
@@ -922,10 +922,10 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                         return (
                           <span
                             key={id}
-                            className="inline-flex items-center gap-1 text-[10px] font-medium bg-[#eaf3ff] text-[#3e97ff] border border-[#d6e8ff] rounded-md px-1.5 py-0.5"
+                            className="inline-flex items-center gap-1 text-[10px] font-medium bg-[#fdf5fa] text-[#b8256e] border border-[#f2c9dd] rounded-md px-1.5 py-0.5"
                           >
                             {prod?.name ?? id}
-                            <button type="button" onClick={() => toggleScopeId(id)} className="cursor-pointer hover:text-[#d13b4c]">
+                            <button type="button" onClick={() => toggleScopeId(id)} className="cursor-pointer hover:text-[#fb323f]">
                               <X className="w-3 h-3" />
                             </button>
                           </span>
@@ -938,14 +938,14 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
             </>
           )}
 
-          {modalError && <p className="text-xs text-[#d13b4c]">{modalError}</p>}
+          {modalError && <p className="text-xs text-[#fb323f]">{modalError}</p>}
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#eef0f3]">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#e3e8ef]">
             <Button variant="outline" onClick={() => setModalOpen(false)}>
-              {ar ? 'ط¥ظ„ط؛ط§ط،' : 'Cancel'}
+              {ar ? 'إلغاء' : 'Cancel'}
             </Button>
             <Button onClick={saveOverride} loading={saving} disabled={!draftKey}>
-              {ar ? 'ط­ظپط¸' : 'Save'}
+              {ar ? 'حفظ' : 'Save'}
             </Button>
           </div>
         </div>

@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     if (from && !isNaN(from.getTime())) dateWhere.gte = from;
     if (to && !isNaN(to.getTime())) dateWhere.lte = to;
 
-    // Group confirmed orders by product â€” aggregated server-side
+    // Group confirmed orders by product — aggregated server-side
     const grouped = await db.order.groupBy({
       by: ['productId'],
       where: {
@@ -56,8 +56,8 @@ export async function GET(req: Request) {
         const qty = Number(g._sum.quantity ?? 0);
         return {
           productId: g.productId,
-          name: p?.name ?? 'â€”',
-          sku: p?.sku ?? 'â€”',
+          name: p?.name ?? '—',
+          sku: p?.sku ?? '—',
           ordersCount: g._count.id,
           quantitySold: qty,
           revenue: revenue.toFixed(2),

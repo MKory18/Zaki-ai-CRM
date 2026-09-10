@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
@@ -55,18 +55,18 @@ export function Modal({
       />
       <div
         className={clsx(
-          'relative w-full bg-white rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] overflow-hidden z-10 max-h-[90vh] flex flex-col',
+          'relative w-full bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] overflow-hidden z-10 max-h-[90vh] flex flex-col',
           widthStyles[maxWidth]
         )}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#eef0f3] bg-[#f8f9fa]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e3e8ef] bg-[#f8fafc]">
           <div>
-            <h3 className="text-lg font-semibold text-[#252f4a]">{title}</h3>
-            {subtitle && <p className="text-xs text-[#6b7177] mt-0.5">{subtitle}</p>}
+            <h3 className="text-lg font-semibold text-[#121926]">{title}</h3>
+            {subtitle && <p className="text-xs text-[#697586] mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#9aa0aa] hover:text-[#252f4a] hover:bg-[#eef0f3] transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-[#9aa4b2] hover:text-[#121926] hover:bg-[#e3e8ef] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

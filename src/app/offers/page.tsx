@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -94,8 +94,8 @@ export default function OffersPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.offers}</h1>
-            <p className="text-xs text-[#6b7177] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.offers}</h1>
+            <p className="text-xs text-[#697586] mt-1">
               Promotional bundles, volume tier discounts & free delivery configurations
             </p>
           </div>
@@ -119,10 +119,10 @@ export default function OffersPage() {
                   <div className="flex items-start space-x-2.5 rtl:space-x-reverse">
                     <ProductThumb src={o.product?.image} alt={o.product?.name} size="md" />
                     <div>
-                      <span className="text-[10px] font-bold text-[#d13b4c] uppercase tracking-wider block">
+                      <span className="text-[10px] font-bold text-[#fb323f] uppercase tracking-wider block">
                         {o.product?.name}
                       </span>
-                      <h3 className="font-bold text-[#252f4a] text-sm mt-0.5">{o.name}</h3>
+                      <h3 className="font-bold text-[#121926] text-sm mt-0.5">{o.name}</h3>
                     </div>
                   </div>
                   <Badge variant={o.status === 'ACTIVE' ? 'success' : 'default'}>
@@ -130,38 +130,38 @@ export default function OffersPage() {
                   </Badge>
                 </div>
 
-                <div className="p-3 bg-[#f8f9fa] rounded-xl border border-[#eef0f3] flex items-center justify-between">
+                <div className="p-3 bg-[#f8fafc] rounded-xl border border-[#e3e8ef] flex items-center justify-between">
                   <div>
                     <span className="text-xs text-[#9ca3af] block">Offer Price</span>
-                    <span className="text-xl font-black text-[#252f4a]">
+                    <span className="text-xl font-black text-[#121926]">
                       ${o.sellingPrice.toFixed(2)}
                     </span>
                   </div>
 
                   <div className="text-right">
                     <span className="text-xs text-[#9ca3af] block">Pack Size</span>
-                    <span className="text-sm font-bold text-[#d13b4c]">
+                    <span className="text-sm font-bold text-[#fb323f]">
                       {o.quantity} {o.quantity === 1 ? 'Unit' : 'Units'}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between text-xs pt-1">
-                  <div className="flex items-center space-x-1 text-[#d13b4c] bg-[#fbe9ea] px-2 py-0.5 rounded">
+                  <div className="flex items-center space-x-1 text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded">
                     <Truck className="w-3.5 h-3.5" />
                     <span>{o.deliveryIncluded ? 'Free Delivery' : 'Standard Shipping'}</span>
                   </div>
 
                   {o.discount > 0 && (
-                    <span className="text-[#d13b4c] font-bold bg-[#fbe9ea] px-2 py-0.5 rounded">
+                    <span className="text-[#fb323f] font-bold bg-[#feecee] px-2 py-0.5 rounded">
                       Save ${o.discount.toFixed(2)}
                     </span>
                   )}
                 </div>
 
-                <div className="text-[11px] text-[#9ca3af] pt-2 border-t border-[#eef0f3] flex justify-between">
+                <div className="text-[11px] text-[#9ca3af] pt-2 border-t border-[#e3e8ef] flex justify-between">
                   <span>Unit Price Eqv:</span>
-                  <strong className="text-[#4b5675]">
+                  <strong className="text-[#364152]">
                     ${(o.sellingPrice / (o.quantity || 1)).toFixed(2)} / unit
                   </strong>
                 </div>
@@ -180,7 +180,7 @@ export default function OffersPage() {
       >
         <form onSubmit={handleCreateOffer} className="space-y-4">
           {modalError && (
-            <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-lg">
+            <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">
               {modalError}
             </div>
           )}

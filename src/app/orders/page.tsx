@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -37,6 +37,7 @@ export default function OrdersPage() {
   const [status, setStatus] = useState('all');
   const [productId, setProductId] = useState('all');
   const [moderatorId, setModeratorId] = useState('all');
+  const [source, setSource] = useState('all');
   // Workflow queue (backend-enforced per role — server rejects unauthorized queues)
   const [queue, setQueue] = useState('');
 
@@ -90,6 +91,7 @@ export default function OrdersPage() {
         status,
         productId,
         moderatorId,
+        source,
       });
       if (queue) params.set('queue', queue);
 
@@ -115,7 +117,7 @@ export default function OrdersPage() {
       // Only the latest request may clear the shared loading flag
       if (seq === loadOrdersSeq.current) setLoading(false);
     }
-  }, [search, status, productId, moderatorId, queue]);
+  }, [search, status, productId, moderatorId, source, queue]);
 
   // Keep the ref in sync each render (after loadOrders exists)
   useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
@@ -151,7 +153,7 @@ export default function OrdersPage() {
 
   const handleExportCSV = () => {
     // Export respects the current filters (same params as loadOrders)
-    const params = new URLSearchParams({ q: search, status, productId, moderatorId });
+    const params = new URLSearchParams({ q: search, status, productId, moderatorId, source });
     if (queue) params.set('queue', queue);
     window.open(`/api/reports/export?${params.toString()}`, '_blank');
   };
@@ -162,8 +164,8 @@ export default function OrdersPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.orders}</h1>
-            <p className="text-xs text-[#6b7177] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.orders}</h1>
+            <p className="text-xs text-[#697586] mt-1">
               Complete order tracking, moderator calls, status transitions & fulfillment
             </p>
           </div>
@@ -192,7 +194,7 @@ export default function OrdersPage() {
             <Button
               size="sm"
               onClick={() => setAiModalOpen(true)}
-              className="flex items-center space-x-1.5 bg-[#d13b4c] hover:bg-[#d13b4c]/85"
+              className="flex items-center space-x-1.5 bg-[#fb323f] hover:bg-[#fb323f]/85"
             >
               <Wand2 className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
@@ -210,7 +212,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Filters & Search Bar */}
-        <div className="bg-white border border-[#eef0f3] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className="bg-white border border-[#e3e8ef] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           {/* Workflow queue tabs (server-enforced per role) */}
           <div className="sm:col-span-2 flex flex-wrap gap-1.5">
             {[
@@ -226,8 +228,8 @@ export default function OrdersPage() {
                 onClick={() => { setQueue(q.key); }}
                 className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
                   queue === q.key
-                    ? 'bg-[#3e97ff] text-white border-[#3e97ff]'
-                    : 'bg-white text-[#4b5675] border-[#eef0f3] hover:border-[#3e97ff]/40 hover:text-[#3e97ff]'
+                    ? 'bg-[#b8256e] text-white border-[#b8256e]'
+                    : 'bg-white text-[#364152] border-[#e3e8ef] hover:border-[#b8256e]/40 hover:text-[#b8256e]'
                 }`}
               >
                 {ar ? q.ar : q.en}
@@ -241,7 +243,7 @@ export default function OrdersPage() {
               placeholder={t.searchOrders}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[#f8f9fa] border border-[#eef0f3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e97ff]/30 focus:border-[#3e97ff]"
+              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]"
             />
           </div>
 
@@ -290,6 +292,23 @@ export default function OrdersPage() {
               </option>
             ))}
           </Select>
+
+          <Select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className="text-xs py-2"
+          >
+            <option value="all">كل المصادر</option>
+            <option value="Manual">Manual</option>
+            <option value="Facebook Ads">Facebook Ads</option>
+            <option value="Messenger">Messenger</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="AI">AI</option>
+            <option value="Landing Page">Landing Page</option>
+            <option value="Website">Website</option>
+            <option value="TikTok">TikTok</option>
+            <option value="Instagram">Instagram</option>
+          </Select>
         </div>
 
         {/* Load error banner */}
@@ -305,7 +324,7 @@ export default function OrdersPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">{t.thOrderNumber}</th>
                     <th className="px-6 py-3.5">{t.thCustomer}</th>
@@ -317,7 +336,7 @@ export default function OrdersPage() {
                     <th className="px-6 py-3.5 text-right rtl:text-left">{t.thActions}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#eef0f3]">
+                <tbody className="divide-y divide-[#e3e8ef]">
                   {orders.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-12 text-center text-[#9ca3af]">
@@ -328,11 +347,11 @@ export default function OrdersPage() {
                     orders.map((order) => (
                       <tr
                         key={order.id}
-                        className="hover:bg-[#f8f9fa] transition-colors cursor-pointer"
+                        className="hover:bg-[#f8fafc] transition-colors cursor-pointer"
                         onClick={() => setSelectedOrderId(order.id)}
                       >
                         <td className="px-6 py-3.5">
-                          <span className="font-bold text-[#d13b4c] block">
+                          <span className="font-bold text-[#fb323f] block">
                             {order.orderNumber}
                           </span>
                           <span className="text-[10px] text-[#9ca3af] block mt-0.5">
@@ -341,9 +360,9 @@ export default function OrdersPage() {
                         </td>
 
                         <td className="px-6 py-3.5">
-                          <p className="font-semibold text-[#252f4a]">{order.customer?.fullName}</p>
+                          <p className="font-semibold text-[#121926]">{order.customer?.fullName}</p>
                           <div className="flex items-center space-x-1 mt-0.5">
-                            <span className="font-mono text-[11px] text-[#6b7177]">
+                            <span className="font-mono text-[11px] text-[#697586]">
                               {order.customer?.rawPhone || order.customer?.phone}
                             </span>
                             <span className="text-[11px] text-[#9ca3af]">• {order.customer?.city}</span>
@@ -358,7 +377,7 @@ export default function OrdersPage() {
                               size="sm"
                             />
                             <div>
-                              <p className="font-medium text-[#252f4a]">{order.productNameSnapshot || order.product?.name}</p>
+                              <p className="font-medium text-[#121926]">{order.productNameSnapshot || order.product?.name}</p>
                               <p className="text-[11px] text-[#9ca3af]">
                                 {order.offer?.name || 'قياسي'} ({order.quantity} وحدة)
                               </p>
@@ -366,7 +385,7 @@ export default function OrdersPage() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-3.5 font-bold text-[#252f4a]">
+                        <td className="px-6 py-3.5 font-bold text-[#121926]">
                           ${Number(order.totalAmount || 0).toFixed(2)}
                         </td>
 
@@ -375,7 +394,7 @@ export default function OrdersPage() {
                         </td>
 
                         <td className="px-6 py-3.5">
-                          <span className="font-medium text-[#4b5675] block">
+                          <span className="font-medium text-[#364152] block">
                             {order.moderator?.name || 'Unassigned'}
                           </span>
                         </td>
@@ -404,7 +423,7 @@ export default function OrdersPage() {
             </div>
 
             {/* Pagination Bar */}
-            <div className="px-6 py-3 border-t border-[#eef0f3] flex items-center justify-between text-xs text-[#6b7177]">
+            <div className="px-6 py-3 border-t border-[#e3e8ef] flex items-center justify-between text-xs text-[#697586]">
               <span>
                 Showing <strong>{orders.length}</strong> of <strong>{pagination.total}</strong> orders
               </span>
@@ -455,7 +474,7 @@ export default function OrdersPage() {
         isOpen={!!selectedOrderId}
         onClose={() => setSelectedOrderId(null)}
         onRefresh={() => loadOrders(pagination.page)}
-        filters={{ q: search, status, productId, moderatorId, queue }}
+        filters={{ q: search, status, productId, moderatorId, queue, source }}
       />
     </AppLayout>
   );

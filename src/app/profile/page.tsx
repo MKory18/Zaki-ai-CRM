@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -61,11 +61,11 @@ export default function ProfilePage() {
     <AppLayout>
       <div className="space-y-6 max-w-3xl">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#252f4a] flex items-center space-x-2 rtl:space-x-reverse">
-            <User className="w-6 h-6 text-[#d13b4c]" />
+          <h1 className="text-2xl font-bold tracking-tight text-[#121926] flex items-center space-x-2 rtl:space-x-reverse">
+            <User className="w-6 h-6 text-[#fb323f]" />
             <span>الملف الشخصي</span>
           </h1>
-          <p className="text-xs text-[#6b7177] mt-1">
+          <p className="text-xs text-[#697586] mt-1">
             تحديث بياناتك الشخصية وكلمة المرور — الدور والصلاحيات يديرها المدير فقط
           </p>
         </div>
@@ -74,8 +74,8 @@ export default function ProfilePage() {
           <div
             className={`p-3 rounded-xl text-xs flex items-center space-x-2 rtl:space-x-reverse ${
               message.type === 'success'
-                ? 'bg-emerald-100 border-0 text-[#25b865]'
-                : 'bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c]'
+                ? 'bg-emerald-100 border-0 text-[#00c853]'
+                : 'bg-[#feecee] border border-[#f5c6cb] text-[#fb323f]'
             }`}
           >
             {message.type === 'success' ? (
@@ -95,15 +95,15 @@ export default function ProfilePage() {
               subtitle="تُدار من قِبل مدير النظام — للقراءة فقط"
             />
             <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+              <div className="bg-[#f8fafc] p-3 rounded-xl">
                 <span className="text-[#9ca3af] block">البريد الإلكتروني</span>
-                <span className="font-bold text-[#252f4a]">{currentUser?.email}</span>
+                <span className="font-bold text-[#121926]">{currentUser?.email}</span>
               </div>
-              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+              <div className="bg-[#f8fafc] p-3 rounded-xl">
                 <span className="text-[#9ca3af] block">الدور</span>
                 <Badge variant="info">{currentUser?.role}</Badge>
               </div>
-              <div className="bg-[#f8f9fa] p-3 rounded-xl">
+              <div className="bg-[#f8fafc] p-3 rounded-xl">
                 <span className="text-[#9ca3af] block">حالة الحساب</span>
                 <Badge variant={currentUser?.status === 'ACTIVE' ? 'success' : 'warning'}>
                   {currentUser?.status}
@@ -168,15 +168,15 @@ export default function ProfilePage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
-              <p className="text-[11px] text-[#6b7177] flex items-center space-x-1.5 rtl:space-x-reverse">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#d13b4c]" />
+              <p className="text-[11px] text-[#697586] flex items-center space-x-1.5 rtl:space-x-reverse">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#fb323f]" />
                 <span>تغيير كلمة المرور يُنهي جميع الجلسات النشطة على حسابك.</span>
               </p>
             </CardContent>
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" loading={loading} className="bg-[#d13b4c] hover:bg-[#d13b4c]/85">
+            <Button type="submit" loading={loading} className="bg-[#fb323f] hover:bg-[#fb323f]/85">
               حفظ التغييرات
             </Button>
           </div>

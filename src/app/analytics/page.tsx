@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -42,21 +42,21 @@ export default function AnalyticsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.analytics}</h1>
-            <p className="text-xs text-[#6b7177] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.analytics}</h1>
+            <p className="text-xs text-[#697586] mt-1">
               Section 18 & 19 In-depth Product Profit Analysis, Rankings & Date Range Performance
             </p>
           </div>
 
           <div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-y-2">
-            <div className="bg-white border border-[#eef0f3] rounded-lg p-1 flex text-xs font-medium text-[#4b5675]">
+            <div className="bg-white border border-[#e3e8ef] rounded-lg p-1 flex text-xs font-medium text-[#364152]">
               {(['today', 'yesterday', '7d', '30d', 'month', 'last_month', 'all'] as const).map(
                 (p) => (
                   <button
                     key={p}
                     onClick={() => setPeriod(p)}
                     className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                      period === p ? 'bg-[#d13b4c] text-white font-semibold' : 'hover:bg-[#f3f4f6]'
+                      period === p ? 'bg-[#fb323f] text-white font-semibold' : 'hover:bg-[#f8fafc]'
                     }`}
                   >
                     {p.replace('_', ' ').toUpperCase()}
@@ -79,38 +79,38 @@ export default function AnalyticsPage() {
 
         {/* Section 19 Rankings Showcase */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="bg-[#fbe9ea] border border-[#f5c6cb] p-4 rounded-xl">
-            <span className="text-[10px] font-bold text-[#d13b4c] uppercase tracking-wider block">
+          <div className="bg-[#feecee] border border-[#f5c6cb] p-4 rounded-xl">
+            <span className="text-[10px] font-bold text-[#fb323f] uppercase tracking-wider block">
               🏆 Most Requested Product
             </span>
-            <p className="font-bold text-[#252f4a] text-sm mt-1">
+            <p className="font-bold text-[#121926] text-sm mt-1">
               {analytics?.rankings?.mostRequested?.name || 'N/A'}
             </p>
-            <p className="text-xs text-[#d13b4c] font-semibold mt-0.5">
+            <p className="text-xs text-[#fb323f] font-semibold mt-0.5">
               {analytics?.rankings?.mostRequested?.totalOrders || 0} Orders
             </p>
           </div>
 
-          <div className="bg-[#fbe9ea] border border-[#f5c6cb] p-4 rounded-xl">
-            <span className="text-[10px] font-bold text-[#d13b4c] uppercase tracking-wider block">
+          <div className="bg-[#feecee] border border-[#f5c6cb] p-4 rounded-xl">
+            <span className="text-[10px] font-bold text-[#fb323f] uppercase tracking-wider block">
               💰 Most Profitable Product
             </span>
-            <p className="font-bold text-[#252f4a] text-sm mt-1">
+            <p className="font-bold text-[#121926] text-sm mt-1">
               {analytics?.rankings?.mostProfitable?.name || 'N/A'}
             </p>
-            <p className="text-xs text-[#d13b4c] font-semibold mt-0.5">
+            <p className="text-xs text-[#fb323f] font-semibold mt-0.5">
               +${analytics?.rankings?.mostProfitable?.netProfit?.toFixed(2) || '0.00'} Net Yield
             </p>
           </div>
 
-          <div className="bg-[#fbe9ea] border border-[#f5c6cb] p-4 rounded-xl">
-            <span className="text-[10px] font-bold text-[#d13b4c] uppercase tracking-wider block">
+          <div className="bg-[#feecee] border border-[#f5c6cb] p-4 rounded-xl">
+            <span className="text-[10px] font-bold text-[#fb323f] uppercase tracking-wider block">
               ✅ Most Confirmed
             </span>
-            <p className="font-bold text-[#252f4a] text-sm mt-1">
+            <p className="font-bold text-[#121926] text-sm mt-1">
               {analytics?.rankings?.mostConfirmed?.name || 'N/A'}
             </p>
-            <p className="text-xs text-[#d13b4c] font-semibold mt-0.5">
+            <p className="text-xs text-[#fb323f] font-semibold mt-0.5">
               {analytics?.rankings?.mostConfirmed?.confirmedOrders || 0} Confirmed
             </p>
           </div>
@@ -119,22 +119,22 @@ export default function AnalyticsPage() {
             <span className="text-[10px] font-bold text-[#c07f2a] uppercase tracking-wider block">
               🚚 Most Delivered
             </span>
-            <p className="font-bold text-[#252f4a] text-sm mt-1">
+            <p className="font-bold text-[#121926] text-sm mt-1">
               {analytics?.rankings?.mostDelivered?.name || 'N/A'}
             </p>
-            <p className="text-xs text-[#e49e3d] font-semibold mt-0.5">
+            <p className="text-xs text-[#ffab00] font-semibold mt-0.5">
               {analytics?.rankings?.mostDelivered?.deliveredOrders || 0} Delivered
             </p>
           </div>
 
-          <div className="bg-[#fbe9ea] border border-[#f5c6cb] p-4 rounded-xl">
-            <span className="text-[10px] font-bold text-[#d13b4c] uppercase tracking-wider block">
+          <div className="bg-[#feecee] border border-[#f5c6cb] p-4 rounded-xl">
+            <span className="text-[10px] font-bold text-[#fb323f] uppercase tracking-wider block">
               ⚠️ Highest Rejections
             </span>
-            <p className="font-bold text-[#252f4a] text-sm mt-1">
+            <p className="font-bold text-[#121926] text-sm mt-1">
               {analytics?.rankings?.highestRejection?.name || 'N/A'}
             </p>
-            <p className="text-xs text-[#d13b4c] font-semibold mt-0.5">
+            <p className="text-xs text-[#fb323f] font-semibold mt-0.5">
               {analytics?.rankings?.highestRejection?.rejectedOrders || 0} Rejected
             </p>
           </div>
@@ -149,7 +149,7 @@ export default function AnalyticsPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Product SKU</th>
                     <th className="px-6 py-3.5">Total Orders</th>
@@ -163,37 +163,37 @@ export default function AnalyticsPage() {
                     <th className="px-6 py-3.5">Profit Margin</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#eef0f3]">
+                <tbody className="divide-y divide-[#e3e8ef]">
                   {analytics?.productStats?.map((prod: any) => (
-                    <tr key={prod.id} className="hover:bg-[#f8f9fa] transition-colors">
+                    <tr key={prod.id} className="hover:bg-[#f8fafc] transition-colors">
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-[#252f4a] block">{prod.name}</span>
+                        <span className="font-bold text-[#121926] block">{prod.name}</span>
                         <span className="font-mono text-[10px] text-[#9ca3af]">{prod.sku}</span>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#252f4a]">{prod.totalOrders}</td>
-                      <td className="px-6 py-3.5 font-bold text-[#d13b4c]">
+                      <td className="px-6 py-3.5 font-bold text-[#121926]">{prod.totalOrders}</td>
+                      <td className="px-6 py-3.5 font-bold text-[#fb323f]">
                         {prod.confirmedOrders}
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#d13b4c]">
+                      <td className="px-6 py-3.5 font-bold text-[#fb323f]">
                         {prod.deliveredOrders}
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#d13b4c]">
+                      <td className="px-6 py-3.5 font-bold text-[#fb323f]">
                         {prod.rejectedOrders}
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#252f4a]">
+                      <td className="px-6 py-3.5 font-bold text-[#121926]">
                         ${prod.revenue.toFixed(2)}
                       </td>
-                      <td className="px-6 py-3.5 text-[#d13b4c] font-medium">
+                      <td className="px-6 py-3.5 text-[#fb323f] font-medium">
                         -${prod.cogs.toFixed(2)}
                       </td>
-                      <td className="px-6 py-3.5 text-[#d13b4c] font-medium">
+                      <td className="px-6 py-3.5 text-[#fb323f] font-medium">
                         -${prod.shippingCost.toFixed(2)}
                       </td>
-                      <td className="px-6 py-3.5 font-black text-[#d13b4c]">
+                      <td className="px-6 py-3.5 font-black text-[#fb323f]">
                         ${prod.netProfit.toFixed(2)}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-[#d13b4c] bg-[#fbe9ea] px-2 py-0.5 rounded text-xs">
+                        <span className="font-bold text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded text-xs">
                           {prod.profitMargin}%
                         </span>
                       </td>

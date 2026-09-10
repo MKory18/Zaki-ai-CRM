@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import { Tajawal, Public_Sans } from 'next/font/google';
 import './globals.css';
 import { getCurrentUser } from '@/lib/auth';
@@ -40,7 +40,7 @@ export default async function RootLayout({
     >
       <body
         suppressHydrationWarning
-        className="min-h-full flex flex-col bg-[#f3f4f6] text-[#4b5675]"
+        className="min-h-full flex flex-col bg-[#f8fafc] text-[#364152]"
       >
         <AppProvider initialUser={user}>{children}</AppProvider>
       </body>

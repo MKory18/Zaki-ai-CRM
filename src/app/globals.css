@@ -2,46 +2,46 @@
 
 @layer base {
   :root {
-    --background: #f3f4f6;
-    --foreground: #252f4a;
+    --background: #f8fafc;
+    --foreground: #364152;
     --card: #ffffff;
-    --card-foreground: #252f4a;
-    --primary: #3e97ff;
+    --card-foreground: #121926;
+    --primary: #b8256e;
     --primary-foreground: #ffffff;
-    --secondary: #f8f9fa;
-    --secondary-foreground: #252f4a;
-    --muted: #f8f9fa;
-    --muted-foreground: #6b7177;
-    --accent: #eaf3ff;
-    --accent-foreground: #3e97ff;
-    --destructive: #d13b4c;
+    --secondary: #f8fafc;
+    --secondary-foreground: #364152;
+    --muted: #f8fafc;
+    --muted-foreground: #697586;
+    --accent: #fdf5fa;
+    --accent-foreground: #b8256e;
+    --destructive: #fb323f;
     --destructive-foreground: #ffffff;
-    --success: #25b865;
-    --warning: #e49e3d;
-    --info: #02a0e4;
-    --border: #eef0f3;
-    --input: #eef0f3;
-    --ring: #3e97ff;
+    --success: #00c853;
+    --warning: #ffab00;
+    --info: #13b5fe;
+    --border: #e3e8ef;
+    --input: #e3e8ef;
+    --ring: #b8256e;
     --radius: 0.5rem;
   }
 }
 
 body {
-  background-color: #f3f4f6;
-  color: #4b5675;
-  font-family: var(--font-public-sans), "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #f8fafc;
+  color: #364152;
+  font-family: var(--font-public-sans), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Headings and key values use the template's darker semibold tone */
+/* Headings and key values use the darker primary text tone */
 h1, h2, h3, h4, h5, h6, strong {
-  color: #252f4a;
+  color: #121926;
   font-weight: 600;
 }
 
 /* Arabic native typography: proper font, line-height and letter spacing */
 html[lang="ar"] body {
-  font-family: var(--font-arabic), "Tajawal", "Segoe UI", sans-serif;
+  font-family: var(--font-arabic), "Cairo", "Tajawal", "Segoe UI", sans-serif;
   line-height: 1.8;
   letter-spacing: 0;
 }
@@ -52,7 +52,7 @@ html[lang="ar"] h4,
 html[lang="ar"] h5,
 html[lang="ar"] h6,
 html[lang="ar"] strong {
-  color: #252f4a;
+  color: #121926;
 }
 html[lang="ar"] table,
 html[lang="ar"] th,
@@ -69,19 +69,19 @@ html[lang="ar"] td {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d5d9e0;
+  background: #cdd5df;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #b9bfc9;
+  background: #9aa4b2;
 }
 
 /* Sidebar dark scrollbar */
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #26282e;
+  background: #202939;
 }
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: #34363d;
+  background: #364152;
 }
 
 /* RTL Helpers */

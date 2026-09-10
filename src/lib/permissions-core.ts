@@ -1,23 +1,23 @@
 ﻿/**
- * PERMISSION CORE â€” low-level effective-permission computation.
+ * PERMISSION CORE — low-level effective-permission computation.
  *
  * Source of truth: RolePermission (via users.roleId) + UserPermission overrides,
  * with a legacy fallback to ROLE_PERMISSIONS[role] mapped through LEGACY_PERMISSION_MAP
- * for any user without a roleId (backward compatibility â€” never removes access).
+ * for any user without a roleId (backward compatibility — never removes access).
  *
  * PRECEDENCE (documented contract):
- *   1. SUPER_ADMIN                       â†’ full access (centralized here, nowhere else)
- *   2. UserPermission effect=DENY        â†’ final DENY (beats role + ALLOW)
- *   3. UserPermission effect=ALLOW       â†’ ALLOW (wins over role absence/scope)
- *   4. RolePermission                    â†’ allowed with its scope
- *   5. otherwise                         â†’ DENY
+ *   1. SUPER_ADMIN                       → full access (centralized here, nowhere else)
+ *   2. UserPermission effect=DENY        → final DENY (beats role + ALLOW)
+ *   3. UserPermission effect=ALLOW       → ALLOW (wins over role absence/scope)
+ *   4. RolePermission                    → allowed with its scope
+ *   5. otherwise                         → DENY
  *
  * TENANT BOUNDARY (non-negotiable): companyId comes from the authenticated
  * server-side session only. No scope ever crosses it. SUPER_ADMIN bypasses
  * resource ownership but is still tenant-scoped by requireCompanyTenant().
  *
  * CACHING POLICY: grants are computed per-request from indexed queries
- * (role_permissions + user_permissions by roleId/userId). No long-lived cache â€”
+ * (role_permissions + user_permissions by roleId/userId). No long-lived cache —
  * permission changes take effect on the next request.
  */
 import { db } from './db';
@@ -35,7 +35,7 @@ export interface EffectiveGrants {
   grants: Record<string, Grant>;
 }
 
-/** Legacy permission key â†’ new catalog key(s) + default scope (parity mapping,
+/** Legacy permission key → new catalog key(s) + default scope (parity mapping,
  *  identical to scripts/generate-permission-backfill.ts and the migration backfill). */
 export function mapLegacyPermission(legacy: string): Grant[] {
   const A: Grant = { scope: 'ALL_COMPANY' };
@@ -65,12 +65,12 @@ export function mapLegacyPermission(legacy: string): Grant[] {
   };
   const out = M[legacy];
   if (out) return out;
-  // unknown legacy key â†’ keep as-is (defensive; never silently drops access)
+  // unknown legacy key → keep as-is (defensive; never silently drops access)
   return [A];
 }
 
-/** Legacy permission key â†’ expanded NEW-catalog keys (parity: identical to the
- *  migration backfill mapping â€” single source of truth for renames/expansions). */
+/** Legacy permission key → expanded NEW-catalog keys (parity: identical to the
+ *  migration backfill mapping — single source of truth for renames/expansions). */
 function expandLegacyKey(legacy: string): string[] {
   const E: Record<string, string[]> = {
     // ORDERS
@@ -116,7 +116,7 @@ function expandLegacyKey(legacy: string): string[] {
   return E[legacy] ?? [legacy];
 }
 
-/** Legacy view_assigned/update_own â†’ scoped keys (orders.view/edit keep the
+/** Legacy view_assigned/update_own → scoped keys (orders.view/edit keep the
  *  scope in the Grant, so the key itself is unscoped). */
 function scopeAwareKey(legacy: string): string {
   switch (legacy) {
@@ -137,12 +137,12 @@ export interface DbUserLike {
 
 /** Compute effective grants for a user. 2 indexed queries max. */
 export async function computeEffectiveGrants(user: DbUserLike): Promise<EffectiveGrants> {
-  // 1. SUPER_ADMIN â†’ full access (centralized bypass)
+  // 1. SUPER_ADMIN → full access (centralized bypass)
   if (user.role === 'SUPER_ADMIN') return { fullAccess: true, grants: {} };
 
   const grants: Record<string, Grant> = {};
 
-  // 2. Role grants (DB) â€” fallback to legacy map when no roleId
+  // 2. Role grants (DB) — fallback to legacy map when no roleId
   if (user.roleId) {
     const rows = await db.rolePermission.findMany({
       where: { roleId: user.roleId },
@@ -164,7 +164,7 @@ export async function computeEffectiveGrants(user: DbUserLike): Promise<Effectiv
     }
   }
 
-  // 3. User overrides â€” DENY wins, ALLOW wins over role absence/scope
+  // 3. User overrides — DENY wins, ALLOW wins over role absence/scope
   const overrides = await db.userPermission.findMany({
     where: { userId: user.id },
     select: { permission: true, effect: true, scope: true, scopeIds: true },

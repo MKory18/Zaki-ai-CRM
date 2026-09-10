@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     if (to && !isNaN(to.getTime())) range.lte = to;
     const dateWhere = Object.keys(range).length ? { createdAt: range } : {};
 
-    // Server-side aggregation â€” never load orders into the browser
+    // Server-side aggregation — never load orders into the browser
     const agg = await db.order.aggregate({
       where: { companyId, ...dateWhere, confirmationStatus: 'CONFIRMED' },
       _sum: {

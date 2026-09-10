@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * SALESFLOW — /permissions: role × permission matrix grouped by category.
+ * SALESFLOW — /permissions: role أ— permission matrix grouped by category.
  * Informational only — the backend RBAC engine is the enforcement point.
  */
 
@@ -40,11 +40,11 @@ export default function PermissionsPage() {
     <AppLayout>
       <div className="space-y-6" dir={isRtl ? 'rtl' : 'ltr'}>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#252f4a] flex items-center gap-2">
-            <Lock className="w-6 h-6 text-[#d13b4c]" />
+          <h1 className="text-2xl font-bold tracking-tight text-[#121926] flex items-center gap-2">
+            <Lock className="w-6 h-6 text-[#fb323f]" />
             {ar ? 'مصفوفة الصلاحيات' : 'Permissions Matrix'}
           </h1>
-          <p className="text-xs text-[#6b7177] mt-1">
+          <p className="text-xs text-[#697586] mt-1">
             {ar
               ? 'كل صلاحية تُفحص على الخادم قبل أي عملية حساسة — العرض هنا توثيقي فقط.'
               : 'Every sensitive operation re-checks permissions server-side. This view is documentation.'}
@@ -57,16 +57,16 @@ export default function PermissionsPage() {
           return (
             <Card key={g.key}>
               <CardContent className="p-0">
-                <div className="px-5 py-3.5 border-b border-[#eef0f3] bg-[#f8f9fa]/60">
-                  <h3 className="text-sm font-bold text-[#252f4a]">{ar ? g.ar : g.en}</h3>
+                <div className="px-5 py-3.5 border-b border-[#e3e8ef] bg-[#f8fafc]/60">
+                  <h3 className="text-sm font-bold text-[#121926]">{ar ? g.ar : g.en}</h3>
                 </div>
-                <div className="divide-y divide-[#f3f4f6]">
+                <div className="divide-y divide-[#f8fafc]">
                   {gPerms.map((perm) => {
                     const label = (PERMISSION_LABELS as any)[perm];
                     return (
                       <div key={perm} className="px-5 py-2.5 flex flex-wrap items-center gap-y-2 gap-x-3 text-xs">
                         <div className="min-w-[180px] sm:min-w-[240px]">
-                          <p className="font-semibold text-[#4b5675]">{ar ? label.ar : label.en}</p>
+                          <p className="font-semibold text-[#364152]">{ar ? label.ar : label.en}</p>
                           <p className="text-[10px] text-[#9ca3af] font-mono">{perm}</p>
                         </div>
                         <div className="flex flex-wrap gap-1.5 flex-1">
@@ -78,8 +78,8 @@ export default function PermissionsPage() {
                                 title={`${ROLE_LABELS[r]}: ${has ? '✓' : '✗'}`}
                                 className={`text-[10px] font-medium rounded-md px-1.5 py-0.5 border ${
                                   has
-                                    ? 'text-[#25b865] bg-emerald-100 border-0'
-                                    : 'text-[#c3c8d4] bg-[#f8f9fa] border-[#eef0f3]'
+                                    ? 'text-[#00c853] bg-emerald-100 border-0'
+                                    : 'text-[#c3c8d4] bg-[#f8fafc] border-[#e3e8ef]'
                                 }`}
                               >
                                 {has ? '✓' : '✗'} {roleShort(r, ar)}

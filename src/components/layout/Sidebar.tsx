@@ -33,6 +33,7 @@ import {
   Calendar,
   StickyNote,
   FileText,
+  Globe,
   BarChart3,
   Settings2,
 } from 'lucide-react';
@@ -75,6 +76,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
     { href: '/dashboards/crm/calendar', label: 'التقويم', icon: Calendar, permission: 'crm.view' },
     { href: '/dashboards/crm/notes', label: 'الملاحظات', icon: StickyNote, permission: 'crm.view' },
     { href: '/dashboards/crm/invoices', label: 'الفواتير', icon: FileText, permission: 'crm.view' },
+    { href: '/dashboards/crm/landing-pages', label: 'صفحات الهبوط', icon: Globe, permission: 'landing_pages.view' },
     { href: '/dashboards/crm/products', label: 'المنتجات', icon: Package, permission: 'crm.view' },
     { href: '/dashboards/crm/reports', label: 'التقارير', icon: BarChart3, permission: 'crm.view' },
     { href: '/dashboards/crm/settings', label: 'إعدادات CRM', icon: Settings2, permission: 'crm.view' },
@@ -107,21 +109,21 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
 
       <aside
         className={clsx(
-          'fixed top-0 bottom-0 z-40 flex flex-col w-[280px] bg-[#0b0c10] text-[#6b7177] transition-transform duration-200 md:translate-x-0',
+          'fixed top-0 bottom-0 z-40 flex flex-col w-[280px] bg-[#121926] text-[#697586] transition-transform duration-200 md:translate-x-0',
           isRtl ? 'right-0' : 'left-0',
           mobileOpen ? 'translate-x-0' : isRtl ? 'translate-x-full md:translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
         {/* Brand Header */}
-        <div className="flex items-center h-[72px] px-5 border-b border-[#1a1c22] shrink-0">
+        <div className="flex items-center h-[72px] px-5 border-b border-[#202939] shrink-0">
           <Link href="/" className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="Zaki AI" className="w-11 h-9 object-contain" />
             <div>
               <span className="font-bold text-white tracking-wide text-base leading-tight block" dir="ltr">
-                Zaki <span className="text-[#3e97ff]">AI</span> Store
+                Zaki <span className="text-[#b8256e]">AI</span> Store
               </span>
-              <span className="block text-[10px] text-[#6b7177] font-semibold uppercase tracking-[0.18em]" dir="ltr">
+              <span className="block text-[10px] text-[#697586] font-semibold uppercase tracking-[0.18em]" dir="ltr">
                 Intelligent Systems
               </span>
             </div>
@@ -130,7 +132,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
 
         {/* Navigation List */}
         <div className="flex-1 overflow-y-auto sidebar-scroll py-4 space-y-0.5">
-          <p className="px-5 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#4a4f57]">
+          <p className="px-5 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5b6474]">
             Menu
           </p>
           {[...visibleNavItems, ...visibleCrmItems.map((item) => ({ ...item, isCrm: true }))].map((item, idx) => {
@@ -147,7 +149,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
             return (
               <React.Fragment key={item.href}>
                 {showGroupLabel && (
-                  <p className="px-5 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#4a4f57]">
+                  <p className="px-5 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5b6474]">
                     CRM
                   </p>
                 )}
@@ -155,17 +157,17 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
                   href={item.href}
                   onClick={onClose}
                   className={clsx(
-                    'flex items-center justify-between mx-3 px-2 py-2.5 rounded-[5px] text-sm font-medium transition-colors group',
+                    'flex items-center justify-between mx-3 px-2 py-2.5 rounded-[8px] text-sm font-medium transition-colors group',
                     isActive
-                      ? 'bg-[#3e97ff] text-white'
-                      : 'text-[#6b7177] hover:text-white hover:bg-[#16181e]'
+                      ? 'bg-[#b8256e] text-white'
+                      : 'text-[#697586] hover:text-white hover:bg-[#1a2232]'
                   )}
                 >
                   <div className="flex items-center space-x-3 rtl:space-x-reverse">
                     <span
                       className={clsx(
-                        'w-8 h-8 rounded-[5px] flex items-center justify-center shrink-0 transition-colors',
-                        isActive ? 'bg-white/10 text-white' : 'bg-[#14161b] text-[#6b7177] group-hover:text-white'
+                        'w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 transition-colors',
+                        isActive ? 'bg-white/10 text-white' : 'bg-[#1a2232] text-[#697586] group-hover:text-white'
                       )}
                     >
                       <Icon className="w-[18px] h-[18px]" />
@@ -173,7 +175,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
                     <span>{item.label}</span>
                   </div>
                   {(item as any).badge ? (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#3e97ff] text-white">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#b8256e] text-white">
                       {(item as any).badge}
                     </span>
                   ) : (
@@ -186,16 +188,16 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
         </div>
 
         {/* Current User Info / Company Badge */}
-        <div className="p-3 border-t border-[#1a1c22]">
+        <div className="p-3 border-t border-[#202939]">
           <div className="flex items-center space-x-3 rtl:space-x-reverse">
-            <div className="w-8 h-8 rounded-full bg-[#14161b] border border-[#26282e] flex items-center justify-center text-[#9aa0aa] font-bold text-xs uppercase">
+            <div className="w-8 h-8 rounded-full bg-[#1a2232] border border-[#364152] flex items-center justify-center text-[#9aa4b2] font-bold text-xs uppercase">
               {currentUser?.name ? currentUser.name.slice(0, 2) : 'SF'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-white truncate">
                 {currentUser?.name || 'BioDerma User'}
               </p>
-              <p className="text-[10px] text-[#6b7177] truncate">
+              <p className="text-[10px] text-[#697586] truncate">
                 {currentUser?.role || 'COMPANY_ADMIN'}
               </p>
             </div>

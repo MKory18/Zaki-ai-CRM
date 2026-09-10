@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -202,8 +202,8 @@ export default function ProductsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#252f4a]">{t.products}</h1>
-            <p className="text-xs text-[#6b7177] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.products}</h1>
+            <p className="text-xs text-[#697586] mt-1">
               كتالوج المنتجات مع الصور، تحليل تكاليف التصنيع متعدد التشغيلات والمخزون
             </p>
           </div>
@@ -218,7 +218,7 @@ export default function ProductsPage() {
             <Button
               size="sm"
               onClick={() => setCreateModalOpen(true)}
-              className="flex items-center space-x-1.5 bg-[#d13b4c] hover:bg-[#d13b4c]/85"
+              className="flex items-center space-x-1.5 bg-[#fb323f] hover:bg-[#fb323f]/85"
             >
               <Plus className="w-4 h-4" />
               <span>إضافة منتج</span>
@@ -241,12 +241,12 @@ export default function ProductsPage() {
                 placeholder="بحث بالاسم (عربي/إنجليزي) أو SKU..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full ps-9 pe-4 py-2.5 text-xs bg-[#f8f9fa] border border-[#eef0f3] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3e97ff]/30 focus:border-[#3e97ff]"
+                className="w-full ps-9 pe-4 py-2.5 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute end-3 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-[#4b5675] cursor-pointer"
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-[#364152] cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -259,7 +259,7 @@ export default function ProductsPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8f9fa] border-b border-[#eef0f3] text-[#6b7177] font-semibold uppercase tracking-wider">
+                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">الصورة</th>
                     <th className="px-6 py-3.5">اسم المنتج</th>
@@ -271,37 +271,37 @@ export default function ProductsPage() {
                     <th className="px-6 py-3.5 text-right rtl:text-left">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#eef0f3]">
+                <tbody className="divide-y divide-[#e3e8ef]">
                   {filteredProducts.map((p) => {
                     const img = primaryImageOf(p);
                     return (
                       <tr
                         key={p.id}
-                        className="hover:bg-[#f8f9fa] transition-colors cursor-pointer"
+                        className="hover:bg-[#f8fafc] transition-colors cursor-pointer"
                         onClick={() => router.push(`/products/${p.id}`)}
                       >
                         <td className="px-6 py-3">
                           <ProductThumb src={img?.url} alt={productName(p, locale)} size="md" />
                         </td>
                         <td className="px-6 py-3">
-                          <span className="font-bold text-[#252f4a] block">{productName(p, locale)}</span>
+                          <span className="font-bold text-[#121926] block">{productName(p, locale)}</span>
                           <span className="text-[11px] text-[#9ca3af]">
                             {p.images?.length || 0} صورة • {p.offers?.length || 0} عرض
                           </span>
                         </td>
-                        <td className="px-6 py-3 font-mono text-[#6b7177]">{p.sku}</td>
+                        <td className="px-6 py-3 font-mono text-[#697586]">{p.sku}</td>
                         <td className="px-6 py-3">
                           <Badge variant={p.status === 'ACTIVE' ? 'success' : 'warning'}>
                             {p.status === 'ACTIVE' ? 'نشط' : p.status === 'INACTIVE' ? 'غير نشط' : 'نفد المخزون'}
                           </Badge>
                         </td>
-                        <td className="px-6 py-3 font-bold text-[#25b865]">
+                        <td className="px-6 py-3 font-bold text-[#00c853]">
                           {p.analytics?.totalRemaining ?? 0}
                         </td>
-                        <td className="px-6 py-3 text-[#252f4a]">
+                        <td className="px-6 py-3 text-[#121926]">
                           ${p.analytics?.avgCostPerUnit?.toFixed(2) || '0.00'}
                         </td>
-                        <td className="px-6 py-3 text-[#3e97ff] font-medium">
+                        <td className="px-6 py-3 text-[#b8256e] font-medium">
                           {p.analytics?.totalSold ?? 0}
                         </td>
                         <td className="px-6 py-3 text-right rtl:text-left">
@@ -319,7 +319,7 @@ export default function ProductsPage() {
                               size="sm"
                               variant="secondary"
                               onClick={() => openEdit(p)}
-                              className="p-2 bg-blue-50 text-[#3e97ff] border-[#b9dcff] hover:bg-blue-100"
+                              className="p-2 bg-blue-50 text-[#b8256e] border-[#f2c9dd] hover:bg-blue-100"
                               title="تعديل المنتج"
                             >
                               <Pencil className="w-3.5 h-3.5" />
@@ -362,14 +362,14 @@ export default function ProductsPage() {
       >
         <form onSubmit={handleCreateProduct} className="space-y-4">
           {modalError && (
-            <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-lg">
+            <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">
               {modalError}
             </div>
           )}
 
           {/* Basic Information */}
-          <div className="border border-[#eef0f3] rounded-xl p-4 bg-[#f8f9fa] space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#4b5675]">1. المعلومات الأساسية</h4>
+          <div className="border border-[#e3e8ef] rounded-xl p-4 bg-[#f8fafc] space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">1. المعلومات الأساسية</h4>
             <Input
               label="اسم المنتج *"
               placeholder="مثال: كريم إزالة الندبات الألماني الأصلي"
@@ -408,9 +408,9 @@ export default function ProductsPage() {
           </div>
 
           {/* Product Images */}
-          <div className="border border-[#eef0f3] rounded-xl p-4 bg-[#f8f9fa] space-y-3">
+          <div className="border border-[#e3e8ef] rounded-xl p-4 bg-[#f8fafc] space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#4b5675]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">
                 2. صور المنتج (الأولى = الصورة الرئيسية)
               </h4>
               <input
@@ -443,7 +443,7 @@ export default function ProductsPage() {
                   <div
                     key={idx}
                     className={`relative group rounded-xl overflow-hidden border-2 ${
-                      primaryIndex === idx ? 'border-[#3e97ff]' : 'border-[#eef0f3]'
+                      primaryIndex === idx ? 'border-[#b8256e]' : 'border-[#e3e8ef]'
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -453,7 +453,7 @@ export default function ProductsPage() {
                       className="w-full h-20 object-cover"
                     />
                     {primaryIndex === idx && (
-                      <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-[#d13b4c] text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center space-x-0.5">
+                      <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-[#fb323f] text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center space-x-0.5">
                         <Star className="w-2.5 h-2.5" />
                         <span>رئيسية</span>
                       </span>
@@ -461,7 +461,7 @@ export default function ProductsPage() {
                     <button
                       type="button"
                       onClick={() => removeFile(idx)}
-                      className="absolute top-1 right-1 rtl:right-auto rtl:left-1 bg-white/90 text-[#d13b4c] rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      className="absolute top-1 right-1 rtl:right-auto rtl:left-1 bg-white/90 text-[#fb323f] rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -481,7 +481,7 @@ export default function ProductsPage() {
           </div>
 
           {/* Inventory info hint */}
-          <div className="p-3 bg-blue-50 border border-[#b9dcff] rounded-xl text-[11px] text-[#3e97ff]">
+          <div className="p-3 bg-blue-50 border border-[#f2c9dd] rounded-xl text-[11px] text-[#b8256e]">
             بعد إنشاء المنتج أضف تشغيلات الإنتاج من صفحة <Link href="/production" className="underline font-semibold">تشغيلات الإنتاج</Link> لحساب تكلفة الوحدة والمخزون تلقائياً.
           </div>
 
@@ -489,7 +489,7 @@ export default function ProductsPage() {
             <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" loading={modalLoading} className="bg-[#d13b4c] hover:bg-[#d13b4c]/85">
+            <Button type="submit" loading={modalLoading} className="bg-[#fb323f] hover:bg-[#fb323f]/85">
               حفظ المنتج
             </Button>
           </div>
@@ -501,12 +501,12 @@ export default function ProductsPage() {
         isOpen={editOpen}
         onClose={() => setEditOpen(false)}
         title={`تعديل المنتج: ${editProduct ? productName(editProduct, locale) : ''}`}
-        subtitle="غيّر الاسم بالعربية والإنجليزية، SKU، الحالة والوصف — الصور تُدار من صفحة التفاصيل"
+        subtitle="غيّر الاسم بالعربية والإنجليزيɡ SKU، الحالة والوصف — الصور تُدار من صفحة التفاصيل"
         maxWidth="xl"
       >
         <form onSubmit={handleEditSave} className="space-y-4">
           {editError && (
-            <div className="p-3 bg-[#fbe9ea] border border-[#f5c6cb] text-[#d13b4c] text-xs rounded-xl">
+            <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-xl">
               {editError}
             </div>
           )}
@@ -530,12 +530,12 @@ export default function ProductsPage() {
           <Textarea label="الوصف بالإنجليزية" rows={2} dir="ltr" value={editForm.descriptionEn} onChange={(e) => setEditForm({ ...editForm, descriptionEn: e.target.value })} />
 
           {editProduct && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-[#b9dcff] rounded-xl">
+            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-[#f2c9dd] rounded-xl">
               <ProductThumb
                 src={editProduct.images?.find((i: any) => i.isPrimary)?.url || editProduct.images?.[0]?.url}
                 size="md"
               />
-              <div className="text-[11px] text-[#3e97ff]">
+              <div className="text-[11px] text-[#b8256e]">
                 <p className="font-bold">إدارة الصور</p>
                 <p>
                   {editProduct.images?.length || 0} صورة — للتعديل والتبديل والحذف افتح{' '}
@@ -558,7 +558,7 @@ export default function ProductsPage() {
             <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" loading={editLoading} className="bg-[#3e97ff] hover:bg-[#3e97ff]/85">
+            <Button type="submit" loading={editLoading} className="bg-[#b8256e] hover:bg-[#b8256e]/85">
               <Pencil className="w-4 h-4" />
               حفظ التعديلات
             </Button>
