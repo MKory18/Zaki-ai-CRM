@@ -6,8 +6,9 @@
  * privilege-escalation rules stay identical across all three handlers:
  *
  * - Target must exist and belong to the admin's company (404 otherwise).
- *   A platform-level SUPER_ADMIN (companyId null) is exempt from the
- *   same-company rule — same behavior as PATCH /api/users/:id.
+ *   Only a platform-level SUPER_ADMIN (companyId null) may act on
+ *   platform-level accounts — UserPermission overrides on companyId:null
+ *   accounts are a SUPER_ADMIN-exclusive operation.
  * - Only SUPER_ADMIN may manage SUPER_ADMIN accounts (403 otherwise).
  *
  * The "SUPER_ADMIN accounts accept no overrides" rule is enforced separately
@@ -57,13 +58,12 @@ export async function loadPermissionTarget(
   }
 
   // ── Multi-tenant isolation (same rule as PATCH /api/users/:id): admins may
-  // only act on users inside their own company. Platform-level SUPER_ADMIN
-  // (companyId null) is exempt. Company admins may still act on unclaimed
-  // platform accounts (companyId null) — matching the PATCH route. ──
+  // only act on users inside their own company. Platform-level accounts
+  // (companyId null) are manageable ONLY by a platform SUPER_ADMIN — a
+  // company admin must never create/edit/delete overrides on them. ──
   const isPlatformSuper = admin.role === 'SUPER_ADMIN' && !admin.companyId;
   if (!isPlatformSuper) {
-    const sameCompany =
-      !!admin.companyId && (target.companyId === admin.companyId || target.companyId === null);
+    const sameCompany = !!admin.companyId && target.companyId === admin.companyId;
     if (!sameCompany) {
       return { ok: false, response: NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 }) };
     }

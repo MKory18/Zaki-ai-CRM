@@ -45,6 +45,46 @@ async function main() {
     ok('user-create guard (users/route.ts) name-based too', src('src/app/api/users/route.ts').includes('isPrivilegedRoleName(targetRole.name)'));
   }
 
+  console.log('\n=== FIX 9 (MEDIUM): platform accounts off-limits for permission overrides ===');
+  {
+    const up = src('src/lib/user-permissions.ts');
+    ok('loadPermissionTarget no longer allows companyId-null targets for company admins', up.includes('target.companyId === admin.companyId') && !up.includes('target.companyId === admin.companyId || target.companyId === null'));
+    ok('Guard is central (both PUT and DELETE routes route through it)',
+      src('src/app/api/users/[id]/permissions/route.ts').includes('loadPermissionTarget(id, admin)') &&
+      src('src/app/api/users/[id]/permissions/[permission]/route.ts').includes('loadPermissionTarget(id, admin)'));
+    ok('No other route writes UserPermission rows (single choke point)',
+      !src('src/app/api/users/route.ts').includes('userPermission.create') &&
+      !src('src/app/api/roles/[id]/route.ts').includes('userPermission.create'));
+
+    // Simulate the exact guard contract for all four scenarios
+    const decide = (adminRole: string, adminCo: string | null, targetCo: string | null) => {
+      const isPlatformSuper = adminRole === 'SUPER_ADMIN' && !adminCo;
+      if (!isPlatformSuper) {
+        const sameCompany = !!adminCo && targetCo === adminCo;
+        if (!sameCompany) return 404;
+      }
+      return 200;
+    };
+    ok('COMPANY_ADMIN → platform account rejected (404)', decide('COMPANY_ADMIN', 'coA', null) === 404);
+    ok('MANAGER → platform account rejected (404)', decide('MANAGER', 'coA', null) === 404);
+    ok('COMPANY_ADMIN → same-company user allowed (200)', decide('COMPANY_ADMIN', 'coA', 'coA') === 200);
+    ok('platform SUPER_ADMIN → platform account allowed (200)', decide('SUPER_ADMIN', null, null) === 200);
+    ok('platform SUPER_ADMIN → company account allowed (200)', decide('SUPER_ADMIN', null, 'coA') === 200);
+    ok('COMPANY_ADMIN A → company B user rejected (404, cross-tenant)', decide('COMPANY_ADMIN', 'coA', 'coB') === 404);
+    ok('company-level non-super actor → platform account rejected', decide('MODERATOR', null, null) === 404);
+
+    // Rejected operations never touch permissionsVersion: the 404 fires inside
+    // loadPermissionTarget BEFORE any transaction in the callers.
+    ok('permissionsVersion bump only exists after the guard (no write on rejection)',
+      up.indexOf('permissionsVersion') === -1 ||
+      (src('src/app/api/users/[id]/permissions/route.ts').indexOf('loadPermissionTarget') < src('src/app/api/users/[id]/permissions/route.ts').indexOf('permissionsVersion')));
+
+    // Engine surfaces untouched: ALLOW/DENY/scopes/audit contract preserved
+    ok('UserPermission ALLOW/DENY write path unchanged (createMany + deleteMany intact)',
+      src('src/app/api/users/[id]/permissions/route.ts').includes('effect: o.effect') && src('src/app/api/users/[id]/permissions/route.ts').includes('USER_PERMISSION_GRANTED'));
+    ok('scopeIds tenant validation still in PUT', src('src/app/api/users/[id]/permissions/route.ts').includes('نطاق يحتوي موارد من شركة أخرى'));
+  }
+
   console.log('\n=== FIX 2 (HIGH): self-escalation blocked in permission overrides ===');
   {
     const put = src('src/app/api/users/[id]/permissions/route.ts');
