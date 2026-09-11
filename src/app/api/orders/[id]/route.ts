@@ -355,6 +355,15 @@ export async function PATCH(
     }
 
     if (moderatorId !== undefined) {
+      // Tenant-validate the moderator (same rule as POST /orders) — a client
+      // can never attach a moderator from another company, even with a valid
+      // user id. null/unset clears the assignment (existing behavior kept).
+      if (moderatorId) {
+        const mod = await db.user.findFirst({ where: { id: moderatorId, companyId }, select: { id: true } });
+        if (!mod) {
+          return NextResponse.json({ error: 'الموديريتور غير موجود في هذه الشركة' }, { status: 404 });
+        }
+      }
       updateData.moderatorId = moderatorId || null;
     }
     if (internalNotes !== undefined) {

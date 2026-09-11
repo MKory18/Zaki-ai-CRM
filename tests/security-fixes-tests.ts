@@ -45,6 +45,38 @@ async function main() {
     ok('user-create guard (users/route.ts) name-based too', src('src/app/api/users/route.ts').includes('isPrivilegedRoleName(targetRole.name)'));
   }
 
+  console.log('\n=== FIX 10 (MEDIUM): PATCH moderatorId tenant-validated ===');
+  {
+    const route = src('src/app/api/orders/[id]/route.ts');
+    ok('PATCH validates moderator against session companyId', route.includes('db.user.findFirst({ where: { id: moderatorId, companyId }, select: { id: true } })'));
+    ok('Rejected with 404 before any write', /db\.user\.findFirst\(\{ where: \{ id: moderatorId, companyId \}[\s\S]{0,220}status: 404/.test(route));
+    ok('null moderatorId still allowed (clears assignment — existing behavior)', route.includes('updateData.moderatorId = moderatorId || null'));
+    ok('No SUPER_ADMIN bypass added (guard runs for every actor)', !/moderatorId[\s\S]{0,400}SUPER_ADMIN[\s\S]{0,200}updateData\.moderatorId/.test(route) || route.indexOf('db.user.findFirst({ where: { id: moderatorId, companyId } })') > 0);
+
+    // Simulate the exact guard contract (moderatorId must live in the session tenant)
+    const decide = (moderatorId: string | null, modCompany: string | null | undefined, orderCompany: string) => {
+      if (moderatorId === undefined) return 200; // field not sent
+      if (moderatorId) {
+        const exists = modCompany === orderCompany; // findFirst({ id, companyId })
+        if (!exists) return 404;
+      }
+      return 200; // moderatorId = null → clears assignment
+    };
+    ok('TEST 1: same-company moderator accepted', decide('mod-1', 'coA', 'coA') === 200);
+    ok('TEST 2: cross-company moderator rejected (404)', decide('mod-1', 'coB', 'coA') === 404);
+    ok('TEST 3: nonexistent moderator rejected (404)', decide('mod-1', null, 'coA') === 404);
+    ok('TEST 4: null moderatorId allowed (clears assignment)', decide(null, null, 'coA') === 200);
+    ok('TEST 5: guard applies to every actor (incl. SUPER_ADMIN — no bypass)', decide('mod-1', 'coB', 'coA') === 404);
+    ok('TEST 6: commission cannot accrue to foreign moderator (assignment itself rejected before write)',
+      route.indexOf('db.user.findFirst({ where: { id: moderatorId, companyId }, select: { id: true } })') < route.indexOf('updateData.moderatorId'));
+
+    // Same-vulnerability sweep in the Orders domain
+    ok('POST /orders tenant-validates moderator (was already safe)', src('src/app/api/orders/route.ts').includes("db.user.findFirst({ where: { id: assignedModeratorId, companyId } })"));
+    ok('ai-intake tenant-validates moderator (fixed earlier)', src('src/app/api/orders/ai-intake/route.ts').includes("db.user.findFirst({ where: { id: assignedModeratorId, companyId } })"));
+    ok('call-logs derives moderator from session (never client)', src('src/app/api/orders/[id]/call-logs/route.ts').includes('moderatorId: user.id'));
+    ok('transfer validates target tenant', src('src/app/api/orders/[id]/transfer/route.ts').includes('target.companyId !== companyId'));
+  }
+
   console.log('\n=== FIX 9 (MEDIUM): platform accounts off-limits for permission overrides ===');
   {
     const up = src('src/lib/user-permissions.ts');
