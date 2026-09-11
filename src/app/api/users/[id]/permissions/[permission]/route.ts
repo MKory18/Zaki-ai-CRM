@@ -22,6 +22,10 @@ export async function DELETE(
     if (!loaded.ok) return loaded.response;
     const target = loaded.user;
 
+    if (target.id === admin.id) {
+      return NextResponse.json({ error: 'لا يمكنك تعديل صلاحيات حسابك الشخصي' }, { status: 400 });
+    }
+
     // SUPER_ADMIN is full-access by engine precedence — no overrides, ever.
     const superBlock = superAdminOverrideGuard(target);
     if (superBlock) return superBlock;

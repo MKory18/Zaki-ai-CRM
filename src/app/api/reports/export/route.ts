@@ -18,6 +18,17 @@ const MAX_EXPORT_ROWS = 10000;
 const MAX_WINDOW_DAYS = 90;
 const CHUNK_SIZE = 1000;
 
+/**
+ * CSV formula-injection neutralization: a cell beginning with =, +, -, @, |,
+ * TAB or CR is interpreted as a formula by Excel/Google Sheets. Prefixing with
+ * an apostrophe keeps the original text visible while forcing text mode.
+ */
+function csvSafeText(value: unknown): string {
+  const text = String(value ?? '');
+  if (/^[=+\-@|\t\r]/.test(text)) return `'${text}`;
+  return text;
+}
+
 export async function GET(req: Request) {
   try {
     const { companyId, user } = await requireCompanyTenant();
@@ -100,19 +111,19 @@ export async function GET(req: Request) {
 
       for (const o of orders) {
         const row = [
-          o.orderNumber,
+          csvSafeText(o.orderNumber),
           o.createdAt.toISOString(),
-          `"${(o.customer?.fullName || '').replace(/"/g, '""')}"`,
-          `"${o.customer?.rawPhone || o.customer?.phone || ''}"`,
-          `"${(o.customer?.city || '').replace(/"/g, '""')}"`,
-          `"${(o.product?.name || '').replace(/"/g, '""')}"`,
-          `"${(o.offer?.name || 'Direct').replace(/"/g, '""')}"`,
+          `"${csvSafeText(o.customer?.fullName || '').replace(/"/g, '""')}"`,
+          `"${csvSafeText(o.customer?.rawPhone || o.customer?.phone || '').replace(/"/g, '""')}"`,
+          `"${csvSafeText(o.customer?.city || '').replace(/"/g, '""')}"`,
+          `"${csvSafeText(o.product?.name || '').replace(/"/g, '""')}"`,
+          `"${csvSafeText(o.offer?.name || 'Direct').replace(/"/g, '""')}"`,
           o.quantity,
           o.sellingPrice,
           o.totalAmount,
           o.status,
-          `"${(o.moderator?.name || 'Unassigned').replace(/"/g, '""')}"`,
-          `"${o.source}"`,
+          `"${csvSafeText(o.moderator?.name || 'Unassigned').replace(/"/g, '""')}"`,
+          `"${csvSafeText(o.source).replace(/"/g, '""')}"`,
         ];
         csvParts.push(row.join(','));
       }

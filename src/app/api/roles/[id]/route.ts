@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { PERMISSION_MODULES } from '@/lib/permission-catalog';
+import { isReservedRoleName, isPrivilegedRoleName, normalizeRoleName } from '@/lib/role-names';
 
 const ALLOWED_KEYS: Set<string> = new Set(
   PERMISSION_MODULES.flatMap((m) => m.items.map((i) => i.key))
@@ -88,8 +89,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     // SUPER_ADMIN role is full-access by design — nothing to change, ever.
-    if (role.name === 'SUPER_ADMIN' && (name !== undefined || permissions !== undefined)) {
+    if (normalizeRoleName(role.name) === normalizeRoleName('SUPER_ADMIN') && (name !== undefined || permissions !== undefined)) {
       return NextResponse.json({ error: 'Forbidden: SUPER_ADMIN is full-access by design' }, { status: 403 });
+    }
+
+    // Reserved-name guard: no role may be RENAMED into a system/privileged
+    // legacy string (same rule as POST) — a rename to 'SUPER_ADMIN' would
+    // grant fullAccess to every user bound to it via the legacy string.
+    if (typeof name === 'string' && isReservedRoleName(name) && admin.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'اسم الدور محجوز للنظام' }, { status: 403 });
     }
 
     if (permissions) {
@@ -182,6 +190,14 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       const replacement = await loadVisibleRole(replacementRoleId, admin.companyId);
       if (!replacement) {
         return NextResponse.json({ error: 'الدور البديل غير موجود' }, { status: 400 });
+      }
+      // Privilege-escalation guard: the legacy role string written onto users
+      // drives the permission engine — a replacement named SUPER_ADMIN (system
+      // OR company role) would grant full platform access. The check is
+      // name-based and normalization-safe on purpose: isSystem/companyId are
+      // NOT sufficient identifiers for privileged legacy strings.
+      if (isPrivilegedRoleName(replacement.name) && admin.role !== 'SUPER_ADMIN') {
+        return NextResponse.json({ error: 'غير مسموح باستخدام دور المدير الأعلى كبديل' }, { status: 403 });
       }
 
       await db.$transaction(async (tx) => {

@@ -6,6 +6,7 @@ import { hashPassword } from '@/lib/auth';
 import { ASSIGNABLE_ROLES, UserRole, UserStatus } from '@/types/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
+import { isPrivilegedRoleName } from '@/lib/role-names';
 
 /**
  * PATCH /api/users/:id — admin actions on a user account:
@@ -32,12 +33,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!isPlatformSuper) {
       const adminCo = admin.companyId;
       const targetCo = target.companyId;
-      const sameCompany =
-        (adminCo && targetCo === adminCo) ||
-        // company admin may adopt a platform-level (companyId: null) account
-        // into their company only through an explicit action — reading is allowed:
-        (adminCo && targetCo === null);
-      if (!sameCompany) {
+      const sameCompany = adminCo && targetCo === adminCo;
+      // Platform-level (companyId: null) accounts may only be touched by a
+      // company admin for ADOPTION (assignRole on a PENDING account); every
+      // other action (resetPassword/changeStatus/forceLogout/delete) is
+      // SUPER_ADMIN-only — platform accounts are never company-manageable.
+      const adoptionEligible = adminCo && targetCo === null && action === 'assignRole';
+      if (!sameCompany && !adoptionEligible) {
         return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
       }
     }
@@ -72,10 +74,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (!roleAllowed) {
           return NextResponse.json({ error: 'الدور غير موجود' }, { status: 404 });
         }
-        // Only SUPER_ADMIN may assign the SUPER_ADMIN role
-        if (roleRow.name === 'SUPER_ADMIN' && admin.role !== 'SUPER_ADMIN') {
-          return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه تعيين رتبة المدير الأعلى' }, { status: 403 });
-        }
+        // Only SUPER_ADMIN may assign a privileged legacy role string (name-based,
+      // normalization-safe: guards both system and shadow company roles)
+      if (isPrivilegedRoleName(roleRow.name) && admin.role !== 'SUPER_ADMIN') {
+        return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه تعيين رتبة المدير الأعلى' }, { status: 403 });
+      }
         if (target.id === admin.id && target.roleId !== roleId) {
           return NextResponse.json({ error: 'لا يمكنك تغيير دورك الشخصي' }, { status: 400 });
         }

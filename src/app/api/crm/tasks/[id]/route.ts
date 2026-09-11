@@ -61,6 +61,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     }
 
+    // Tenant-validate every foreign-key reference (same rule as POST /tasks)
+    if (data.crmContactId) {
+      const contact = await db.crmContact.findFirst({ where: { id: data.crmContactId, companyId } });
+      if (!contact) return NextResponse.json({ error: 'Contact not found' }, { status: 400 });
+    }
+    if (data.crmDealId) {
+      const deal = await db.crmDeal.findFirst({ where: { id: data.crmDealId, companyId } });
+      if (!deal) return NextResponse.json({ error: 'Deal not found' }, { status: 400 });
+    }
+    if (data.assignedToId) {
+      const assignee = await db.user.findFirst({ where: { id: data.assignedToId, companyId } });
+      if (!assignee) return NextResponse.json({ error: 'Assignee not found' }, { status: 400 });
+    }
+
     const record = await db.crmTask.update({ where: { id }, data });
 
     await logAudit({

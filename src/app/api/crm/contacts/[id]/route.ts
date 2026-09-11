@@ -64,6 +64,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const crmCompany = await db.crmCompany.findFirst({ where: { id: parsed.data.crmCompanyId, companyId } });
       if (!crmCompany) return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
+    if (parsed.data.ownerId) {
+      const owner = await db.user.findFirst({ where: { id: parsed.data.ownerId, companyId } });
+      if (!owner) return NextResponse.json({ error: 'Owner not found' }, { status: 404 });
+    }
 
     const record = await db.crmContact.update({ where: { id }, data: parsed.data });
 

@@ -3,6 +3,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requirePermission } from '@/lib/authorization';
 import { computeEffectiveGrants } from '@/lib/permissions-core';
+import { getPermissionScope } from '@/lib/authorization';
 import { ALL_CATALOG_KEYS, catalogItem } from '@/lib/permission-catalog';
 import { logAudit } from '@/lib/audit';
 import {
@@ -165,6 +166,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!loaded.ok) return loaded.response;
     const target = loaded.user;
 
+    // Self-modification guard: no user may edit their own permission overrides —
+    // a holder of users.edit could otherwise silently grant themselves keys.
+    if (target.id === admin.id) {
+      return NextResponse.json({ error: 'لا يمكنك تعديل صلاحيات حسابك الشخصي' }, { status: 400 });
+    }
+
     // SUPER_ADMIN is full-access by engine precedence — no overrides, ever.
     const superBlock = superAdminOverrideGuard(target);
     if (superBlock) return superBlock;
@@ -173,6 +180,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const validated = validateOverrideInputs(body?.overrides);
     if (!validated.ok) return validated.response;
     const parsed = validated.parsed;
+
+    // ── Grant-level guard: the actor may only ALLOW keys they themselves hold
+    // at ALL_COMPANY scope (or be SUPER_ADMIN). DENY rows grant nothing. ──
+    for (const o of parsed) {
+      if (o.effect !== 'ALLOW') continue;
+      const granterScope = getPermissionScope(admin, o.permission);
+      if (!granterScope || granterScope.scope !== 'ALL_COMPANY') {
+        return NextResponse.json(
+          { error: 'لا يمكنك منح صلاحية لا تملكها بنطاق كامل' },
+          { status: 403 }
+        );
+      }
+    }
 
     // ── scopeIds tenant validation: every id must belong to the TARGET
     // user's company (never the actor's) — no cross-tenant resource scopes. ──

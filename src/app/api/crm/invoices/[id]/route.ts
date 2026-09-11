@@ -76,6 +76,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (data.dueDate !== undefined) data.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     if (data.issueDate !== undefined) data.issueDate = new Date(data.issueDate);
 
+    // Tenant-validate every foreign-key reference (same rule as POST /invoices)
+    if (data.crmContactId) {
+      const contact = await db.crmContact.findFirst({ where: { id: data.crmContactId, companyId } });
+      if (!contact) return NextResponse.json({ error: 'Contact not found' }, { status: 400 });
+    }
+    if (data.crmCompanyId) {
+      const crmCompany = await db.crmCompany.findFirst({ where: { id: data.crmCompanyId, companyId } });
+      if (!crmCompany) return NextResponse.json({ error: 'CRM company not found' }, { status: 400 });
+    }
+    if (data.crmDealId) {
+      const deal = await db.crmDeal.findFirst({ where: { id: data.crmDealId, companyId } });
+      if (!deal) return NextResponse.json({ error: 'Deal not found' }, { status: 400 });
+    }
+
     const amountPaid = data.amountPaid ?? existing.amountPaid;
     const total = existing.total;
 

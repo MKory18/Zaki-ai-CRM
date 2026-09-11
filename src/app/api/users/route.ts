@@ -7,6 +7,8 @@ import { logAudit } from '@/lib/audit';
 import { ASSIGNABLE_ROLES, UserRole } from '@/types/auth';
 import { requirePermission } from '@/lib/authorization';
 
+import { isPrivilegedRoleName } from '@/lib/role-names';
+
 const createUserSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80),
   email: z.string().trim().toLowerCase().email('صيغة البريد الإلكتروني غير صحيحة'),
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
       if (targetRole.companyId !== null && targetRole.companyId !== admin.companyId) {
         return NextResponse.json({ error: 'غير مسموح بإسناد دور من شركة أخرى' }, { status: 403 });
       }
-      if (targetRole.name === 'SUPER_ADMIN' && admin.role !== 'SUPER_ADMIN') {
+if (isPrivilegedRoleName(targetRole.name) && admin.role !== 'SUPER_ADMIN') {
         return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه إسناد دور المدير الأعلى' }, { status: 403 });
       }
       targetRoleId = targetRole.id;

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
@@ -83,11 +84,28 @@ export async function POST(req: Request) {
 
     // ─── Mode 2: Confirm & Create ───
     if (body.confirm) {
-      const p = body.parsed as ParsedOrder & {
-        productId: string;
-        finalPrice: number;
-        moderatorId?: string;
-      };
+      // Server-side Zod validation — the client-confirmed payload is never
+      // trusted with raw values (same rules as POST /api/orders).
+      const confirmSchema = z.object({
+        customerName: z.string().trim().min(2).max(80),
+        phone: z.string().trim().min(7).max(20),
+        address: z.string().trim().max(200).optional().nullable(),
+        governorate: z.string().trim().max(60).optional().nullable(),
+        productId: z.string().min(10).max(64),
+        quantity: z.coerce.number().int().min(1).max(999),
+        finalPrice: z.coerce.number().min(0).max(100000),
+        moderatorId: z.string().min(10).max(64).optional().nullable(),
+        notes: z.string().trim().max(500).optional().nullable(),
+        source: z.string().trim().max(40).optional().nullable(),
+      });
+      const check = confirmSchema.safeParse(body.parsed);
+      if (!check.success) {
+        return NextResponse.json(
+          { error: check.error.issues[0]?.message || 'بيانات الطلب غير صالحة' },
+          { status: 400 }
+        );
+      }
+      const p = check.data;
 
       if (!p.customerName || !p.phone || !p.productId) {
         return NextResponse.json(
@@ -123,14 +141,23 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
       }
 
-      const qty = p.quantity || 1;
-      const price = p.finalPrice || 0;
+      const qty = p.quantity;
+      // Same business rule as POST /orders: zero/absent price falls back to
+      // the product's own base price — the client never dictates the price.
+      const price = p.finalPrice || product.basePrice;
       const unitCost = product.batches[0]?.costPerUnit || 0;
 
+      // Moderator assignment — must belong to THIS company (same rule as POST /orders)
+      const assignedModeratorId = p.moderatorId || (user.role === 'MODERATOR' ? user.id : null);
       let moderatorCommission = 0;
-      if (user.role === 'MODERATOR') {
-        const mod = await db.user.findUnique({ where: { id: user.id } });
-        if (mod?.commissionRate) moderatorCommission = Number(((price * mod.commissionRate) / 100).toFixed(2));
+      if (assignedModeratorId) {
+        const mod = await db.user.findFirst({ where: { id: assignedModeratorId, companyId } });
+        if (!mod) {
+          return NextResponse.json({ error: 'الموديريتور غير موجود في شركتك' }, { status: 404 });
+        }
+        if (mod.commissionRate > 0) {
+          moderatorCommission = Number(((price * mod.commissionRate) / 100).toFixed(2));
+        }
       }
 
       const count = await db.order.count({ where: { companyId } });
@@ -147,7 +174,7 @@ export async function POST(req: Request) {
           shippingCost: 0,
           totalAmount: price,
           currency: 'USD',
-        moderatorId: user.role === 'MODERATOR' ? user.id : p.moderatorId || null,
+        moderatorId: assignedModeratorId,
         moderatorCommission,
         estimatedCostOfGoods: Number((unitCost * qty).toFixed(2)),
         productNameSnapshot: product.name,

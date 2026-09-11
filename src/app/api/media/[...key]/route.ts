@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { readStoredFile } from '@/lib/storage';
+import { readStoredFile, isSafeStorageKey } from '@/lib/storage';
 
 /**
  * GET /api/media/companies/{companyId}/products/{productId}/{file}
@@ -17,7 +17,19 @@ export async function GET(
   }
 
   const { key } = await params;
-  const storageKey = key.map((k) => decodeURIComponent(k)).join('/');
+  let decoded: string[];
+  try {
+    decoded = key.map((k) => decodeURIComponent(k));
+  } catch {
+    return NextResponse.json({ error: 'Invalid media path' }, { status: 400 });
+  }
+
+  // Reject traversal payloads before joining: backslash separators, dot
+  // segments and dot-prefixed names can escape the per-company namespace.
+  if (decoded.some((s) => s.includes('\\') || s === '.' || s === '..' || s.startsWith('.'))) {
+    return NextResponse.json({ error: 'Invalid media path' }, { status: 400 });
+  }
+  const storageKey = decoded.join('/');
 
   // Path structure: companies/{companyId}/products/{productId}/{file}
   const parts = storageKey.split('/');
@@ -28,6 +40,10 @@ export async function GET(
   const companyId = parts[1];
   if (user.role !== 'SUPER_ADMIN' && user.companyId !== companyId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  // Canonical containment check (defense in depth with readStoredFile's guard)
+  if (!isSafeStorageKey(storageKey)) {
+    return NextResponse.json({ error: 'Invalid media path' }, { status: 400 });
   }
 
   const file = await readStoredFile(storageKey);

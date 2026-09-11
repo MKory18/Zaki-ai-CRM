@@ -57,6 +57,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid body' }, { status: 400 });
     }
 
+    // Tenant-validate the assignee (same rule as POST /leads)
+    if (parsed.data.assignedToId) {
+      const assignee = await db.user.findFirst({ where: { id: parsed.data.assignedToId, companyId } });
+      if (!assignee) return NextResponse.json({ error: 'Assignee not found' }, { status: 400 });
+    }
+
     const record = await db.crmLead.update({ where: { id }, data: parsed.data });
 
     // Log a status change activity when the lead moves to a new status

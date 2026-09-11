@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { PERMISSION_MODULES } from '@/lib/permission-catalog';
+import { isReservedRoleName } from '@/lib/role-names';
 
 // Allowed canonical keys — built from the UI catalog (single source of truth).
 const ALLOWED_KEYS: Set<string> = new Set(
@@ -83,6 +84,14 @@ export async function POST(req: Request) {
 
     if (typeof name !== 'string' || !name.trim()) {
       return NextResponse.json({ error: 'اسم الدور مطلوب' }, { status: 400 });
+    }
+
+    // Reserved-name guard: system/privileged legacy role strings are never
+    // creatable as company roles — a role named SUPER_ADMIN would let the
+    // role-deletion replacement (or assignment) write the legacy string
+    // 'SUPER_ADMIN' onto users, which the engine treats as fullAccess.
+    if (isReservedRoleName(name) && admin.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'اسم الدور محجوز للنظام' }, { status: 403 });
     }
 
     // Validate permission keys against the catalog + scope integrity.

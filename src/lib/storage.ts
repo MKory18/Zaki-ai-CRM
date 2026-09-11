@@ -17,6 +17,20 @@ import { Readable } from 'stream';
 export const STORAGE_PROVIDER = process.env.STORAGE_PROVIDER || 'local';
 export const LOCAL_STORAGE_DIR = path.join(process.cwd(), 'uploads');
 
+/**
+ * Canonical path-containment guard for a storage key.
+ * Rejects backslashes (Windows separators), dot segments, and any key whose
+ * resolved path escapes the uploads root — traversal-safe for ../, ..\ and
+ * URL-decoded variants alike.
+ */
+export function isSafeStorageKey(storageKey: string): boolean {
+  if (!storageKey || storageKey.includes('\\')) return false;
+  const segments = storageKey.split('/');
+  if (segments.some((s) => s === '' || s === '.' || s === '..' || s.startsWith('.'))) return false;
+  const resolved = path.resolve(LOCAL_STORAGE_DIR, storageKey);
+  return resolved.startsWith(LOCAL_STORAGE_DIR + path.sep);
+}
+
 const MAX_SIZE_MB = parseInt(process.env.MAX_PRODUCT_IMAGE_SIZE_MB || '10', 10);
 
 export interface StoredImage {
@@ -141,8 +155,8 @@ export async function readStoredFile(
   storageKey: string
 ): Promise<{ stream: Readable; size: number; mimeType: string } | null> {
   if (STORAGE_PROVIDER !== 'local') return null;
-  const absPath = path.join(LOCAL_STORAGE_DIR, storageKey);
-  if (!absPath.startsWith(LOCAL_STORAGE_DIR)) return null; // path traversal guard
+  if (!isSafeStorageKey(storageKey)) return null; // canonical traversal guard
+  const absPath = path.resolve(LOCAL_STORAGE_DIR, storageKey);
   try {
     const stat = await fs.promises.stat(absPath);
     const ext = path.extname(absPath).toLowerCase();
@@ -164,8 +178,8 @@ export async function readStoredFile(
 
 export async function deleteStoredFile(storageKey: string): Promise<void> {
   if (STORAGE_PROVIDER === 'local') {
-    const absPath = path.join(LOCAL_STORAGE_DIR, storageKey);
-    if (!absPath.startsWith(LOCAL_STORAGE_DIR)) return;
+    if (!isSafeStorageKey(storageKey)) return; // canonical traversal guard
+    const absPath = path.resolve(LOCAL_STORAGE_DIR, storageKey);
     try {
       await fs.promises.unlink(absPath);
     } catch {
