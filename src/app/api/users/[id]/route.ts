@@ -7,6 +7,7 @@ import { ASSIGNABLE_ROLES, UserRole, UserStatus } from '@/types/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { isPrivilegedRoleName } from '@/lib/role-names';
+import { canConferRole } from '@/lib/user-permissions';
 
 /**
  * PATCH /api/users/:id — admin actions on a user account:
@@ -82,6 +83,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (target.id === admin.id && target.roleId !== roleId) {
           return NextResponse.json({ error: 'لا يمكنك تغيير دورك الشخصي' }, { status: 400 });
         }
+        // Conferral policy: assigning a role confers its FULL canonical matrix
+        // onto the target — the granter must be able to grant every key/scope
+        // the role carries (granter-must-hold), not just hold users.edit.
+        const conferral = await canConferRole(admin, { id: roleRow.id, name: roleRow.name });
+        if (!conferral.ok) {
+          return NextResponse.json({ error: conferral.error }, { status: conferral.status });
+        }
         updateData.roleId = roleId;
         updateData.role = roleRow.name; // keep legacy role string in sync
         updateData.permissionsVersion = { increment: 1 }; // invalidate cached grants
@@ -97,6 +105,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       } else {
         if (target.id === admin.id && role !== admin.role) {
           return NextResponse.json({ error: 'لا يمكنك تغيير دورك الشخصي' }, { status: 400 });
+        }
+        // Conferral policy for the legacy string: it resolves to the canonical
+        // legacy matrix (granter-must-hold, fail-closed for unknown names).
+        // PENDING_USER confers nothing and stays always allowed.
+        const conferral = await canConferRole(admin, { name: role as string });
+        if (!conferral.ok) {
+          return NextResponse.json({ error: conferral.error }, { status: conferral.status });
         }
         updateData.role = role;
       }

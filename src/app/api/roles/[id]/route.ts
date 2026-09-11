@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { PERMISSION_MODULES } from '@/lib/permission-catalog';
 import { isReservedRoleName, isPrivilegedRoleName, normalizeRoleName } from '@/lib/role-names';
+import { granterHoldsAll, canConferRole } from '@/lib/user-permissions';
 
 const ALLOWED_KEYS: Set<string> = new Set(
   PERMISSION_MODULES.flatMap((m) => m.items.map((i) => i.key))
@@ -103,6 +104,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (permissions) {
       const invalid = validatePermissions(permissions);
       if (invalid) return invalid;
+      // Granter-must-hold: the actor may never place a key (or a stronger
+      // scope) into ANY role — their own role or someone else's — that they
+      // do not themselves hold. Blocks self-escalation via the role matrix
+      // and cross-user conferral alike. Runs BEFORE any DB write.
+      const grantError = granterHoldsAll(admin, permissions.map((p) => ({ permission: p.permission, scope: p.scope ?? 'ALL_COMPANY' })));
+      if (grantError) {
+        return NextResponse.json({ error: grantError }, { status: 403 });
+      }
     }
     if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
       return NextResponse.json({ error: 'اسم الدور غير صالح' }, { status: 400 });
@@ -198,6 +207,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       // NOT sufficient identifiers for privileged legacy strings.
       if (isPrivilegedRoleName(replacement.name) && admin.role !== 'SUPER_ADMIN') {
         return NextResponse.json({ error: 'غير مسموح باستخدام دور المدير الأعلى كبديل' }, { status: 403 });
+      }
+      // Conferral policy: reassignment confers the replacement's full canonical
+      // matrix onto every bound user — the actor must be able to grant it
+      // (granter-must-hold). replacement.name is never a security authority.
+      const conferral = await canConferRole(admin, { id: replacement.id, name: replacement.name });
+      if (!conferral.ok) {
+        return NextResponse.json({ error: conferral.error }, { status: conferral.status });
       }
 
       await db.$transaction(async (tx) => {

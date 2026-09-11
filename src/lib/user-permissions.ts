@@ -17,7 +17,9 @@
  */
 import { NextResponse } from 'next/server';
 import { db } from './db';
-import { SessionUser } from '../types/auth';
+import { ROLE_PERMISSIONS, SessionUser, UserRole } from '../types/auth';
+import { getPermissionScope } from './authorization';
+import { legacyEffectiveKeys, catalogExtensionKeys } from './permissions-core';
 
 /** Shape of the target user needed by the permission override routes. */
 export interface PermissionTargetUser {
@@ -83,10 +85,6 @@ export async function loadPermissionTarget(
   return { ok: true, user: target };
 }
 
-/**
- * SUPER_ADMIN accounts are full-access by engine precedence (permissions-core)
- * — they never accept overrides. Mutating handlers (PUT/DELETE) must call this.
- */
 export function superAdminOverrideGuard(target: { role: string }): NextResponse | null {
   if (target.role === 'SUPER_ADMIN') {
     return NextResponse.json(
@@ -95,4 +93,84 @@ export function superAdminOverrideGuard(target: { role: string }): NextResponse 
     );
   }
   return null;
+}
+
+/**
+ * Granter-must-hold rule for ROLE-MATRIX writes (POST /roles, PATCH /roles/:id):
+ * the actor may only place a permission into a role if they themselves hold
+ * that key, and only at a scope they hold at equal strength or ALL_COMPANY
+ * (ALL_COMPANY holders can grant any narrower scope; OWN/ASSIGNED/CATEGORY/
+ * SPECIFIC holders can only grant their exact scope). SUPER_ADMIN holds
+ * everything by engine precedence and keeps the existing bypass.
+ * Returns the Arabic 403 error message, or null when every grant is allowed.
+ */
+export function granterHoldsAll(
+  actor: SessionUser,
+  grants: Array<{ permission: string; scope?: string }>
+): string | null {
+  // Visibility-tier coverage: holding a broader view tier covers its narrower
+  // tier (customers.view ⊇ customers.view_basic) — conferring a role that
+  // carries the narrower tier to someone when you hold the broader one is a
+  // downgrade, not an escalation.
+  const COVERAGE: Record<string, string> = { 'customers.view_basic': 'customers.view' };
+  for (const g of grants) {
+    const requested = g.scope ?? 'ALL_COMPANY';
+    let held = getPermissionScope(actor, g.permission);
+    if (!held && COVERAGE[g.permission]) {
+      held = getPermissionScope(actor, COVERAGE[g.permission]);
+    }
+    const ok =
+      !!held &&
+      (held.scope === 'ALL_COMPANY' ||
+        (requested !== 'ALL_COMPANY' && held.scope === requested));
+    if (!ok) {
+      return 'لا يمكنك منح صلاحية لا تملكها بنطاق كامل';
+    }
+  }
+  return null;
+}
+
+/**
+ * Canonical (permission, scope) grants a role would CONFER onto a user.
+ * DB roles resolve from their RolePermission rows; legacy roles (no rows)
+ * resolve through the parity mapping (legacyEffectiveKeys + catalogExtensionKeys)
+ * at ALL_COMPANY scope. Returns null when the role name is unknown (fail closed).
+ */
+export async function roleConferralGrants(
+  role: { id?: string | null; name: string }
+): Promise<Array<{ permission: string; scope: string }> | null> {
+  if (role.id) {
+    const rows = await db.rolePermission.findMany({
+      where: { roleId: role.id },
+      select: { permission: true, scope: true },
+    });
+    return rows.map((r) => ({ permission: r.permission, scope: (r.scope as string) ?? 'ALL_COMPANY' }));
+  }
+  const legacy = (ROLE_PERMISSIONS as Record<string, string[]>)[role.name];
+  if (!legacy) return null;
+  if (legacy.length === 0) return []; // PENDING_USER — confers nothing
+  const keys = catalogExtensionKeys(new Set(legacyEffectiveKeys(role.name as UserRole)));
+  return [...keys]
+    .filter((k) => k !== 'dashboard.view')
+    .map((permission) => ({ permission, scope: 'ALL_COMPANY' }));
+}
+
+/**
+ * Conferral policy — the SINGLE gate for granting a role to a user in ANY
+ * path (POST /users, PATCH /users/:id roleId + legacy string, role deletion
+ * replacement, role duplication). SUPER_ADMIN bypasses (existing precedence).
+ * Everything else resolves the role to its canonical effective grants and
+ * enforces granter-must-hold — role NAME is never a security authority.
+ */
+export async function canConferRole(
+  actor: SessionUser,
+  role: { id?: string | null; name: string }
+): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
+  if (actor.role === 'SUPER_ADMIN') return { ok: true };
+  const grants = await roleConferralGrants(role);
+  if (grants === null) {
+    return { ok: false, error: 'الدور غير معروف', status: 400 };
+  }
+  const err = granterHoldsAll(actor, grants);
+  return err ? { ok: false, error: err, status: 403 } : { ok: true };
 }

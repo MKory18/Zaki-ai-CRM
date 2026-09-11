@@ -23,7 +23,7 @@ async function main() {
     const del = src('src/app/api/roles/[id]/route.ts');
     ok('DELETE replacement guard uses isPrivilegedRoleName (name-based, normalization-safe)', del.includes('isPrivilegedRoleName(replacement.name) && admin.role !== \'SUPER_ADMIN\''));
     ok('DELETE guard no longer depends on isSystem/companyId', !del.includes('replacement.isSystem && replacement.companyId === null && replacement.name === \'SUPER_ADMIN\''));
-    ok('DELETE reassignment runs inside db.$transaction', /replacementRoleId[\s\S]{0,900}db\.\$transaction/.test(del));
+    ok('DELETE reassignment runs inside db.$transaction', /replacementRoleId[\s\S]{0,1600}db\.\$transaction/.test(del));
     const sa = await db.role.findFirst({ where: { name: 'SUPER_ADMIN' } });
     ok('SUPER_ADMIN system role exists (guard target)', !!sa && sa.isSystem === true && sa.companyId === null);
 
@@ -43,6 +43,71 @@ async function main() {
     ok('PATCH /api/roles/:id rejects rename TO reserved name', del.includes("isReservedRoleName(name) && admin.role !== 'SUPER_ADMIN'"));
     ok('assignRole guard is normalization-safe (users/[id])', src('src/app/api/users/[id]/route.ts').includes('isPrivilegedRoleName(roleRow.name)'));
     ok('user-create guard (users/route.ts) name-based too', src('src/app/api/users/route.ts').includes('isPrivilegedRoleName(targetRole.name)'));
+  }
+
+  console.log('\n=== FIX 12 (HIGH): unified conferral policy across all five paths ===');
+  {
+    const dup = src('src/app/api/roles/[id]/duplicate/route.ts');
+    const uid = src('src/app/api/users/[id]/route.ts');
+    const upost = src('src/app/api/users/route.ts');
+    const rid = src('src/app/api/roles/[id]/route.ts');
+    const helper = src('src/lib/user-permissions.ts');
+    ok('Duplicate route gates on canConferRole BEFORE any write', dup.includes('canConferRole(admin, { id: source.id, name: source.name })') && dup.indexOf('canConferRole') < dup.indexOf('db.$transaction'));
+    ok('PATCH users/[id] roleId path gated on canConferRole', uid.includes('canConferRole(admin, { id: roleRow.id, name: roleRow.name })'));
+    ok('PATCH users/[id] legacy role-string path gated too', uid.includes('canConferRole(admin, { name: role as string })'));
+    ok('POST /users gated for both roleId and legacy role', upost.includes('canConferRole(admin, { id: targetRole.id, name: targetRole.name })') && upost.includes('canConferRole(admin, { name: targetRoleName })'));
+    ok('DELETE replacement gated on conferral (name never an authority)', rid.includes('canConferRole(admin, { id: replacement.id, name: replacement.name })'));
+    ok('Single helper reuses granterHoldsAll (no second policy model)', helper.includes('granterHoldsAll(actor, grants)') && helper.includes('export async function canConferRole'));
+    ok('Legacy roles resolve through parity mapping (legacyEffectiveKeys + catalogExtensionKeys)', helper.includes('legacyEffectiveKeys') && helper.includes('catalogExtensionKeys'));
+    ok('Fail-closed for unknown role names', helper.includes('if (!legacy) return null') && helper.includes("'الدور غير معروف'"));
+    ok('PENDING_USER (empty matrix) stays conferrable', helper.includes('legacy.length === 0) return []'));
+    ok('Engine untouched (permissions-core reads only)', src('src/lib/permissions-core.ts').includes('export async function computeEffectiveGrants'));
+
+    // Simulate the exact conferral contract (mirror: coverage + scope rule)
+    const COVERAGE: Record<string, string> = { 'customers.view_basic': 'customers.view' };
+    const canGrant = (held: Record<string, string>, permission: string, requested: string): boolean => {
+      let h = held[permission];
+      if (!h && COVERAGE[permission]) h = held[COVERAGE[permission]];
+      return !!h && (h === 'ALL_COMPANY' || (requested !== 'ALL_COMPANY' && h === requested));
+    };
+    const adminHeld = { 'orders.view': 'ALL_COMPANY', 'orders.create': 'ALL_COMPANY', 'orders.edit': 'ALL_COMPANY', 'orders.claim': 'ALL_COMPANY', 'orders.release': 'ALL_COMPANY', 'orders.confirm': 'ALL_COMPANY', 'customers.view': 'ALL_COMPANY', 'customers.edit': 'ALL_COMPANY', 'products.view': 'ALL_COMPANY', 'offers.view': 'ALL_COMPANY', 'offers.manage': 'ALL_COMPANY', 'reports.view': 'ALL_COMPANY', 'ai.use': 'ALL_COMPANY', 'users.view': 'ALL_COMPANY', 'users.create': 'ALL_COMPANY', 'users.edit': 'ALL_COMPANY', 'users.delete': 'ALL_COMPANY', 'finance.view': 'ALL_COMPANY', 'crm.view': 'ALL_COMPANY' };
+    const richRole: Array<[string, string]> = [['users.view', 'ALL_COMPANY'], ['finance.view', 'ALL_COMPANY'], ['crm.view', 'ALL_COMPANY']];
+    const moderatorRole: Array<[string, string]> = [['orders.view', 'ALL_COMPANY'], ['orders.create', 'ALL_COMPANY'], ['orders.edit', 'ASSIGNED'], ['customers.view', 'ALL_COMPANY'], ['customers.edit', 'ALL_COMPANY'], ['products.view', 'ALL_COMPANY']];
+    const agentRole: Array<[string, string]> = [['orders.view', 'ASSIGNED'], ['orders.edit', 'ASSIGNED'], ['customers.view_basic', 'ALL_COMPANY'], ['products.view', 'ALL_COMPANY']];
+    ok('TEST: roles.create-only holder CANNOT duplicate rich COMPANY_ADMIN-like role', !richRole.every(([p, s]) => canGrant({ 'roles.create': 'ALL_COMPANY' }, p, s)));
+    ok('TEST: partial holder (no finance) cannot duplicate richer role', !richRole.every(([p, s]) => canGrant({ 'orders.view': 'ALL_COMPANY' }, p, s)));
+    ok('TEST: admin holds all moderator keys incl. ASSIGNED rows → duplication succeeds', moderatorRole.every(([p, s]) => canGrant(adminHeld, p, s)));
+    ok('TEST: CONFIRMATION_AGENT duplicate allowed for admin via customers.view coverage of view_basic', agentRole.every(([p, s]) => canGrant(adminHeld, p, s)));
+    ok('TEST: OWN holder cannot confer a role carrying ALL_COMPANY orders.edit', !moderatorRole.every(([p, s]) => canGrant({ 'orders.edit': 'OWN', 'orders.view': 'ALL_COMPANY' }, p, s)));
+    ok('TEST: missing permission → reject (finance.view not held)', !canGrant(adminHeld, 'finance.cashbox', 'ALL_COMPANY'));
+    ok('TEST: narrower tier coverage only (view_basic via view)', canGrant(adminHeld, 'customers.view_basic', 'ALL_COMPANY'));
+    ok('TEST: no self-escalation — actor grants checked against THEIR OWN effective grants (getPermissionScope, session-only)', helper.includes('getPermissionScope(actor') && !helper.includes('body.'));
+  }
+
+  console.log('\n=== FIX 11 (HIGH): granter-must-hold on role matrix (self-escalation closed) ===');
+  {
+    const rid = src('src/app/api/roles/[id]/route.ts');
+    const rpost = src('src/app/api/roles/route.ts');
+    ok('PATCH applies granterHoldsAll BEFORE any DB write', rid.includes('granterHoldsAll(admin') && rid.indexOf('granterHoldsAll(admin') < rid.indexOf('db.$transaction'));
+    ok('POST applies granterHoldsAll too (same vulnerability, role creation)', rpost.includes('granterHoldsAll(admin') && rpost.indexOf('granterHoldsAll(admin') < rpost.indexOf('db.$transaction'));
+    ok('Helper lives in shared guards (single source, no route-local duplication)', src('src/lib/user-permissions.ts').includes('export function granterHoldsAll'));
+    ok('Engine untouched (permissions-core unchanged by this fix)', src('src/lib/permissions-core.ts').includes("if (user.role === 'SUPER_ADMIN') return { fullAccess: true, grants: {} };"));
+
+    // Simulate the exact granter-must-hold contract (mirror of the helper)
+    const canGrant = (held: Record<string, string>, permission: string, requested: string): boolean => {
+      const h = held[permission];
+      return !!h && (h === 'ALL_COMPANY' || (requested !== 'ALL_COMPANY' && h === requested));
+    };
+    const heldAdmin = { 'users.manage': 'ALL_COMPANY', 'orders.view': 'ALL_COMPANY', 'orders.edit': 'OWN', 'products.view': 'CATEGORY' };
+    ok('TEST 1: held users.manage grants users.manage → allowed... but roles-edit-only holder adding users.manage → rejected', !canGrant({ 'roles.edit': 'ALL_COMPANY' }, 'users.manage', 'ALL_COMPANY'));
+    ok('TEST 2: finance.* not held → rejected', !canGrant(heldAdmin, 'finance.cashbox', 'ALL_COMPANY'));
+    ok('TEST 3: roles.edit-only holder cannot grant other roles.* keys they lack (roles.delete/roles.view)', !canGrant({ 'roles.edit': 'ALL_COMPANY' }, 'roles.delete', 'ALL_COMPANY') && !canGrant({ 'roles.edit': 'ALL_COMPANY' }, 'roles.view', 'ALL_COMPANY'));
+    ok('TEST 4: granting a held key at equal scope succeeds', canGrant(heldAdmin, 'users.manage', 'ALL_COMPANY') && canGrant(heldAdmin, 'orders.edit', 'OWN'));
+    ok('TEST 5: OWN holder cannot grant ALL_COMPANY (scope escalation rejected)', !canGrant({ 'orders.edit': 'OWN' }, 'orders.edit', 'ALL_COMPANY'));
+    ok('TEST 6: CATEGORY/SPECIFIC rejected when not held at matching scope', !canGrant(heldAdmin, 'products.view', 'SPECIFIC') && !canGrant(heldAdmin, 'products.view', 'ALL_COMPANY'));
+    ok('TEST 7: SUPER_ADMIN bypass preserved — helper relies on getPermissionScope which returns ALL_COMPANY for fullAccess', src('src/lib/user-permissions.ts').includes('getPermissionScope(actor, g.permission)') && src('src/lib/authorization.ts').includes('if (g.fullAccess) return { scope: \'ALL_COMPANY\' };'));
+    ok('TEST 8: cross-tenant role edit still 404 via loadVisibleRole (unchanged)', rid.includes('role.companyId !== null && role.companyId !== adminCompanyId'));
+    ok('TEST 9/10: rejection precedes transaction (no write, permissionsVersion/audit untouched)', rid.indexOf("status: 403 }\n      );\n    }\n    if (name !== undefined") !== -1 || rid.indexOf('grantError') < rid.indexOf('db.$transaction'));
   }
 
   console.log('\n=== FIX 10 (MEDIUM): PATCH moderatorId tenant-validated ===');

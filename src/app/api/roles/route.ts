@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { PERMISSION_MODULES } from '@/lib/permission-catalog';
 import { isReservedRoleName } from '@/lib/role-names';
+import { granterHoldsAll } from '@/lib/user-permissions';
 
 // Allowed canonical keys — built from the UI catalog (single source of truth).
 const ALLOWED_KEYS: Set<string> = new Set(
@@ -108,6 +109,14 @@ export async function POST(req: Request) {
       if (!VALID_SCOPES.includes(scope)) {
         return NextResponse.json({ error: `نطاق غير صالح للصلاحية: ${p.permission}` }, { status: 400 });
       }
+    }
+
+    // Granter-must-hold (same rule as PATCH): a created role must never carry
+    // keys/scope-strengths the actor does not hold — the role could otherwise
+    // be assigned to anyone (incl. via role-deletion replacement).
+    const grantError = granterHoldsAll(admin, permissions.map((p) => ({ permission: p.permission, scope: p.scope ?? 'ALL_COMPANY' })));
+    if (grantError) {
+      return NextResponse.json({ error: grantError }, { status: 403 });
     }
 
     // Tenant resolution — never trust client companyId blindly.

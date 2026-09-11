@@ -8,6 +8,7 @@ import { ASSIGNABLE_ROLES, UserRole } from '@/types/auth';
 import { requirePermission } from '@/lib/authorization';
 
 import { isPrivilegedRoleName } from '@/lib/role-names';
+import { canConferRole } from '@/lib/user-permissions';
 
 const createUserSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80),
@@ -54,8 +55,21 @@ export async function POST(req: Request) {
 if (isPrivilegedRoleName(targetRole.name) && admin.role !== 'SUPER_ADMIN') {
         return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه إسناد دور المدير الأعلى' }, { status: 403 });
       }
+      // Conferral policy: creating an ACTIVE user with a role confers the full
+      // canonical matrix — the creator must hold every key/scope it carries.
+      const conferral = await canConferRole(admin, { id: targetRole.id, name: targetRole.name });
+      if (!conferral.ok) {
+        return NextResponse.json({ error: conferral.error }, { status: conferral.status });
+      }
       targetRoleId = targetRole.id;
       targetRoleName = targetRole.name;
+    } else if (admin.role !== 'SUPER_ADMIN') {
+      // Legacy role-string path: same conferral policy resolved through the
+      // canonical legacy matrix (fail-closed for unknown names).
+      const conferral = await canConferRole(admin, { name: targetRoleName });
+      if (!conferral.ok) {
+        return NextResponse.json({ error: conferral.error }, { status: conferral.status });
+      }
     }
 
     const existing = await db.user.findUnique({ where: { email } });

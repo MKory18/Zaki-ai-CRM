@@ -3,6 +3,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
+import { canConferRole } from '@/lib/user-permissions';
 
 /**
  * POST /api/roles/:id/duplicate — copy a role (name + ' (نسخة)') with its full
@@ -23,6 +24,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     // Company roles may only be duplicated within the same company.
     if (source.companyId !== null && source.companyId !== admin.companyId) {
       return NextResponse.json({ error: 'الدور غير موجود' }, { status: 404 });
+    }
+
+    // Conferral policy: visibility is NOT authorization. The actor may only
+    // duplicate a role whose full canonical matrix they could grant themselves
+    // (granter-must-hold) — no permission laundering through copying a rich
+    // system/other role. Rejected wholesale, before any write.
+    const conferral = await canConferRole(admin, { id: source.id, name: source.name });
+    if (!conferral.ok) {
+      return NextResponse.json({ error: conferral.error }, { status: conferral.status });
     }
 
     const targetCompanyId = admin.companyId ?? source.companyId;
