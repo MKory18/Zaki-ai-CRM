@@ -28,6 +28,7 @@ import {
   Calendar,
   FileText,
   Globe,
+  MessageCircle,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
@@ -62,6 +63,8 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
     { href: '/dashboards/crm/calendar', label: 'التقويم', icon: Calendar, permission: 'crm.view' },
     { href: '/dashboards/crm/invoices', label: 'الفواتير', icon: FileText, permission: 'crm.view' },
     { href: '/dashboards/crm/landing-pages', label: 'صفحات الهبوط', icon: Globe, permission: 'landing_pages.view' },
+    { href: '/dashboards/whatsapp', label: 'صندوق واتساب', icon: MessageCircle, permission: 'whatsapp.view' },
+    { href: '/dashboards/whatsapp/settings', label: 'إعدادات واتساب', icon: Settings, permission: 'whatsapp.manage' },
   ];
 
   // Filter based on user role and permissions

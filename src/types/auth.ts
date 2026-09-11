@@ -119,6 +119,10 @@ export type Permission =
   | 'crm.activities.delete'
   | 'settings.view'
   | 'settings.manage'
+  | 'whatsapp.view'
+  | 'whatsapp.send'
+  | 'whatsapp.manage'
+  | 'whatsapp.assign'
   | 'audit.view';
 
 export const ALL_PERMISSIONS: Permission[] = [
@@ -134,12 +138,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   'reports.view', 'analytics.view', 'ai.use',
   'crm.view', 'crm.manage',
   'settings.view', 'settings.manage', 'audit.view',
+  'whatsapp.view', 'whatsapp.send', 'whatsapp.manage', 'whatsapp.assign',
 ];
 
 // Re-export grouped aliases for readability
 export type PermissionGroup =
   | 'USERS' | 'ORDERS' | 'CUSTOMERS' | 'PRODUCTS' | 'FINANCE'
-  | 'SETTLEMENT' | 'INVENTORY' | 'PRODUCTION' | 'ANALYTICS' | 'SETTINGS' | 'AUDIT' | 'CRM';
+  | 'SETTLEMENT' | 'INVENTORY' | 'PRODUCTION' | 'ANALYTICS' | 'SETTINGS' | 'AUDIT' | 'CRM' | 'WHATSAPP';
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   // ─── Full system administration ───
@@ -172,6 +177,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports.view', 'analytics.view', 'ai.use',
     'crm.view', 'crm.manage',
     'settings.view', 'settings.manage', 'audit.view',
+    'whatsapp.view', 'whatsapp.send', 'whatsapp.manage', 'whatsapp.assign',
   ],
 
   // ─── Legacy manager — broad operational oversight, no finance writes ───
@@ -186,6 +192,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports.view', 'analytics.view', 'ai.use',
     'crm.view', 'crm.manage',
     'settings.view',
+    'whatsapp.view', 'whatsapp.send', 'whatsapp.assign',
   ],
 
   // ─── Order intake only — NO finance, NO settings, NO user roles ───
@@ -196,6 +203,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'products.view', 'offers.manage',
     'reports.view', 'ai.use',
     'crm.view', 'crm.manage',
+    'whatsapp.view', 'whatsapp.send',
   ],
 
   // ─── Confirmation only on OWN assigned orders — NO finance ───
@@ -279,6 +287,10 @@ export const STATUS_LABELS: Record<UserStatus, { ar: string; en: string }> = {
 
 /** Human-readable permission labels for the /permissions matrix page */
 export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string; group: string }> = {
+  'whatsapp.view': { ar: 'عرض صندوق واتساب', en: 'View WhatsApp inbox', group: 'WHATSAPP' },
+  'whatsapp.send': { ar: 'إرسال رسائل واتساب', en: 'Send WhatsApp messages', group: 'WHATSAPP' },
+  'whatsapp.manage': { ar: 'إدارة إعدادات واتساب', en: 'Manage WhatsApp settings', group: 'WHATSAPP' },
+  'whatsapp.assign': { ar: 'إسناد محادثات واتساب', en: 'Assign WhatsApp conversations', group: 'WHATSAPP' },
   'users.view': { ar: 'عرض المستخدمين', en: 'View users', group: 'USERS' },
   'users.create': { ar: 'إنشاء مستخدمين', en: 'Create users', group: 'USERS' },
   'users.update': { ar: 'تعديل المستخدمين', en: 'Update users', group: 'USERS' },

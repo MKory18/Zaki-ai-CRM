@@ -195,6 +195,15 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     ],
   },
   {
+    module: 'whatsapp',
+    items: [
+      { key: 'whatsapp.view', ar: 'عرض صندوق واتساب', en: 'View WhatsApp inbox' },
+      { key: 'whatsapp.send', ar: 'إرسال رسائل واتساب', en: 'Send WhatsApp messages' },
+      { key: 'whatsapp.manage', ar: 'إدارة إعدادات واتساب', en: 'Manage WhatsApp settings' },
+      { key: 'whatsapp.assign', ar: 'إسناد محادثات واتساب', en: 'Assign WhatsApp conversations' },
+    ],
+  },
+  {
     module: 'audit',
     items: [{ key: 'audit.view', ar: 'عرض سجل التدقيق', en: 'View audit logs' }],
   },
@@ -237,6 +246,7 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   roles: { ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' },
   settings: { ar: 'الإعدادات', en: 'Settings' },
   audit: { ar: 'سجل التدقيق', en: 'Audit Logs' },
+  whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
   landing_pages: { ar: 'صفحات الهبوط', en: 'Landing Pages' },
 };
 

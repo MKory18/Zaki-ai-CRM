@@ -49,6 +49,9 @@ model Company {
   crmInvoices       CrmInvoice[]
   roles             Role[]
   categories        Category[]
+  whatsappConnections WhatsAppConnection[]
+  whatsappConversations WhatsAppConversation[]
+  whatsappMessages  WhatsAppMessage[]
 
   @@map("companies")
 }
@@ -99,6 +102,7 @@ model User {
   permissionsVersion Int  @default(1)
   userPermissions UserPermission[]
   permissionsGranted UserPermission[] @relation("UserPermissionGranter")
+  whatsappAssignedConversations WhatsAppConversation[] @relation("WhatsAppAssignee")
   crmContactOwners    CrmContact[]  @relation("CrmContactOwner")
   crmLeadAssignees    CrmLead[]     @relation("CrmLeadAssignee")
   crmDealAssignees    CrmDeal[]     @relation("CrmDealAssignee")
@@ -260,6 +264,7 @@ model Customer {
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   orders  Order[]
+  whatsappConversations WhatsAppConversation[]
 
   @@unique([companyId, phone])
   @@index([companyId, phone])
@@ -1074,4 +1079,91 @@ model OrderAddOn {
   @@index([orderId])
   @@index([companyId, orderId])
   @@map("order_add_ons")
+}
+
+// ─── WHATSAPP BUSINESS CLOUD API (additive) ───
+// Official Meta Cloud API only — no unofficial bridges. One shared business
+// number per company; employees share a single Inbox. Access tokens are
+// server-only (env var or AES-256-GCM encrypted at rest) and are NEVER
+// returned by any API or exposed to the client.
+model WhatsAppConnection {
+  id                   String   @id @default(uuid())
+  companyId            String
+  wabaId               String   // WhatsApp Business Account ID
+  phoneNumberId        String   // Phone Number ID (Meta)
+  phoneNumber          String?  // display phone, e.g. +20 10 xxxx
+  displayName          String?
+  status               String   @default("NEEDS_SETUP") // CONNECTED, NEEDS_SETUP, DISCONNECTED
+  accessTokenEncrypted String?  // AES-256-GCM encrypted token (fallback when env token absent)
+  lastWebhookAt        DateTime?
+  lastMessageAt        DateTime?
+  lastError            String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  company      Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversations WhatsAppConversation[]
+  messages      WhatsAppMessage[]
+
+  // One number per company today; the schema allows more later.
+  @@unique([companyId, phoneNumberId])
+  @@index([companyId, status])
+  @@map("whatsapp_connections")
+}
+
+// Customer-facing conversation (a chat thread with one phone number).
+// Statuses OPEN/CLOSED now; extensible to PENDING/ARCHIVED later.
+model WhatsAppConversation {
+  id                String    @id @default(uuid())
+  companyId         String
+  connectionId      String
+  customerId        String?
+  customerPhone     String    // WhatsApp wa_id (digits only)
+  customerName      String?
+  status            String    @default("OPEN") // OPEN, CLOSED (PENDING/ARCHIVED reserved for later)
+  assignedUserId    String?
+  lastMessageAt     DateTime?
+  lastMessagePreview String?
+  unreadCount       Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company    Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  connection WhatsAppConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  customer   Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedTo User?               @relation("WhatsAppAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  messages   WhatsAppMessage[]
+
+  @@unique([companyId, connectionId, customerPhone])
+  @@index([companyId, status, lastMessageAt])
+  @@index([companyId, assignedUserId])
+  @@index([companyId, customerId])
+  @@map("whatsapp_conversations")
+}
+
+// Individual WhatsApp message. externalMessageId (Meta wamid) is unique so
+// duplicate webhook deliveries can never create duplicate messages.
+model WhatsAppMessage {
+  id                String   @id @default(uuid())
+  companyId         String
+  conversationId    String
+  connectionId      String
+  externalMessageId String
+  direction         String   // INBOUND, OUTBOUND
+  messageType       String   @default("TEXT") // TEXT (IMAGE/VIDEO/AUDIO/DOCUMENT/TEMPLATE reserved)
+  text              String?
+  status            String   @default("RECEIVED") // RECEIVED, SENT, DELIVERED, READ, FAILED
+  senderPhone       String?
+  recipientPhone    String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  company     Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  connection  WhatsAppConnection   @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([externalMessageId])
+  @@index([companyId, conversationId, createdAt])
+  @@index([companyId, status])
+  @@map("whatsapp_messages")
 }
