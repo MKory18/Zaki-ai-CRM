@@ -24,18 +24,10 @@ import {
   CircleUser,
   ShieldCheck,
   Lock,
-  Building2,
-  UserPlus,
-  Handshake,
-  KanbanSquare,
   ListChecks,
-  Activity,
   Calendar,
-  StickyNote,
   FileText,
   Globe,
-  BarChart3,
-  Settings2,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
@@ -65,21 +57,11 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
   ];
 
   const crmNavItems = [
-    { href: '/dashboards/crm', label: 'لوحة CRM', icon: LayoutDashboard, permission: 'crm.view' },
     { href: '/dashboards/crm/contacts', label: 'جهات الاتصال', icon: Users, permission: 'crm.view' },
-    { href: '/dashboards/crm/companies', label: 'الشركات', icon: Building2, permission: 'crm.view' },
-    { href: '/dashboards/crm/leads', label: 'العملاء المحتملون', icon: UserPlus, permission: 'crm.view' },
-    { href: '/dashboards/crm/deals', label: 'الصفقات', icon: Handshake, permission: 'crm.view' },
-    { href: '/dashboards/crm/pipeline', label: 'خط الصفقات', icon: KanbanSquare, permission: 'crm.view' },
     { href: '/dashboards/crm/tasks', label: 'المهام', icon: ListChecks, permission: 'crm.view' },
-    { href: '/dashboards/crm/activities', label: 'الأنشطة', icon: Activity, permission: 'crm.view' },
     { href: '/dashboards/crm/calendar', label: 'التقويم', icon: Calendar, permission: 'crm.view' },
-    { href: '/dashboards/crm/notes', label: 'الملاحظات', icon: StickyNote, permission: 'crm.view' },
     { href: '/dashboards/crm/invoices', label: 'الفواتير', icon: FileText, permission: 'crm.view' },
     { href: '/dashboards/crm/landing-pages', label: 'صفحات الهبوط', icon: Globe, permission: 'landing_pages.view' },
-    { href: '/dashboards/crm/products', label: 'المنتجات', icon: Package, permission: 'crm.view' },
-    { href: '/dashboards/crm/reports', label: 'التقارير', icon: BarChart3, permission: 'crm.view' },
-    { href: '/dashboards/crm/settings', label: 'إعدادات CRM', icon: Settings2, permission: 'crm.view' },
   ];
 
   // Filter based on user role and permissions

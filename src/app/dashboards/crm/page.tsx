@@ -31,8 +31,6 @@ export default function CrmDashboardPage() {
 
   const kpis = data?.kpis || {};
   const quickActions = [
-    { href: '/dashboards/crm/leads', label: 'عميل محتمل جديد', icon: UserPlus },
-    { href: '/dashboards/crm/deals', label: 'صفقة جديدة', icon: Handshake },
     { href: '/dashboards/crm/tasks', label: 'مهمة جديدة', icon: ListChecks },
     { href: '/dashboards/crm/contacts', label: 'جهة اتصال', icon: Users },
   ];

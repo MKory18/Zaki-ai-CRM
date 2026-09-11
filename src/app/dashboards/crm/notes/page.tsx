@@ -101,10 +101,10 @@ export default function NotesPage() {
   };
 
   const relatedLabel = (n: any) => {
-    if (n.crmContact) return { label: `${n.crmContact.firstName} ${n.crmContact.lastName}`, href: '/dashboards/crm/contacts' };
-    if (n.company || n.crmCompany) return { label: n.company?.name || n.crmCompany?.name, href: '/dashboards/crm/companies' };
-    if (n.crmDeal) return { label: n.crmDeal.title, href: '/dashboards/crm/deals' };
-    if (n.crmLead) return { label: `${n.crmLead.firstName} ${n.crmLead.lastName}`, href: '/dashboards/crm/leads' };
+    if (n.crmContact) return { label: `${n.crmContact.firstName} ${n.crmContact.lastName}`, href: '/dashboards/crm/contacts' as const };
+    if (n.company || n.crmCompany) return { label: n.company?.name || n.crmCompany?.name, href: undefined };
+    if (n.crmDeal) return { label: n.crmDeal.title, href: undefined };
+    if (n.crmLead) return { label: `${n.crmLead.firstName} ${n.crmLead.lastName}`, href: undefined };
     return null;
   };
 
