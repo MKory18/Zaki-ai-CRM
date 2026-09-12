@@ -204,6 +204,14 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     ],
   },
   {
+    module: 'telegram',
+    items: [
+      { key: 'telegram.view', ar: 'عرض طلبات تيليجرام', en: 'View Telegram integration' },
+      { key: 'telegram.manage', ar: 'إدارة ربط تيليجرام', en: 'Manage Telegram integration' },
+      { key: 'telegram.receive_orders', ar: 'استقبال طلبات تيليجرام', en: 'Receive Telegram orders' },
+    ],
+  },
+  {
     module: 'audit',
     items: [{ key: 'audit.view', ar: 'عرض سجل التدقيق', en: 'View audit logs' }],
   },
@@ -247,6 +255,7 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   settings: { ar: 'الإعدادات', en: 'Settings' },
   audit: { ar: 'سجل التدقيق', en: 'Audit Logs' },
   whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
+  telegram: { ar: 'تيليجرام', en: 'Telegram' },
   landing_pages: { ar: 'صفحات الهبوط', en: 'Landing Pages' },
 };
 

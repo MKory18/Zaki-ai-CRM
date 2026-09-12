@@ -303,6 +303,7 @@ export default function OrdersPage() {
             <option value="Facebook Ads">Facebook Ads</option>
             <option value="Messenger">Messenger</option>
             <option value="WhatsApp">WhatsApp</option>
+            <option value="Telegram">Telegram</option>
             <option value="AI">AI</option>
             <option value="Landing Page">Landing Page</option>
             <option value="Website">Website</option>

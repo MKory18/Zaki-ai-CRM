@@ -52,6 +52,8 @@ model Company {
   whatsappConnections WhatsAppConnection[]
   whatsappConversations WhatsAppConversation[]
   whatsappMessages  WhatsAppMessage[]
+  telegramSources   TelegramSource[]
+  telegramMessages  TelegramMessage[]
 
   @@map("companies")
 }
@@ -391,6 +393,7 @@ model Order {
   claimHistory OrderClaimHistory[]
   statusLogs   OrderStatusLog[]
   contactAttempts OrderContactAttempt[]
+  telegramMessages TelegramMessage[]
 
   @@unique([companyId, orderNumber])
   @@index([companyId, createdAt]) // hot path: list ordering + prev/next navigation + analytics windows
@@ -1166,4 +1169,65 @@ model WhatsAppMessage {
   @@index([companyId, conversationId, createdAt])
   @@index([companyId, status])
   @@map("whatsapp_messages")
+}
+
+// ─── Telegram Order Ingestion (additive) ───
+// A TelegramSource links one Telegram chat (group/supergroup) — or one forum
+// topic inside it — to a company. topicId = null means the WHOLE chat is
+// mapped; a numeric topicId maps a single forum topic. A chat can never be
+// bound to two companies (partial unique indexes in the migration).
+model TelegramSource {
+  id          String   @id @default(uuid())
+  companyId   String
+  chatId      String   // Telegram chat id (e.g. "-1001234567890")
+  chatType    String   // group, supergroup, channel
+  chatTitle   String?
+  topicId     Int?     // message_thread_id when mapping a single topic
+  topicName   String?
+  isActive    Boolean  @default(true)
+  lastMessageAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company  Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  messages TelegramMessage[]
+
+  @@unique([companyId, chatId, topicId])
+  @@index([chatId])
+  @@index([companyId, isActive])
+  @@map("telegram_sources")
+}
+
+// Every accepted webhook message is stored once (unique per tenant +
+// chat + message id) — the DB constraint is the idempotency source of
+// truth for duplicate Telegram webhook deliveries.
+model TelegramMessage {
+  id               String    @id @default(uuid())
+  companyId        String
+  sourceId         String?
+  chatId           String
+  messageId        String    // Telegram message_id (per chat)
+  threadId         Int?      // message_thread_id when the chat is a forum
+  threadName       String?
+  senderUserId     String?
+  senderUsername   String?
+  senderName       String?
+  text             String?
+  messageType      String    @default("TEXT") // TEXT, PHOTO, ... (reserved)
+  processingStatus String    @default("PENDING") // PENDING, PROCESSED, IGNORED, NEEDS_REVIEW, FAILED
+  reviewReason     String?   // PRODUCT_NOT_FOUND, AMBIGUOUS_PRODUCT, INVALID_PHONE, MISSING_CUSTOMER_NAME, MISSING_ADDRESS, INVALID_QUANTITY, ...
+  orderId          String?
+  internalError    String?   // safe internal error code only (never secrets/stacks)
+  createdAt        DateTime  @default(now())
+  processedAt      DateTime?
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  source  TelegramSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  order   Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, chatId, messageId])
+  @@index([companyId, processingStatus, createdAt])
+  @@index([companyId, sourceId])
+  @@index([orderId])
+  @@map("telegram_messages")
 }

@@ -469,7 +469,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       isOpen={isOpen}
       onClose={onClose}
       title={`الطلب ${order.orderNumber}`}
-      subtitle={`أُنشئ في ${format(new Date(order.createdAt), 'd MMMM yyyy — h:mm a', {})} • المصدر: ${order.source}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}${order.landingPageOffer?.name ? ` • العرض: ${order.landingPageOffer.name}` : ''}`}
+      subtitle={`أُنشئ في ${format(new Date(order.createdAt), 'd MMMM yyyy — h:mm a', {})} • المصدر: ${order.source}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}${order.landingPageOffer?.name ? ` • العرض: ${order.landingPageOffer.name}` : ''}${order.source === 'Telegram' && (order as any).telegramMessages?.[0] ? ` • تيليجرام: رسالة #${(order as any).telegramMessages[0].messageId}${(order as any).telegramMessages[0].threadId ? ` • موضوع: ${(order as any).telegramMessages[0].threadName || (order as any).telegramMessages[0].threadId}` : ''}` : ''}`}
       maxWidth="4xl"
     >
       {/* ─── Prev/Next order navigation (below the header, inside the modal) ─── */}

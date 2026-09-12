@@ -123,6 +123,9 @@ export type Permission =
   | 'whatsapp.send'
   | 'whatsapp.manage'
   | 'whatsapp.assign'
+  | 'telegram.view'
+  | 'telegram.manage'
+  | 'telegram.receive_orders'
   | 'audit.view';
 
 export const ALL_PERMISSIONS: Permission[] = [
@@ -139,12 +142,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   'crm.view', 'crm.manage',
   'settings.view', 'settings.manage', 'audit.view',
   'whatsapp.view', 'whatsapp.send', 'whatsapp.manage', 'whatsapp.assign',
+  'telegram.view', 'telegram.manage', 'telegram.receive_orders',
 ];
 
 // Re-export grouped aliases for readability
 export type PermissionGroup =
   | 'USERS' | 'ORDERS' | 'CUSTOMERS' | 'PRODUCTS' | 'FINANCE'
-  | 'SETTLEMENT' | 'INVENTORY' | 'PRODUCTION' | 'ANALYTICS' | 'SETTINGS' | 'AUDIT' | 'CRM' | 'WHATSAPP';
+  | 'SETTLEMENT' | 'INVENTORY' | 'PRODUCTION' | 'ANALYTICS' | 'SETTINGS' | 'AUDIT' | 'CRM' | 'WHATSAPP' | 'TELEGRAM';
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   // ─── Full system administration ───
@@ -178,6 +182,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'crm.view', 'crm.manage',
     'settings.view', 'settings.manage', 'audit.view',
     'whatsapp.view', 'whatsapp.send', 'whatsapp.manage', 'whatsapp.assign',
+    'telegram.view', 'telegram.manage', 'telegram.receive_orders',
   ],
 
   // ─── Legacy manager — broad operational oversight, no finance writes ───
@@ -193,6 +198,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'crm.view', 'crm.manage',
     'settings.view',
     'whatsapp.view', 'whatsapp.send', 'whatsapp.assign',
+    'telegram.view',
   ],
 
   // ─── Order intake only — NO finance, NO settings, NO user roles ───
@@ -287,6 +293,9 @@ export const STATUS_LABELS: Record<UserStatus, { ar: string; en: string }> = {
 
 /** Human-readable permission labels for the /permissions matrix page */
 export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string; group: string }> = {
+  'telegram.view': { ar: 'عرض طلبات تيليجرام', en: 'View Telegram integration', group: 'TELEGRAM' },
+  'telegram.manage': { ar: 'إدارة ربط تيليجرام', en: 'Manage Telegram integration', group: 'TELEGRAM' },
+  'telegram.receive_orders': { ar: 'استقبال طلبات تيليجرام', en: 'Receive Telegram orders', group: 'TELEGRAM' },
   'whatsapp.view': { ar: 'عرض صندوق واتساب', en: 'View WhatsApp inbox', group: 'WHATSAPP' },
   'whatsapp.send': { ar: 'إرسال رسائل واتساب', en: 'Send WhatsApp messages', group: 'WHATSAPP' },
   'whatsapp.manage': { ar: 'إدارة إعدادات واتساب', en: 'Manage WhatsApp settings', group: 'WHATSAPP' },

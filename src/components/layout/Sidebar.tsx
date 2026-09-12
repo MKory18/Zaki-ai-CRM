@@ -29,6 +29,7 @@ import {
   FileText,
   Globe,
   MessageCircle,
+  Send,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
@@ -65,6 +66,8 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
     { href: '/dashboards/crm/landing-pages', label: 'صفحات الهبوط', icon: Globe, permission: 'landing_pages.view' },
     { href: '/dashboards/whatsapp', label: 'صندوق واتساب', icon: MessageCircle, permission: 'whatsapp.view' },
     { href: '/dashboards/whatsapp/settings', label: 'إعدادات واتساب', icon: Settings, permission: 'whatsapp.manage' },
+    { href: '/dashboards/telegram', label: 'طلبات تيليجرام', icon: Send, permission: 'telegram.view' },
+    { href: '/dashboards/telegram/settings', label: 'إعدادات تيليجرام', icon: Settings, permission: 'telegram.manage' },
   ];
 
   // Filter based on user role and permissions

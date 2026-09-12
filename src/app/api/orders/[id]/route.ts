@@ -131,6 +131,10 @@ export async function GET(
         activities: {
           orderBy: { createdAt: 'desc' },
         },
+        telegramMessages: {
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, chatId: true, threadId: true, threadName: true, messageId: true, createdAt: true },
+        },
       },
     });
 
