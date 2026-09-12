@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -42,11 +42,11 @@ interface TelegramMsg {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'ظ‚ظٹط¯ ط§ظ„ظ…ط¹ط§ظ„ط¬ط©',
-  PROCESSED: 'طھظ… ط¥ظ†ط´ط§ط، ط·ظ„ط¨',
-  IGNORED: 'ظ…طھط¬ط§ظ‡ظ„ط©',
-  NEEDS_REVIEW: 'طھط­طھط§ط¬ ظ…ط±ط§ط¬ط¹ط©',
-  FAILED: 'ظپط´ظ„طھ',
+  PENDING: 'قيد المعالجة',
+  PROCESSED: 'تم إنشاء طلب',
+  IGNORED: 'تم التجاهل',
+  NEEDS_REVIEW: 'قيد المراجعة',
+  FAILED: 'فشل',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -58,18 +58,16 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const REVIEW_REASONS: Record<string, string> = {
-  PRODUCT_NOT_FOUND: 'ط§ظ„ظ…ظ†طھط¬ ط؛ظٹط± ظ…ظˆط¬ظˆط¯',
-  AMBIGUOUS_PRODUCT: 'ط£ظƒط«ط± ظ…ظ† ظ…ظ†طھط¬ ظ…ط­طھظ…ظ„',
-  INVALID_PHONE: 'ط±ظ‚ظ… ظ‡ط§طھظپ ط؛ظٹط± طµط§ظ„ط­',
-  MISSING_CUSTOMER_NAME: 'ط§ط³ظ… ط§ظ„ط¹ظ…ظٹظ„ ظ†ط§ظ‚طµ',
-  MISSING_ADDRESS: 'ط§ظ„ط¹ظ†ظˆط§ظ† ظ†ط§ظ‚طµ',
-  MISSING_PRODUCT: 'ط§ظ„ظ…ظ†طھط¬ ظ†ط§ظ‚طµ',
-  INVALID_QUANTITY: 'ظƒظ…ظٹط© ط؛ظٹط± طµط§ظ„ط­ط©',
-  NO_SYSTEM_ACTOR: 'ظ„ط§ ظٹظˆط¬ط¯ ظ…ط³طھط®ط¯ظ… ظ†ط¸ط§ظ…',
-  CREATION_FAILED: 'ظپط´ظ„ ط¥ظ†ط´ط§ط، ط§ظ„ط·ظ„ط¨',
+  PRODUCT_NOT_FOUND: 'المنتج غير موجود',
+  AMBIGUOUS_PRODUCT: 'أكثر من منتج محتمل',
+  INVALID_PHONE: 'رقم هاتف غير صالح',
+  MISSING_CUSTOMER_NAME: 'اسم العميل ناقص',
+  MISSING_ADDRESS: 'العنوان ناقص',
+  MISSING_PRODUCT: 'المنتج ناقص',
+  INVALID_QUANTITY: 'كمية غير صالحة',
+  NO_SYSTEM_ACTOR: 'لا يوجد مستخدم نظام',
+  CREATION_FAILED: 'فشل إنشاء الطلب',
 };
-
-const REVIEW_REASONS_EMPTY = ['MISSING_CUSTOMER_NAME', 'MISSING_ADDRESS', 'MISSING_PRODUCT', 'INVALID_PHONE', 'INVALID_QUANTITY'];
 
 export default function TelegramDashboardPage() {
   const { currentUser } = useApp();
@@ -101,7 +99,7 @@ export default function TelegramDashboardPage() {
       setMessages(msgs.messages || []);
       setError(null);
     } catch (e: any) {
-      setError(e?.message || 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ط¨ظٹط§ظ†ط§طھ');
+      setError(e?.message || 'تعذر تحميل البيانات');
     } finally {
       setLoading(false);
     }
@@ -114,7 +112,7 @@ export default function TelegramDashboardPage() {
   if (!canView) {
     return (
       <AppLayout>
-        <div className="p-8 text-center text-[#697586]">ظ„ظٹط³ ظ„ط¯ظٹظƒ طµظ„ط§ط­ظٹط© ظ„ط¹ط±ط¶ طھظƒط§ظ…ظ„ طھظٹظ„ظٹط¬ط±ط§ظ…</div>
+        <div className="p-8 text-center text-[#697586]">ليس لديك صلاحية لعرض تكامل تيليجرام</div>
       </AppLayout>
     );
   }
@@ -138,7 +136,7 @@ export default function TelegramDashboardPage() {
       setForm({ chatId: '', chatTitle: '', topicId: '', topicName: '' });
       await loadAll(true);
     } catch (e: any) {
-      setFormError(e?.message || 'طھط¹ط°ط± ط¥ط¶ط§ظپط© ط§ظ„ظ…طµط¯ط±');
+      setFormError(e?.message || 'تعذر إضافة المصدر');
     } finally {
       setSaving(false);
     }
@@ -150,20 +148,20 @@ export default function TelegramDashboardPage() {
       await crmApi(`/api/telegram/sources/${s.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: !s.isActive }) });
       await loadAll(true);
     } catch (e: any) {
-      setError(e?.message || 'طھط¹ط°ط± ط§ظ„طھط­ط¯ظٹط«');
+      setError(e?.message || 'تعذر التحديث');
     } finally {
       setBusyId(null);
     }
   };
 
   const deleteSource = async (s: TelegramSource) => {
-    if (!confirm(`ط­ط°ظپ ط§ظ„ط±ط¨ط· ظ…ط¹ "${s.chatTitle || s.chatId}"طں ظ„ظ† ظٹطھظ… ط­ط°ظپ ط§ظ„ط·ظ„ط¨ط§طھ ط§ظ„ط³ط§ط¨ظ‚ط©.`)) return;
+    if (!confirm(`حذف الربط مع "${s.chatTitle || s.chatId}"؟ لن يتم حذف الطلبات السابقة.`)) return;
     setBusyId(s.id);
     try {
       await crmApi(`/api/telegram/sources/${s.id}`, { method: 'DELETE' });
       await loadAll(true);
     } catch (e: any) {
-      setError(e?.message || 'طھط¹ط°ط± ط§ظ„ط­ط°ظپ');
+      setError(e?.message || 'تعذر الحذف');
     } finally {
       setBusyId(null);
     }
@@ -173,9 +171,11 @@ export default function TelegramDashboardPage() {
     setBusyId(s.id);
     try {
       const r: any = await crmApi(`/api/telegram/sources/${s.id}/test`, { method: 'POST' });
-      alert(r.lastMessage ? `ط¢ط®ط± ط±ط³ط§ظ„ط©: ${new Date(r.lastMessage.createdAt).toLocaleString('ar')} â€” ط§ظ„ط­ط§ظ„ط©: ${STATUS_LABELS[r.lastMessage.processingStatus] || r.lastMessage.processingStatus}` : 'ظ„ط§ طھظˆط¬ط¯ ط±ط³ط§ط¦ظ„ ظ…ط³طھظ„ظ…ط© ظ…ظ† ظ‡ط°ظ‡ ط§ظ„ظ…ط¬ظ…ظˆط¹ط© ط¨ط¹ط¯');
+      alert(r.lastMessage
+        ? `آخر رسالة: ${new Date(r.lastMessage.createdAt).toLocaleString('ar')} — الحالة: ${STATUS_LABELS[r.lastMessage.processingStatus] || r.lastMessage.processingStatus}`
+        : 'لا توجد رسائل مستلمة من هذه المجموعة بعد');
     } catch (e: any) {
-      setError(e?.message || 'طھط¹ط°ط± ط§ظ„ط§ط®طھط¨ط§ط±');
+      setError(e?.message || 'تعذر الاختبار');
     } finally {
       setBusyId(null);
     }
@@ -186,9 +186,9 @@ export default function TelegramDashboardPage() {
     try {
       const r: any = await crmApi(`/api/telegram/messages/${m.id}/retry`, { method: 'POST' });
       if (r.status === 'PROCESSED') await loadAll(true);
-      else setError(REVIEW_REASONS[r.reason] || 'ظ„ط§ ظٹط²ط§ظ„ ظ„ط§ ظٹظ…ظƒظ† ط¥ظ†ط´ط§ط، ط§ظ„ط·ظ„ط¨');
+      else setError(REVIEW_REASONS[r.reason] || 'لا يزال لا يمكن إنشاء الطلب');
     } catch (e: any) {
-      setError(e?.message || 'طھط¹ط°ط± ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©');
+      setError(e?.message || 'تعذر إعادة المحاولة');
     } finally {
       setBusyId(null);
     }
@@ -203,16 +203,16 @@ export default function TelegramDashboardPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-xl font-bold text-[#121926] flex items-center gap-2">
-              <Send className="w-5 h-5 text-[#229ED9]" /> طھظƒط§ظ…ظ„ طھظٹظ„ظٹط¬ط±ط§ظ…
+              <Send className="w-5 h-5 text-[#229ED9]" /> تكامل تيليجرام
             </h1>
-            <p className="text-xs text-[#697586] mt-1">طھط­ظˆظٹظ„ ط±ط³ط§ط¦ظ„ ظ…ط¬ظ…ظˆط¹ط§طھ طھظٹظ„ظٹط¬ط±ط§ظ… ط¥ظ„ظ‰ ط·ظ„ط¨ط§طھ طھظ„ظ‚ط§ط¦ظٹظ‹ط§</p>
+            <p className="text-xs text-[#697586] mt-1">تحويل رسائل مجموعات تيليجرام إلى طلبات تلقائيًا</p>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/dashboards/telegram/settings">
-              <Button variant="outline" size="sm"><Settings className="w-4 h-4 ml-1" /> ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ</Button>
+              <Button variant="outline" size="sm"><Settings className="w-4 h-4 ml-1" /> الإعدادات</Button>
             </Link>
             {canManage && (
-              <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 ml-1" /> ط¥ط¶ط§ظپط© ظ…ط¬ظ…ظˆط¹ط©</Button>
+              <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 ml-1" /> إضافة مصدر</Button>
             )}
             <Button variant="ghost" size="sm" onClick={() => loadAll()}><RefreshCw className="w-4 h-4" /></Button>
           </div>
@@ -221,7 +221,7 @@ export default function TelegramDashboardPage() {
         {error && (
           <div className="rounded-xl border border-rose-300 bg-rose-50 text-rose-800 px-3 py-2.5 text-xs flex items-center justify-between gap-2">
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">âœ•</button>
+            <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
           </div>
         )}
 
@@ -230,26 +230,26 @@ export default function TelegramDashboardPage() {
           <CardContent className="p-4 flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-              <span className="text-sm font-semibold text-[#121926]">{connected ? 'ظ…طھطµظ„' : 'ط؛ظٹط± ظ…طھطµظ„'}</span>
+              <span className="text-sm font-semibold text-[#121926]">{connected ? 'متصل' : 'غير متصل'}</span>
             </div>
             <div className="text-xs text-[#697586]">
-              ط§ظ„ط¨ظˆطھ: {status?.botUsername ? <span dir="ltr" className="font-mono">@{status.botUsername}</span> : 'ط؛ظٹط± ظ…ط¹ط±ظˆظپ'}
+              البوت: {status?.botUsername ? <span dir="ltr" className="font-mono">@{status.botUsername}</span> : 'غير معروف'}
             </div>
             <div className="text-xs text-[#697586]">
-              ط§ظ„ظˆظٹط¨ظ‡ظˆظƒ: {status?.telegramWebhookSet ? <span className="text-emerald-600 font-semibold">ظ…ظڈط³ط¬ظ„</span> : <span className="text-rose-600 font-semibold">ط؛ظٹط± ظ…ظڈط³ط¬ظ„</span>}
+              الويبهوك: {status?.telegramWebhookSet ? <span className="text-emerald-600 font-semibold">مسجل</span> : <span className="text-rose-600 font-semibold">غير مسجل</span>}
             </div>
-            <div className="text-xs text-[#697586]">ط§ظ„ظ…ط¬ظ…ظˆط¹ط§طھ ط§ظ„ظ…ط±طھط¨ط·ط©: <span className="font-semibold text-[#121926]">{status?.sourcesCount ?? 0}</span></div>
-            <Link href="/dashboards/telegram/settings" className="text-xs text-[#b8256e] hover:underline mr-auto">طھظپط§طµظٹظ„ ط§ظ„ط§طھطµط§ظ„ â†گ</Link>
+            <div className="text-xs text-[#697586]">المصادر المرتبطة: <span className="font-semibold text-[#121926]">{status?.sourcesCount ?? 0}</span></div>
+            <Link href="/dashboards/telegram/settings" className="text-xs text-[#b8256e] hover:underline mr-auto">تفاصيل الاتصال ←</Link>
           </CardContent>
         </Card>
 
         {/* Order processing stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { key: 'CREATED', label: 'ط·ظ„ط¨ط§طھ ظ…ظڈظ†ط´ط£ط©', icon: ShoppingBag, color: 'text-emerald-600' },
-            { key: 'NEEDS_REVIEW', label: 'طھط­طھط§ط¬ ظ…ط±ط§ط¬ط¹ط©', icon: MessageSquare, color: 'text-rose-600' },
-            { key: 'IGNORED', label: 'ظ…طھط¬ط§ظ‡ظ„ط©', icon: CheckCircle2, color: 'text-[#697586]' },
-            { key: 'FAILED', label: 'ظپط´ظ„طھ', icon: XCircle, color: 'text-red-600' },
+            { key: 'CREATED', label: 'تم الإنشاء', icon: ShoppingBag, color: 'text-emerald-600' },
+            { key: 'NEEDS_REVIEW', label: 'قيد المراجعة', icon: MessageSquare, color: 'text-rose-600' },
+            { key: 'IGNORED', label: 'تم التجاهل', icon: CheckCircle2, color: 'text-[#697586]' },
+            { key: 'FAILED', label: 'فشل', icon: XCircle, color: 'text-red-600' },
           ].map((s) => (
             <Card key={s.key}>
               <CardContent className="p-4 flex items-center gap-3">
@@ -265,43 +265,43 @@ export default function TelegramDashboardPage() {
 
         {/* Sources */}
         <Card>
-          <CardHeader title={<h2 className="text-sm font-bold text-[#121926]">ط§ظ„ظ…ط¬ظ…ظˆط¹ط§طھ ظˆط§ظ„ظ…ظˆط§ط¶ظٹط¹ ط§ظ„ظ…ط±طھط¨ط·ط©</h2>} className="border-b-0 pb-0 px-6 pt-4" />
+          <CardHeader title={<h2 className="text-sm font-bold text-[#121926]">المجموعات والمواضيع المرتبطة</h2>} className="border-b-0 pb-0 px-6 pt-4" />
           <CardContent className="p-0 mt-3">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase">
                   <tr>
-                    <th className="px-4 py-3 text-right">ط§ظ„ظ…ط¬ظ…ظˆط¹ط©</th>
-                    <th className="px-4 py-3 text-right">ط§ظ„ظ†ظˆط¹</th>
-                    <th className="px-4 py-3 text-right">ط§ظ„ط­ط§ظ„ط©</th>
-                    <th className="px-4 py-3 text-right">ط§ظ„ط·ظ„ط¨ط§طھ</th>
-                    <th className="px-4 py-3 text-right">ط¢ط®ط± ط±ط³ط§ظ„ط©</th>
-                    <th className="px-4 py-3 text-left">ط¥ط¬ط±ط§ط،ط§طھ</th>
+                    <th className="px-4 py-3 text-right">المجموعة</th>
+                    <th className="px-4 py-3 text-right">النوع</th>
+                    <th className="px-4 py-3 text-right">الحالة</th>
+                    <th className="px-4 py-3 text-right">الطلبات</th>
+                    <th className="px-4 py-3 text-right">آخر رسالة</th>
+                    <th className="px-4 py-3 text-left">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e3e8ef]">
                   {sources.length === 0 ? (
-                    <tr><td colSpan={6} className="py-8 text-center text-[#9ca3af]">{loading ? 'ط¬ط§ط±ظچ ط§ظ„طھط­ظ…ظٹظ„...' : 'ظ„ط§ طھظˆط¬ط¯ ظ…ط¬ظ…ظˆط¹ط§طھ ظ…ط±طھط¨ط·ط© ط¨ط¹ط¯'}</td></tr>
+                    <tr><td colSpan={6} className="py-8 text-center text-[#9ca3af]">{loading ? 'جارٍ التحميل...' : 'لا توجد بيانات'}</td></tr>
                   ) : sources.map((s) => (
                     <tr key={s.id} className="hover:bg-[#f8fafc]">
                       <td className="px-4 py-3">
-                        <p className="font-semibold text-[#121926]">{s.chatTitle || 'ط¨ط¯ظˆظ† ط¹ظ†ظˆط§ظ†'}</p>
-                        <p className="text-[10px] text-[#697586] font-mono" dir="ltr">{s.chatId}{s.topicId ? ` â€¢ topic ${s.topicId}` : ''}</p>
-                        {s.topicName && <p className="text-[10px] text-[#697586]">ط§ظ„ظ…ظˆط¶ظˆط¹: {s.topicName}</p>}
+                        <p className="font-semibold text-[#121926]">{s.chatTitle || 'بدون عنوان'}</p>
+                        <p className="text-[10px] text-[#697586] font-mono" dir="ltr">{s.chatId}{s.topicId ? ` • topic ${s.topicId}` : ''}</p>
+                        {s.topicName && <p className="text-[10px] text-[#697586]">الموضوع: {s.topicName}</p>}
                       </td>
-                      <td className="px-4 py-3 text-[#697586]">{s.chatType === 'supergroup' ? 'ظ…ط¬ظ…ظˆط¹ط© ظپط§ط¦ظ‚ط©' : s.chatType === 'group' ? 'ظ…ط¬ظ…ظˆط¹ط©' : 'ظ‚ظ†ط§ط©'}</td>
+                      <td className="px-4 py-3 text-[#697586]">{s.chatType === 'supergroup' ? 'مجموعة فائقة' : s.chatType === 'group' ? 'مجموعة' : 'قناة'}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${s.isActive ? 'bg-[#e6f9ee] text-[#00a651]' : 'bg-[#f1f5f9] text-[#697586]'}`}>
-                          {s.isActive ? 'ظ…ظپط¹ظ‘ظ„' : 'ظ…ط¹ط·ظ„'}
+                          {s.isActive ? 'مفعل' : 'معطل'}
                         </span>
                       </td>
                       <td className="px-4 py-3 font-semibold text-[#121926]">{s.ordersCount}</td>
-                      <td className="px-4 py-3 text-[#697586]">{s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar') : 'â€”'}</td>
+                      <td className="px-4 py-3 text-[#697586]">{s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar') : '—'}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 justify-end">
-                          <button disabled={busyId === s.id} onClick={() => testSource(s)} title="ط§ط®طھط¨ط§ط±" className="p-1.5 rounded hover:bg-[#f1f5f9] text-[#697586]"><FlaskConical className="w-4 h-4" /></button>
-                          <button disabled={busyId === s.id} onClick={() => toggleSource(s)} title={s.isActive ? 'طھط¹ط·ظٹظ„' : 'طھظپط¹ظٹظ„'} className="p-1.5 rounded hover:bg-[#f1f5f9] text-[#697586]"><Power className="w-4 h-4" /></button>
-                          <button disabled={busyId === s.id} onClick={() => deleteSource(s)} title="ط­ط°ظپ" className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                          <button disabled={busyId === s.id} onClick={() => testSource(s)} title="اختبار" className="p-1.5 rounded hover:bg-[#f1f5f9] text-[#697586]"><FlaskConical className="w-4 h-4" /></button>
+                          <button disabled={busyId === s.id} onClick={() => toggleSource(s)} title={s.isActive ? 'تعطيل' : 'تفعيل'} className="p-1.5 rounded hover:bg-[#f1f5f9] text-[#697586]"><Power className="w-4 h-4" /></button>
+                          <button disabled={busyId === s.id} onClick={() => deleteSource(s)} title="حذف" className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -315,12 +315,12 @@ export default function TelegramDashboardPage() {
         {/* Recent messages */}
         <Card>
           <CardHeader
-            title={<h2 className="text-sm font-bold text-[#121926]">ط§ظ„ط±ط³ط§ط¦ظ„ ط§ظ„ط£ط®ظٹط±ط©</h2>}
+            title={<h2 className="text-sm font-bold text-[#121926]">الرسائل الأخيرة</h2>}
             className="border-b-0 pb-0 px-6 pt-4"
             action={
               <div className="w-40">
                 <Select value={statusFilter} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)} className="text-xs py-1.5">
-                  <option value="">ظƒظ„ ط§ظ„ط­ط§ظ„ط§طھ</option>
+                  <option value="">كل الحالات</option>
                   {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </Select>
               </div>
@@ -331,26 +331,26 @@ export default function TelegramDashboardPage() {
               <table className="w-full text-xs">
                 <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase">
                   <tr>
-                    <th className="px-4 py-3 text-right">ط§ظ„ط±ط³ط§ظ„ط©</th>
-                    <th className="px-4 py-3 text-right">ط§ظ„ظ…ط¬ظ…ظˆط¹ط©</th>
-                    <th className="px-4 py-3 text-right">ط§ظ„ظ…ظˆط¶ظˆط¹</th>
-                    <th className="px-4 py-3 text-right">ط§ظ„ط­ط§ظ„ط©</th>
-                    <th className="px-4 py-3 text-right">ط§ظ„ط·ظ„ط¨</th>
-                    <th className="px-4 py-3 text-right">ط§ظ„ظˆظ‚طھ</th>
-                    <th className="px-4 py-3 text-left">ط¥ط¬ط±ط§ط،</th>
+                    <th className="px-4 py-3 text-right">الرسائل</th>
+                    <th className="px-4 py-3 text-right">المجموعات</th>
+                    <th className="px-4 py-3 text-right">المواضيع</th>
+                    <th className="px-4 py-3 text-right">حالة المعالجة</th>
+                    <th className="px-4 py-3 text-right">الطلب</th>
+                    <th className="px-4 py-3 text-right">الوقت</th>
+                    <th className="px-4 py-3 text-left">إجراء</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e3e8ef]">
                   {messages.length === 0 ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-[#9ca3af]">{loading ? 'ط¬ط§ط±ظچ ط§ظ„طھط­ظ…ظٹظ„...' : 'ظ„ط§ طھظˆط¬ط¯ ط±ط³ط§ط¦ظ„'}</td></tr>
+                    <tr><td colSpan={7} className="py-8 text-center text-[#9ca3af]">{loading ? 'جارٍ التحميل...' : 'لا توجد بيانات'}</td></tr>
                   ) : messages.map((m) => (
                     <tr key={m.id} className="hover:bg-[#f8fafc]">
                       <td className="px-4 py-3 max-w-[280px]">
-                        <p className="truncate text-[#121926]">{m.text || 'â€”'}</p>
-                        <p className="text-[10px] text-[#697586]">{m.senderName || 'ظ…ط¬ظ‡ظˆظ„'}</p>
+                        <p className="truncate text-[#121926]">{m.text || '—'}</p>
+                        <p className="text-[10px] text-[#697586]">{m.senderName || 'مجهول'}</p>
                       </td>
                       <td className="px-4 py-3 text-[#697586]">{m.source?.chatTitle || m.chatId}</td>
-                      <td className="px-4 py-3 text-[#697586]">{m.threadName || m.source?.topicName || (m.threadId ? m.threadId : 'â€”')}</td>
+                      <td className="px-4 py-3 text-[#697586]">{m.threadName || m.source?.topicName || (m.threadId ? m.threadId : '—')}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[m.processingStatus] || ''}`}>
                           {STATUS_LABELS[m.processingStatus] || m.processingStatus}
@@ -358,13 +358,13 @@ export default function TelegramDashboardPage() {
                         {m.reviewReason && <p className="text-[10px] text-[#e11d48] mt-0.5">{REVIEW_REASONS[m.reviewReason] || m.reviewReason}</p>}
                       </td>
                       <td className="px-4 py-3">
-                        {m.order ? <span className="font-mono text-[#b8256e] font-semibold">{m.order.orderNumber}</span> : 'â€”'}
+                        {m.order ? <span className="font-mono text-[#b8256e] font-semibold" dir="ltr">{m.order.orderNumber}</span> : '—'}
                       </td>
                       <td className="px-4 py-3 text-[#697586]">{new Date(m.createdAt).toLocaleString('ar')}</td>
                       <td className="px-4 py-3 text-left">
                         {['NEEDS_REVIEW', 'FAILED'].includes(m.processingStatus) && canManage && (
                           <Button size="sm" variant="outline" disabled={busyId === m.id} onClick={() => retryMessage(m)}>
-                            <RotateCcw className="w-3 h-3 ml-1" /> ط¥ط¹ط§ط¯ط©
+                            <RotateCcw className="w-3 h-3 ml-1" /> إعادة المعالجة
                           </Button>
                         )}
                       </td>
@@ -377,33 +377,33 @@ export default function TelegramDashboardPage() {
         </Card>
 
         {/* Add Source modal */}
-        <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="ط¥ط¶ط§ظپط© ظ…ط¬ظ…ظˆط¹ط© طھظٹظ„ظٹط¬ط±ط§ظ…">
+        <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="إضافة مصدر تيليجرام">
           <div className="space-y-4" dir="rtl">
             <div>
               <label className="text-xs font-semibold text-[#121926] block mb-1">Chat ID *</label>
               <Input value={form.chatId} onChange={(e) => setForm({ ...form, chatId: e.target.value })} placeholder="-1001234567890" dir="ltr" className="text-left font-mono" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-[#121926] block mb-1">ط§ط³ظ… ط§ظ„ظ…ط¬ظ…ظˆط¹ط©</label>
-              <Input value={form.chatTitle} onChange={(e) => setForm({ ...form, chatTitle: e.target.value })} placeholder="ظ…ط¬ظ…ظˆط¹ط© ط·ظ„ط¨ط§طھ ط§ظ„ظ…طھط¬ط±" />
+              <label className="text-xs font-semibold text-[#121926] block mb-1">اسم المجموعة</label>
+              <Input value={form.chatTitle} onChange={(e) => setForm({ ...form, chatTitle: e.target.value })} placeholder="مجموعة طلبات المتجر" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-[#121926] block mb-1">Topic ID (ط§ط®طھظٹط§ط±ظٹ)</label>
-                <Input value={form.topicId} onChange={(e) => setForm({ ...form, topicId: e.target.value })} placeholder="ط§طھط±ظƒظ‡ ظپط§ط±ط؛ظ‹ط§ ظ„ط±ط¨ط· ط§ظ„ظ…ط¬ظ…ظˆط¹ط© ظƒط§ظ…ظ„ط©" dir="ltr" className="text-left font-mono" />
+                <label className="text-xs font-semibold text-[#121926] block mb-1">Topic ID (اختياري)</label>
+                <Input value={form.topicId} onChange={(e) => setForm({ ...form, topicId: e.target.value })} placeholder="اتركه فارغًا لربط المجموعة كاملة" dir="ltr" className="text-left font-mono" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[#121926] block mb-1">ط§ط³ظ… ط§ظ„ظ…ظˆط¶ظˆط¹</label>
+                <label className="text-xs font-semibold text-[#121926] block mb-1">اسم الموضوع</label>
                 <Input value={form.topicName} onChange={(e) => setForm({ ...form, topicName: e.target.value })} />
               </div>
             </div>
             {formError && <p className="text-xs text-rose-600">{formError}</p>}
             <p className="text-[10px] text-[#697586] leading-relaxed">
-              طھط£ظƒط¯ ظ…ظ† ط¥ط¶ط§ظپط© ط§ظ„ط¨ظˆطھ ط¥ظ„ظ‰ ط§ظ„ظ…ط¬ظ…ظˆط¹ط© ظˆظ…ظ† طھظپط¹ظٹظ„ Privacy Mode ط§ظ„ظ…ظ†ط§ط³ط¨. ط§طھط±ظƒ Topic ID ظپط§ط±ط؛ظ‹ط§ ظ„ط±ط¨ط· ط§ظ„ظ…ط¬ظ…ظˆط¹ط© ط¨ط§ظ„ظƒط§ظ…ظ„.
+              تأكد من إضافة البوت إلى المجموعة ومن تفعيل Privacy Mode المناسب. اترك Topic ID فارغًا لربط المجموعة بالكامل.
             </p>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setAddOpen(false)}>ط¥ظ„ط؛ط§ط،</Button>
-              <Button size="sm" disabled={!form.chatId.trim() || saving} onClick={addSource}>{saving ? 'ط¬ط§ط±ظچ ط§ظ„ط­ظپط¸...' : 'ط¥ط¶ط§ظپط©'}</Button>
+              <Button variant="outline" size="sm" onClick={() => setAddOpen(false)}>إلغاء</Button>
+              <Button size="sm" disabled={!form.chatId.trim() || saving} onClick={addSource}>{saving ? 'جارٍ الحفظ...' : 'إضافة'}</Button>
             </div>
           </div>
         </Modal>
