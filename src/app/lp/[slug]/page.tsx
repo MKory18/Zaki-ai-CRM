@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { verifyPreviewToken } from '@/lib/landing-pages';
 import OrderForm from '@/components/landing/OrderForm';
 import { ShieldCheck, Truck, PhoneCall } from 'lucide-react';
+import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -124,7 +125,10 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
 
   return (
     <div dir="rtl" className="flex min-h-screen flex-col bg-[#f7f7f8]">
-      {/* 1. Untrusted uploaded HTML — sandboxed opaque-origin iframe */}
+      {/* 1. Untrusted uploaded HTML — sandboxed opaque-origin iframe.
+          data-zaki-* placeholders inside are resolved server-side (raw route);
+          offer clicks / CTA clicks reach this page ONLY via LandingFormBridge,
+          which validates every message against this page's own DB offers. */}
       <iframe
         src={rawSrc}
         title={lp.name}
@@ -134,14 +138,16 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
       />
 
       {/* 2. Trusted native order form — part of Zaki AI, after the content */}
-      <OrderForm
-        slug={lp.slug}
-        productName={productName}
-        basePrice={price}
-        currency={currency}
-        offers={offers.map((o) => ({ ...o }))}
-        recommendations={recommendations}
-      />
+      <LandingFormBridge offers={offers.map((o) => ({ ...o }))}>
+        <OrderForm
+          slug={lp.slug}
+          productName={productName}
+          basePrice={price}
+          currency={currency}
+          offers={offers.map((o) => ({ ...o }))}
+          recommendations={recommendations}
+        />
+      </LandingFormBridge>
 
       {/* 3. Footer */}
       <footer className="border-t border-[#e3e8ef] bg-white px-4 py-8">

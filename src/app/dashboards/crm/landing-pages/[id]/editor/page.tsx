@@ -42,7 +42,7 @@ const DEVICE_WIDTHS: Record<Device, string> = {
 const INSERT_SNIPPETS: { label: string; icon: any; snippet: string }[] = [
   { label: 'المنتج', icon: Package, snippet: '<div data-zaki-product>\n  <h2 class="product-title">{{product.name}}</h2>\n  <img class="product-image" src="{{product.image}}" alt="{{product.name}}">\n  <p class="product-desc">{{product.description}}</p>\n</div>' },
   { label: 'صورة', icon: ImageIcon, snippet: '<img src="https://example.com/image.webp" alt="" class="lp-img">' },
-  { label: 'زر', icon: MousePointerClick, snippet: '<a href="#zaki-order-form" class="lp-btn">اطلب الآن</a>' },
+  { label: 'زر الطلب', icon: MousePointerClick, snippet: '<button data-zaki-order class="lp-btn">اطلب الآن</button>' },
   { label: 'نموذج الطلب', icon: ListPlus, snippet: '<div data-zaki-order-form></div>' },
   { label: 'العروض', icon: Gift, snippet: '<div data-zaki-offers></div>' },
   { label: 'منتجات مقترحة', icon: Package, snippet: '<div data-zaki-recommendations></div>' },
@@ -104,8 +104,9 @@ const STARTER_CSS = `.hero {
 }`;
 
 /** Client-side quick sanitize for PREVIEW ONLY (the iframe runs with
- *  sandbox="" — no scripts can execute regardless; this keeps visuals honest
- *  about what will actually be saved). Server sanitizes again at save. */
+ *  sandbox="allow-scripts" WITHOUT allow-same-origin — opaque origin: user
+ *  markup can never touch the dashboard even in preview. Server sanitizes
+ *  again at save). */
 function quickSanitize(html: string): string {
   return (html || '')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
@@ -116,15 +117,121 @@ function quickSanitize(html: string): string {
     .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 }
 
-function buildPreviewDoc(html: string, css: string, settings: any): string {
+/** Phase 2: preview data for the dynamic placeholders — from THIS page's DB
+ *  records via authenticated APIs (product/offers/recommendations). No
+ *  secrets are embedded in the srcDoc. */
+export interface PreviewData {
+  product: { name: string; image: string | null; description: string | null; price: number } | null;
+  offers: { id: string; name: string; quantity: number; freeQuantity: number; price: number; isDefault?: boolean }[];
+  recommendations: { id: string; name: string; price: number; image: string | null }[];
+  currency: string;
+}
+
+const escHtml = (v: unknown) =>
+  String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** Client-side mirror of resolveDynamicPlaceholders (server version is used
+ *  on the public page — this preview version renders the SAME blocks from
+ *  the page's own DB data). */
+function resolvePreviewPlaceholders(html: string, data: PreviewData): string {
+  let out = html || '';
+  const productBlock = data.product
+    ? `<div style="text-align:center;padding:16px 0">` +
+      (data.product.image ? `<img src="${escHtml(data.product.image)}" alt="${escHtml(data.product.name)}" style="max-width:100%;border-radius:12px;display:block;margin:0 auto 12px">` : '') +
+      (data.product.name ? `<h2 style="margin:8px 0;font-size:26px;font-weight:800">${escHtml(data.product.name)}</h2>` : '') +
+      (data.product.description ? `<p style="color:#555;line-height:1.8;margin:8px 0">${escHtml(data.product.description)}</p>` : '') +
+      (data.product.price != null ? `<p style="font-size:22px;font-weight:800;margin:8px 0">${escHtml(data.product.price)}</p>` : '') +
+      `</div>`
+    : '';
+  const offersBlock = data.offers.length
+    ? `<div style="margin:12px 0">` +
+      data.offers
+        .map(
+          (o) =>
+            `<button type="button" data-zaki-offer-id="${escHtml(o.id)}"${o.isDefault ? ' data-zaki-selected="1"' : ''} style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:8px 0;display:block;width:100%;cursor:pointer;text-align:start;background:#fff;font:inherit">` +
+            `<span style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-weight:700">${escHtml(o.name)}</span><span style="font-weight:800;color:#b8256e;white-space:nowrap">${escHtml(o.price)} ${escHtml(data.currency)}</span></span>` +
+            `<span style="display:block;color:#697586;font-size:13px;margin-top:4px">${escHtml(o.quantity + (o.freeQuantity > 0 ? ` + ${o.freeQuantity} مجانًا` : ''))}</span>` +
+            `</button>`
+        )
+        .join('') +
+      `</div>`
+    : '';
+  const recsBlock = data.recommendations.length
+    ? `<div style="margin:12px 0;text-align:center">` +
+      data.recommendations
+        .map(
+          (r) =>
+            `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;display:inline-block;width:150px;vertical-align:top;text-align:center;margin:6px">` +
+            (r.image ? `<img src="${escHtml(r.image)}" alt="${escHtml(r.name)}" style="width:100%;border-radius:8px">` : '') +
+            `<div style="font-weight:600;font-size:14px;margin-top:6px">${escHtml(r.name)}</div>` +
+            `<div style="color:#b8256e;font-weight:800">${escHtml(r.price)} ${escHtml(data.currency)}</div></div>`
+        )
+        .join('') +
+      `</div>`
+    : '';
+  const formAnchor = `<div id="zaki-order-form-anchor" style="padding:8px 0"></div>`;
+
+  // variables resolved from the same page data
+  if (data.product) {
+    out = out
+      .replace(/\{\{\s*product\.name\s*\}\}/g, escHtml(data.product.name))
+      .replace(/\{\{\s*product\.nameEn\s*\}\}/g, escHtml(data.product.name))
+      .replace(/\{\{\s*product\.image\s*\}\}/g, escHtml(data.product.image))
+      .replace(/\{\{\s*product\.description\s*\}\}/g, escHtml(data.product.description))
+      .replace(/\{\{\s*product\.price\s*\}\}/g, escHtml(data.product.price));
+  }
+
+  out = out
+    .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-product\b[^>]*>[\s\S]*?<\/\1>/gi, productBlock)
+    .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-product\b[^>]*\/?>/gi, productBlock)
+    .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-offers\b[^>]*>[\s\S]*?<\/\1>/gi, offersBlock)
+    .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-offers\b[^>]*\/?>/gi, offersBlock)
+    .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-recommendations\b[^>]*>[\s\S]*?<\/\1>/gi, recsBlock)
+    .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-recommendations\b[^>]*\/?>/gi, recsBlock)
+    .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-order-form\b[^>]*>[\s\S]*?<\/\1>/gi, formAnchor)
+    .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-order-form\b[^>]*\/?>/gi, formAnchor);
+
+  // preview interaction: offer highlight + CTA scroll to the form anchor
+  const previewScript = `<script>(function(){'use strict';
+document.addEventListener('click', function (ev) {
+  var n = ev.target;
+  while (n && n !== document.body) {
+    if (n.getAttribute) {
+      var oid = n.getAttribute('data-zaki-offer-id');
+      if (oid) {
+        ev.preventDefault();
+        document.querySelectorAll('[data-zaki-offer-id]').forEach(function (b) { b.style.borderColor = '#e5e7eb'; b.style.background = '#fff'; });
+        n.style.borderColor = '#b8256e'; n.style.background = '#fdf2f7';
+        return;
+      }
+      if (n.hasAttribute && n.hasAttribute('data-zaki-order')) {
+        ev.preventDefault();
+        var a = document.getElementById('zaki-order-form-anchor');
+        if (a) a.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+    n = n.parentNode;
+  }
+}, true);
+})();</script>`;
+
+  if (/<\/body>/i.test(out)) out = out.replace(/<\/body>/i, previewScript + '</body>');
+  else out += previewScript;
+  return out;
+}
+
+function buildPreviewDoc(html: string, css: string, settings: any, data: PreviewData | null): string {
   const dir = settings?.direction === 'ltr' ? 'ltr' : 'rtl';
   const bg = typeof settings?.background === 'string' ? settings.background : '#ffffff';
   const ff = settings?.fontFamily ? `font-family:${settings.fontFamily};` : '';
   const wrapMax = settings?.width === 'contained' && settings?.maxWidth ? `.zaki-page-wrap{max-width:${settings.maxWidth}px;margin:0 auto;padding:0 16px;}` : '';
+  const body = quickSanitize(html);
+  const resolved = data ? resolvePreviewPlaceholders(body, data) : body;
   return `<!doctype html><html dir="${dir}" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>body{margin:0;background:${bg};${ff}}${wrapMax}</style>
 <style>${css || ''}</style>
-</head><body>${quickSanitize(html)}</body></html>`;
+</head><body>${resolved}</body></html>`;
 }
 
 export default function LandingPageEditorPage() {
@@ -149,6 +256,7 @@ export default function LandingPageEditorPage() {
   const [previewKey, setPreviewKey] = useState(0);
   const [varOpen, setVarOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const htmlRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -165,6 +273,23 @@ export default function LandingPageEditorPage() {
         try { setSettings({ width: 'full', background: '#ffffff', direction: 'rtl', fontFamily: '', ...JSON.parse(page.pageSettings) }); } catch {}
       }
       setDirty(false);
+      // Phase 2 preview data — this page's own DB records (no secrets)
+      setPreviewData({
+        product: page.product
+          ? { name: page.product.name, image: page.product.image, description: (page.product as any).description ?? null, price: page.product.basePrice }
+          : null,
+        offers: [],
+        recommendations: [],
+        currency: 'USD',
+      });
+      try {
+        const off = await crmApi(`/api/landing-pages/${lpId}/offers`);
+        setPreviewData((pd) => pd ? { ...pd, offers: (off.offers || []).map((o: any) => ({ id: o.id, name: o.name, quantity: o.quantity, freeQuantity: o.freeQuantity, price: o.price, isDefault: o.isDefault })) } : pd);
+      } catch {}
+      try {
+        const recs = await crmApi(`/api/landing-pages/${lpId}/recommendations`);
+        setPreviewData((pd) => pd ? { ...pd, recommendations: (recs.recommendations || []).map((r: any) => ({ id: r.id, name: r.product?.name || '', price: r.product?.basePrice ?? 0, image: r.product?.image || null })) } : pd);
+      } catch {}
     } catch (e: any) {
       setPageError(e.message || 'تعذر تحميل الصفحة');
     } finally {
@@ -174,10 +299,12 @@ export default function LandingPageEditorPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Live preview: debounced rebuild (no script execution — sandbox="")
+  // Live preview: debounced rebuild. The iframe is sandbox="allow-scripts"
+  // WITHOUT allow-same-origin — opaque origin: scripts (ours + user markup
+  // stripped of them) cannot touch the dashboard DOM, cookies or storage.
   const previewDoc = useMemo(
-    () => buildPreviewDoc(html, css, settings),
-    [html, css, settings]
+    () => buildPreviewDoc(html, css, settings, previewData),
+    [html, css, settings, previewData]
   );
   useEffect(() => {
     const t = setTimeout(() => setPreviewKey((k) => k + 1), 400);
@@ -460,12 +587,13 @@ export default function LandingPageEditorPage() {
                 </div>
               </div>
               <div className="flex flex-1 justify-center overflow-auto bg-[#eef2f6] p-3">
-                {/* sandbox="" → no scripts, no same-origin: the preview can
-                    never touch the dashboard DOM, cookies or localStorage */}
+                {/* sandbox="allow-scripts" WITHOUT allow-same-origin → opaque
+                    origin: preview scripts run but can never touch the
+                    dashboard DOM, cookies, localStorage or parent window */}
                 <iframe
                   key={previewKey}
                   title="معاينة الصفحة"
-                  sandbox=""
+                  sandbox="allow-scripts"
                   srcDoc={previewDoc}
                   className="h-full min-h-[400px] rounded-lg border border-[#e3e8ef] bg-white shadow-sm"
                   style={{ width: DEVICE_WIDTHS[device], maxWidth: '100%' }}

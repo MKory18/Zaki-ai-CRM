@@ -41,13 +41,15 @@ interface OrderFormProps {
   currency: string;
   offers: OfferView[];
   recommendations: RecommendationView[];
+  /** Phase 2: offer selected from custom-HTML placeholder (pre-validated by the bridge) */
+  externalSelectedOfferId?: string | null;
 }
 
 type FormState = 'idle' | 'loading' | 'success' | 'error';
 
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, externalSelectedOfferId }: OrderFormProps) {
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -56,6 +58,14 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
     offers.find((o) => o.isDefault)?.id || offers[0]?.id || ''
   );
   const [addons, setAddons] = useState<Record<string, 'added' | 'adding'>>({});
+
+  // Phase 2: offer picked from the custom HTML placeholder (bridge already
+  // validated the id against this page's DB offers)
+  React.useEffect(() => {
+    if (externalSelectedOfferId && offers.some((o) => o.id === externalSelectedOfferId)) {
+      setSelectedOffer(externalSelectedOfferId);
+    }
+  }, [externalSelectedOfferId, offers]);
   const [totals, setTotals] = useState<{ total: number } | null>(null);
 
   const offer = useMemo(() => offers.find((o) => o.id === selectedOffer) || offers[0], [offers, selectedOffer]);

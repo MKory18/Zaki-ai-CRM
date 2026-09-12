@@ -7,6 +7,7 @@ import {
   parseLandingSettings,
   applyLandingVariables,
 } from '@/lib/landing-html-sanitize';
+import { resolveDynamicPlaceholders } from '@/lib/landing-dynamic';
 
 interface Ctx {
   params: Promise<{ slug: string }>;
@@ -57,7 +58,10 @@ export async function GET(req: Request, ctx: Ctx) {
         where: { id: tok.lpId, slug },
         select: {
           id: true, name: true, slug: true, htmlContent: true, cssContent: true, pageSettings: true,
+          company: { select: { currency: true } },
           product: { select: { name: true, nameEn: true, image: true, description: true, basePrice: true } },
+          offers: { where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { price: 'asc' }], select: { id: true, name: true, quantity: true, freeQuantity: true, price: true, isDefault: true } },
+          recommendations: { where: { isActive: true, product: { status: 'ACTIVE' } }, orderBy: { sortOrder: 'asc' }, select: { id: true, product: { select: { name: true, basePrice: true, image: true } } } },
         },
       });
     }
@@ -68,7 +72,10 @@ export async function GET(req: Request, ctx: Ctx) {
       where: { slug, isPublished: true },
       select: {
         id: true, name: true, slug: true, htmlContent: true, cssContent: true, pageSettings: true,
+        company: { select: { currency: true } },
         product: { select: { name: true, nameEn: true, image: true, description: true, basePrice: true } },
+        offers: { where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { price: 'asc' }], select: { id: true, name: true, quantity: true, freeQuantity: true, price: true, isDefault: true } },
+        recommendations: { where: { isActive: true, product: { status: 'ACTIVE' } }, orderBy: { sortOrder: 'asc' }, select: { id: true, product: { select: { name: true, basePrice: true, image: true } } } },
       },
     });
   }
@@ -106,6 +113,22 @@ ${settings.width === 'contained' && settings.maxWidth ? `.zaki-page-wrap{max-wid
       price: lp.product.basePrice,
     });
   }
+
+  // ── Phase 2: data-zaki-* placeholders → server-rendered DB-backed blocks ──
+  // Values (product/offers/recommendations) come exclusively from the DB —
+  // the custom HTML can only place markers, never set prices/ids. The
+  // interaction script is hard-coded server output (see landing-dynamic.ts).
+  const currency = lp.company?.currency || 'USD';
+  html = resolveDynamicPlaceholders({
+    html,
+    slug: lp.slug,
+    product: lp.product
+      ? { name: lp.product.name, nameEn: lp.product.nameEn, image: lp.product.image, description: lp.product.description, price: lp.product.basePrice }
+      : null,
+    offers: (lp.offers || []).map((o) => ({ id: o.id, name: o.name, quantity: o.quantity, freeQuantity: o.freeQuantity, price: o.price, isDefault: o.isDefault })),
+    recommendations: (lp.recommendations || []).map((r) => ({ id: r.id, name: r.product?.name || '', price: r.product?.basePrice ?? 0, image: r.product?.image || null })),
+    currency,
+  });
 
   // Inject base styles + custom CSS right before </head> (or prepend when no head exists)
   const injection = `${baseStyles}${customCss}`;
