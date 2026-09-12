@@ -173,7 +173,7 @@ async function main() {
   const creation2 = creationSrc();
   function creationSrc() { return src('src/lib/telegram/order-creation.ts'); }
   ok('source includes pageName (Telegram → page)', creation2.includes("pageName?.trim() ? `Telegram → ${pageName"));
-  ok('priceText stored for audit only', creation2.includes('advertised price (used as unit price)'));
+  ok('priceText stored as advertised total', creation2.includes('advertised total price'));
   ok('source never hardcoded to pageName alone', creation2.includes("'Telegram'"));
   const inbound2 = inboundSrc();
   function inboundSrc() { return src('src/lib/telegram/inbound.ts'); }
@@ -318,15 +318,16 @@ async function main() {
       message: {
         message_id: 6007,
         chat: { id: -100999888777, type: 'supergroup', title: 'طلبات سوريا' },
-        text: 'الاسم: سالم\nالرقم: 09922223333\nاسم المحافظة: السويداء\nالعنوان: بهم\nالمنتج: ماء الكمأة\nالكمية: 3\nالسعر: 18 دولار\nاسم الصفحة: اسرار',
+        text: 'الاسم: سالم\nالرقم: 09922223333\nاسم المحافظة: السويداء\nالعنوان: بهم\nالمنتج: ماء الكمأة\nالكمية: 3\nالسعر: 45$\nاسم الصفحة: اسرار',
         date: nowSec,
       },
     };
     const r54 = await processTelegramUpdate(upd54);
     if (r54.orderId) {
       const o54 = await db.order.findUnique({ where: { id: r54.orderId } });
-      ok('qty 3 × telegram 18 → sellingPrice 18', o54?.sellingPrice === 18);
-      ok('qty 3 × telegram 18 → totalAmount 54 (not 25×3)', Number(o54?.totalAmount) === 54);
+      ok('qty 3 × TOTAL 45 → sellingPrice 15', Number(o54?.sellingPrice) === 15);
+      ok('NO double multiply (totalAmount ≠ 135)', Number(o54?.totalAmount) !== 135);
+      ok('qty 3 × TOTAL 45 → totalAmount 45', Number(o54?.totalAmount) === 45);
       await db.orderActivity.deleteMany({ where: { orderId: o54!.id } });
       await db.orderStatusLog.deleteMany({ where: { orderId: o54!.id } });
       await db.order.delete({ where: { id: o54!.id } });
@@ -347,8 +348,8 @@ async function main() {
     ok('reason = MISSING_PRICE', noPriceMsg?.reviewReason === 'MISSING_PRICE');
     ok('no order created without valid price', await db.order.count({ where: { companyId: company.id } }) === 0);
 
-    // ── invalid price (negative/huge/garbage) → NEEDS_REVIEW ──
-    const badPrices = ['السعر: -5', 'السعر: 999999999', 'السعر: مجاني'];
+    // ── invalid price (zero/negative/huge/garbage) → NEEDS_REVIEW ──
+    const badPrices = ['السعر: 0', 'السعر: -45$', 'السعر: 999999999', 'السعر: مجاني'];
     for (let i = 0; i < badPrices.length; i++) {
       const updBad: any = {
         message: {
@@ -364,14 +365,15 @@ async function main() {
 
     // ── price parsing variants ──
     const { parseAdvertisedPrice } = await import('../src/lib/telegram/order-creation');
-    ok('parse "18 دولار" → 18', parseAdvertisedPrice('18 دولار') === 18);
-    ok('parse "١٨ دولار" → 18', parseAdvertisedPrice('١٨ دولار') === 18);
-    ok('parse "18 USD" → 18', parseAdvertisedPrice('18 USD') === 18);
-    ok('parse "18$" → 18', parseAdvertisedPrice('18$') === 18);
-    ok('parse "$18" → 18', parseAdvertisedPrice('$18') === 18);
-    ok('parse "18.50 دولار" → 18.5', parseAdvertisedPrice('18.50 دولار') === 18.5);
+    ok('parse "45 دولار" → 45', parseAdvertisedPrice('45 دولار') === 45);
+    ok('parse "٤٥ دولار" → 45', parseAdvertisedPrice('٤٥ دولار') === 45);
+    ok('parse "45 USD" → 45', parseAdvertisedPrice('45 USD') === 45);
+    ok('parse "45$" → 45', parseAdvertisedPrice('45$') === 45);
+    ok('parse "$45" → 45', parseAdvertisedPrice('$45') === 45);
+    ok('parse zero → null', parseAdvertisedPrice('0 دولار') === null);
+    ok('parse negative "-45$" → null (never flips to 45)', parseAdvertisedPrice('-45$') === null);
     ok('parse empty → null', parseAdvertisedPrice('') === null);
-    ok('parse negative → null', parseAdvertisedPrice('-5 دولار') === null);
+    ok('parse huge → null', parseAdvertisedPrice('999999999 دولار') === null);
     ok('parse huge → null', parseAdvertisedPrice('999999999 دولار') === null);
 
     // cleanup order-side data

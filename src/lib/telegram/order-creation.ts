@@ -38,13 +38,13 @@ export type CreateTelegramOrderResult =
   | { ok: true; orderId: string; orderNumber: string }
   | { ok: false; reason: 'NO_SYSTEM_ACTOR' | 'CREATION_FAILED' | 'PRODUCT_NOT_FOUND' | 'MISSING_PRICE' };
 
-/** Sane upper bound for a Telegram-provided unit price. */
+/** Sane upper bound for a Telegram-provided order total. */
 const MAX_UNIT_PRICE = 100_000;
 
 /**
- * Parse the advertised price text ("18 دولار" / "$18" / "18 USD" / "١٨ دولار")
- * → validated number. Returns null when missing/invalid — the caller must
- * NOT fall back silently to DB pricing.
+ * Parse the advertised TOTAL order price text ("45 دولار" / "$45" / "45 USD" /
+ * "٤٥ دولار") → validated number. Returns null when missing/invalid — the
+ * caller must NOT fall back silently to DB pricing.
  */
 export function parseAdvertisedPrice(priceText: string | undefined | null): number | null {
   if (!priceText || !priceText.trim()) return null;
@@ -84,22 +84,24 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   const { companyId, customer, product, quantity, address, notes, priceText, pageName, telegram } = input;
 
   /**
-   * PRICING (business rule): the Telegram message price IS the authoritative
-   * unit price when present and valid. The server validates it (numeric,
-   * finite, > 0, sane upper bound) — never trusts raw text blindly.
-   *   - valid price → sellingPrice = telegram price (DB basePrice ignored)
+   * PRICING (business rule): the Telegram message price is the TOTAL ORDER
+   * AMOUNT (for the whole quantity), NOT a unit price. The server validates
+   * it (numeric, finite, > 0, sane upper bound) — never trusts raw text.
+   *   - valid price   → totalAmount = telegram price (DB basePrice ignored)
+   *   -               → sellingPrice (unit) = totalAmount / quantity
    *   - missing/invalid price → NEEDS_REVIEW (MISSING_PRICE), never silent
    *     fallback to DB.
-   * totalAmount is ALWAYS server-computed: quantity × unitPrice.
+   * totalAmount is NEVER multiplied by quantity anywhere else.
    */
-  const parsedPrice = parseAdvertisedPrice(priceText);
-  if (parsedPrice === null) {
+  const parsedTotal = parseAdvertisedPrice(priceText);
+  if (parsedTotal === null) {
     return { ok: false, reason: 'MISSING_PRICE' };
   }
-  const price = parsedPrice;
+  const totalAmount = parsedTotal;
   const shipCost = 0;
-  // Server-side total — never client/Telegram-controlled
-  const totalAmount = Number((quantity * price).toFixed(2));
+  // Unit price derived server-side: total / quantity (quantity already
+  // validated ≥ 1 — no division by zero possible)
+  const price = Number((totalAmount / quantity).toFixed(2));
 
   const productRow = await db.product.findFirst({
     where: { id: product.id, companyId },
@@ -107,6 +109,9 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   });
   if (!productRow) return { ok: false, reason: 'PRODUCT_NOT_FOUND' };
 
+  // Note: order.totalAmount stores the Telegram total as-is. The orders PATCH
+  // API recomputes total on later edits via its own formula — that is
+  // pre-existing behavior for ALL orders, not a double-multiply here.
   const unitCost = productRow.batches[0]?.costPerUnit || 0;
   const estimatedCostOfGoods = Number((unitCost * quantity).toFixed(2));
   const now = new Date();
@@ -151,7 +156,7 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
               internalNotes: [
                 `Telegram: chat ${telegram.chatId}${telegram.threadId ? ` topic ${telegram.threadId}` : ''} msg ${telegram.messageId}`,
                 pageName?.trim() ? `page: ${pageName.trim().slice(0, 60)}` : null,
-                priceText?.trim() ? `advertised price (used as unit price): ${priceText.trim().slice(0, 30)}` : null,
+                priceText?.trim() ? `advertised total price: ${priceText.trim().slice(0, 30)}` : null,
                 telegram.chatTitle ? `group: ${telegram.chatTitle.slice(0, 60)}` : null,
               ].filter(Boolean).join(' | '),
             },
