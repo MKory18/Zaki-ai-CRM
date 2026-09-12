@@ -1,9 +1,12 @@
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
-import { verifyPreviewToken } from '@/lib/landing-pages';
+import { verifyPreviewToken, clampStoredHtml } from '@/lib/landing-pages';
 import OrderForm from '@/components/landing/OrderForm';
 import { ShieldCheck, Truck, PhoneCall } from 'lucide-react';
 import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
+import { detectOrderIntent } from '@/lib/landing-dynamic';
+import { MetaPixel } from '@/components/landing/MetaPixel';
+import { pixelActive } from '@/lib/landing-tracking';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -69,7 +72,10 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
     name: string;
     slug: string;
     isPublished?: boolean;
-    product?: { name: string; basePrice: number } | null;
+    htmlContent?: string | null;
+    product?: { id: string; name: string; basePrice: number } | null;
+    metaPixelId?: string | null;
+    metaPixelEnabled?: boolean;
     company?: { currency: string };
   } | null = null;
 
@@ -86,7 +92,10 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
           id: true,
           name: true,
           slug: true,
-          product: { select: { name: true, basePrice: true } },
+          htmlContent: true,
+          metaPixelId: true,
+          metaPixelEnabled: true,
+          product: { select: { id: true, name: true, basePrice: true } },
           company: { select: { currency: true } },
         },
       });
@@ -104,8 +113,11 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
         name: true,
         slug: true,
         isPublished: true,
+        htmlContent: true,
+        metaPixelId: true,
+        metaPixelEnabled: true,
         company: { select: { currency: true } },
-        product: { select: { name: true, basePrice: true } },
+        product: { select: { id: true, name: true, basePrice: true } },
       },
     });
     if (!lp || !lp.isPublished) notFound();
@@ -123,8 +135,38 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
   const price = lp.product?.basePrice ?? 0;
   const currency = lp.company?.currency || 'USD';
 
+  // ── Form visibility rule ──
+  //  - Legacy pages (NO data-zaki-* markers at all): trusted OrderForm renders
+  //    below the content exactly as it always did (backward compatibility).
+  //  - Behavior-layer pages (any data-zaki-* marker): the custom HTML owns the
+  //    design; the trusted form exists ONLY when the user asked for ordering
+  //    (data-zaki-action="order"/"scroll-order", legacy data-zaki-order, or
+  //    the optional data-zaki-order-form anchor).
+  const html = clampStoredHtml(lp.htmlContent) || '';
+  const usesBehaviorLayer = /data-zaki-(?:action|offer|order|position|product)/.test(html);
+  const showOrderForm = usesBehaviorLayer ? detectOrderIntent(html) : true;
+
+  // ── Meta Pixel (Phase 3) — browser Pixel on the TRUSTED page only. ──
+  // Disabled/invalid → the Pixel script is never loaded. Never fired in the
+  // dashboard or editor preview. ViewContent data comes from the DB only.
+  const activePixelId = pixelActive(lp.metaPixelEnabled, lp.metaPixelId);
+  const viewContent = lp.product
+    ? {
+        contentIds: [lp.product.id],
+        contentName: lp.product.name || null,
+        value: lp.product.basePrice ?? null,
+        currency,
+      }
+    : null;
+
   return (
     <div dir="rtl" className="flex min-h-screen flex-col bg-[#f7f7f8]">
+      {/* 0. Meta Pixel — trusted page only (never in the sandboxed iframe,
+          never in the dashboard/preview); loader is hard-coded, the only
+          dynamic value is the validated numeric Pixel ID. */}
+      {activePixelId && (
+        <MetaPixel pixelId={activePixelId} viewContent={viewContent} />
+      )}
       {/* 1. Untrusted uploaded HTML — sandboxed opaque-origin iframe.
           data-zaki-* placeholders inside are resolved server-side (raw route);
           offer clicks / CTA clicks reach this page ONLY via LandingFormBridge,
@@ -137,17 +179,25 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
         style={{ height: '70vh', minHeight: 480, display: 'block' }}
       />
 
-      {/* 2. Trusted native order form — part of Zaki AI, after the content */}
-      <LandingFormBridge offers={offers.map((o) => ({ ...o }))}>
-        <OrderForm
-          slug={lp.slug}
-          productName={productName}
-          basePrice={price}
-          currency={currency}
+      {/* 2. Trusted native order form — rendered only when the page asks for
+          ordering (or on legacy pages without behavior-layer markers) */}
+      {showOrderForm && (
+        <LandingFormBridge
           offers={offers.map((o) => ({ ...o }))}
-          recommendations={recommendations}
-        />
-      </LandingFormBridge>
+          pixelId={activePixelId}
+          product={lp.product ? { id: lp.product.id, name: lp.product.name } : null}
+        >
+          <OrderForm
+            slug={lp.slug}
+            productName={productName}
+            basePrice={price}
+            currency={currency}
+            offers={offers.map((o) => ({ ...o }))}
+            recommendations={recommendations}
+            metaPixelId={activePixelId}
+          />
+        </LandingFormBridge>
+      )}
 
       {/* 3. Footer */}
       <footer className="border-t border-[#e3e8ef] bg-white px-4 py-8">

@@ -997,6 +997,8 @@ model LandingPage {
   htmlContent  String?  @db.Text
   cssContent   String?  @db.Text // custom CSS from the visual editor (sanitized server-side)
   pageSettings String?  // JSON: { width, maxWidth, background, direction, fontFamily } — additive base styles
+  metaPixelId      String?  // Meta/Facebook Pixel ID (digits only, validated server-side)
+  metaPixelEnabled Boolean  @default(false) // false/empty → no Pixel script is ever loaded
   productId    String?
   isPublished  Boolean  @default(false)
   viewsCount   Int      @default(0) // view = one successful public page render (no PII)

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Loader2, CheckCircle2, AlertCircle, ShoppingBag, Search } from 'lucide-react';
 import { SYRIAN_LOCATIONS } from '@/lib/locations/syria';
 
@@ -43,13 +43,15 @@ interface OrderFormProps {
   recommendations: RecommendationView[];
   /** Phase 2: offer selected from custom-HTML placeholder (pre-validated by the bridge) */
   externalSelectedOfferId?: string | null;
+  /** validated Meta Pixel id (digits) — Purchase fires only when set */
+  metaPixelId?: string | null;
 }
 
 type FormState = 'idle' | 'loading' | 'success' | 'error';
 
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, externalSelectedOfferId }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, externalSelectedOfferId, metaPixelId }: OrderFormProps) {
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -58,6 +60,8 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
     offers.find((o) => o.isDefault)?.id || offers[0]?.id || ''
   );
   const [addons, setAddons] = useState<Record<string, 'added' | 'adding'>>({});
+  // Phase 3: Purchase dedup — one event per orderNumber per page session
+  const purchaseFiredRef = useRef<Set<string>>(new Set());
 
   // Phase 2: offer picked from the custom HTML placeholder (bridge already
   // validated the id against this page's DB offers)
@@ -115,6 +119,21 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
       const json = await res.json().catch(() => null);
       if (res.ok) {
         setResult({ orderNumber: json?.orderNumber || null, addonToken: json?.addonToken || null });
+          // Phase 3: Purchase — ONLY after the server confirms a real order,
+          // with the SERVER-AUTHORITATIVE total/currency from the response.
+          // Deduped per orderNumber: re-renders can never fire it twice.
+          if (metaPixelId && json?.orderNumber && typeof window !== 'undefined') {
+            const ordNum = String(json.orderNumber);
+            if (!purchaseFiredRef.current.has(ordNum)) {
+              purchaseFiredRef.current.add(ordNum);
+              try {
+                window.fbq?.('track', 'Purchase', {
+                  value: typeof json.total === 'number' ? json.total : null,
+                  currency: typeof json.currency === 'string' ? json.currency : currency,
+                });
+              } catch { /* tracking is non-fatal */ }
+            }
+          }
         setTotals(null);
         setState('success');
       } else {

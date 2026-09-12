@@ -322,6 +322,10 @@ export async function POST(req: Request, ctx: Ctx) {
         success: true,
         orderNumber: order.orderNumber,
         addonToken,
+        // Server-authoritative amounts — the ONLY source for Purchase
+        // conversion tracking (client/browser values are never trusted).
+        total: Number(order.totalAmount),
+        currency: order.currency,
         recommendations: recommendations.map((r) => ({
           id: r.id,
           name: r.product?.name || null,

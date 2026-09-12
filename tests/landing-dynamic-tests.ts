@@ -19,7 +19,7 @@ const CURRENCY = 'USD';
 const SLUG = 'test-page';
 
 async function main() {
-  const { resolveDynamicPlaceholders, renderOffersBlock, renderProductBlock, buildInteractionScript } = await import('../src/lib/landing-dynamic');
+  const { resolveDynamicPlaceholders, renderOffersBlock, renderProductBlock, buildBehaviorScript } = await import('../src/lib/landing-dynamic');
   const { sanitizeLandingHtml } = await import('../src/lib/landing-html-sanitize');
 
   const resolve = (html: string) =>
@@ -32,7 +32,7 @@ async function main() {
   ok('product rendered from DB price', r1.includes('25'));
 
   const r2 = resolve('<div data-zaki-offers></div>');
-  ok('offers rendered with DB ids', r2.includes('data-zaki-offer-id="offer-aaa-1"') && r2.includes('data-zaki-offer-id="offer-bbb-2"'));
+  ok('offers rendered with DB ids', r2.includes('data-zaki-offer="offer-aaa-1"') && r2.includes('data-zaki-offer="offer-bbb-2"'));
   ok('offer prices from DB only', r2.includes('25') && r2.includes('45'));
   ok('default offer flagged', r2.includes('data-zaki-selected="1"'));
 
@@ -74,20 +74,20 @@ async function main() {
   const x3 = resolve('<button data-zaki-offer-id="fakes">click</button>');
   ok('fake offer id forwarded but inert in iframe (parent validates)', x3.includes('data-zaki-offer-id="fakes"'));
 
-  const x4 = buildInteractionScript(SLUG);
-  ok('interaction script contains no user content', !x4.includes('<') || true) && ok('script is postMessage-only', x4.includes("postMessage") && !x4.includes('fetch(') && !x4.includes('XMLHttpRequest'));
-  ok('script rejects invalid slug', buildInteractionScript('BAD SLUG;alert(1)') === '');
+  const x4 = buildBehaviorScript(false);
+  ok('behavior script is postMessage-only (no fetch/XHR)', x4.includes('ZAKI_ORDER') && !x4.includes('fetch(') && !x4.includes('XMLHttpRequest'));
+  ok('behavior script is hard-coded (no user content interpolated)', !x4.includes(SLUG) && !x4.includes(PRODUCT.name));
 
   console.log('\n=== 4. EXISTING PAGES UNTOUCHED ===');
   const plain = resolve('<h1>صفحة عادية بدون placeholders</h1>');
   ok('plain HTML preserved as-is', plain.includes('صفحة عادية بدون placeholders'));
-  ok('no script injected when no interactive placeholders', !plain.includes('postMessage'));
+  ok('no script injected when no behavior-layer usage', !plain.includes('postMessage'));
 
   console.log('\n=== 5. SOURCE CONTRACTS (bridge) ===');
   const fs = require('fs');
   const bridge = fs.readFileSync('src/components/landing/LandingFormBridge.tsx', 'utf8');
   ok('bridge validates offer ids against DB allowlist', bridge.includes('offerIdsRef.current.has(d.offerId)'));
-  ok('bridge ignores unknown message types', bridge.includes("d.type === 'zaki:offer'") && bridge.includes("d.type === 'zaki:scroll-form'"));
+  ok('bridge accepts the ZAKI_ORDER protocol', bridge.includes("d.type === 'ZAKI_ORDER'"));
   const orderForm = fs.readFileSync('src/components/landing/OrderForm.tsx', 'utf8');
   ok('OrderForm re-validates external offer id', orderForm.includes('offers.some((o) => o.id === externalSelectedOfferId)'));
   ok('OrderForm still sends only offerId (never price)', !/price:\s|totalAmount:\s/.test(orderForm.split('onSubmit')[1] || ''));
@@ -102,3 +102,4 @@ async function main() {
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
+export {};

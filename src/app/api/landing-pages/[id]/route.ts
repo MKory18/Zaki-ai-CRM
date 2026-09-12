@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { validateSlug, clampStoredHtml, conversionRate } from '@/lib/landing-pages';
+import { validatePixelId } from '@/lib/landing-tracking';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -54,6 +55,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
       slug: z.string().trim().toLowerCase().max(60).optional(),
       productId: z.string().min(10).max(64).optional().nullable(),
       isPublished: z.boolean().optional(),
+      metaPixelId: z.string().trim().max(20).optional().nullable(),
+      metaPixelEnabled: z.boolean().optional(),
     });
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -68,7 +71,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
       await requirePermission('landing_pages.publish');
     }
     const needsEdit =
-      parsed.data.name !== undefined || parsed.data.slug !== undefined || parsed.data.productId !== undefined;
+      parsed.data.name !== undefined ||
+      parsed.data.slug !== undefined ||
+      parsed.data.productId !== undefined ||
+      parsed.data.metaPixelId !== undefined ||
+      parsed.data.metaPixelEnabled !== undefined;
     if (needsEdit) await requirePermission('landing_pages.edit');
 
     const data: Record<string, unknown> = {};
@@ -86,6 +93,27 @@ export async function PATCH(req: Request, ctx: Ctx) {
       data.productId = parsed.data.productId;
     }
     if (parsed.data.isPublished !== undefined) data.isPublished = parsed.data.isPublished;
+
+    // ── Meta Pixel configuration (configuration, never code) ──
+    if (parsed.data.metaPixelId !== undefined || parsed.data.metaPixelEnabled !== undefined) {
+      const nextId = parsed.data.metaPixelId !== undefined ? parsed.data.metaPixelId : lp.metaPixelId;
+      const nextEnabled = parsed.data.metaPixelEnabled !== undefined ? parsed.data.metaPixelEnabled : lp.metaPixelEnabled;
+      const cleanId = validatePixelId(nextId ?? null);
+      if (nextEnabled && !cleanId) {
+        return NextResponse.json(
+          { error: 'Meta Pixel ID غير صالح (أرقام فقط، 15-16 خانة)' },
+          { status: 400 }
+        );
+      }
+      if (parsed.data.metaPixelId !== undefined) {
+        // Store the validated digits only — or null when empty (cleanest disable)
+        data.metaPixelId = nextId && cleanId ? cleanId : null;
+      }
+      if (parsed.data.metaPixelEnabled !== undefined) {
+        // Enabling with no valid id is refused above; disabling always allowed
+        data.metaPixelEnabled = nextEnabled && Boolean(cleanId);
+      }
+    }
 
     try {
       const updated = await db.landingPage.update({ where: { id: lp.id }, data });

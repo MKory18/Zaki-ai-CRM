@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { crmApi } from '@/lib/crm-client';
+import { buildBehaviorScript, BEHAVIOR_CSS } from '@/lib/landing-dynamic';
 import {
   ArrowRight, Save, Eye, Globe, Code2, Palette, Monitor, Tablet, Smartphone,
   Image as ImageIcon, Package, MousePointerClick, Gift, ListPlus, Type, Upload, Loader2,
@@ -191,30 +192,9 @@ function resolvePreviewPlaceholders(html: string, data: PreviewData): string {
     .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-order-form\b[^>]*>[\s\S]*?<\/\1>/gi, formAnchor)
     .replace(/<([a-zA-Z]+)\b[^>]*\bdata-zaki-order-form\b[^>]*\/?>/gi, formAnchor);
 
-  // preview interaction: offer highlight + CTA scroll to the form anchor
-  const previewScript = `<script>(function(){'use strict';
-document.addEventListener('click', function (ev) {
-  var n = ev.target;
-  while (n && n !== document.body) {
-    if (n.getAttribute) {
-      var oid = n.getAttribute('data-zaki-offer-id');
-      if (oid) {
-        ev.preventDefault();
-        document.querySelectorAll('[data-zaki-offer-id]').forEach(function (b) { b.style.borderColor = '#e5e7eb'; b.style.background = '#fff'; });
-        n.style.borderColor = '#b8256e'; n.style.background = '#fdf2f7';
-        return;
-      }
-      if (n.hasAttribute && n.hasAttribute('data-zaki-order')) {
-        ev.preventDefault();
-        var a = document.getElementById('zaki-order-form-anchor');
-        if (a) a.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
-    }
-    n = n.parentNode;
-  }
-}, true);
-})();</script>`;
+  // preview interaction: behavior layer (position/styling/actions) — same
+  // hard-coded logic as the public page, in preview mode (no real orders)
+  const previewScript = buildBehaviorScript(true);
 
   if (/<\/body>/i.test(out)) out = out.replace(/<\/body>/i, previewScript + '</body>');
   else out += previewScript;
@@ -229,6 +209,7 @@ function buildPreviewDoc(html: string, css: string, settings: any, data: Preview
   const body = quickSanitize(html);
   const resolved = data ? resolvePreviewPlaceholders(body, data) : body;
   return `<!doctype html><html dir="${dir}" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style id="zaki-behavior-preview-style">${BEHAVIOR_CSS}</style>
 <style>body{margin:0;background:${bg};${ff}}${wrapMax}</style>
 <style>${css || ''}</style>
 </head><body>${resolved}</body></html>`;
@@ -257,6 +238,9 @@ export default function LandingPageEditorPage() {
   const [varOpen, setVarOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [pixelForm, setPixelForm] = useState<{ id: string; enabled: boolean }>({ id: '', enabled: false });
+  const [pixelSaving, setPixelSaving] = useState(false);
+  const [pixelMsg, setPixelMsg] = useState<string | null>(null);
   const htmlRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -274,6 +258,7 @@ export default function LandingPageEditorPage() {
       }
       setDirty(false);
       // Phase 2 preview data — this page's own DB records (no secrets)
+      setPixelForm({ id: page.metaPixelId || '', enabled: Boolean(page.metaPixelEnabled) });
       setPreviewData({
         product: page.product
           ? { name: page.product.name, image: page.product.image, description: (page.product as any).description ?? null, price: page.product.basePrice }
@@ -345,6 +330,24 @@ export default function LandingPageEditorPage() {
       setSaveMsg({ ok: false, text: e.message || 'تعذر الحفظ' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const savePixel = async () => {
+    if (!lpId) return;
+    setPixelSaving(true);
+    setPixelMsg(null);
+    try {
+      await crmApi(`/api/landing-pages/${lpId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ metaPixelId: pixelForm.id.trim() || null, metaPixelEnabled: pixelForm.enabled }),
+      });
+      setPixelMsg('تم حفظ إعدادات Meta Pixel');
+      await load();
+    } catch (e: any) {
+      setPixelMsg(e?.message || 'تعذر الحفظ');
+    } finally {
+      setPixelSaving(false);
     }
   };
 
@@ -510,7 +513,53 @@ export default function LandingPageEditorPage() {
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} رفع صورة
             </Button>
 
-            <p className="mt-4 text-[10px] leading-relaxed text-[#697586]">
+            {/* ─── Zaki Actions documentation ─── */}
+            <details className="mt-4 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] p-2.5">
+              <summary className="cursor-pointer text-[11px] font-bold text-[#364152]">📚 توثيق Zaki Actions</summary>
+              <div className="mt-2 space-y-3 text-[10px] leading-relaxed text-[#697586]" dir="ltr">
+                <div>
+                  <p className="font-bold text-[#364152]">Actions</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`<button data-zaki-action="order">
+  اطلب الآن
+</button>
+<button data-zaki-action="scroll-order">…</button>
+<button data-zaki-action="offer"
+  data-zaki-offer="OFFER_ID">…</button>`}</pre>
+                  <p>open/scroll → Trusted OrderForm (لا ينفّذ الطلب مباشرة). offer → يتحقق السيرفر من الـ id ضد عروض الصفحة.</p>
+                </div>
+                <div>
+                  <p className="font-bold text-[#364152]">Fixed Button</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`data-zaki-position="fixed-bottom"
+  | "fixed-top" | "floating"`}</pre>
+                  <p>position فقط — لا لون ولا خط إلا إن طلبتها.</p>
+                </div>
+                <div>
+                  <p className="font-bold text-[#364152]">Styling (اختياري)</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`data-zaki-bg="#16a34a"
+data-zaki-color="#fff"
+data-zaki-font-size="20px"
+data-zaki-font-weight="700"
+data-zaki-radius="14px"
+data-zaki-width="90%"
+data-zaki-padding="16px 24px"
+data-zaki-shadow="0 8px 30px rgba(0,0,0,.2)"
+data-zaki-bottom="20px"
+data-zaki-z-index="9999"`}</pre>
+                  <p>قيم غير آمنة (javascript:, url(), …) تُتجاهل تلقائيًا.</p>
+                </div>
+                <div>
+                  <p className="font-bold text-[#364152]">Placeholders</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`<div data-zaki-product></div>
+<div data-zaki-offers></div>
+<div data-zaki-recommendations></div>
+<div data-zaki-order-form></div>
+{{product.name}} {{product.image}}
+{{product.description}} {{product.price}}`}</pre>
+                  <p>كل القيم من قاعدة البيانات (escaped) — HTML لا يحدد السعر أو المنتج.</p>
+                </div>
+              </div>
+            </details>
+            <p className="mt-3 text-[10px] leading-relaxed text-[#697586]">
               العناصر المدرجة هي placeholders — تُحوَّل للعناصر الحقيقية في الصفحة المنشورة. نموذج الطلب الموثوق يعمل خارج HTML المخصص دائمًا.
             </p>
           </div>
@@ -660,6 +709,47 @@ export default function LandingPageEditorPage() {
               <p className="text-[10px] leading-relaxed text-[#697586]">
                 الإعدادات تُطبَّق كأنماط أساسية — CSS المخصص لك يتجاوزها دائمًا عند التعارض.
               </p>
+            </div>
+
+            {/* ─── Meta Pixel (Phase 3) ─── */}
+            <div className="mt-6 border-t border-[#e3e8ef] pt-4">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">Meta Pixel</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#364152]">Meta Pixel ID</label>
+                  <Input
+                    dir="ltr"
+                    placeholder="123456789012345"
+                    value={pixelForm.id}
+                    onChange={(e) => setPixelForm({ ...pixelForm, id: e.target.value })}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-[#364152]">
+                  <input
+                    type="checkbox"
+                    checked={pixelForm.enabled}
+                    onChange={(e) => setPixelForm({ ...pixelForm, enabled: e.target.checked })}
+                  />
+                  تفعيل Meta Pixel
+                </label>
+                {pixelMsg && <p className="text-[10px] text-emerald-600">{pixelMsg}</p>}
+                <Button variant="outline" size="sm" onClick={savePixel} disabled={pixelSaving}>
+                  {pixelSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} حفظ التتبع
+                </Button>
+                <details className="rounded-lg border border-[#e3e8ef] bg-[#f8fafc] p-2">
+                  <summary className="cursor-pointer text-[10px] font-bold text-[#364152]">كيف يعمل؟</summary>
+                  <ol className="mt-1.5 list-decimal space-y-1 pe-4 text-[10px] leading-relaxed text-[#697586]">
+                    <li>أنشئ Pixel في Meta Events Manager.</li>
+                    <li>انسخ Pixel ID (أرقام فقط، 15-16 خانة).</li>
+                    <li>ضعه في الحقل أعلاه ثم فعّل Pixel واحفظ.</li>
+                    <li>Zaki يتولى تلقائيًا: PageView / ViewContent / InitiateCheckout / Purchase.</li>
+                  </ol>
+                  <p className="mt-1.5 text-[10px] text-[#697586]">
+                    لا JavaScript — Zaki يولّد كود Pixel الثابت تلقائيًا. لا يعمل داخل المعاينة أو لوحة التحكم، فقط في الصفحة المنشورة. لا تُرسل أي بيانات شخصية للزائر.
+                  </p>
+                </details>
+              </div>
             </div>
           </div>
         </div>
