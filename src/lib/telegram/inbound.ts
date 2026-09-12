@@ -23,6 +23,7 @@ export interface TelegramInboundResult {
   handled: boolean; // false = event type not processed as an order
   status?: 'PROCESSED' | 'IGNORED' | 'NEEDS_REVIEW' | 'FAILED' | 'DUPLICATE' | 'NO_SOURCE' | 'NON_TEXT';
   reason?: string;
+  orderId?: string;
 }
 
 /** Update-update envelope types we accept. */
@@ -138,7 +139,7 @@ export async function processTelegramUpdate(update: unknown): Promise<TelegramIn
 
   try {
     const result = await processStoredMessage(message.id);
-    return { handled: true, status: result.status, reason: result.reason };
+    return { handled: true, status: result.status, reason: result.reason, orderId: result.orderId };
   } catch (e) {
     // Persist a safe failure state — Telegram must not retry-spam duplicates
     await db.telegramMessage.update({
@@ -177,6 +178,12 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
   const companyId = message.companyId;
   const parsed = parseTelegramOrderMessage(message.text ?? '');
 
+  // Persist the extracted commercial page name (source) for dashboard display
+  const pageName = parsed.pageName?.trim() || null;
+  if (pageName && message.pageName !== pageName) {
+    await db.telegramMessage.update({ where: { id: message.id }, data: { pageName } }).catch(() => undefined);
+  }
+
   // ── Non-order → IGNORED ──
   if (!parsed.isOrder) {
     await db.telegramMessage.update({
@@ -202,7 +209,7 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
   const phone = parsed.phone ? normalizePhoneNumber(parsed.phone) : '';
   if (!phone || phone.length < 7 || phone.length > 15) return review('INVALID_PHONE');
 
-  const address = parsed.address?.trim();
+  const address = parsed.address?.trim() || parsed.governorate?.trim();
   if (!address) return review('MISSING_ADDRESS');
 
   const quantity = parsed.quantity ?? 1;
@@ -210,6 +217,10 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
 
   const productText = parsed.productText?.trim();
   if (!productText) return review('MISSING_PRODUCT');
+
+  // pageName is the commercial source; optional — missing → review reason but
+  // the order is NOT lost if everything else is valid.
+  const sourcePageName = pageName ?? undefined;
 
   // ── Product matching (same-company only) ──
   const products = await db.product.findMany({
@@ -245,7 +256,7 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
           phone,
           rawPhone: parsed.phone!.slice(0, 20),
           address: address.slice(0, 200),
-          city: (parsed.city?.trim() || address).slice(0, 60),
+          city: (parsed.governorate?.trim() || address).slice(0, 60),
           totalOrders: 0,
         },
       });
@@ -264,8 +275,10 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
     product,
     quantity,
     address,
-    city: parsed.city?.trim(),
+    governorate: parsed.governorate?.trim(),
     notes: parsed.notes,
+    priceText: parsed.priceText,
+    pageName: sourcePageName,
     telegram: {
       messageId: message.messageId,
       chatId: message.chatId,

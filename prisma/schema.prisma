@@ -1216,6 +1216,7 @@ model TelegramMessage {
   messageType      String    @default("TEXT") // TEXT, PHOTO, ... (reserved)
   processingStatus String    @default("PENDING") // PENDING, PROCESSED, IGNORED, NEEDS_REVIEW, FAILED
   reviewReason     String?   // PRODUCT_NOT_FOUND, AMBIGUOUS_PRODUCT, INVALID_PHONE, MISSING_CUSTOMER_NAME, MISSING_ADDRESS, INVALID_QUANTITY, ...
+  pageName         String?   // اسم الصفحة التجارية داخل الرسالة (المصدر) — غير مرتبط بمجموعة تيليجرام
   orderId          String?
   internalError    String?   // safe internal error code only (never secrets/stacks)
   createdAt        DateTime  @default(now())

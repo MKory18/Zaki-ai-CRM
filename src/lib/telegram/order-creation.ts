@@ -20,8 +20,12 @@ export interface CreateTelegramOrderInput {
   product: { id: string; name: string; image: string | null; basePrice: number };
   quantity: number;
   address: string;
-  city?: string;
+  governorate?: string;
   notes?: string;
+  /** السعر كما ورد في الرسالة — audit فقط، لا يُستخدم سعرًا نهائيًا */
+  priceText?: string;
+  /** اسم الصفحة التجارية من الرسالة = المصدر في Orders (غير مجموعة تيليجرام) */
+  pageName?: string;
   telegram: {
     messageId: string;
     chatId: string;
@@ -32,7 +36,29 @@ export interface CreateTelegramOrderInput {
 
 export type CreateTelegramOrderResult =
   | { ok: true; orderId: string; orderNumber: string }
-  | { ok: false; reason: 'NO_SYSTEM_ACTOR' | 'CREATION_FAILED' | 'PRODUCT_NOT_FOUND' };
+  | { ok: false; reason: 'NO_SYSTEM_ACTOR' | 'CREATION_FAILED' | 'PRODUCT_NOT_FOUND' | 'MISSING_PRICE' };
+
+/** Sane upper bound for a Telegram-provided unit price. */
+const MAX_UNIT_PRICE = 100_000;
+
+/**
+ * Parse the advertised price text ("18 دولار" / "$18" / "18 USD" / "١٨ دولار")
+ * → validated number. Returns null when missing/invalid — the caller must
+ * NOT fall back silently to DB pricing.
+ */
+export function parseAdvertisedPrice(priceText: string | undefined | null): number | null {
+  if (!priceText || !priceText.trim()) return null;
+  const t = priceText
+    .replace(/[\u0660-\u0669]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x06f0 + 0x30));
+  // Negative prices are invalid (reject before the digits match)
+  if (/(?:^|\s)[-–—]\s*\d/.test(t)) return null;
+  const m = t.match(/\d+(?:[.,]\d{1,2})?/);
+  if (!m) return null;
+  const n = parseFloat(m[0].replace(',', '.'));
+  if (!Number.isFinite(n) || n <= 0 || n > MAX_UNIT_PRICE) return null;
+  return Number(n.toFixed(2));
+}
 
 /**
  * Resolve a company user to act as the bookkeeping actor for
@@ -55,12 +81,25 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   const actor = await resolveSystemActor(input.companyId);
   if (!actor) return { ok: false, reason: 'NO_SYSTEM_ACTOR' };
 
-  const { companyId, customer, product, quantity, address, notes, telegram } = input;
+  const { companyId, customer, product, quantity, address, notes, priceText, pageName, telegram } = input;
 
-  // Server-authoritative pricing — Telegram-provided prices are ignored by design
-  const price = product.basePrice;
+  /**
+   * PRICING (business rule): the Telegram message price IS the authoritative
+   * unit price when present and valid. The server validates it (numeric,
+   * finite, > 0, sane upper bound) — never trusts raw text blindly.
+   *   - valid price → sellingPrice = telegram price (DB basePrice ignored)
+   *   - missing/invalid price → NEEDS_REVIEW (MISSING_PRICE), never silent
+   *     fallback to DB.
+   * totalAmount is ALWAYS server-computed: quantity × unitPrice.
+   */
+  const parsedPrice = parseAdvertisedPrice(priceText);
+  if (parsedPrice === null) {
+    return { ok: false, reason: 'MISSING_PRICE' };
+  }
+  const price = parsedPrice;
   const shipCost = 0;
-  const totalAmount = price;
+  // Server-side total — never client/Telegram-controlled
+  const totalAmount = Number((quantity * price).toFixed(2));
 
   const productRow = await db.product.findFirst({
     where: { id: product.id, companyId },
@@ -104,9 +143,17 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
               currentOwnerId: null,
               signatureStatus: 'UNSIGNED',
               version: 1,
-              source: 'Telegram',
+              // Channel + commercial source: Order.source = "Telegram → <page>"
+              // (page from the message only; the Telegram group is stored in
+              // internalNotes — three distinct facts, never mixed)
+              source: pageName?.trim() ? `Telegram → ${pageName.trim().slice(0, 30)}` : 'Telegram',
               customerNotes: notes?.trim()?.slice(0, 500) || null,
-              internalNotes: `Telegram: chat ${telegram.chatId}${telegram.threadId ? ` topic ${telegram.threadId}` : ''} msg ${telegram.messageId}`,
+              internalNotes: [
+                `Telegram: chat ${telegram.chatId}${telegram.threadId ? ` topic ${telegram.threadId}` : ''} msg ${telegram.messageId}`,
+                pageName?.trim() ? `page: ${pageName.trim().slice(0, 60)}` : null,
+                priceText?.trim() ? `advertised price (used as unit price): ${priceText.trim().slice(0, 30)}` : null,
+                telegram.chatTitle ? `group: ${telegram.chatTitle.slice(0, 60)}` : null,
+              ].filter(Boolean).join(' | '),
             },
           });
           break;
@@ -166,7 +213,8 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
       entityId: order.id,
       newData: {
         orderNumber: (order as any).orderNumber,
-        source: 'Telegram',
+        source: (order as any).source,
+        pageName: pageName?.trim()?.slice(0, 60) || null,
         telegramMessageId: telegram.messageId,
         telegramChatId: telegram.chatId,
         telegramThreadId: telegram.threadId,

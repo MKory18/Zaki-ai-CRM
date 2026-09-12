@@ -36,6 +36,7 @@ interface TelegramMsg {
   text: string | null;
   processingStatus: string;
   reviewReason: string | null;
+  pageName: string | null;
   createdAt: string;
   source: { chatTitle: string | null; topicName: string | null; chatId: string; topicId: number | null } | null;
   order: { id: string; orderNumber: string } | null;
@@ -65,6 +66,7 @@ const REVIEW_REASONS: Record<string, string> = {
   MISSING_ADDRESS: 'العنوان ناقص',
   MISSING_PRODUCT: 'المنتج ناقص',
   INVALID_QUANTITY: 'كمية غير صالحة',
+  MISSING_PRICE: 'السعر ناقص أو غير صالح',
   NO_SYSTEM_ACTOR: 'لا يوجد مستخدم نظام',
   CREATION_FAILED: 'فشل إنشاء الطلب',
 };
@@ -334,6 +336,7 @@ export default function TelegramDashboardPage() {
                     <th className="px-4 py-3 text-right">الرسائل</th>
                     <th className="px-4 py-3 text-right">المجموعات</th>
                     <th className="px-4 py-3 text-right">المواضيع</th>
+                    <th className="px-4 py-3 text-right">اسم الصفحة</th>
                     <th className="px-4 py-3 text-right">حالة المعالجة</th>
                     <th className="px-4 py-3 text-right">الطلب</th>
                     <th className="px-4 py-3 text-right">الوقت</th>
@@ -342,7 +345,7 @@ export default function TelegramDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-[#e3e8ef]">
                   {messages.length === 0 ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-[#9ca3af]">{loading ? 'جارٍ التحميل...' : 'لا توجد بيانات'}</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-[#9ca3af]">{loading ? 'جارٍ التحميل...' : 'لا توجد بيانات'}</td></tr>
                   ) : messages.map((m) => (
                     <tr key={m.id} className="hover:bg-[#f8fafc]">
                       <td className="px-4 py-3 max-w-[280px]">
@@ -351,6 +354,9 @@ export default function TelegramDashboardPage() {
                       </td>
                       <td className="px-4 py-3 text-[#697586]">{m.source?.chatTitle || m.chatId}</td>
                       <td className="px-4 py-3 text-[#697586]">{m.threadName || m.source?.topicName || (m.threadId ? m.threadId : '—')}</td>
+                      <td className="px-4 py-3">
+                        {m.pageName ? <span className="text-[#121926] font-semibold">{m.pageName}</span> : '—'}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[m.processingStatus] || ''}`}>
                           {STATUS_LABELS[m.processingStatus] || m.processingStatus}

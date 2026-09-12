@@ -21,9 +21,15 @@ export interface ParsedTelegramOrder {
   phone?: string;
   address?: string;
   city?: string;
+  /** المحافظة — kept separate from address (never merged) */
+  governorate?: string;
   productText?: string;
   quantity?: number;
+  /** السعر كما ورد في الرسالة — للعرض/التدقيق فقط، لا يُستخدم سعرًا نهائيًا */
+  priceText?: string;
   notes?: string;
+  /** اسم الصفحة التجارية (المصدر) داخل الرسالة — غير مرتبط بمجموعة تيليجرام */
+  pageName?: string;
 }
 
 const MAX_TEXT_LENGTH = 4000;
@@ -65,13 +71,15 @@ export function extractQuantity(text: string): number | undefined {
 }
 
 const LABEL_PATTERNS = {
-  customerName: /(?:الاسم|اسم الزبون|اسم العميل|الاسم الكامل|الزبون|العميل)\s*[:：\-]\s*(.+)/,
+  customerName: /(?:الاسم|اسم الزبون|اسم العميل|الاسم الكامل|الزبون|العميل)\s*[:：\-]\s*(.*)/,
   phone: /(?:الرقم|رقم الهاتف|الهاتف|رقم الموبايل|رقم الواتس|واتساب|واتس|التليفون)\s*[:：\-]?\s*([0-9+\-\s()]{7,20})/,
-  address: /(?:العنوان|عنوان التوصيل|السكن|العنوان بالتفصيل)\s*[:：\-]\s*(.+)/,
-  city: /(?:المدينة|المحافظة|المحافظه|المدينه)\s*[:：\-]\s*(.+)/,
-  product: /(?:المنتج|اسم المنتج|الطلب|المطلوب|المنتج المطلوب)\s*[:：\-]\s*(.+)/,
-  quantity: /(?:الكمية|الكميه|العدد)\s*[:：=\-]?\s*(\d{1,4})/,
-  notes: /(?:الملاحظات|ملاحظات|ملاحظة)\s*[:：\-]\s*(.+)/,
+  address: /(?:العنوان|عنوان التوصيل|السكن|العنوان بالتفصيل)\s*[:：\-]\s*(.*)/,
+  governorate: /(?:اسم المحافظة|اسم المحافظه|المحافظة|المحافظه|المدينة|المدينه)\s*[:：\-]\s*(.*)/,
+  product: /(?:الطلب\s*[\(（]\s*[^)）]*\s*[\)）]|الطلب|المنتج|اسم المنتج|المنتج المطلوب|المطلوب)\s*[:：\-]\s*(.*)/,
+  quantity: /(?:الكمية|الكميه|العدد)\s*[:：=\-]?\s*([0-9٠-٩]{1,5})/,
+  price: /(?:السعر|الثمن|المبلغ)\s*[:：]\s*(.+)/,
+  notes: /(?:الملاحظات|ملاحظات|ملاحظة)\s*[:：\-]\s*(.*)/,
+  pageName: /(?:اسم الصفحة|اسم الصفحه|الصفحة|الصفحه|المصدر)\s*[:：\-]\s*(.*)/,
 };
 
 /** Chit-chat / non-order signals. */
@@ -88,6 +96,19 @@ function clean(v: string | undefined | null): string | undefined {
   if (!v) return undefined;
   const t = v.replace(/^[-–—:：]+\s*/, '').trim();
   return t && t !== '-' ? t : undefined;
+}
+
+/**
+ * Labeled-field values that may legitimately be EMPTY (e.g. الملاحظات:).
+ * clean() returns undefined for empty; emptyField() returns '' so the
+ * caller knows the label existed with an empty value.
+ */
+function cleanAllowEmpty(v: string | undefined | null): string {
+  if (!v) return '';
+  // Strip label punctuation, but keep a leading minus (negative values must
+  // survive to the validator so they can be rejected, not silently flipped)
+  const t = v.replace(/^[:：]\s*/, '').replace(/^[-–—](?!\d)\s*/, '').trim();
+  return t === '-' ? '' : t;
 }
 
 /**
@@ -120,17 +141,34 @@ export function parseTelegramOrderMessage(rawText: string): ParsedTelegramOrder 
       const m = trimmed.match(LABEL_PATTERNS.address);
       if (m) out.address = clean(m[1]);
     }
-    if (!out.city) {
-      const m = trimmed.match(LABEL_PATTERNS.city);
-      if (m) out.city = clean(m[1]);
+    if (!out.governorate) {
+      const m = trimmed.match(LABEL_PATTERNS.governorate);
+      if (m) out.governorate = clean(m[1]);
     }
     if (!out.productText) {
       const m = trimmed.match(LABEL_PATTERNS.product);
       if (m) out.productText = clean(m[1]);
     }
-    if (!out.notes) {
+    if (out.quantity === undefined) {
+      const m = trimmed.match(LABEL_PATTERNS.quantity);
+      if (m) {
+        const n = parseInt(toLatinDigits(m[1]), 10);
+        if (Number.isFinite(n)) out.quantity = n;
+      }
+    }
+    if (!out.priceText) {
+      const m = trimmed.match(LABEL_PATTERNS.price);
+      // keep raw value (incl. signs) so the price validator can reject negatives
+      if (m) out.priceText = cleanAllowEmpty(m[1]) || undefined;
+    }
+    // الملاحظات may be intentionally empty — preserve the label presence
+    if (out.notes === undefined) {
       const m = trimmed.match(LABEL_PATTERNS.notes);
-      if (m) out.notes = clean(m[1]);
+      if (m) out.notes = cleanAllowEmpty(m[1]);
+    }
+    if (!out.pageName) {
+      const m = trimmed.match(LABEL_PATTERNS.pageName);
+      if (m) out.pageName = clean(m[1]);
     }
   }
 
@@ -160,7 +198,7 @@ export function parseTelegramOrderMessage(rawText: string): ParsedTelegramOrder 
   if (ORDER_ACTION_WORDS.test(text)) score += 1;
 
   // 6) Confidence = fraction of expected fields present
-  const fields = [hasPhone, hasProduct, hasName, Boolean(out.address), out.quantity !== undefined];
+  const fields = [hasPhone, hasProduct, hasName, Boolean(out.address || out.governorate), out.quantity !== undefined];
   out.confidence = Math.min(1, fields.filter(Boolean).length / fields.length);
 
   // 7) Free-format fallbacks (no labels): "أحمد 33334444 عرفات 2 ريان"
