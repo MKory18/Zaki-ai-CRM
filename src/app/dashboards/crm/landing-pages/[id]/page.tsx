@@ -206,9 +206,14 @@ export default function LandingPageEditorPage() {
             </div>
             <Badge variant={lp.isPublished ? 'success' : 'warning'}>{lp.isPublished ? 'منشورة' : 'مسودة'}</Badge>
           </div>
-          <Button onClick={togglePublish} variant={lp.isPublished ? 'outline' : 'success'}>
-            {lp.isPublished ? 'إلغاء النشر' : 'نشر الصفحة'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => (window.location.href = `/dashboards/crm/landing-pages/${lpId}/editor`)}>
+              <Pencil className="w-4 h-4" /> Custom Editor
+            </Button>
+            <Button onClick={togglePublish} variant={lp.isPublished ? 'outline' : 'success'}>
+              {lp.isPublished ? 'إلغاء النشر' : 'نشر الصفحة'}
+            </Button>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">

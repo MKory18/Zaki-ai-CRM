@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { clampStoredHtml, RAW_HTML_CSP, verifyPreviewToken } from '@/lib/landing-pages';
+import {
+  sanitizeLandingCss,
+  sanitizeLandingHtml,
+  parseLandingSettings,
+  applyLandingVariables,
+} from '@/lib/landing-html-sanitize';
 
 interface Ctx {
   params: Promise<{ slug: string }>;
@@ -49,7 +55,10 @@ export async function GET(req: Request, ctx: Ctx) {
     if (tok) {
       lp = await db.landingPage.findFirst({
         where: { id: tok.lpId, slug },
-        select: { id: true, name: true, slug: true, htmlContent: true, product: { select: { name: true } } },
+        select: {
+          id: true, name: true, slug: true, htmlContent: true, cssContent: true, pageSettings: true,
+          product: { select: { name: true, nameEn: true, image: true, description: true, basePrice: true } },
+        },
       });
     }
     // Invalid/expired token → fall through to the published-only path
@@ -57,15 +66,56 @@ export async function GET(req: Request, ctx: Ctx) {
   if (!lp) {
     lp = await db.landingPage.findFirst({
       where: { slug, isPublished: true },
-      select: { id: true, name: true, slug: true, htmlContent: true, product: { select: { name: true } } },
+      select: {
+        id: true, name: true, slug: true, htmlContent: true, cssContent: true, pageSettings: true,
+        product: { select: { name: true, nameEn: true, image: true, description: true, basePrice: true } },
+      },
     });
   }
   if (!lp) return new NextResponse('Not found', { status: 404 });
 
-  // Serve the uploaded (untrusted) HTML as-is — NO form injection. The
-  // Trusted Native Order Form is rendered by /lp/[slug] OUTSIDE this iframe.
+  // Serve the uploaded (untrusted) HTML — re-sanitized at serve time (defense
+  // in depth; already sanitized at save). NO form injection: the Trusted
+  // Native Order Form is rendered by /lp/[slug] OUTSIDE this iframe.
   const stored = clampStoredHtml(lp.htmlContent);
-  const html = stored || DEFAULT_HTML(lp.name, lp.product?.name);
+  const settings = parseLandingSettings(lp.pageSettings);
+
+  // ── Page settings (base styles) — injected BEFORE user CSS so the user's
+  //    custom CSS always wins cascade battles. ──
+  const baseStyles = settings
+    ? `<style id="zaki-base-style">body{${[
+        settings.background ? `background:${settings.background}` : '',
+        settings.direction ? `direction:${settings.direction}` : '',
+        settings.fontFamily ? `font-family:${settings.fontFamily}` : '',
+      ].filter(Boolean).join(';')}}
+${settings.width === 'contained' && settings.maxWidth ? `.zaki-page-wrap{max-width:${settings.maxWidth}px;margin:0 auto;padding:0 16px}` : ''}</style>`
+    : '';
+
+  // ── Custom CSS — sanitized, injected last inside <head> (highest priority) ──
+  const customCss = lp.cssContent?.trim() ? `<style id="zaki-custom-style">${sanitizeLandingCss(lp.cssContent)}</style>` : '';
+
+  // ── Whitelisted dynamic variables — values from the DB only ──
+  let html = stored || DEFAULT_HTML(lp.name, lp.product?.name);
+  html = sanitizeLandingHtml(html);
+  if (lp.product) {
+    html = applyLandingVariables(html, {
+      name: lp.product.name,
+      nameEn: lp.product.nameEn,
+      image: lp.product.image,
+      description: lp.product.description,
+      price: lp.product.basePrice,
+    });
+  }
+
+  // Inject base styles + custom CSS right before </head> (or prepend when no head exists)
+  const injection = `${baseStyles}${customCss}`;
+  if (injection) {
+    if (/<\/head>/i.test(html)) {
+      html = html.replace(/<\/head>/i, `${injection}</head>`);
+    } else {
+      html = injection + html;
+    }
+  }
 
   return new NextResponse(html, {
     headers: {
