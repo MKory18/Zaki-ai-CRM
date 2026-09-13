@@ -3,6 +3,8 @@ import { Tajawal, Public_Sans } from 'next/font/google';
 import './globals.css';
 import { getCurrentUser } from '@/lib/auth';
 import { AppProvider } from '@/context/AppContext';
+import { GlobalTrackingProvider } from '@/components/tracking/GlobalTrackingProvider';
+import { getSiteTrackingPixels } from '@/lib/tracking/tracking-config';
 
 const tajawal = Tajawal({
   variable: '--font-arabic',
@@ -28,6 +30,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const user = await getCurrentUser();
+  // Central tracking config — GLOBAL + PUBLIC pixels of the company.
+  // Server-resolved scope; empty list → the provider is a pure no-op.
+  // On public pages (no session) it falls back to the single company.
+  const trackingPixels = await getSiteTrackingPixels(user?.companyId ?? null);
 
   // suppressHydrationWarning: browser extensions (translate/dark-mode/password
   // managers) mutate <html>/<body> before hydration — React must not warn.
@@ -42,7 +48,9 @@ export default async function RootLayout({
         suppressHydrationWarning
         className="min-h-full flex flex-col bg-[#f8fafc] text-[#364152]"
       >
-        <AppProvider initialUser={user}>{children}</AppProvider>
+        <AppProvider initialUser={user}>
+          <GlobalTrackingProvider pixels={trackingPixels}>{children}</GlobalTrackingProvider>
+        </AppProvider>
       </body>
     </html>
   );

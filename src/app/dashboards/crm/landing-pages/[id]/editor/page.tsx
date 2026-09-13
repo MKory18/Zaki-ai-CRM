@@ -238,9 +238,6 @@ export default function LandingPageEditorPage() {
   const [varOpen, setVarOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
-  const [pixelForm, setPixelForm] = useState<{ id: string; enabled: boolean }>({ id: '', enabled: false });
-  const [pixelSaving, setPixelSaving] = useState(false);
-  const [pixelMsg, setPixelMsg] = useState<string | null>(null);
   const htmlRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -258,7 +255,6 @@ export default function LandingPageEditorPage() {
       }
       setDirty(false);
       // Phase 2 preview data — this page's own DB records (no secrets)
-      setPixelForm({ id: page.metaPixelId || '', enabled: Boolean(page.metaPixelEnabled) });
       setPreviewData({
         product: page.product
           ? { name: page.product.name, image: page.product.image, description: (page.product as any).description ?? null, price: page.product.basePrice }
@@ -330,24 +326,6 @@ export default function LandingPageEditorPage() {
       setSaveMsg({ ok: false, text: e.message || 'تعذر الحفظ' });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const savePixel = async () => {
-    if (!lpId) return;
-    setPixelSaving(true);
-    setPixelMsg(null);
-    try {
-      await crmApi(`/api/landing-pages/${lpId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ metaPixelId: pixelForm.id.trim() || null, metaPixelEnabled: pixelForm.enabled }),
-      });
-      setPixelMsg('تم حفظ إعدادات Meta Pixel');
-      await load();
-    } catch (e: any) {
-      setPixelMsg(e?.message || 'تعذر الحفظ');
-    } finally {
-      setPixelSaving(false);
     }
   };
 
@@ -711,45 +689,18 @@ data-zaki-z-index="9999"`}</pre>
               </p>
             </div>
 
-            {/* ─── Meta Pixel (Phase 3) ─── */}
+            {/* ─── Tracking (centralized in Settings) ─── */}
             <div className="mt-6 border-t border-[#e3e8ef] pt-4">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">Meta Pixel</p>
-              <div className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-[#364152]">Meta Pixel ID</label>
-                  <Input
-                    dir="ltr"
-                    placeholder="123456789012345"
-                    value={pixelForm.id}
-                    onChange={(e) => setPixelForm({ ...pixelForm, id: e.target.value })}
-                    className="font-mono text-xs"
-                  />
-                </div>
-                <label className="flex cursor-pointer items-center gap-2 text-xs text-[#364152]">
-                  <input
-                    type="checkbox"
-                    checked={pixelForm.enabled}
-                    onChange={(e) => setPixelForm({ ...pixelForm, enabled: e.target.checked })}
-                  />
-                  تفعيل Meta Pixel
-                </label>
-                {pixelMsg && <p className="text-[10px] text-emerald-600">{pixelMsg}</p>}
-                <Button variant="outline" size="sm" onClick={savePixel} disabled={pixelSaving}>
-                  {pixelSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} حفظ التتبع
-                </Button>
-                <details className="rounded-lg border border-[#e3e8ef] bg-[#f8fafc] p-2">
-                  <summary className="cursor-pointer text-[10px] font-bold text-[#364152]">كيف يعمل؟</summary>
-                  <ol className="mt-1.5 list-decimal space-y-1 pe-4 text-[10px] leading-relaxed text-[#697586]">
-                    <li>أنشئ Pixel في Meta Events Manager.</li>
-                    <li>انسخ Pixel ID (أرقام فقط، 15-16 خانة).</li>
-                    <li>ضعه في الحقل أعلاه ثم فعّل Pixel واحفظ.</li>
-                    <li>Zaki يتولى تلقائيًا: PageView / ViewContent / InitiateCheckout / Purchase.</li>
-                  </ol>
-                  <p className="mt-1.5 text-[10px] text-[#697586]">
-                    لا JavaScript — Zaki يولّد كود Pixel الثابت تلقائيًا. لا يعمل داخل المعاينة أو لوحة التحكم، فقط في الصفحة المنشورة. لا تُرسل أي بيانات شخصية للزائر.
-                  </p>
-                </details>
-              </div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">التتبع والإعلانات</p>
+              <p className="text-[10px] leading-relaxed text-[#697586]">
+                تم نقل إدارة أكواد التتبع (Meta / TikTok / Snapchat) إلى نظام مركزي موحّد.
+              </p>
+              <a
+                href="/settings#tracking"
+                className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#b8256e] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#b8256e]/90"
+              >
+                إدارة البكسلات من الإعدادات ←
+              </a>
             </div>
           </div>
         </div>

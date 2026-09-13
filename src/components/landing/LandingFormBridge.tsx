@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
 
 /**
  * LANDING FORM BRIDGE — the ONLY channel between the untrusted custom-HTML
@@ -17,9 +18,10 @@ import React, { useEffect, useRef, useState } from 'react';
  *  - The iframe cannot read this component, the form, cookies, tokens or
  *    API credentials — it can only ASK; the trusted side decides.
  *
- * Meta Pixel (Phase 3): fires InitiateCheckout ONCE per page session when
- * the visitor actually starts ordering (order/scroll/offer CTA). Payloads
- * use DB product/offer values only. The iframe itself has NO access to fbq.
+ * Global Tracking: fires InitiateCheckout ONCE per page session via the
+ * central engine (all enabled, scope-matching pixels of the platform set).
+ * Payloads use DB product/offer values only. The iframe itself has NO
+ * access to fbq/ttq/snaptr.
  */
 
 interface BridgeOffer {
@@ -30,29 +32,24 @@ interface BridgeProps {
   /** server-provided offers of THIS landing page (DB) — the allowlist */
   offers: BridgeOffer[];
   children: React.ReactNode;
-  /** validated Meta Pixel id (digits) or null — tracking fires only when set */
-  pixelId?: string | null;
+  /** page currency (DB) — message data can never supply it */
+  currency?: string;
   /** DB product of THIS landing page (for content_ids) */
   product?: { id: string; name: string } | null;
 }
 
-declare global {
-  interface Window {
-    fbq?: (...args: unknown[]) => void;
-  }
-}
-
-export function LandingFormBridge({ offers, children, pixelId, product }: BridgeProps) {
+export function LandingFormBridge({ offers, children, currency, product }: BridgeProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [externalOfferId, setExternalOfferId] = useState<string | null>(null);
+  const { trackEvent } = useTracking();
 
   const offerIdsRef = useRef<Set<string>>(new Set());
   offerIdsRef.current = new Set(offers.map((o) => o.id));
 
-  // InitiateCheckout dedup: once per page session (per actual page load)
+  // InitiateCheckout dedup: once per page session (per actual page load);
+  // the central engine dedupes per-pixel on top of this.
   const checkoutFiredRef = useRef(false);
   function trackInitiateCheckout(offer?: BridgeOffer) {
-    if (!pixelId) return; // Pixel disabled → no events at all
     if (checkoutFiredRef.current) return; // never duplicate for re-posts
     checkoutFiredRef.current = true;
     const payload: Record<string, unknown> = {
@@ -62,10 +59,10 @@ export function LandingFormBridge({ offers, children, pixelId, product }: Bridge
     if (offer) {
       // DB offer price only — message can never supply value/currency
       payload.value = offer.price;
-      payload.currency = 'USD';
+      payload.currency = currency || 'USD';
     }
     try {
-      window.fbq?.('track', 'InitiateCheckout', payload);
+      trackEvent('InitiateCheckout', payload);
     } catch {
       /* tracking is non-fatal */
     }
@@ -116,7 +113,7 @@ export function LandingFormBridge({ offers, children, pixelId, product }: Bridge
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pixelId, offers]);
+  }, [offers]);
 
   return (
     <div ref={wrapRef} id="zaki-order-form">

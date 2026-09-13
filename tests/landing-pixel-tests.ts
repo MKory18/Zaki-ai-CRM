@@ -1,5 +1,5 @@
 /**
- * META PIXEL (Phase 3) — tracking security & correctness tests.
+ * GLOBAL TRACKING — security & correctness source tests.
  * Usage: npx tsx tests/landing-pixel-tests.ts
  */
 let pass = 0, fail = 0;
@@ -9,90 +9,85 @@ function ok(name: string, cond: boolean, extra?: string) {
 }
 
 async function main() {
-  const { validatePixelId, pixelActive, META_PIXEL_EVENTS } = await import('../src/lib/landing-tracking');
+  const { validatePixelId } = await import('../src/lib/landing-tracking');
+  const { validateMetaPixelId, validateTikTokPixelId, validateSnapchatPixelId } = await import('../src/lib/tracking/tracking-validation');
   const { sanitizeLandingHtml, sanitizeLandingCss } = await import('../src/lib/landing-html-sanitize');
   const { buildBehaviorScript } = await import('../src/lib/landing-dynamic');
   const fs = require('fs');
   const src = (p: string) => fs.readFileSync(p, 'utf8');
 
-  console.log('\n=== 1. PIXEL ID VALIDATION ===');
-  ok('valid 15-digit accepted', validatePixelId('123456789012345') === '123456789012345');
-  ok('valid 16-digit accepted', validatePixelId('1234567890123456') === '1234567890123456');
-  ok('whitespace trimmed', validatePixelId('  123456789012345  ') === '123456789012345');
-  ok('letters rejected', validatePixelId('abc123') === null);
-  ok('dashes rejected', validatePixelId('123-456') === null);
-  ok('<script> rejected', validatePixelId('<script>alert(1)</script>') === null);
-  ok('javascript: rejected', validatePixelId('javascript:123456789012345') === null);
-  ok('oversized (>16) rejected', validatePixelId('123456789012345678901234567890') === null);
-  ok('empty rejected', validatePixelId('') === null);
-  ok('non-string rejected', validatePixelId(null) === null && validatePixelId(undefined) === null);
-  ok('14 digits rejected', validatePixelId('12345678901234') === null);
+  console.log('\n=== 1. PIXEL ID VALIDATION (fail closed) ===');
+  ok('Meta valid 15-digit accepted', validateMetaPixelId('123456789012345') === '123456789012345');
+  ok('Meta letters rejected', validateMetaPixelId('abc123') === null);
+  ok('Meta javascript: rejected', validateMetaPixelId('javascript:123456789012345') === null);
+  ok('Meta <script> rejected', validateMetaPixelId('<script>alert(1)</script>') === null);
+  ok('TikTok valid accepted', validateTikTokPixelId('C4ABCD1234567890') === 'C4ABCD1234567890');
+  ok('TikTok javascript: rejected', validateTikTokPixelId('javascript:alert(1)') === null);
+  ok('Snap valid UUID accepted', validateSnapchatPixelId('110ec58a-a0f2-4ac4-8393-c866d813b8d1') === '110ec58a-a0f2-4ac4-8393-c866d813b8d1');
+  ok('Snap non-UUID rejected', validateSnapchatPixelId('not-a-uuid') === null);
+  ok('legacy Meta validator intact', validatePixelId('123456789012345') === '123456789012345');
 
-  console.log('\n=== 2. ENABLE/DISABLE GATE ===');
-  ok('disabled → null (no Pixel script)', pixelActive(false, '123456789012345') === null);
-  ok('enabled + valid → id', pixelActive(true, '123456789012345') === '123456789012345');
-  ok('enabled + empty id → null', pixelActive(true, '') === null);
-  ok('enabled + invalid id → null (fail closed)', pixelActive(true, 'abc123') === null);
-  ok('disabled + valid id → null', pixelActive(true === false, '123456789012345') === null);
+  console.log('\n=== 2. SINGLE SOURCE — old MetaPixel is gone ===');
+  ok('MetaPixel.tsx deleted', !fs.existsSync('src/components/landing/MetaPixel.tsx'));
+  ok('lp page no longer uses MetaPixel', !src('src/app/lp/[slug]/page.tsx').includes('MetaPixel'));
+  ok('lp page uses LandingTrackingPixels', src('src/app/lp/[slug]/page.tsx').includes('LandingTrackingPixels'));
+  ok('no duplicate fbq PageView path remains in landing components',
+    !src('src/components/landing/OrderForm.tsx').includes('window.fbq') &&
+    !src('src/components/landing/LandingFormBridge.tsx').includes('window.fbq'));
 
-  console.log('\n=== 3. EVENTS ARE FIXED (no user-defined) ===');
-  ok('exactly the four standard events', JSON.stringify(META_PIXEL_EVENTS) === JSON.stringify(['PageView', 'ViewContent', 'InitiateCheckout', 'Purchase']));
+  console.log('\n=== 3. CENTRAL ENGINE ===');
+  const engine = src('src/lib/tracking/tracking-client.ts');
+  ok('engine dedupes events (per platform+pixel+event[+order])', engine.includes('trackingEventKey'));
+  ok('engine never dispatches to disabled/out-of-scope pixels', engine.includes('filterPixelsForPage'));
+  ok('engine re-validates pixel IDs before any use', engine.includes('validateTrackingPixelId'));
+  ok('adapters receive sanitized payload only', engine.includes('this.adapters[pixel.platform].track(event, safe'));
+  ok('ViewContent only with a trusted product', engine.includes("event === 'ViewContent'"));
 
-  console.log('\n=== 4. IFRAME CANNOT TOUCH THE PIXEL ===');
+  console.log('\n=== 4. GLOBAL INJECTION ===');
+  ok('GlobalTrackingProvider mounted in root layout', src('src/app/layout.tsx').includes('GlobalTrackingProvider'));
+  ok('layout resolves pixels server-side', src('src/app/layout.tsx').includes('getSiteTrackingPixels'));
+  ok('landing page resolves pixels server-side (scope LANDING_PAGES)',
+    src('src/app/lp/[slug]/page.tsx').includes("getTrackingPixelsForPage(lp.company.id, 'LANDING_PAGES')"));
+
+  console.log('\n=== 5. PLATFORM ADAPTERS (hard-coded loaders) ===');
+  const platforms = src('src/lib/tracking/tracking-platforms.ts');
+  ok('TikTok browser pixel events allowlisted', platforms.includes("'Pageview'") && platforms.includes("'CompletePayment'"));
+  ok('Snapchat events allowlisted', platforms.includes("'PAGE_VIEW'") && platforms.includes("'PURCHASE'"));
+  ok('Meta events allowlisted', platforms.includes("'InitiateCheckout'") && platforms.includes("'Purchase'"));
+  ok('every event map covers exactly the central allowlist',
+    ['PageView', 'ViewContent', 'InitiateCheckout', 'Purchase'].every((e) => platforms.includes(`${e}:`)));
+
+  console.log('\n=== 6. UPLOADED HTML CANNOT INJECT TRACKING ===');
   const bs = buildBehaviorScript(false);
-  ok('behavior script never references fbq', !bs.includes('fbq'));
-  ok('behavior script never injects pixel script', !bs.includes('fbevents.js') && !bs.includes('facebook'));
+  ok('behavior script never references fbq/ttq/snaptr', !/fbq|ttq|snaptr/.test(bs));
+  ok('behavior script never injects pixel loaders', !bs.includes('fbevents.js') && !bs.includes('facebook') && !bs.includes('tiktok') && !bs.includes('snap'));
   ok('sanitizer strips user fbq <script>', !sanitizeLandingHtml("<script>fbq('track','Purchase',{value:999});</script><h1>x</h1>").includes('fbq'));
   ok('sanitizer strips pixel loader script src', !sanitizeLandingHtml('<script src="https://connect.facebook.net/en_US/fbevents.js"></script>').includes('fbevents.js'));
-  ok('css url() to code-execution vectors stripped', !sanitizeLandingCss('.a{background:url(javascript:alert(1))}').toLowerCase().includes('javascript:'));
-  // custom HTML cannot even reference pixel config
-  ok('Pixel ID is not interpolated into behavior script', !bs.includes('metaPixelId') && !bs.includes('123456789012345'));
+  ok('css url() code-execution vectors stripped', !sanitizeLandingCss('.a{background:url(javascript:alert(1))}').toLowerCase().includes('javascript:'));
 
-  console.log('\n=== 5. NO PII IN PIXEL PAYLOADS ===');
-  const mp = src('src/components/landing/MetaPixel.tsx');
-  const mpPayload = mp.split('payload')[1] || mp;
-  ok('MetaPixel payload: content_type/content_ids/content_name/value/currency only',
-    mp.includes("content_type: 'product'") && mp.includes('content_ids') && mp.includes('content_name') &&
-    !/full_name|phone|address|notes/.test(mp));
-  const of = src('src/components/landing/OrderForm.tsx');
-  const purchaseCall = of.slice(of.indexOf("track', 'Purchase'"), of.indexOf("track', 'Purchase'") + 260);
-  ok('Purchase payload has only value/currency (no PII)', purchaseCall.includes('value:') && purchaseCall.includes('currency:') && !/full_name|phone|address|notes/.test(purchaseCall));
+  console.log('\n=== 7. SERVER-AUTHORITATIVE DATA / NO PII ===');
+  const oform = src('src/components/landing/OrderForm.tsx');
+  ok('Purchase fires only in the success branch', oform.indexOf("trackEvent('Purchase'") > oform.indexOf('if (res.ok)'));
+  ok('Purchase value from server response only', oform.includes("typeof json.total === 'number' ? json.total : null"));
+  ok('Purchase deduped per orderNumber', oform.includes('purchaseFiredRef.current.has(ordNum)'));
   const bridge = src('src/components/landing/LandingFormBridge.tsx');
-  const icSeg = bridge.split('trackInitiateCheckout')[1] || '';
-  ok('InitiateCheckout payload: content_type/content_ids (+DB value/currency) only',
-    icSeg.includes("content_type: 'product'") && icSeg.includes('content_ids') && !/full_name|phone|address/.test(icSeg));
-
-  console.log('\n=== 6. PURCHASE IS SERVER-CONFIRMED ===');
+  ok('bridge dedupes InitiateCheckout per session', bridge.includes('checkoutFiredRef.current'));
+  ok('bridge never reads price from message data', !/\bd\.(price|totalAmount|currency)\b/.test(bridge));
   const route = src('src/app/api/public/landing-pages/[slug]/orders/route.ts');
   ok('orders API returns server-authoritative total', route.includes('total: Number(order.totalAmount)'));
-  ok('orders API returns server-authoritative currency', route.includes('currency: order.currency'));
-  ok('Purchase fires only in the success branch', of.includes('if (metaPixelId && json?.orderNumber') && of.indexOf("track', 'Purchase'") > of.indexOf('if (res.ok)'));
-  ok('Purchase value from server response only', of.includes("typeof json.total === 'number' ? json.total : null"));
-  ok('Purchase currency from server response', of.includes("typeof json.currency === 'string' ? json.currency : currency"));
-  ok('Purchase deduped per orderNumber', of.includes('purchaseFiredRef.current.has(ordNum)'));
-  ok('failed order (no res.ok) cannot fire Purchase — only success path contains it', (of.match(/track', 'Purchase'/g) || []).length === 1);
-  ok('Purchase requires metaPixelId prop (disabled pages never fire)', of.includes('if (metaPixelId && json?.orderNumber'));
+  ok('payload sanitizer blocks PII keys', /full_name|'phone'|'address'|'notes'/.test(src('src/lib/tracking/tracking-types.ts')) && src('src/lib/tracking/tracking-types.ts').includes('PII_KEYS'));
 
-  console.log('\n=== 7. INITIATECHECKOUT (bridge, trusted) ===');
-  ok('bridge fires InitiateCheckout only when pixelId set', icSeg.includes('if (!pixelId) return'));
-  ok('bridge dedupes InitiateCheckout per session', icSeg.includes('checkoutFiredRef.current'));
-  ok('bridge InitiateCheckout uses DB offer price', icSeg.includes('payload.value = offer.price'));
-  ok('bridge never reads price from message data', !/\bd\.(price|totalAmount|currency)\b/.test(bridge));
-  ok('bridge payload content_ids from DB product prop', icSeg.includes('content_ids: product ? [product.id] : []'));
+  console.log('\n=== 8. SETTINGS API SECURITY ===');
+  const api = src('src/app/api/settings/tracking-pixels/route.ts');
+  ok('create requires settings.edit', api.includes("requirePermission('settings.edit')"));
+  ok('list requires settings.view', api.includes("requirePermission('settings.view')"));
+  ok('tenant always from session (no body companyId)', !/data:\s*\{[^}]*body|companyId:\s*body/.test(api));
+  const apiId = src('src/app/api/settings/tracking-pixels/[id]/route.ts');
+  ok('update/delete are company-scoped (cross-tenant → 404)', apiId.includes('findFirst({ where: { id, companyId } })'));
+  ok('platform spoofing rejected', apiId.includes('immutable') || apiId.includes('لا يمكن تغيير منصة البكسل'));
+  ok('audit log written on create', api.includes('TRACKING_PIXEL_CREATED'));
 
-  console.log('\n=== 8. LOADER SECURITY ===');
-  ok('loader is client-side only (useEffect, renders null)', mp.includes('useEffect') && mp.includes('return null;'));
-  ok('loader re-validates before injecting', mp.includes('validatePixelId(pixelId)'));
-  ok('loader fired-once guard (no duplicate PageView)', mp.includes('initialized.current'));
-
-  console.log('\n=== 9. PAGE RENDER RULES ===');
-  const page = src('src/app/lp/[slug]/page.tsx');
-  ok('public page gates pixel via pixelActive()', page.includes('pixelActive(lp.metaPixelEnabled, lp.metaPixelId)'));
-  ok('dashboard/preview never load pixel (component only in /lp page)', !src('src/app/dashboards/crm/landing-pages/[id]/editor/page.tsx').includes('MetaPixel'));
-
-  console.log('\n=== 10. PREVIEW / LEGACY SAFETY ===');
-  const previewScript = buildBehaviorScript(true);
-  ok('preview behavior script has no pixel events', !previewScript.includes('fbq') && !previewScript.includes('InitiateCheckout'));
+  console.log('\n=== 9. BEHAVIOR LAYER UNTOUCHED ===');
   ok('legacy data-zaki-order unaffected', bs.includes("hasAttribute('data-zaki-order')"));
   ok('fixed CTA CSS untouched', (await import('../src/lib/landing-dynamic')).BEHAVIOR_CSS.includes('.zaki-fixed-bottom'));
 

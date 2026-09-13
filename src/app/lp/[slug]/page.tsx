@@ -5,8 +5,8 @@ import OrderForm from '@/components/landing/OrderForm';
 import { ShieldCheck, Truck, PhoneCall } from 'lucide-react';
 import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
 import { detectOrderIntent } from '@/lib/landing-dynamic';
-import { MetaPixel } from '@/components/landing/MetaPixel';
-import { pixelActive } from '@/lib/landing-tracking';
+import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixels';
+import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -74,9 +74,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
     isPublished?: boolean;
     htmlContent?: string | null;
     product?: { id: string; name: string; basePrice: number } | null;
-    metaPixelId?: string | null;
-    metaPixelEnabled?: boolean;
-    company?: { currency: string };
+    company?: { id: string; currency: string };
   } | null = null;
 
   // Active offers + post-order recommendations (server-side, DB prices only)
@@ -93,10 +91,8 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
           name: true,
           slug: true,
           htmlContent: true,
-          metaPixelId: true,
-          metaPixelEnabled: true,
           product: { select: { id: true, name: true, basePrice: true } },
-          company: { select: { currency: true } },
+          company: { select: { id: true, currency: true } },
         },
       });
       if (lp) {
@@ -114,9 +110,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
         slug: true,
         isPublished: true,
         htmlContent: true,
-        metaPixelId: true,
-        metaPixelEnabled: true,
-        company: { select: { currency: true } },
+        company: { select: { id: true, currency: true } },
         product: { select: { id: true, name: true, basePrice: true } },
       },
     });
@@ -146,10 +140,13 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
   const usesBehaviorLayer = /data-zaki-(?:action|offer|order|position|product)/.test(html);
   const showOrderForm = usesBehaviorLayer ? detectOrderIntent(html) : true;
 
-  // ── Meta Pixel (Phase 3) — browser Pixel on the TRUSTED page only. ──
-  // Disabled/invalid → the Pixel script is never loaded. Never fired in the
-  // dashboard or editor preview. ViewContent data comes from the DB only.
-  const activePixelId = pixelActive(lp.metaPixelEnabled, lp.metaPixelId);
+  // ── Global Tracking Engine — single tracking source for this page. ──
+  // Server-resolved pixels (GLOBAL + PUBLIC + LANDING_PAGES scopes of the
+  // page's company), re-validated before any script may load. The uploaded
+  // iframe can never fire or influence any of this. No pixels → no-op.
+  const trackingPixels = lp.company?.id
+    ? await getTrackingPixelsForPage(lp.company.id, 'LANDING_PAGES')
+    : [];
   const viewContent = lp.product
     ? {
         contentIds: [lp.product.id],
@@ -161,12 +158,9 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
 
   return (
     <div dir="rtl" className="flex min-h-screen flex-col bg-[#f7f7f8]">
-      {/* 0. Meta Pixel — trusted page only (never in the sandboxed iframe,
-          never in the dashboard/preview); loader is hard-coded, the only
-          dynamic value is the validated numeric Pixel ID. */}
-      {activePixelId && (
-        <MetaPixel pixelId={activePixelId} viewContent={viewContent} />
-      )}
+      {/* 0. Global Tracking (Meta/TikTok/Snapchat) — trusted page only;
+          the sandboxed iframe has no access to it. */}
+      <LandingTrackingPixels pixels={trackingPixels} viewContent={viewContent} />
       {/* 1. Untrusted uploaded HTML — sandboxed opaque-origin iframe.
           data-zaki-* placeholders inside are resolved server-side (raw route);
           offer clicks / CTA clicks reach this page ONLY via LandingFormBridge,
@@ -184,7 +178,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
       {showOrderForm && (
         <LandingFormBridge
           offers={offers.map((o) => ({ ...o }))}
-          pixelId={activePixelId}
+          currency={currency}
           product={lp.product ? { id: lp.product.id, name: lp.product.name } : null}
         >
           <OrderForm
@@ -194,7 +188,6 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
             currency={currency}
             offers={offers.map((o) => ({ ...o }))}
             recommendations={recommendations}
-            metaPixelId={activePixelId}
           />
         </LandingFormBridge>
       )}

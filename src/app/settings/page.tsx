@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
+import { TrackingPixelsSection } from '@/components/settings/TrackingPixelsSection';
 import { Settings, Building2, Key, Webhook, ShieldCheck, Check } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -231,6 +232,9 @@ export default function SettingsPage() {
             </Button>
           </div>
         </form>
+
+        {/* التتبع والإعلانات — Global multi-platform tracking pixels */}
+        <TrackingPixelsSection />
       </div>
     </AppLayout>
   );

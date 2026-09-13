@@ -54,8 +54,33 @@ model Company {
   whatsappMessages  WhatsAppMessage[]
   telegramSources   TelegramSource[]
   telegramMessages  TelegramMessage[]
+  trackingPixels    TrackingPixel[]
 
   @@map("companies")
+}
+
+// ─── GLOBAL TRACKING PIXELS (additive) ───
+// Centralized multi-platform tracking config (Meta / TikTok / Snapchat).
+// pixelId is the ONLY stored value — no tokens, no secrets, no user JS.
+// platform: META | TIKTOK | SNAPCHAT ; scope: GLOBAL | PUBLIC | LANDING_PAGES
+// Loading/tracking code is 100% hard-coded in the app — never user-controlled.
+model TrackingPixel {
+  id        String   @id @default(uuid())
+  companyId String
+  platform  String   // META | TIKTOK | SNAPCHAT (allowlisted server-side)
+  name      String
+  pixelId   String   // validated per-platform (digits / alphanumeric / uuid)
+  enabled   Boolean  @default(true)
+  scope     String   @default("GLOBAL") // GLOBAL | PUBLIC | LANDING_PAGES
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, platform, pixelId])
+  @@index([companyId, enabled, scope])
+  @@index([companyId, platform, enabled])
+  @@map("tracking_pixels")
 }
 
 model User {
