@@ -27,6 +27,10 @@ export function apiError(error: unknown): ApiErrorResult {
   if (message.startsWith('Forbidden')) {
     return { body: { error: message }, status: 403 };
   }
+  // Geo context missing (see lib/geo-context.ts requireContext)
+  if (error instanceof Error && error.name === 'ContextError') {
+    return { body: { error: message, code: (error as Error & { code: string }).code }, status: 400 };
+  }
 
   // Prisma known errors
   if (error instanceof Prisma.PrismaClientKnownRequestError) {

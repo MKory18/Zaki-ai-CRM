@@ -55,6 +55,8 @@ model Company {
   telegramSources   TelegramSource[]
   telegramMessages  TelegramMessage[]
   trackingPixels    TrackingPixel[]
+  countries         Country[]
+  stores            Store[]
 
   @@map("companies")
 }
@@ -136,6 +138,8 @@ model User {
   crmTaskAssignees    CrmTask[]     @relation("CrmTaskAssignee")
   crmActivities       CrmActivity[] @relation("CrmActivityUser")
   crmNotes            CrmNote[]     @relation("CrmNoteUser")
+  countryAccess       UserCountryAccess[]
+  storeAccess         UserStoreAccess[]
 
   @@index([companyId])
   @@index([role])
@@ -390,10 +394,15 @@ model Order {
   postponedUntil       DateTime?
   confirmedAt          DateTime?
   deliveredAt          DateTime?
+  // Geo context (Stage 1). Nullable until every order-creation path writes it.
+  countryId            String?
+  storeId              String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
   company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  country    Country?        @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  store      Store?          @relation(fields: [storeId], references: [id], onDelete: Restrict)
   customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
   product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   offer      Offer?          @relation(fields: [offerId], references: [id], onDelete: SetNull)
@@ -441,6 +450,8 @@ model Order {
   @@index([companyId, landingPageId])
   @@index([companyId, landingPageOfferId])
   @@index([lockedById, lockExpiresAt])
+  @@index([storeId, createdAt])
+  @@index([countryId])
   @@map("orders")
 }
 
@@ -1260,4 +1271,106 @@ model TelegramMessage {
   @@index([companyId, sourceId])
   @@index([orderId])
   @@map("telegram_messages")
+}
+
+// ─── GEO CONTEXT (Stage 1, additive) ───
+// Company -> Country -> Store. A store inherits currency, minor unit,
+// regions, work hours, weekend days, order prefix and allowNegativeStock
+// from its country; none of these are stored on Store.
+model Country {
+  id                 String   @id @default(uuid())
+  companyId          String
+  code               String // ISO 3166-1 alpha-2 (e.g. SY, JO); "ZZ" = not yet set
+  name               String
+  currencyCode       String // ISO 4217 (e.g. SYP, JOD)
+  minorUnit          Int      @default(2) // decimal places for this currency
+  workHoursStart     String   @default("09:00") // HH:mm, country-local
+  workHoursEnd       String   @default("17:00")
+  weekendDays        Int[]    @default([5]) // 0 = Sunday ... 6 = Saturday
+  timezone           String   @default("Asia/Damascus") // IANA
+  orderPrefix        String   @default("ORD")
+  allowNegativeStock Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  regions Region[]
+  stores  Store[]
+  orders  Order[]
+  access  UserCountryAccess[]
+
+  @@unique([companyId, code])
+  @@index([companyId, isActive])
+  @@map("countries")
+}
+
+// Governorate / region inside a country. Replaces the hard-coded list in
+// src/lib/locations/syria.ts once every caller reads from here.
+model Region {
+  id        String   @id @default(uuid())
+  countryId String
+  name      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  country Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  @@unique([countryId, name])
+  @@map("regions")
+}
+
+model Store {
+  id        String   @id @default(uuid())
+  companyId String
+  countryId String
+  name      String
+  slug      String
+  logo      String?
+  status    String   @default("ACTIVE") // ACTIVE | PAUSED
+  type      String   @default("MULTI_PRODUCT") // MULTI_PRODUCT | SINGLE_PRODUCT
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  country Country           @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  orders  Order[]
+  access  UserStoreAccess[]
+
+  @@unique([companyId, slug])
+  @@index([countryId, status])
+  @@map("stores")
+}
+
+// Which countries a user may enter. Users holding geo.manage see every
+// country of their company without rows here.
+model UserCountryAccess {
+  id        String   @id @default(uuid())
+  userId    String
+  countryId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, countryId])
+  @@index([countryId])
+  @@map("user_country_access")
+}
+
+// Optional narrowing inside an accessible country. No rows for a country
+// = every store of that country is accessible.
+model UserStoreAccess {
+  id        String   @id @default(uuid())
+  userId    String
+  storeId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
+  @@index([storeId])
+  @@map("user_store_access")
 }

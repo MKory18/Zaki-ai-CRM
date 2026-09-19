@@ -128,6 +128,20 @@ function scopeAwareKey(legacy: string): string {
   }
 }
 
+/** Roles that own countries/stores (parity with migration stage1_geo_context). */
+export const GEO_MANAGER_ROLES: readonly string[] = ['COMPANY_ADMIN', 'MANAGER'];
+
+/** geo.* companions for the legacy path: managers get geo.manage + geo.view,
+ *  anyone who can view settings gets geo.view (same rule as the migration). */
+function addGeoCompanions(role: string, keys: { has(k: string): boolean }, add: (k: string) => void): void {
+  if (GEO_MANAGER_ROLES.includes(role)) {
+    add('geo.manage');
+    add('geo.view');
+  } else if (keys.has('settings.view')) {
+    add('geo.view');
+  }
+}
+
 /** DB-shaped user (subset needed). */
 export interface DbUserLike {
   id: string;
@@ -162,6 +176,11 @@ export async function computeEffectiveGrants(user: DbUserLike): Promise<Effectiv
         grants[key] = mapped;
       }
     }
+    addGeoCompanions(
+      user.role,
+      { has: (k) => grants[k] !== undefined },
+      (k) => { grants[k] ??= { scope: 'ALL_COMPANY' }; }
+    );
   }
 
   // 3. User overrides — DENY wins, ALLOW wins over role absence/scope
@@ -199,6 +218,7 @@ export function legacyEffectiveKeys(role: UserRole): string[] {
     }
   }
   if (role === 'ACCOUNTANT' || role === 'SETTLEMENT_OFFICER') keys.add('products.view');
+  addGeoCompanions(role, keys, (k) => keys.add(k));
   return [...keys];
 }
 

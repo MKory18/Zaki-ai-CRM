@@ -320,6 +320,11 @@ async function main() {
   await prisma.inventoryMovement.deleteMany();
   await prisma.productionBatch.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.userStoreAccess.deleteMany();
+  await prisma.userCountryAccess.deleteMany();
+  await prisma.store.deleteMany();
+  await prisma.region.deleteMany();
+  await prisma.country.deleteMany();
   await prisma.user.deleteMany();
   await prisma.company.deleteMany();
 
@@ -387,6 +392,23 @@ async function main() {
     });
   }
   console.log('✅ Users & roles created');
+
+  // Geo context: default country + store, every company user may enter it
+  // (same shape as the stage1_geo_context migration backfill).
+  const country = await prisma.country.create({
+    data: {
+      companyId: company.id, code: 'JO', name: 'الأردن', currencyCode: 'JOD', minorUnit: 3,
+      weekendDays: [5, 6], timezone: 'Asia/Amman', orderPrefix: 'ORD',
+    },
+  });
+  const store = await prisma.store.create({
+    data: { companyId: company.id, countryId: country.id, name: company.name, slug: 'main' },
+  });
+  const companyUsers = await prisma.user.findMany({ where: { companyId: company.id }, select: { id: true } });
+  await prisma.userCountryAccess.createMany({
+    data: companyUsers.map((u) => ({ userId: u.id, countryId: country.id })),
+  });
+  console.log('✅ Country & store created');
 
   // Products + offers
   let batchNo = 1;
@@ -485,7 +507,7 @@ async function main() {
 
   const order1 = await prisma.order.create({
     data: {
-      companyId: company.id, orderNumber: 'ORD-2026-0001',
+      companyId: company.id, countryId: country.id, storeId: store.id, orderNumber: 'ORD-2026-0001',
       customerId: cust1.id, productId: scrub!.id, offerId: scrubOffer!.id,
       quantity: 1, sellingPrice: 12, shippingCost: 0, totalAmount: 12,
       currency: 'JOD', moderatorId: modSara!.id,
@@ -514,7 +536,7 @@ async function main() {
   });
   await prisma.order.create({
     data: {
-      companyId: company.id, orderNumber: 'ORD-2026-0002',
+      companyId: company.id, countryId: country.id, storeId: store.id, orderNumber: 'ORD-2026-0002',
       customerId: cust2.id, productId: scarProd!.id, offerId: scarOffer!.id,
       quantity: 2, sellingPrice: 35, shippingCost: 0, totalAmount: 35,
       currency: 'USD', moderatorId: modOmar!.id,

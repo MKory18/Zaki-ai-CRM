@@ -184,6 +184,13 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     ],
   },
   {
+    module: 'geo',
+    items: [
+      { key: 'geo.view', ar: 'عرض البلدان والمتاجر', en: 'View countries & stores' },
+      { key: 'geo.manage', ar: 'إدارة البلدان والمتاجر والمناطق', en: 'Manage countries, stores & regions' },
+    ],
+  },
+  {
     module: 'landing_pages',
     items: [
       { key: 'landing_pages.view', ar: 'عرض صفحات الهبوط', en: 'View landing pages' },
@@ -253,6 +260,7 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   users: { ar: 'المستخدمون', en: 'Users' },
   roles: { ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' },
   settings: { ar: 'الإعدادات', en: 'Settings' },
+  geo: { ar: 'البلدان والمتاجر', en: 'Countries & Stores' },
   audit: { ar: 'سجل التدقيق', en: 'Audit Logs' },
   whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
   telegram: { ar: 'تيليجرام', en: 'Telegram' },
