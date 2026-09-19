@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
@@ -27,7 +27,7 @@ interface Ctx {
  */
 export async function PUT(req: Request, ctx: Ctx) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('landing_pages.edit');
     const { id } = await ctx.params;
 
@@ -39,7 +39,7 @@ export async function PUT(req: Request, ctx: Ctx) {
       );
     }
 
-    const lp = await db.landingPage.findFirst({ where: { id, companyId } });
+    const lp = await db.landingPage.findFirst({ where: { id, companyId, storeId } });
     if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });
 
     const schema = z.object({

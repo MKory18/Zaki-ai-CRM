@@ -184,6 +184,44 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     ],
   },
   {
+    module: 'confirmation',
+    items: [
+      { key: 'confirmation.pull', ar: 'سحب الطلب التالي', en: 'Pull next order' },
+      { key: 'confirmation.work', ar: 'العمل على طلباتي والمؤجلة', en: 'Work own and postponed orders' },
+      { key: 'confirmation.supervise', ar: 'الإشراف على التأكيد (عرض القائمة)', en: 'Supervise confirmation (list view)' },
+      { key: 'confirmation.issues', ar: 'إشكالات الإدخال', en: 'Entry issues' },
+    ],
+  },
+  {
+    module: 'ops',
+    items: [
+      { key: 'ops.prepare', ar: 'التجهيز', en: 'Preparation' },
+      { key: 'ops.ship', ar: 'إنشاء الشحنات', en: 'Create shipments' },
+      { key: 'ops.labels', ar: 'البوالص', en: 'Labels' },
+      { key: 'ops.track', ar: 'متابعة الشحن', en: 'Tracking' },
+      { key: 'ops.returns', ar: 'المرتجعات', en: 'Returns' },
+    ],
+  },
+  {
+    module: 'control',
+    items: [
+      { key: 'control.change_requests', ar: 'طلبات التعديل', en: 'Change requests' },
+      { key: 'control.discount_alerts', ar: 'تنبيهات الخصم', en: 'Discount alerts' },
+      { key: 'control.blacklist', ar: 'القائمة السوداء', en: 'Blacklist' },
+    ],
+  },
+  {
+    module: 'growth',
+    items: [{ key: 'growth.intelligence', ar: 'مركز الذكاء', en: 'Business intelligence' }],
+  },
+  {
+    module: 'apps',
+    items: [
+      { key: 'apps.view', ar: 'عرض التطبيقات', en: 'View apps' },
+      { key: 'apps.manage', ar: 'تثبيت وإدارة التطبيقات', en: 'Install & manage apps' },
+    ],
+  },
+  {
     module: 'geo',
     items: [
       { key: 'geo.view', ar: 'عرض البلدان والمتاجر', en: 'View countries & stores' },
@@ -261,6 +299,11 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   roles: { ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' },
   settings: { ar: 'الإعدادات', en: 'Settings' },
   geo: { ar: 'البلدان والمتاجر', en: 'Countries & Stores' },
+  confirmation: { ar: 'مركز التأكيد', en: 'Confirmation' },
+  ops: { ar: 'التشغيل', en: 'Operations' },
+  control: { ar: 'الرقابة', en: 'Control' },
+  growth: { ar: 'النمو', en: 'Growth' },
+  apps: { ar: 'التطبيقات', en: 'Apps' },
   audit: { ar: 'سجل التدقيق', en: 'Audit Logs' },
   whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
   telegram: { ar: 'تيليجرام', en: 'Telegram' },

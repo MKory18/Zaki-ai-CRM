@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 
 
@@ -12,7 +12,7 @@ import { requirePermission } from '@/lib/authorization';
  */
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('finance.view');
     const { searchParams } = new URL(req.url);
     const from = searchParams.get('from') ? new Date(searchParams.get('from')!) : undefined;
@@ -28,6 +28,7 @@ export async function GET(req: Request) {
       by: ['productId'],
       where: {
         companyId,
+        storeId,
         confirmationStatus: 'CONFIRMED',
         ...(Object.keys(dateWhere).length ? { createdAt: dateWhere } : {}),
       },

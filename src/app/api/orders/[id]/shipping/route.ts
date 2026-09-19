@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
 import {
   isValidShippingTransition, canEnterShipping, STATUS_TIMESTAMP,
@@ -32,10 +32,10 @@ import { can, authorize } from '@/lib/authorization';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     // Order access first, then shipping authority evaluated against the order
-    const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
@@ -183,7 +183,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
       case 'assign_batch': {
         if (!shippingBatchId) return NextResponse.json({ error: 'shippingBatchId is required' }, { status: 400 });
-        const batch = await db.shippingBatch.findFirst({ where: { id: shippingBatchId, companyId } });
+        const batch = await db.shippingBatch.findFirst({ where: { id: shippingBatchId, companyId, storeId } });
         if (!batch) {
           return NextResponse.json({ error: 'Shipping batch not found in your company' }, { status: 404 });
         }

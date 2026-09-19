@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { rateLimit } from '@/lib/rate-limit';
 import { requirePermission } from '@/lib/authorization';
 
@@ -31,7 +31,7 @@ function csvSafeText(value: unknown): string {
 
 export async function GET(req: Request) {
   try {
-    const { companyId, user } = await requireCompanyTenant();
+    const { companyId, storeId, user } = await requireContext();
     await requirePermission('reports.export');
 
     // Rate limit heavy exports: generous window so normal usage is unaffected
@@ -61,6 +61,7 @@ export async function GET(req: Request) {
 
     const where = {
       companyId,
+      storeId,
       createdAt: { gte: start, lte: end },
     };
 

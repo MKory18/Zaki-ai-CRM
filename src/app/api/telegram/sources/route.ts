@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -66,7 +67,7 @@ const createSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('telegram.manage');
 
     const body = await req.json().catch(() => null);
@@ -92,6 +93,7 @@ export async function POST(req: Request) {
       const source = await db.telegramSource.create({
         data: {
           companyId, // server-side tenant — never client input
+          storeId, // orders from this chat land in the selected store
           chatId,
           chatType,
           chatTitle: chatTitle ?? null,

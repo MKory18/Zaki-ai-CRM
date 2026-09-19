@@ -87,7 +87,16 @@ function round2(n: number): number {
   return Number(n.toFixed(2));
 }
 
-export async function getCompanyAnalytics(companyId: string, filter: DateFilter = {}) {
+/**
+ * scope.storeId = one store's orders; null = every store of the company
+ * (company-level reports such as the AI daily summary). Expenses have no
+ * store dimension yet and are always company-wide.
+ */
+export async function getCompanyAnalytics(
+  scope: { companyId: string; storeId: string | null },
+  filter: DateFilter = {}
+) {
+  const { companyId, storeId } = scope;
   const { start, end } = getDateRange(filter);
 
   const dateFilter =
@@ -100,7 +109,7 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
         }
       : {};
 
-  const baseWhere = { companyId, ...dateFilter };
+  const baseWhere = { companyId, ...(storeId ? { storeId } : {}), ...dateFilter };
 
   // ─── 1. Status breakdown: single GROUP BY instead of fetching all rows ───
   const statusGroups = await db.order.groupBy({

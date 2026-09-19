@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { deriveFollowUpState } from '@/lib/confirmation-workflow';
 
 /**
@@ -15,7 +15,7 @@ import { deriveFollowUpState } from '@/lib/confirmation-workflow';
  */
 export async function GET(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     const { searchParams } = new URL(req.url);
     const bucket = searchParams.get('bucket') || 'today';
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -29,6 +29,7 @@ export async function GET(req: Request) {
     // Base: orders with an active (scheduled) follow-up in this company
     const base: Record<string, unknown> = {
       companyId,
+      storeId,
       nextFollowUpAt: { not: null },
       followUpStatus: { notIn: ['COMPLETED', 'CANCELLED'] },
     };
@@ -101,6 +102,7 @@ export async function GET(req: Request) {
       db.order.count({
         where: {
           companyId,
+          storeId,
           nextFollowUpAt: { not: null },
           followUpStatus: { notIn: ['COMPLETED', 'CANCELLED'] },
           OR: [{ claimedById: user.id }, { assignedToId: user.id }, { currentOwnerId: user.id }],

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -52,8 +52,8 @@ const patchSchema = z.object({
  * so prev/next navigation matches the exact list context (filters + tenant + RBAC).
  */
 async function buildNavigationWhere(order: { createdAt: Date; companyId: string }, searchParams: URLSearchParams) {
-  const { user, companyId } = await requireCompanyTenant();
-  const where: any = { companyId: order.companyId };
+  const { user, companyId, storeId } = await requireContext();
+  const where: any = { companyId, storeId };
 
   // RBAC: self-scoped roles navigate within their own visibility envelope
   // (same orderVisibilityWhere used by the list API's queue filtering)
@@ -94,13 +94,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     const { searchParams } = new URL(req.url);
 
     // ── Phase S: role-scoped access (same envelope as the list API) ──
     // Self-scoped roles may only read orders assigned/claimed/created by them
     // or claimable queue items — never another employee's private orders.
-    const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found' }, { status: map[access.reason] });
@@ -203,7 +203,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     // Server-side Zod validation — never trust client input
     const parsed = patchSchema.safeParse(await req.json());
@@ -223,7 +223,7 @@ export async function PATCH(
     // ── Authorization chain: visibility/assignment (RBAC engine) → canonical
     // orders.edit permission with scope evaluation (ASSIGNED scope enforces
     // own-assignment, so no separate any/own check is needed) ──
-    const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });

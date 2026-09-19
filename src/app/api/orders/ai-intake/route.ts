@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit } from '@/lib/audit';
@@ -77,7 +77,7 @@ Rules: keep original Arabic text, quantity is a number, price is a number withou
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId, countryId, country } = await requireContext();
     await requirePermission('orders.create');
 
     const body = await req.json();
@@ -161,11 +161,13 @@ export async function POST(req: Request) {
       }
 
       const count = await db.order.count({ where: { companyId } });
-      const orderNumber = `ORD-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+      const orderNumber = `${country.orderPrefix}-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
 
       const order = await db.order.create({
         data: {
           companyId,
+          countryId,
+          storeId,
           orderNumber,
           customerId: customer.id,
           productId: product.id,
@@ -173,7 +175,7 @@ export async function POST(req: Request) {
           sellingPrice: price,
           shippingCost: 0,
           totalAmount: price,
-          currency: 'USD',
+          currency: country.currencyCode,
         moderatorId: assignedModeratorId,
         moderatorCommission,
         estimatedCostOfGoods: Number((unitCost * qty).toFixed(2)),

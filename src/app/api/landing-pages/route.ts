@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { validateSlug, conversionRate } from '@/lib/landing-pages';
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('landing_pages.view');
 
     const { searchParams } = new URL(req.url);
@@ -17,9 +17,9 @@ export async function GET(req: Request) {
     const limit = Math.min(Number.isNaN(parsedLimit) ? 50 : parsedLimit, 100);
 
     const [total, pages] = await Promise.all([
-      db.landingPage.count({ where: { companyId } }),
+      db.landingPage.count({ where: { companyId, storeId } }),
       db.landingPage.findMany({
-        where: { companyId },
+        where: { companyId, storeId },
         include: {
           product: { select: { id: true, name: true, basePrice: true, image: true } },
           creator: { select: { id: true, name: true } },
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('landing_pages.create');
 
     const schema = z.object({
@@ -77,6 +77,7 @@ export async function POST(req: Request) {
       const lp = await db.landingPage.create({
         data: {
           companyId,
+          storeId,
           name: name.trim(),
           slug,
           productId: productId || null,

@@ -108,9 +108,15 @@ export async function POST(req: Request, ctx: Ctx) {
       include: {
         company: { select: { id: true, currency: true } },
         product: { select: { id: true, basePrice: true, name: true, image: true } },
+        store: { select: { id: true, countryId: true, country: { select: { currencyCode: true, orderPrefix: true } } } },
       },
     });
     if (!lp) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
+    // Every order must land in a store; a page without one cannot take orders.
+    if (!lp.store) {
+      return NextResponse.json({ error: 'هذه الصفحة لا تقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
+    }
+    const store = lp.store;
     if (!lp.productId || !lp.product) {
       return NextResponse.json({ error: 'هذه الصفحة لا تقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
     }
@@ -203,10 +209,12 @@ export async function POST(req: Request, ctx: Ctx) {
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
           const count = await tx.order.count({ where: { companyId } });
-          const orderNumber = `ORD-${new Date().getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
+          const orderNumber = `${store.country.orderPrefix}-${new Date().getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
           created = await tx.order.create({
             data: {
               companyId,
+              countryId: store.countryId,
+              storeId: store.id,
               orderNumber,
               customerId: customer!.id,
               productId: product.id,
@@ -215,7 +223,7 @@ export async function POST(req: Request, ctx: Ctx) {
               sellingPrice: price,
               shippingCost: 0,
               totalAmount,
-              currency: lp.company.currency || 'USD',
+              currency: store.country.currencyCode,
               moderatorId: null, // anonymous source — no user may be assigned from the browser
               moderatorCommission: 0,
               estimatedCostOfGoods: Number((unitCost * qty).toFixed(2)),

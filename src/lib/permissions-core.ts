@@ -156,12 +156,15 @@ export async function computeEffectiveGrants(user: DbUserLike): Promise<Effectiv
 
   const grants: Record<string, Grant> = {};
 
-  // 2. Role grants (DB) — fallback to legacy map when no roleId
-  if (user.roleId) {
-    const rows = await db.rolePermission.findMany({
-      where: { roleId: user.roleId },
-      select: { permission: true, scope: true, scopeIds: true },
-    });
+  // 2. Role grants (DB). A user without roleId inherits the system role
+  //    template named like their legacy role string, so role edits in the
+  //    permissions screen reach every user. The in-code legacy map is used
+  //    only when no such template exists.
+  const rows = await db.rolePermission.findMany({
+    where: user.roleId ? { roleId: user.roleId } : { role: { companyId: null, name: user.role } },
+    select: { permission: true, scope: true, scopeIds: true },
+  });
+  if (user.roleId || rows.length > 0) {
     for (const r of rows) {
       grants[r.permission] = { scope: r.scope as Scope, scopeIds: (r.scopeIds as unknown[]) ?? null };
     }

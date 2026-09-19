@@ -1,13 +1,13 @@
 ﻿import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('finance.view');
 
     const expenses = await db.expense.findMany({
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     });
 
     const deliveredOrders = await db.order.findMany({
-      where: { companyId, status: 'DELIVERED' },
+      where: { companyId, storeId, status: 'DELIVERED' },
       select: {
         id: true,
         orderNumber: true,
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireContext();
     // Phase S: writing expenses requires finance.create (not just view)
     await requirePermission('finance.create');
 

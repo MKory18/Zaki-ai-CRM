@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 
 import { logAudit } from '@/lib/audit';
 import { can } from '@/lib/authorization';
@@ -15,12 +15,12 @@ import { can } from '@/lib/authorization';
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     if (!can(user, 'orders.change_status')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const batch = await db.shippingBatch.findFirst({ where: { id, companyId } });
+    const batch = await db.shippingBatch.findFirst({ where: { id, companyId, storeId } });
     if (!batch) return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
 
     const body = await req.json();
@@ -50,7 +50,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (status === 'SHIPPED') {
       const now = new Date();
       await db.order.updateMany({
-        where: { shippingBatchId: id, companyId, shippingStatus: 'READY_FOR_PICKUP' },
+        where: { shippingBatchId: id, companyId, storeId, shippingStatus: 'READY_FOR_PICKUP' },
         data: { shippingStatus: 'SHIPPED', shippedAt: now, version: { increment: 1 } },
       });
     }

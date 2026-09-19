@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 
 import { logAudit } from '@/lib/audit';
 import { can } from '@/lib/authorization';
@@ -13,15 +13,15 @@ import { can } from '@/lib/authorization';
  */
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
 
     const [total, batches] = await Promise.all([
-      db.shippingBatch.count({ where: { companyId } }),
+      db.shippingBatch.count({ where: { companyId, storeId } }),
       db.shippingBatch.findMany({
-        where: { companyId },
+        where: { companyId, storeId },
         include: {
           provider: { select: { id: true, name: true, code: true } },
           creator: { select: { id: true, name: true } },
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     if (!can(user, 'orders.change_status')) {
       return NextResponse.json({ error: 'Forbidden: cannot manage shipping batches' }, { status: 403 });
     }
@@ -66,6 +66,7 @@ export async function POST(req: Request) {
     const batch = await db.shippingBatch.create({
       data: {
         companyId,            // session-derived
+        storeId,              // selected store
         batchNumber,          // server-generated
         deliveryProviderId: providerId,
         createdById: user.id, // server-derived actor

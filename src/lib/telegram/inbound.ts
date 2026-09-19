@@ -271,6 +271,9 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
   // ── Order creation via the shared ingestion service (server-set price/status) ──
   const created = await createTelegramOrder({
     companyId,
+    storeId: message.sourceId
+      ? (await db.telegramSource.findUnique({ where: { id: message.sourceId }, select: { storeId: true } }))?.storeId ?? null
+      : null,
     customer,
     product,
     quantity,

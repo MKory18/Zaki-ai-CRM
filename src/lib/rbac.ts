@@ -139,12 +139,13 @@ export type OrderAccessResult =
  * Verify the authenticated user may access this order:
  * 1. Order exists
  * 2. Belongs to the user's company (multi-tenant isolation)
- * 3. Role-specific assignment (agents only see their own)
+ * 3. Belongs to the selected store (geo context) — otherwise NOT_FOUND
+ * 4. Role-specific assignment (agents only see their own)
  */
 export async function assertOrderAccess(
   orderId: string,
   user: SessionUser,
-  companyId: string,
+  scope: { companyId: string; storeId: string },
   permission?: Permission
 ): Promise<OrderAccessResult> {
   if (permission && !can(user, permission)) {
@@ -153,7 +154,8 @@ export async function assertOrderAccess(
 
   const order = await db.order.findUnique({ where: { id: orderId } });
   if (!order) return { allowed: false, reason: 'NOT_FOUND' };
-  if (order.companyId !== companyId) return { allowed: false, reason: 'WRONG_COMPANY' };
+  if (order.companyId !== scope.companyId) return { allowed: false, reason: 'WRONG_COMPANY' };
+  if (order.storeId !== scope.storeId) return { allowed: false, reason: 'NOT_FOUND' };
 
   // Scope-driven detail access (Permission Engine):
   //   ALL_COMPANY → tenant check alone; ASSIGNED → ownership check;

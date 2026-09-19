@@ -16,6 +16,8 @@ import { createNotification } from '../notification';
 
 export interface CreateTelegramOrderInput {
   companyId: string;
+  /** Store of the Telegram source (null = source not bound to a store yet). */
+  storeId: string | null;
   customer: { id: string; firstOrderDate: Date | null; totalOrders: number };
   product: { id: string; name: string; image: string | null; basePrice: number };
   quantity: number;
@@ -36,7 +38,7 @@ export interface CreateTelegramOrderInput {
 
 export type CreateTelegramOrderResult =
   | { ok: true; orderId: string; orderNumber: string }
-  | { ok: false; reason: 'NO_SYSTEM_ACTOR' | 'CREATION_FAILED' | 'PRODUCT_NOT_FOUND' | 'MISSING_PRICE' };
+  | { ok: false; reason: 'NO_SYSTEM_ACTOR' | 'CREATION_FAILED' | 'PRODUCT_NOT_FOUND' | 'MISSING_PRICE' | 'NO_STORE' };
 
 /** Sane upper bound for a Telegram-provided order total. */
 const MAX_UNIT_PRICE = 100_000;
@@ -81,7 +83,14 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   const actor = await resolveSystemActor(input.companyId);
   if (!actor) return { ok: false, reason: 'NO_SYSTEM_ACTOR' };
 
-  const { companyId, customer, product, quantity, address, notes, priceText, pageName, telegram } = input;
+  const { companyId, storeId, customer, product, quantity, address, notes, priceText, pageName, telegram } = input;
+
+  if (!storeId) return { ok: false, reason: 'NO_STORE' };
+  const store = await db.store.findFirst({
+    where: { id: storeId, companyId },
+    select: { id: true, countryId: true, country: { select: { currencyCode: true, orderPrefix: true } } },
+  });
+  if (!store) return { ok: false, reason: 'NO_STORE' };
 
   /**
    * PRICING (business rule): the Telegram message price is the TOTAL ORDER
@@ -122,10 +131,12 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
           const count = await tx.order.count({ where: { companyId } });
-          const orderNumber = `ORD-${now.getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
+          const orderNumber = `${store.country.orderPrefix}-${now.getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
           created = await tx.order.create({
             data: {
               companyId,
+              countryId: store.countryId,
+              storeId: store.id,
               orderNumber,
               customerId: customer.id,
               productId: productRow.id,
@@ -133,7 +144,7 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
               sellingPrice: price,
               shippingCost: shipCost,
               totalAmount,
-              currency: 'USD',
+              currency: store.country.currencyCode,
               moderatorId: null,
               moderatorCommission: 0,
               estimatedCostOfGoods,

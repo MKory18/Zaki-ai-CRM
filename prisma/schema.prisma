@@ -743,9 +743,13 @@ model ShippingBatch {
   provider DeliveryProvider? @relation(fields: [deliveryProviderId], references: [id], onDelete: SetNull)
   creator  User             @relation("ShippingBatchCreator", fields: [createdById], references: [id], onDelete: Restrict)
   orders   Order[]
+  // Geo context (Stage 2): a batch only holds orders of one store.
+  storeId  String?
+  store    Store?           @relation(fields: [storeId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, batchNumber])
   @@index([companyId, status])
+  @@index([storeId, status])
   @@map("shipping_batches")
 }
 
@@ -1052,10 +1056,14 @@ model LandingPage {
   offers  LandingPageOffer[]
   recommendations LandingPageRecommendation[]
   addOns  OrderAddOn[]
+  // Geo context (Stage 2): orders from this page land in this store.
+  storeId String?
+  store   Store?   @relation(fields: [storeId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, slug])
   @@index([companyId])
   @@index([companyId, isPublished])
+  @@index([storeId])
   @@map("landing_pages")
 }
 // ─── LANDING PAGE OFFERS (additive) ───
@@ -1231,6 +1239,9 @@ model TelegramSource {
 
   company  Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   messages TelegramMessage[]
+  // Geo context (Stage 2): orders parsed from this chat land in this store.
+  storeId  String?
+  store    Store?            @relation(fields: [storeId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, chatId, topicId])
   @@index([chatId])
@@ -1337,6 +1348,9 @@ model Store {
   country Country           @relation(fields: [countryId], references: [id], onDelete: Restrict)
   orders  Order[]
   access  UserStoreAccess[]
+  landingPages    LandingPage[]
+  telegramSources TelegramSource[]
+  shippingBatches ShippingBatch[]
 
   @@unique([companyId, slug])
   @@index([countryId, status])

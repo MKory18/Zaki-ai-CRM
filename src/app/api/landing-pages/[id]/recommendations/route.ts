@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 
@@ -11,10 +11,10 @@ interface Ctx {
 
 export async function GET(_req: Request, ctx: Ctx) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('landing_pages.view');
     const { id } = await ctx.params;
-    const lp = await db.landingPage.findFirst({ where: { id, companyId }, select: { id: true } });
+    const lp = await db.landingPage.findFirst({ where: { id, companyId, storeId }, select: { id: true } });
     if (!lp) return NextResponse.json({ error: 'غير موجودة' }, { status: 404 });
     const recommendations = await db.landingPageRecommendation.findMany({
       where: { landingPageId: id },
@@ -36,11 +36,11 @@ const createSchema = z.object({
 
 export async function POST(req: Request, ctx: Ctx) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('landing_pages.edit');
     const { id } = await ctx.params;
 
-    const lp = await db.landingPage.findFirst({ where: { id, companyId }, select: { id: true } });
+    const lp = await db.landingPage.findFirst({ where: { id, companyId, storeId }, select: { id: true } });
     if (!lp) return NextResponse.json({ error: 'غير موجودة' }, { status: 404 });
 
     const parsed = createSchema.safeParse(await req.json());

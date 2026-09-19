@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
 
 
@@ -14,7 +14,7 @@ import { can } from '@/lib/authorization';
  */
 export async function GET(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     const { searchParams } = new URL(req.url);
     const queue = searchParams.get('queue') || 'all';
     const providerId = searchParams.get('providerId')?.trim();
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const base: Record<string, unknown> = { companyId };
+    const base: Record<string, unknown> = { companyId, storeId };
     // Self-scoped roles (incl. MODERATOR) see only their own orders
     if (['CONFIRMATION_AGENT', 'FOLLOW_UP_AGENT', 'MODERATOR'].includes(user.role)) {
       base.OR = [{ claimedById: user.id }, { assignedToId: user.id }, { currentOwnerId: user.id }, { moderatorId: user.id }];
@@ -81,15 +81,15 @@ export async function GET(req: Request) {
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
     const [ready, packing, pickup, shipped, out, failedToday, deliveredToday, returned, noProvider] = await Promise.all([
-      db.order.count({ where: { companyId, shippingStatus: 'READY_FOR_SHIPPING' } }),
-      db.order.count({ where: { companyId, shippingStatus: 'PACKING' } }),
-      db.order.count({ where: { companyId, shippingStatus: 'READY_FOR_PICKUP' } }),
-      db.order.count({ where: { companyId, shippingStatus: 'SHIPPED' } }),
-      db.order.count({ where: { companyId, shippingStatus: 'OUT_FOR_DELIVERY' } }),
-      db.order.count({ where: { companyId, shippingStatus: 'FAILED_DELIVERY', failedAt: { gte: startOfToday } } }),
-      db.order.count({ where: { companyId, shippingStatus: 'DELIVERED', deliveredAt: { gte: startOfToday } } }),
-      db.order.count({ where: { companyId, shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED'] } } }),
-      db.order.count({ where: { companyId, shippingStatus: { in: ['READY_FOR_SHIPPING', 'PACKING', 'READY_FOR_PICKUP'] }, deliveryProviderId: null } }),
+      db.order.count({ where: { companyId, storeId, shippingStatus: 'READY_FOR_SHIPPING' } }),
+      db.order.count({ where: { companyId, storeId, shippingStatus: 'PACKING' } }),
+      db.order.count({ where: { companyId, storeId, shippingStatus: 'READY_FOR_PICKUP' } }),
+      db.order.count({ where: { companyId, storeId, shippingStatus: 'SHIPPED' } }),
+      db.order.count({ where: { companyId, storeId, shippingStatus: 'OUT_FOR_DELIVERY' } }),
+      db.order.count({ where: { companyId, storeId, shippingStatus: 'FAILED_DELIVERY', failedAt: { gte: startOfToday } } }),
+      db.order.count({ where: { companyId, storeId, shippingStatus: 'DELIVERED', deliveredAt: { gte: startOfToday } } }),
+      db.order.count({ where: { companyId, storeId, shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED'] } } }),
+      db.order.count({ where: { companyId, storeId, shippingStatus: { in: ['READY_FOR_SHIPPING', 'PACKING', 'READY_FOR_PICKUP'] }, deliveryProviderId: null } }),
     ]);
 
     return NextResponse.json({

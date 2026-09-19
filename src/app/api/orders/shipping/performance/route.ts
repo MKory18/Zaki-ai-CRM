@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
 
 
@@ -18,7 +18,7 @@ import { can } from '@/lib/authorization';
  */
 export async function GET(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     const { searchParams } = new URL(req.url);
     const providerId = searchParams.get('providerId')?.trim();
 
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
 
     const results = await Promise.all(
       providers.map(async (p) => {
-        const base = { companyId, deliveryProviderId: p.id };
+        const base = { companyId, storeId, deliveryProviderId: p.id };
         const [assigned, shipped, delivered, failed, returned] = await Promise.all([
           db.order.count({ where: base }),
           db.order.count({ where: { ...base, shippingStatus: { in: ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED_DELIVERY', 'RETURN_REQUESTED', 'RETURNED'] } } }),

@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit } from '@/lib/audit';
 import { applyQueueFilter } from '@/lib/rbac';
@@ -11,7 +11,7 @@ import { requirePermission, getPermissionScope } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId, countryId, country } = await requireContext();
 
     // Explicit canonical gate — orders.view scope decides order visibility
     if (!getPermissionScope(user, 'orders.view')) {
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     const parsedLimit = parseInt(searchParams.get('limit') || '25', 10);
     const limit = Math.min(Number.isNaN(parsedLimit) ? 25 : parsedLimit, 100);
 
-    const whereClause: any = { companyId };
+    const whereClause: any = { companyId, storeId };
 
     // Explicit moderatorId filter (used by admin dashboards) — RBAC still applies below
     if (moderatorId && moderatorId !== 'all') {
@@ -110,7 +110,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId, countryId, country } = await requireContext();
     await requirePermission('orders.create');
 
     const body = await req.json();
@@ -250,11 +250,13 @@ export async function POST(req: Request) {
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
           const count = await tx.order.count({ where: { companyId } });
-          const orderNumber = `ORD-${new Date().getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
+          const orderNumber = `${country.orderPrefix}-${new Date().getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
 
           created = await tx.order.create({
             data: {
               companyId,
+              countryId,
+              storeId,
               orderNumber,
               customerId: customer.id,
               productId,
@@ -263,7 +265,7 @@ export async function POST(req: Request) {
               sellingPrice: price,
               shippingCost: shipCost,
               totalAmount,
-              currency: 'USD',
+              currency: country.currencyCode,
               moderatorId: assignedModeratorId,
               moderatorCommission,
               estimatedCostOfGoods,

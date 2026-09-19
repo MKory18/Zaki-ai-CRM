@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 
 /**
  * GET /api/finance/summary?from=&to=
@@ -10,7 +10,7 @@ import { requireCompanyTenant } from '@/lib/auth';
  */
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     const { requirePermission } = await import('@/lib/authorization');
     await requirePermission('finance.view');
     const { searchParams } = new URL(req.url);
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
     // Server-side aggregation — never load orders into the browser
     const agg = await db.order.aggregate({
-      where: { companyId, ...dateWhere, confirmationStatus: 'CONFIRMED' },
+      where: { companyId, storeId, ...dateWhere, confirmationStatus: 'CONFIRMED' },
       _sum: {
         totalRevenue: true, grossProfit: true, netProfit: true,
         productCost: true, packagingCost: true, advertisingCost: true,
@@ -36,9 +36,9 @@ export async function GET(req: Request) {
     });
 
     const [settledCount, pendingCount, refundedCount] = await Promise.all([
-      db.order.count({ where: { companyId, ...dateWhere, settlementStatus: 'SETTLED' } }),
-      db.order.count({ where: { companyId, ...dateWhere, settlementStatus: { in: ['PENDING', 'PENDING_COLLECTION'] } } }),
-      db.order.count({ where: { companyId, ...dateWhere, settlementStatus: { in: ['REFUNDED', 'PARTIALLY_REFUNDED'] } } }),
+      db.order.count({ where: { companyId, storeId, ...dateWhere, settlementStatus: 'SETTLED' } }),
+      db.order.count({ where: { companyId, storeId, ...dateWhere, settlementStatus: { in: ['PENDING', 'PENDING_COLLECTION'] } } }),
+      db.order.count({ where: { companyId, storeId, ...dateWhere, settlementStatus: { in: ['REFUNDED', 'PARTIALLY_REFUNDED'] } } }),
     ]);
 
     const ordersConfirmed = agg._count || 0;

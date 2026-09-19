@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
 import {
   atomicAcquireLock, atomicRenewLock, atomicReleaseLock, isLockActive, lockConfig,
@@ -19,8 +19,8 @@ import { authorize } from '@/lib/authorization';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
-    const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+    const { user, companyId, storeId } = await requireContext();
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
@@ -96,10 +96,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
-    const order = await db.order.findUnique({ where: { id }, select: { companyId: true, lockedById: true } });
-    if (!order || order.companyId !== companyId) {
+    const order = await db.order.findUnique({ where: { id }, select: { companyId: true, storeId: true, lockedById: true } });
+    if (!order || order.companyId !== companyId || order.storeId !== storeId) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
     if (order.lockedById !== user.id) {
@@ -123,10 +123,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
-    const order = await db.order.findUnique({ where: { id }, select: { companyId: true, lockedById: true } });
-    if (!order || order.companyId !== companyId) {
+    const order = await db.order.findUnique({ where: { id }, select: { companyId: true, storeId: true, lockedById: true } });
+    if (!order || order.companyId !== companyId || order.storeId !== storeId) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
     if (order.lockedById && order.lockedById !== user.id) {

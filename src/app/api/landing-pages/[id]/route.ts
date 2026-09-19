@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
@@ -12,19 +12,19 @@ interface Ctx {
   params: Promise<{ id: string }>;
 }
 
-async function loadLandingPage(id: string, companyId: string) {
+async function loadLandingPage(id: string, companyId: string, storeId: string) {
   // Tenant isolation: id + companyId in the WHERE — company B can never read company A's page
-  return db.landingPage.findFirst({ where: { id, companyId } });
+  return db.landingPage.findFirst({ where: { id, companyId, storeId } });
 }
 
 export async function GET(_req: Request, ctx: Ctx) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('landing_pages.view');
     const { id } = await ctx.params;
 
     const lp = await db.landingPage.findFirst({
-      where: { id, companyId },
+      where: { id, companyId, storeId },
       include: {
         product: { select: { id: true, name: true, basePrice: true, image: true, status: true } },
         creator: { select: { id: true, name: true } },
@@ -47,7 +47,7 @@ export async function GET(_req: Request, ctx: Ctx) {
 
 export async function PATCH(req: Request, ctx: Ctx) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     const { id } = await ctx.params;
 
     const schema = z.object({
@@ -63,7 +63,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
     }
 
-    const lp = await loadLandingPage(id, companyId);
+    const lp = await loadLandingPage(id, companyId, storeId);
     if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });
 
     // Publish/unpublish is a distinct permission from editing
@@ -140,11 +140,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
 export async function DELETE(_req: Request, ctx: Ctx) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('landing_pages.delete');
     const { id } = await ctx.params;
 
-    const lp = await loadLandingPage(id, companyId);
+    const lp = await loadLandingPage(id, companyId, storeId);
     if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });
 
     await db.landingPage.delete({ where: { id: lp.id } });
