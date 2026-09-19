@@ -68,6 +68,10 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  experimental: {
+    // forbidden() -> app/forbidden.tsx with a real 403 for pages the role may not open
+    authInterrupts: true,
+  },
 };
 
 export default nextConfig;

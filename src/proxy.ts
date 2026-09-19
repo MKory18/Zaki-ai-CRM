@@ -1,6 +1,5 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { ROLE_PERMISSIONS, type Permission } from '@/types/auth';
 
 let cachedJwtSecret: Uint8Array | null = null;
 function getJwtSecret(): Uint8Array {
@@ -17,26 +16,16 @@ function getJwtSecret(): Uint8Array {
 
 const COOKIE_NAME = 'salesflow_session';
 
-const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/lp'];
 
-/** Route → required permission (enforced at the edge, verified again in every API) */
-const PERMISSION_MAP: Record<string, Permission> = {
-  '/orders': 'orders.view',
-  '/customers': 'customers.view',
-  '/products': 'products.view',
-  '/production': 'production.view',
-  '/inventory': 'inventory.view',
-  '/offers': 'offers.manage',
-  '/moderators': 'users.view',
-  '/users': 'users.view',
-  '/roles': 'roles.view',
-  '/permissions': 'roles.view',
-  '/analytics': 'reports.view',
-  '/finance': 'finance.view',
-  '/ai-assistant': 'ai.use',
-  '/audit-logs': 'audit.view',
-  '/settings': 'settings.view',
-};
+/**
+ * Edge pass: session presence and account state only.
+ *
+ * Route permissions are NOT decided here. Every screen is guarded on the
+ * server by src/lib/page-guard.ts against the route registry (404 outside
+ * the contract, 403 without the permission), and every API re-checks the
+ * same permission. The edge never sees the permission engine's DB state.
+ */
 
 function redirectTo(req: Request, path: string) {
   const url = new URL(req.url);
@@ -98,15 +87,16 @@ function validateApiOrigin(req: Request): NextResponse | null {
 export async function proxy(req: Request) {
   const { pathname } = new URL(req.url);
 
-  // API routes: enforce origin validation on mutations, then pass through —
-  // authentication/authorization is handled inside each route handler.
+  // API routes: origin validation on mutations; auth lives in each handler.
+  // Public endpoints (landing pages, webhooks) are intentionally included —
+  // they carry their own guards and the origin check is method-scoped.
   if (pathname.startsWith('/api/')) {
     const originError = validateApiOrigin(req);
     if (originError) return originError;
     return NextResponse.next();
   }
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.next();
   }
 
@@ -122,14 +112,13 @@ export async function proxy(req: Request) {
     return redirectTo(req, '/login');
   }
 
-  let payload: any;
+  let payload: Record<string, unknown>;
   try {
     ({ payload } = await jwtVerify(token, getJwtSecret()));
   } catch {
     return redirectTo(req, '/login');
   }
 
-  const role = payload.role as string;
   const status = payload.status as string;
 
   if (status === 'SUSPENDED' || status === 'DISABLED') {
@@ -137,24 +126,10 @@ export async function proxy(req: Request) {
   }
 
   if (status === 'PENDING') {
-    if (pathname === '/pending' || pathname === '/profile') {
+    if (pathname === '/pending' || pathname === '/admin/profile') {
       return NextResponse.next();
     }
     return redirectTo(req, '/pending');
-  }
-
-  // Protected module permission check
-  for (const [basePath, permission] of Object.entries(PERMISSION_MAP)) {
-    if (pathname === basePath || pathname.startsWith(basePath + '/')) {
-      if (role === 'SUPER_ADMIN' || role === 'COMPANY_ADMIN') {
-        return NextResponse.next();
-      }
-      const perms = ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS] || [];
-      if (!perms.includes(permission)) {
-        return redirectTo(req, '/access-denied');
-      }
-      break;
-    }
   }
 
   return NextResponse.next();
@@ -162,26 +137,10 @@ export async function proxy(req: Request) {
 
 export const config = {
   matcher: [
-    // API routes run through the proxy for origin validation on mutations only
-    '/api/:path*',
-    '/orders/:path*',
-    '/customers/:path*',
-    '/products/:path*',
-    '/production/:path*',
-    '/inventory/:path*',
-    '/offers/:path*',
-    '/moderators/:path*',
-    '/users/:path*',
-    '/roles/:path*',
-    '/permissions/:path*',
-    '/analytics/:path*',
-    '/finance/:path*',
-    '/ai-assistant/:path*',
-    '/audit-logs/:path*',
-    '/settings/:path*',
-    '/access-denied',
-    '/pending',
-    '/profile',
+    /*
+     * Everything except Next internals and static assets. Screens resolve
+     * through the route registry, so no path list is maintained here.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|logo.svg|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map)$).*)',
   ],
 };
-

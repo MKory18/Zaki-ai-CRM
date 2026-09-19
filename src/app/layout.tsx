@@ -39,8 +39,8 @@ export default async function RootLayout({
   // managers) mutate <html>/<body> before hydration — React must not warn.
   return (
     <html
-      lang="en"
-      dir="ltr"
+      lang="ar"
+      dir="rtl"
       suppressHydrationWarning
       className={`h-full ${tajawal.variable} ${publicSans.variable}`}
     >
