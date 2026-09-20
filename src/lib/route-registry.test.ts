@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('./db', () => ({ db: {} }));
 
-import { ALL_ROUTES, NAV, canAccessRoute, findRoute, visibleNav } from './route-registry';
+import { ALL_ROUTES, NAV, canAccessRoute, findRoute, landingRoute, visibleNav } from './route-registry';
 import { attachGrants } from './authorization';
 import { ALL_CATALOG_KEYS } from './permission-catalog';
 
@@ -80,6 +80,18 @@ describe('role visibility', () => {
   it('an inactive user opens nothing, not even the profile', () => {
     const pending = { ...userWith(['orders.view']), status: 'PENDING' };
     expect(canAccessRoute(pending, findRoute('/admin/profile')!)).toBe(false);
+  });
+
+  it('sends a user without dashboard.view to the first screen he may open', () => {
+    // A moderator scoped to his own orders holds no dashboard.view: landing
+    // him on /dashboard is a 403 at login.
+    const mod = userWith(['orders.view', 'customers.view', 'confirmation.issues']);
+    expect(landingRoute(mod)).toBe('/orders');
+    expect(canAccessRoute(mod, findRoute('/dashboard')!)).toBe(false);
+  });
+
+  it('still sends everyone who holds dashboard.view to the dashboard', () => {
+    expect(landingRoute(userWith(['dashboard.view', 'orders.view']))).toBe('/dashboard');
   });
 
   it('the visible navigation drops empty groups', () => {

@@ -12,10 +12,10 @@ export default function NotFound() {
         <h1 className="text-lg font-bold text-[#121926]">الصفحة غير موجودة</h1>
         <p className="text-sm text-[#697586]">الرابط الذي فتحته ليس ضمن شاشات النظام.</p>
         <Link
-          href="/dashboard"
+          href="/"
           className="inline-block px-5 py-2 text-sm font-medium rounded-[8px] bg-[#b8256e] text-white hover:bg-[#b8256e]/90"
         >
-          العودة للوحة التحكم
+          العودة إلى شاشتك الأولى
         </Link>
       </div>
     </div>

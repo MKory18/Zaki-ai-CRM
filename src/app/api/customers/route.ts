@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
-import { can, requirePermission } from '@/lib/authorization';
+import { can, getPermissionScope, requirePermission } from '@/lib/authorization';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit, redactCustomerForAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -67,6 +67,16 @@ export async function GET(req: Request) {
     const search = searchParams.get('q')?.trim();
 
     const whereClause: any = { companyId };
+
+    // OWN scope means the customers this person actually brought in: the
+    // ones with at least one order they are the moderator of. A customer
+    // has no owner column — the relationship lives in the orders — so it is
+    // derived here rather than stored, the same way the order state is.
+    const scope = getPermissionScope(user, canViewFull ? 'customers.view' : 'customers.view_basic');
+    if (scope?.scope === 'OWN') {
+      whereClause.orders = { some: { companyId, moderatorId: user.id } };
+    }
+
     if (search) {
       const normalizedSearch = normalizePhoneNumber(search);
       whereClause.OR = [

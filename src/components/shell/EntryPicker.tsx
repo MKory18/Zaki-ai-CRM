@@ -57,7 +57,7 @@ export function EntryPicker() {
       setData(res);
       // Changing context always starts at step 1; otherwise follow the server.
       if (changing) setStep('country');
-      else if (res.next === 'READY') router.replace('/dashboard');
+      else if (res.next === 'READY') router.replace('/');
       else setStep(res.next === 'PICK_STORE' || res.next === 'CREATE_FIRST_STORE' ? 'store' : 'country');
     } catch (e: any) {
       setError(e?.message || 'تعذر تحميل البلدان');
@@ -79,14 +79,14 @@ export function EntryPicker() {
         body: JSON.stringify(storeId ? { countryId, storeId } : { countryId }),
       });
       if (storeId) {
-        router.replace('/dashboard');
+        router.replace('/');
         router.refresh();
         return;
       }
       const res = await apiJson<ContextResponse>('/api/context');
       setData(res);
       if (res.next === 'READY') {
-        router.replace('/dashboard');
+        router.replace('/');
         router.refresh();
         return;
       }

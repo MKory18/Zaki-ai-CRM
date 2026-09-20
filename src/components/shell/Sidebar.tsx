@@ -34,7 +34,7 @@ export function Sidebar({
         )}
       >
         <div className="flex items-center h-[72px] px-5 border-b border-[#202939] shrink-0">
-          <Link href="/dashboard" className="flex items-center gap-3" onClick={onClose}>
+          <Link href="/" className="flex items-center gap-3" onClick={onClose}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="Zaki AI" className="w-11 h-9 object-contain" />
             <div>

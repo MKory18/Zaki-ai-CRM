@@ -166,3 +166,17 @@ export function visibleNav(user: SessionUser): NavGroup[] {
     (g) => g.routes.length > 0
   );
 }
+
+/**
+ * Where "/" sends this user.
+ *
+ * The dashboard is the first screen for anyone who may open it, but a
+ * narrowly-scoped account (a moderator who only works his own orders) does
+ * not hold dashboard.view — sending him there lands him on a 403 the moment
+ * he logs in. He goes to the first screen he may actually open instead,
+ * which is the first item of his own sidebar.
+ */
+export function landingRoute(user: SessionUser): string {
+  const first = visibleNav(user)[0]?.routes[0];
+  return first?.path ?? '/no-access';
+}

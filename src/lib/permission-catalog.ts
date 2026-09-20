@@ -41,8 +41,8 @@ export const PERMISSION_MODULES: CatalogModule[] = [
   {
     module: 'customers',
     items: [
-      { key: 'customers.view', ar: 'عرض العملاء', en: 'View customers' },
-      { key: 'customers.view_basic', ar: 'عرض بيانات العميل الأساسية', en: 'View basic customer info' },
+      { key: 'customers.view', ar: 'عرض العملاء', en: 'View customers', scopes: ['ALL_COMPANY', 'OWN'] },
+      { key: 'customers.view_basic', ar: 'عرض بيانات العميل الأساسية', en: 'View basic customer info', scopes: ['ALL_COMPANY', 'OWN'] },
       { key: 'customers.create', ar: 'إنشاء عملاء', en: 'Create customers' },
     ],
   },

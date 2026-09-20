@@ -14,10 +14,10 @@ export default function Forbidden() {
           هذه الشاشة خارج صلاحيات دورك. إذا كنت تحتاجها، اطلب من المدير إضافتها لدورك.
         </p>
         <Link
-          href="/dashboard"
+          href="/"
           className="inline-block px-5 py-2 text-sm font-medium rounded-[8px] bg-[#b8256e] text-white hover:bg-[#b8256e]/90"
         >
-          العودة للوحة التحكم
+          العودة إلى شاشتك الأولى
         </Link>
       </div>
     </div>
