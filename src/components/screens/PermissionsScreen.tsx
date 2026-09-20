@@ -20,7 +20,7 @@ import {
 } from '@/lib/permission-catalog';
 import { format } from 'date-fns';
 import {
-  ShieldCheck, Search, Plus, Pencil, Copy, Trash2, ChevronDown, ChevronUp, Users, KeyRound, X,
+  ShieldCheck, Search, Plus, Pencil, Copy, Trash2, ChevronDown, ChevronUp, Users, KeyRound, X, RotateCcw,
 } from 'lucide-react';
 
 interface RolePerm { permission: string; scope: string; scopeIds?: unknown }
@@ -57,6 +57,12 @@ export function PermissionsScreen() {
   const [saving, setSaving] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+  // Restore-defaults state: the button only exists for a role that has a
+  // shipped matrix, and it fills the draft rather than writing — the admin
+  // still presses Save, and can still cancel.
+  const [defaultsAvailable, setDefaultsAvailable] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [restoredFlash, setRestoredFlash] = useState(false);
 
   // Delete state
   const [deletingRole, setDeletingRole] = useState<RoleRow | null>(null);
@@ -108,6 +114,8 @@ export function PermissionsScreen() {
 
   // ── Editor helpers ──
   function openCreate() {
+    setDefaultsAvailable(false);
+    setRestoredFlash(false);
     setEditingRole(null);
     setName('');
     setDraft({});
@@ -118,6 +126,12 @@ export function PermissionsScreen() {
   }
 
   function openEdit(role: RoleRow) {
+    setRestoredFlash(false);
+    setDefaultsAvailable(false);
+    fetch(`/api/roles/${role.id}/default`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setDefaultsAvailable(!!d?.available))
+      .catch(() => setDefaultsAvailable(false));
     setEditingRole(role);
     setName(role.name);
     const d: Record<string, DraftPerm> = {};
@@ -191,6 +205,30 @@ export function PermissionsScreen() {
     }, DEBOUNCE_MS);
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [productQuery, activeSpecific, editorOpen, editingRole]);
+
+  /** Load the role's shipped matrix into the draft. Nothing is written until Save. */
+  async function restoreDefaults() {
+    if (!editingRole) return;
+    setRestoring(true);
+    setEditorError(null);
+    try {
+      const res = await fetch(`/api/roles/${editingRole.id}/default`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.available) {
+        throw new Error(data.error || (ar ? 'لا توجد صلاحيات افتراضية لهذا الدور' : 'This role has no defaults'));
+      }
+      const d: Record<string, DraftPerm> = {};
+      for (const p of data.permissions as RolePerm[]) {
+        d[p.permission] = { scope: (p.scope as ScopeValue) || 'ALL_COMPANY', scopeIds: [] };
+      }
+      setDraft(d);
+      setRestoredFlash(true);
+    } catch (e: any) {
+      setEditorError(e.message);
+    } finally {
+      setRestoring(false);
+    }
+  }
 
   async function saveEditor() {
     if (!name.trim()) {
@@ -442,10 +480,26 @@ export function PermissionsScreen() {
                   className="ps-8"
                 />
               </div>
-              <Badge variant={activeCount > 0 ? 'success' : 'default'}>
-                {activeCount} {ar ? 'صلاحية مفعّلة' : 'enabled'}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {editingRole && defaultsAvailable && (
+                  <Button variant="outline" size="sm" onClick={restoreDefaults} loading={restoring}>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    {ar ? 'إرجاع للافتراضي' : 'Restore defaults'}
+                  </Button>
+                )}
+                <Badge variant={activeCount > 0 ? 'success' : 'default'}>
+                  {activeCount} {ar ? 'صلاحية مفعّلة' : 'enabled'}
+                </Badge>
+              </div>
             </div>
+
+            {restoredFlash && (
+              <div className="rounded-lg bg-[#fff6e5] border border-[#ffe7b8] text-[#c07f2a] text-xs px-4 py-2.5">
+                {ar
+                  ? 'تم تحميل الصلاحيات الافتراضية للدور — لن تُطبّق حتى تضغط حفظ التغييرات.'
+                  : 'The role defaults are loaded — nothing changes until you press Save.'}
+              </div>
+            )}
 
             <div className="space-y-2">
               {visibleModules.map((m) => {

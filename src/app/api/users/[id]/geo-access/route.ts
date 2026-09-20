@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { firstIssue, geoAccessSchema } from '@/lib/geo-schemas';
+import { currentGeoAccess, geoAccessError, replaceGeoAccess } from '@/lib/geo-access';
 
 /**
  *   GET /api/users/:id/geo-access  (geo.manage)
@@ -19,21 +20,13 @@ async function companyUser(id: string, companyId: string) {
   return db.user.findFirst({ where: { id, companyId }, select: { id: true } });
 }
 
-async function currentAccess(userId: string) {
-  const [countries, stores] = await Promise.all([
-    db.userCountryAccess.findMany({ where: { userId }, select: { countryId: true } }),
-    db.userStoreAccess.findMany({ where: { userId }, select: { storeId: true } }),
-  ]);
-  return { countryIds: countries.map((c) => c.countryId), storeIds: stores.map((s) => s.storeId) };
-}
-
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { companyId } = await requireCompanyTenant();
     await requirePermission('geo.manage');
     if (!(await companyUser(id, companyId))) return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
-    return NextResponse.json(await currentAccess(id));
+    return NextResponse.json(await currentGeoAccess(id));
   } catch (error) {
     return apiErrorResponse(error);
   }
@@ -51,22 +44,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const countryIds = [...new Set(parsed.data.countryIds)];
     const storeIds = [...new Set(parsed.data.storeIds)];
 
-    const validCountries = await db.country.count({ where: { companyId, id: { in: countryIds } } });
-    if (validCountries !== countryIds.length) {
-      return NextResponse.json({ error: 'بلد غير موجود' }, { status: 400 });
-    }
-    const validStores = await db.store.count({ where: { companyId, id: { in: storeIds }, countryId: { in: countryIds } } });
-    if (validStores !== storeIds.length) {
-      return NextResponse.json({ error: 'كل متجر يجب أن يكون ضمن بلد مُسند للمستخدم' }, { status: 400 });
-    }
+    const invalid = await geoAccessError(companyId, countryIds, storeIds);
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
 
-    const before = await currentAccess(id);
-    await db.$transaction([
-      db.userCountryAccess.deleteMany({ where: { userId: id } }),
-      db.userStoreAccess.deleteMany({ where: { userId: id } }),
-      db.userCountryAccess.createMany({ data: countryIds.map((countryId) => ({ userId: id, countryId })) }),
-      db.userStoreAccess.createMany({ data: storeIds.map((storeId) => ({ userId: id, storeId })) }),
-    ]);
+    const before = await currentGeoAccess(id);
+    await db.$transaction(async (tx) => replaceGeoAccess(tx as never, id, countryIds, storeIds));
 
     const after = { countryIds, storeIds };
     await logAudit({

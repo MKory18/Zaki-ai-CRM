@@ -7,7 +7,9 @@ import { Select, Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { ASSIGNABLE_ROLES, USER_STATUSES } from '@/types/auth';
+import { userCan } from '@/lib/can';
+import { CreateUserModal } from './users/CreateUserModal';
+import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '@/types/auth';
 import {
   Users,
   Search,
@@ -20,21 +22,15 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  UserPlus,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: 'مدير النظام',
-  CONFIRMATION_AGENT: 'موظف التأكيد',
-  FOLLOW_UP_AGENT: 'موظف المتابعة',
-  SETTLEMENT_OFFICER: 'مدقق التسويات',
-  COMPANY_ADMIN: 'مدير الشركة',
-  MANAGER: 'مدير',
-  MODERATOR: 'موديريتور',
-  ACCOUNTANT: 'المحاسب',
-  DELIVERY_MANAGER: 'مدير التوصيل',
-  PENDING_USER: 'بانتظار التعيين',
-};
+/** One source for the Arabic role names — a screen with its own copy is how
+ *  two of them ended up blank in the filter. */
+const ROLE_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(ROLE_LABELS_AR).map(([key, label]) => [key, label.ar])
+);
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'قيد المراجعة',
@@ -57,7 +53,8 @@ export function UsersScreen() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  // Manage modal
+  // Create + manage modals
+  const [createOpen, setCreateOpen] = useState(false);
   const [manageUser, setManageUser] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -152,9 +149,17 @@ export function UsersScreen() {
               مراجعة طلبات التسجيل، تعيين الأدوار، تنشيط/إيقاف الحسابات — كل إجراء يُسجَّل في سجل التدقيق
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => loadUsers(pagination.page)} className="p-2">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            {userCan(currentUser, 'users.create') && (
+              <Button size="sm" onClick={() => setCreateOpen(true)}>
+                <UserPlus className="w-4 h-4" />
+                موظف جديد
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => loadUsers(pagination.page)} className="p-2">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -278,6 +283,12 @@ export function UsersScreen() {
           </CardContent>
         </Card>
       </div>
+
+      <CreateUserModal
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => loadUsers(1)}
+      />
 
       {/* Manage User Modal */}
       <Modal

@@ -611,8 +611,9 @@ model Role {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company     Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company     Company?                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   permissions RolePermission[]
+  defaults    RolePermissionDefault[]
   users       User[]
 
   @@unique([companyId, name])
@@ -633,6 +634,26 @@ model RolePermission {
   @@unique([roleId, permission])
   @@index([roleId])
   @@map("role_permissions")
+}
+
+/// The matrix a role was issued with — what "restore defaults" returns to.
+/// Written once when the role is created (and seeded from the system
+/// templates for the roles that predate this table); never touched by an
+/// edit, which is the whole point: the editable rows cannot also be the
+/// record of what they started as.
+model RolePermissionDefault {
+  id         String   @id @default(uuid())
+  roleId     String
+  permission String
+  scope      String   @default("ALL_COMPANY")
+  scopeIds   Json?
+  createdAt  DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@index([roleId])
+  @@map("role_permission_defaults")
 }
 
 model UserPermission {
