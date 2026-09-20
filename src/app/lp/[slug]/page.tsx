@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
+import { ruleFor } from '@/lib/phone-rules';
 import { verifyPreviewToken, clampStoredHtml } from '@/lib/landing-pages';
 import OrderForm from '@/components/landing/OrderForm';
 import { ShieldCheck, Truck, PhoneCall } from 'lucide-react';
@@ -75,6 +76,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
     htmlContent?: string | null;
     product?: { id: string; name: string; basePrice: number } | null;
     company?: { id: string; currency: string };
+    store?: { countryId: string; country: { code: string } } | null;
   } | null = null;
 
   // Active offers + post-order recommendations (server-side, DB prices only)
@@ -93,6 +95,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
           htmlContent: true,
           product: { select: { id: true, name: true, basePrice: true } },
           company: { select: { id: true, currency: true } },
+          store: { select: { countryId: true, country: { select: { code: true } } } },
         },
       });
       if (lp) {
@@ -112,6 +115,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
         htmlContent: true,
         company: { select: { id: true, currency: true } },
         product: { select: { id: true, name: true, basePrice: true } },
+        store: { select: { countryId: true, country: { select: { code: true } } } },
       },
     });
     if (!lp || !lp.isPublished) notFound();
@@ -123,6 +127,19 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
       .update({ where: { id: lp.id }, data: { viewsCount: { increment: 1 } } })
       .catch(() => {});
   }
+
+  // The cities offered and the phone format come from the country this page
+  // sells into — never from a hard-coded list.
+  const countryCode = lp.store?.country.code ?? null;
+  const regions = lp.store
+    ? (
+        await db.region.findMany({
+          where: { countryId: lp.store.countryId, isActive: true },
+          select: { name: true },
+          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        })
+      ).map((r) => r.name)
+    : [];
 
   const rawSrc = `/lp/${encodeURIComponent(lp.slug)}/raw${previewToken ? `?p=${encodeURIComponent(previewToken)}` : ''}`;
   const productName = lp.product?.name || lp.name;
@@ -188,6 +205,8 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
             currency={currency}
             offers={offers.map((o) => ({ ...o }))}
             recommendations={recommendations}
+            regions={regions}
+            phonePlaceholder={ruleFor(countryCode)?.example}
           />
         </LandingFormBridge>
       )}

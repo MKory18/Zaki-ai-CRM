@@ -2,7 +2,6 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { Loader2, CheckCircle2, AlertCircle, ShoppingBag, Search } from 'lucide-react';
-import { SYRIAN_LOCATIONS } from '@/lib/locations/syria';
 import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
 
 /**
@@ -42,6 +41,10 @@ interface OrderFormProps {
   currency: string;
   offers: OfferView[];
   recommendations: RecommendationView[];
+  /** Region names of the store's country — the only city options offered. */
+  regions: string[];
+  /** Placeholder for the phone field, in this country's own format. */
+  phonePlaceholder?: string;
   /** Phase 2: offer selected from custom-HTML placeholder (pre-validated by the bridge) */
   externalSelectedOfferId?: string | null;
 }
@@ -50,7 +53,7 @@ type FormState = 'idle' | 'loading' | 'success' | 'error';
 
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, externalSelectedOfferId }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId }: OrderFormProps) {
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -79,17 +82,16 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
   const savings = useMemo(() => (offer ? Math.max(0, Number((originalPrice - offer.price).toFixed(2))) : 0), [originalPrice, offer]);
 
   // ─── City searchable select ───
+  // The options are THIS store's country regions, server-rendered. There is
+  // no hard-coded country here: a Jordanian store shows Jordanian regions.
   const [cityOpen, setCityOpen] = useState(false);
   const [cityQuery, setCityQuery] = useState('');
   const [cityValue, setCityValue] = useState('');
   const cityOptions = useMemo(() => {
     const q = cityQuery.trim();
-    if (!q) return SYRIAN_LOCATIONS;
-    return SYRIAN_LOCATIONS.map((l) => ({
-      governorate: l.governorate,
-      cities: l.cities.filter((c) => c.includes(q)),
-    })).filter((l) => l.governorate.includes(q) || l.cities.length > 0);
-  }, [cityQuery]);
+    if (!q) return regions;
+    return regions.filter((r) => r.includes(q));
+  }, [cityQuery, regions]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -386,7 +388,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                   maxLength={20}
                   inputMode="tel"
                   autoComplete="tel"
-                  placeholder="09xxxxxxxxx"
+                  placeholder={phonePlaceholder || '07xxxxxxxx'}
                   dir="ltr"
                   className={`${inputCls} text-start`}
                   disabled={state === 'loading'}
@@ -446,33 +448,17 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                       />
                     </div>
                     <div className="max-h-56 overflow-y-auto">
-                      {SYRIAN_LOCATIONS.map((loc) => {
-                        const govMatch = loc.governorate.includes(cityQuery.trim());
-                        const cities = govMatch ? loc.cities : loc.cities.filter((c) => c.includes(cityQuery.trim()));
-                        if (!govMatch && cities.length === 0) return null;
-                        return (
-                          <div key={loc.governorate}>
-                            <button
-                              type="button"
-                              onClick={() => { setCityValue(loc.governorate); setCityOpen(false); setCityQuery(''); setFieldErrors((fe) => { const n = { ...fe }; delete n.city; return n; }); }}
-                              className="block w-full bg-[#f8fafc] px-4 py-2 text-start text-xs font-bold text-[#b8256e] hover:bg-[#fdf2f7]"
-                            >
-                              📍 {loc.governorate}
-                            </button>
-                            {(govMatch ? loc.cities : cities).map((city) => (
-                              <button
-                                key={city}
-                                type="button"
-                                onClick={() => { setCityValue(city); setCityOpen(false); setCityQuery(''); setFieldErrors((fe) => { const n = { ...fe }; delete n.city; return n; }); }}
-                                className={`block w-full px-6 py-2 text-start text-sm hover:bg-[#f8fafc] ${cityValue === city ? 'bg-[#fdf2f7] font-semibold text-[#b8256e]' : 'text-[#364152]'}`}
-                              >
-                                {city}
-                              </button>
-                            ))}
-                          </div>
-                        );
-                      })}
-                      {SYRIAN_LOCATIONS.every((loc) => !loc.governorate.includes(cityQuery.trim()) && !loc.cities.some((c) => c.includes(cityQuery.trim()))) && (
+                      {cityOptions.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => { setCityValue(name); setCityOpen(false); setCityQuery(''); setFieldErrors((fe) => { const n = { ...fe }; delete n.city; return n; }); }}
+                          className={`block w-full px-4 py-2 text-start text-sm hover:bg-[#f8fafc] ${cityValue === name ? 'bg-[#fdf2f7] font-semibold text-[#b8256e]' : 'text-[#364152]'}`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                      {cityOptions.length === 0 && (
                         <p className="px-4 py-6 text-center text-xs text-[#9aa4b2]">لا توجد نتائج مطابقة</p>
                       )}
                     </div>

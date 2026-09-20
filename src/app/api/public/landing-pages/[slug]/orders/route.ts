@@ -9,7 +9,7 @@ import {
   signAddonToken,
 } from '@/lib/landing-pages';
 import {
-  publicOrderSchema,
+  buildPublicOrderSchema,
   mapZodFieldErrors,
   ORDER_VALIDATION_ERROR_BODY,
 } from '@/lib/landing-order-schema';
@@ -77,14 +77,51 @@ export async function POST(req: Request, ctx: Ctx) {
       }
     }
 
-    // ─── Zod validation ───
     let raw: unknown;
     try {
       raw = await req.json();
     } catch {
       return NextResponse.json({ error: 'بيانات غير صالحة' }, { status: 400, headers: CORS });
     }
-    const parsed = publicOrderSchema.safeParse(raw);
+
+    // ─── Resolve the landing page → company → product (server-side only) ───
+    // This comes BEFORE validation: the phone format and the list of cities
+    // depend on the country this page sells into. A Jordanian store must not
+    // be validated against Syrian rules.
+    const lp = await db.landingPage.findFirst({
+      where: { slug, isPublished: true },
+      include: {
+        company: { select: { id: true, currency: true } },
+        product: { select: { id: true, basePrice: true, name: true, image: true } },
+        store: {
+          select: {
+            id: true,
+            countryId: true,
+            country: { select: { code: true, currencyCode: true, orderPrefix: true, minorUnit: true } },
+          },
+        },
+      },
+    });
+    if (!lp) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
+    // Every order must land in a store; a page without one cannot take orders.
+    if (!lp.store) {
+      return NextResponse.json({ error: 'هذه الصفحة لا تقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
+    }
+    const store = lp.store;
+    if (!lp.productId || !lp.product) {
+      return NextResponse.json({ error: 'هذه الصفحة لا تقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
+    }
+
+    // ─── Zod validation, against THIS country ───
+    const regions = await db.region.findMany({
+      where: { countryId: store.countryId, isActive: true },
+      select: { id: true, name: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+    const parsed = buildPublicOrderSchema({
+      countryCode: store.country.code,
+      regions: regions.map((r) => r.name),
+    }).safeParse(raw);
     if (!parsed.success) {
       // Safe Arabic field errors only — no Zod internals leak to the visitor
       return NextResponse.json(
@@ -104,24 +141,11 @@ export async function POST(req: Request, ctx: Ctx) {
       return NextResponse.json({ error: 'رقم الهاتف غير صالح' }, { status: 400, headers: CORS });
     }
 
-    // ─── Resolve the landing page → company → product (server-side only) ───
-    const lp = await db.landingPage.findFirst({
-      where: { slug, isPublished: true },
-      include: {
-        company: { select: { id: true, currency: true } },
-        product: { select: { id: true, basePrice: true, name: true, image: true } },
-        store: { select: { id: true, countryId: true, country: { select: { currencyCode: true, orderPrefix: true, minorUnit: true } } } },
-      },
-    });
-    if (!lp) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
-    // Every order must land in a store; a page without one cannot take orders.
-    if (!lp.store) {
-      return NextResponse.json({ error: 'هذه الصفحة لا تقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
-    }
-    const store = lp.store;
-    if (!lp.productId || !lp.product) {
-      return NextResponse.json({ error: 'هذه الصفحة لا تقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
-    }
+    // The chosen city is a real region of this country, so the order carries
+    // its id — that is what the delivery-fee table is keyed on.
+    const region = regions.find(
+      (r) => r.name.trim().toLocaleLowerCase('ar') === v.city.trim().toLocaleLowerCase('ar')
+    );
 
     const companyId = lp.company.id; // server-derived — NEVER from the browser
     const product = lp.product;
@@ -224,6 +248,7 @@ export async function POST(req: Request, ctx: Ctx) {
               companyId,
               countryId: store.countryId,
               storeId: store.id,
+              regionId: region?.id ?? null,
               ...refs,
               customerId: customer!.id,
               productId: product.id,

@@ -15,7 +15,6 @@
 
 import { db } from '../src/lib/db';
 import { signAddonToken, verifyAddonToken, LANDING_PAGE_SOURCE } from '../src/lib/landing-pages';
-import { isSyrianLocation, SYRIAN_LOCATIONS, ALL_SYRIAN_LOCATIONS } from '../src/lib/locations/syria';
 
 let passed = 0;
 let failed = 0;
@@ -40,16 +39,8 @@ async function main() {
   let orderId: string | null = null;
 
   try {
-    // ─── 1-2. Syrian locations ───
-    console.log('— Syrian locations —');
-    ok('1a. governorates present', SYRIAN_LOCATIONS.length >= 14);
-    ok('1b. searchable list is flat & deduped', new Set(ALL_SYRIAN_LOCATIONS).size === ALL_SYRIAN_LOCATIONS.length);
-    ok('1c. damascus valid', isSyrianLocation('دمشق'));
-    ok('1d. city (المزة) valid', isSyrianLocation('المزة'));
-    ok('1e. أخرى valid (legacy behavior)', isSyrianLocation('أخرى'));
-    ok('2a. invalid city rejected', !isSyrianLocation('باريس'));
-    ok('2b. empty invalid', !isSyrianLocation(''));
-    ok('2c. injection string invalid', !isSyrianLocation("دمشق'; DROP TABLE orders;--"));
+    // City validation moved to the Region table, per country. Its tests live
+    // in src/lib/landing-order-schema.test.ts.
 
     // ─── 3. Create LP + offers ───
     console.log('— Offers —');
