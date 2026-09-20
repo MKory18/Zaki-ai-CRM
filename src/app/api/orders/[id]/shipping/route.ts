@@ -10,6 +10,8 @@ import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
 import { can, authorize } from '@/lib/authorization';
+import { assertCancellable, assertReadyToShip, type StateSource } from '@/lib/order-state';
+import { orderLinesForGuard } from '@/lib/reservation';
 
 /**
  * POST /api/orders/[id]/shipping — controlled shipping workflow action.
@@ -120,6 +122,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           );
         }
 
+        // ── No cancellation once the order has shipped (invariant 4) ──
+        // Checked BEFORE the transition validator so the admin override path
+        // cannot bypass it either.
+        if (newShippingStatus === 'CANCELLED') {
+          const cancellable = assertCancellable(order as StateSource);
+          if (!cancellable.allowed) {
+            return NextResponse.json(
+              { error: cancellable.message, errorAr: cancellable.message, code: cancellable.code },
+              { status: 409 }
+            );
+          }
+        }
+
         // ── Controlled transitions (Section 3) ──
         if (!isValidShippingTransition(from, newShippingStatus)) {
           // SUPER_ADMIN override with reason
@@ -131,6 +146,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 errorAr: `انتقال شحن غير صالح: ${from} → ${newShippingStatus}`,
                 code: 'INVALID_TRANSITION',
               },
+              { status: 409 }
+            );
+          }
+        }
+
+        // ── Reservation gate: one unreserved line blocks READY_TO_SHIP ──
+        if (newShippingStatus === 'READY_FOR_SHIPPING' || newShippingStatus === 'READY_FOR_PICKUP') {
+          const lines = await orderLinesForGuard(db, id);
+          const ready = assertReadyToShip(order as StateSource, lines);
+          if (!ready.allowed) {
+            return NextResponse.json(
+              { error: ready.message, errorAr: ready.message, code: ready.code },
               { status: 409 }
             );
           }

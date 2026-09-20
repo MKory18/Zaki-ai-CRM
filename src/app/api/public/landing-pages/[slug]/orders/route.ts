@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { orderRefFields } from '@/lib/order-ref';
+import { computeCod } from '@/lib/money';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import {
   LANDING_PAGE_SOURCE,
@@ -108,7 +110,7 @@ export async function POST(req: Request, ctx: Ctx) {
       include: {
         company: { select: { id: true, currency: true } },
         product: { select: { id: true, basePrice: true, name: true, image: true } },
-        store: { select: { id: true, countryId: true, country: { select: { currencyCode: true, orderPrefix: true } } } },
+        store: { select: { id: true, countryId: true, country: { select: { currencyCode: true, orderPrefix: true, minorUnit: true } } } },
       },
     });
     if (!lp) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
@@ -202,20 +204,27 @@ export async function POST(req: Request, ctx: Ctx) {
 
     // ─── Create the REAL order (same Order model, same defaults) ───
     const unitCost = 0; // public orders have no batch context; finance finalizes later
-    const totalAmount = price; // offer price is the authoritative total
+
+    // ONE COD function (contract PART 5). The offer price is the total for
+    // its quantity; free units are real lines at zero price, so they never
+    // enter the money maths — only stock and COGS.
+    const money = computeCod({
+      lines: [{ quantity: qty, unitPrice: qty > 0 ? price / qty : price, freeQuantity: freeQty }],
+      minorUnit: store.country.minorUnit,
+    });
+    const totalAmount = money.cod;
 
     const order = await db.$transaction(async (tx) => {
       let created: any = null;
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
-          const count = await tx.order.count({ where: { companyId } });
-          const orderNumber = `${store.country.orderPrefix}-${new Date().getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
+          const refs = await orderRefFields(tx, companyId, store.country.orderPrefix, attempt);
           created = await tx.order.create({
             data: {
               companyId,
               countryId: store.countryId,
               storeId: store.id,
-              orderNumber,
+              ...refs,
               customerId: customer!.id,
               productId: product.id,
               quantity: qty,
@@ -252,6 +261,21 @@ export async function POST(req: Request, ctx: Ctx) {
         }
       }
       if (!created) throw new Error('Failed to generate a unique order number');
+
+      // Order line, gift units included: they consume stock and show in COGS.
+      await tx.orderItem.create({
+        data: {
+          companyId,
+          orderId: created.id,
+          productId: product.id,
+          productName: product.name,
+          quantity: qty,
+          freeQuantity: freeQty,
+          unitPrice: money.subtotal / qty,
+          lineTotal: money.lineTotals[0] ?? money.subtotal,
+          addedStage: 'INTAKE',
+        },
+      });
 
       await tx.customer.update({
         where: { id: customer!.id },

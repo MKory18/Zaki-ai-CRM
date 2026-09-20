@@ -168,6 +168,7 @@ model Product {
   inventoryMovements InventoryMovement[]
   offers             Offer[]
   orders             Order[]
+  orderItems         OrderItem[]
   landingPages       LandingPage[]
   recommendations    LandingPageRecommendation[]
   addOns             OrderAddOn[]
@@ -397,6 +398,12 @@ model Order {
   // Geo context (Stage 1). Nullable until every order-creation path writes it.
   countryId            String?
   storeId              String?
+  // Stage 3: courier-facing reference, generated for EVERY order (POS, landing
+  // page, Telegram). Read-only once set; sent in the courier reference field.
+  merchantRef          String?
+  // Snapshot of the offer's delivery policy: if ANY line includes delivery the
+  // whole order does, and the fee is deducted from revenue instead of added.
+  priceIncludesDelivery Boolean  @default(false)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
@@ -424,12 +431,15 @@ model Order {
   activities OrderActivity[]
   deliveryAttempts DeliveryAttempt[]
   financialTransactions FinancialTransaction[]
+  items        OrderItem[]
+  notes        OrderNote[]
   claimHistory OrderClaimHistory[]
   statusLogs   OrderStatusLog[]
   contactAttempts OrderContactAttempt[]
   telegramMessages TelegramMessage[]
 
   @@unique([companyId, orderNumber])
+  @@unique([companyId, merchantRef])
   @@index([companyId, createdAt]) // hot path: list ordering + prev/next navigation + analytics windows
   @@index([companyId, status])
   @@index([companyId, confirmationStatus, claimedById])
@@ -1387,4 +1397,52 @@ model UserStoreAccess {
   @@unique([userId, storeId])
   @@index([storeId])
   @@map("user_store_access")
+}
+
+// ─── ORDER LINES (Stage 3) ───
+// One row per product line. Reservation and discount live HERE, never on the
+// order: an order with a single unreserved line cannot reach READY_TO_SHIP,
+// and a partial return must refund that line's real share of the discount.
+model OrderItem {
+  id            String   @id @default(uuid())
+  companyId     String
+  orderId       String
+  productId     String
+  productName   String // snapshot at creation
+  quantity      Int
+  freeQuantity  Int      @default(0) // gift units: real stock, zero price
+  unitPrice     Decimal  @db.Decimal(12, 2)
+  discountShare Decimal  @db.Decimal(12, 2) @default(0) // proportional share of the order discount
+  lineTotal     Decimal  @db.Decimal(12, 2) // quantity * unitPrice - discountShare
+  reservedQty   Int      @default(0)
+  addedById     String? // who added the line (cross-sell attribution)
+  addedStage    String? // INTAKE | CONFIRMATION | CUSTODY
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([companyId, productId])
+  @@map("order_items")
+}
+
+// ─── ORDER NOTES (Stage 3) ───
+// The context layer. Immutable by contract: no edit, no delete, corrections
+// are new notes. Never add a typed field for something a note already covers.
+model OrderNote {
+  id        String   @id @default(uuid())
+  companyId String
+  orderId   String
+  body      String
+  authorId  String?
+  kind      String   @default("internal") // follow_up | return | settlement | internal
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@index([companyId, kind])
+  @@map("order_notes")
 }

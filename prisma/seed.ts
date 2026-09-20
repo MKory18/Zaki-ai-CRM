@@ -320,6 +320,8 @@ async function main() {
   await prisma.inventoryMovement.deleteMany();
   await prisma.productionBatch.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.orderNote.deleteMany();
+  await prisma.orderItem.deleteMany();
   await prisma.userStoreAccess.deleteMany();
   await prisma.userCountryAccess.deleteMany();
   await prisma.store.deleteMany();
@@ -507,7 +509,8 @@ async function main() {
 
   const order1 = await prisma.order.create({
     data: {
-      companyId: company.id, countryId: country.id, storeId: store.id, orderNumber: 'ORD-2026-0001',
+      companyId: company.id, countryId: country.id, storeId: store.id,
+      orderNumber: 'ORD-2026-0001', merchantRef: 'ORD-2026-0001',
       customerId: cust1.id, productId: scrub!.id, offerId: scrubOffer!.id,
       quantity: 1, sellingPrice: 12, shippingCost: 0, totalAmount: 12,
       currency: 'JOD', moderatorId: modSara!.id,
@@ -534,9 +537,10 @@ async function main() {
       address: 'تلاع العلي', city: 'عمّان', country: 'الأردن', totalOrders: 1,
     },
   });
-  await prisma.order.create({
+  const order2 = await prisma.order.create({
     data: {
-      companyId: company.id, countryId: country.id, storeId: store.id, orderNumber: 'ORD-2026-0002',
+      companyId: company.id, countryId: country.id, storeId: store.id,
+      orderNumber: 'ORD-2026-0002', merchantRef: 'ORD-2026-0002',
       customerId: cust2.id, productId: scarProd!.id, offerId: scarOffer!.id,
       quantity: 2, sellingPrice: 35, shippingCost: 0, totalAmount: 35,
       currency: 'USD', moderatorId: modOmar!.id,
@@ -544,6 +548,28 @@ async function main() {
       estimatedCostOfGoods: Number((35 * 0.35).toFixed(2)),
       status: 'CONFIRMED', source: 'TikTok',
       confirmedAt: new Date(),
+    },
+  });
+
+  // Order lines: unit price derived from the order total (legacy sellingPrice
+  // is the total for the whole quantity), discount share stays on the line.
+  await prisma.orderItem.createMany({
+    data: [
+      {
+        companyId: company.id, orderId: order1.id, productId: scrub!.id, productName: scrub!.name,
+        quantity: 1, unitPrice: 12, lineTotal: 12, addedStage: 'INTAKE',
+      },
+      {
+        companyId: company.id, orderId: order2.id, productId: scarProd!.id, productName: scarProd!.name,
+        quantity: 2, unitPrice: 17.5, lineTotal: 35, addedStage: 'INTAKE',
+      },
+    ],
+  });
+
+  await prisma.orderNote.create({
+    data: {
+      companyId: company.id, orderId: order1.id, authorId: modSara!.id, kind: 'follow_up',
+      body: 'الزبون أكد الطلب وطلب التوصيل صباحاً.',
     },
   });
 

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { orderRefFields } from '@/lib/order-ref';
+import { computeCod } from '@/lib/money';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit } from '@/lib/audit';
@@ -160,21 +162,25 @@ export async function POST(req: Request) {
         }
       }
 
-      const count = await db.order.count({ where: { companyId } });
-      const orderNumber = `${country.orderPrefix}-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+      const refs = await orderRefFields(db, companyId, country.orderPrefix);
+      // ONE COD function (contract PART 5); no delivery fee at intake.
+      const money = computeCod({
+        lines: [{ quantity: qty, unitPrice: qty > 0 ? price / qty : price }],
+        minorUnit: country.minorUnit,
+      });
 
       const order = await db.order.create({
         data: {
           companyId,
           countryId,
           storeId,
-          orderNumber,
+          ...refs,
           customerId: customer.id,
           productId: product.id,
           quantity: qty,
           sellingPrice: price,
           shippingCost: 0,
-          totalAmount: price,
+          totalAmount: money.cod,
           currency: country.currencyCode,
         moderatorId: assignedModeratorId,
         moderatorCommission,
@@ -184,6 +190,21 @@ export async function POST(req: Request) {
         status: 'NEW',
           source: p.source?.trim() || 'AI Intake',
           customerNotes: p.notes?.trim() && p.notes !== '-' ? p.notes.trim() : null,
+        },
+      });
+
+      // Order line — reservation and discount share live per line.
+      await db.orderItem.create({
+        data: {
+          companyId,
+          orderId: order.id,
+          productId: product.id,
+          productName: product.name,
+          quantity: qty,
+          unitPrice: money.subtotal / qty,
+          lineTotal: money.lineTotals[0] ?? money.subtotal,
+          addedById: user.id,
+          addedStage: 'INTAKE',
         },
       });
 

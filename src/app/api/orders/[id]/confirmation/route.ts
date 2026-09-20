@@ -10,6 +10,8 @@ import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
 import { can, authorize } from '@/lib/authorization';
+import { assertCancellable, type StateSource } from '@/lib/order-state';
+import { releaseOrderLines, reserveOrderLines } from '@/lib/reservation';
 
 /**
  * POST /api/orders/[id]/confirmation — controlled confirmation workflow action.
@@ -30,7 +32,7 @@ import { can, authorize } from '@/lib/authorization';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId, storeId } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
 
     // Confirmation status authority (scope evaluated against the loaded order)
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
@@ -144,6 +146,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         if (!can(user, 'orders.unlock')) {
           return NextResponse.json({ error: 'Forbidden: only administrators may cancel orders' }, { status: 403 });
         }
+        // No cancellation after SHIPPED — it becomes a cancel request and
+        // ends as RETURNED with a reason (contract invariant 4).
+        const cancellable = assertCancellable(order as StateSource);
+        if (!cancellable.allowed) {
+          return NextResponse.json(
+            { error: cancellable.message, errorAr: cancellable.message, code: cancellable.code },
+            { status: 409 }
+          );
+        }
         if (!note || note.trim().length < 5) {
           return NextResponse.json({ error: 'Cancellation requires a reason (min 5 chars)' }, { status: 400 });
         }
@@ -240,6 +251,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       });
       if (res.count !== 1) {
         throw new Error('VERSION_CONFLICT: This order was updated by another user. Please refresh before saving.');
+      }
+
+      // ── Reservation follows the decision, inside THIS transaction ──
+      // Confirming reserves every line; rejecting or cancelling releases
+      // them, so stock is never held by a dead order.
+      if (target === 'CONFIRMED') {
+        await reserveOrderLines(tx, id, { allowNegativeStock: country.allowNegativeStock });
+      } else if (target === 'REJECTED' || target === 'CANCELLED') {
+        await releaseOrderLines(tx, id);
       }
 
       // ── Logs: StatusLog (always on transition) + Activity ──

@@ -2,6 +2,8 @@
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { orderRefFields } from '@/lib/order-ref';
+import { computeCod } from '@/lib/money';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit } from '@/lib/audit';
 import { applyQueueFilter } from '@/lib/rbac';
@@ -218,9 +220,24 @@ export async function POST(req: Request) {
     }
 
     const qty = quantity || 1;
+    // Legacy semantics: sellingPrice is the TOTAL for the whole quantity.
     const price = sellingPrice || product.basePrice;
     const shipCost = shippingCost || 0;
-    const totalAmount = price;
+
+    // Offers may include delivery in the price; if so the fee is deducted
+    // from revenue instead of added to what the customer pays.
+    const offer = offerId ? await db.offer.findFirst({ where: { id: offerId, companyId } }) : null;
+    const priceIncludesDelivery = offer?.deliveryIncluded === true;
+
+    // ONE COD function, used by every screen and service (contract PART 5).
+    const money = computeCod({
+      lines: [{ quantity: qty, unitPrice: qty > 0 ? price / qty : price }],
+      discount: offer?.discount ?? 0,
+      deliveryFee: shipCost,
+      priceIncludesDelivery,
+      minorUnit: country.minorUnit,
+    });
+    const totalAmount = money.cod;
 
     // Unit cost estimation
     const unitCost = product.batches[0]?.costPerUnit || 0;
@@ -249,15 +266,15 @@ export async function POST(req: Request) {
       let created: any = null;
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
-          const count = await tx.order.count({ where: { companyId } });
-          const orderNumber = `${country.orderPrefix}-${new Date().getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
+          const refs = await orderRefFields(tx, companyId, country.orderPrefix, attempt, now);
 
           created = await tx.order.create({
             data: {
               companyId,
               countryId,
               storeId,
-              orderNumber,
+              ...refs,
+              priceIncludesDelivery,
               customerId: customer.id,
               productId,
               offerId: offerId || null,
@@ -294,6 +311,22 @@ export async function POST(req: Request) {
         }
       }
       if (!created) throw new Error('Failed to generate a unique order number');
+
+      // 3b. Order line — reservation and the discount share live per line.
+      await tx.orderItem.create({
+        data: {
+          companyId,
+          orderId: created.id,
+          productId,
+          productName: product.name,
+          quantity: qty,
+          unitPrice: money.subtotal / qty,
+          discountShare: money.discountShares[0] ?? 0,
+          lineTotal: money.lineTotals[0] ?? money.subtotal,
+          addedById: user.id,
+          addedStage: 'INTAKE',
+        },
+      });
 
       // 4. Update Customer Stats
       await tx.customer.update({
