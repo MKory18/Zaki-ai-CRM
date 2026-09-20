@@ -17,9 +17,14 @@
 >      someone registers an adapter AND turns apiEnabled on for it.
 >    - A courier feed may never assert DELIVERED / RETURNED / CANCELLED, and
 >      an unrecognised code maps to null, never a near match — a test pins it.
->    - BLOCKED on LogesTechs: they publish no readable API spec. Ask them for
->      the four things in src/lib/couriers/README.md, above all their verbatim
->      status codes with meanings. Do not write the adapter against a guess.
+>    - LogesTechs adapter BUILT from their documentation (v. 9-6-2026). It
+>      registers only when every env var is set, and the provider still needs
+>      code=LOGESTECHS plus apiEnabled. Their PARTIALLY_DELIVERED stays null
+>      until Stage 9. Only open question left: do they support webhooks.
+>    - مندوب (AGENT) vs COMPANY: away from an agent a parcel moves directly;
+>      away from a company it is recalled and a REPLACEMENT order is raised
+>      (replacesOrderId), re-entering preparation. Never overwrite the
+>      provider — the parcel is with them under their barcode.
 > 6. Finance — statements, receipts, matching, wallets, transfers,
 >    closing, commission rules  ✅ done
 >    - Three sequential entities; money moves ONLY at statement approval.
@@ -47,6 +52,17 @@
 >  - Public landing checkout now validates phone and city against the store's
 >    OWN country (src/lib/phone-rules.ts + the Region table). The hard-coded
 >    Syrian lists are deleted.
+>  - Statement import reads the courier's REAL .xlsx (src/lib/xlsx-reader.ts,
+>    hand-written on purpose — third-party file, money path). The NET column
+>    is the amount; the merchant ref is read from the notes when there is no
+>    reference column. Verified on the user's own 145-line statement.
+>  - Region binding: every intake path resolves a Region via src/lib/regions.ts.
+>    Without it an order cannot be priced or shipped.
+>  - Stock: receiving opens a BATCH. On-hand is the sum of batch remainders, so
+>    a movement that touches no batch adds nothing — that was the phantom
+>    "shortage" for stock that had just been entered.
+>  - Order numbers come from the highest issued, not a row count, and the retry
+>    wraps the transaction (a failed statement aborts it on Postgres).
 
 One stage at a time. Do not open the next before the current is approved.
 Commit after every stage; a bad stage should cost one revert, not a
