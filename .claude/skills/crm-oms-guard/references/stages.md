@@ -36,10 +36,18 @@
 >      ACCOUNTANT are deliberately different pairs of hands; both are seeded.
 >    - Commission rules are dated data. Revenue base = totalAmount − fee
 >      (totalAmount holds the COD, so this is right under both pricing modes).
->    - STILL OPEN: accrual only runs when someone calls POST
->      /api/finance/commission. The contract accrues on DELIVERED — wire it
->      into the delivery transition or the Stage 7 worker.
-> 7. Scheduler worker
+>    - Accrual runs on a schedule now (Stage 7 job accrue-commission).
+> 7. Scheduler worker  ✅ done
+>    - scripts/worker.ts — a real process, no Redis/cron. --once, --job=NAME.
+>    - Six jobs, each calling the service that owns the rule. All idempotent.
+>    - runJob: skips a live RUNNING row, takes over one older than 30 min,
+>      records every attempt, re-throws failures. "Overdue" = last SUCCESS vs
+>      the job's interval with grace. Backoff, alert after 3 in a row.
+>    - Courier sync applies in-transit states ONLY, through the transition
+>      machine. It can never assert DELIVERED/RETURNED/CANCELLED.
+>    - /admin/jobs answers "is anything quietly not running", and says WHY a
+>      job did nothing.
+>    - This closed the Stage 6 gap: commission now accrues on a schedule.
 > 8. Control, growth, settings, admin
 > 9. Split / partial delivery, courier custody
 > 10. Single product store · 11. App store
