@@ -394,6 +394,10 @@ model Order {
   regionId             String?
   // A manual fee override always carries a reason (written to the audit log).
   deliveryFeeOverrideReason String?
+  // A courier may only be changed at shipment creation. Afterwards the
+  // parcel is taken back and a REPLACEMENT order is raised, which re-enters
+  // preparation and is assigned from scratch; these two link the pair.
+  replacesOrderId      String?   @unique
   labelPrintedAt       DateTime?
   // Snapshot of the offer's delivery policy: if ANY line includes delivery the
   // whole order does, and the fee is deducted from revenue instead of added.
@@ -430,6 +434,8 @@ model Order {
   commissions       CommissionEntry[]
   settlementMatches SettlementMatch[]
   region         Region?      @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  replaces       Order?       @relation("OrderReplacement", fields: [replacesOrderId], references: [id], onDelete: SetNull)
+  replacedBy     Order?       @relation("OrderReplacement")
   returnReceipt  ReturnReceipt?
   changeRequests OrderChangeRequest[]
   issues         OrderIssue[]
@@ -720,6 +726,10 @@ model DeliveryProvider {
   companyId  String
   name       String
   code       String   @unique
+  // COMPANY = a shipping company with its own pipeline and statements.
+  // AGENT   = a مندوب: immediate delivery, settled by hand, and the only
+  //           party an order may be moved away from without a replacement.
+  kind       String   @default("COMPANY")
   phone      String?
   email      String?
   address    String?

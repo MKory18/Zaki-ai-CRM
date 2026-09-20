@@ -28,7 +28,7 @@ export async function GET() {
       db.deliveryProvider.findMany({
         where: { companyId, isActive: true },
         orderBy: { name: 'asc' },
-        select: { id: true, name: true, code: true },
+        select: { id: true, name: true, code: true, kind: true },
       }),
       db.region.findMany({
         where: { countryId, isActive: true },

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Plus, Truck } from 'lucide-react';
+import { Bike, Loader2, Plus, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 
 /**
@@ -15,6 +15,7 @@ interface Courier {
   id: string;
   name: string;
   code: string;
+  kind?: 'COMPANY' | 'AGENT';
   phone: string | null;
   email: string | null;
   isActive: boolean;
@@ -23,7 +24,7 @@ interface Courier {
 export function CouriersScreen() {
   const [rows, setRows] = useState<Courier[] | null>(null);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: '', code: '', phone: '' });
+  const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT' });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -48,9 +49,9 @@ export function CouriersScreen() {
       await apiJson('/api/delivery-providers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), code: form.code.trim().toUpperCase(), phone: form.phone.trim() || undefined }),
+        body: JSON.stringify({ name: form.name.trim(), code: form.code.trim().toUpperCase(), kind: form.kind, phone: form.phone.trim() || undefined }),
       });
-      setForm({ name: '', code: '', phone: '' });
+      setForm({ name: '', code: '', phone: '', kind: 'COMPANY' });
       setAdding(false);
       await load();
     } catch (e) {
@@ -92,7 +93,7 @@ export function CouriersScreen() {
           <Link href="/settings/delivery-fees" className="text-[#b8256e] hover:underline">أجور التوصيل</Link>.
         </p>
         <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium">
-          <Plus className="w-4 h-4" /> شركة شحن
+          <Plus className="w-4 h-4" /> شركة شحن أو مندوب
         </button>
       </div>
 
@@ -103,6 +104,20 @@ export function CouriersScreen() {
           <Field label="الاسم" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
           <Field label="الرمز" value={form.code} onChange={(v) => setForm({ ...form, code: v })} dir="ltr" />
           <Field label="الهاتف" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} dir="ltr" required={false} />
+          <label className="block">
+            <span className="block text-xs font-medium text-[#364152] mb-1">النوع</span>
+            <select
+              value={form.kind}
+              onChange={(e) => setForm({ ...form, kind: e.target.value as 'COMPANY' | 'AGENT' })}
+              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            >
+              <option value="COMPANY">شركة شحن</option>
+              <option value="AGENT">مندوب</option>
+            </select>
+            <span className="block text-[11px] text-[#9aa4b2] mt-1">
+              المندوب فوري وتسويته يدوية، وهو الوحيد الذي يمكن سحب الشحنة منه مباشرة.
+            </span>
+          </label>
           <div className="flex gap-2 items-end">
             <button type="submit" disabled={busy} className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm disabled:opacity-60">حفظ</button>
             <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]">إلغاء</button>
@@ -114,7 +129,8 @@ export function CouriersScreen() {
         <table className="w-full text-sm">
           <thead className="bg-[#f8fafc] text-[#697586] text-xs">
             <tr>
-              <th className="text-right font-medium px-4 py-2">الشركة</th>
+              <th className="text-right font-medium px-4 py-2">الجهة</th>
+              <th className="text-right font-medium px-4 py-2">النوع</th>
               <th className="text-right font-medium px-4 py-2">الرمز</th>
               <th className="text-right font-medium px-4 py-2">الهاتف</th>
               <th className="text-right font-medium px-4 py-2">الحالة</th>
@@ -124,7 +140,21 @@ export function CouriersScreen() {
             {rows.map((c) => (
               <tr key={c.id}>
                 <td className="px-4 py-2 flex items-center gap-2 text-[#121926]">
-                  <Truck className="w-4 h-4 text-[#697586]" /> {c.name}
+                  {c.kind === 'AGENT' ? (
+                    <Bike className="w-4 h-4 text-[#b8256e]" />
+                  ) : (
+                    <Truck className="w-4 h-4 text-[#697586]" />
+                  )}
+                  {c.name}
+                </td>
+                <td className="px-4 py-2">
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                    c.kind === 'AGENT'
+                      ? 'bg-[#fdf2f7] border-[#f8c4dd] text-[#b8256e]'
+                      : 'bg-[#f8fafc] border-[#e3e8ef] text-[#697586]'
+                  }`}>
+                    {c.kind === 'AGENT' ? 'مندوب' : 'شركة شحن'}
+                  </span>
                 </td>
                 <td className="px-4 py-2 text-[#697586]" dir="ltr">{c.code}</td>
                 <td className="px-4 py-2 text-[#697586]" dir="ltr">{c.phone ?? '—'}</td>
@@ -137,7 +167,7 @@ export function CouriersScreen() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شركات شحن بعد.</td>
+                <td colSpan={5} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شركات شحن ولا مندوبون بعد.</td>
               </tr>
             )}
           </tbody>

@@ -20,8 +20,24 @@ export async function nextOrderNumber(
   attempt = 0,
   now: Date = new Date()
 ): Promise<string> {
-  const count = await tx.order.count({ where: { companyId } });
-  return `${orderPrefix}-${now.getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
+  // Counting rows is wrong: delete or void one and the count drops back onto
+  // a number already in use, the insert hits the unique index, and on
+  // Postgres that poisons the whole transaction — so the retry that was
+  // supposed to recover cannot even run. Continue from the HIGHEST number
+  // issued for this prefix and year instead; a gap is harmless, a collision
+  // is not.
+  const year = now.getFullYear();
+  const stem = `${orderPrefix}-${year}-`;
+
+  const last = await tx.order.findFirst({
+    where: { companyId, orderNumber: { startsWith: stem } },
+    orderBy: { orderNumber: 'desc' },
+    select: { orderNumber: true },
+  });
+
+  const highest = last ? Number.parseInt(last.orderNumber.slice(stem.length), 10) : 0;
+  const next = (Number.isFinite(highest) ? highest : 0) + 1 + attempt;
+  return `${stem}${String(next).padStart(4, '0')}`;
 }
 
 /** Fields every order carries at creation: the number and its merchant ref. */

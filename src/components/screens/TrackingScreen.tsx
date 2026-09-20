@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Clock, Loader2, Search } from 'lucide-react';
+import { Bike, Clock, Loader2, Search, Truck } from 'lucide-react';
+import { TransferDialog } from '@/components/screens/tracking/TransferDialog';
 import { apiJson } from '@/lib/api-client';
 
 /**
@@ -26,7 +27,7 @@ interface Row {
   deliveryFailureReason: string | null;
   customer: { fullName: string; phone: string; city: string };
   region: { name: string } | null;
-  deliveryProvider: { name: string } | null;
+  deliveryProvider: { id: string; name: string; kind?: string } | null;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -53,6 +54,8 @@ export function TrackingScreen() {
   const [status, setStatus] = useState('');
   const [data, setData] = useState<{ orders: Row[]; lateCount: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const [transferFor, setTransferFor] = useState<Row | null>(null);
 
   const load = useCallback(async () => {
     const q = new URLSearchParams();
@@ -109,6 +112,7 @@ export function TrackingScreen() {
       </form>
 
       {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
+      {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
@@ -123,10 +127,12 @@ export function TrackingScreen() {
                 <th className="text-right font-medium px-3 py-2">الباركود</th>
                 <th className="text-right font-medium px-3 py-2">العميل</th>
                 <th className="text-right font-medium px-3 py-2">المحافظة</th>
+                <th className="text-right font-medium px-3 py-2">جهة الشحن</th>
                 <th className="text-right font-medium px-3 py-2">حالة الشحن</th>
                 <th className="text-right font-medium px-3 py-2">أيام الشحن</th>
                 <th className="text-right font-medium px-3 py-2">حالة التحصيل</th>
                 <th className="text-right font-medium px-3 py-2">المبلغ</th>
+                <th className="text-right font-medium px-3 py-2"> </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e3e8ef]">
@@ -136,6 +142,20 @@ export function TrackingScreen() {
                   <td className="px-3 py-2 text-[#697586]" dir="ltr">{o.trackingNumber ?? '—'}</td>
                   <td className="px-3 py-2 text-[#364152]">{o.customer.fullName}</td>
                   <td className="px-3 py-2 text-[#697586]">{o.region?.name ?? o.customer.city}</td>
+                  <td className="px-3 py-2">
+                    {o.deliveryProvider ? (
+                      <span className="inline-flex items-center gap-1 text-[#364152]">
+                        {o.deliveryProvider.kind === 'AGENT' ? (
+                          <Bike className="w-3.5 h-3.5 text-[#b8256e]" />
+                        ) : (
+                          <Truck className="w-3.5 h-3.5 text-[#9aa4b2]" />
+                        )}
+                        {o.deliveryProvider.name}
+                      </span>
+                    ) : (
+                      <span className="text-[#9aa4b2]">—</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-[#364152]">
                     {STATUS_LABEL[o.shippingStatus] ?? o.shippingStatus}
                     {o.deliveryFailureReason && <span className="block text-[11px] text-[#fb323f]">{o.deliveryFailureReason}</span>}
@@ -146,16 +166,42 @@ export function TrackingScreen() {
                   </td>
                   <td className="px-3 py-2 text-[#697586]">{COLLECTION_LABEL[o.collectionStatus] ?? o.collectionStatus}</td>
                   <td className="px-3 py-2 tabular-nums" dir="ltr">{o.totalAmount} {o.currency}</td>
+                  <td className="px-3 py-2 text-left whitespace-nowrap">
+                    <button
+                      onClick={() => setTransferFor(o)}
+                      className="text-xs text-[#b8256e] hover:underline"
+                      title={
+                        o.deliveryProvider?.kind === 'AGENT'
+                          ? 'استلام من المندوب وتحويلها لجهة أخرى'
+                          : 'سحب الشحنة وإصدار طلب بديل لجهة أخرى'
+                      }
+                    >
+                      تحويل
+                    </button>
+                  </td>
                 </tr>
               ))}
               {data.orders.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شحنات مطابقة.</td>
+                  <td colSpan={10} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شحنات مطابقة.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+      )}
+
+      {transferFor && (
+        <TransferDialog
+          order={transferFor}
+          onClose={() => setTransferFor(null)}
+          onDone={async (message) => {
+            setTransferFor(null);
+            setDone(message);
+            setError(null);
+            await load();
+          }}
+        />
       )}
     </div>
   );

@@ -8,6 +8,10 @@ import { requirePermission } from '@/lib/authorization';
 const providerSchema = z.object({
   name: z.string().trim().min(2).max(80),
   code: z.string().trim().min(2).max(30).regex(/^[A-Z0-9_-]+$/i, 'Code: letters/numbers only'),
+  // A مندوب delivers immediately and is settled by hand; a company has its
+  // own pipeline and sends statements. The difference decides whether a
+  // parcel may be moved away without raising a replacement order.
+  kind: z.enum(['COMPANY', 'AGENT']).default('COMPANY'),
   phone: z.string().trim().max(25).optional(),
   email: z.string().trim().email().optional(),
   address: z.string().trim().max(200).optional(),
@@ -24,7 +28,7 @@ export async function GET() {
       where: { companyId },
       orderBy: { createdAt: 'desc' },
       // apiBaseUrl is internal config — not exposed broadly
-      select: { id: true, name: true, code: true, phone: true, email: true, address: true, isActive: true, createdAt: true },
+      select: { id: true, name: true, code: true, kind: true, phone: true, email: true, address: true, isActive: true, createdAt: true },
     });
     return NextResponse.json({ providers });
   } catch (error: any) {
@@ -41,18 +45,18 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
     }
-    const { name, code, phone, email, address, notes } = parsed.data;
+    const { name, code, kind, phone, email, address, notes } = parsed.data;
 
     const clash = await db.deliveryProvider.findFirst({ where: { companyId, code: code.toUpperCase() } });
     if (clash) return NextResponse.json({ error: 'Provider code already exists' }, { status: 409 });
 
     const provider = await db.deliveryProvider.create({
-      data: { companyId, name, code: code.toUpperCase(), phone, email, address, notes },
+      data: { companyId, name, code: code.toUpperCase(), kind, phone, email, address, notes },
     });
 
     await logAudit({
       companyId, userId: user.id, action: 'DELIVERY_PROVIDER_CREATED',
-      entity: 'DeliveryProvider', entityId: provider.id, newData: { name, code },
+      entity: 'DeliveryProvider', entityId: provider.id, newData: { name, code, kind },
     });
 
     return NextResponse.json({ success: true, provider });

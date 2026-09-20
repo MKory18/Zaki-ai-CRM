@@ -51,7 +51,7 @@ export async function GET(req: Request) {
         deliveryProviderId: true,
         customer: { select: { fullName: true, phone: true, city: true } },
         region: { select: { id: true, name: true } },
-        deliveryProvider: { select: { id: true, name: true } },
+        deliveryProvider: { select: { id: true, name: true, kind: true } },
         _count: { select: { deliveryAttempts: true, notes: true } },
       },
     });
