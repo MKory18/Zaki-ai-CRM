@@ -31,6 +31,7 @@ interface Row {
   deliveryProvider: { id: string; name: string; kind?: string } | null;
   deliveryFee?: number | null;
   settlementStatus?: string;
+  _count?: { deliveryAttempts: number; notes: number };
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -41,6 +42,14 @@ const STATUS_LABEL: Record<string, string> = {
   RETURN_REQUESTED: 'طلب إرجاع',
   DELIVERED: 'تم التسليم',
   RETURNED: 'مرتجع',
+};
+
+type TaskFilter = 'all' | 'late' | 'failed' | 'returning' | 'nobarcode' | 'uncollected';
+
+const TASK_TONE: Record<string, string> = {
+  rose: 'bg-[#feecee] border-[#fecdd1] text-[#fb323f]',
+  amber: 'bg-amber-50 border-amber-200 text-amber-700',
+  emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
 };
 
 const COLLECTION_LABEL: Record<string, string> = {
@@ -61,6 +70,7 @@ export function TrackingScreen() {
   const [transferFor, setTransferFor] = useState<Row | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [collecting, setCollecting] = useState(false);
+  const [task, setTask] = useState<TaskFilter>('all');
 
   const load = useCallback(async () => {
     const q = new URLSearchParams();
@@ -80,7 +90,20 @@ export function TrackingScreen() {
   // Only a delivered parcel owes anything, and only once. A returned one
   // owes nothing; one still in transit has not been collected yet.
   const canCollect = (o: Row) => o.shippingStatus === 'DELIVERED' && o.settlementStatus !== 'SETTLED';
-  const collectable = (data?.orders ?? []).filter(canCollect);
+
+  // The work waiting in this screen, each one a thing somebody must do.
+  const all = data?.orders ?? [];
+  const tasks: { key: TaskFilter; label: string; rows: Row[]; tone: string }[] = [
+    { key: 'late', label: 'متأخرة', rows: all.filter((o) => o.late), tone: 'rose' },
+    { key: 'failed', label: 'تعذّر التوصيل', rows: all.filter((o) => o.shippingStatus === 'FAILED_DELIVERY'), tone: 'rose' },
+    { key: 'returning', label: 'بانتظار الإرجاع', rows: all.filter((o) => o.shippingStatus === 'RETURN_REQUESTED'), tone: 'amber' },
+    // Shipped with no barcode: the courier's statement can never be matched
+    // to it, so it would silently fall out of settlement.
+    { key: 'nobarcode', label: 'بلا باركود', rows: all.filter((o) => !o.trackingNumber && o.shippingStatus !== 'READY_FOR_PICKUP'), tone: 'amber' },
+    { key: 'uncollected', label: 'بانتظار التحصيل', rows: all.filter(canCollect), tone: 'emerald' },
+  ];
+  const visible = task === 'all' ? all : (tasks.find((t) => t.key === task)?.rows ?? []);
+  const collectable = visible.filter(canCollect);
   const chosen = collectable.filter((o) => selected[o.id]);
   const netOfChosen = Number(
     chosen.reduce((sum, o) => sum + (Number(o.totalAmount) - Number(o.deliveryFee ?? 0)), 0).toFixed(3)
@@ -127,6 +150,35 @@ export function TrackingScreen() {
 
       {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
       {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
+
+      {data && all.length > 0 && (
+        <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => { setTask('all'); setSelected({}); }}
+            className={`text-xs px-2.5 py-1 rounded-full border ${
+              task === 'all' ? 'bg-[#121926] text-white border-[#121926]' : 'border-[#e3e8ef] text-[#697586]'
+            }`}
+          >
+            الكل {all.length}
+          </button>
+          {tasks.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => { setTask(t.key); setSelected({}); }}
+              disabled={t.rows.length === 0}
+              className={`text-xs px-2.5 py-1 rounded-full border disabled:opacity-40 ${
+                task === t.key
+                  ? 'bg-[#121926] text-white border-[#121926]'
+                  : t.rows.length > 0
+                    ? TASK_TONE[t.tone]
+                    : 'border-[#e3e8ef] text-[#9aa4b2]'
+              }`}
+            >
+              {t.label} {t.rows.length}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Manual settlement: a مندوب — and any company that sends no file —
           has no statement to import, so collection is done by naming the
@@ -177,13 +229,14 @@ export function TrackingScreen() {
                 <th className="text-right font-medium px-3 py-2">جهة الشحن</th>
                 <th className="text-right font-medium px-3 py-2">حالة الشحن</th>
                 <th className="text-right font-medium px-3 py-2">أيام الشحن</th>
+                <th className="text-right font-medium px-3 py-2">المحاولات</th>
                 <th className="text-right font-medium px-3 py-2">حالة التحصيل</th>
                 <th className="text-right font-medium px-3 py-2">المبلغ</th>
                 <th className="text-right font-medium px-3 py-2"> </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e3e8ef]">
-              {data.orders.map((o) => (
+              {visible.map((o) => (
                 <tr key={o.id} className={o.late ? 'bg-[#feecee]/40' : ''}>
                   <td className="px-3 py-2">
                     {canCollect(o) ? (
@@ -220,6 +273,16 @@ export function TrackingScreen() {
                     {o.daysInTransit ?? '—'}
                     {o.lateThresholdDays > 0 && <span className="text-[11px] text-[#9aa4b2]"> / {o.lateThresholdDays}</span>}
                   </td>
+                  <td className="px-3 py-2 text-xs">
+                    <span className={`tabular-nums ${(o._count?.deliveryAttempts ?? 0) > 1 ? 'text-[#fb323f] font-semibold' : 'text-[#697586]'}`}>
+                      {o._count?.deliveryAttempts ?? 0}
+                    </span>
+                    {(o._count?.notes ?? 0) > 0 && (
+                      <span className="text-[#9aa4b2] mr-2" title={`${o._count?.notes} ملاحظة`}>
+                        · {o._count?.notes} ملاحظة
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-[#697586]">{COLLECTION_LABEL[o.collectionStatus] ?? o.collectionStatus}</td>
                   <td className="px-3 py-2 tabular-nums" dir="ltr">{o.totalAmount} {o.currency}</td>
                   <td className="px-3 py-2 text-left whitespace-nowrap">
@@ -237,9 +300,9 @@ export function TrackingScreen() {
                   </td>
                 </tr>
               ))}
-              {data.orders.length === 0 && (
+              {visible.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شحنات مطابقة.</td>
+                  <td colSpan={12} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شحنات مطابقة.</td>
                 </tr>
               )}
             </tbody>

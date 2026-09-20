@@ -22,6 +22,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Wand2,
+  Bike,
+  Truck,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -367,7 +369,9 @@ export function OrdersScreen() {
                             <span className="font-mono text-[11px] text-[#697586]">
                               {order.customer?.rawPhone || order.customer?.phone}
                             </span>
-                            <span className="text-[11px] text-[#9ca3af]">• {order.customer?.city}</span>
+                            <span className="text-[11px] text-[#9ca3af]">
+                              • {order.region?.name ?? order.customer?.city ?? '—'}
+                            </span>
                           </div>
                         </td>
 
@@ -394,6 +398,16 @@ export function OrdersScreen() {
                         <td className="px-6 py-3.5">
                           {/* The derived state, the same one every other screen shows */}
                           <OrderStateBadge state={order.state} />
+                          {order.deliveryProvider && (
+                            <span className="mt-1 flex items-center gap-1 text-[10px] text-[#9ca3af]">
+                              {order.deliveryProvider.kind === 'AGENT' ? (
+                                <Bike className="w-3 h-3 text-[#b8256e]" />
+                              ) : (
+                                <Truck className="w-3 h-3" />
+                              )}
+                              {order.deliveryProvider.name}
+                            </span>
+                          )}
                         </td>
 
                         <td className="px-6 py-3.5">

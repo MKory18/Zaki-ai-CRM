@@ -13,6 +13,7 @@ import { ShippingSection } from '@/components/orders/ShippingSection';
 import { useApp } from '@/context/AppContext';
 import { apiFetch, apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
+import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { useRegions } from '@/hooks/useRegions';
 import { format } from 'date-fns';
 import {
@@ -35,9 +36,22 @@ import {
   ChevronRight,
   Lock,
   Pencil,
+  Bike,
 } from 'lucide-react';
 
 /* ─── Status config: Arabic label + color + icon per status ─── */
+/** Settlement is its own fact, never merged into the delivery status. */
+const SETTLEMENT_AR: Record<string, string> = {
+  PENDING: 'بانتظار التسوية',
+  PENDING_COLLECTION: 'لم يُحصَّل',
+  COLLECTED: 'محصَّل',
+  PARTIALLY_SETTLED: 'مسوّى جزئياً',
+  SETTLED: 'مسوّى',
+  UNSETTLED: 'غير مسوّى',
+  REFUNDED: 'مُسترد',
+  CANCELLED: 'ملغى',
+};
+
 const STATUS_CONFIG: Record<
   string,
   { ar: string; en: string; pill: string; select: string; icon: React.ElementType }
@@ -554,18 +568,54 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             }}
           />
 
-          {/* Current Status — colored with icon */}
+          {/* Current Status — the DERIVED state, the same one the orders list,
+              the queues and the shipment screens show. The stored `status`
+              column is legacy and drifts out of step with reality. */}
           <div className="rounded-2xl border border-slate-200 p-4 bg-gradient-to-l from-slate-50 to-white">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-[11px] font-semibold text-slate-400 block mb-1.5">
-                  {ar ? 'الحالة الحالية' : 'Current Status'}
+                  {ar ? 'حالة الطلب' : 'Order State'}
                 </span>
-                <span
-                  className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 font-bold text-sm ${currentCfg?.pill ?? 'bg-slate-100 text-slate-700 border-slate-300'}`}
-                >
-                  <CurrentIcon className="w-4 h-4" />
-                  {ar ? currentCfg?.ar : currentCfg?.en}
+                <span className="flex flex-wrap items-center gap-2">
+                  {order.state ? (
+                    <OrderStateBadge state={order.state} />
+                  ) : (
+                    <span
+                      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 font-bold text-sm ${currentCfg?.pill ?? 'bg-slate-100 text-slate-700 border-slate-300'}`}
+                    >
+                      <CurrentIcon className="w-4 h-4" />
+                      {ar ? currentCfg?.ar : currentCfg?.en}
+                    </span>
+                  )}
+
+                  {/* Who is carrying it, and whether the money came back. */}
+                  {order.deliveryProvider && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-200 bg-white text-[11px] font-semibold text-slate-600">
+                      {order.deliveryProvider.kind === 'AGENT' ? (
+                        <Bike className="w-3 h-3 text-[#b8256e]" />
+                      ) : (
+                        <Truck className="w-3 h-3 text-slate-400" />
+                      )}
+                      {order.deliveryProvider.name}
+                    </span>
+                  )}
+                  {order.trackingNumber && (
+                    <span className="px-2.5 py-1 rounded-full border border-slate-200 bg-white text-[11px] font-mono text-slate-500" dir="ltr">
+                      {order.trackingNumber}
+                    </span>
+                  )}
+                  {order.settlementStatus && order.settlementStatus !== 'NOT_APPLICABLE' && (
+                    <span
+                      className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold ${
+                        order.settlementStatus === 'SETTLED'
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-amber-50 border-amber-200 text-amber-700'
+                      }`}
+                    >
+                      {SETTLEMENT_AR[order.settlementStatus] ?? order.settlementStatus}
+                    </span>
+                  )}
                 </span>
               </div>
 

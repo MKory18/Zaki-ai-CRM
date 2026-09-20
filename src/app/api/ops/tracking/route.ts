@@ -29,7 +29,11 @@ export async function GET(req: Request) {
       where: {
         companyId,
         storeId,
-        shippingStatus: status && status !== 'all' ? status : { in: IN_FLIGHT },
+        // "all" means all. It used to fall back to the in-flight list, which
+        // hid every delivered shipment — the very ones you collect against.
+        ...(status === 'all'
+          ? {}
+          : { shippingStatus: status ? status : { in: IN_FLIGHT } }),
         ...(term
           ? {
               OR: [
@@ -42,7 +46,9 @@ export async function GET(req: Request) {
             }
           : {}),
       },
-      orderBy: { shippedAt: 'asc' },
+      // Oldest in transit first — the ones waiting longest are the work.
+      // Nulls last so a shipment with no date does not head the queue.
+      orderBy: [{ shippedAt: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
       take: 200,
       select: {
         id: true, orderNumber: true, merchantRef: true, trackingNumber: true,

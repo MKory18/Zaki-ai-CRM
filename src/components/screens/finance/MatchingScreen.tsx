@@ -200,7 +200,7 @@ function Queue({
             <table className="w-full text-sm">
               <thead className="bg-[#f8fafc] text-[#697586] text-xs">
                 <tr>
-                  <th className="text-right font-medium px-3 py-2">المرجع</th>
+                  <th className="text-right font-medium px-3 py-2">باركود الشحنة</th>
                   <th className="text-right font-medium px-3 py-2">الطلب</th>
                   <th className="text-right font-medium px-3 py-2">المتوقَّع</th>
                   <th className="text-right font-medium px-3 py-2">في الكشف</th>
@@ -215,8 +215,18 @@ function Queue({
                   const feeDiff = num(m.feeDifference);
                   return (
                     <tr key={m.id}>
+                      {/* The barcode IS the reference: the courier assigns it
+                          and writes their statement in it. Our own number is
+                          shown under it, smaller, as the fallback key. */}
                       <td className="px-3 py-2 text-[#364152]" dir="ltr">
-                        {m.statementLine?.merchantRef ?? m.statementLine?.barcode ?? m.order?.merchantRef ?? '—'}
+                        <span className="block font-medium">
+                          {m.statementLine?.barcode ?? '—'}
+                        </span>
+                        {(m.statementLine?.merchantRef ?? m.order?.merchantRef) && (
+                          <span className="block text-[11px] text-[#9aa4b2]">
+                            {m.statementLine?.merchantRef ?? m.order?.merchantRef}
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2">
                         {m.order ? (

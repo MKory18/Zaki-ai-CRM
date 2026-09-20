@@ -89,6 +89,10 @@ export async function GET(req: Request) {
           moderator: {
             select: { id: true, name: true, email: true },
           },
+          // Who is carrying it, and where it is going — both are read on the
+          // list, so neither needs opening the order to see.
+          region: { select: { id: true, name: true } },
+          deliveryProvider: { select: { id: true, name: true, kind: true } },
           callLogs: {
             orderBy: { createdAt: 'desc' },
             take: 3,

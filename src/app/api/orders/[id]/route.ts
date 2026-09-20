@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -195,7 +196,16 @@ export async function GET(
       // Navigation is best-effort; never fail the order fetch because of it
     }
 
-    return NextResponse.json({ order, previousOrderId, nextOrderId });
+    // The SAME derived state every other screen shows. The stored `status`
+    // column is legacy and drifts: an order can read CONFIRMED there while it
+    // is already READY_TO_SHIP. One truth, computed in one place.
+    const state = deriveCoreState(order as unknown as StateSource);
+
+    return NextResponse.json({
+      order: { ...order, state, zone: getZone(state) },
+      previousOrderId,
+      nextOrderId,
+    });
   } catch (error) {
     const { body, status } = apiError(error);
     return NextResponse.json(body, { status });
