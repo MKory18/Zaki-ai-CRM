@@ -12,6 +12,7 @@
  */
 import { db } from '../db';
 import { logAudit } from '../audit';
+import { resolveRegionId } from '@/lib/regions';
 import { orderRefFields } from '../order-ref';
 import { computeCod } from '../money';
 import { createNotification } from '../notification';
@@ -135,6 +136,9 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   const now = new Date();
 
   try {
+    // The delivery fee is keyed on the region, so bind it at intake.
+    const resolvedRegionId = await resolveRegionId(db, store.countryId, input.governorate ?? address);
+
     const order = await db.$transaction(async (tx) => {
       let created: any = null;
       for (let attempt = 0; attempt < 5; attempt++) {
@@ -145,6 +149,7 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
               companyId,
               countryId: store.countryId,
               storeId: store.id,
+              regionId: resolvedRegionId,
               ...refs,
               customerId: customer.id,
               productId: productRow.id,

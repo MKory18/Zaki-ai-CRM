@@ -13,6 +13,7 @@ import { ShippingSection } from '@/components/orders/ShippingSection';
 import { useApp } from '@/context/AppContext';
 import { apiFetch, apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
+import { useRegions } from '@/hooks/useRegions';
 import { format } from 'date-fns';
 import {
   User,
@@ -639,14 +640,19 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 </div>
                 <div className="flex items-start gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-[11px] text-slate-400">عنوان التوصيل</p>
-                    <p className="text-slate-700 text-xs leading-relaxed">
-                      {order.customer?.address}
-                      {order.customer?.city ? ` — ${order.customer.city}` : ''}
-                    </p>
+                    <p className="text-slate-700 text-xs leading-relaxed">{order.customer?.address}</p>
                   </div>
                 </div>
+
+                {/* The governorate is a real Region, not free text: the delivery
+                    fee is keyed on it, so an order without one cannot be priced
+                    or shipped. Editable here for exactly that reason. */}
+                <OrderRegionField
+                  order={order}
+                  onSaved={async () => { await loadOrder(order.id); onRefresh(); }}
+                />
               </div>
 
               <div className="space-y-2.5">
@@ -966,5 +972,105 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         </div>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * The order's governorate, shown and editable.
+ *
+ * It is a Region row, not the free-text city: the delivery-fee table is keyed
+ * on regionId, and an order that never resolved one reaches the shipment
+ * screen as "no governorate — cannot price delivery". The server re-checks
+ * that the chosen region belongs to this order's country.
+ */
+function OrderRegionField({
+  order,
+  onSaved,
+}: {
+  order: any;
+  onSaved: () => void | Promise<void>;
+}) {
+  const { regions, loading } = useRegions();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState<string>(order.regionId ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const current = regions.find((r) => r.id === order.regionId);
+
+  if (!editing) {
+    return (
+      <div className="flex items-start gap-1.5">
+        <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+        <div className="flex-1">
+          <p className="text-[11px] text-slate-400">المحافظة</p>
+          <div className="flex items-center gap-2">
+            {order.regionId ? (
+              <p className="text-slate-700 text-xs font-medium">{current?.name ?? order.customer?.city}</p>
+            ) : (
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[6px] px-2 py-0.5">
+                لم تُحدَّد — لا يمكن حساب أجرة التوصيل
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => { setValue(order.regionId ?? ''); setEditing(true); }}
+              className="text-[11px] text-[#b8256e] hover:underline"
+            >
+              {order.regionId ? 'تغيير' : 'تحديد'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-1.5">
+      <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+      <div className="flex-1">
+        <p className="text-[11px] text-slate-400 mb-1">المحافظة</p>
+        <div className="flex items-center gap-2">
+          <select
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            disabled={loading || saving}
+            className="flex-1 h-8 px-2 rounded-lg border border-slate-200 text-xs bg-white"
+          >
+            <option value="">اختر…</option>
+            {regions.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={saving || !value}
+            onClick={async () => {
+              setSaving(true);
+              setError(null);
+              try {
+                await apiJson(`/api/orders/${order.id}`, {
+                  method: 'PATCH',
+                  body: JSON.stringify({ regionId: value, expectedVersion: order.version }),
+                });
+                setEditing(false);
+                await onSaved();
+              } catch (e) {
+                setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+              } finally {
+                setSaving(false);
+              }
+            }}
+            className="h-8 px-3 rounded-lg bg-[#b8256e] text-white text-xs font-bold disabled:opacity-50"
+          >
+            {saving ? '…' : 'حفظ'}
+          </button>
+          <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-slate-500">
+            إلغاء
+          </button>
+        </div>
+        {error && <p className="text-[11px] text-red-600 mt-1">{error}</p>}
+      </div>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { orderRefFields } from '@/lib/order-ref';
 import { computeCod } from '@/lib/money';
+import { matchRegion } from '@/lib/regions';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import {
   LANDING_PAGE_SOURCE,
@@ -142,10 +143,9 @@ export async function POST(req: Request, ctx: Ctx) {
     }
 
     // The chosen city is a real region of this country, so the order carries
-    // its id — that is what the delivery-fee table is keyed on.
-    const region = regions.find(
-      (r) => r.name.trim().toLocaleLowerCase('ar') === v.city.trim().toLocaleLowerCase('ar')
-    );
+    // its id — that is what the delivery-fee table is keyed on. Same matcher
+    // every other intake path uses.
+    const region = matchRegion(regions, v.city);
 
     const companyId = lp.company.id; // server-derived — NEVER from the browser
     const product = lp.product;

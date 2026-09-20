@@ -72,7 +72,7 @@ export const NAV: NavGroup[] = [
     key: 'inventory',
     label: 'المخزون',
     routes: [
-      r('/inventory/receiving', 'استلام البضاعة', 'PackagePlus', ['inventory.adjust'], 6),
+      r('/inventory/receiving', 'استلام البضاعة', 'PackagePlus', ['inventory.adjust']),
       r('/inventory/balances', 'أرصدة المخزون', 'Boxes', ['inventory.view']),
       r('/inventory/movements', 'حركات المخزون', 'ArrowLeftRight', ['inventory.view'], 6),
     ],

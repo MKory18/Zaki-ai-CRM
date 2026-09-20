@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { orderRefFields } from '@/lib/order-ref';
+import { resolveRegionId } from '@/lib/regions';
 import { computeCod } from '@/lib/money';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -169,11 +170,17 @@ export async function POST(req: Request) {
         minorUnit: country.minorUnit,
       });
 
+      // Bind the governorate written in the message to a real Region: the
+      // delivery fee is keyed on it, so an order without one cannot be priced
+      // or shipped.
+      const resolvedRegionId = await resolveRegionId(db, countryId, p.governorate ?? customer.city);
+
       const order = await db.order.create({
         data: {
           companyId,
           countryId,
           storeId,
+          regionId: resolvedRegionId,
           ...refs,
           customerId: customer.id,
           productId: product.id,

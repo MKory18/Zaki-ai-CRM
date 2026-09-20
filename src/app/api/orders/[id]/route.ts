@@ -34,6 +34,9 @@ const patchSchema = z.object({
   customerName: z.string().trim().min(2).max(80).optional(),
   customerPhone: z.string().trim().min(7).max(20).optional(),
   customerAddress: z.string().trim().max(300).optional(),
+  // The governorate the order ships to. The delivery-fee table is keyed on
+  // it, so it is editable here rather than only at intake.
+  regionId: z.string().uuid().optional().nullable(),
   postponedUntil: parseableDate.nullable().optional(),
   trackingCode: z.string().trim().max(100).optional().nullable(),
   confirmationStatus: z.enum(CONFIRMATION_STATUSES).optional(),
@@ -112,6 +115,8 @@ export async function GET(
         customer: true,
         product: true,
         offer: true,
+        region: { select: { id: true, name: true } },
+        deliveryProvider: { select: { id: true, name: true, code: true } },
         landingPage: { select: { id: true, name: true, slug: true } },
         landingPageOffer: { select: { id: true, name: true, quantity: true, freeQuantity: true, price: true } },
         addOns: { orderBy: { createdAt: 'asc' } },
@@ -216,7 +221,7 @@ export async function PATCH(
     const {
       status, moderatorId, internalNotes, customerNotes, postponedUntil, trackingCode,
       confirmationStatus, shippingStatus, expectedVersion,
-      customerName, customerPhone, customerAddress,
+      customerName, customerPhone, customerAddress, regionId,
       sellingPrice, quantity, discountAmount, shippingCost, productId,
     } = parsed.data;
 
@@ -414,8 +419,32 @@ export async function PATCH(
       updateData.productNameSnapshot = product.name;
     }
 
+    // Region edit — must belong to THIS order's country, so a Jordanian
+    // order can never be pointed at a Syrian governorate.
+    let regionName: string | undefined;
+    if (regionId !== undefined) {
+      if (regionId === null) {
+        updateData.regionId = null;
+      } else {
+        const region = await db.region.findFirst({
+          where: { id: regionId, countryId: existing.countryId, isActive: true },
+          select: { id: true, name: true },
+        });
+        if (!region) {
+          return NextResponse.json(
+            { error: 'المحافظة غير موجودة في بلد هذا الطلب', code: 'REGION_NOT_IN_COUNTRY' },
+            { status: 400 }
+          );
+        }
+        updateData.regionId = region.id;
+        regionName = region.name;
+      }
+    }
+
     // Customer information edit (name / phone / address) — applied to the linked Customer row
-    const editingCustomer = customerName !== undefined || customerPhone !== undefined || customerAddress !== undefined;
+    const editingCustomer =
+      customerName !== undefined || customerPhone !== undefined || customerAddress !== undefined ||
+      regionName !== undefined;
     if (editingCustomer && customerPhone !== undefined) {
       const normalized = normalizePhoneNumber(customerPhone);
       const dupe = await db.customer.findFirst({
@@ -449,6 +478,8 @@ export async function PATCH(
         const custData: any = {};
         if (customerName !== undefined) custData.fullName = customerName;
         if (customerAddress !== undefined) custData.address = customerAddress;
+        // Keep the written city in step with the chosen governorate.
+        if (regionName !== undefined) custData.city = regionName;
         if (customerPhone !== undefined) {
           custData.phone = normalizePhoneNumber(customerPhone);
           custData.rawPhone = customerPhone;

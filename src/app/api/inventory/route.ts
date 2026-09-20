@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
+import { drawDownStock, onHandTotal, receiveStock } from '@/lib/receiving';
 
 export async function GET() {
   try {
@@ -81,39 +82,48 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Product not found in your company' }, { status: 404 });
     }
 
-    // If batchId specified, adjust batch remaining (batch must belong to this company + product)
-    if (batchId) {
-      const batch = await db.productionBatch.findFirst({
-        where: { id: batchId, companyId, productId },
-      });
-      if (batch) {
-        const newRemaining = Math.max(0, batch.quantityRemaining + qty);
-        await db.productionBatch.update({
+    // Units live in batches: on-hand is the sum of their remainders. A
+    // movement that touches no batch changes nothing, which is why stock
+    // entered for a product with no batch used to vanish — the ledger said it
+    // arrived and the shipment screen still called it a shortage.
+    const movement = await db.$transaction(async (tx) => {
+      if (qty > 0 && !batchId) {
+        // Receiving into a product that has no batch yet: open one.
+        const received = await receiveStock(tx, {
+          companyId,
+          productId,
+          quantity: qty,
+          unitCost: typeof body.unitCost === 'number' ? body.unitCost : undefined,
+          note: reason?.trim() || null,
+          createdById: user.id,
+        });
+        return received.movement;
+      }
+
+      if (batchId) {
+        const batch = await tx.productionBatch.findFirst({ where: { id: batchId, companyId, productId } });
+        if (!batch) throw new Error('BATCH_NOT_FOUND');
+        await tx.productionBatch.update({
           where: { id: batch.id },
-          data: { quantityRemaining: newRemaining },
+          data: { quantityRemaining: Math.max(0, batch.quantityRemaining + qty) },
         });
       } else {
-        return NextResponse.json({ error: 'Batch not found in your company' }, { status: 404 });
+        // Taking stock out with no batch named: oldest first.
+        await drawDownStock(tx, { companyId, productId, quantity: Math.abs(qty), allowNegative: false });
       }
-    }
 
-    // Get current total remaining across batches (company-scoped)
-    const allBatches = await db.productionBatch.findMany({
-      where: { productId, companyId },
-    });
-    const currentTotal = allBatches.reduce((s, b) => s + b.quantityRemaining, 0);
-
-    const movement = await db.inventoryMovement.create({
-      data: {
-        companyId,
-        productId,
-        batchId: batchId || null,
-        type, // PRODUCTION, SALE, RETURN, MANUAL_ADJUSTMENT
-        quantity: qty,
-        balanceAfter: currentTotal,
-        reason: reason?.trim() || 'Manual adjustment',
-        createdById: user.id,
-      },
+      return tx.inventoryMovement.create({
+        data: {
+          companyId,
+          productId,
+          batchId: batchId || null,
+          type, // PRODUCTION, SALE, RETURN, MANUAL_ADJUSTMENT
+          quantity: qty,
+          balanceAfter: await onHandTotal(tx, companyId, productId),
+          reason: reason?.trim() || 'Manual adjustment',
+          createdById: user.id,
+        },
+      });
     });
 
     await logAudit({
@@ -127,6 +137,12 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, movement });
   } catch (error: any) {
+    if (error?.message === 'BATCH_NOT_FOUND') {
+      return NextResponse.json({ error: 'Batch not found in your company' }, { status: 404 });
+    }
+    if (typeof error?.message === 'string' && error.message.includes('غير كافٍ')) {
+      return NextResponse.json({ error: error.message, code: 'INSUFFICIENT_STOCK' }, { status: 409 });
+    }
     return apiErrorResponse(error);
   }
 }
