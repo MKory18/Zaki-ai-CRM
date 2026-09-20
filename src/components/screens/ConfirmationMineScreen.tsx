@@ -1,15 +1,21 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Phone, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Phone, PhoneOff, ShieldAlert } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import {
+  ChangeRequestDialog,
+  IssueDialog,
+  PostponeDialog,
+  type PostponeValue,
+} from './confirmation/ActionDialogs';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
  * already-confirmed (read-only, with a change request per row).
  *
- * Every number here — COD, risk tier, attempt count — comes from the API.
- * The screen only renders and sends actions.
+ * Every number here — COD, risk tier, attempt counter — comes from the API.
+ * The screen renders and sends; it never decides.
  */
 
 interface RiskInfo {
@@ -31,6 +37,7 @@ interface OrderRow {
   postponedUntil: string | null;
   postponePreferredTime: string | null;
   postponeCount: number;
+  noAnswerCount: number;
   customer: { id: string; fullName: string; phone: string; rawPhone: string; city: string; address: string };
   items: { id: string; productName: string; quantity: number; freeQuantity: number; lineTotal: number }[];
   _count: { contactAttempts: number; notes: number };
@@ -40,6 +47,7 @@ interface OrderRow {
 
 interface MineResponse {
   leadDays: number;
+  noAnswerLimit: number;
   inConfirmation: OrderRow[];
   confirmed: OrderRow[];
 }
@@ -50,10 +58,16 @@ const RISK_LABEL: Record<string, { text: string; cls: string }> = {
   HIGH: { text: 'خطورة عالية', cls: 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]' },
 };
 
+type DialogState =
+  | { kind: 'postpone' | 'issue' | 'change'; order: OrderRow }
+  | null;
+
 export function ConfirmationMineScreen() {
   const [data, setData] = useState<MineResponse | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<DialogState>(null);
 
   const load = useCallback(async () => {
     try {
@@ -71,8 +85,9 @@ export function ConfirmationMineScreen() {
     setBusyId(id);
     setError(null);
     try {
-      await fn();
+      const result = await fn();
       await load();
+      return result;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر تنفيذ الإجراء');
     } finally {
@@ -81,13 +96,22 @@ export function ConfirmationMineScreen() {
   };
 
   const logAttempt = (order: OrderRow, method: 'PHONE' | 'WHATSAPP' | 'SMS', result: string) =>
-    act(order.id, () =>
-      apiJson(`/api/orders/${order.id}/contact-attempts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contactMethod: method, result }),
-      })
-    );
+    act(order.id, async () => {
+      const res = await apiJson<{ autoClosed: boolean; noAnswerCount: number }>(
+        `/api/orders/${order.id}/contact-attempts`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contactMethod: method, result }),
+        }
+      );
+      setNotice(
+        res.autoClosed
+          ? `أُغلق الطلب ${order.orderNumber} تلقائياً بعد ${res.noAnswerCount} محاولات بلا رد.`
+          : null
+      );
+      return res;
+    });
 
   const confirm = (order: OrderRow) =>
     act(order.id, () =>
@@ -99,50 +123,47 @@ export function ConfirmationMineScreen() {
       })
     );
 
-  const postpone = (order: OrderRow) => {
-    const date = window.prompt('تاريخ التأجيل (YYYY-MM-DD)');
-    if (!date) return;
-    const preferredTime = window.prompt('الوقت المفضّل للعميل (اختياري)') ?? '';
-    const at = new Date(`${date}T10:00:00`);
+  const submitPostpone = (order: OrderRow, value: PostponeValue) => {
+    const at = new Date(`${value.date}T10:00:00`);
     if (Number.isNaN(at.getTime())) {
       setError('تاريخ غير صالح');
       return;
     }
-    return act(order.id, () =>
+    setDialog(null);
+    void act(order.id, () =>
       apiJson(`/api/orders/${order.id}/confirmation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'schedule_follow_up',
           nextFollowUpAt: at.toISOString(),
-          followUpReason: 'POSTPONED',
-          preferredTime,
+          followUpReason: value.reason,
+          preferredTime: value.preferredTime,
+          note: value.note || undefined,
           expectedVersion: order.version,
         }),
       })
     );
   };
 
-  const raiseIssue = (order: OrderRow) => {
-    const note = window.prompt('ما المشكلة في بيانات الإدخال؟');
-    if (!note) return;
-    return act(order.id, () =>
+  const submitIssue = (order: OrderRow, value: { reason: string; note: string }) => {
+    setDialog(null);
+    void act(order.id, () =>
       apiJson('/api/confirmation/issues', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.id, reason: 'MISSING_DATA', note }),
+        body: JSON.stringify({ orderId: order.id, reason: value.reason, note: value.note || undefined }),
       })
     );
   };
 
-  const requestChange = (order: OrderRow) => {
-    const reason = window.prompt('ما التعديل المطلوب على هذا الطلب المؤكد؟');
-    if (!reason) return;
-    return act(order.id, () =>
+  const submitChange = (order: OrderRow, value: { field: string; to: string; reason: string }) => {
+    setDialog(null);
+    void act(order.id, () =>
       apiJson(`/api/orders/${order.id}/change-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason, changes: { customerNotes: { to: reason } } }),
+        body: JSON.stringify({ reason: value.reason, changes: { [value.field]: { to: value.to } } }),
       })
     );
   };
@@ -160,6 +181,9 @@ export function ConfirmationMineScreen() {
       {error && (
         <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>
       )}
+      {notice && (
+        <p className="text-sm text-[#c07f2a] bg-amber-50 border border-amber-100 rounded-[8px] p-3">{notice}</p>
+      )}
 
       <section>
         <h2 className="text-sm font-bold text-[#121926] mb-3">قيد التأكيد ({data.inConfirmation.length})</h2>
@@ -169,64 +193,95 @@ export function ConfirmationMineScreen() {
               لا يوجد طلب بيدك الآن. اسحب طلباً من مركز التأكيد.
             </p>
           )}
-          {data.inConfirmation.map((order) => (
-            <article key={order.id} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
-              <header className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-[#121926]" dir="ltr">{order.orderNumber}</span>
-                <span className="text-xs text-[#697586]">{order.confirmationStatus}</span>
-                {order.risk && (
-                  <span className={`text-[11px] px-2 py-0.5 rounded-[6px] border ${RISK_LABEL[order.risk.tier].cls}`}>
-                    {RISK_LABEL[order.risk.tier].text} · {Math.round(order.risk.returnRate * 100)}% مرتجع من{' '}
-                    {order.risk.orders} طلب
+          {data.inConfirmation.map((order) => {
+            const remaining = Math.max(0, data.noAnswerLimit - order.noAnswerCount);
+            return (
+              <article key={order.id} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
+                <header className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-[#121926]" dir="ltr">{order.orderNumber}</span>
+                  <span className="text-xs text-[#697586]">{order.confirmationStatus}</span>
+                  {order.risk && (
+                    <span className={`text-[11px] px-2 py-0.5 rounded-[6px] border ${RISK_LABEL[order.risk.tier].cls}`}>
+                      {RISK_LABEL[order.risk.tier].text} · {Math.round(order.risk.returnRate * 100)}% مرتجع من{' '}
+                      {order.risk.orders} طلب
+                    </span>
+                  )}
+                  <span className="mr-auto text-sm font-semibold text-[#121926] tabular-nums" dir="ltr">
+                    {order.totalAmount} {order.currency}
                   </span>
+                </header>
+
+                <div className="text-sm text-[#364152]">
+                  {order.customer.fullName} · <span dir="ltr">{order.customer.rawPhone}</span> · {order.customer.city}
+                  <p className="text-xs text-[#697586] mt-1">{order.customer.address}</p>
+                </div>
+
+                <ul className="text-xs text-[#697586] space-y-0.5">
+                  {order.items.map((it) => (
+                    <li key={it.id}>
+                      {it.productName} × {it.quantity}
+                      {it.freeQuantity > 0 && ` (+${it.freeQuantity} هدية)`}
+                    </li>
+                  ))}
+                </ul>
+
+                {order.postponedUntil && (
+                  <p className="text-xs text-[#c07f2a]">
+                    مؤجل حتى{' '}
+                    <span dir="ltr">{new Date(order.postponedUntil).toLocaleDateString('ar-EG')}</span>
+                    {order.postponePreferredTime && ` · ${order.postponePreferredTime}`} · تأجيل رقم{' '}
+                    {order.postponeCount}
+                  </p>
                 )}
-                <span className="mr-auto text-sm font-semibold text-[#121926] tabular-nums" dir="ltr">
-                  {order.totalAmount} {order.currency}
-                </span>
-              </header>
 
-              <div className="text-sm text-[#364152]">
-                {order.customer.fullName} · <span dir="ltr">{order.customer.rawPhone}</span> · {order.customer.city}
-                <p className="text-xs text-[#697586] mt-1">{order.customer.address}</p>
-              </div>
+                {order.risk?.requiresPrepaymentOrApproval && (
+                  <p className="flex items-center gap-2 text-xs text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-2">
+                    <ShieldAlert className="w-4 h-4" /> عميل عالي الخطورة: يتطلب دفعاً مسبقاً أو موافقة المشرف.
+                  </p>
+                )}
 
-              <ul className="text-xs text-[#697586] space-y-0.5">
-                {order.items.map((it) => (
-                  <li key={it.id}>
-                    {it.productName} × {it.quantity}
-                    {it.freeQuantity > 0 && ` (+${it.freeQuantity} هدية)`}
-                  </li>
-                ))}
-              </ul>
+                <footer className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#e3e8ef]">
+                  <Action onClick={() => logAttempt(order, 'PHONE', 'ANSWERED')} busy={busyId === order.id} icon={<Phone className="w-3.5 h-3.5" />}>
+                    ردّ على الاتصال
+                  </Action>
 
-              {order.risk?.requiresPrepaymentOrApproval && (
-                <p className="flex items-center gap-2 text-xs text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-2">
-                  <ShieldAlert className="w-4 h-4" /> عميل عالي الخطورة: يتطلب دفعاً مسبقاً أو موافقة المشرف.
-                </p>
-              )}
+                  {/* 1/2/3 counter — the third no-answer closes the order by rule */}
+                  <Action
+                    onClick={() => logAttempt(order, 'PHONE', 'NO_ANSWER')}
+                    busy={busyId === order.id}
+                    icon={<PhoneOff className="w-3.5 h-3.5" />}
+                    danger={remaining <= 1}
+                  >
+                    لا يرد
+                    <span className="tabular-nums" dir="ltr">
+                      {' '}
+                      {order.noAnswerCount}/{data.noAnswerLimit}
+                    </span>
+                  </Action>
+                  <span className="text-[11px] text-[#9aa4b2]">
+                    {remaining === 0
+                      ? 'بلغ الحد'
+                      : remaining === 1
+                        ? 'المحاولة القادمة تُغلق الطلب تلقائياً'
+                        : `متبقٍ ${remaining} محاولات قبل الإغلاق التلقائي`}
+                  </span>
 
-              <footer className="flex flex-wrap gap-2 pt-1 border-t border-[#e3e8ef]">
-                <Action onClick={() => logAttempt(order, 'PHONE', 'ANSWERED')} busy={busyId === order.id} icon={<Phone className="w-3.5 h-3.5" />}>
-                  رد على الاتصال
-                </Action>
-                <Action onClick={() => logAttempt(order, 'PHONE', 'NO_ANSWER')} busy={busyId === order.id}>
-                  لا يرد ({order._count.contactAttempts})
-                </Action>
-                <Action onClick={() => logAttempt(order, 'WHATSAPP', 'ANSWERED')} busy={busyId === order.id} icon={<MessageCircle className="w-3.5 h-3.5" />}>
-                  واتساب
-                </Action>
-                <Action onClick={() => postpone(order)} busy={busyId === order.id} icon={<Clock className="w-3.5 h-3.5" />}>
-                  تأجيل {order.postponeCount > 0 && `(${order.postponeCount})`}
-                </Action>
-                <Action onClick={() => raiseIssue(order)} busy={busyId === order.id} icon={<AlertTriangle className="w-3.5 h-3.5" />}>
-                  إشكال إدخال
-                </Action>
-                <Action primary onClick={() => confirm(order)} busy={busyId === order.id} icon={<CheckCircle2 className="w-3.5 h-3.5" />}>
-                  تأكيد الطلب
-                </Action>
-              </footer>
-            </article>
-          ))}
+                  <Action onClick={() => logAttempt(order, 'WHATSAPP', 'ANSWERED')} busy={busyId === order.id} icon={<MessageCircle className="w-3.5 h-3.5" />}>
+                    واتساب
+                  </Action>
+                  <Action onClick={() => setDialog({ kind: 'postpone', order })} busy={busyId === order.id} icon={<Clock className="w-3.5 h-3.5" />}>
+                    تأجيل {order.postponeCount > 0 && `(${order.postponeCount})`}
+                  </Action>
+                  <Action onClick={() => setDialog({ kind: 'issue', order })} busy={busyId === order.id} icon={<AlertTriangle className="w-3.5 h-3.5" />}>
+                    إشكال إدخال
+                  </Action>
+                  <Action primary onClick={() => confirm(order)} busy={busyId === order.id} icon={<CheckCircle2 className="w-3.5 h-3.5" />}>
+                    تأكيد الطلب
+                  </Action>
+                </footer>
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -255,7 +310,7 @@ export function ConfirmationMineScreen() {
                       <span className="text-xs text-[#c07f2a]">طلب تعديل قيد المراجعة</span>
                     ) : (
                       <button
-                        onClick={() => requestChange(order)}
+                        onClick={() => setDialog({ kind: 'change', order })}
                         disabled={busyId === order.id}
                         className="text-xs text-[#b8256e] hover:underline disabled:opacity-50"
                       >
@@ -276,6 +331,35 @@ export function ConfirmationMineScreen() {
           </table>
         </div>
       </section>
+
+      {dialog?.kind === 'postpone' && (
+        <PostponeDialog
+          open
+          orderNumber={dialog.order.orderNumber}
+          postponeCount={dialog.order.postponeCount}
+          busy={busyId === dialog.order.id}
+          onClose={() => setDialog(null)}
+          onSubmit={(value) => submitPostpone(dialog.order, value)}
+        />
+      )}
+      {dialog?.kind === 'issue' && (
+        <IssueDialog
+          open
+          orderNumber={dialog.order.orderNumber}
+          busy={busyId === dialog.order.id}
+          onClose={() => setDialog(null)}
+          onSubmit={(value) => submitIssue(dialog.order, value)}
+        />
+      )}
+      {dialog?.kind === 'change' && (
+        <ChangeRequestDialog
+          open
+          orderNumber={dialog.order.orderNumber}
+          busy={busyId === dialog.order.id}
+          onClose={() => setDialog(null)}
+          onSubmit={(value) => submitChange(dialog.order, value)}
+        />
+      )}
     </div>
   );
 }
@@ -285,12 +369,14 @@ function Action({
   onClick,
   busy,
   primary,
+  danger,
   icon,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   busy?: boolean;
   primary?: boolean;
+  danger?: boolean;
   icon?: React.ReactNode;
 }) {
   return (
@@ -300,7 +386,9 @@ function Action({
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-xs font-medium border disabled:opacity-50 ${
         primary
           ? 'bg-[#b8256e] text-white border-[#b8256e]'
-          : 'bg-white text-[#364152] border-[#e3e8ef] hover:border-[#b8256e]'
+          : danger
+            ? 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]'
+            : 'bg-white text-[#364152] border-[#e3e8ef] hover:border-[#b8256e]'
       }`}
     >
       {icon}

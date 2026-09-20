@@ -5,6 +5,8 @@ import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
 import { CONTACT_METHODS, CONTACT_RESULTS } from '@/lib/confirmation-workflow';
 import { logAudit } from '@/lib/audit';
+import { NO_ANSWER_LIMIT } from '@/lib/confirmation-workflow';
+import { releaseOrderLines } from '@/lib/reservation';
 import { can, authorize } from '@/lib/authorization';
 
 /**
@@ -103,19 +105,62 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
     const attemptNumber = (lastAttempt?.attemptNumber ?? 0) + 1;
 
-    const attempt = await db.orderContactAttempt.create({
-      data: {
-        companyId,            // from session — never client
-        orderId: id,
-        employeeId: user.id,  // server-derived — forged employeeId impossible
-        employeeRole: user.role,
-        attemptNumber,
-        contactMethod: contactMethod!,
-        result: result!,
-        note: note?.trim() || null,
-        nextFollowUpAt: fu.date,
-      },
-      include: { employee: { select: { id: true, name: true } } },
+    // ── The 1/2/3 no-answer rule ──
+    // The third no-answer closes the order under its OWN reason, in the same
+    // transaction as the attempt, and releases the reservation. It is not a
+    // customer rejection and must never be reported as one.
+    const { attempt, autoClosed, noAnswerCount } = await db.$transaction(async (tx) => {
+      const created = await tx.orderContactAttempt.create({
+        data: {
+          companyId,            // from session — never client
+          orderId: id,
+          employeeId: user.id,  // server-derived — forged employeeId impossible
+          employeeRole: user.role,
+          attemptNumber,
+          contactMethod: contactMethod!,
+          result: result!,
+          note: note?.trim() || null,
+          nextFollowUpAt: fu.date,
+        },
+        include: { employee: { select: { id: true, name: true } } },
+      });
+
+      const noAnswers = await tx.orderContactAttempt.count({
+        where: { orderId: id, result: { in: ['NO_ANSWER', 'BUSY'] } },
+      });
+
+      const terminal = ['CONFIRMED', 'REJECTED', 'CANCELLED'].includes(order.confirmationStatus);
+      if (result === 'NO_ANSWER' && noAnswers >= NO_ANSWER_LIMIT && !terminal) {
+        await tx.order.update({
+          where: { id },
+          data: {
+            confirmationStatus: 'CANCELLED',
+            status: 'CANCELLED',
+            rejectionReason: 'NO_ANSWER_3_ATTEMPTS',
+            rejectionNote: `إغلاق تلقائي بعد ${noAnswers} محاولات بلا رد`,
+            moderatorCommission: 0,
+            followUpStatus: order.nextFollowUpAt ? 'CANCELLED' : order.followUpStatus,
+            version: { increment: 1 },
+          },
+        });
+        await releaseOrderLines(tx, id);
+        await tx.orderStatusLog.create({
+          data: {
+            companyId, orderId: id, statusType: 'CONFIRMATION',
+            previousValue: order.confirmationStatus, newValue: 'CANCELLED',
+            changedById: user.id, changedByRole: user.role,
+            note: 'AUTO_CLOSE_NO_ANSWER_3_ATTEMPTS',
+          },
+        });
+        await tx.orderNote.create({
+          data: {
+            companyId, orderId: id, authorId: user.id, kind: 'follow_up',
+            body: `أُغلق الطلب تلقائياً بعد ${noAnswers} محاولات اتصال بلا رد.`,
+          },
+        });
+        return { attempt: created, autoClosed: true, noAnswerCount: noAnswers };
+      }
+      return { attempt: created, autoClosed: false, noAnswerCount: noAnswers };
     });
 
     await logAudit({
@@ -124,7 +169,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       newData: { attemptNumber, contactMethod, result, nextFollowUpAt: fu.date },
     });
 
-    return NextResponse.json({ success: true, attempt });
+    return NextResponse.json({
+      success: true,
+      attempt,
+      noAnswerCount,
+      noAnswerLimit: NO_ANSWER_LIMIT,
+      autoClosed,
+    });
   } catch (error: any) {
     return apiErrorResponse(error);
   }

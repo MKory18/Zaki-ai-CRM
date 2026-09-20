@@ -134,7 +134,9 @@ async function main() {
   console.log('\nTEST 9/10 — Confirm & reject semantics');
   ok('IN_PROGRESS → CONFIRMED valid', wf.isValidTransition('IN_PROGRESS', 'CONFIRMED'));
   ok('IN_PROGRESS → REJECTED valid', wf.isValidTransition('IN_PROGRESS', 'REJECTED'));
-  ok('8 structured rejection reasons defined', wf.REJECTION_REASONS.length === 8);
+  // 8 original reasons + NO_ANSWER_3_ATTEMPTS (Stage 4 auto-close)
+  ok('9 structured rejection reasons defined', wf.REJECTION_REASONS.length === 9);
+  ok('auto-close has its own reason', (wf.REJECTION_REASONS as readonly string[]).includes('NO_ANSWER_3_ATTEMPTS'));
   ok('reject OTHER requires note (validator contract)', (wf.REJECTION_REASONS as readonly string[]).includes('OTHER'));
 
   // ═══ TEST 11 ═══
