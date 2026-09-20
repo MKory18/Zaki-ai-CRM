@@ -1,5 +1,6 @@
 import type { CourierAdapter } from './types';
 import { manualAdapter } from './manual';
+import { logesTechsFromEnv } from './logestechs';
 
 /**
  * Adapter registry, keyed by DeliveryProvider.code.
@@ -9,6 +10,12 @@ import { manualAdapter } from './manual';
  * working only when someone deliberately turns it on for that provider.
  */
 const ADAPTERS = new Map<string, CourierAdapter>([[manualAdapter.code, manualAdapter]]);
+
+// LogesTechs registers itself only when its credentials are configured.
+// Without them there is nothing to call, so the provider stays manual
+// rather than failing at the first request.
+const logesTechs = logesTechsFromEnv();
+if (logesTechs) ADAPTERS.set(logesTechs.code, logesTechs);
 
 export function registerAdapter(adapter: CourierAdapter): void {
   ADAPTERS.set(adapter.code.toUpperCase(), adapter);
@@ -25,3 +32,4 @@ export function isAutomated(provider: { code: string; apiEnabled?: boolean } | n
 
 export * from './types';
 export { manualAdapter };
+export { LogesTechsAdapter, LOGESTECHS_STATUS, LOGESTECHS_STATUS_AR } from './logestechs';

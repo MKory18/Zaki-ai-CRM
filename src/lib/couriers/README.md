@@ -25,23 +25,66 @@ In-transit statuses (`SHIPPED`, `OUT_FOR_DELIVERY`, `FAILED_DELIVERY`) move no
 money and may be applied automatically — through the normal transition
 machine in `shipping-workflow.ts`, never by writing the column directly.
 
-## LogesTechs — blocked, and on what
+## LogesTechs — built
 
-LogesTechs publishes no publicly readable API specification; it is issued to
-partners. The adapter cannot be written against a guess, because a wrong
-status mapping moves money. What is needed from them, as one request:
+`logestechs.ts`, against their API documentation (v. 9-6-2026).
+Base `https://apisv2.logestechs.com/api`. Authentication is the account email
+and password in each request body, not a token, so the credentials live in
+the environment and never in a database row.
 
-1. **API documentation** — base URL, authentication scheme, and the request
-   and response bodies for: create shipment, fetch shipment status, and bulk
-   status for a list of tracking numbers.
-2. **A test key and a sandbox account**, so the mapping can be proven against
-   their real responses before a single live parcel depends on it.
-3. **The full list of their status codes**, verbatim, with the meaning of
-   each — including their partial-delivery and returned codes, and whether a
-   collected amount is reported and in what field.
-4. **Their webhook support**, if any: whether they can push status changes,
-   what they sign the payload with, and their retry behaviour. Without it the
-   Stage 7 worker polls instead, which is fine but slower and chattier.
+| What | Their endpoint |
+|---|---|
+| Create shipment | `POST /ship/request/by-email` |
+| City id for an address | `GET /addresses/cities?search=` |
+| One package's status | `GET /guests/packages/status?barcode=` |
+| AWB labels | `POST /guests/{companyId}/packages/pdf` |
+| Cancel | `PUT /guests/{companyId}/packages/cancel?barcode=` |
 
-Point 3 is the one people forget and the one that matters most here: the
-mapping table from their codes to `ShippingStatus` is the whole risk surface.
+Two details of their contract worth keeping in mind: their `cod` is the
+amount **including** delivery, which is exactly our COD; and their
+`invoiceNumber` is the merchant's own order number, so our `merchantRef`
+goes there — it is the key their statement comes back with, and the key
+matching reads.
+
+### Status mapping
+
+`LOGESTECHS_STATUS` maps their codes only where the meaning is unambiguous.
+Their driver-assignment, shelf and partner-transfer codes say where the
+parcel is inside *their* operation, not what has happened to it from our
+side, so they map to `null` and nothing is applied. `DELIVERED_TO_RECIPIENT`
+and `RETURNED_BY_RECIPIENT` do map, but `COURIER_CANNOT_ASSERT` still refuses
+to apply them automatically: those two decide whether money is owed, and a
+person confirms them against the statement.
+
+`PARTIALLY_DELIVERED` is deliberately `null` until Stage 9 — a partial
+delivery needs the amount actually collected, and guessing it would settle
+the wrong figure.
+
+### Turning it on
+
+The adapter registers itself only when every required variable is set;
+otherwise the provider stays manual rather than failing at the first call.
+
+```
+LOGESTECHS_EMAIL=
+LOGESTECHS_PASSWORD=
+LOGESTECHS_COMPANY_ID=
+LOGESTECHS_SENDER_NAME=
+LOGESTECHS_SENDER_PHONE=
+LOGESTECHS_SENDER_BUSINESS=      # optional
+LOGESTECHS_ORIGIN_ADDRESS=
+LOGESTECHS_ORIGIN_ADDRESS2=      # optional
+LOGESTECHS_ORIGIN_CITY_ID=       # from GET /addresses/cities
+LOGESTECHS_SERVICE_TYPE_ID=      # optional, as their account was set up
+LOGESTECHS_VEHICLE_TYPE_ID=      # optional
+LOGESTECHS_PARCEL_TYPE_ID=       # optional
+LOGESTECHS_BASE_URL=             # optional override
+```
+
+Then set the provider's `code` to `LOGESTECHS` and turn `apiEnabled` on for
+it. Until someone does both, it is handled manually.
+
+Still worth asking them for: whether they can push status changes by webhook,
+what they sign the payload with, and their retry behaviour. Without it the
+Stage 7 worker polls `GET /guests/packages/status` per barcode, which works
+but is slower and chattier than being told.
