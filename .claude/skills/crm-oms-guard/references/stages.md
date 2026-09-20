@@ -13,7 +13,13 @@
 >    postponed, entry issues, change requests  ✅ done
 > 5. Operations — preparation, shipments with blocking checks, labels,
 >    tracking, returns, delivery-fee tables and couriers  ✅ done
->    (LogesTechs integration still needs API docs + a test key)
+>    - Courier seam built (src/lib/couriers). Every provider is MANUAL until
+>      someone registers an adapter AND turns apiEnabled on for it.
+>    - A courier feed may never assert DELIVERED / RETURNED / CANCELLED, and
+>      an unrecognised code maps to null, never a near match — a test pins it.
+>    - BLOCKED on LogesTechs: they publish no readable API spec. Ask them for
+>      the four things in src/lib/couriers/README.md, above all their verbatim
+>      status codes with meanings. Do not write the adapter against a guess.
 > 6. Finance — statements, receipts, matching, wallets, transfers,
 >    closing, commission rules  ✅ done
 >    - Three sequential entities; money moves ONLY at statement approval.
@@ -32,6 +38,15 @@
 > 8. Control, growth, settings, admin
 > 9. Split / partial delivery, courier custody
 > 10. Single product store · 11. App store
+>
+> Cleared 2026-09-20 (were blockers):
+>  - CRM module: models gone, migration 20260920160000_drop_crm drops the
+>    eight tables and REFUSES to run if any holds a row. preflight.sql answers
+>    "is production empty?" read-only. Still to do: run it on production and
+>    deploy, which is the user's call.
+>  - Public landing checkout now validates phone and city against the store's
+>    OWN country (src/lib/phone-rules.ts + the Region table). The hard-coded
+>    Syrian lists are deleted.
 
 One stage at a time. Do not open the next before the current is approved.
 Commit after every stage; a bad stage should cost one revert, not a
