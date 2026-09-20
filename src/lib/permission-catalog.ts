@@ -30,7 +30,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'orders.view', ar: 'عرض الطلبات', en: 'View orders', scopes: ['ALL_COMPANY', 'OWN', 'ASSIGNED'] },
       { key: 'orders.edit', ar: 'تعديل الطلبات', en: 'Edit orders', scopes: ['ALL_COMPANY', 'OWN', 'ASSIGNED'] },
       { key: 'orders.create', ar: 'إنشاء طلبات', en: 'Create orders' },
-      { key: 'orders.delete', ar: 'حذف الطلبات', en: 'Delete orders' },
       { key: 'orders.assign', ar: 'إسناد الطلبات', en: 'Assign orders' },
       { key: 'orders.claim', ar: 'استلام الطلبات', en: 'Claim orders' },
       { key: 'orders.release', ar: 'تحرير الطلبات', en: 'Release orders' },
@@ -45,9 +44,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'customers.view', ar: 'عرض العملاء', en: 'View customers' },
       { key: 'customers.view_basic', ar: 'عرض بيانات العميل الأساسية', en: 'View basic customer info' },
       { key: 'customers.create', ar: 'إنشاء عملاء', en: 'Create customers' },
-      { key: 'customers.edit', ar: 'تعديل العملاء', en: 'Edit customers' },
-      { key: 'customers.freeze', ar: 'تجميد عملاء', en: 'Freeze customers' },
-      { key: 'customers.unfreeze', ar: 'فك تجميد العملاء', en: 'Unfreeze customers' },
     ],
   },
   {
@@ -59,15 +55,8 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'products.delete', ar: 'حذف منتجات', en: 'Delete products' },
       { key: 'products.change_price', ar: 'تغيير أسعار المنتجات', en: 'Change product prices' },
       { key: 'products.upload_images', ar: 'رفع صور المنتجات', en: 'Upload product images' },
-    ],
-  },
-  {
-    module: 'categories',
-    items: [
-      { key: 'categories.view', ar: 'عرض الفئات', en: 'View categories' },
-      { key: 'categories.create', ar: 'إنشاء فئات', en: 'Create categories' },
-      { key: 'categories.edit', ar: 'تعديل الفئات', en: 'Edit categories' },
-      { key: 'categories.delete', ar: 'حذف الفئات', en: 'Delete categories' },
+      // Reading the category list, which the permission scope pickers need.
+      { key: 'categories.view', ar: 'عرض التصنيفات', en: 'View categories' },
     ],
   },
   {
@@ -123,10 +112,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'users.view', ar: 'عرض المستخدمين', en: 'View users' },
       { key: 'users.create', ar: 'إنشاء مستخدمين', en: 'Create users' },
       { key: 'users.edit', ar: 'تعديل المستخدمين', en: 'Edit users' },
-      { key: 'users.delete', ar: 'حذف المستخدمين', en: 'Delete users' },
-      { key: 'users.manage', ar: 'إدارة كاملة للمستخدمين', en: 'Full user management' },
-      { key: 'users.manage_roles', ar: 'إدارة الأدوار', en: 'Manage roles' },
-      { key: 'moderators.manage', ar: 'إدارة الموديريتورز', en: 'Manage moderators' },
     ],
   },
   {
@@ -143,6 +128,9 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     items: [
       { key: 'settings.view', ar: 'عرض الإعدادات', en: 'View settings' },
       { key: 'settings.edit', ar: 'تعديل إعدادات النظام', en: 'Edit system settings' },
+      // Enforced on /api/admin/jobs but was missing here, so nobody could be
+      // granted it through the screen.
+      { key: 'settings.manage', ar: 'تشغيل المهام المجدولة', en: 'Run scheduled jobs' },
     ],
   },
   {
@@ -180,7 +168,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     module: 'apps',
     items: [
       { key: 'apps.view', ar: 'عرض التطبيقات', en: 'View apps' },
-      { key: 'apps.manage', ar: 'تثبيت وإدارة التطبيقات', en: 'Install & manage apps' },
     ],
   },
   {
@@ -198,7 +185,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'landing_pages.edit', ar: 'تعديل صفحات الهبوط', en: 'Edit landing pages' },
       { key: 'landing_pages.delete', ar: 'حذف صفحات هبوط', en: 'Delete landing pages' },
       { key: 'landing_pages.publish', ar: 'نشر / إلغاء نشر صفحات الهبوط', en: 'Publish / unpublish landing pages' },
-      { key: 'landing_pages.analytics', ar: 'عرض تحليلات صفحات الهبوط', en: 'View landing page analytics' },
     ],
   },
   {
@@ -215,7 +201,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     items: [
       { key: 'telegram.view', ar: 'عرض طلبات تيليجرام', en: 'View Telegram integration' },
       { key: 'telegram.manage', ar: 'إدارة ربط تيليجرام', en: 'Manage Telegram integration' },
-      { key: 'telegram.receive_orders', ar: 'استقبال طلبات تيليجرام', en: 'Receive Telegram orders' },
     ],
   },
   {
