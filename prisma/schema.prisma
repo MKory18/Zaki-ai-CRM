@@ -1650,3 +1650,32 @@ model CommissionPeriod {
   @@index([companyId, status])
   @@map("commission_periods")
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Stage 7 — the scheduler.
+//
+// Half the system is inert without it: claims that should auto-release wait
+// for someone to open a screen, postponed orders resurface only if a human
+// remembers, commission accrues only when asked. A run log per job is what
+// makes a missed window visible instead of silent.
+// ─────────────────────────────────────────────────────────────────────────
+
+model JobRun {
+  id         String    @id @default(uuid())
+  jobName    String
+  status     String    @default("RUNNING") // RUNNING | SUCCEEDED | FAILED
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  /** How many things the run actually acted on — 0 is a valid quiet run. */
+  processed  Int       @default(0)
+  /** A short human summary, and the error when it failed. */
+  detail     String?
+  error      String?
+  /** Which company/country the run covered, when a job is scoped. */
+  companyId  String?
+  countryId  String?
+
+  @@index([jobName, startedAt])
+  @@index([status, startedAt])
+  @@map("job_runs")
+}

@@ -140,6 +140,7 @@ export const NAV: NavGroup[] = [
     routes: [
       r('/admin/users', 'الموظفين', 'UserCog', ['users.view']),
       r('/admin/permissions', 'الصلاحيات', 'ShieldCheck', ['roles.view']),
+      r('/admin/jobs', 'المهام المجدولة', 'Timer', ['settings.view']),
       r('/admin/profile', 'الملف الشخصي', 'CircleUser', null),
     ],
   },

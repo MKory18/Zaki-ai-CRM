@@ -4,7 +4,7 @@ import {
   Inbox, LayoutDashboard, LayoutGrid, Lightbulb, Lock, MapPin, Megaphone, MessageCircle,
   Package, PackageCheck, PackagePlus, PanelsTopLeft, Percent, Printer, Radar, Receipt,
   Repeat, ScrollText, Send, Settings, ShieldCheck, ShoppingCart, Store, Tag, TrendingUp,
-  Truck, Undo2, UserCog, Users, Wallet,
+  Timer, Truck, Undo2, UserCog, Users, Wallet,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -15,7 +15,7 @@ export const ICONS: Record<string, LucideIcon> = {
   Inbox, LayoutDashboard, LayoutGrid, Lightbulb, Lock, MapPin, Megaphone, MessageCircle,
   Package, PackageCheck, PackagePlus, PanelsTopLeft, Percent, Printer, Radar, Receipt,
   Repeat, ScrollText, Send, Settings, ShieldCheck, ShoppingCart, Store, Tag, TrendingUp,
-  Truck, Undo2, UserCog, Users, Wallet,
+  Timer, Truck, Undo2, UserCog, Users, Wallet,
 };
 
 export function iconFor(name: string): LucideIcon {
