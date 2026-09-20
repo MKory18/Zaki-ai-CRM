@@ -1,0 +1,144 @@
+# Stages — the order of work
+
+> **Revised order (approved 2026-09-19).** Stage 0 found that most of the
+> backend this file assumes does not exist, so foundations come first.
+> The stage bodies below still hold; only the sequence changed:
+>
+> 1. Geo foundation — Country, Region, Store, access, requireContext  ✅ done
+> 2. Shell + store scope — pickers, navigation, 403/404 guard, old UI and
+>    CRM deleted, requireContext wired into every order API  ✅ done
+> 3. Order core — derived state + getZone, OrderItem + per-line reservation,
+>    one COD function (src/lib/money.ts), merchant reference, OrderNote  ✅ done
+> 4. Confirmation centre — pull-next with caps, business-hours auto-release,
+>    postponed, entry issues, change requests  ✅ done
+> 5. Operations — preparation, shipments with blocking checks, labels,
+>    tracking, returns, delivery-fee tables and couriers  ✅ done
+>    (LogesTechs integration still needs API docs + a test key)
+> 6. Finance — statements, receipts, matching, wallets, transfers,
+>    closing, commission rules  ✅ done
+>    - Three sequential entities; money moves ONLY at statement approval.
+>      Approval refuses: no receipts, no matching run, unexplained gap.
+>      Verified end to end against the running app, not just in tests.
+>    - Corrections are reversing entries only — no edit, no delete.
+>    - Closing: difference needs a written reason, an unexplained one blocks
+>      the next day, and the recorder cannot approve. SETTLEMENT_OFFICER and
+>      ACCOUNTANT are deliberately different pairs of hands; both are seeded.
+>    - Commission rules are dated data. Revenue base = totalAmount − fee
+>      (totalAmount holds the COD, so this is right under both pricing modes).
+>    - STILL OPEN: accrual only runs when someone calls POST
+>      /api/finance/commission. The contract accrues on DELIVERED — wire it
+>      into the delivery transition or the Stage 7 worker.
+> 7. Scheduler worker
+> 8. Control, growth, settings, admin
+> 9. Split / partial delivery, courier custody
+> 10. Single product store · 11. App store
+
+One stage at a time. Do not open the next before the current is approved.
+Commit after every stage; a bad stage should cost one revert, not a
+rebuild.
+
+## Stage 0 — Discovery
+Service inventory table plus the anti-duplication verdict table plus the
+route map. **No code.** Wait for approval.
+
+## Stage 1 — Shell
+Country picker, store picker, layout, navigation, routing, role
+visibility, 403 enforcement, RTL, design tokens.
+Old shell and old routes DELETED in the same commit.
+
+## Stage 2 — Confirmation centre
+Four screens: queue, mine, postponed, issues.
+
+## Stage 3 — Operations
+Five screens: preparation, shipments, labels, tracking, returns.
+
+## Stage 4 — Inventory and finance
+Nine screens: receiving, balances, movements, collection, matching,
+wallets, transfers, closing, profit.
+
+## Stage 5 — Control, growth, apps, settings, admin
+The remaining screens.
+
+## Stage 6 — Scheduler worker  ← highest value per hour
+
+A real background process, not API endpoints. BullMQ + Redis, or
+node-cron in a separate container. Runs independently of any browser.
+
+```
+every 2 min   courier status sync for shipments in transit
+every 1 min   SLA escalation for pending change requests
+every 5 min   auto-release claims with no attempt in 90 business minutes
+daily 08:00   surface postponed orders due within lead days
+daily 16:45   daily closing reminder per wallet
+daily 09:00   alert: returns announced but not received, oldest first
+daily 06:00   ad spend sync
+daily 23:00   commission accrual
+```
+
+Requirements: every job idempotent; a run log per job with job_name,
+started_at, finished_at, status, error; an admin screen showing last run
+and last status, red when a window is missed; business-calendar aware per
+country so SLA counters freeze outside hours and on weekend days; retry
+with backoff and an alert after 3 consecutive failures; a barcode
+returning 404 three consecutive times raises "shipment missing at
+courier" instead of silent polling.
+
+Without this layer half the system is inert. It waits for a human to open
+a screen.
+
+## Stage 7 — Order notes as the context layer
+Immutable notes, surfaced on settlement exceptions, return receiving,
+tracking and order detail. An eye icon with a count wherever notes exist.
+
+## Stage 8 — Reservation per line
+`OrderItem.reserved_qty`. Proportional discount allocation stored per
+line. This fixes the wrong single-product assumption the system was built
+on.
+
+## Stage 9 — Split and partial delivery
+Split: `parent_order_id`, children get suffixed numbers (SY-4401-A).
+Delivery fee charged PER SHIPMENT, never divided, shown before confirming.
+PARTIALLY_DELIVERED with post-event settlement comparison. A pending
+cancellation auto-rejects with "too late - already delivered" when a
+DELIVERED webhook arrives.
+
+## Stage 10 — Courier custody
+`COURIER_CUSTODY` inventory location. Enables: same-run item reassignment
+with no second fee, add-on orders with no additional delivery fee, and the
+three wrong-item paths (before shipment, with courier, at customer).
+Track `picking_error_rate` per warehouse user.
+
+## Stage 11 — Single product store and landing pages
+
+Landing pages and bundle quantities ALREADY EXIST. Assemble them.
+Building a second landing page system is a failure of the task.
+
+- Store type MULTI_PRODUCT | SINGLE_PRODUCT. A single-product store binds
+  to exactly ONE ProductMarket. No catalog, no cart. Its storefront IS the
+  landing page. Domain or subdomain per store.
+- Section library, reorderable, each on or off: announcement bar, hero,
+  countdown, gallery, benefits, story, social proof, reviews, comparison,
+  FAQ, guarantee, sticky order button, offer block, checkout, thank-you.
+- Arabic RTL first, mobile first. No external blocking scripts. LCP under
+  2.5s on 3G. A slow page loses more orders than a weak offer.
+- Three offer types: QUANTITY_TIERS, MULTI_PRODUCT_BUNDLE, BUY_X_GET_Y.
+  Free items are real order lines at zero price — they consume stock and
+  appear in COGS. Free delivery is never an offer property; it comes only
+  from `ProductMarket.price_includes_delivery`.
+- Checkout: name, phone, region, address, offer, optional note. No
+  account, no email. Phone is the identity. Live COD summary from the
+  SAME COD function.
+- Submission guards server-side: duplicate flagged not merged, blacklist
+  checked company-wide with a neutral message, rate limit per IP and
+  phone, honeypot plus minimum time-on-page, attribution captured once.
+- The order enters the SAME pipeline: state NEW, shared pool, merchant
+  reference. There is no separate storefront flow.
+- Store cloning copies structure but never prices, costs, fees or pixels.
+
+## Stage 12 — App store foundation
+`App`: key, name, category, description, icon, version, publisher, scopes,
+install_target, settings_schema, enabled. Installed per store. An app may
+register landing-page sections, dashboard widgets, settings panels and
+scheduled jobs. An app may NEVER write a fund movement, change a price,
+approve a settlement or edit the audit log — regardless of scopes.
+First two apps ship internal: Reviews and Countdown.
