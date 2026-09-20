@@ -48,6 +48,7 @@ model Company {
   telegramMessages  TelegramMessage[]
   trackingPixels    TrackingPixel[]
   countries         Country[]
+  customerBlocks    CustomerBlock[]
   stores            Store[]
 
   @@map("companies")
@@ -126,6 +127,8 @@ model User {
   whatsappAssignedConversations WhatsAppConversation[] @relation("WhatsAppAssignee")
   countryAccess       UserCountryAccess[]
   storeAccess         UserStoreAccess[]
+  customerBlocks        CustomerBlock[] @relation("CustomerBlockedBy")
+  customerBlockReleases CustomerBlock[] @relation("CustomerBlockReleasedBy")
 
   @@index([companyId])
   @@index([role])
@@ -1678,4 +1681,37 @@ model JobRun {
   @@index([jobName, startedAt])
   @@index([status, startedAt])
   @@map("job_runs")
+}
+
+// Blocking a customer.
+//
+// Keyed on the PHONE, not on a customer row: the phone is the identity, and
+// somebody refused delivery three times will happily order again under a new
+// name. Company-wide and never country-scoped — the same person is the same
+// person in every store.
+//
+// A block is never deleted, only RELEASED, so the history of who blocked
+// whom and why survives the decision to let them back.
+model CustomerBlock {
+  id            String    @id @default(uuid())
+  companyId     String
+  /** Normalized digits, the same form customer.phone is stored in. */
+  phone         String
+  /** Kept for the screen; the phone is what is matched on. */
+  name          String?
+  reason        String
+  blockedById   String
+  createdAt     DateTime  @default(now())
+  releasedAt    DateTime?
+  releasedById  String?
+  releaseReason String?
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  blockedBy  User    @relation("CustomerBlockedBy", fields: [blockedById], references: [id], onDelete: Restrict)
+  releasedBy User?   @relation("CustomerBlockReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
+
+  // One ACTIVE block per phone is enforced in the service, not here: a
+  // released block must be able to sit beside a new one for the same phone.
+  @@index([companyId, phone, releasedAt])
+  @@map("customer_blocks")
 }

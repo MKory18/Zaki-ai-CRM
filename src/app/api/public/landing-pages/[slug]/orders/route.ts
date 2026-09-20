@@ -4,6 +4,7 @@ import { normalizePhoneNumber } from '@/lib/phone';
 import { orderRefFields } from '@/lib/order-ref';
 import { computeCod } from '@/lib/money';
 import { matchRegion } from '@/lib/regions';
+import { NEUTRAL_REFUSAL, isBlocked } from '@/lib/blacklist';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import {
   LANDING_PAGE_SOURCE,
@@ -188,6 +189,16 @@ export async function POST(req: Request, ctx: Ctx) {
     const price = offer ? offer.price : product.basePrice; // server-side price — never from the browser
     const qty = offer ? offer.quantity : 1;
     const freeQty = offer ? offer.freeQuantity : 0;
+
+    // ─── Blacklist, company-wide ───
+    // The message says nothing: telling somebody they are blacklisted
+    // invites them to try another number, and tells them which one is burned.
+    // The RAW phone as typed: normalizing first would drop the leading +
+    // that marks an international form, and a block stored from "+963…"
+    // would then miss a local "0…" — the exact way around a block.
+    if (await isBlocked(db, companyId, v.phone)) {
+      return NextResponse.json({ error: NEUTRAL_REFUSAL }, { status: 400, headers: CORS });
+    }
 
     // ─── Duplicate-submission protection (per phone, per page) ───
     const dup = rateLimit(`lp_order_dup:${lp.id}:${normalizedPhone}`, 1, 5 * 60_000);

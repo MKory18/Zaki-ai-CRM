@@ -8,6 +8,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { db, requireContext, requirePermission, logAudit, createNotification } = vi.hoisted(() => ({
   db: {
     region: { findFirst: vi.fn() },
+    // The blacklist is checked before the customer is touched; an order from
+    // an unblocked phone must find no active block.
+    customerBlock: { findFirst: vi.fn() },
     customer: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     product: { findFirst: vi.fn() },
     offer: { findFirst: vi.fn() },
@@ -54,6 +57,7 @@ const body = (over: Record<string, unknown> = {}) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  db.customerBlock.findFirst.mockResolvedValue(null); // not blacklisted
   requireContext.mockResolvedValue({
     user: { id: 'u1', name: 'Admin', role: 'COMPANY_ADMIN', status: 'ACTIVE' },
     companyId: 'c1', storeId: 's1', countryId: 'co-jo',

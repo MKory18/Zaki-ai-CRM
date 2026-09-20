@@ -6,6 +6,7 @@ import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { orderRefFields } from '@/lib/order-ref';
 import { computeCod } from '@/lib/money';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { applyQueueFilter } from '@/lib/rbac';
 import { createNotification } from '@/lib/notification';
@@ -189,6 +190,21 @@ export async function POST(req: Request) {
 
     // 1. Duplicate check / Customer creation (reuse on a P2002 race)
     const normalizedPhone = normalizePhoneNumber(customerPhone);
+
+    // ─── Blacklist, company-wide ───
+    // Staff get the real reason: they are the ones who decide whether to
+    // release it, and a silent refusal here would just look like a bug.
+    const block = await activeBlock(db, companyId, customerPhone);
+    if (block) {
+      return NextResponse.json(
+        {
+          error: `هذا الرقم محظور: ${block.reason}`,
+          code: 'CUSTOMER_BLOCKED',
+          blockId: block.id,
+        },
+        { status: 409 }
+      );
+    }
     let customer = await db.customer.findUnique({
       where: {
         companyId_phone: {

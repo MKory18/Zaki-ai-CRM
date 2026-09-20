@@ -96,7 +96,7 @@ export const NAV: NavGroup[] = [
       r('/control/change-requests', 'طلبات التعديل', 'FilePen', ['control.change_requests']),
       r('/control/discount-alerts', 'تنبيهات الخصم', 'BadgePercent', ['control.discount_alerts']),
       r('/control/audit', 'سجل التدقيق', 'ScrollText', ['audit.view']),
-      r('/control/blacklist', 'القائمة السوداء', 'Ban', ['control.blacklist'], 8),
+      r('/control/blacklist', 'القائمة السوداء', 'Ban', ['control.blacklist']),
     ],
   },
   {

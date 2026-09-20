@@ -7,6 +7,7 @@ import { resolveRegionId } from '@/lib/regions';
 import { computeCod } from '@/lib/money';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { createNotification } from '@/lib/notification';
 import { apiError } from '@/lib/api-error';
@@ -118,6 +119,16 @@ export async function POST(req: Request) {
       }
 
       const normalizedPhone = normalizePhoneNumber(p.phone);
+
+      // Blacklist, company-wide. Staff get the real reason.
+      const block = await activeBlock(db, companyId, p.phone);
+      if (block) {
+        return NextResponse.json(
+          { error: `هذا الرقم محظور: ${block.reason}`, code: 'CUSTOMER_BLOCKED', blockId: block.id },
+          { status: 409 }
+        );
+      }
+
       let customer = await db.customer.findUnique({
         where: { companyId_phone: { companyId, phone: normalizedPhone } },
       });

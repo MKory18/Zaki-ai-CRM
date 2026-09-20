@@ -102,3 +102,44 @@ export function phoneErrorFor(countryCode: string | null | undefined): string {
     ? `يرجى إدخال رقم هاتف ${rule.countryName} صحيح.`
     : 'يرجى إدخال رقم هاتف صحيح.';
 }
+
+/** Every dial code we know, longest first so 963 is tried before 96. */
+const DIAL_CODES = [...new Set(Object.values(PHONE_RULES).map((r) => r.dialCode))].sort(
+  (a, b) => b.length - a.length
+);
+
+/**
+ * One phone, one string — whatever form it was written in.
+ *
+ * "+963 966 793918" and "0966793918" are the same person, and anything that
+ * identifies a person by their number has to agree on that. The blacklist
+ * is the sharp case: a block that can be walked around by writing the number
+ * differently is not a block.
+ *
+ * A dial code is only stripped when the number was written internationally
+ * (a leading + or 00). Otherwise a local Syrian 0966… would be mistaken for
+ * a Saudi +966… — so the explicit marker is what licenses the strip, and a
+ * plain local number just loses its trunk zero.
+ */
+export function canonicalPhone(raw: string | null | undefined): string {
+  const text = String(raw ?? '').trim();
+  if (!text) return '';
+
+  const digits = text.replace(/\D/g, '');
+  if (!digits) return '';
+
+  const international = text.startsWith('+') || digits.startsWith('00');
+  let rest = digits.startsWith('00') ? digits.slice(2) : digits;
+
+  if (international) {
+    for (const code of DIAL_CODES) {
+      if (rest.startsWith(code) && rest.length - code.length >= 6) {
+        rest = rest.slice(code.length);
+        break;
+      }
+    }
+  }
+
+  // The trunk zero is a dialing convention, not part of the number.
+  return rest.replace(/^0+/, '');
+}

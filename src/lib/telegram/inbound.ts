@@ -12,6 +12,7 @@
  * so permanent failures are recorded as FAILED instead of thrown.
  */
 import { db } from '../db';
+import { isBlocked } from '../blacklist';
 import { normalizePhoneNumber } from '../phone';
 import { matchProduct, normalizeArabic } from '../order-parser';
 import { parseTelegramOrderMessage } from './parser';
@@ -244,6 +245,14 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
     if (!fuzzy) return review('PRODUCT_NOT_FOUND');
     product = products.find((p) => p.id === fuzzy.id)!;
   }
+
+  // ── Blacklist, company-wide ──
+  // Held for review rather than dropped: a human should see that a blocked
+  // number tried again, and decide.
+  // The RAW phone, not the normalized one: normalizing drops the leading
+  // + that says the number was written internationally, and without it a
+  // block stored from "+963…" would not match a local "0…".
+  if (await isBlocked(db, companyId, parsed.phone ?? phone)) return review('CUSTOMER_BLOCKED');
 
   // ── Customer matching / creation (same company only) ──
   let customer = await db.customer.findUnique({ where: { companyId_phone: { companyId, phone } } });
