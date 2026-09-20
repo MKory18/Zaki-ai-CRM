@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { roundMinor } from './money';
+import { looksLikeXlsx, readXlsxRows } from './xlsx-reader';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -24,21 +25,55 @@ export function fileHash(content: string | Buffer): string {
 export interface ParsedStatementRow {
   merchantRef: string | null;
   barcode: string | null;
+  /**
+   * What the courier actually hands over for this line — their net, after
+   * they keep their delivery fee. This is the figure a receipt is measured
+   * against, so it is the one stored as the amount.
+   */
   amount: number;
+  /** What the courier says they collected from the customer (COD). */
+  collected: number | null;
+  /** The delivery fee they deducted. */
+  fee: number | null;
   status: string | null;
   rawRow: string;
 }
 
-const HEADER_ALIASES: Record<keyof Omit<ParsedStatementRow, 'rawRow'>, string[]> = {
-  merchantRef: ['merchant_ref', 'merchantref', 'reference', 'ref', 'order_number', 'ordernumber', 'المرجع', 'رقم الطلب'],
-  barcode: ['barcode', 'tracking', 'tracking_number', 'awb', 'الباركود', 'رقم البوليصة'],
-  amount: ['amount', 'cod', 'cod_amount', 'collected', 'total', 'المبلغ', 'التحصيل'],
+type HeaderField = 'merchantRef' | 'barcode' | 'net' | 'collected' | 'fee' | 'status' | 'notes';
+
+const HEADER_ALIASES: Record<HeaderField, string[]> = {
+  merchantRef: ['merchant_ref', 'merchantref', 'reference', 'ref', 'order_number', 'ordernumber', 'invoice', 'invoicenumber', 'invoice_number', 'المرجع', 'رقم الطلب', 'رقم الفاتورة', 'رقم الإرسالية', 'رقم الارسالية'],
+  barcode: ['barcode', 'tracking', 'tracking_number', 'awb', 'الباركود', 'رقم البوليصة', 'باركود الشحنة'],
+  // The net is what arrives; prefer it over the COD when both are present.
+  net: ['net', 'net_amount', 'الصافي', 'صافي', 'المستحق'],
+  collected: ['amount', 'cod', 'cod_amount', 'collected', 'total', 'المبلغ', 'التحصيل'],
+  fee: ['fee', 'delivery_fee', 'shipping_fee', 'cost', 'السعر', 'أجرة التوصيل', 'اجرة التوصيل', 'التوصيل'],
   status: ['status', 'state', 'الحالة'],
+  // Couriers who have no reference column put the merchant's order number at
+  // the start of the notes; that is where it is read from.
+  notes: ['notes', 'note', 'remarks', 'الملاحظات', 'ملاحظات'],
 };
 
-function columnIndex(header: string[], field: keyof typeof HEADER_ALIASES): number {
-  const names = HEADER_ALIASES[field];
-  return header.findIndex((h) => names.includes(h.trim().toLowerCase().replace(/^﻿/, '')));
+function normalizeHeader(value: string): string {
+  return value.trim().toLowerCase().replace(/^﻿/, '').replace(/\s+/g, ' ');
+}
+
+function columnIndex(header: string[], field: HeaderField): number {
+  const names = HEADER_ALIASES[field].map(normalizeHeader);
+  return header.findIndex((h) => names.includes(normalizeHeader(h)));
+}
+
+function toNumber(value: unknown): number | null {
+  const cleaned = String(value ?? '').replace(/[^\d.-]/g, '');
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** "15132 - العميل طلب التأجيل" → "15132". */
+export function refFromNotes(notes: string | null | undefined): string | null {
+  const match = /^\s*([A-Za-z0-9][A-Za-z0-9_\/-]{2,})/.exec(String(notes ?? ''));
+  return match ? match[1] : null;
 }
 
 function splitCsvLine(line: string): string[] {
@@ -63,46 +98,93 @@ function splitCsvLine(line: string): string[] {
   return out;
 }
 
-/**
- * Parse a courier CSV. Unknown columns are ignored, but a file without an
- * amount column is rejected: a statement with no amounts settles nothing.
- */
-export function parseStatementCsv(content: string): { rows: ParsedStatementRow[]; total: number; error?: string } {
-  const lines = content
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (lines.length < 2) return { rows: [], total: 0, error: 'الملف فارغ أو بلا صفوف' };
-
-  const header = splitCsvLine(lines[0]);
+/** Turns a header row plus data rows into statement lines. */
+export function parseStatementRows(
+  header: string[],
+  dataRows: string[][]
+): { rows: ParsedStatementRow[]; total: number; error?: string } {
   const idx = {
     merchantRef: columnIndex(header, 'merchantRef'),
     barcode: columnIndex(header, 'barcode'),
-    amount: columnIndex(header, 'amount'),
+    net: columnIndex(header, 'net'),
+    collected: columnIndex(header, 'collected'),
+    fee: columnIndex(header, 'fee'),
     status: columnIndex(header, 'status'),
+    notes: columnIndex(header, 'notes'),
   };
-  if (idx.amount < 0) return { rows: [], total: 0, error: 'لا يوجد عمود للمبلغ في الملف' };
-  if (idx.merchantRef < 0 && idx.barcode < 0) {
+
+  if (idx.net < 0 && idx.collected < 0) {
+    return { rows: [], total: 0, error: 'لا يوجد عمود للمبلغ في الملف' };
+  }
+  if (idx.merchantRef < 0 && idx.barcode < 0 && idx.notes < 0) {
     return { rows: [], total: 0, error: 'الملف بلا مرجع تجاري ولا باركود — لا يمكن المطابقة' };
   }
 
+  const at = (cells: string[], i: number) => (i >= 0 ? (cells[i] ?? '').toString().trim() : '');
+
   const rows: ParsedStatementRow[] = [];
-  for (const line of lines.slice(1)) {
-    const cells = splitCsvLine(line);
-    const amount = Number(String(cells[idx.amount] ?? '').replace(/[^\d.-]/g, ''));
-    if (!Number.isFinite(amount)) continue;
+  for (const cells of dataRows) {
+    if (!cells.some((c) => String(c ?? '').trim())) continue;
+
+    const collected = toNumber(at(cells, idx.collected));
+    const fee = toNumber(at(cells, idx.fee));
+    const net = toNumber(at(cells, idx.net));
+
+    // The net is what the courier hands over. When the file gives only the
+    // COD and the fee, derive it rather than treating the COD as received.
+    const amount = net ?? (collected !== null && fee !== null ? collected - fee : collected);
+    if (amount === null) continue;
+
+    const explicitRef = at(cells, idx.merchantRef);
     rows.push({
-      merchantRef: idx.merchantRef >= 0 ? cells[idx.merchantRef]?.trim() || null : null,
-      barcode: idx.barcode >= 0 ? cells[idx.barcode]?.trim() || null : null,
+      merchantRef: explicitRef || refFromNotes(at(cells, idx.notes)),
+      barcode: at(cells, idx.barcode) || null,
       amount,
-      status: idx.status >= 0 ? cells[idx.status]?.trim() || null : null,
-      rawRow: line.slice(0, 500),
+      collected,
+      fee,
+      status: at(cells, idx.status) || null,
+      rawRow: cells.join(' | ').slice(0, 500),
     });
   }
 
   const total = rows.reduce((sum, r) => sum + r.amount, 0);
   return { rows, total };
 }
+
+/**
+ * Parse a courier statement, CSV or .xlsx.
+ *
+ * Unknown columns are ignored, but a file with no amount at all is rejected:
+ * a statement that settles nothing is not a statement. Likewise a file with
+ * no reference, barcode or notes to read a reference from — there would be
+ * nothing to match against.
+ */
+export function parseStatement(
+  content: string | Buffer | Uint8Array
+): { rows: ParsedStatementRow[]; total: number; error?: string } {
+  if (typeof content !== 'string' && looksLikeXlsx(content)) {
+    let sheet: string[][];
+    try {
+      sheet = readXlsxRows(content);
+    } catch (e) {
+      return { rows: [], total: 0, error: e instanceof Error ? e.message : 'تعذّر قراءة ملف الإكسل' };
+    }
+    if (sheet.length < 2) return { rows: [], total: 0, error: 'الملف فارغ أو بلا صفوف' };
+    return parseStatementRows(sheet[0], sheet.slice(1));
+  }
+
+  const text = typeof content === 'string' ? content : Buffer.from(content).toString('utf8');
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length < 2) return { rows: [], total: 0, error: 'الملف فارغ أو بلا صفوف' };
+
+  return parseStatementRows(splitCsvLine(lines[0]), lines.slice(1).map(splitCsvLine));
+}
+
+/** @deprecated Use parseStatement — it reads .xlsx too. */
+export const parseStatementCsv = parseStatement;
 
 /**
  * What we expect the courier to hand over for one order. A partially
@@ -114,10 +196,21 @@ export function expectedAmountFor(order: {
   totalAmount: number | Prisma.Decimal;
   // Set once partial delivery ships (Stage 9); until then it is null.
   collectedAmount?: number | Prisma.Decimal | null;
+  /**
+   * The courier keeps this out of what they collected. Pass it to compare
+   * against a statement stated in NET terms — which is how a courier states
+   * what they are actually handing over.
+   */
+  deliveryFee?: number | Prisma.Decimal | null;
 }): number {
-  if (order.collectedAmount !== null && order.collectedAmount !== undefined) return Number(order.collectedAmount);
   if (order.shippingStatus === 'RETURNED' || order.shippingStatus === 'RETURN_REQUESTED') return 0;
-  return Number(order.totalAmount);
+
+  const collected =
+    order.collectedAmount !== null && order.collectedAmount !== undefined
+      ? Number(order.collectedAmount)
+      : Number(order.totalAmount);
+
+  return collected - Number(order.deliveryFee ?? 0);
 }
 
 export interface MatchOutcome {
@@ -156,13 +249,13 @@ export async function runMatching(
       (line.merchantRef
         ? await tx.order.findFirst({
             where: { companyId, storeId, merchantRef: line.merchantRef },
-            select: { id: true, shippingStatus: true, totalAmount: true },
+            select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
           })
         : null) ??
       (line.barcode
         ? await tx.order.findFirst({
             where: { companyId, storeId, trackingNumber: line.barcode },
-            select: { id: true, shippingStatus: true, totalAmount: true },
+            select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
           })
         : null);
 
@@ -213,7 +306,7 @@ export async function runMatching(
           }
         : {}),
     },
-    select: { id: true, shippingStatus: true, totalAmount: true },
+    select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
     take: 1000,
   });
 

@@ -5,7 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
-import { fileHash, parseStatementCsv, receiptGap } from '@/lib/settlement';
+import { fileHash, parseStatement, receiptGap } from '@/lib/settlement';
 import { roundMinor } from '@/lib/money';
 
 /**
@@ -22,8 +22,13 @@ const importSchema = z.object({
   deliveryProviderId: z.string().uuid(),
   reference: z.string().trim().min(2).max(80),
   fileName: z.string().trim().min(1).max(200),
-  /** Raw CSV text of the courier file. */
-  content: z.string().min(2).max(5_000_000),
+  /**
+   * The courier's file. Either its text (CSV) or base64 for a spreadsheet —
+   * couriers send .xlsx far more often than CSV, so both are accepted and
+   * the parser decides by looking at the bytes.
+   */
+  content: z.string().min(2).max(20_000_000),
+  encoding: z.enum(['text', 'base64']).default('text'),
   periodFrom: z.string().datetime().optional().nullable(),
   periodTo: z.string().datetime().optional().nullable(),
 });
@@ -82,7 +87,11 @@ export async function POST(req: Request) {
     });
     if (!provider) return NextResponse.json({ error: 'شركة الشحن غير موجودة' }, { status: 404 });
 
-    const hash = fileHash(input.content);
+    // Hash the bytes as received: the same file re-encoded must still be
+    // recognised as the same file.
+    const fileBytes =
+      input.encoding === 'base64' ? Buffer.from(input.content, 'base64') : Buffer.from(input.content, 'utf8');
+    const hash = fileHash(fileBytes);
     const duplicate = await db.courierStatement.findFirst({
       where: { companyId, fileHash: hash },
       select: { id: true, reference: true, createdAt: true },
@@ -98,7 +107,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { rows, total, error } = parseStatementCsv(input.content);
+    const { rows, total, error } = parseStatement(fileBytes);
     if (error) return NextResponse.json({ error, code: 'UNREADABLE_FILE' }, { status: 400 });
 
     const statement = await db.$transaction(async (tx) => {

@@ -273,11 +273,12 @@ function ImportCard({
     reference: string;
     fileName: string;
     content: string;
+    encoding: 'text' | 'base64';
   }) => Promise<boolean>;
 }) {
   const [providerId, setProviderId] = useState('');
   const [reference, setReference] = useState('');
-  const [file, setFile] = useState<{ name: string; content: string } | null>(null);
+  const [file, setFile] = useState<{ name: string; content: string; encoding: 'text' | 'base64' } | null>(null);
 
   return (
     <form
@@ -289,6 +290,7 @@ function ImportCard({
           reference,
           fileName: file.name,
           content: file.content,
+          encoding: file.encoding,
         });
         if (ok) {
           setReference('');
@@ -325,14 +327,23 @@ function ImportCard({
       </label>
 
       <label>
-        <span className="block text-xs font-medium text-[#364152] mb-1">ملف الكشف (CSV)</span>
+        <span className="block text-xs font-medium text-[#364152] mb-1">ملف الكشف (Excel أو CSV)</span>
         <input
           type="file"
-          accept=".csv,text/csv,text/plain"
+          accept=".csv,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           onChange={async (e) => {
             const picked = e.target.files?.[0];
             if (!picked) return setFile(null);
-            setFile({ name: picked.name, content: await picked.text() });
+            // A spreadsheet is binary: send its bytes, not a text reading of
+            // them, or the hash and the parse both see something else.
+            if (/\.xlsx?$/i.test(picked.name)) {
+              const bytes = new Uint8Array(await picked.arrayBuffer());
+              let binary = '';
+              for (const b of bytes) binary += String.fromCharCode(b);
+              setFile({ name: picked.name, content: btoa(binary), encoding: 'base64' });
+            } else {
+              setFile({ name: picked.name, content: await picked.text(), encoding: 'text' });
+            }
           }}
           className="w-full text-xs file:h-8 file:px-3 file:rounded-[6px] file:border-0 file:bg-[#f8fafc] file:text-[#364152] file:ml-2"
         />

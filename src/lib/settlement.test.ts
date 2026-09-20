@@ -13,7 +13,7 @@ const { db } = vi.hoisted(() => ({
 }));
 vi.mock('./db', () => ({ db }));
 
-import { expectedAmountFor, fileHash, parseStatementCsv, receiptGap, runMatching } from './settlement';
+import { expectedAmountFor, fileHash, parseStatement, parseStatementRows, refFromNotes, receiptGap, runMatching } from './settlement';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,7 +32,7 @@ describe('file hash', () => {
 
 describe('parseStatementCsv', () => {
   it('reads merchant reference, barcode, amount and status', () => {
-    const { rows, total } = parseStatementCsv(
+    const { rows, total } = parseStatement(
       'merchant_ref,barcode,amount,status\nORD-1,BC1,12.5,delivered\nORD-2,BC2,7.5,delivered'
     );
     expect(rows).toHaveLength(2);
@@ -41,16 +41,79 @@ describe('parseStatementCsv', () => {
   });
 
   it('accepts Arabic headers and semicolons', () => {
-    const { rows } = parseStatementCsv('المرجع;المبلغ\nORD-9;30');
+    const { rows } = parseStatement('المرجع;المبلغ\nORD-9;30');
     expect(rows[0]).toMatchObject({ merchantRef: 'ORD-9', amount: 30 });
   });
 
   it('refuses a file with no amount column', () => {
-    expect(parseStatementCsv('merchant_ref,status\nORD-1,delivered').error).toContain('عمود للمبلغ');
+    expect(parseStatement('merchant_ref,status\nORD-1,delivered').error).toContain('عمود للمبلغ');
   });
 
   it('refuses a file with neither reference nor barcode — nothing to match on', () => {
-    expect(parseStatementCsv('amount,status\n10,delivered').error).toContain('المطابقة');
+    expect(parseStatement('amount,status\n10,delivered').error).toContain('المطابقة');
+  });
+});
+
+describe('a real courier statement, as the courier writes it', () => {
+  // The shape of the file the user actually receives: Arabic headers, three
+  // money columns, and the merchant's order number buried at the start of
+  // the notes because the courier has no reference column.
+  const HEADER = [
+    'باركود الشحنة', 'الكمية', 'باركود كشف التحصيل', 'اسم المستلم',
+    'الملاحظات', 'التحصيل', 'السعر', 'الصافي', 'الحالة',
+  ];
+  const rowsIn = [
+    ['100522160432', '1.0', '7446091600029', 'محمد', '15133 ', '12.0', '3.0', '9.0', 'تم توصيلها'],
+    ['100522160425', '1.0', '7446091600029', 'هاشم', '15132 - العميل طلب التأجيل', '20.0', '3.0', '17.0', 'تم توصيلها'],
+    ['100522159603', '1.0', '7446091600029', 'فائز', '15055 - تم الرفض قبل الوصول', '0.0', '0.0', '0.0', 'تم إرجاعها'],
+    ['', '', '', '', '', '', '', '', ''],
+  ];
+
+  it('stores the NET as the amount — that is what the courier hands over', () => {
+    const { rows, total } = parseStatementRows(HEADER, rowsIn);
+    expect(rows).toHaveLength(3); // the blank row is dropped
+    expect(rows[0]).toMatchObject({ amount: 9, collected: 12, fee: 3 });
+    expect(total).toBe(26); // 9 + 17 + 0
+  });
+
+  it('reads the merchant reference out of the notes', () => {
+    const { rows } = parseStatementRows(HEADER, rowsIn);
+    expect(rows.map((r) => r.merchantRef)).toEqual(['15133', '15132', '15055']);
+  });
+
+  it('keeps the courier barcode as the second matching key', () => {
+    const { rows } = parseStatementRows(HEADER, rowsIn);
+    expect(rows[0].barcode).toBe('100522160432');
+  });
+
+  it('carries a returned line through at zero rather than dropping it', () => {
+    const { rows } = parseStatementRows(HEADER, rowsIn);
+    const returned = rows.find((r) => r.status?.includes('إرجاع'));
+    expect(returned).toMatchObject({ amount: 0, merchantRef: '15055' });
+  });
+
+  it('derives the net when the file states only the COD and the fee', () => {
+    const header = ['المرجع', 'التحصيل', 'السعر'];
+    const { rows } = parseStatementRows(header, [['ORD-1', '20', '3']]);
+    expect(rows[0]).toMatchObject({ amount: 17, collected: 20, fee: 3 });
+  });
+
+  it('falls back to the COD when there is no fee column at all', () => {
+    const { rows } = parseStatementRows(['المرجع', 'المبلغ'], [['ORD-1', '20']]);
+    expect(rows[0].amount).toBe(20);
+  });
+});
+
+describe('refFromNotes', () => {
+  it('takes the reference written before the free text', () => {
+    expect(refFromNotes('15132 - بردلي خبر بس يخلص شغل')).toBe('15132');
+    expect(refFromNotes('  ORD-2026-0007 ملاحظة')).toBe('ORD-2026-0007');
+  });
+
+  it('returns null when the note is only prose', () => {
+    expect(refFromNotes('تم الرفض قبل الوصول')).toBeNull();
+    expect(refFromNotes('')).toBeNull();
+    expect(refFromNotes(null)).toBeNull();
   });
 });
 
@@ -61,6 +124,10 @@ describe('expected amount', () => {
 
   it('is zero for a returned order', () => {
     expect(expectedAmountFor({ shippingStatus: 'RETURNED', totalAmount: 100 })).toBe(0);
+  });
+
+  it('subtracts the courier fee — a statement states what they hand over', () => {
+    expect(expectedAmountFor({ shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 })).toBe(17);
   });
 
   it('is the order total otherwise', () => {
