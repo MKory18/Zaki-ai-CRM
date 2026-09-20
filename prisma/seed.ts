@@ -383,6 +383,26 @@ async function main() {
     },
   });
 
+  // Contract roles the confirmation centre needs (Stage 2/4).
+  await prisma.user.create({
+    data: {
+      companyId: company.id, email: 'agent@bioderma.com', name: 'موظف التأكيد',
+      passwordHash, role: 'CONFIRMATION_AGENT', status: 'ACTIVE',
+    },
+  });
+  await prisma.user.create({
+    data: {
+      companyId: company.id, email: 'supervisor@bioderma.com', name: 'مشرف التأكيد',
+      passwordHash, role: 'CONFIRMATION_SUPERVISOR', status: 'ACTIVE',
+    },
+  });
+  await prisma.user.create({
+    data: {
+      companyId: company.id, email: 'warehouse@bioderma.com', name: 'أمين المستودع',
+      passwordHash, role: 'WAREHOUSE', status: 'ACTIVE',
+    },
+  });
+
   const modsData = [
     { email: 'sara@bioderma.com', name: 'سارة محمود', phone: '+962 790 000 001', commissionRate: 5 },
     { email: 'omar@bioderma.com', name: 'عمر خالد', phone: '+962 790 000 002', commissionRate: 5 },
