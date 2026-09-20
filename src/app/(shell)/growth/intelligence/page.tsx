@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { IntelligenceScreen } from '@/components/screens/IntelligenceScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/growth/intelligence');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/growth/intelligence');
+  return <IntelligenceScreen />;
 }

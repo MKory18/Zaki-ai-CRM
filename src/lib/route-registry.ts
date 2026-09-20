@@ -105,7 +105,7 @@ export const NAV: NavGroup[] = [
     routes: [
       r('/growth/performance', 'لوحة الأداء', 'Gauge', ['reports.view', 'analytics.view']),
       r('/growth/campaigns', 'الحملات', 'Megaphone', ['reports.view'], 8),
-      r('/growth/intelligence', 'مركز الذكاء', 'Lightbulb', ['growth.intelligence'], 8),
+      r('/growth/intelligence', 'مركز الذكاء', 'Lightbulb', ['growth.intelligence']),
       r('/growth/single-product-stores', 'المتاجر المفردة', 'Store', ['geo.manage'], 10),
       r('/growth/landing-pages', 'صفحات الهبوط', 'PanelsTopLeft', ['landing_pages.view']),
       r('/growth/whatsapp/inbox', 'صندوق الواتساب', 'MessageCircle', ['whatsapp.view']),
