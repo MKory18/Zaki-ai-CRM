@@ -50,6 +50,32 @@ describe('adapter selection', () => {
   });
 });
 
+describe('a courier is not a platform', () => {
+  it('runs a courier on the adapter its adapterCode names, not its own code', () => {
+    const platform: CourierAdapter = {
+      code: 'PLATFORM', name: 'Platform', automated: true,
+      createShipment: async () => ({ trackingNumber: 'X' }),
+      fetchEvents: async () => [],
+      mapStatus: () => null,
+    };
+    registerAdapter(platform);
+
+    // Basha ships THROUGH the platform: its own code stays BASHA.
+    expect(adapterFor({ code: 'BASHA', adapterCode: 'PLATFORM', apiEnabled: true })).toBe(platform);
+  });
+
+  it('falls back to its own code when no adapter is named', () => {
+    expect(adapterFor({ code: 'PLATFORM', apiEnabled: true }).code).toBe('PLATFORM');
+  });
+
+  it('stays manual when the named adapter has no credentials configured', () => {
+    // LOGESTECHS builds from the environment; with none set there is
+    // nothing to call, so it must not pretend to be automated.
+    expect(adapterFor({ code: 'BASHA', adapterCode: 'LOGESTECHS', apiEnabled: true, apiConfig: { companyId: 744 } }))
+      .toBe(manualAdapter);
+  });
+});
+
 describe('the manual adapter is the honest description of today', () => {
   it('has nothing to poll and refuses to invent a tracking number', async () => {
     expect(await manualAdapter.fetchEvents(['TR-1'])).toEqual([]);

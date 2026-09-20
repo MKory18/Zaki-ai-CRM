@@ -113,7 +113,7 @@ export class LogesTechsAdapter implements CourierAdapter {
   private readonly base: string;
   private readonly http: typeof fetch;
 
-  constructor(private readonly config: LogesTechsConfig) {
+  constructor(readonly config: LogesTechsConfig) {
     this.base = (config.baseUrl ?? DEFAULT_BASE).replace(/\/+$/, '');
     this.http = config.fetchImpl ?? fetch;
   }

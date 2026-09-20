@@ -1,6 +1,6 @@
 import type { CourierAdapter } from './types';
 import { manualAdapter } from './manual';
-import { logesTechsFromEnv } from './logestechs';
+import { LogesTechsAdapter, logesTechsFromEnv } from './logestechs';
 
 /**
  * Adapter registry, keyed by DeliveryProvider.code.
@@ -21,12 +21,57 @@ export function registerAdapter(adapter: CourierAdapter): void {
   ADAPTERS.set(adapter.code.toUpperCase(), adapter);
 }
 
-export function adapterFor(provider: { code: string; apiEnabled?: boolean } | null | undefined): CourierAdapter {
-  if (!provider?.apiEnabled) return manualAdapter;
-  return ADAPTERS.get(provider.code.trim().toUpperCase()) ?? manualAdapter;
+/** What the registry needs to know about a courier to pick its adapter. */
+export interface ProviderLike {
+  code: string;
+  apiEnabled?: boolean;
+  /** Which integration it runs on. Falls back to its own code. */
+  adapterCode?: string | null;
+  /** That account's ids on the platform — never credentials. */
+  apiConfig?: unknown;
 }
 
-export function isAutomated(provider: { code: string; apiEnabled?: boolean } | null | undefined): boolean {
+/**
+ * The adapter for a courier.
+ *
+ * A courier is not a platform: Basha Delivery ships through LogesTechs, so
+ * its adapterCode is LOGESTECHS while its own code stays BASHA. Two couriers
+ * can run on the same platform under different accounts, which is why the
+ * account's ids come from the courier row and not from the environment.
+ *
+ * Credentials still come from the environment. A courier with an adapter
+ * named but no credentials configured stays MANUAL rather than failing at
+ * the first call.
+ */
+export function adapterFor(provider: ProviderLike | null | undefined): CourierAdapter {
+  if (!provider?.apiEnabled) return manualAdapter;
+
+  const key = (provider.adapterCode || provider.code).trim().toUpperCase();
+
+  if (key === 'LOGESTECHS') {
+    const base = logesTechsFromEnv();
+    if (!base) return manualAdapter; // no credentials — nothing to call
+
+    const config = (provider.apiConfig ?? {}) as Record<string, unknown>;
+    const companyId = Number(config.companyId);
+    if (!Number.isFinite(companyId)) return manualAdapter;
+
+    // The courier's own account on the platform, over the shared credentials.
+    return new LogesTechsAdapter({
+      ...base.config,
+      companyId,
+      ...(Number.isFinite(Number(config.serviceTypeId)) ? { serviceTypeId: Number(config.serviceTypeId) } : {}),
+      ...(Number.isFinite(Number(config.vehicleTypeId)) ? { vehicleTypeId: Number(config.vehicleTypeId) } : {}),
+      ...(Number.isFinite(Number(config.originCityId))
+        ? { origin: { ...base.config.origin, cityId: Number(config.originCityId) } }
+        : {}),
+    });
+  }
+
+  return ADAPTERS.get(key) ?? manualAdapter;
+}
+
+export function isAutomated(provider: ProviderLike | null | undefined): boolean {
   return adapterFor(provider).automated;
 }
 

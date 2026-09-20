@@ -749,6 +749,15 @@ model DeliveryProvider {
   isActive   Boolean  @default(true)
   apiEnabled Boolean  @default(false)
   apiBaseUrl String?
+  // Which integration this courier runs on. A courier is not a platform:
+  // Basha Delivery ships through LogesTechs, and another courier could ship
+  // through the same platform under a different account. So the adapter is
+  // named here, and the account's own ids live in apiConfig.
+  adapterCode String?
+  // Per-courier settings for that adapter — their companyId, service and
+  // vehicle type ids. NEVER credentials: email and password stay in the
+  // environment, out of the database and out of any API response.
+  apiConfig  Json?
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
