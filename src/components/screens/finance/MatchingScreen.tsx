@@ -18,6 +18,10 @@ interface Match {
   expectedAmount: string | number | null;
   statementAmount: string | number | null;
   difference: string | number | null;
+  expectedFee: string | number | null;
+  statementFee: string | number | null;
+  feeDifference: string | number | null;
+  note: string | null;
   order: { id: string; orderNumber: string; merchantRef: string | null; shippingStatus: string } | null;
   statementLine: { merchantRef: string | null; barcode: string | null; amount: string | number } | null;
 }
@@ -131,7 +135,7 @@ export function MatchingScreen() {
             tone="rose"
             currency={statement?.currencyCode ?? ''}
             rows={queue('MISMATCHED')}
-            hint="راجع الطلب نفسه: تسليم جزئي غير مسجَّل أو خصم من الشركة. التصحيح يكون على الطلب أو بقيد عكسي."
+            hint="راجع الطلب نفسه: تسليم جزئي غير مسجَّل، أو أجرة توصيل أعلى من المتفق عليه. التصحيح يكون على الطلب أو بقيد عكسي — لا بتعديل الكشف."
           />
           <Queue
             title="في الكشف وليس عندنا"
@@ -201,12 +205,14 @@ function Queue({
                   <th className="text-right font-medium px-3 py-2">المتوقَّع</th>
                   <th className="text-right font-medium px-3 py-2">في الكشف</th>
                   <th className="text-right font-medium px-3 py-2">الفرق</th>
+                  <th className="text-right font-medium px-3 py-2">أجرة التوصيل</th>
                   <th className="text-right font-medium px-3 py-2">طوبق عبر</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e3e8ef]">
                 {rows.map((m) => {
                   const diff = num(m.difference);
+                  const feeDiff = num(m.feeDifference);
                   return (
                     <tr key={m.id}>
                       <td className="px-3 py-2 text-[#364152]" dir="ltr">
@@ -225,6 +231,17 @@ function Queue({
                       <td className="px-3 py-2 tabular-nums">{num(m.statementAmount) ?? '—'}</td>
                       <td className={`px-3 py-2 tabular-nums ${diff ? 'text-[#fb323f] font-medium' : 'text-[#697586]'}`}>
                         {diff === null ? '—' : `${diff} ${currency}`}
+                      </td>
+                      <td className="px-3 py-2 text-xs tabular-nums">
+                        {num(m.statementFee) === null ? (
+                          <span className="text-[#9aa4b2]">—</span>
+                        ) : feeDiff ? (
+                          <span className="text-[#fb323f] font-medium">
+                            {num(m.statementFee)} بدل {num(m.expectedFee)}
+                          </span>
+                        ) : (
+                          <span className="text-[#697586]">{num(m.statementFee)}</span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-xs text-[#697586]">
                         {m.matchedBy === 'MERCHANT_REF' ? 'المرجع' : m.matchedBy === 'BARCODE' ? 'الباركود' : '—'}

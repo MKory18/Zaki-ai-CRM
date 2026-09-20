@@ -213,6 +213,61 @@ describe('runMatching', () => {
   });
 });
 
+describe('the delivery fee is matched too', () => {
+  const scope = { companyId: 'c1', storeId: 's1', statementId: 'st1', minorUnit: 3 };
+
+  it('flags a fee higher than agreed even when the net still adds up', async () => {
+    // The courier collected 2 more AND charged 2 more, so the net is exactly
+    // what we expected — and our revenue is quietly 2 lower.
+    db.statementLine.findMany.mockResolvedValue([
+      { id: 'l1', merchantRef: null, barcode: 'BC1', amount: 17, collected: 22, fee: 5 },
+    ]);
+    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 });
+
+    const outcome = await runMatching(db as never, scope);
+    expect(outcome.matched).toBe(0);
+    expect(outcome.mismatched).toBe(1);
+    expect(outcome.feeMismatched).toBe(1);
+
+    const data = db.settlementMatch.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({ result: 'MISMATCHED', expectedFee: 3, statementFee: 5, feeDifference: 2, difference: 0 });
+    expect(data.note).toContain('أجرة التوصيل');
+  });
+
+  it('passes a line where both the net and the fee agree', async () => {
+    db.statementLine.findMany.mockResolvedValue([
+      { id: 'l1', merchantRef: null, barcode: 'BC1', amount: 17, collected: 20, fee: 3 },
+    ]);
+    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 });
+
+    const outcome = await runMatching(db as never, scope);
+    expect(outcome).toMatchObject({ matched: 1, mismatched: 0, feeMismatched: 0 });
+    expect(db.settlementMatch.create.mock.calls[0][0].data).toMatchObject({ feeDifference: 0 });
+  });
+
+  it('does not compare the fee on a returned parcel — none is charged', async () => {
+    db.statementLine.findMany.mockResolvedValue([
+      { id: 'l1', merchantRef: null, barcode: 'BC1', amount: 0, collected: 0, fee: 0 },
+    ]);
+    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'RETURNED', totalAmount: 20, deliveryFee: 3 });
+
+    const outcome = await runMatching(db as never, scope);
+    expect(outcome.matched).toBe(1);
+    expect(outcome.feeMismatched).toBe(0);
+  });
+
+  it('compares nothing when the file states no fee at all', async () => {
+    db.statementLine.findMany.mockResolvedValue([
+      { id: 'l1', merchantRef: null, barcode: 'BC1', amount: 17, collected: null, fee: null },
+    ]);
+    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 });
+
+    const outcome = await runMatching(db as never, scope);
+    expect(outcome.matched).toBe(1);
+    expect(db.settlementMatch.create.mock.calls[0][0].data).toMatchObject({ statementFee: null, feeDifference: null });
+  });
+});
+
 describe('receiptGap', () => {
   it('reports the gap between what was claimed and what arrived', async () => {
     db.courierStatement.findUnique.mockResolvedValue({ totalAmount: 100, gapExplanation: null });

@@ -225,6 +225,8 @@ export function expectedAmountFor(order: {
 export interface MatchOutcome {
   matched: number;
   mismatched: number;
+  /** Of the mismatched, how many are a delivery-fee difference. */
+  feeMismatched: number;
   missingInSystem: number;
   missingInStatement: number;
 }
@@ -249,7 +251,7 @@ export async function runMatching(
   // Start clean: matching may be re-run after the operator fixes data.
   await tx.settlementMatch.deleteMany({ where: { statementId } });
 
-  const outcome: MatchOutcome = { matched: 0, mismatched: 0, missingInSystem: 0, missingInStatement: 0 };
+  const outcome: MatchOutcome = { matched: 0, mismatched: 0, feeMismatched: 0, missingInSystem: 0, missingInStatement: 0 };
   const matchedOrderIds = new Set<string>();
 
   for (const line of lines) {
@@ -297,19 +299,39 @@ export async function runMatching(
     const stated = roundMinor(Number(line.amount), minorUnit);
     const difference = roundMinor(stated - expected, minorUnit);
 
+    // The delivery fee is checked in its own right. With the price INCLUDING
+    // delivery the customer pays one figure and the fee comes out of it, so a
+    // fee higher than agreed does not look like an error — the money still
+    // arrives, just less of it. Comparing both quantities names the cause.
+    const expectedFee = roundMinor(Number(order.deliveryFee ?? 0), minorUnit);
+    const statedFee = line.fee === null || line.fee === undefined ? null : roundMinor(Number(line.fee), minorUnit);
+    const feeDifference = statedFee === null ? null : roundMinor(statedFee - expectedFee, minorUnit);
+
+    // A returned parcel is charged no fee, so its fee is not compared.
+    const feeWrong = feeDifference !== null && feeDifference !== 0 && expected > 0;
+
     await tx.settlementMatch.create({
       data: {
         companyId, statementId, statementLineId: line.id, orderId: order.id,
-        result: difference === 0 ? 'MATCHED' : 'MISMATCHED',
+        result: difference === 0 && !feeWrong ? 'MATCHED' : 'MISMATCHED',
         // Record which key actually found it, not which one the line carries.
         matchedBy: matchedByBarcode ? 'BARCODE' : 'MERCHANT_REF',
         expectedAmount: expected,
         statementAmount: stated,
         difference,
+        expectedFee,
+        statementFee: statedFee,
+        feeDifference,
+        note: feeWrong && difference === 0
+          ? `أجرة التوصيل ${statedFee} بدل ${expectedFee}`
+          : null,
       },
     });
-    if (difference === 0) outcome.matched++;
-    else outcome.mismatched++;
+    if (difference === 0 && !feeWrong) outcome.matched++;
+    else {
+      outcome.mismatched++;
+      if (feeWrong) outcome.feeMismatched++;
+    }
   }
 
   // Orders we delivered in the period that the courier did not list at all.

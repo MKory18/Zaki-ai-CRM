@@ -1494,7 +1494,14 @@ model StatementLine {
   statementId String
   merchantRef String?
   barcode     String?
+  // The NET: what the courier hands over after keeping their fee. This is
+  // the figure a receipt is measured against.
   amount      Decimal  @db.Decimal(14, 3)
+  // What they say they collected from the customer, and the fee they kept.
+  // Both are stated so a difference in the net can be traced to its cause:
+  // a collection short, or a fee higher than agreed.
+  collected   Decimal? @db.Decimal(14, 3)
+  fee         Decimal? @db.Decimal(14, 3)
   status      String? // the courier's own status word
   rawRow      String?
   createdAt   DateTime @default(now())
@@ -1543,6 +1550,12 @@ model SettlementMatch {
   expectedAmount  Decimal?  @db.Decimal(14, 3)
   statementAmount Decimal?  @db.Decimal(14, 3)
   difference      Decimal?  @db.Decimal(14, 3)
+  // The delivery fee is checked in its own right. With the price INCLUDING
+  // delivery, a fee higher than agreed quietly eats the revenue: the net
+  // still "arrives", just smaller. Stating both sides names the cause.
+  expectedFee     Decimal?  @db.Decimal(14, 3)
+  statementFee    Decimal?  @db.Decimal(14, 3)
+  feeDifference   Decimal?  @db.Decimal(14, 3)
   note            String?
   resolvedById    String?
   resolvedAt      DateTime?

@@ -132,6 +132,10 @@ export async function POST(req: Request) {
           merchantRef: r.merchantRef,
           barcode: r.barcode,
           amount: r.amount,
+          // Kept so a difference in the net can be traced to its cause: a
+          // collection short, or a fee higher than agreed.
+          collected: r.collected,
+          fee: r.fee,
           status: r.status,
           rawRow: r.rawRow,
         })),
