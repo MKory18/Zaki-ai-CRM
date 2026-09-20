@@ -36,7 +36,7 @@ export function LabelsScreen() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    apiJson<{ providers: { id: string; name: string }[]; regions: { id: string; name: string }[] }>('/api/settings/delivery-fees')
+    apiJson<{ providers: { id: string; name: string }[]; regions: { id: string; name: string }[] }>('/api/ops/references')
       .then((d) => {
         setProviders(d.providers);
         setRegions(d.regions);

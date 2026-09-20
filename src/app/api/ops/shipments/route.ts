@@ -38,6 +38,8 @@ export async function GET(req: Request) {
     const q = new URL(req.url).searchParams;
     const from = q.get('from') ? new Date(q.get('from')!) : null;
     const to = q.get('to') ? new Date(q.get('to')!) : null;
+    // The courier is the TARGET of this shipment, used to price each row —
+    // not a filter: orders waiting for a courier have none assigned yet.
     const providerId = q.get('courier');
     const regionId = q.get('region');
     const productId = q.get('product');
@@ -49,7 +51,6 @@ export async function GET(req: Request) {
         confirmationStatus: 'CONFIRMED',
         shippingStatus: { in: ['NOT_READY', 'PACKING', 'READY_FOR_SHIPPING'] },
         ...(regionId ? { regionId } : {}),
-        ...(providerId ? { deliveryProviderId: providerId } : {}),
         ...(productId ? { items: { some: { productId } } } : {}),
         ...(from || to
           ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }

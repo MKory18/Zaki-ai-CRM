@@ -39,7 +39,7 @@ export function ShipmentsNewScreen() {
 
   useEffect(() => {
     apiJson<{ providers: { id: string; name: string }[]; regions: { id: string; name: string }[] }>(
-      '/api/settings/delivery-fees'
+      '/api/ops/references'
     )
       .then((d) => {
         setProviders(d.providers);
@@ -110,7 +110,7 @@ export function ShipmentsNewScreen() {
   return (
     <div className="max-w-5xl space-y-3">
       <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 grid gap-3 md:grid-cols-5">
-        <Select label="شركة الشحن" value={filters.courier} onChange={(v) => setFilters({ ...filters, courier: v })} options={providers.map((p) => ({ value: p.id, label: p.name }))} />
+        <Select label="شركة الشحن (للشحنة)" value={filters.courier} onChange={(v) => setFilters({ ...filters, courier: v })} options={providers.map((p) => ({ value: p.id, label: p.name }))} />
         <Select label="المحافظة" value={filters.region} onChange={(v) => setFilters({ ...filters, region: v })} options={regions.map((r) => ({ value: r.id, label: r.name }))} />
         <DateField label="من" value={filters.from} onChange={(v) => setFilters({ ...filters, from: v })} />
         <DateField label="إلى" value={filters.to} onChange={(v) => setFilters({ ...filters, to: v })} />
