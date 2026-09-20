@@ -151,6 +151,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           }
         }
 
+        // ── A blocking change request stops OUR forward transitions ──
+        // (courier webhook events are recorded regardless and mark the
+        // request as changed during review — contract invariant 7.)
+        const FORWARD = ['PACKING', 'READY_FOR_SHIPPING', 'READY_FOR_PICKUP', 'SHIPPED', 'OUT_FOR_DELIVERY'];
+        if (FORWARD.includes(newShippingStatus)) {
+          const pending = await db.orderChangeRequest.findFirst({
+            where: { orderId: id, status: 'PENDING', blocking: true },
+            select: { id: true, reason: true },
+          });
+          if (pending) {
+            return NextResponse.json(
+              {
+                error: 'يوجد طلب تعديل قيد المراجعة على هذا الطلب',
+                errorAr: 'يوجد طلب تعديل قيد المراجعة على هذا الطلب',
+                code: 'CHANGE_REQUEST_PENDING',
+                changeRequestId: pending.id,
+              },
+              { status: 409 }
+            );
+          }
+        }
+
         // ── Reservation gate: one unreserved line blocks READY_TO_SHIP ──
         if (newShippingStatus === 'READY_FOR_SHIPPING' || newShippingStatus === 'READY_FOR_PICKUP') {
           const lines = await orderLinesForGuard(db, id);

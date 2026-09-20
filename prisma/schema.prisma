@@ -393,6 +393,9 @@ model Order {
   internalNotes        String?
   customerNotes        String?
   postponedUntil       DateTime?
+  // Stage 4: what the customer asked for, and how often they have asked.
+  postponePreferredTime String?  // free text slot, e.g. "مساءً" or "18:00-20:00"
+  postponeCount        Int       @default(0)
   confirmedAt          DateTime?
   deliveredAt          DateTime?
   // Geo context (Stage 1). Nullable until every order-creation path writes it.
@@ -431,8 +434,10 @@ model Order {
   activities OrderActivity[]
   deliveryAttempts DeliveryAttempt[]
   financialTransactions FinancialTransaction[]
-  items        OrderItem[]
-  notes        OrderNote[]
+  items          OrderItem[]
+  notes          OrderNote[]
+  changeRequests OrderChangeRequest[]
+  issues         OrderIssue[]
   claimHistory OrderClaimHistory[]
   statusLogs   OrderStatusLog[]
   contactAttempts OrderContactAttempt[]
@@ -1445,4 +1450,60 @@ model OrderNote {
   @@index([orderId, createdAt])
   @@index([companyId, kind])
   @@map("order_notes")
+}
+
+// ─── CHANGE REQUESTS (Stage 4) ───
+// A confirmed order is read-only for the agent: changing it goes through a
+// request. A BLOCKING request stops OUR forward transitions only — courier
+// webhook events are always recorded and flag the request as changed during
+// review (contract invariant 7).
+model OrderChangeRequest {
+  id            String   @id @default(uuid())
+  companyId     String
+  orderId       String
+  requestedById String
+  requestedRole String
+  /// { field: { from, to } } — what the requester wants changed
+  changes       Json
+  reason        String
+  status        String   @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  blocking      Boolean  @default(true)
+  /// SLA deadline; expiry escalates, it NEVER auto-approves (silence is not consent)
+  slaDueAt      DateTime?
+  escalatedAt   DateTime?
+  changedDuringReview Boolean @default(false)
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status, createdAt])
+  @@index([orderId, status])
+  @@map("order_change_requests")
+}
+
+// ─── ENTRY ISSUES (Stage 4) ───
+// Only for orders a moderator entered: a store-sourced order has no
+// moderator to return it to. An issue is never counted as a cancellation
+// against the agent, and the order keeps its original created_at.
+model OrderIssue {
+  id           String    @id @default(uuid())
+  companyId    String
+  orderId      String
+  raisedById   String
+  reason       String // WRONG_PHONE | WRONG_ADDRESS | WRONG_PRODUCT | MISSING_DATA | DUPLICATE | OTHER
+  note         String?
+  status       String    @default("OPEN") // OPEN | CORRECTED | VOIDED
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status, createdAt])
+  @@index([orderId])
+  @@map("order_issues")
 }

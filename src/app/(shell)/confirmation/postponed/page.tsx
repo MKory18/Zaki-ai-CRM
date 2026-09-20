@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { ConfirmationPostponedScreen } from '@/components/screens/ConfirmationPostponedScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/confirmation/postponed');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/confirmation/postponed');
+  return <ConfirmationPostponedScreen />;
 }

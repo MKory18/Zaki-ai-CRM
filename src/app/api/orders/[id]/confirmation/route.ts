@@ -69,11 +69,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const body = await req.json();
     const {
-      action, result, note, nextFollowUpAt, followUpReason,
+      action, result, note, nextFollowUpAt, followUpReason, preferredTime,
       rejectionReason, rejectionNote, expectedVersion,
     } = body as {
       action?: string; result?: string; contactMethod?: string; note?: string;
-      nextFollowUpAt?: string; followUpReason?: string;
+      nextFollowUpAt?: string; followUpReason?: string; preferredTime?: string;
       rejectionReason?: string; rejectionNote?: string; expectedVersion?: number;
     };
 
@@ -175,6 +175,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           return NextResponse.json({ error: 'nextFollowUpAt must be in the future (server time)' }, { status: 400 });
         }
         updateData.nextFollowUpAt = d;
+        // Postpone details the confirmation screen shows back to the agent:
+        // when the customer asked for, and how often they have asked.
+        if (target === 'POSTPONED') {
+          updateData.postponedUntil = d;
+          updateData.postponeCount = { increment: 1 };
+          if (typeof preferredTime === 'string' && preferredTime.trim()) {
+            updateData.postponePreferredTime = preferredTime.trim().slice(0, 40);
+          }
+        }
         updateData.followUpStatus = 'SCHEDULED';
         updateData.followUpReason =
           followUpReason && (FOLLOW_UP_REASONS as readonly string[]).includes(followUpReason)

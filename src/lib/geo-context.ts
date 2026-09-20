@@ -42,6 +42,10 @@ export interface GeoContext {
     timezone: string;
     orderPrefix: string;
     allowNegativeStock: boolean;
+    // Business calendar: SLA counters freeze outside these hours.
+    workHoursStart: string;
+    workHoursEnd: string;
+    weekendDays: number[];
   };
 }
 
@@ -216,6 +220,7 @@ export async function requireContext(): Promise<GeoContext> {
     select: {
       id: true, code: true, name: true, currencyCode: true, minorUnit: true,
       timezone: true, orderPrefix: true, allowNegativeStock: true,
+      workHoursStart: true, workHoursEnd: true, weekendDays: true,
     },
   });
   if (!country) throw new Error('Forbidden: country not accessible');

@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { ConfirmationMineScreen } from '@/components/screens/ConfirmationMineScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/confirmation/mine');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/confirmation/mine');
+  return <ConfirmationMineScreen />;
 }

@@ -9,6 +9,7 @@ const { db, requireContext, assertOrderAccess, logAudit, createNotification } = 
   db: {
     orderNote: { findMany: vi.fn(), create: vi.fn() },
     orderItem: { findMany: vi.fn() },
+    orderChangeRequest: { findFirst: vi.fn() },
     user: { findMany: vi.fn(), findUnique: vi.fn() },
     order: { update: vi.fn(), updateMany: vi.fn() },
     deliveryProvider: { findFirst: vi.fn() },
@@ -54,6 +55,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   requireContext.mockResolvedValue(ctx);
   assertOrderAccess.mockResolvedValue({ allowed: true, order: order() });
+  // No blocking change request unless a test says so.
+  db.orderChangeRequest.findFirst.mockResolvedValue(null);
 });
 
 describe('order notes are immutable', () => {

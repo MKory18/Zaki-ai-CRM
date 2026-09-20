@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { ChangeRequestsScreen } from '@/components/screens/ChangeRequestsScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/control/change-requests');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/control/change-requests');
+  return <ChangeRequestsScreen />;
 }

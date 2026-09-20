@@ -51,10 +51,10 @@ export const NAV: NavGroup[] = [
     label: 'مركز التأكيد',
     routes: [
       // Moderators never hold confirmation.pull / .supervise — pulling is not their job.
-      r('/confirmation/queue', 'الطلبات الجديدة', 'Inbox', ['confirmation.pull', 'confirmation.supervise'], 4),
-      r('/confirmation/mine', 'طلباتي', 'ClipboardList', ['confirmation.work'], 4),
-      r('/confirmation/postponed', 'الطلبات المؤجلة', 'CalendarClock', ['confirmation.work', 'confirmation.supervise'], 4),
-      r('/confirmation/issues', 'الإشكالات', 'AlertTriangle', ['confirmation.issues'], 4),
+      r('/confirmation/queue', 'الطلبات الجديدة', 'Inbox', ['confirmation.pull', 'confirmation.supervise']),
+      r('/confirmation/mine', 'طلباتي', 'ClipboardList', ['confirmation.work']),
+      r('/confirmation/postponed', 'الطلبات المؤجلة', 'CalendarClock', ['confirmation.work', 'confirmation.supervise']),
+      r('/confirmation/issues', 'الإشكالات', 'AlertTriangle', ['confirmation.issues']),
     ],
   },
   {
@@ -93,8 +93,8 @@ export const NAV: NavGroup[] = [
     key: 'control',
     label: 'الرقابة',
     routes: [
-      r('/control/change-requests', 'طلبات التعديل', 'FilePen', ['control.change_requests'], 4),
-      r('/control/discount-alerts', 'تنبيهات الخصم', 'BadgePercent', ['control.discount_alerts'], 4),
+      r('/control/change-requests', 'طلبات التعديل', 'FilePen', ['control.change_requests']),
+      r('/control/discount-alerts', 'تنبيهات الخصم', 'BadgePercent', ['control.discount_alerts'], 6),
       r('/control/audit', 'سجل التدقيق', 'ScrollText', ['audit.view']),
       r('/control/blacklist', 'القائمة السوداء', 'Ban', ['control.blacklist'], 8),
     ],
