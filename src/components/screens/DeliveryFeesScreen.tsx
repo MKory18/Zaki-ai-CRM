@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Save } from 'lucide-react';
+import { AlertTriangle, Loader2, Save, Wand2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { Modal } from '@/components/ui/Modal';
 
 /**
  * /settings/delivery-fees — one row per courier per region: the fee, the
@@ -28,6 +29,11 @@ export function DeliveryFeesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  // Changing an existing fee needs a written reason; this holds the request
+  // until the dialog collects one, instead of a browser prompt.
+  const [reasonFor, setReasonFor] = useState<{ regionId: string; regionName: string } | null>(null);
+  const [bulkDone, setBulkDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -47,7 +53,10 @@ export function DeliveryFeesScreen() {
 
   const feeFor = (regionId: string) => data?.fees.find((f) => f.deliveryProviderId === courier && f.regionId === regionId);
 
-  const save = async (regionId: string) => {
+  /** Regions this courier has no fee row for — the ones that block orders. */
+  const missing = (data?.regions ?? []).filter((r) => !feeFor(r.id));
+
+  const save = async (regionId: string, reason?: string) => {
     const current = feeFor(regionId);
     const d = draft[regionId] ?? {
       fee: String(current?.fee ?? ''),
@@ -60,11 +69,12 @@ export function DeliveryFeesScreen() {
       return;
     }
 
-    // Changing an existing fee is an override: the API demands a reason.
-    let reason: string | undefined;
-    if (current && current.fee !== fee) {
-      reason = window.prompt('سبب تعديل الأجرة (يُسجَّل في سجل التدقيق)') ?? undefined;
-      if (!reason) return;
+    // Changing an existing fee is an override: the API demands a reason, and
+    // it is collected in a real dialog rather than a browser prompt.
+    if (current && current.fee !== fee && !reason) {
+      const region = data?.regions.find((r) => r.id === regionId);
+      setReasonFor({ regionId, regionName: region?.name ?? '' });
+      return;
     }
 
     setBusy(regionId);
@@ -114,7 +124,30 @@ export function DeliveryFeesScreen() {
         <p className="text-xs text-[#697586] pb-2">
           الطلبات المشحونة تحتفظ بالأجرة وقت شحنها؛ التعديل هنا يسري على الشحنات الجديدة فقط.
         </p>
+
+        {missing.length > 0 && (
+          <button
+            onClick={() => setBulkOpen(true)}
+            className="h-10 px-3 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
+          >
+            <Wand2 className="w-3.5 h-3.5" /> عبّئ الفارغة ({missing.length})
+          </button>
+        )}
       </div>
+
+      {/* A region with no fee row cannot be priced, so its orders stop dead
+          at the shipment screen. Saying so here is the difference between a
+          blank cell and a known cause. */}
+      {missing.length > 0 && (
+        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-[8px] p-3 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <b>{missing.length}</b> محافظة بلا أجرة عند هذه الشركة — أي طلب إليها سيتوقف في شاشة إنشاء
+            الشحنة برسالة «لا توجد أجرة توصيل لهذه المحافظة».
+            {missing.length <= 6 && <span className="block mt-0.5">{missing.map((r) => r.name).join(' · ')}</span>}
+          </span>
+        </p>
+      )}
 
       {data.providers.length === 0 && (
         <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
@@ -179,6 +212,193 @@ export function DeliveryFeesScreen() {
           </table>
         </div>
       )}
+
+      {bulkOpen && (
+        <BulkFillDialog
+          regions={missing}
+          onClose={() => setBulkOpen(false)}
+          onSaved={async (message) => {
+            setBulkOpen(false);
+            setError(null);
+            setBulkDone(message);
+            await load();
+          }}
+          courier={courier}
+        />
+      )}
+
+      {reasonFor && (
+        <ReasonDialog
+          regionName={reasonFor.regionName}
+          onClose={() => setReasonFor(null)}
+          onConfirm={async (reason) => {
+            const id = reasonFor.regionId;
+            setReasonFor(null);
+            await save(id, reason);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Filling every empty region at once.
+ *
+ * Writes only the regions that have NO fee yet. An existing fee is an
+ * override that needs its own reason, so a bulk pass must never quietly
+ * reprice what somebody already decided.
+ */
+function BulkFillDialog({
+  regions,
+  courier,
+  onClose,
+  onSaved,
+}: {
+  regions: { id: string; name: string }[];
+  courier: string;
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}) {
+  const [fee, setFee] = useState('');
+  const [days, setDays] = useState('3');
+  const [returnFee, setReturnFee] = useState('0');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  return (
+    <Modal isOpen onClose={onClose} title={`تعبئة ${regions.length} محافظة`}>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setSaving(true);
+          setError(null);
+          let done = 0;
+          try {
+            for (const region of regions) {
+              await apiJson('/api/settings/delivery-fees', {
+                method: 'PUT',
+                body: JSON.stringify({
+                  deliveryProviderId: courier,
+                  regionId: region.id,
+                  fee: Number(fee),
+                  lateThresholdDays: Number(days) || 0,
+                  returnFee: Number(returnFee) || 0,
+                }),
+              });
+              done++;
+              setProgress(done);
+            }
+            onSaved(`عُبِّئت ${done} محافظة`);
+          } catch (err) {
+            setError(
+              `${err instanceof Error ? err.message : 'تعذر الحفظ'} — حُفظت ${done} من ${regions.length}`
+            );
+          } finally {
+            setSaving(false);
+          }
+        }}
+        className="space-y-3"
+      >
+        <p className="text-xs text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+          تُكتب على المحافظات التي <b>لا أجرة لها</b> فقط. المحافظات المسعّرة مسبقاً لا تُلمس — تعديلها
+          قرار منفصل يحتاج سبباً مكتوباً. تقدر تعدّل أي محافظة بعدها من الجدول.
+        </p>
+
+        <label className="block">
+          <span className="block text-xs font-medium text-[#364152] mb-1">الأجرة</span>
+          <input
+            type="number" min="0" step="0.001" value={fee} onChange={(e) => setFee(e.target.value)}
+            required autoFocus dir="ltr"
+            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+          />
+        </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label>
+            <span className="block text-xs font-medium text-[#364152] mb-1">حد التأخير (أيام)</span>
+            <input
+              type="number" min="0" max="90" value={days} onChange={(e) => setDays(e.target.value)} dir="ltr"
+              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            />
+          </label>
+          <label>
+            <span className="block text-xs font-medium text-[#364152] mb-1">أجرة الإرجاع</span>
+            <input
+              type="number" min="0" step="0.001" value={returnFee} onChange={(e) => setReturnFee(e.target.value)} dir="ltr"
+              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            />
+          </label>
+        </div>
+
+        <p className="text-[11px] text-[#9aa4b2]">
+          {regions.map((r) => r.name).join(' · ')}
+        </p>
+
+        {saving && (
+          <p className="text-xs text-[#697586] tabular-nums">جارٍ الحفظ… {progress} / {regions.length}</p>
+        )}
+        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+
+        <div className="flex gap-2 justify-end">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+            إلغاء
+          </button>
+          <button
+            type="submit" disabled={saving || !fee}
+            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+          >
+            {saving ? 'جارٍ…' : `عبّئ ${regions.length}`}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** The written reason an existing fee change needs, for the audit log. */
+function ReasonDialog({
+  regionName,
+  onClose,
+  onConfirm,
+}: {
+  regionName: string;
+  onClose: () => void;
+  onConfirm: (reason: string) => void | Promise<void>;
+}) {
+  const [reason, setReason] = useState('');
+
+  return (
+    <Modal isOpen onClose={onClose} title={`تعديل أجرة ${regionName}`}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onConfirm(reason.trim());
+        }}
+        className="space-y-3"
+      >
+        <p className="text-xs text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+          تغيير أجرة قائمة يُسجَّل في سجل التدقيق باسمك وبالسبب. الشحنات القائمة تحتفظ بأجرتها.
+        </p>
+        <label className="block">
+          <span className="block text-xs font-medium text-[#364152] mb-1">السبب (إلزامي)</span>
+          <textarea
+            value={reason} onChange={(e) => setReason(e.target.value)}
+            required minLength={3} rows={3} autoFocus
+            placeholder="مثال: اتفاق جديد مع الشركة على هذه المحافظة"
+            className="w-full p-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+          />
+        </label>
+        <div className="flex gap-2 justify-end">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+            إلغاء
+          </button>
+          <button type="submit" className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium">
+            حفظ التعديل
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
