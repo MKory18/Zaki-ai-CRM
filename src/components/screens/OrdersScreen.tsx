@@ -26,6 +26,9 @@ import {
   Truck,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { ar as arLocale } from 'date-fns/locale';
+import { FILTERABLE_STATES, STATE_LABEL_AR } from '@/lib/order-state';
+import { formatMoney } from '@/lib/money';
 
 export function OrdersScreen() {
   const { t, currentUser, locale } = useApp();
@@ -40,12 +43,16 @@ export function OrdersScreen() {
   const [productId, setProductId] = useState('all');
   const [moderatorId, setModeratorId] = useState('all');
   const [source, setSource] = useState('all');
+  const [courierId, setCourierId] = useState('all');
   // Workflow queue (backend-enforced per role — server rejects unauthorized queues)
   const [queue, setQueue] = useState('');
 
   // Metadata dropdowns
   const [products, setProducts] = useState<any[]>([]);
   const [moderators, setModerators] = useState<any[]>([]);
+  const [couriers, setCouriers] = useState<any[]>([]);
+  // The store's own currency, sent with the list — never assumed.
+  const [currency, setCurrency] = useState({ code: '', minorUnit: 2 });
   const [error, setError] = useState<string | null>(null);
   // ref mirror of pagination for polling without re-subscribing the interval
   const paginationRef = useRef({ page: 1 });
@@ -64,9 +71,10 @@ export function OrdersScreen() {
 
   const loadMetadata = async () => {
     try {
-      const [pRes, mRes] = await Promise.all([
+      const [pRes, mRes, cRes] = await Promise.all([
         fetch('/api/products'),
         fetch('/api/moderators'),
+        fetch('/api/delivery-providers'),
       ]);
       if (pRes.ok) {
         const pData = await pRes.json();
@@ -75,6 +83,10 @@ export function OrdersScreen() {
       if (mRes.ok) {
         const mData = await mRes.json();
         setModerators(mData.moderators || []);
+      }
+      if (cRes.ok) {
+        const cData = await cRes.json();
+        setCouriers(cData.providers ?? cData.deliveryProviders ?? []);
       }
     } catch (e) {
       console.error(e);
@@ -95,6 +107,7 @@ export function OrdersScreen() {
         moderatorId,
         source,
       });
+      if (courierId !== 'all') params.set('courierId', courierId);
       if (queue) params.set('queue', queue);
 
       const res = await apiFetch(`/api/orders?${params.toString()}`);
@@ -104,6 +117,7 @@ export function OrdersScreen() {
       if (res.ok) {
         const data = await res.json();
         setOrders(data.orders || []);
+        if (data.currency) setCurrency(data.currency);
         setPagination(data.pagination || { total: 0, page: 1, limit: 25, totalPages: 1 });
       } else {
         // Show a visible error instead of silently keeping stale data
@@ -119,7 +133,7 @@ export function OrdersScreen() {
       // Only the latest request may clear the shared loading flag
       if (seq === loadOrdersSeq.current) setLoading(false);
     }
-  }, [search, status, productId, moderatorId, source, queue]);
+  }, [search, status, productId, moderatorId, source, courierId, queue]);
 
   // Keep the ref in sync each render (after loadOrders exists)
   useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
@@ -156,6 +170,7 @@ export function OrdersScreen() {
   const handleExportCSV = () => {
     // Export respects the current filters (same params as loadOrders)
     const params = new URLSearchParams({ q: search, status, productId, moderatorId, source });
+    if (courierId !== 'all') params.set('courierId', courierId);
     if (queue) params.set('queue', queue);
     window.open(`/api/reports/export?${params.toString()}`, '_blank');
   };
@@ -168,7 +183,7 @@ export function OrdersScreen() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.orders}</h1>
             <p className="text-xs text-[#697586] mt-1">
-              Complete order tracking, moderator calls, status transitions & fulfillment
+              كل الطلبات بحالتها ومَن يحملها — الحالة والفلتر يقرآن نفس الشيء
             </p>
           </div>
 
@@ -254,19 +269,14 @@ export function OrdersScreen() {
             onChange={(e) => setStatus(e.target.value)}
             className="text-xs py-2"
           >
-            <option value="all">{t.allStatuses}</option>
-            <option value="NEW">NEW</option>
-            <option value="CONTACTING">CONTACTING</option>
-            <option value="NO_ANSWER">NO_ANSWER</option>
-            <option value="CONFIRMED">CONFIRMED</option>
-            <option value="POSTPONED">POSTPONED</option>
-            <option value="REJECTED">REJECTED</option>
-            <option value="READY_FOR_SHIPPING">READY_FOR_SHIPPING</option>
-            <option value="SHIPPED">SHIPPED</option>
-            <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
-            <option value="DELIVERED">DELIVERED</option>
-            <option value="CANCELLED">CANCELLED</option>
-            <option value="RETURNED">RETURNED</option>
+            {/* The same states the badges show — the legacy status column is
+                not a vocabulary anyone on this screen reads. */}
+            <option value="all">كل الحالات</option>
+            {FILTERABLE_STATES.map((st) => (
+              <option key={st} value={st}>
+                {STATE_LABEL_AR[st]}
+              </option>
+            ))}
           </Select>
 
           <Select
@@ -312,6 +322,20 @@ export function OrdersScreen() {
             <option value="TikTok">TikTok</option>
             <option value="Instagram">Instagram</option>
           </Select>
+
+          <Select
+            value={courierId}
+            onChange={(e) => setCourierId(e.target.value)}
+            className="text-xs py-2"
+          >
+            <option value="all">كل شركات الشحن</option>
+            <option value="none">بلا شركة شحن بعد</option>
+            {couriers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.kind === 'AGENT' ? `مندوب · ${c.name}` : c.name}
+              </option>
+            ))}
+          </Select>
         </div>
 
         {/* Load error banner */}
@@ -332,8 +356,9 @@ export function OrdersScreen() {
                     <th className="px-6 py-3.5">{t.thOrderNumber}</th>
                     <th className="px-6 py-3.5">{t.thCustomer}</th>
                     <th className="px-6 py-3.5">{t.thProduct} & {t.thOffer}</th>
-                    <th className="px-6 py-3.5">{t.thTotal} ($)</th>
+                    <th className="px-6 py-3.5">{t.thTotal}</th>
                     <th className="px-6 py-3.5">{t.status}</th>
+                    <th className="px-6 py-3.5">شركة الشحن</th>
                     <th className="px-6 py-3.5">السجل</th>
                     <th className="px-6 py-3.5">{t.thModerator}</th>
                     <th className="px-6 py-3.5">{t.thDate}</th>
@@ -343,7 +368,7 @@ export function OrdersScreen() {
                 <tbody className="divide-y divide-[#e3e8ef]">
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-[#9ca3af]">
+                      <td colSpan={10} className="py-12 text-center text-[#9ca3af]">
                         {loading ? t.loading : t.noOrders}
                       </td>
                     </tr>
@@ -391,21 +416,35 @@ export function OrdersScreen() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-3.5 font-bold text-[#121926]">
-                          ${Number(order.totalAmount || 0).toFixed(2)}
+                        <td className="px-6 py-3.5 font-bold text-[#121926] tabular-nums" dir="ltr">
+                          {currency.code
+                            ? formatMoney(Number(order.totalAmount || 0), currency.code, currency.minorUnit)
+                            : Number(order.totalAmount || 0).toFixed(2)}
                         </td>
 
                         <td className="px-6 py-3.5">
                           {/* The derived state, the same one every other screen shows */}
                           <OrderStateBadge state={order.state} />
-                          {order.deliveryProvider && (
-                            <span className="mt-1 flex items-center gap-1 text-[10px] text-[#9ca3af]">
+                        </td>
+
+                        {/* Who is carrying it. An order past confirmation with
+                            nobody on it is the thing worth spotting here. */}
+                        <td className="px-6 py-3.5">
+                          {order.deliveryProvider ? (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] text-[#364152]">
                               {order.deliveryProvider.kind === 'AGENT' ? (
-                                <Bike className="w-3 h-3 text-[#b8256e]" />
+                                <Bike className="w-3.5 h-3.5 text-[#b8256e] shrink-0" />
                               ) : (
-                                <Truck className="w-3 h-3" />
+                                <Truck className="w-3.5 h-3.5 text-[#697586] shrink-0" />
                               )}
-                              {order.deliveryProvider.name}
+                              <span className="truncate max-w-[120px]">{order.deliveryProvider.name}</span>
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-[#9aa4b2]">—</span>
+                          )}
+                          {order.trackingNumber && (
+                            <span className="block mt-0.5 font-mono text-[10px] text-[#9aa4b2]" dir="ltr">
+                              {order.trackingNumber}
                             </span>
                           )}
                         </td>
@@ -420,12 +459,12 @@ export function OrdersScreen() {
 
                         <td className="px-6 py-3.5">
                           <span className="font-medium text-[#364152] block">
-                            {order.moderator?.name || 'Unassigned'}
+                            {order.moderator?.name || 'غير مسند'}
                           </span>
                         </td>
 
                         <td className="px-6 py-3.5 text-[#9ca3af]">
-                          {format(new Date(order.createdAt), 'MMM d, yyyy p')}
+                          {format(new Date(order.createdAt), 'd MMMM yyyy · HH:mm', { locale: arLocale })}
                         </td>
 
                         <td className="px-6 py-3.5 text-right rtl:text-left">
@@ -450,7 +489,7 @@ export function OrdersScreen() {
             {/* Pagination Bar */}
             <div className="px-6 py-3 border-t border-[#e3e8ef] flex items-center justify-between text-xs text-[#697586]">
               <span>
-                Showing <strong>{orders.length}</strong> of <strong>{pagination.total}</strong> orders
+                عرض <strong>{orders.length}</strong> من <strong>{pagination.total}</strong> طلب
               </span>
 
               <div className="flex items-center space-x-2 rtl:space-x-reverse">
@@ -464,7 +503,7 @@ export function OrdersScreen() {
                   <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
                 </Button>
                 <span className="font-medium">
-                  Page {pagination.page} of {pagination.totalPages || 1}
+                  صفحة {pagination.page} من {pagination.totalPages || 1}
                 </span>
                 <Button
                   size="sm"

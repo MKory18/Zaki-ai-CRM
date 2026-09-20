@@ -44,7 +44,18 @@ export async function GET(req: Request) {
           select: {
             id: true, orderNumber: true, merchantRef: true, createdAt: true, source: true,
             confirmationStatus: true, moderatorId: true,
-            customer: { select: { fullName: true, phone: true, city: true, address: true } },
+            // The screen corrects the data in place, so it needs the values it
+            // is about to overwrite — and the version, because the correction
+            // saves through the ordinary order edit and that takes the same
+            // lost-update guard as every other edit.
+            version: true,
+            regionId: true,
+            region: { select: { id: true, name: true } },
+            product: { select: { name: true } },
+            quantity: true,
+            customer: {
+              select: { id: true, fullName: true, phone: true, rawPhone: true, altPhone: true, city: true, address: true },
+            },
             moderator: { select: { id: true, name: true } },
           },
         },

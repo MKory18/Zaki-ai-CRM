@@ -6,6 +6,7 @@ import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
@@ -230,7 +231,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const { user, companyId, storeId } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
 
     // Server-side Zod validation — never trust client input
     const parsed = patchSchema.safeParse(await req.json());
@@ -467,6 +468,15 @@ export async function PATCH(
     const editingCustomer =
       customerName !== undefined || customerPhone !== undefined || customerAddress !== undefined ||
       regionName !== undefined;
+    // A corrected phone has to actually be a phone for this country —
+    // otherwise "fixing" a wrong number just writes a different wrong one.
+    if (customerPhone !== undefined && !isValidPhoneFor(country.code, customerPhone)) {
+      return NextResponse.json(
+        { error: phoneErrorFor(country.code), code: 'INVALID_PHONE', field: 'customerPhone' },
+        { status: 400 }
+      );
+    }
+
     if (editingCustomer && customerPhone !== undefined) {
       const normalized = normalizePhoneNumber(customerPhone);
       const dupe = await db.customer.findFirst({

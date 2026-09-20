@@ -59,6 +59,10 @@ const SHIPPING_TO_CORE: Record<string, CoreState> = {
   SHIPPED: 'SHIPPED',
   OUT_FOR_DELIVERY: 'SHIPPED',
   DELIVERED: 'DELIVERED',
+  // A door where some lines were taken and some refused. Without this line it
+  // fell through to the confirmation mapping and read as CONFIRMED — a closed,
+  // partly-collected order sitting in the warehouse zone waiting to be packed.
+  PARTIALLY_DELIVERED: 'PARTIALLY_DELIVERED',
   FAILED_DELIVERY: 'WAITING_RETURN',
   RETURN_REQUESTED: 'WAITING_RETURN',
   RETURNED: 'RETURNED',
@@ -167,3 +171,94 @@ export function assertReadyToShip(order: StateSource, lines: LineReservation[]):
   }
   return { allowed: true };
 }
+
+// ─────────────────────────────────────────────────────
+// Filtering by the state the screens actually show
+// ─────────────────────────────────────────────────────
+
+/**
+ * The stored rows that derive to a given core state.
+ *
+ * The orders list showed the derived state in one column and filtered on the
+ * legacy `status` column, which the API's own comment admits "drifts from
+ * confirmation/shipping status" — so picking CONFIRMED could return orders
+ * the same screen was labelling SHIPPED, and miss ones it labelled CONFIRMED.
+ *
+ * This is deriveCoreState() read backwards, and the test holds the two to
+ * each other: every row a clause matches must derive to that state, and no
+ * row of that state may be missed.
+ */
+export function whereForState(state: CoreState): Record<string, unknown> | null {
+  // Shipping decides once it has started — anything but NOT_READY/CANCELLED.
+  const shippingKeys = Object.entries(SHIPPING_TO_CORE)
+    .filter(([key, core]) => core === state && key !== 'CANCELLED')
+    .map(([key]) => key);
+
+  const confirmationKeys = Object.entries(CONFIRMATION_TO_CORE)
+    .filter(([, core]) => core === state)
+    .map(([key]) => key);
+
+  // Shipping has not taken over: NOT_READY, or a value the map never knew.
+  const shippingIdle = { shippingStatus: { notIn: Object.keys(SHIPPING_TO_CORE) } };
+
+  const branches: Record<string, unknown>[] = [];
+
+  if (shippingKeys.length) branches.push({ shippingStatus: { in: shippingKeys } });
+
+  if (confirmationKeys.length) {
+    // NEW splits on ownership: claimed by someone, it is CLAIMED instead.
+    if (state === 'NEW') {
+      branches.push({ ...shippingIdle, confirmationStatus: 'NEW', claimedById: null });
+    } else if (state === 'CLAIMED') {
+      branches.push({
+        ...shippingIdle,
+        OR: [
+          { confirmationStatus: 'IN_PROGRESS' },
+          { confirmationStatus: 'NEW', claimedById: { not: null } },
+        ],
+      });
+    } else {
+      branches.push({ ...shippingIdle, confirmationStatus: { in: confirmationKeys } });
+    }
+  }
+
+  if (state === 'CANCELLED') {
+    // A cancelled shipment is cancelled whatever the confirmation says.
+    branches.push({ shippingStatus: 'CANCELLED' });
+  }
+
+  if (state === 'NEW') {
+    // An unrecognised confirmation value falls back to NEW in the derivation,
+    // so it has to fall back to NEW here too or those orders filter to nothing.
+    branches.push({
+      ...shippingIdle,
+      confirmationStatus: { notIn: Object.keys(CONFIRMATION_TO_CORE) },
+      claimedById: null,
+    });
+  }
+
+  if (!branches.length) return null; // a state nothing can currently be in
+  return branches.length === 1 ? branches[0] : { OR: branches };
+}
+
+/** The core states an order can actually be in today, for a filter dropdown. */
+export const FILTERABLE_STATES: CoreState[] = CORE_STATES.filter((s) => whereForState(s) !== null);
+
+export const STATE_LABEL_AR: Record<CoreState, string> = {
+  NEW: 'جديد',
+  CLAIMED: 'قيد التأكيد',
+  CONFIRMED: 'مؤكد',
+  PREPARING: 'قيد التجهيز',
+  READY_TO_SHIP: 'جاهز للشحن',
+  SHIPPED: 'مشحون',
+  DELIVERED: 'مسلَّم',
+  PARTIALLY_DELIVERED: 'مسلَّم جزئياً',
+  WAITING_RETURN: 'بانتظار الإرجاع',
+  NO_ANSWER: 'لا يرد',
+  POSTPONED: 'مؤجل',
+  IN_TRANSFER: 'قيد التحويل',
+  RETURNED: 'مرتجع',
+  CANCELLED: 'ملغي',
+  NEEDS_REVIEW: 'يحتاج مراجعة',
+  VOIDED: 'مُبطَل',
+};

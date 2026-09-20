@@ -2,10 +2,11 @@
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
+import { CORE_STATES, deriveCoreState, getZone, whereForState, type CoreState, type StateSource } from '@/lib/order-state';
 import { orderRefFields } from '@/lib/order-ref';
 import { computeCod } from '@/lib/money';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { applyQueueFilter } from '@/lib/rbac';
@@ -27,6 +28,7 @@ export async function GET(req: Request) {
     const status = searchParams.get('status')?.trim();
     const productId = searchParams.get('productId')?.trim();
     const moderatorId = searchParams.get('moderatorId')?.trim();
+    const courierId = searchParams.get('courierId')?.trim();
     const page = parseInt(searchParams.get('page') || '1', 10);
     // Cap page size (hard server-side limit) with a NaN guard
     const parsedLimit = parseInt(searchParams.get('limit') || '25', 10);
@@ -39,8 +41,22 @@ export async function GET(req: Request) {
       whereClause.moderatorId = moderatorId;
     }
 
+    // Filter by the SAME state the table labels each row with. The legacy
+    // `status` column drifts from confirmation/shipping status, so filtering
+    // on it returned rows the screen was calling something else.
     if (status && status !== 'all') {
-      whereClause.status = status;
+      if (!CORE_STATES.includes(status as CoreState)) {
+        return NextResponse.json({ error: `حالة غير معروفة: ${status}` }, { status: 400 });
+      }
+      const stateWhere = whereForState(status as CoreState);
+      // A state nothing can currently be in returns nothing, rather than
+      // silently returning everything.
+      whereClause.AND = [...(whereClause.AND ?? []), stateWhere ?? { id: '' }];
+    }
+
+    // Which courier is carrying it — 'none' finds the ones nobody has taken.
+    if (courierId && courierId !== 'all') {
+      whereClause.deliveryProviderId = courierId === 'none' ? null : courierId;
     }
 
     if (productId && productId !== 'all') {
@@ -115,6 +131,9 @@ export async function GET(req: Request) {
         zone: getZone(deriveCoreState(o as unknown as StateSource)),
         previousOrders: Math.max(0, (o.customer.totalOrders ?? 1) - 1),
       })),
+      // The store's own currency. The list used to print a hard-coded $ on
+      // every row, which read as dollars on a Jordanian store.
+      currency: { code: country.currencyCode, minorUnit: country.minorUnit },
       pagination: {
         total,
         page,
@@ -184,6 +203,22 @@ export async function POST(req: Request) {
     if (!customerName || !customerPhone || !productId) {
       return NextResponse.json(
         { error: 'Customer Name, Phone, and Product are required' },
+        { status: 400 }
+      );
+    }
+
+    // The same phone rule the public landing page applies. Without it the
+    // CRM accepted any 7 characters, which is where most "رقم خاطئ" issues
+    // were born: nothing refused the number until someone tried to call it.
+    if (!isValidPhoneFor(country.code, customerPhone)) {
+      return NextResponse.json(
+        { error: phoneErrorFor(country.code), code: 'INVALID_PHONE', field: 'customerPhone' },
+        { status: 400 }
+      );
+    }
+    if (customerAltPhone && !isValidPhoneFor(country.code, customerAltPhone)) {
+      return NextResponse.json(
+        { error: phoneErrorFor(country.code), code: 'INVALID_PHONE', field: 'customerAltPhone' },
         { status: 400 }
       );
     }
