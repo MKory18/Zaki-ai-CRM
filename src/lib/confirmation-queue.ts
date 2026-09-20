@@ -227,7 +227,7 @@ export async function pullNextOrder(
           newValue: 'IN_PROGRESS',
           changedById: user.id,
           changedByRole: user.role,
-          note: 'pull next',
+          note: 'سحب من الطابور',
         },
       });
       return { ok: true, orderId: candidate, released };

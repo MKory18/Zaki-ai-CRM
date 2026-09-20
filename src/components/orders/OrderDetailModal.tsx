@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/Button';
 import { Select, Textarea, Input } from '@/components/ui/Input';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { useOrderOwnership } from '@/hooks/useOrderOwnership';
-import { OwnershipSection } from '@/components/orders/OwnershipSection';
+import { OrderResponsibility } from '@/components/orders/OrderResponsibility';
+import { CustomerCard } from '@/components/orders/CustomerCard';
+import { OrderLinesCard } from '@/components/orders/OrderLinesCard';
 import { ConfirmationActions } from '@/components/orders/ConfirmationActions';
 import { ShippingSection } from '@/components/orders/ShippingSection';
 import { useApp } from '@/context/AppContext';
 import { apiFetch, apiJson } from '@/lib/api-client';
-import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
+import { CustomerHistoryModal } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { useRegions } from '@/hooks/useRegions';
 import { amount, arDateShort, arDateTime, type Currency } from '@/lib/format';
@@ -70,6 +72,8 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   const ar = locale === 'ar';
   const [order, setOrder] = useState<any>(null);
   const [currency, setCurrency] = useState<Currency | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
   // The COD breakdown, computed server-side by the one cod function.
   const [cod, setCod] = useState<
     { subtotal: number; discount: number; deliveryFee: number; cod: number; includesDelivery: boolean } | null
@@ -350,7 +354,14 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
         </div>
-      </Modal>
+        {historyOpen && order.customer?.id && (
+        <CustomerHistoryModal
+          customerId={order.customer.id}
+          orderId={order.id}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
+    </Modal>
     );
   }
   if (loadError) {
@@ -462,14 +473,13 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         {/* ─── Left column ─── */}
         <div className="lg:col-span-2 space-y-5">
 
-          {/* ─── Phase C: Order responsibility / claim / editing lock ─── */}
-          <OwnershipSection
+          {/* Whose hands it is in, and the two things anyone wants to do
+              about that. The six read-only ownership fields it replaced said
+              "—" on nearly every order. */}
+          <OrderResponsibility
             order={order}
-            ar={ar}
-            isRtl={isRtl}
-            ownership={ownership}
-            nowMs={nowMs}
-            onRefreshOrder={async () => {
+            currentUserId={currentUser?.id}
+            onChanged={async () => {
               if (order?.id) await loadOrder(order.id);
               onRefresh();
             }}
@@ -554,82 +564,27 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
           </div>
 
-          {/* Customer Info + Notes */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-            <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2">
-              <User className="w-4 h-4 text-red-600" />
-              معلومات العميل
-            </h4>
+          <CustomerCard
+            order={order}
+            canEdit={order.lockedById === currentUser?.id && lockActive}
+            onAcquireLock={handleEnterEditMode}
+            onSaved={async () => {
+              if (order?.id) await loadOrder(order.id);
+              onRefresh();
+            }}
+            onOpenHistory={() => setHistoryOpen(true)}
+          />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2.5">
-                <div>
-                  <p className="text-[11px] text-slate-400">اسم العميل</p>
-                  <p className="font-bold text-slate-900">{order.customer?.fullName}</p>
-                </div>
-                <div className="flex items-start gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-[11px] text-slate-400">عنوان التوصيل</p>
-                    <p className="text-slate-700 text-xs leading-relaxed">{order.customer?.address}</p>
-                  </div>
-                </div>
-
-                {/* The governorate is a real Region, not free text: the delivery
-                    fee is keyed on it, so an order without one cannot be priced
-                    or shipped. Editable here for exactly that reason. */}
-                <OrderRegionField
-                  order={order}
-                  onSaved={async () => { await loadOrder(order.id); onRefresh(); }}
-                />
-              </div>
-
-              <div className="space-y-2.5">
-                <div>
-                  <p className="text-[11px] text-slate-400 mb-1">رقم الهاتف</p>
-                  <a
-                    href={`tel:${order.customer?.phone}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 border border-green-300 font-mono text-xs font-bold rounded-xl hover:bg-green-100 transition-colors"
-                    dir="ltr"
-                  >
-                    <Phone className="w-3.5 h-3.5" />
-                    {order.customer?.rawPhone || order.customer?.phone}
-                  </a>
-                  {order.customer?.altPhone && (
-                    <p className="text-[11px] text-slate-400 mt-1">بديل: {order.customer.altPhone}</p>
-                  )}
-                </div>
-                <div className="flex gap-2 text-[11px]">
-                  <span className="bg-slate-100 rounded-lg px-2 py-1 font-semibold text-slate-600">
-                    طلبات سابقة: {order.customer?.totalOrders ?? 1}
-                  </span>
-                  <span className="bg-green-50 text-green-700 rounded-lg px-2 py-1 font-semibold">
-                    موصّل: {order.customer?.deliveredOrders ?? 0}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Customer notes — prominent */}
-            {order.customerNotes && (
-              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 flex items-start gap-2">
-                <MessageSquareText className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[11px] font-bold text-amber-800 mb-0.5">ملاحظات العميل</p>
-                  <p className="text-xs text-amber-900 leading-relaxed">{order.customerNotes}</p>
-                </div>
-              </div>
-            )}
-            {order.internalNotes && (
-              <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3 flex items-start gap-2">
-                <StickyNote className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[11px] font-bold text-slate-600 mb-0.5">ملاحظات داخلية</p>
-                  <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">{order.internalNotes}</p>
-                </div>
-              </div>
-            )}
-          </div>
+          <OrderLinesCard
+            order={order}
+            currency={currency}
+            canEdit={order.lockedById === currentUser?.id && lockActive}
+            onAcquireLock={handleEnterEditMode}
+            onSaved={async () => {
+              if (order?.id) await loadOrder(order.id);
+              onRefresh();
+            }}
+          />
 
           {/* ─── Phase D2: Shipping & delivery section ─── */}
           <ShippingSection
@@ -653,145 +608,6 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             }}
           />
 
-          {/* ─── Order data editing (customer info + price fields) ─── */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 flex items-center gap-2">
-                <Pencil className="w-4 h-4 text-[#b8256e]" />
-                تعديل بيانات الطلب
-              </h4>
-              <Button size="sm" variant="outline" onClick={openEditForm} loading={ownership.actionLoading === 'lock'}>
-                {editOpen ? 'إغلاق النموذج' : 'تعديل'}
-              </Button>
-            </div>
-
-            {editOpen && (
-              <div className="space-y-3">
-                {editingLockedByOther && (
-                  <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
-                    <Lock className="w-3 h-3 inline ml-1" />
-                    {t.editingBy} {lockHolderName}
-                  </p>
-                )}
-                {editError && (
-                  <p className="text-[11px] text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
-                    {editError}
-                  </p>
-                )}
-                {editSuccess && (
-                  <p className="text-[11px] text-green-800 bg-green-50 border border-green-300 rounded-lg px-2.5 py-1.5">
-                    {editSuccess}
-                  </p>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Input label="اسم العميل" value={editForm.customerName} onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })} />
-                  <Input label="رقم الهاتف" dir="ltr" value={editForm.customerPhone} onChange={(e) => setEditForm({ ...editForm, customerPhone: e.target.value })} />
-                  <Input label="عنوان التوصيل" value={editForm.customerAddress} onChange={(e) => setEditForm({ ...editForm, customerAddress: e.target.value })} />
-                  <div />
-                  <Input label="سعر البيع" type="number" min="0" step="0.01" dir="ltr" value={editForm.sellingPrice} onChange={(e) => setEditForm({ ...editForm, sellingPrice: e.target.value })} />
-                  <Input label="الكمية" type="number" min="1" step="1" dir="ltr" value={editForm.quantity} onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })} />
-                  <Input label="الخصم" type="number" min="0" step="0.01" dir="ltr" value={editForm.discountAmount} onChange={(e) => setEditForm({ ...editForm, discountAmount: e.target.value })} />
-                  <Input label="تكلفة الشحن" type="number" min="0" step="0.01" dir="ltr" value={editForm.shippingCost} onChange={(e) => setEditForm({ ...editForm, shippingCost: e.target.value })} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleEditSave}
-                    loading={editLoading}
-                    disabled={editingLockedByOther || !(order.lockedById === currentUser?.id && lockActiveNow)}
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    حفظ التعديلات
-                  </Button>
-                  <span className="text-[11px] text-slate-400">
-                    الحفظ يتطلب الاحتفاظ بقفل التحرير — الإجمالي الجديد = السعر × الكمية − الخصم + الشحن
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Call follow-up */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-            <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2">
-              <PhoneCall className="w-4 h-4 text-indigo-600" />
-              تسجيل نتيجة الاتصال
-            </h4>
-
-            <form onSubmit={handleRecordCall} className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Select label="نتيجة الاتصال *" value={callResult} onChange={(e) => setCallResult(e.target.value)}>
-                  {Object.entries(CALL_RESULTS).map(([key, cfg]) => (
-                    <option key={key} value={key}>{ar ? cfg.ar : cfg.en}</option>
-                  ))}
-                </Select>
-                <Input
-                  label="موعد المتابعة القادم (اختياري)"
-                  type="date"
-                  value={nextFollowUpDate}
-                  onChange={(e) => setNextFollowUpDate(e.target.value)}
-                />
-              </div>
-
-              <Textarea
-                label="ملاحظات الاتصال / تعليقات العميل"
-                placeholder="مثال: العميل أكد التوصيل يوم الأربعاء بين 2-5 عصراً."
-                rows={2}
-                value={callNotes}
-                onChange={(e) => setCallNotes(e.target.value)}
-              />
-
-              <div className="flex justify-end">
-                <Button size="sm" type="submit" loading={actionLoading} className="bg-red-600 hover:bg-red-700">
-                  <PhoneCall className="w-3.5 h-3.5" />
-                  حفظ نتيجة الاتصال
-                </Button>
-              </div>
-            </form>
-          </div>
-
-          {/* Call history */}
-          {order.callLogs?.length > 0 && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-              <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2">
-                <History className="w-4 h-4 text-slate-500" />
-                سجل المكالمات ({order.callLogs.length})
-              </h4>
-              <div className="space-y-2.5">
-                {order.callLogs.map((log: any) => {
-                  const cfg = CALL_RESULTS[log.result];
-                  const good = ['CONFIRMED'].includes(log.result);
-                  const bad = ['REJECTED', 'WRONG_NUMBER'].includes(log.result);
-                  return (
-                    <div
-                      key={log.id}
-                      className={`p-3 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 ${
-                        good
-                          ? 'bg-green-50/70 border-green-200'
-                          : bad
-                          ? 'bg-red-50/70 border-red-200'
-                          : 'bg-slate-50 border-slate-200'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-slate-800">{ar ? cfg?.ar ?? log.result : cfg?.en ?? log.result}</span>
-                          <span className="text-slate-400 flex items-center gap-1">
-                            <UserCheck className="w-3 h-3" />
-                            {log.moderator?.name}
-                          </span>
-                        </div>
-                        {log.notes && <p className="text-slate-600 mt-1">{log.notes}</p>}
-                      </div>
-                      <div className="text-slate-400 text-[11px] shrink-0">
-                        {arDateShort(log.callDate || log.createdAt)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ─── Right column ─── */}
@@ -891,14 +707,27 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             </div>
           </div>
 
-          {/* Moderator */}
+          {/* Where the order came from. A sheet import and a moderator typing
+              it in are different origins, and "غير معيّن" for an imported
+              order read as a gap in the data rather than as its answer. */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
             <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 mb-2 flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-red-600" />
-              المودريتور المسؤول
+              <UserCheck className="w-4 h-4 text-[#b8256e]" />
+              جهة الطلب
             </h4>
-            <p className="text-sm font-bold text-slate-900">{order.moderator?.name || 'غير معيّن'}</p>
-            <p className="text-xs text-slate-500" dir="ltr">{order.moderator?.email || '—'}</p>
+            {order.moderator ? (
+              <>
+                <p className="text-sm font-bold text-slate-900">
+                  مودريتور: {order.moderator.name}
+                </p>
+                <p className="text-xs text-slate-500" dir="ltr">{order.moderator.email || '—'}</p>
+              </>
+            ) : (
+              <p className="text-sm font-bold text-slate-900">{order.source || '—'}</p>
+            )}
+            <p className="text-[11px] text-slate-400 mt-1">
+              القناة: {order.source || '—'}
+            </p>
           </div>
 
           {/* Timeline — merged from every event table (src/lib/order-timeline.ts),
@@ -907,21 +736,19 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4 text-slate-400" />
               سجل الأحداث ({timeline.length})
-              {order.customer?.id && (
-                <span className="ms-auto">
-                  <CustomerHistoryButton
-                    customerId={order.customer.id}
-                    orderId={order.id}
-                    previousOrders={Math.max(0, (order.customer.totalOrders ?? 1) - 1)}
-                    label="سجل العميل"
-                  />
-                </span>
+              {timeline.length > 5 && (
+                <button
+                  onClick={() => setTimelineExpanded((v) => !v)}
+                  className="ms-auto text-[11px] font-medium text-[#b8256e] hover:underline"
+                >
+                  {timelineExpanded ? 'إظهار الأحدث فقط' : `إظهار الكل (${timeline.length})`}
+                </button>
               )}
             </h4>
 
             <div className="relative border-s-2 border-slate-200 ms-2.5 space-y-4 text-xs">
               {timeline.length === 0 && <p className="ps-4 text-slate-400">لا توجد أحداث بعد.</p>}
-              {timeline.map((event) => (
+              {(timelineExpanded ? timeline : timeline.slice(-5)).map((event) => (
                 <div key={event.id} className="relative ps-4">
                   <span className="absolute -start-[7px] top-1 w-2.5 h-2.5 rounded-full bg-red-600 border-2 border-white" />
                   <p className="font-bold text-slate-800">{event.title}</p>

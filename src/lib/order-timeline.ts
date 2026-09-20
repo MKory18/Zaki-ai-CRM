@@ -58,6 +58,15 @@ const STATUS_VALUE_AR: Record<string, string> = {
   VOIDED: 'مُبطَل',
 };
 
+const CLAIM_REASON_AR: Record<string, string> = {
+  PULL_NEXT: 'سحب من الطابور',
+  MANUAL_CLAIM: 'استلام يدوي',
+  ADMIN_OVERRIDE: 'تجاوز إداري',
+  AUTO_RELEASE: 'تحرير تلقائي',
+  LOCK_EXPIRED: 'انتهت مدة القفل',
+  REASSIGNED: 'إعادة إسناد',
+};
+
 const CONTACT_METHOD_AR: Record<string, string> = {
   PHONE: 'هاتف', WHATSAPP: 'واتساب', TELEGRAM: 'تلجرام', SMS: 'رسالة نصية', OTHER: 'أخرى',
 };
@@ -128,10 +137,11 @@ function readableMetadata(metadata: unknown): string | null {
 }
 
 export async function orderTimeline(tx: Tx, orderId: string): Promise<TimelineEvent[]> {
-  const [statusLogs, claims, contacts, deliveries, notes, activities, changeRequests, issues] = await Promise.all([
+  const [statusLogs, claims, contacts, callLogs, deliveries, notes, activities, changeRequests, issues] = await Promise.all([
     tx.orderStatusLog.findMany({ where: { orderId }, orderBy: { createdAt: 'asc' } }),
     tx.orderClaimHistory.findMany({ where: { orderId }, orderBy: { createdAt: 'asc' } }),
     tx.orderContactAttempt.findMany({ where: { orderId }, orderBy: { createdAt: 'asc' } }),
+    tx.callLog.findMany({ where: { orderId }, orderBy: { createdAt: 'asc' } }),
     tx.deliveryAttempt.findMany({ where: { orderId }, orderBy: { createdAt: 'asc' } }),
     tx.orderNote.findMany({ where: { orderId }, orderBy: { createdAt: 'asc' } }),
     tx.orderActivity.findMany({ where: { orderId }, orderBy: { createdAt: 'asc' } }),
@@ -143,6 +153,7 @@ export async function orderTimeline(tx: Tx, orderId: string): Promise<TimelineEv
   for (const row of statusLogs) actorIds.add(row.changedById);
   for (const row of claims) actorIds.add(row.userId);
   for (const row of contacts) actorIds.add(row.employeeId);
+  for (const row of callLogs) if (row.moderatorId) actorIds.add(row.moderatorId);
   for (const row of notes) if (row.authorId) actorIds.add(row.authorId);
   for (const row of activities) if (row.userId) actorIds.add(row.userId);
   for (const row of changeRequests) actorIds.add(row.requestedById);
@@ -182,7 +193,7 @@ export async function orderTimeline(tx: Tx, orderId: string): Promise<TimelineEv
       kind: 'OWNERSHIP' as const,
       at: row.createdAt,
       title: CLAIM_LABEL[row.action] ?? row.action,
-      detail: row.reason,
+      detail: row.reason ? ar(CLAIM_REASON_AR, row.reason) : null,
       actorId: row.userId,
       actorName: nameOf.get(row.userId) ?? null,
     })),
@@ -194,6 +205,15 @@ export async function orderTimeline(tx: Tx, orderId: string): Promise<TimelineEv
       detail: row.note,
       actorId: row.employeeId,
       actorName: nameOf.get(row.employeeId) ?? null,
+    })),
+    ...callLogs.map((row) => ({
+      id: `cg_${row.id}`,
+      kind: 'CONTACT' as const,
+      at: row.callDate ?? row.createdAt,
+      title: `مكالمة — ${ar(CONTACT_RESULT_AR, row.result)}`,
+      detail: row.notes,
+      actorId: row.moderatorId,
+      actorName: row.moderatorId ? nameOf.get(row.moderatorId) ?? null : null,
     })),
     ...deliveries.map((row) => ({
       id: `dl_${row.id}`,

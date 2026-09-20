@@ -18,6 +18,30 @@ import { can, authorize } from '@/lib/authorization';
  * Body: { targetUserId, reason? }  — targetUserId is verified in DB,
  * never trusted from ownership fields.
  */
+
+interface RankedUser { id: string; name: string; role: string; roleId: string | null }
+
+/** Two people do the same job when they share a role — the DB role when both
+ *  carry one, the legacy role string otherwise. */
+function sameRank(a: RankedUser, b: RankedUser): boolean {
+  if (a.roleId && b.roleId) return a.roleId === b.roleId;
+  return a.role === b.role;
+}
+
+/** Whose hands the order is in right now: the claimer, else the owner, else
+ *  the person doing the transferring. */
+async function currentHolder(
+  database: typeof db,
+  order: { claimedById?: string | null; currentOwnerId?: string | null },
+  actor: { id: string; role: string; name?: string | null }
+): Promise<RankedUser | null> {
+  const holderId = order.claimedById ?? order.currentOwnerId ?? actor.id;
+  return database.user.findUnique({
+    where: { id: holderId },
+    select: { id: true, name: true, role: true, roleId: true },
+  });
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -61,10 +85,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Target must be an ACTIVE user in the SAME company
     const target = await db.user.findUnique({
       where: { id: targetUserId },
-      select: { id: true, name: true, companyId: true, status: true },
+      select: { id: true, name: true, companyId: true, status: true, role: true, roleId: true },
     });
     if (!target || target.companyId !== companyId || target.status !== 'ACTIVE') {
       return NextResponse.json({ error: 'Target user not found in your company or not active' }, { status: 400 });
+    }
+
+    // An order moves sideways, never across jobs. Whoever is holding a
+    // confirmation order hands it to another confirmation agent — handing it
+    // to the warehouse would put it in a pair of hands that cannot do the
+    // next thing it needs, and the queue it belongs to would not show it.
+    const holder = await currentHolder(db, order, user);
+    if (holder && !sameRank(holder, target)) {
+      return NextResponse.json(
+        {
+          error: `لا يمكن تحويل الطلب إلى رتبة مختلفة — ${target.name} ليس بنفس دور ${holder.name}`,
+          code: 'DIFFERENT_RANK',
+        },
+        { status: 409 }
+      );
     }
     if (target.id === order.currentOwnerId) {
       return NextResponse.json({ error: 'This order is already owned by that user' }, { status: 400 });
@@ -119,6 +158,54 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const freshOrder = await db.order.findUnique({ where: { id } });
     return NextResponse.json({ success: true, transferredTo: target.name, order: freshOrder });
+  } catch (error) {
+    const { body, status } = apiError(error);
+    return NextResponse.json(body, { status });
+  }
+}
+
+/**
+ * GET /api/orders/[id]/transfer — the colleagues this order may go to.
+ *
+ * The screen offers exactly what the POST above accepts, so a name can never
+ * appear in the list and then be refused on save.
+ */
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { user, companyId, storeId } = await requireContext();
+
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
+    if (!access.allowed) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+    const order = access.order;
+
+    const mayTransfer =
+      authorize(user, 'orders.assign', order).allowed ||
+      (can(user, 'orders.release') && (order.currentOwnerId === user.id || order.claimedById === user.id));
+    if (!mayTransfer) return NextResponse.json({ candidates: [], mayTransfer: false });
+
+    const holder = await currentHolder(db, order, user);
+    if (!holder) return NextResponse.json({ candidates: [], mayTransfer: true });
+
+    const candidates = await db.user.findMany({
+      where: {
+        companyId,
+        status: 'ACTIVE',
+        id: { not: holder.id },
+        ...(holder.roleId ? { roleId: holder.roleId } : { role: holder.role }),
+      },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+      take: 50,
+    });
+
+    return NextResponse.json({
+      mayTransfer: true,
+      holder: { id: holder.id, name: holder.name },
+      candidates,
+    });
   } catch (error) {
     const { body, status } = apiError(error);
     return NextResponse.json(body, { status });

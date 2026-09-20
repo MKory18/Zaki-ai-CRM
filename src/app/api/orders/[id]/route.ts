@@ -36,6 +36,8 @@ const patchSchema = z.object({
   // Customer fields are validated when present (trimmed strings)
   customerName: z.string().trim().min(2).max(80).optional(),
   customerPhone: z.string().trim().min(7).max(20).optional(),
+  // The second number the customer answers on. Empty clears it.
+  customerAltPhone: z.string().trim().max(20).nullable().optional(),
   customerAddress: z.string().trim().max(300).optional(),
   // The governorate the order ships to. The delivery-fee table is keyed on
   // it, so it is editable here rather than only at intake.
@@ -265,7 +267,7 @@ export async function PATCH(
     const {
       status, moderatorId, internalNotes, customerNotes, postponedUntil, trackingCode,
       confirmationStatus, shippingStatus, expectedVersion,
-      customerName, customerPhone, customerAddress, regionId,
+      customerName, customerPhone, customerAltPhone, customerAddress, regionId,
       sellingPrice, quantity, discountAmount, shippingCost, productId,
     } = parsed.data;
 
@@ -488,12 +490,19 @@ export async function PATCH(
     // Customer information edit (name / phone / address) — applied to the linked Customer row
     const editingCustomer =
       customerName !== undefined || customerPhone !== undefined || customerAddress !== undefined ||
-      regionName !== undefined;
+      customerAltPhone !== undefined || regionName !== undefined;
     // A corrected phone has to actually be a phone for this country —
     // otherwise "fixing" a wrong number just writes a different wrong one.
     if (customerPhone !== undefined && !isValidPhoneFor(country.code, customerPhone)) {
       return NextResponse.json(
         { error: phoneErrorFor(country.code), code: 'INVALID_PHONE', field: 'customerPhone' },
+        { status: 400 }
+      );
+    }
+    // The second number is optional, but a number that is there must be real.
+    if (customerAltPhone && !isValidPhoneFor(country.code, customerAltPhone)) {
+      return NextResponse.json(
+        { error: phoneErrorFor(country.code), code: 'INVALID_PHONE', field: 'customerAltPhone' },
         { status: 400 }
       );
     }
@@ -536,6 +545,9 @@ export async function PATCH(
         if (customerPhone !== undefined) {
           custData.phone = normalizePhoneNumber(customerPhone);
           custData.rawPhone = customerPhone;
+        }
+        if (customerAltPhone !== undefined) {
+          custData.altPhone = customerAltPhone?.trim() || null;
         }
         if (Object.keys(custData).length > 0) {
           await tx.customer.update({ where: { id: existing.customerId }, data: custData });
@@ -667,6 +679,7 @@ export async function PATCH(
           ...(productId !== undefined ? ['productId'] : []),
           ...(customerName !== undefined ? ['customerName'] : []),
           ...(customerPhone !== undefined ? ['customerPhone'] : []),
+          ...(customerAltPhone !== undefined ? ['customerAltPhone'] : []),
           ...(customerAddress !== undefined ? ['customerAddress'] : []),
         ];
         await tx.orderActivity.create({
