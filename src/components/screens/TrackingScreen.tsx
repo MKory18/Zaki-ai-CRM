@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Bike, Clock, Loader2, Search, Truck } from 'lucide-react';
+import { Bike, Clock, HandCoins, Loader2, Search, Truck } from 'lucide-react';
 import { TransferDialog } from '@/components/screens/tracking/TransferDialog';
+import { CollectDialog } from '@/components/screens/tracking/CollectDialog';
 import { apiJson } from '@/lib/api-client';
 
 /**
@@ -28,6 +29,8 @@ interface Row {
   customer: { fullName: string; phone: string; city: string };
   region: { name: string } | null;
   deliveryProvider: { id: string; name: string; kind?: string } | null;
+  deliveryFee?: number | null;
+  settlementStatus?: string;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -56,6 +59,8 @@ export function TrackingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [transferFor, setTransferFor] = useState<Row | null>(null);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [collecting, setCollecting] = useState(false);
 
   const load = useCallback(async () => {
     const q = new URLSearchParams();
@@ -71,6 +76,15 @@ export function TrackingScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Only a delivered parcel owes anything, and only once. A returned one
+  // owes nothing; one still in transit has not been collected yet.
+  const canCollect = (o: Row) => o.shippingStatus === 'DELIVERED' && o.settlementStatus !== 'SETTLED';
+  const collectable = (data?.orders ?? []).filter(canCollect);
+  const chosen = collectable.filter((o) => selected[o.id]);
+  const netOfChosen = Number(
+    chosen.reduce((sum, o) => sum + (Number(o.totalAmount) - Number(o.deliveryFee ?? 0)), 0).toFixed(3)
+  );
 
   return (
     <div className="max-w-6xl space-y-3">
@@ -114,6 +128,38 @@ export function TrackingScreen() {
       {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
       {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
 
+      {/* Manual settlement: a مندوب — and any company that sends no file —
+          has no statement to import, so collection is done by naming the
+          orders here. Only delivered, unsettled ones can be chosen. */}
+      {collectable.length > 0 && (
+        <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-3 flex flex-wrap items-center gap-3">
+          <span className="text-xs text-[#697586]">
+            {chosen.length > 0
+              ? `مختار ${chosen.length} طلب · صافي ${netOfChosen}`
+              : `${collectable.length} طلب مسلَّم بانتظار التحصيل اليدوي`}
+          </span>
+          <button
+            onClick={() => setSelected(Object.fromEntries(collectable.map((o) => [o.id, true])))}
+            className="text-xs text-[#b8256e] hover:underline"
+          >
+            اختر الكل
+          </button>
+          {chosen.length > 0 && (
+            <>
+              <button onClick={() => setSelected({})} className="text-xs text-[#697586] hover:underline">
+                إلغاء الاختيار
+              </button>
+              <button
+                onClick={() => setCollecting(true)}
+                className="h-8 px-3 rounded-[8px] bg-[#00a344] text-white text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
+              >
+                <HandCoins className="w-3.5 h-3.5" /> استلمت منه
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
@@ -123,6 +169,7 @@ export function TrackingScreen() {
           <table className="w-full text-sm">
             <thead className="bg-[#f8fafc] text-[#697586] text-xs">
               <tr>
+                <th className="text-right font-medium px-3 py-2 w-8"> </th>
                 <th className="text-right font-medium px-3 py-2">المرجع</th>
                 <th className="text-right font-medium px-3 py-2">الباركود</th>
                 <th className="text-right font-medium px-3 py-2">العميل</th>
@@ -138,6 +185,15 @@ export function TrackingScreen() {
             <tbody className="divide-y divide-[#e3e8ef]">
               {data.orders.map((o) => (
                 <tr key={o.id} className={o.late ? 'bg-[#feecee]/40' : ''}>
+                  <td className="px-3 py-2">
+                    {canCollect(o) ? (
+                      <input
+                        type="checkbox"
+                        checked={!!selected[o.id]}
+                        onChange={(e) => setSelected((s) => ({ ...s, [o.id]: e.target.checked }))}
+                      />
+                    ) : null}
+                  </td>
                   <td className="px-3 py-2 font-medium text-[#121926]" dir="ltr">{o.merchantRef ?? o.orderNumber}</td>
                   <td className="px-3 py-2 text-[#697586]" dir="ltr">{o.trackingNumber ?? '—'}</td>
                   <td className="px-3 py-2 text-[#364152]">{o.customer.fullName}</td>
@@ -183,12 +239,26 @@ export function TrackingScreen() {
               ))}
               {data.orders.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شحنات مطابقة.</td>
+                  <td colSpan={11} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شحنات مطابقة.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+      )}
+
+      {collecting && chosen.length > 0 && (
+        <CollectDialog
+          orders={chosen}
+          onClose={() => setCollecting(false)}
+          onDone={async (message) => {
+            setCollecting(false);
+            setSelected({});
+            setDone(message);
+            setError(null);
+            await load();
+          }}
+        />
       )}
 
       {transferFor && (

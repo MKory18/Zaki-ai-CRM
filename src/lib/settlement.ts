@@ -13,9 +13,18 @@ type Tx = Prisma.TransactionClient | typeof db;
  *   Receipt   : what ACTUALLY arrived (many lines, each with its own wallet)
  *   Matching  : runs on demand AFTER the receipt
  *
- * Matching uses ONE key: the merchant reference, then the courier barcode.
+ * Matching keys on the SHIPMENT BARCODE. The courier assigns it when the
+ * parcel is handed over — over the API for an integrated company — and it is
+ * stored on the order as their reference, separate from our own order
+ * number. Their statement is written in their identifier, so that is what
+ * matching reads. Our merchant reference is the fallback.
+ *
  * NEVER the phone — two customers share a phone often enough to settle the
  * wrong order, and a wrong match is money moved against the wrong order.
+ *
+ * A مندوب and any company without an API have no barcode coming back, so
+ * they are settled BY HAND from the tracking screen, not by importing a
+ * statement. See src/lib/couriers/README.md.
  */
 
 export function fileHash(content: string | Buffer): string {
@@ -244,17 +253,29 @@ export async function runMatching(
   const matchedOrderIds = new Set<string>();
 
   for (const line of lines) {
-    // ONE key: merchant reference first, courier barcode second. Never phone.
+    // The key is the SHIPMENT BARCODE: the courier assigns it when the order
+    // is handed to them — over the API for an integrated company — and it is
+    // stored on the order as their reference, separate from our own order
+    // number. It is their identifier for the parcel, so it is the identifier
+    // their statement is written in.
+    //
+    // Our merchant reference is the fallback, for a courier who echoes it
+    // back (or writes it in the notes) but whose barcode we never recorded.
+    // Never the phone: two customers share one often enough to settle the
+    // wrong order, and a wrong match is money moved against the wrong order.
+    const byBarcode = line.barcode
+      ? await tx.order.findFirst({
+          where: { companyId, storeId, trackingNumber: line.barcode },
+          select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
+        })
+      : null;
+    const matchedByBarcode = byBarcode !== null;
+
     const order =
+      byBarcode ??
       (line.merchantRef
         ? await tx.order.findFirst({
             where: { companyId, storeId, merchantRef: line.merchantRef },
-            select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
-          })
-        : null) ??
-      (line.barcode
-        ? await tx.order.findFirst({
-            where: { companyId, storeId, trackingNumber: line.barcode },
             select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
           })
         : null);
@@ -264,7 +285,7 @@ export async function runMatching(
         data: {
           companyId, statementId, statementLineId: line.id,
           result: 'MISSING_IN_SYSTEM', statementAmount: line.amount,
-          note: 'لا يوجد طلب بهذا المرجع أو الباركود',
+          note: 'لا يوجد طلب بهذا الباركود أو المرجع',
         },
       });
       outcome.missingInSystem++;
@@ -280,7 +301,8 @@ export async function runMatching(
       data: {
         companyId, statementId, statementLineId: line.id, orderId: order.id,
         result: difference === 0 ? 'MATCHED' : 'MISMATCHED',
-        matchedBy: line.merchantRef ? 'MERCHANT_REF' : 'BARCODE',
+        // Record which key actually found it, not which one the line carries.
+        matchedBy: matchedByBarcode ? 'BARCODE' : 'MERCHANT_REF',
         expectedAmount: expected,
         statementAmount: stated,
         difference,

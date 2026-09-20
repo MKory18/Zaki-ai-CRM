@@ -138,14 +138,37 @@ describe('expected amount', () => {
 describe('runMatching', () => {
   const scope = { companyId: 'c1', storeId: 's1', statementId: 'st1', minorUnit: 3 };
 
-  it('matches on the merchant reference first', async () => {
+  it('matches on the courier BARCODE first — it is their identifier for the parcel', async () => {
     db.statementLine.findMany.mockResolvedValue([{ id: 'l1', merchantRef: 'ORD-1', barcode: 'BC1', amount: 12 }]);
     db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 });
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.matched).toBe(1);
-    expect(db.order.findFirst.mock.calls[0][0].where).toMatchObject({ merchantRef: 'ORD-1' });
-    expect(db.settlementMatch.create.mock.calls[0][0].data).toMatchObject({ result: 'MATCHED', matchedBy: 'MERCHANT_REF' });
+    // The barcode is tried before the merchant reference, and it is what the
+    // courier assigns when the parcel is handed over.
+    expect(db.order.findFirst.mock.calls[0][0].where).toMatchObject({ trackingNumber: 'BC1' });
+    expect(db.settlementMatch.create.mock.calls[0][0].data).toMatchObject({ result: 'MATCHED', matchedBy: 'BARCODE' });
+  });
+
+  it('falls back to our merchant reference when the barcode finds nothing', async () => {
+    db.statementLine.findMany.mockResolvedValue([{ id: 'l1', merchantRef: 'ORD-1', barcode: 'BC-UNKNOWN', amount: 12 }]);
+    db.order.findFirst
+      .mockResolvedValueOnce(null) // by barcode
+      .mockResolvedValueOnce({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 }); // by reference
+
+    const outcome = await runMatching(db as never, scope);
+    expect(outcome.matched).toBe(1);
+    expect(db.order.findFirst.mock.calls[1][0].where).toMatchObject({ merchantRef: 'ORD-1' });
+    expect(db.settlementMatch.create.mock.calls[0][0].data).toMatchObject({ matchedBy: 'MERCHANT_REF' });
+  });
+
+  it('matches a line that carries only a barcode — a مندوب or an API courier leaves no reference', async () => {
+    db.statementLine.findMany.mockResolvedValue([{ id: 'l1', merchantRef: null, barcode: 'BC1', amount: 12 }]);
+    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 });
+
+    const outcome = await runMatching(db as never, scope);
+    expect(outcome.matched).toBe(1);
+    expect(db.settlementMatch.create.mock.calls[0][0].data).toMatchObject({ matchedBy: 'BARCODE' });
   });
 
   it('never falls back to the phone', async () => {

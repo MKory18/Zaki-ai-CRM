@@ -8,9 +8,9 @@
  */
 import { readFileSync } from 'node:fs';
 import { PrismaClient } from '@prisma/client';
-import { readXlsxRows } from '../src/lib/xlsx-reader.ts';
-import { matchRegion } from '../src/lib/regions.ts';
-import { refFromNotes } from '../src/lib/settlement.ts';
+import { readXlsxRows } from '../src/lib/xlsx-reader';
+import { matchRegion } from '../src/lib/regions';
+import { refFromNotes } from '../src/lib/settlement';
 
 const db = new PrismaClient();
 const FILE = process.argv[2];
