@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { DiscountAlertsScreen } from '@/components/screens/DiscountAlertsScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/control/discount-alerts');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/control/discount-alerts');
+  return <DiscountAlertsScreen />;
 }

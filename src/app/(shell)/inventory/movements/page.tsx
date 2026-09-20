@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { InventoryMovementsScreen } from '@/components/screens/InventoryMovementsScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/inventory/movements');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/inventory/movements');
+  return <InventoryMovementsScreen />;
 }

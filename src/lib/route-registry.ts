@@ -74,7 +74,7 @@ export const NAV: NavGroup[] = [
     routes: [
       r('/inventory/receiving', 'استلام البضاعة', 'PackagePlus', ['inventory.adjust']),
       r('/inventory/balances', 'أرصدة المخزون', 'Boxes', ['inventory.view']),
-      r('/inventory/movements', 'حركات المخزون', 'ArrowLeftRight', ['inventory.view'], 6),
+      r('/inventory/movements', 'حركات المخزون', 'ArrowLeftRight', ['inventory.view']),
     ],
   },
   {
@@ -94,7 +94,7 @@ export const NAV: NavGroup[] = [
     label: 'الرقابة',
     routes: [
       r('/control/change-requests', 'طلبات التعديل', 'FilePen', ['control.change_requests']),
-      r('/control/discount-alerts', 'تنبيهات الخصم', 'BadgePercent', ['control.discount_alerts'], 6),
+      r('/control/discount-alerts', 'تنبيهات الخصم', 'BadgePercent', ['control.discount_alerts']),
       r('/control/audit', 'سجل التدقيق', 'ScrollText', ['audit.view']),
       r('/control/blacklist', 'القائمة السوداء', 'Ban', ['control.blacklist'], 8),
     ],
