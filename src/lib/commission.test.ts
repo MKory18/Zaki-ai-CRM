@@ -81,6 +81,22 @@ describe('accrueForOrder', () => {
     });
   });
 
+  it('earns on the sale and not on the courier fee, under both pricing modes', async () => {
+    db.commissionRule.findMany.mockResolvedValue([rule({ type: 'PERCENT', value: 10 })]);
+
+    // totalAmount holds the COD figure. Fee added on top: COD 110 = net 100 + 10.
+    db.order.findFirst.mockResolvedValue({ ...delivered, totalAmount: 110, deliveryFee: 10, priceIncludesDelivery: false });
+    expect((await accrueForOrder(db as never, { companyId: 'c1', orderId: 'o1', minorUnit: 3 })).amount).toBe(10);
+
+    // Fee included: COD 110 is the net, so the sale itself is 100.
+    vi.clearAllMocks();
+    db.commissionEntry.create.mockImplementation(async ({ data }: any) => ({ id: 'e1', ...data }));
+    db.commissionEntry.findFirst.mockResolvedValue(null);
+    db.commissionRule.findMany.mockResolvedValue([rule({ type: 'PERCENT', value: 10 })]);
+    db.order.findFirst.mockResolvedValue({ ...delivered, totalAmount: 110, deliveryFee: 10, priceIncludesDelivery: true });
+    expect((await accrueForOrder(db as never, { companyId: 'c1', orderId: 'o1', minorUnit: 3 })).amount).toBe(10);
+  });
+
   it('pays nothing on a returned order', async () => {
     db.order.findFirst.mockResolvedValue({ ...delivered, shippingStatus: 'RETURNED' });
     db.commissionRule.findMany.mockResolvedValue([rule()]);

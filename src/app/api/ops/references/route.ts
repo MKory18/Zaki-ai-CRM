@@ -7,11 +7,15 @@ import { apiErrorResponse } from '@/lib/api-error';
 /**
  * GET /api/ops/references — couriers and regions for the operations filters.
  *
- * The shipping and warehouse roles need these lists but hold no settings
- * permission; the settings endpoint stays settings-only, and this one
- * returns names and ids alone, for anyone who works a shipment screen.
+ * The shipping, warehouse and settlement roles need these lists but hold no
+ * settings permission; the settings endpoint stays settings-only, and this
+ * one returns names and ids alone, for anyone who works a shipment screen or
+ * imports a courier statement.
  */
-const OPS_PERMISSIONS = ['ops.ship', 'ops.labels', 'ops.track', 'ops.returns', 'ops.prepare'];
+const OPS_PERMISSIONS = [
+  'ops.ship', 'ops.labels', 'ops.track', 'ops.returns', 'ops.prepare',
+  'settlement.view', 'settlement.upload',
+];
 
 export async function GET() {
   try {

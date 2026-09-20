@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { requirePermission } from '@/lib/authorization';
+import { can, requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { walletBalance } from '@/lib/wallets';
@@ -27,14 +27,30 @@ const createSchema = z.object({
 
 export async function GET() {
   try {
-    const { companyId, country } = await requireContext();
-    await requirePermission('finance.cashbox');
+    const { user, companyId, country } = await requireContext();
+    // Settlement records WHICH wallet a courier payment landed in, so it needs
+    // the list of wallets — but not the cashbox figures. Only finance.cashbox
+    // sees balances.
+    const cashbox = can(user, 'finance.cashbox');
+    if (!cashbox) await requirePermission('settlement.upload');
 
     const wallets = await db.wallet.findMany({
       where: { companyId },
       orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
       include: { country: { select: { id: true, name: true, code: true, minorUnit: true } } },
     });
+
+    if (!cashbox) {
+      return NextResponse.json({
+        wallets: wallets.map((w) => ({
+          id: w.id,
+          name: w.name,
+          currencyCode: w.currencyCode,
+          isActive: w.isActive,
+          country: w.country,
+        })),
+      });
+    }
 
     const balances = await Promise.all(
       wallets.map((w) => walletBalance(db, w.id, w.country.minorUnit ?? country.minorUnit))

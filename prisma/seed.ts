@@ -406,6 +406,15 @@ async function main() {
       passwordHash, role: 'WAREHOUSE', status: 'ACTIVE',
     },
   });
+  // Settlement is a separate pair of hands from the cashbox: whoever imports
+  // and approves a courier statement must not be the one who approves the
+  // day's closing.
+  await prisma.user.create({
+    data: {
+      companyId: company.id, email: 'settlement@bioderma.com', name: 'موظف التسويات',
+      passwordHash, role: 'SETTLEMENT_OFFICER', status: 'ACTIVE',
+    },
+  });
 
   const modsData = [
     { email: 'sara@bioderma.com', name: 'سارة محمود', phone: '+962 790 000 001', commissionRate: 5 },

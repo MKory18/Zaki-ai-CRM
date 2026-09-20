@@ -103,10 +103,12 @@ export async function accrueForOrder(
     where: { companyId: params.companyId, isActive: true },
   })) as unknown as RuleLike[];
 
-  // Commission is earned on the sale, not on the courier's fee.
-  const revenue = order.priceIncludesDelivery
-    ? Number(order.totalAmount) - Number(order.deliveryFee ?? 0)
-    : Number(order.totalAmount) - Number(order.deliveryFee ?? 0);
+  // Commission is earned on the sale, not on the courier's fee. `totalAmount`
+  // holds the COD figure from computeCod, and COD minus the fee is the sale
+  // revenue under BOTH pricing modes: with the fee included COD is the net and
+  // revenue is net − fee; with it added on top COD is net + fee, so
+  // COD − fee is the net again. One expression covers both on purpose.
+  const revenue = Number(order.totalAmount) - Number(order.deliveryFee ?? 0);
 
   const parties = [
     order.moderator ? { userId: order.moderator.id, role: order.moderator.role } : null,
