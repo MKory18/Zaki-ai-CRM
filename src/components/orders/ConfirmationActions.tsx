@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { apiFetch } from '@/lib/api-client';
-import { format } from 'date-fns';
 import {
   Phone,
   PhoneCall,
@@ -23,6 +22,7 @@ import {
   History,
   CalendarClock,
 } from 'lucide-react';
+import { arDateShort, arDateTime } from '@/lib/format';
 
 const REJECTION_REASONS: { key: string; ar: string; en: string }[] = [
   { key: 'PRICE_TOO_HIGH', ar: 'السعر مرتفع', en: 'Price too high' },
@@ -213,7 +213,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
           {order.nextFollowUpAt && order.followUpStatus !== 'COMPLETED' && order.followUpStatus !== 'CANCELLED' && (
             <span className="text-[11px] font-bold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-2 py-1 inline-flex items-center gap-1">
               <CalendarClock className="w-3 h-3" />
-              {ar ? 'متابعة:' : 'Follow-up:'} {format(new Date(order.nextFollowUpAt), 'd MMM, h:mm a')}
+              {ar ? 'متابعة:' : 'Follow-up:'} {arDateShort(order.nextFollowUpAt)}
             </span>
           )}
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 text-[11px] font-bold ${wf.cls}`}>
@@ -321,7 +321,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
                       📞 {ar ? `محاولة #${att.attemptNumber}` : `Attempt #${att.attemptNumber}`}
                     </span>
                     <span className="text-[10px] text-slate-400">
-                      {format(new Date(att.createdAt), 'd MMM yyyy — h:mm a')}
+                      {arDateTime(att.createdAt)}
                     </span>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
@@ -337,7 +337,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
                     {att.nextFollowUpAt && (
                       <span className="text-orange-600 font-semibold inline-flex items-center gap-1">
                         <CalendarClock className="w-3 h-3" />
-                        {ar ? 'المتابعة:' : 'Next:'} {format(new Date(att.nextFollowUpAt), 'd MMM, h:mm a')}
+                        {ar ? 'المتابعة:' : 'Next:'} {arDateShort(att.nextFollowUpAt)}
                       </span>
                     )}
                   </div>

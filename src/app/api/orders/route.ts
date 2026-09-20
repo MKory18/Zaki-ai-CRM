@@ -306,10 +306,19 @@ export async function POST(req: Request) {
     const price = sellingPrice || product.basePrice;
     const shipCost = shippingCost || 0;
 
-    // Offers may include delivery in the price; if so the fee is deducted
-    // from revenue instead of added to what the customer pays.
-    const offer = offerId ? await db.offer.findFirst({ where: { id: offerId, companyId } }) : null;
-    const priceIncludesDelivery = offer?.deliveryIncluded === true;
+    // Whether the price already contains delivery is the STORE's pricing
+    // policy; an offer may override it upward for its own bundle. Reading it
+    // from the offer alone meant a direct order — the commonest kind — was
+    // always priced as price + fee, even on a store that advertises
+    // delivery-inclusive prices, and the courier statement then disagreed
+    // with the order by exactly the fee.
+    const [offer, store] = await Promise.all([
+      offerId ? db.offer.findFirst({ where: { id: offerId, companyId } }) : Promise.resolve(null),
+      db.store.findFirst({ where: { id: storeId }, select: { priceIncludesDelivery: true } }),
+    ]);
+    const priceIncludesDelivery = offer
+      ? offer.deliveryIncluded === true || store?.priceIncludesDelivery === true
+      : store?.priceIncludesDelivery === true;
 
     // ONE COD function, used by every screen and service (contract PART 5).
     const money = computeCod({

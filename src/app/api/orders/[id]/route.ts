@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { computeCod } from '@/lib/money';
 import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
@@ -99,7 +100,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { user, companyId, storeId } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     const { searchParams } = new URL(req.url);
 
     // ── Phase S: role-scoped access (same envelope as the list API) ──
@@ -214,8 +215,28 @@ export async function GET(
     // is already READY_TO_SHIP. One truth, computed in one place.
     const state = deriveCoreState(order as unknown as StateSource);
 
+    // What the customer actually pays at the door, from the ONE cod function
+    // (contract invariant: never computed in a screen). With a price that
+    // includes delivery the fee is already inside the line prices, so the
+    // detail screen can state that instead of listing a fee above a total
+    // that does not contain it.
+    const cod = computeCod({
+      lines: (order.items ?? []).map((line) => ({
+        quantity: line.quantity,
+        unitPrice: Number(line.unitPrice),
+      })),
+      deliveryFee: Number(order.deliveryFee ?? order.shippingCost ?? 0),
+      discount: Number(order.discountAmount ?? 0),
+      priceIncludesDelivery: order.priceIncludesDelivery === true,
+      minorUnit: country.minorUnit,
+    });
+
     return NextResponse.json({
       order: { ...order, state, zone: getZone(state) },
+      // The store's own currency, so the detail screen shows the same money
+      // the list does instead of a hard-coded dollar sign.
+      currency: { code: country.currencyCode, minorUnit: country.minorUnit },
+      cod: { ...cod, includesDelivery: order.priceIncludesDelivery === true },
       previousOrderId,
       nextOrderId,
     });

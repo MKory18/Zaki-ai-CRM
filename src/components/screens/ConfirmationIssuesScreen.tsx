@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Loader2, PencilLine, Ban, X } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
+import { arDateTime } from '@/lib/format';
 
 /**
  * /confirmation/issues — entry issues on moderator-entered orders only.
@@ -384,7 +385,7 @@ export function ConfirmationIssuesScreen() {
 
             <p className="text-[11px] text-[#9aa4b2]">
               تاريخ إنشاء الطلب الأصلي:{' '}
-              <span dir="ltr">{new Date(issue.order.createdAt).toLocaleString('ar-EG')}</span> — لا يتغير بعد التصحيح.
+              <span>{arDateTime(issue.order.createdAt)}</span> — لا يتغير بعد التصحيح.
             </p>
 
             {!isEditing && !isVoiding && (

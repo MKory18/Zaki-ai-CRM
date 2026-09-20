@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { OrderStatusBadge } from '@/components/ui/Badge';
 import { Select, Textarea, Input } from '@/components/ui/Input';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { useOrderOwnership } from '@/hooks/useOrderOwnership';
@@ -15,23 +14,20 @@ import { apiFetch, apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { useRegions } from '@/hooks/useRegions';
-import { format } from 'date-fns';
+import { amount, arDateShort, arDateTime, type Currency } from '@/lib/format';
 import {
   User,
   Phone,
   PhoneCall,
   History,
   Clock,
-  CalendarClock,
   DollarSign,
   MapPin,
   StickyNote,
   Truck,
   Save,
   MessageSquareText,
-  Tag,
   UserCheck,
-  Send,
   ChevronLeft,
   ChevronRight,
   Lock,
@@ -39,7 +35,6 @@ import {
   Bike,
 } from 'lucide-react';
 
-/* ─── Status config: Arabic label + color + icon per status ─── */
 /** Settlement is its own fact, never merged into the delivery status. */
 const SETTLEMENT_AR: Record<string, string> = {
   PENDING: 'بانتظار التسوية',
@@ -52,40 +47,6 @@ const SETTLEMENT_AR: Record<string, string> = {
   CANCELLED: 'ملغى',
 };
 
-const STATUS_CONFIG: Record<
-  string,
-  { ar: string; en: string; pill: string; select: string; icon: React.ElementType }
-> = {
-  NEW: { ar: 'جديد', en: 'New', pill: 'bg-blue-50 text-blue-700 border-blue-300', select: 'bg-blue-50 text-blue-800', icon: Clock },
-  CONTACTING: { ar: 'قيد التواصل', en: 'Contacting', pill: 'bg-purple-50 text-purple-700 border-purple-300', select: 'bg-purple-50 text-purple-800', icon: PhoneCall },
-  NO_ANSWER: { ar: 'لا يجيب', en: 'No Answer', pill: 'bg-amber-50 text-amber-700 border-amber-300', select: 'bg-amber-50 text-amber-800', icon: Phone },
-  CONFIRMED: { ar: 'مؤكد', en: 'Confirmed', pill: 'bg-green-50 text-green-700 border-green-300', select: 'bg-green-50 text-green-800', icon: CheckIcon },
-  POSTPONED: { ar: 'مؤجل', en: 'Postponed', pill: 'bg-orange-50 text-orange-700 border-orange-300', select: 'bg-orange-50 text-orange-800', icon: CalendarClock },
-  REJECTED: { ar: 'مرفوض', en: 'Rejected', pill: 'bg-red-50 text-red-700 border-red-300', select: 'bg-red-50 text-red-800', icon: XIcon },
-  READY_FOR_SHIPPING: { ar: 'جاهز للشحن', en: 'Ready for Shipping', pill: 'bg-cyan-50 text-cyan-700 border-cyan-300', select: 'bg-cyan-50 text-cyan-800', icon: Tag },
-  SHIPPED: { ar: 'تم الشحن', en: 'Shipped', pill: 'bg-indigo-50 text-indigo-700 border-indigo-300', select: 'bg-indigo-50 text-indigo-800', icon: Send },
-  OUT_FOR_DELIVERY: { ar: 'خرج للتوصيل', en: 'Out for Delivery', pill: 'bg-violet-50 text-violet-700 border-violet-300', select: 'bg-violet-50 text-violet-800', icon: Truck },
-  DELIVERED: { ar: 'تم التوصيل ✓', en: 'Delivered ✓', pill: 'bg-emerald-50 text-emerald-700 border-emerald-400', select: 'bg-emerald-50 text-emerald-800', icon: CheckIcon },
-  CANCELLED: { ar: 'ملغى', en: 'Cancelled', pill: 'bg-rose-50 text-rose-700 border-rose-300', select: 'bg-rose-50 text-rose-800', icon: XIcon },
-  RETURNED: { ar: 'مرتجع', en: 'Returned', pill: 'bg-pink-50 text-pink-700 border-pink-300', select: 'bg-pink-50 text-pink-800', icon: History },
-  FAILED_DELIVERY: { ar: 'فشل التوصيل', en: 'Failed Delivery', pill: 'bg-red-100 text-red-800 border-red-400', select: 'bg-red-100 text-red-900', icon: XIcon },
-};
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-    </svg>
-  );
-}
-function XIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-
 const CALL_RESULTS: Record<string, { ar: string; en: string }> = {
   CONFIRMED: { ar: 'مؤكد — وافق على الطلب', en: 'Confirmed (Agreed & Accepted)' },
   POSTPONED: { ar: 'مؤجل — سيتصل لاحقاً', en: 'Postponed (Callback later)' },
@@ -93,17 +54,6 @@ const CALL_RESULTS: Record<string, { ar: string; en: string }> = {
   REJECTED: { ar: 'مرفوض — ألغى الطلب', en: 'Rejected' },
   CALLBACK_REQUESTED: { ar: 'طلب منك الاتصال به', en: 'Customer Requested Callback' },
   WRONG_NUMBER: { ar: 'رقم خاطئ', en: 'Wrong Number' },
-};
-
-const ACTIVITY_LABELS: Record<string, { ar: string; en: string }> = {
-  ORDER_CREATED: { ar: 'تم إنشاء الطلب', en: 'Order Created' },
-  CUSTOMER_UPDATED: { ar: 'تحديث بيانات العميل', en: 'Customer Updated' },
-  MODERATOR_ASSIGNED: { ar: 'تعيين مودريتور', en: 'Moderator Assigned' },
-  CALL_MADE: { ar: 'اتصال', en: 'Call Made' },
-  STATUS_CHANGED: { ar: 'تغيير الحالة', en: 'Status Changed' },
-  ORDER_UPDATED: { ar: 'تحديث الطلب', en: 'Order Updated' },
-  NOTE_ADDED: { ar: 'إضافة ملاحظة', en: 'Note Added' },
-  SHIPPING_UPDATED: { ar: 'تحديث الشحن', en: 'Shipping Updated' },
 };
 
 interface OrderDetailModalProps {
@@ -119,6 +69,11 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   const { t, locale, isRtl, currentUser } = useApp();
   const ar = locale === 'ar';
   const [order, setOrder] = useState<any>(null);
+  const [currency, setCurrency] = useState<Currency | null>(null);
+  // The COD breakdown, computed server-side by the one cod function.
+  const [cod, setCod] = useState<
+    { subtotal: number; discount: number; deliveryFee: number; cod: number; includesDelivery: boolean } | null
+  >(null);
   // Merged history: status logs, ownership, contact and delivery attempts,
   // notes, change requests and issues in one list.
   const [timeline, setTimeline] = useState<
@@ -166,7 +121,6 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     }
   }, [isOpen, inEditMode, orderId]);
 
-  const [selectedStatus, setSelectedStatus] = useState('');
   const [statusNote, setStatusNote] = useState('');
 
   const [callResult, setCallResult] = useState('CONFIRMED');
@@ -302,7 +256,8 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       if (res.ok) {
         const data = await res.json();
         setOrder(data.order);
-        setSelectedStatus(data.order.status);
+        if (data.currency) setCurrency(data.currency);
+        setCod(data.cod ?? null);
         // The merged timeline is its own endpoint so every screen shows the
         // same history, not whatever one table happens to hold.
         apiJson<{ events: typeof timeline }>(`/api/orders/${id}/timeline`)
@@ -353,52 +308,6 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       document.querySelector('.max-h-\\[90vh\\] .overflow-y-auto')?.scrollTo({ top: 0 });
     } finally {
       setNavLoading(null);
-    }
-  };
-
-  const handleStatusUpdate = async () => {
-    // Use order.id (current displayed order), not the orderId prop — after
-    // prev/next navigation the prop still holds the originally opened order.
-    if (!order?.id || selectedStatus === order.status) return;
-    setActionLoading(true);
-    setActionFeedback(null);
-    try {
-      const res = await apiFetch(`/api/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: selectedStatus,
-          expectedVersion: order.version, // optimistic concurrency (Phase B)
-          internalNotes: statusNote
-            ? `${order.internalNotes ? order.internalNotes + '\n' : ''}[${new Date().toLocaleTimeString(ar ? 'ar-EG' : 'en-US')}]: ${statusNote}`
-            : order.internalNotes,
-        }),
-      });
-      if (res.status === 409) {
-        // Version conflict — never silently overwrite
-        ownership.setMessage({ type: 'conflict', text: t.conflictMessage });
-        return;
-      }
-      if (res.status === 423) {
-        const data = await res.json().catch(() => ({}));
-        ownership.setMessage({ type: 'error', text: data.errorAr || data.error || t.editingBy });
-        return;
-      }
-      if (res.ok) {
-        setActionFeedback({ type: 'success', text: 'تم تحديث الحالة بنجاح ✓' });
-        await loadOrder(order.id);
-        onRefresh();
-        setStatusNote('');
-        // Save complete → release the editing lock
-        await ownership.releaseLock(order.id);
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setActionFeedback({ type: 'error', text: data.errorAr || data.error || `HTTP ${res.status}` });
-      }
-    } catch (e: any) {
-      setActionFeedback({ type: 'error', text: e?.message || 'فشل تحديث الحالة' });
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -462,8 +371,6 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   }
   if (!order) return null;
 
-  const currentCfg = STATUS_CONFIG[order.status];
-  const CurrentIcon = currentCfg?.icon ?? Clock;
   const isNavigating = navLoading !== null || loading;
 
   // ─── Phase C: lock state helpers ───
@@ -487,15 +394,15 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     }
   };
 
-  const money = (n: number) =>
-    `$${n.toLocaleString(ar ? 'ar-EG' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // The store's currency, the same one the orders list prints.
+  const money = (n: number) => amount(n, currency);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={`الطلب ${order.orderNumber}`}
-      subtitle={`أُنشئ في ${format(new Date(order.createdAt), 'd MMMM yyyy — h:mm a', {})} • قناة الطلب: ${order.source.split(' → ')[0]}${order.source.includes(' → ') ? ` • المصدر: ${order.source.split(' → ')[1]}` : ''}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}${order.landingPageOffer?.name ? ` • العرض: ${order.landingPageOffer.name}` : ''}${(order.source === 'Telegram' || order.source.startsWith('Telegram → ')) && (order as any).telegramMessages?.[0] ? ` • تيليجرام: رسالة #${(order as any).telegramMessages[0].messageId}${(order as any).telegramMessages[0].threadId ? ` • موضوع: ${(order as any).telegramMessages[0].threadName || (order as any).telegramMessages[0].threadId}` : ''}` : ''}`}
+      subtitle={`أُنشئ في ${arDateTime(order.createdAt)} • قناة الطلب: ${order.source.split(' → ')[0]}${order.source.includes(' → ') ? ` • المصدر: ${order.source.split(' → ')[1]}` : ''}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}${order.landingPageOffer?.name ? ` • العرض: ${order.landingPageOffer.name}` : ''}${(order.source === 'Telegram' || order.source.startsWith('Telegram → ')) && (order as any).telegramMessages?.[0] ? ` • تيليجرام: رسالة #${(order as any).telegramMessages[0].messageId}${(order as any).telegramMessages[0].threadId ? ` • موضوع: ${(order as any).telegramMessages[0].threadName || (order as any).telegramMessages[0].threadId}` : ''}` : ''}`}
       maxWidth="4xl"
     >
       {/* ─── Prev/Next order navigation (below the header, inside the modal) ─── */}
@@ -578,16 +485,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                   {ar ? 'حالة الطلب' : 'Order State'}
                 </span>
                 <span className="flex flex-wrap items-center gap-2">
-                  {order.state ? (
-                    <OrderStateBadge state={order.state} />
-                  ) : (
-                    <span
-                      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 font-bold text-sm ${currentCfg?.pill ?? 'bg-slate-100 text-slate-700 border-slate-300'}`}
-                    >
-                      <CurrentIcon className="w-4 h-4" />
-                      {ar ? currentCfg?.ar : currentCfg?.en}
-                    </span>
-                  )}
+                  <OrderStateBadge state={order.state} />
 
                   {/* Who is carrying it, and whether the money came back. */}
                   {order.deliveryProvider && (
@@ -620,29 +518,17 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               </div>
 
               <div className="flex items-center gap-2">
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  disabled={editingLockedByOther}
-                  className="px-3 py-2 text-xs font-bold rounded-xl border-2 border-slate-200 focus:border-red-500 focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                    <option key={key} value={key} className={cfg.select}>
-                      {ar ? cfg.ar : cfg.en}
-                    </option>
-                  ))}
-                </select>
+                {/* No free status dropdown here. Every transition an order can
+                    make is offered, in order and guarded, by the confirmation
+                    and shipping sections below. A dropdown that could jump a
+                    NEW order straight to "تم التوصيل ✓" wrote the delivery
+                    date and marked the money collected without anyone ever
+                    opening the collection screen. */}
                 {order.lockedById === currentUser?.id && lockActive ? (
-                  <Button
-                    size="sm"
-                    onClick={handleStatusUpdate}
-                    loading={actionLoading}
-                    disabled={selectedStatus === order.status}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    تحديث
-                  </Button>
+                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1.5">
+                    <Pencil className="w-3 h-3" />
+                    وضع التعديل مفتوح
+                  </span>
                 ) : (
                   <Button
                     size="sm"
@@ -666,13 +552,6 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               </p>
             )}
 
-            {selectedStatus !== order.status && (
-              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-3 inline-flex items-center gap-1.5">
-                <History className="w-3 h-3" />
-                سيتم تسجيل التغيير: {ar ? currentCfg?.ar : currentCfg?.en} ←{' '}
-                {ar ? STATUS_CONFIG[selectedStatus]?.ar : STATUS_CONFIG[selectedStatus]?.en}
-              </p>
-            )}
           </div>
 
           {/* Customer Info + Notes */}
@@ -905,7 +784,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                         {log.notes && <p className="text-slate-600 mt-1">{log.notes}</p>}
                       </div>
                       <div className="text-slate-400 text-[11px] shrink-0">
-                        {format(new Date(log.callDate || log.createdAt), 'd MMM — h:mm a')}
+                        {arDateShort(log.callDate || log.createdAt)}
                       </div>
                     </div>
                   );
@@ -938,40 +817,76 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               </div>
             </div>
 
-            <div className="space-y-1.5 text-xs divide-y divide-slate-100">
-              <div className="flex justify-between pt-1.5">
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between">
                 <span className="text-slate-500">العرض / الكمية:</span>
                 <span className="font-medium text-slate-900">
                   {order.landingPageOffer?.name || order.offer?.name || 'مباشر'} ({order.quantity} {t.units}{order.freeQuantity ? ` + ${order.freeQuantity} هدية` : ''})
                 </span>
               </div>
               {order.addOns?.length > 0 && (
-                <div className="flex justify-between pt-1.5">
-                  <span className="text-slate-500">منتجات إضافية (Upsell):</span>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">منتجات إضافية:</span>
                   <span className="font-medium text-slate-900 text-end">
                     {order.addOns.map((a: any) => `${a.productName} ×${a.quantity} (${money(a.total)})`).join(' + ')}
                   </span>
                 </div>
               )}
-              <div className="flex justify-between pt-1.5">
-                <span className="text-slate-500">سعر البيع:</span>
-                <span className="font-bold text-slate-900" dir="ltr">{money(order.sellingPrice)}</span>
+
+              {/* What the customer pays. The figures come from the one COD
+                  function on the server — a screen never adds up money. */}
+              <div className="mt-2 rounded-xl border border-slate-200 divide-y divide-slate-100">
+                <p className="text-[11px] font-bold text-slate-600 px-2.5 py-1.5 bg-slate-50 rounded-t-xl">
+                  ما يدفعه العميل
+                </p>
+                <div className="flex justify-between px-2.5 py-1.5">
+                  <span className="text-slate-500">قيمة البضاعة:</span>
+                  <span className="text-slate-900" dir="ltr">{money(cod?.subtotal ?? order.sellingPrice)}</span>
+                </div>
+                {!!cod?.discount && (
+                  <div className="flex justify-between px-2.5 py-1.5">
+                    <span className="text-slate-500">الخصم:</span>
+                    <span className="text-slate-700" dir="ltr">− {money(cod.discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between px-2.5 py-1.5">
+                  <span className="text-slate-500">
+                    أجرة التوصيل:
+                    {cod?.includesDelivery && (
+                      <span className="text-slate-400"> (داخلة في السعر)</span>
+                    )}
+                  </span>
+                  {/* The fee follows the courier, and the courier is chosen when
+                      the shipment is created. Before that it is undecided, not
+                      zero — printing 0.00 here reads as free delivery. */}
+                  {!order.deliveryProvider && !Number(cod?.deliveryFee ?? 0) ? (
+                    <span className="text-slate-400 text-[11px]">تُحدَّد عند إنشاء الشحنة</span>
+                  ) : (
+                    <span className="text-slate-700" dir="ltr">{money(cod?.deliveryFee ?? order.shippingCost)}</span>
+                  )}
+                </div>
+                <div className="flex justify-between px-2.5 py-2 bg-slate-50 rounded-b-xl">
+                  <span className="font-bold">المحصَّل عند الباب:</span>
+                  <span className="font-black text-red-600 text-sm" dir="ltr">
+                    {money(cod?.cod ?? order.totalAmount)}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between pt-1.5">
-                <span className="text-slate-500">تكلفة الشحن:</span>
-                <span className="text-slate-700" dir="ltr">{money(order.shippingCost)}</span>
-              </div>
-              <div className="flex justify-between pt-1.5">
-                <span className="text-slate-500">تكلفة البضاعة:</span>
-                <span className="text-slate-700" dir="ltr">{money(order.estimatedCostOfGoods)}</span>
-              </div>
-              <div className="flex justify-between pt-1.5">
-                <span className="text-slate-500">عمولة المودريتور:</span>
-                <span className="text-slate-700" dir="ltr">{money(order.moderatorCommission)}</span>
-              </div>
-              <div className="flex justify-between pt-2 bg-slate-50 -mx-2 px-2 py-2 rounded-xl">
-                <span className="font-bold">الإجمالي:</span>
-                <span className="font-black text-red-600 text-sm" dir="ltr">{money(order.totalAmount)}</span>
+
+              {/* Costs are ours, not the customer's — kept apart so the column
+                  above never reads as a sum that includes them. */}
+              <div className="mt-2 rounded-xl border border-slate-200 divide-y divide-slate-100">
+                <p className="text-[11px] font-bold text-slate-600 px-2.5 py-1.5 bg-slate-50 rounded-t-xl">
+                  تكاليفنا على هذا الطلب
+                </p>
+                <div className="flex justify-between px-2.5 py-1.5">
+                  <span className="text-slate-500">تكلفة البضاعة:</span>
+                  <span className="text-slate-700" dir="ltr">{money(order.estimatedCostOfGoods)}</span>
+                </div>
+                <div className="flex justify-between px-2.5 py-1.5">
+                  <span className="text-slate-500">عمولة المودريتور:</span>
+                  <span className="text-slate-700" dir="ltr">{money(order.moderatorCommission)}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1012,7 +927,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                   <p className="font-bold text-slate-800">{event.title}</p>
                   {event.detail && <p className="text-slate-500 mt-0.5 break-words">{event.detail}</p>}
                   <p className="text-[10px] text-slate-400 mt-0.5">
-                    {format(new Date(event.at), 'd MMM, h:mm a')}
+                    {arDateShort(event.at)}
                     {event.actorName ? ` — ${event.actorName}` : ''}
                   </p>
                 </div>

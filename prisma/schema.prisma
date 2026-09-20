@@ -1188,6 +1188,12 @@ model Store {
   logo      String?
   status    String   @default("ACTIVE") // ACTIVE | PAUSED
   type      String   @default("MULTI_PRODUCT") // MULTI_PRODUCT | SINGLE_PRODUCT
+  /// Whether the advertised price already contains the delivery fee.
+  /// A shop-wide pricing policy, not a per-offer one: it used to live only
+  /// on the offer, so a direct order on a delivery-inclusive store was
+  /// priced as price + fee and asked the customer for money the seller had
+  /// never advertised. An offer may still override it.
+  priceIncludesDelivery Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

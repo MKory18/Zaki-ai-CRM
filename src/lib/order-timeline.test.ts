@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-/** One merged history: every event table in one chronological list. */
+/**
+ * One merged history: every event table in one chronological list, written
+ * in the language the person reading it speaks. This history is shown to
+ * staff, so a line of it is never a raw enum and never the metadata JSON.
+ */
 
 const { db } = vi.hoisted(() => ({
   db: {
@@ -50,7 +54,7 @@ describe('orderTimeline', () => {
     const events = await orderTimeline(db as never, 'o1');
     expect(events.map((e) => e.kind)).toEqual(['OWNERSHIP', 'CONTACT', 'STATUS', 'NOTE']);
     expect(events[0].actorName).toBe('سارة');
-    expect(events[2].title).toContain('CONFIRMED');
+    expect(events[2].title).toBe('التأكيد: جديد ← مؤكد');
   });
 
   it('does not repeat a status change that the activity log also holds', async () => {
@@ -64,7 +68,76 @@ describe('orderTimeline', () => {
 
     const events = await orderTimeline(db as never, 'o1');
     expect(events.filter((e) => e.kind === 'STATUS')).toHaveLength(1);
-    expect(events.filter((e) => e.kind === 'ACTIVITY').map((e) => e.title)).toEqual(['ORDER_UPDATED']);
+    expect(events.filter((e) => e.kind === 'ACTIVITY').map((e) => e.title)).toEqual(['تعديل بيانات الطلب']);
+  });
+
+  it('never shows the metadata JSON to whoever opens the order', async () => {
+    // This is what the order history actually displayed: the raw object.
+    db.orderActivity.findMany.mockResolvedValue([
+      {
+        id: 'a1', createdAt: at('2026-09-02T10:00:00Z'), action: 'ORDER_CREATED', userId: 'u1',
+        metadata: { source: 'اسرار الجمال', intakeMethod: 'AI_PASTE', createdBy: 'مودريتور' },
+      },
+    ]);
+
+    const [event] = await orderTimeline(db as never, 'o1');
+    expect(event.title).toBe('إنشاء الطلب');
+    expect(event.detail).toBe('المصدر: اسرار الجمال · طريقة الإدخال: AI_PASTE · أدخله: مودريتور');
+    expect(event.detail).not.toContain('{');
+    expect(event.detail).not.toContain('"');
+  });
+
+  it('drops a metadata key nobody wrote a label for rather than dumping it', async () => {
+    db.orderActivity.findMany.mockResolvedValue([
+      {
+        id: 'a1', createdAt: at('2026-09-02T10:00:00Z'), action: 'ORDER_UPDATED', userId: 'u1',
+        metadata: { updatedBy: 'سارة', someInternalFlag: true, __v: 7 },
+      },
+    ]);
+
+    const [event] = await orderTimeline(db as never, 'o1');
+    expect(event.detail).toBe('عدّله: سارة');
+  });
+
+  it('names the changed fields instead of their column names', async () => {
+    db.orderActivity.findMany.mockResolvedValue([
+      {
+        id: 'a1', createdAt: at('2026-09-02T10:00:00Z'), action: 'ORDER_UPDATED', userId: 'u1',
+        metadata: { fields: ['customerName', 'customerPhone'] },
+      },
+    ]);
+
+    const [event] = await orderTimeline(db as never, 'o1');
+    expect(event.detail).toBe('الحقول: اسم العميل، رقم الهاتف');
+  });
+
+  it('reads an entry issue as a sentence, not as two enum values', async () => {
+    db.orderIssue.findMany.mockResolvedValue([
+      { id: 'i1', createdAt: at('2026-09-02T10:00:00Z'), reason: 'WRONG_PHONE', status: 'CORRECTED', note: 'رقم الهاتف: 0932 ← 0944', raisedById: 'u1' },
+    ]);
+
+    const [event] = await orderTimeline(db as never, 'o1');
+    expect(event.title).toBe('إشكال إدخال: رقم خاطئ — تم التصحيح');
+  });
+
+  it('reads a call attempt in Arabic, method and outcome both', async () => {
+    db.orderContactAttempt.findMany.mockResolvedValue([
+      { id: 't1', createdAt: at('2026-09-01T11:00:00Z'), attemptNumber: 2, contactMethod: 'WHATSAPP', result: 'NO_ANSWER', employeeId: 'u1', note: null },
+    ]);
+
+    const [event] = await orderTimeline(db as never, 'o1');
+    expect(event.title).toBe('محاولة اتصال 2 عبر واتساب — لم يرد');
+  });
+
+  it('keeps an unknown value visible rather than blanking it', async () => {
+    // A status the label table has not caught up with must still be readable;
+    // showing nothing would hide that the change happened at all.
+    db.orderStatusLog.findMany.mockResolvedValue([
+      { id: 's1', createdAt: at('2026-09-02T10:00:00Z'), statusType: 'CONFIRMATION', previousValue: 'NEW', newValue: 'SOMETHING_NEW', changedById: 'u1', note: null },
+    ]);
+
+    const [event] = await orderTimeline(db as never, 'o1');
+    expect(event.title).toBe('التأكيد: جديد ← SOMETHING_NEW');
   });
 
   it('is empty, not broken, for an order with no events', async () => {

@@ -5,6 +5,7 @@ import { History, Loader2, ShieldAlert } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { OrderStateBadge } from './OrderStateBadge';
+import { arDate, arDateShort } from '@/lib/format';
 
 /**
  * "Has this customer ordered before?" — a small counter next to the order
@@ -149,7 +150,7 @@ export function CustomerHistoryModal({
           {timeline?.events.map((e) => (
             <li key={e.id} className="flex gap-3 text-sm">
               <span className="text-[11px] text-[#9aa4b2] whitespace-nowrap pt-0.5" dir="ltr">
-                {new Date(e.at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
+                {arDateShort(e.at)}
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block text-[#121926]">{e.title}</span>
@@ -170,7 +171,7 @@ export function CustomerHistoryModal({
                 <span className="font-medium text-[#121926]" dir="ltr">{o.orderNumber}</span>
                 <OrderStateBadge state={o.state} />
                 <span className="text-xs text-[#697586]" dir="ltr">
-                  {new Date(o.createdAt).toLocaleDateString('ar-EG')}
+                  {arDate(o.createdAt)}
                 </span>
                 {o.store && <span className="text-xs text-[#9aa4b2]">{o.store.name}</span>}
                 <span className="mr-auto tabular-nums text-[#121926]" dir="ltr">
