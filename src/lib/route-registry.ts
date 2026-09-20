@@ -61,11 +61,11 @@ export const NAV: NavGroup[] = [
     key: 'ops',
     label: 'التشغيل',
     routes: [
-      r('/ops/preparation', 'التجهيز', 'PackageCheck', ['ops.prepare'], 5),
-      r('/ops/shipments/new', 'إنشاء شحنة', 'Truck', ['ops.ship'], 5),
-      r('/ops/labels', 'البوالص', 'Printer', ['ops.labels'], 5),
-      r('/ops/tracking', 'متابعة الشحن', 'MapPin', ['ops.track'], 5),
-      r('/ops/returns', 'المرتجعات', 'Undo2', ['ops.returns'], 5),
+      r('/ops/preparation', 'التجهيز', 'PackageCheck', ['ops.prepare']),
+      r('/ops/shipments/new', 'إنشاء شحنة', 'Truck', ['ops.ship']),
+      r('/ops/labels', 'البوالص', 'Printer', ['ops.labels']),
+      r('/ops/tracking', 'متابعة الشحن', 'MapPin', ['ops.track']),
+      r('/ops/returns', 'المرتجعات', 'Undo2', ['ops.returns']),
     ],
   },
   {
@@ -125,9 +125,9 @@ export const NAV: NavGroup[] = [
     label: 'الإعدادات',
     routes: [
       r('/settings/geo', 'البلدان والمتاجر والمحافظ', 'Globe', ['geo.view']),
-      r('/settings/delivery-fees', 'أجور التوصيل', 'Receipt', ['settings.view'], 5),
+      r('/settings/delivery-fees', 'أجور التوصيل', 'Receipt', ['settings.view']),
       r('/settings/commission', 'العمولات', 'Percent', ['settings.view'], 6),
-      r('/settings/couriers', 'شركات الشحن', 'Truck', ['settings.view'], 5),
+      r('/settings/couriers', 'شركات الشحن', 'Truck', ['settings.view']),
       r('/settings/pixels', 'البكسلات والتتبع', 'Radar', ['settings.view']),
       r('/settings/whatsapp', 'إعدادات واتساب', 'MessageCircle', ['whatsapp.manage']),
       r('/settings/telegram', 'إعدادات تلجرام', 'Send', ['telegram.manage']),

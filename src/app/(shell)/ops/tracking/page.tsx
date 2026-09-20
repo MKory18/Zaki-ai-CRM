@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { TrackingScreen } from '@/components/screens/TrackingScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/ops/tracking');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/ops/tracking');
+  return <TrackingScreen />;
 }

@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { PreparationScreen } from '@/components/screens/PreparationScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/ops/preparation');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/ops/preparation');
+  return <PreparationScreen />;
 }

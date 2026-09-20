@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { CouriersScreen } from '@/components/screens/CouriersScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/settings/couriers');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/settings/couriers');
+  return <CouriersScreen />;
 }

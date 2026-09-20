@@ -320,6 +320,10 @@ async function main() {
   await prisma.inventoryMovement.deleteMany();
   await prisma.productionBatch.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.returnReceipt.deleteMany();
+  await prisma.deliveryFee.deleteMany();
+  await prisma.orderIssue.deleteMany();
+  await prisma.orderChangeRequest.deleteMany();
   await prisma.orderNote.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.userStoreAccess.deleteMany();
@@ -430,7 +434,34 @@ async function main() {
   await prisma.userCountryAccess.createMany({
     data: companyUsers.map((u) => ({ userId: u.id, countryId: country.id })),
   });
-  console.log('✅ Country & store created');
+  // Governorates of the country, and a courier with a fee per governorate:
+  // without a fee row a shipment is blocked by rule, so the demo data has to
+  // carry the whole chain.
+  const JO_REGIONS = [
+    'عمّان', 'إربد', 'الزرقاء', 'البلقاء', 'المفرق', 'الكرك',
+    'جرش', 'مأدبا', 'عجلون', 'العقبة', 'معان', 'الطفيلة',
+  ];
+  await prisma.region.createMany({
+    data: JO_REGIONS.map((name, i) => ({ countryId: country.id, name, sortOrder: i })),
+  });
+  const regions = await prisma.region.findMany({ where: { countryId: country.id } });
+
+  const courier = await prisma.deliveryProvider.create({
+    data: { companyId: company.id, name: 'أرامكس الأردن', code: 'ARAMEX-JO', phone: '+962 6 000 0000' },
+  });
+  await prisma.deliveryFee.createMany({
+    data: regions.map((r) => ({
+      companyId: company.id,
+      countryId: country.id,
+      deliveryProviderId: courier.id,
+      regionId: r.id,
+      fee: r.name === 'عمّان' ? 2.5 : 3.5,
+      lateThresholdDays: r.name === 'عمّان' ? 2 : 4,
+      returnFee: 1.5,
+    })),
+  });
+
+  console.log('✅ Country, store, regions, courier & delivery fees created');
 
   // Products + offers
   let batchNo = 1;
@@ -527,10 +558,12 @@ async function main() {
   const scrub = await prisma.product.findFirst({ where: { sku: 'MB-SCRUB-01' } });
   const scrubOffer = await prisma.offer.findFirst({ where: { productId: scrub!.id, quantity: 1 } });
 
+  const amman = regions.find((r) => r.name === 'عمّان')!;
+
   const order1 = await prisma.order.create({
     data: {
       companyId: company.id, countryId: country.id, storeId: store.id,
-      orderNumber: 'ORD-2026-0001', merchantRef: 'ORD-2026-0001',
+      orderNumber: 'ORD-2026-0001', merchantRef: 'ORD-2026-0001', regionId: amman.id,
       customerId: cust1.id, productId: scrub!.id, offerId: scrubOffer!.id,
       quantity: 1, sellingPrice: 12, shippingCost: 0, totalAmount: 12,
       currency: 'JOD', moderatorId: modSara!.id,
@@ -560,7 +593,7 @@ async function main() {
   const order2 = await prisma.order.create({
     data: {
       companyId: company.id, countryId: country.id, storeId: store.id,
-      orderNumber: 'ORD-2026-0002', merchantRef: 'ORD-2026-0002',
+      orderNumber: 'ORD-2026-0002', merchantRef: 'ORD-2026-0002', regionId: amman.id,
       customerId: cust2.id, productId: scarProd!.id, offerId: scarOffer!.id,
       quantity: 2, sellingPrice: 35, shippingCost: 0, totalAmount: 35,
       currency: 'USD', moderatorId: modOmar!.id,

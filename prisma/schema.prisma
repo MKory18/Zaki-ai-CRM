@@ -404,6 +404,11 @@ model Order {
   // Stage 3: courier-facing reference, generated for EVERY order (POS, landing
   // page, Telegram). Read-only once set; sent in the courier reference field.
   merchantRef          String?
+  // Stage 5: the delivery region drives the fee table and the late threshold.
+  regionId             String?
+  // A manual fee override always carries a reason (written to the audit log).
+  deliveryFeeOverrideReason String?
+  labelPrintedAt       DateTime?
   // Snapshot of the offer's delivery policy: if ANY line includes delivery the
   // whole order does, and the fee is deducted from revenue instead of added.
   priceIncludesDelivery Boolean  @default(false)
@@ -436,6 +441,8 @@ model Order {
   financialTransactions FinancialTransaction[]
   items          OrderItem[]
   notes          OrderNote[]
+  region         Region?      @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  returnReceipt  ReturnReceipt?
   changeRequests OrderChangeRequest[]
   issues         OrderIssue[]
   claimHistory OrderClaimHistory[]
@@ -467,6 +474,8 @@ model Order {
   @@index([lockedById, lockExpiresAt])
   @@index([storeId, createdAt])
   @@index([countryId])
+  @@index([companyId, labelPrintedAt])
+  @@index([regionId])
   @@map("orders")
 }
 
@@ -737,6 +746,7 @@ model DeliveryProvider {
   orders  Order[]
   batches ShippingBatch[]
   attempts DeliveryAttempt[]
+  fees    DeliveryFee[]
 
   @@index([companyId, isActive])
   @@map("delivery_providers")
@@ -1323,6 +1333,7 @@ model Country {
   company Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   regions Region[]
   stores  Store[]
+  deliveryFees DeliveryFee[]
   orders  Order[]
   access  UserCountryAccess[]
 
@@ -1341,7 +1352,9 @@ model Region {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  country Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  country      Country       @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  orders       Order[]
+  deliveryFees DeliveryFee[]
 
   @@unique([countryId, name])
   @@map("regions")
@@ -1506,4 +1519,60 @@ model OrderIssue {
   @@index([companyId, status, createdAt])
   @@index([orderId])
   @@map("order_issues")
+}
+
+// ─── DELIVERY FEES (Stage 5) ───
+// A separate row per courier per country per region, with the fee and the
+// late-threshold days used by tracking. The fee on an order is a snapshot;
+// changing the table never rewrites a live order.
+model DeliveryFee {
+  id                 String   @id @default(uuid())
+  companyId          String
+  countryId          String
+  deliveryProviderId String
+  regionId           String
+  fee                Decimal  @db.Decimal(12, 2)
+  /// Days in transit after which tracking marks the shipment late.
+  lateThresholdDays  Int      @default(3)
+  /// Fee charged by the courier for a returned shipment.
+  returnFee          Decimal  @db.Decimal(12, 2) @default(0)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  country  Country          @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  provider DeliveryProvider @relation(fields: [deliveryProviderId], references: [id], onDelete: Cascade)
+  region   Region           @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@unique([deliveryProviderId, regionId])
+  @@index([companyId, countryId])
+  @@map("delivery_fees")
+}
+
+// ─── RETURN RECEIVING (Stage 5) ───
+// Nothing re-enters stock before a physical count and inspection: the
+// acknowledgement is a column, not a checkbox in the UI. Missing units are
+// computed (shipped - received - damaged), never typed.
+model ReturnReceipt {
+  id                String   @id @default(uuid())
+  companyId         String
+  orderId           String   @unique
+  expectedQty       Int
+  receivedQty       Int
+  damagedQty        Int      @default(0)
+  missingQty        Int      @default(0)
+  courierFeeCharged Boolean  @default(false)
+  courierFeeAmount  Decimal  @db.Decimal(12, 2) @default(0)
+  /// Set only when the receiver confirms they counted and inspected the goods.
+  inspectedById     String
+  inspectedAt       DateTime @default(now())
+  note              String?
+  /// Stock movement created after the acknowledgement, if any.
+  stockRestored     Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@map("return_receipts")
 }
