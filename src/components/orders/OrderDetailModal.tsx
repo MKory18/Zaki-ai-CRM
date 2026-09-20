@@ -11,7 +11,8 @@ import { OwnershipSection } from '@/components/orders/OwnershipSection';
 import { ConfirmationActions } from '@/components/orders/ConfirmationActions';
 import { ShippingSection } from '@/components/orders/ShippingSection';
 import { useApp } from '@/context/AppContext';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, apiJson } from '@/lib/api-client';
+import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { format } from 'date-fns';
 import {
   User,
@@ -103,6 +104,11 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   const { t, locale, isRtl, currentUser } = useApp();
   const ar = locale === 'ar';
   const [order, setOrder] = useState<any>(null);
+  // Merged history: status logs, ownership, contact and delivery attempts,
+  // notes, change requests and issues in one list.
+  const [timeline, setTimeline] = useState<
+    { id: string; title: string; detail?: string | null; at: string; actorName?: string | null }[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -282,6 +288,11 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         const data = await res.json();
         setOrder(data.order);
         setSelectedStatus(data.order.status);
+        // The merged timeline is its own endpoint so every screen shows the
+        // same history, not whatever one table happens to hold.
+        apiJson<{ events: typeof timeline }>(`/api/orders/${id}/timeline`)
+          .then((t) => seq === loadOrderSeq.current && setTimeline(t.events))
+          .catch(() => setTimeline([]));
         setNavIds({
           previousOrderId: data.previousOrderId ?? null,
           nextOrderId: data.nextOrderId ?? null,
@@ -919,34 +930,37 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             <p className="text-xs text-slate-500" dir="ltr">{order.moderator?.email || '—'}</p>
           </div>
 
-          {/* Timeline */}
+          {/* Timeline — merged from every event table (src/lib/order-timeline.ts),
+              not just the activity log, so it always matches the state above. */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
             <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4 text-slate-400" />
-              سجل الأحداث
+              سجل الأحداث ({timeline.length})
+              {order.customer?.id && (
+                <span className="ms-auto">
+                  <CustomerHistoryButton
+                    customerId={order.customer.id}
+                    orderId={order.id}
+                    previousOrders={Math.max(0, (order.customer.totalOrders ?? 1) - 1)}
+                    label="سجل العميل"
+                  />
+                </span>
+              )}
             </h4>
 
             <div className="relative border-s-2 border-slate-200 ms-2.5 space-y-4 text-xs">
-              {order.activities?.map((act: any) => {
-                const label = ACTIVITY_LABELS[act.action];
-                return (
-                  <div key={act.id} className="relative ps-4">
-                    <span className="absolute -start-[7px] top-1 w-2.5 h-2.5 rounded-full bg-red-600 border-2 border-white" />
-                    <p className="font-bold text-slate-800">{ar ? label?.ar ?? act.action : label?.en ?? act.action}</p>
-                    {act.previousStatus && act.newStatus && (
-                      <p className="text-slate-500 mt-0.5">
-                        {ar ? STATUS_CONFIG[act.previousStatus]?.ar : STATUS_CONFIG[act.previousStatus]?.en} ←{' '}
-                        <span className="font-semibold text-slate-700">
-                          {ar ? STATUS_CONFIG[act.newStatus]?.ar : STATUS_CONFIG[act.newStatus]?.en}
-                        </span>
-                      </p>
-                    )}
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {format(new Date(act.createdAt), 'd MMM, h:mm a')}
-                    </p>
-                  </div>
-                );
-              })}
+              {timeline.length === 0 && <p className="ps-4 text-slate-400">لا توجد أحداث بعد.</p>}
+              {timeline.map((event) => (
+                <div key={event.id} className="relative ps-4">
+                  <span className="absolute -start-[7px] top-1 w-2.5 h-2.5 rounded-full bg-red-600 border-2 border-white" />
+                  <p className="font-bold text-slate-800">{event.title}</p>
+                  {event.detail && <p className="text-slate-500 mt-0.5 break-words">{event.detail}</p>}
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {format(new Date(event.at), 'd MMM, h:mm a')}
+                    {event.actorName ? ` — ${event.actorName}` : ''}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

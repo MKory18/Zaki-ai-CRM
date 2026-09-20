@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { customerRisk } from '@/lib/customer-risk';
 import { POSTPONE_LEAD_DAYS } from '@/lib/confirmation-queue';
+import { deriveCoreState, type StateSource } from '@/lib/order-state';
 import { NO_ANSWER_LIMIT } from '@/lib/confirmation-workflow';
 
 /**
@@ -21,7 +22,7 @@ const ORDER_SELECT = {
   confirmationStatus: true, shippingStatus: true, totalAmount: true, currency: true,
   postponedUntil: true, postponePreferredTime: true, postponeCount: true,
   nextFollowUpAt: true, followUpReason: true, discountAmount: true,
-  customer: { select: { id: true, fullName: true, phone: true, rawPhone: true, city: true, address: true } },
+  customer: { select: { id: true, fullName: true, phone: true, rawPhone: true, city: true, address: true, totalOrders: true } },
   items: { select: { id: true, productName: true, quantity: true, freeQuantity: true, lineTotal: true, reservedQty: true } },
   _count: { select: { contactAttempts: true, notes: true } },
 } as const;
@@ -68,12 +69,20 @@ export async function GET() {
     return NextResponse.json({
       leadDays: POSTPONE_LEAD_DAYS,
       noAnswerLimit: NO_ANSWER_LIMIT,
+      // One derived state and one repeat-customer counter everywhere.
       inConfirmation: inConfirmation.map((o) => ({
         ...o,
+        state: deriveCoreState(o as unknown as StateSource),
+        previousOrders: Math.max(0, (o.customer.totalOrders ?? 1) - 1),
         risk: riskByCustomer.get(o.customer.id) ?? null,
         noAnswerCount: noAnswer.get(o.id) ?? 0,
       })),
-      confirmed: confirmed.map((o) => ({ ...o, noAnswerCount: 0 })),
+      confirmed: confirmed.map((o) => ({
+        ...o,
+        state: deriveCoreState(o as unknown as StateSource),
+        previousOrders: Math.max(0, (o.customer.totalOrders ?? 1) - 1),
+        noAnswerCount: 0,
+      })),
     });
   } catch (error) {
     return apiErrorResponse(error);

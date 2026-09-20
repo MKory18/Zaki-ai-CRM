@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
+import QRCode from 'qrcode';
 import { code128Bars, verifyLabelBatch } from '@/lib/labels';
 
 /**
@@ -34,6 +35,16 @@ function barcodeSvg(value: string, widthMm: number, heightMm: number) {
     dark = !dark;
   }
   return `<svg viewBox="0 0 ${total} 10" preserveAspectRatio="none" width="${widthMm}mm" height="${heightMm}mm">${rects.join('')}</svg>`;
+}
+
+/**
+ * QR of OUR order reference, inline. Generated here, so no image host and
+ * no external request ever learns a customer's order number.
+ */
+async function qrSvg(value: string, sizeMm: number) {
+  const svg = await QRCode.toString(value, { type: 'svg', errorCorrectionLevel: 'M', margin: 0, width: 256 });
+  // The library emits a viewBox; force a millimetre size for print.
+  return svg.replace('<svg ', `<svg width="${sizeMm}mm" height="${sizeMm}mm" `);
 }
 
 export async function GET(req: Request) {
@@ -89,11 +100,14 @@ export async function GET(req: Request) {
       });
     }
 
-    const labels = orders
-      .map((o) => {
-        const ref = o.merchantRef ?? o.orderNumber;
-        const courierCode = o.trackingNumber || ref;
-        return `
+    const labels = (
+      await Promise.all(
+        orders.map(async (o) => {
+          const ref = o.merchantRef ?? o.orderNumber;
+          const courierCode = o.trackingNumber || ref;
+          // The courier's barcode AND a QR of our own reference, per contract.
+          const qr = await qrSvg(ref, Math.max(18, Math.round(batch.width / 4)));
+          return `
       <section class="label">
         <div class="head">
           <strong>${esc(o.deliveryProvider?.name ?? 'شركة الشحن')}</strong>
@@ -109,12 +123,13 @@ export async function GET(req: Request) {
         </ul>
         <div class="cod"><span>المبلغ عند الاستلام</span><strong dir="ltr">${o.totalAmount} ${esc(o.currency)}</strong></div>
         <div class="codes">
-          <figure>${barcodeSvg(courierCode, batch.width - 20, 14)}<figcaption dir="ltr">${esc(courierCode)}</figcaption></figure>
-          <figure>${barcodeSvg(ref, batch.width - 20, 10)}<figcaption dir="ltr">${esc(ref)}</figcaption></figure>
+          <figure class="barcode">${barcodeSvg(courierCode, batch.width - 32, 14)}<figcaption dir="ltr">${esc(courierCode)}</figcaption></figure>
+          <figure class="qr">${qr}<figcaption dir="ltr">${esc(ref)}</figcaption></figure>
         </div>
       </section>`;
-      })
-      .join('');
+        })
+      )
+    ).join('');
 
     await db.order.updateMany({ where: { id: { in: orders.map((o) => o.id) } }, data: { labelPrintedAt: new Date() } });
 
@@ -131,7 +146,8 @@ export async function GET(req: Request) {
   .who p { margin: 0; font-size: 9pt; }
   .items { margin: 0; padding: 0 4mm 0 0; font-size: 8pt; }
   .cod { margin-top: auto; display: flex; justify-content: space-between; font-size: 11pt; border-top: 1px solid #000; padding-top: 1mm; }
-  .codes { display: flex; flex-direction: column; gap: 1mm; align-items: center; }
+  .codes { display: flex; gap: 2mm; align-items: flex-end; justify-content: space-between; }
+  .codes .barcode { flex: 1; }
   figure { margin: 0; text-align: center; }
   figcaption { font-size: 7pt; letter-spacing: 1px; }
   @media print { .label { border-bottom: none; } }

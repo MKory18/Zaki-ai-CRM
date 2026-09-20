@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Loader2, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 
 /**
  * /ops/shipments/new — pick a courier, filter, review each row's COD and its
@@ -16,7 +17,8 @@ interface Row {
   id: string;
   orderNumber: string;
   merchantRef: string | null;
-  customer: { fullName: string; phone: string; city: string };
+  customer: { id: string; fullName: string; phone: string; city: string };
+  previousOrders: number;
   region: { id: string; name: string } | null;
   items: { productName: string; quantity: number; freeQuantity: number }[];
   cod: { subtotal: number; discount: number; deliveryFee: number; cod: number; currency: string; feeSource: string };
@@ -172,7 +174,12 @@ export function ShipmentsNewScreen() {
                     />
                   </td>
                   <td className="px-3 py-2 font-medium text-[#121926]" dir="ltr">{r.orderNumber}</td>
-                  <td className="px-3 py-2 text-[#364152]">{r.customer.fullName}</td>
+                  <td className="px-3 py-2 text-[#364152]">
+                    <span className="flex items-center gap-2">
+                      {r.customer.fullName}
+                      <CustomerHistoryButton customerId={r.customer.id} orderId={r.id} previousOrders={r.previousOrders} />
+                    </span>
+                  </td>
                   <td className="px-3 py-2 text-[#697586]">{r.region?.name ?? r.customer.city}</td>
                   <td className="px-3 py-2 text-xs text-[#364152]" dir="ltr">
                     {r.cod.subtotal} − {r.cod.discount} + {r.cod.deliveryFee} ={' '}

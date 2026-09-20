@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select, Input } from '@/components/ui/Input';
-import { OrderStatusBadge } from '@/components/ui/Badge';
+import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
+import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { AiOrderModal } from '@/components/orders/AiOrderModal';
@@ -331,6 +332,7 @@ export function OrdersScreen() {
                     <th className="px-6 py-3.5">{t.thProduct} & {t.thOffer}</th>
                     <th className="px-6 py-3.5">{t.thTotal} ($)</th>
                     <th className="px-6 py-3.5">{t.status}</th>
+                    <th className="px-6 py-3.5">السجل</th>
                     <th className="px-6 py-3.5">{t.thModerator}</th>
                     <th className="px-6 py-3.5">{t.thDate}</th>
                     <th className="px-6 py-3.5 text-right rtl:text-left">{t.thActions}</th>
@@ -390,7 +392,16 @@ export function OrdersScreen() {
                         </td>
 
                         <td className="px-6 py-3.5">
-                          <OrderStatusBadge status={order.status} />
+                          {/* The derived state, the same one every other screen shows */}
+                          <OrderStateBadge state={order.state} />
+                        </td>
+
+                        <td className="px-6 py-3.5">
+                          <CustomerHistoryButton
+                            customerId={order.customer?.id}
+                            orderId={order.id}
+                            previousOrders={order.previousOrders ?? 0}
+                          />
                         </td>
 
                         <td className="px-6 py-3.5">

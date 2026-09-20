@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Phone, PhoneOff, ShieldAlert } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
+import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import {
   ChangeRequestDialog,
   IssueDialog,
@@ -31,6 +33,8 @@ interface OrderRow {
   orderNumber: string;
   merchantRef: string | null;
   confirmationStatus: string;
+  state: string;
+  previousOrders: number;
   version: number;
   totalAmount: number;
   currency: string;
@@ -199,7 +203,12 @@ export function ConfirmationMineScreen() {
               <article key={order.id} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
                 <header className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-[#121926]" dir="ltr">{order.orderNumber}</span>
-                  <span className="text-xs text-[#697586]">{order.confirmationStatus}</span>
+                  <OrderStateBadge state={order.state} />
+                  <CustomerHistoryButton
+                    customerId={order.customer.id}
+                    orderId={order.id}
+                    previousOrders={order.previousOrders}
+                  />
                   {order.risk && (
                     <span className={`text-[11px] px-2 py-0.5 rounded-[6px] border ${RISK_LABEL[order.risk.tier].cls}`}>
                       {RISK_LABEL[order.risk.tier].text} · {Math.round(order.risk.returnRate * 100)}% مرتجع من{' '}
@@ -301,7 +310,16 @@ export function ConfirmationMineScreen() {
               {data.confirmed.map((order) => (
                 <tr key={order.id}>
                   <td className="px-4 py-2 font-medium text-[#121926]" dir="ltr">{order.orderNumber}</td>
-                  <td className="px-4 py-2 text-[#364152]">{order.customer.fullName}</td>
+                  <td className="px-4 py-2 text-[#364152]">
+                    <span className="flex items-center gap-2">
+                      {order.customer.fullName}
+                      <CustomerHistoryButton
+                        customerId={order.customer.id}
+                        orderId={order.id}
+                        previousOrders={order.previousOrders}
+                      />
+                    </span>
+                  </td>
                   <td className="px-4 py-2 tabular-nums text-[#364152]" dir="ltr">
                     {order.totalAmount} {order.currency}
                   </td>

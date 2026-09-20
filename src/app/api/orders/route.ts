@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { orderRefFields } from '@/lib/order-ref';
 import { computeCod } from '@/lib/money';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -73,7 +74,11 @@ export async function GET(req: Request) {
         where: visibleWhere,
         include: {
           customer: {
-            select: { id: true, fullName: true, phone: true, rawPhone: true, city: true, address: true },
+            select: {
+              id: true, fullName: true, phone: true, rawPhone: true, city: true, address: true,
+              // Repeat customer: the list shows a counter that opens the history.
+              totalOrders: true, deliveredOrders: true, cancelledOrders: true,
+            },
           },
           product: {
             select: { id: true, name: true, sku: true, image: true },
@@ -96,7 +101,15 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({
-      orders,
+      // The ONE state the whole app shows, derived from the stored fields —
+      // the legacy `status` column is kept for compatibility but never drives
+      // a screen, because it drifts from confirmation/shipping status.
+      orders: orders.map((o) => ({
+        ...o,
+        state: deriveCoreState(o as unknown as StateSource),
+        zone: getZone(deriveCoreState(o as unknown as StateSource)),
+        previousOrders: Math.max(0, (o.customer.totalOrders ?? 1) - 1),
+      })),
       pagination: {
         total,
         page,
