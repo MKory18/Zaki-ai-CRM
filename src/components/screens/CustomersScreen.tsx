@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { OrderStatusBadge } from '@/components/ui/Badge';
-import { SYRIAN_GOVERNORATES } from '@/lib/syria';
+import { useRegions } from '@/hooks/useRegions';
 import { useApp } from '@/context/AppContext';
 import { Search, Plus, Phone, User, ShoppingBag, MapPin, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
 export function CustomersScreen() {
   const { t } = useApp();
+  // Governorates of the selected country, not a hard-coded country list.
+  const { regions, countryName } = useRegions();
+  const regionNames = regions.map((r) => r.name);
   const [customers, setCustomers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -273,17 +276,17 @@ export function CustomersScreen() {
 
           <div className="grid grid-cols-2 gap-3">
             <Select
-              label="المحافظة السورية"
-              value={SYRIAN_GOVERNORATES.includes(city) || city === 'أخرى' ? city : 'أخرى'}
+              label={`المحافظة${countryName ? ` — ${countryName}` : ''}`}
+              value={regionNames.includes(city) ? city : 'أخرى'}
               onChange={(e) => setCity(e.target.value)}
               required
             >
-              {SYRIAN_GOVERNORATES.map((gov) => (
+              {regionNames.map((gov) => (
                 <option key={gov} value={gov}>
                   {gov}
                 </option>
               ))}
-              <option value="أخرى">أخرى / خارج سوريا</option>
+              <option value="أخرى">أخرى</option>
             </Select>
             {city === 'أخرى' && (
               <Input

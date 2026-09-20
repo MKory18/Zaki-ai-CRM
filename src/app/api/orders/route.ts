@@ -124,6 +124,8 @@ export async function POST(req: Request) {
       customerAltPhone: z.string().trim().max(20).optional().nullable(),
       customerAddress: z.string().trim().max(200).optional().nullable(),
       customerCity: z.string().trim().max(60).optional().nullable(),
+      // Region of THIS country; it drives the delivery fee and the late threshold.
+      regionId: z.string().uuid().optional().nullable(),
       productId: z.string().min(10).max(64),
       offerId: z.string().min(10).max(64).optional().nullable(),
       quantity: z.coerce.number().int().min(1).max(999),
@@ -149,6 +151,7 @@ export async function POST(req: Request) {
       customerAltPhone,
       customerAddress,
       customerCity,
+      regionId,
       productId,
       offerId,
       quantity,
@@ -219,6 +222,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
     }
 
+    // The region must belong to the selected country — a Syrian governorate
+    // on a Jordanian store would have no fee row and could never ship.
+    let resolvedRegionId: string | null = null;
+    if (regionId) {
+      const region = await db.region.findFirst({ where: { id: regionId, countryId }, select: { id: true } });
+      if (!region) {
+        return NextResponse.json({ error: 'المحافظة لا تتبع بلد المتجر الحالي' }, { status: 400 });
+      }
+      resolvedRegionId = region.id;
+    }
+
     const qty = quantity || 1;
     // Legacy semantics: sellingPrice is the TOTAL for the whole quantity.
     const price = sellingPrice || product.basePrice;
@@ -274,6 +288,7 @@ export async function POST(req: Request) {
               countryId,
               storeId,
               ...refs,
+              regionId: resolvedRegionId,
               priceIncludesDelivery,
               customerId: customer.id,
               productId,

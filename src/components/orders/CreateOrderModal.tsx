@@ -6,7 +6,7 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
-import { SYRIAN_GOVERNORATES } from '@/lib/syria';
+import { useRegions } from '@/hooks/useRegions';
 import { productName } from '@/lib/product-name';
 import {
   UserCheck,
@@ -43,7 +43,10 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAltPhone, setCustomerAltPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [customerCity, setCustomerCity] = useState('دمشق');
+  // Governorates of the SELECTED country — never a hard-coded list.
+  const { regions, countryName } = useRegions();
+  const [regionId, setRegionId] = useState('');
+  const customerCity = regions.find((r) => r.id === regionId)?.name ?? '';
   const [productId, setProductId] = useState('');
   const [offerId, setOfferId] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -82,7 +85,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       setCustomerPhone('');
       setCustomerAltPhone('');
       setCustomerAddress('');
-      setCustomerCity('دمشق');
+      setRegionId('');
       setProductId('');
       setOfferId('');
       setQuantity(1);
@@ -137,7 +140,11 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           setExistingCustomerAlert({ exists: true, name: matched.fullName, totalOrders: matched.totalOrders });
           if (!customerName) setCustomerName(matched.fullName);
           if (!customerAddress && matched.address) setCustomerAddress(matched.address);
-          if (matched.city) setCustomerCity(matched.city);
+          // Reuse the customer's known city only when it is a region of THIS country.
+          if (matched.city) {
+            const known = regions.find((r) => r.name === matched.city);
+            if (known) setRegionId(known.id);
+          }
         } else {
           setExistingCustomerAlert({ exists: false });
         }
@@ -188,6 +195,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           customerAltPhone,
           customerAddress,
           customerCity,
+          regionId: regionId || null,
           productId,
           offerId: offerId || null,
           quantity,
@@ -289,13 +297,20 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input label="رقم بديل" placeholder="اختياري" value={customerAltPhone} onChange={(e) => setCustomerAltPhone(e.target.value)} />
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">المحافظة السورية *</label>
-              <Select value={customerCity} onChange={(e) => setCustomerCity(e.target.value)} required>
-                {SYRIAN_GOVERNORATES.map((gov) => (
-                  <option key={gov} value={gov}>{gov}</option>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                المحافظة{countryName ? ` — ${countryName}` : ''} *
+              </label>
+              <Select value={regionId} onChange={(e) => setRegionId(e.target.value)} required>
+                <option value="">اختر المحافظة</option>
+                {regions.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
-                <option value="أخرى">أخرى / خارج سوريا</option>
               </Select>
+              {regions.length === 0 && (
+                <p className="mt-1 text-[11px] text-[#fb323f]">
+                  لا توجد محافظات لهذا البلد — أضفها من الإعدادات ← البلدان والمتاجر والمحافظ.
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1.5">العنوان *</label>
