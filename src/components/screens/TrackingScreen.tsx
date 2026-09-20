@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Bike, Clock, HandCoins, Loader2, Search, Truck } from 'lucide-react';
 import { TransferDialog } from '@/components/screens/tracking/TransferDialog';
 import { CollectDialog } from '@/components/screens/tracking/CollectDialog';
+import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
 import { apiJson } from '@/lib/api-client';
 
 /**
@@ -30,6 +31,8 @@ interface Row {
   region: { name: string } | null;
   deliveryProvider: { id: string; name: string; kind?: string } | null;
   deliveryFee?: number | null;
+  priceIncludesDelivery?: boolean;
+  collectedAmount?: number | null;
   settlementStatus?: string;
   _count?: { deliveryAttempts: number; notes: number };
 }
@@ -68,6 +71,7 @@ export function TrackingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [transferFor, setTransferFor] = useState<Row | null>(null);
+  const [deliverFor, setDeliverFor] = useState<Row | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [collecting, setCollecting] = useState(false);
   const [task, setTask] = useState<TaskFilter>('all');
@@ -286,6 +290,15 @@ export function TrackingScreen() {
                   <td className="px-3 py-2 text-[#697586]">{COLLECTION_LABEL[o.collectionStatus] ?? o.collectionStatus}</td>
                   <td className="px-3 py-2 tabular-nums" dir="ltr">{o.totalAmount} {o.currency}</td>
                   <td className="px-3 py-2 text-left whitespace-nowrap">
+                    {['SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.shippingStatus) && (
+                      <button
+                        onClick={() => setDeliverFor(o)}
+                        className="text-xs text-[#00a344] hover:underline ml-3"
+                        title="سجّل ما استلمه العميل فعلاً — كاملاً أو جزئياً"
+                      >
+                        تسجيل التسليم
+                      </button>
+                    )}
                     <button
                       onClick={() => setTransferFor(o)}
                       className="text-xs text-[#b8256e] hover:underline"
@@ -317,6 +330,19 @@ export function TrackingScreen() {
           onDone={async (message) => {
             setCollecting(false);
             setSelected({});
+            setDone(message);
+            setError(null);
+            await load();
+          }}
+        />
+      )}
+
+      {deliverFor && (
+        <DeliverDialog
+          order={deliverFor}
+          onClose={() => setDeliverFor(null)}
+          onDone={async (message) => {
+            setDeliverFor(null);
             setDone(message);
             setError(null);
             await load();

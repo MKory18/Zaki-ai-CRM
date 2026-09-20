@@ -268,7 +268,7 @@ export async function runMatching(
     const byBarcode = line.barcode
       ? await tx.order.findFirst({
           where: { companyId, storeId, trackingNumber: line.barcode },
-          select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
+          select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true, collectedAmount: true },
         })
       : null;
     const matchedByBarcode = byBarcode !== null;
@@ -278,7 +278,7 @@ export async function runMatching(
       (line.merchantRef
         ? await tx.order.findFirst({
             where: { companyId, storeId, merchantRef: line.merchantRef },
-            select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
+            select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true, collectedAmount: true },
           })
         : null);
 
@@ -350,7 +350,7 @@ export async function runMatching(
           }
         : {}),
     },
-    select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
+    select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true, collectedAmount: true },
     take: 1000,
   });
 

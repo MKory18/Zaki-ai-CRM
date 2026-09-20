@@ -401,6 +401,14 @@ model Order {
   // parcel is taken back and a REPLACEMENT order is raised, which re-enters
   // preparation and is assigned from scratch; these two link the pair.
   replacesOrderId      String?   @unique
+  // Stage 9 — what the customer actually paid at the door. Set only on a
+  // partial delivery, and it INCLUDES the full delivery fee: the courier
+  // travelled whether or not every line was taken, so the fee is never
+  // prorated. Null everywhere else, which is what lets settlement tell a
+  // partial from a whole one.
+  collectedAmount      Decimal?  @db.Decimal(12, 2)
+  // A split order's parent. Children carry a suffixed number (SY-0044-A).
+  parentOrderId        String?
   labelPrintedAt       DateTime?
   // Snapshot of the offer's delivery policy: if ANY line includes delivery the
   // whole order does, and the fee is deducted from revenue instead of added.
@@ -439,6 +447,8 @@ model Order {
   region         Region?      @relation(fields: [regionId], references: [id], onDelete: Restrict)
   replaces       Order?       @relation("OrderReplacement", fields: [replacesOrderId], references: [id], onDelete: SetNull)
   replacedBy     Order?       @relation("OrderReplacement")
+  parentOrder    Order?       @relation("OrderSplit", fields: [parentOrderId], references: [id], onDelete: SetNull)
+  splitChildren  Order[]      @relation("OrderSplit")
   returnReceipt  ReturnReceipt?
   changeRequests OrderChangeRequest[]
   issues         OrderIssue[]
@@ -1212,6 +1222,11 @@ model OrderItem {
   discountShare Decimal  @db.Decimal(12, 2) @default(0) // proportional share of the order discount
   lineTotal     Decimal  @db.Decimal(12, 2) // quantity * unitPrice - discountShare
   reservedQty   Int      @default(0)
+  // Stage 9 — partial delivery. What the customer actually took of this
+  // line. Null until the parcel is settled at the door; after that
+  // deliveredQty + returnedQty equals quantity + freeQuantity.
+  deliveredQty  Int?
+  returnedQty   Int?
   addedById     String? // who added the line (cross-sell attribution)
   addedStage    String? // INTAKE | CONFIRMATION | CUSTODY
   createdAt     DateTime @default(now())

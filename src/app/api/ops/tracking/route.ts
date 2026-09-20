@@ -53,7 +53,7 @@ export async function GET(req: Request) {
       select: {
         id: true, orderNumber: true, merchantRef: true, trackingNumber: true,
         shippingStatus: true, settlementStatus: true, shippedAt: true, outForDeliveryAt: true,
-        deliveryFailureReason: true, totalAmount: true, deliveryFee: true, currency: true, regionId: true,
+        deliveryFailureReason: true, totalAmount: true, deliveryFee: true, priceIncludesDelivery: true, collectedAmount: true, currency: true, regionId: true,
         deliveryProviderId: true,
         customer: { select: { fullName: true, phone: true, city: true } },
         region: { select: { id: true, name: true } },

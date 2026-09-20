@@ -122,6 +122,19 @@ describe('expected amount', () => {
     expect(expectedAmountFor({ shippingStatus: 'DELIVERED', totalAmount: 100, collectedAmount: 60 })).toBe(60);
   });
 
+  it('measures a PARTIAL against what was actually collected, not the original total', () => {
+    // Shipped 55 worth, the customer took 25 of it including the full fee.
+    // Measured against 55 the courier would look short every single time.
+    expect(
+      expectedAmountFor({
+        shippingStatus: 'PARTIALLY_DELIVERED',
+        totalAmount: 55,
+        collectedAmount: 25,
+        deliveryFee: 5,
+      })
+    ).toBe(20); // 25 collected − 5 fee the courier keeps
+  });
+
   it('is zero for a returned order', () => {
     expect(expectedAmountFor({ shippingStatus: 'RETURNED', totalAmount: 100 })).toBe(0);
   });

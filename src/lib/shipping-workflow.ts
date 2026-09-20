@@ -7,7 +7,7 @@
 
 export const SHIPPING_STATUSES = [
   'NOT_READY', 'READY_FOR_SHIPPING', 'PACKING', 'READY_FOR_PICKUP',
-  'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED_DELIVERY',
+  'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PARTIALLY_DELIVERED', 'FAILED_DELIVERY',
   'RETURN_REQUESTED', 'RETURNED', 'CANCELLED',
 ] as const;
 export type ShippingStatus = (typeof SHIPPING_STATUSES)[number];
@@ -22,11 +22,15 @@ export const SHIPPING_TRANSITIONS: Record<ShippingStatus, ShippingStatus[]> = {
   PACKING: ['READY_FOR_PICKUP'],
   READY_FOR_PICKUP: ['SHIPPED'],
   SHIPPED: ['OUT_FOR_DELIVERY'],
-  OUT_FOR_DELIVERY: ['DELIVERED', 'FAILED_DELIVERY'],
+  // A partial delivery is reached at the door, like a whole one.
+  OUT_FOR_DELIVERY: ['DELIVERED', 'PARTIALLY_DELIVERED', 'FAILED_DELIVERY'],
   FAILED_DELIVERY: ['RETURN_REQUESTED', 'SHIPPED'], // SHIPPED = retry dispatch
   RETURN_REQUESTED: ['RETURNED'],
   RETURNED: [],               // terminal
   DELIVERED: [],              // terminal
+  // Terminal too: what was taken is taken, and the refused lines come back
+  // through the normal return receiving, not by reopening the order.
+  PARTIALLY_DELIVERED: [],
   CANCELLED: [],              // terminal
 };
 

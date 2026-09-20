@@ -38,14 +38,14 @@ describe('status mapping — their codes, ours', () => {
   });
 
   it('refuses to read their internal handling as a delivery fact', () => {
-    for (const code of ['COMPLETED', 'TRANSFERRED_OUT', 'PARTIALLY_DELIVERED', 'OPENED_ISSUE_AND_WAITING_FOR_MANAGEMENT']) {
+    for (const code of ['COMPLETED', 'TRANSFERRED_OUT', 'OPENED_ISSUE_AND_WAITING_FOR_MANAGEMENT']) {
       expect(LOGESTECHS_STATUS[code], code).toBeNull();
     }
   });
 
   it('never lets their feed decide that money is owed', () => {
     // DELIVERED and RETURNED map, but the seam still refuses to apply them.
-    for (const code of ['DELIVERED_TO_RECIPIENT', 'RETURNED_BY_RECIPIENT', 'CANCELLED']) {
+    for (const code of ['DELIVERED_TO_RECIPIENT', 'RETURNED_BY_RECIPIENT', 'CANCELLED', 'PARTIALLY_DELIVERED']) {
       const event = {
         trackingNumber: 'B1',
         rawStatus: code,

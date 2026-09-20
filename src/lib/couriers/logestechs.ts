@@ -74,7 +74,10 @@ export const LOGESTECHS_STATUS: Record<string, ShippingStatus | null> = {
   DELIVERED_TO_SENDER: 'RETURNED', // back in our hands
   CANCELLED: 'CANCELLED',
   COMPLETED: null, // their bookkeeping close, not a delivery fact
-  PARTIALLY_DELIVERED: null, // Stage 9 territory; a human decides the amount
+  // Stage 9 landed the state, so their code maps now. It still never
+  // applies itself: a partial needs the amount actually collected and which
+  // lines came back, and only the person at the door knows that.
+  PARTIALLY_DELIVERED: 'PARTIALLY_DELIVERED',
   SWAPPED: null,
   BROUGHT: null,
   TRANSFERRED_OUT: null, // handed to a partner — still in transit, not ours to call

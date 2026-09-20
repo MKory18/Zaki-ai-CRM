@@ -82,6 +82,11 @@ describe('a courier feed never decides that money is owed', () => {
 
   it('guards exactly the statuses that start or reverse a payout', () => {
     // If this list ever shrinks, a courier string starts moving money.
-    expect(COURIER_CANNOT_ASSERT).toEqual(['DELIVERED', 'RETURNED', 'CANCELLED']);
+    expect(COURIER_CANNOT_ASSERT).toEqual([
+      'DELIVERED',
+      'PARTIALLY_DELIVERED',
+      'RETURNED',
+      'CANCELLED',
+    ]);
   });
 });

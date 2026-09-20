@@ -117,6 +117,18 @@ export async function GET(
         product: true,
         offer: true,
         region: { select: { id: true, name: true } },
+        // The real order lines. The legacy productId column holds only the
+        // first one, so anything reading the order as a whole — partial
+        // delivery, preparation, returns — needs these.
+        items: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true, productId: true, productName: true,
+            quantity: true, freeQuantity: true, unitPrice: true,
+            discountShare: true, lineTotal: true, reservedQty: true,
+            deliveredQty: true, returnedQty: true,
+          },
+        },
         deliveryProvider: { select: { id: true, name: true, code: true } },
         landingPage: { select: { id: true, name: true, slug: true } },
         landingPageOffer: { select: { id: true, name: true, quantity: true, freeQuantity: true, price: true } },

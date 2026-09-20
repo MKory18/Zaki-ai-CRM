@@ -63,13 +63,21 @@ export interface CourierAdapter {
 /**
  * Statuses an automated courier feed may NEVER assert on its own.
  *
- * DELIVERED makes commission accrue and money expected; RETURNED reverses
- * it. A courier feed that guesses either — or an adapter that maps an
- * unrecognised code onto one — would move money on a string we do not
- * understand. Both stay a human decision, taken on the screen, against the
- * courier's own statement.
+ * DELIVERED makes commission accrue and money expected. RETURNED reverses
+ * it. PARTIALLY_DELIVERED needs the amount actually collected and which
+ * lines came back, and only the person at the door knows that.
+ *
+ * A feed that guesses any of them — or an adapter that maps an unrecognised
+ * code onto one — would move money on a string we do not understand. They
+ * stay a human decision, taken on the screen, against the courier's own
+ * statement.
  */
-export const COURIER_CANNOT_ASSERT: ShippingStatus[] = ['DELIVERED', 'RETURNED', 'CANCELLED'];
+export const COURIER_CANNOT_ASSERT: ShippingStatus[] = [
+  'DELIVERED',
+  'PARTIALLY_DELIVERED',
+  'RETURNED',
+  'CANCELLED',
+];
 
 /** True when this event is safe to apply automatically. */
 export function isAutoApplicable(event: CourierEvent): boolean {
