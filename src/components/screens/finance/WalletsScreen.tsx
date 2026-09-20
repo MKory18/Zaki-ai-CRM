@@ -56,6 +56,7 @@ export function WalletsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [recordOpen, setRecordOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [reverseFor, setReverseFor] = useState<Movement | null>(null);
 
   const loadWallets = useCallback(async () => {
@@ -96,6 +97,18 @@ export function WalletsScreen() {
 
   return (
     <div className="max-w-6xl space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-[#697586]">
+          المحفظة تتبع بلداً واحداً وتحمل عملتها الخاصة — ولا تُحذف أبداً، تُوقَف فقط، لأن حركاتها سجل دائم.
+        </p>
+        <button
+          onClick={() => setCreating(true)}
+          className="h-9 px-3 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5 shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5" /> محفظة جديدة
+        </button>
+      </div>
+
       {!wallets ? (
         <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
@@ -103,7 +116,7 @@ export function WalletsScreen() {
       ) : wallets.length === 0 ? (
         <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
           <WalletIcon className="w-5 h-5 mx-auto mb-2 text-[#9aa4b2]" />
-          لا توجد محافظ. أنشئ محفظة من إعدادات الشركة أولاً.
+          لا توجد محافظ بعد — أنشئ واحدة من الزر أعلاه.
         </p>
       ) : (
         <>
@@ -202,6 +215,16 @@ export function WalletsScreen() {
             )}
           </div>
         </>
+      )}
+
+      {creating && (
+        <CreateWalletDialog
+          onClose={() => setCreating(false)}
+          onSaved={async (message) => {
+            setCreating(false);
+            await refresh(message);
+          }}
+        />
       )}
 
       {recordOpen && wallet && (
@@ -432,6 +455,162 @@ function ReverseDialog({
             className="h-9 px-4 rounded-[8px] bg-[#fb323f] text-white text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ التسجيل…' : 'تسجيل القيد العكسي'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * Creating a wallet.
+ *
+ * It belongs to a COUNTRY and carries its own currency, which need not be
+ * the country's: a Syrian business holding dollars is the normal case, not
+ * the exception. The currency is fixed at creation because every movement
+ * is recorded in it — changing it later would silently restate history.
+ *
+ * The opening balance is what is in it today, before any movement is
+ * recorded. It is not a movement itself, which is why it never appears in
+ * the ledger.
+ */
+function CreateWalletDialog({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}) {
+  const [countries, setCountries] = useState<{ id: string; name: string; currencyCode: string }[]>([]);
+  const [countryId, setCountryId] = useState('');
+  const [name, setName] = useState('');
+  const [currency, setCurrency] = useState('');
+  const [opening, setOpening] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiJson<{ countries: { id: string; name: string; currencyCode: string }[] }>('/api/geo/countries')
+      .then((d) => {
+        setCountries(d.countries);
+        if (d.countries.length === 1) {
+          setCountryId(d.countries[0].id);
+          setCurrency(d.countries[0].currencyCode);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const country = countries.find((c) => c.id === countryId);
+
+  return (
+    <Modal isOpen onClose={onClose} title="محفظة جديدة">
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setSaving(true);
+          setError(null);
+          try {
+            await apiJson('/api/finance/wallets', {
+              method: 'POST',
+              body: JSON.stringify({
+                countryId,
+                name: name.trim(),
+                currencyCode: currency.trim().toUpperCase(),
+                openingBalance: opening ? Number(opening) : 0,
+              }),
+            });
+            onSaved(`أُنشئت المحفظة ${name.trim()}`);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'تعذر الإنشاء');
+          } finally {
+            setSaving(false);
+          }
+        }}
+        className="space-y-3"
+      >
+        <label className="block">
+          <span className="block text-xs font-medium text-[#364152] mb-1">البلد</span>
+          <select
+            value={countryId}
+            onChange={(e) => {
+              setCountryId(e.target.value);
+              const picked = countries.find((c) => c.id === e.target.value);
+              // Default to the country's currency; it stays editable.
+              if (picked && !currency) setCurrency(picked.currencyCode);
+            }}
+            required
+            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+          >
+            <option value="">اختر…</option>
+            {countries.map((c) => (
+              <option key={c.id} value={c.id}>{c.name} — {c.currencyCode}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="block text-xs font-medium text-[#364152] mb-1">اسم المحفظة</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            minLength={2}
+            autoFocus
+            placeholder="مثال: الصندوق النقدي، حساب البنك العربي"
+            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+          />
+        </label>
+
+        <label className="block">
+          <span className="block text-xs font-medium text-[#364152] mb-1">العملة</span>
+          <input
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+            required
+            maxLength={3}
+            placeholder="USD"
+            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            dir="ltr"
+          />
+          <span className="block text-[11px] text-[#9aa4b2] mt-1">
+            ثلاثة أحرف. لا يمكن تغييرها لاحقاً — كل حركة تُسجَّل بها.
+            {country && currency && currency !== country.currencyCode && (
+              <span className="block text-amber-700 mt-0.5">
+                تختلف عن عملة {country.name} ({country.currencyCode}) — مقبول، وسيُطلب سعر الصرف عند الحاجة.
+              </span>
+            )}
+          </span>
+        </label>
+
+        <label className="block">
+          <span className="block text-xs font-medium text-[#364152] mb-1">الرصيد الافتتاحي</span>
+          <input
+            type="number"
+            step="0.001"
+            value={opening}
+            onChange={(e) => setOpening(e.target.value)}
+            placeholder="0"
+            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            dir="ltr"
+          />
+          <span className="block text-[11px] text-[#9aa4b2] mt-1">
+            ما في المحفظة الآن قبل أي حركة. ليس حركة بحد ذاته، فلا يظهر في السجل.
+          </span>
+        </label>
+
+        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+
+        <div className="flex gap-2 justify-end">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            disabled={saving || !countryId}
+            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+          >
+            {saving ? 'جارٍ الإنشاء…' : 'إنشاء'}
           </button>
         </div>
       </form>
