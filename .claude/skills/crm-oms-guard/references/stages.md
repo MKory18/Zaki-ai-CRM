@@ -48,8 +48,27 @@
 >    - /admin/jobs answers "is anything quietly not running", and says WHY a
 >      job did nothing.
 >    - This closed the Stage 6 gap: commission now accrues on a schedule.
-> 8. Control, growth, settings, admin
-> 9. Split / partial delivery, courier custody
+> 8. Control, growth, settings, admin  ◐ مُعظمها
+>    - Blacklist: keyed on the PHONE via canonicalPhone, company-wide,
+>      enforced at ALL FOUR intakes. Public pages get a neutral refusal.
+>      Released, never deleted.
+>    - Intelligence: analysis with a minimum sample and an explicit "not
+>      enough data". Silence is a stated answer.
+>    - Inventory movements + discount alerts shipped.
+>    - Campaigns NOT built: needs ad-platform credentials from the user. A
+>      campaigns screen with no cost data cannot answer the only question
+>      campaigns are for.
+> 9. Partial delivery ✅ / split ◐ / courier custody ✗
+>    - PARTIAL: the fee is charged IN FULL — the courier travelled. Waived
+>      only when nothing at all was taken. collectedAmount is null on every
+>      ordinary order, which is how settlement tells a partial apart.
+>    - Refused units are REPORTED, never auto-restocked.
+>    - LogesTechs PARTIALLY_DELIVERED maps now but stays in
+>      COURIER_CANNOT_ASSERT — their feed says it happened, not what it was
+>      worth.
+>    - Split: schema is in (parentOrderId, children get SY-0044-A) but the
+>      service and UI are NOT built.
+>    - Courier custody (Stage 10): untouched.
 > 10. Single product store · 11. App store
 >
 > Cleared 2026-09-20 (were blockers):
