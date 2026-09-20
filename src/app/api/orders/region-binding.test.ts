@@ -12,7 +12,7 @@ const { db, requireContext, requirePermission, logAudit, createNotification } = 
     // an unblocked phone must find no active block.
     customerBlock: { findFirst: vi.fn() },
     customer: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-    product: { findFirst: vi.fn() },
+    product: { findFirst: vi.fn(), findMany: vi.fn() },
     offer: { findFirst: vi.fn() },
     user: { findFirst: vi.fn() },
     order: { create: vi.fn(), count: vi.fn() },
@@ -66,6 +66,8 @@ beforeEach(() => {
   requirePermission.mockResolvedValue({});
   db.customer.findUnique.mockResolvedValue({ id: 'cust1', firstOrderDate: null });
   db.product.findFirst.mockResolvedValue({ id: 'p1', name: 'مقشر', image: null, basePrice: 12, batches: [] });
+  // An order is built from its lines now, so the products come back together.
+  db.product.findMany.mockResolvedValue([{ id: 'p1', name: 'مقشر', image: null, basePrice: 12, batches: [] }]);
 });
 
 describe('order region binding', () => {

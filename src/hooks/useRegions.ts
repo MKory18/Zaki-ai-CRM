@@ -16,15 +16,22 @@ export interface RegionOption {
 export function useRegions() {
   const [regions, setRegions] = useState<RegionOption[]>([]);
   const [countryName, setCountryName] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<{ code: string; minorUnit: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    apiJson<{ country: { name: string }; regions: RegionOption[] }>('/api/geo/regions')
+    apiJson<{
+      country: { name: string; currencyCode?: string; minorUnit?: number };
+      regions: RegionOption[];
+    }>('/api/geo/regions')
       .then((data) => {
         if (cancelled) return;
         setRegions(data.regions);
         setCountryName(data.country.name);
+        if (data.country.currencyCode) {
+          setCurrency({ code: data.country.currencyCode, minorUnit: data.country.minorUnit ?? 2 });
+        }
       })
       .catch(() => undefined)
       .finally(() => !cancelled && setLoading(false));
@@ -33,5 +40,5 @@ export function useRegions() {
     };
   }, []);
 
-  return { regions, countryName, loading };
+  return { regions, countryName, currency, loading };
 }

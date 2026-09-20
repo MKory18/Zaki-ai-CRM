@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { computeCod } from '@/lib/money';
-import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
+import { hasEverShipped, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -39,6 +39,19 @@ const patchSchema = z.object({
   // The second number the customer answers on. Empty clears it.
   customerAltPhone: z.string().trim().max(20).nullable().optional(),
   customerAddress: z.string().trim().max(300).optional(),
+  // The order's lines, replaced as a set: what is sent IS the order now, so
+  // removing a product is simply leaving it out.
+  items: z
+    .array(
+      z.object({
+        productId: z.string().min(10).max(64),
+        quantity: z.coerce.number().int().min(1).max(999),
+        unitPrice: z.coerce.number().min(0).max(100000),
+      })
+    )
+    .min(1)
+    .max(20)
+    .optional(),
   // The governorate the order ships to. The delivery-fee table is keyed on
   // it, so it is editable here rather than only at intake.
   regionId: z.string().uuid().optional().nullable(),
@@ -268,7 +281,7 @@ export async function PATCH(
       status, moderatorId, internalNotes, customerNotes, postponedUntil, trackingCode,
       confirmationStatus, shippingStatus, expectedVersion,
       customerName, customerPhone, customerAltPhone, customerAddress, regionId,
-      sellingPrice, quantity, discountAmount, shippingCost, productId,
+      sellingPrice, quantity, discountAmount, shippingCost, productId, items,
     } = parsed.data;
 
     // ── Authorization chain: visibility/assignment (RBAC engine) → canonical
@@ -441,20 +454,94 @@ export async function PATCH(
       quantity !== undefined ||
       discountAmount !== undefined ||
       shippingCost !== undefined ||
-      productId !== undefined;
+      productId !== undefined ||
+      items !== undefined;
+
+    // The lines this edit leaves the order with. An explicit array replaces
+    // them; otherwise the existing lines carry on, adjusted by whatever
+    // single-line fields were sent.
+    let nextLines: { productId: string; quantity: number; unitPrice: number }[] = [];
+    let lineProducts = new Map<string, { id: string; name: string }>();
+    let lineMoney: ReturnType<typeof computeCod> | null = null;
+
     if (editingLine) {
-      const nextPrice = sellingPrice ?? existing.sellingPrice;
-      const nextQty = quantity ?? existing.quantity;
-      const nextDiscount = discountAmount ?? existing.discountAmount;
-      const nextShipping = shippingCost ?? existing.shippingCost;
-      if (nextDiscount > nextPrice * nextQty) {
+      if (items) {
+        // Replacing the set deletes the rows it drops, and those rows carry
+        // the reservation and what was actually delivered or returned. Once
+        // stock has been held against a line, or the parcel has left, the
+        // line is a record of something that happened — not a draft.
+        const committed = await db.orderItem.findFirst({
+          where: {
+            orderId: id,
+            OR: [{ reservedQty: { gt: 0 } }, { deliveredQty: { gt: 0 } }, { returnedQty: { gt: 0 } }],
+          },
+          select: { id: true },
+        });
+        if (committed || hasEverShipped(existing as StateSource)) {
+          return NextResponse.json(
+            {
+              error: 'لا يمكن تعديل بنود طلب حُجزت بضاعته أو خرج للشحن — عدّل الكميات من شاشة المرتجعات',
+              code: 'LINES_COMMITTED',
+            },
+            { status: 409 }
+          );
+        }
+
+        const ids = [...new Set(items.map((l) => l.productId))];
+        const rows = await db.product.findMany({
+          where: { id: { in: ids }, companyId },
+          select: { id: true, name: true },
+        });
+        if (rows.length !== ids.length) {
+          return NextResponse.json({ error: 'أحد المنتجات غير موجود في هذه الشركة' }, { status: 404 });
+        }
+        lineProducts = new Map(rows.map((r) => [r.id, r]));
+        nextLines = items.map((l) => ({ ...l }));
+      } else {
+        // The single-line shorthand: price is the TOTAL for the quantity, the
+        // same meaning intake gives it.
+        nextLines = [
+          {
+            productId: productId ?? existing.productId,
+            quantity: quantity ?? existing.quantity,
+            unitPrice: sellingPrice ?? existing.sellingPrice,
+          },
+        ];
+      }
+
+      const nextDiscount = discountAmount ?? Number(existing.discountAmount ?? 0);
+      const nextShipping = shippingCost ?? Number(existing.shippingCost ?? 0);
+
+      // ONE COD function — never a second formula. The one that used to live
+      // here read `sellingPrice * quantity`, multiplying a price that is
+      // already the line's total by the quantity again, and added the
+      // delivery fee even on a store whose prices include it.
+      const money = computeCod({
+        lines: nextLines.map((l) => ({
+          quantity: l.quantity,
+          unitPrice: l.quantity > 0 ? l.unitPrice / l.quantity : l.unitPrice,
+        })),
+        discount: nextDiscount,
+        deliveryFee: nextShipping,
+        priceIncludesDelivery: existing.priceIncludesDelivery === true,
+        minorUnit: country.minorUnit,
+      });
+
+      if (nextDiscount > money.subtotal) {
         return NextResponse.json({ error: 'الخصم لا يمكن أن يتجاوز إجمالي قيمة الطلب' }, { status: 400 });
       }
-      updateData.sellingPrice = nextPrice;
-      updateData.quantity = nextQty;
-      updateData.discountAmount = nextDiscount;
+
+      updateData.sellingPrice = money.subtotal;
+      updateData.quantity = nextLines.reduce((sum, l) => sum + l.quantity, 0);
+      updateData.discountAmount = money.discount;
       updateData.shippingCost = nextShipping;
-      updateData.totalAmount = nextPrice * nextQty + nextShipping - nextDiscount;
+      updateData.totalAmount = money.cod;
+      // The order is named after its first line, as it is at intake.
+      updateData.productId = nextLines[0].productId;
+      if (items) {
+        updateData.productNameSnapshot = lineProducts.get(nextLines[0].productId)?.name ?? existing.productNameSnapshot;
+      }
+      lineMoney = money;
     }
     if (productId !== undefined && productId !== existing.productId) {
       const product = await db.product.findFirst({ where: { id: productId, companyId }, select: { id: true, name: true } });
@@ -533,6 +620,28 @@ export async function PATCH(
       });
       if (saved.count !== 1) {
         throw new Error('VERSION_CONFLICT: This order was updated by another user. Please refresh before saving.');
+      }
+
+      // The lines themselves, only when an explicit set was sent. Replacing
+      // them wholesale is what the screen does — a product removed from the
+      // list is removed from the order — and it happens in this transaction
+      // so the order's totals and its lines can never disagree.
+      if (items && lineMoney) {
+        await tx.orderItem.deleteMany({ where: { orderId: id } });
+        await tx.orderItem.createMany({
+          data: nextLines.map((line, i) => ({
+            companyId,
+            orderId: id,
+            productId: line.productId,
+            productName: lineProducts.get(line.productId)?.name ?? '',
+            quantity: line.quantity,
+            unitPrice: line.quantity > 0 ? line.unitPrice / line.quantity : line.unitPrice,
+            discountShare: lineMoney!.discountShares[i] ?? 0,
+            lineTotal: lineMoney!.lineTotals[i] ?? 0,
+            addedById: user.id,
+            addedStage: 'EDIT',
+          })),
+        });
       }
 
       // Customer information edit — same transaction as the order write

@@ -163,10 +163,25 @@ export async function POST(req: Request) {
       customerCity: z.string().trim().max(60).optional().nullable(),
       // Region of THIS country; it drives the delivery fee and the late threshold.
       regionId: z.string().uuid().optional().nullable(),
-      productId: z.string().min(10).max(64),
+      // One order, one or more products. The single-product fields below are
+      // the shorthand for a single line and every existing caller — landing
+      // pages, Telegram, AI intake — keeps using them unchanged.
+      items: z
+        .array(
+          z.object({
+            productId: z.string().min(10).max(64),
+            offerId: z.string().min(10).max(64).optional().nullable(),
+            quantity: z.coerce.number().int().min(1).max(999),
+            unitPrice: z.coerce.number().min(0).max(100000),
+          })
+        )
+        .min(1)
+        .max(20)
+        .optional(),
+      productId: z.string().min(10).max(64).optional(),
       offerId: z.string().min(10).max(64).optional().nullable(),
-      quantity: z.coerce.number().int().min(1).max(999),
-      sellingPrice: z.coerce.number().min(0).max(100000),
+      quantity: z.coerce.number().int().min(1).max(999).optional(),
+      sellingPrice: z.coerce.number().min(0).max(100000).optional(),
       shippingCost: z.coerce.number().min(0).max(1000).optional(),
       source: z.string().trim().max(40).optional(),
       moderatorId: z.string().max(64).optional().nullable(),
@@ -200,9 +215,19 @@ export async function POST(req: Request) {
       internalNotes,
     } = v;
 
-    if (!customerName || !customerPhone || !productId) {
+    // The order's lines, however they were sent: an explicit array, or the
+    // single-product shorthand. Everything below works on this one list, so
+    // a one-line order and a five-line one take exactly the same path.
+    const requestedLines =
+      v.items && v.items.length
+        ? v.items
+        : productId
+          ? [{ productId, offerId: offerId ?? null, quantity: quantity ?? 1, unitPrice: sellingPrice ?? 0 }]
+          : [];
+
+    if (!customerName || !customerPhone || requestedLines.length === 0) {
       return NextResponse.json(
-        { error: 'Customer Name, Phone, and Product are required' },
+        { error: 'اسم العميل ورقم الهاتف ومنتج واحد على الأقل مطلوبة' },
         { status: 400 }
       );
     }
@@ -274,21 +299,22 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. Fetch product & compute estimated unit cost from latest batch
-    // Phase S: tenant-validate — orders must reference a product of THIS company
-    const product = await db.product.findFirst({
-      where: { id: productId, companyId },
+    // 2. Every product the order names, in one query — tenant-validated, so
+    // an order can never reference another company's product.
+    const productIds = [...new Set(requestedLines.map((l) => l.productId))];
+    const productRows = await db.product.findMany({
+      where: { id: { in: productIds }, companyId },
       include: {
-        batches: {
-          where: { companyId },
-          orderBy: { productionDate: 'desc' },
-          take: 1,
-        },
+        batches: { where: { companyId }, orderBy: { productionDate: 'desc' }, take: 1 },
       },
     });
-    if (!product) {
-      return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
+    if (productRows.length !== productIds.length) {
+      return NextResponse.json({ error: 'أحد المنتجات غير موجود في شركتك' }, { status: 404 });
     }
+    const productById = new Map(productRows.map((p) => [p.id, p]));
+    // The first line names the order: its product is the one the list shows
+    // and the one per-product reporting groups by.
+    const product = productById.get(requestedLines[0].productId)!;
 
     // The region must belong to the selected country — a Syrian governorate
     // on a Jordanian store would have no fee row and could never ship.
@@ -302,8 +328,8 @@ export async function POST(req: Request) {
     }
 
     const qty = quantity || 1;
-    // Legacy semantics: sellingPrice is the TOTAL for the whole quantity.
-    const price = sellingPrice || product.basePrice;
+    // Legacy semantics: a line's unitPrice is the TOTAL for that line's
+    // quantity, which is how every existing caller sends it.
     const shipCost = shippingCost || 0;
 
     // Whether the price already contains delivery is the STORE's pricing
@@ -321,8 +347,14 @@ export async function POST(req: Request) {
       : store?.priceIncludesDelivery === true;
 
     // ONE COD function, used by every screen and service (contract PART 5).
+    // It takes the whole order at once, so a discount spread over several
+    // lines is allocated in one place rather than guessed per line.
+    const codLines = requestedLines.map((line) => ({
+      quantity: line.quantity,
+      unitPrice: line.quantity > 0 ? (line.unitPrice || 0) / line.quantity : line.unitPrice || 0,
+    }));
     const money = computeCod({
-      lines: [{ quantity: qty, unitPrice: qty > 0 ? price / qty : price }],
+      lines: codLines,
       discount: offer?.discount ?? 0,
       deliveryFee: shipCost,
       priceIncludesDelivery,
@@ -330,9 +362,18 @@ export async function POST(req: Request) {
     });
     const totalAmount = money.cod;
 
-    // Unit cost estimation
-    const unitCost = product.batches[0]?.costPerUnit || 0;
-    const estimatedCostOfGoods = Number((unitCost * qty).toFixed(2));
+    // The legacy single-product columns describe the order as a whole: how
+    // many units it holds, and what the goods on it are worth. Commission and
+    // reporting read totalAmount, so those stay right for a multi-line order.
+    const qtyTotal = requestedLines.reduce((sum, l) => sum + l.quantity, 0);
+    const price = money.subtotal;
+
+    // Cost of goods across every line, from each product's latest batch.
+    const estimatedCostOfGoods = Number(
+      requestedLines
+        .reduce((sum, l) => sum + (productById.get(l.productId)?.batches[0]?.costPerUnit || 0) * l.quantity, 0)
+        .toFixed(2)
+    );
 
     // Moderator assignment — Phase S: moderator must belong to THIS company
     const assignedModeratorId = moderatorId || (user.role === 'MODERATOR' ? user.id : null);
@@ -368,9 +409,9 @@ export async function POST(req: Request) {
               regionId: resolvedRegionId,
               priceIncludesDelivery,
               customerId: customer.id,
-              productId,
+              productId: product.id,
               offerId: offerId || null,
-              quantity: qty,
+              quantity: qtyTotal,
               sellingPrice: price,
               shippingCost: shipCost,
               totalAmount,
@@ -404,20 +445,22 @@ export async function POST(req: Request) {
       }
       if (!created) throw new Error('Failed to generate a unique order number');
 
-      // 3b. Order line — reservation and the discount share live per line.
-      await tx.orderItem.create({
-        data: {
+      // 3b. The order's lines. Reservation and the discount share live per
+      // line, and the shares come from the COD function's allocation so the
+      // parts always add back up to the whole.
+      await tx.orderItem.createMany({
+        data: requestedLines.map((line, i) => ({
           companyId,
           orderId: created.id,
-          productId,
-          productName: product.name,
-          quantity: qty,
-          unitPrice: money.subtotal / qty,
-          discountShare: money.discountShares[0] ?? 0,
-          lineTotal: money.lineTotals[0] ?? money.subtotal,
+          productId: line.productId,
+          productName: productById.get(line.productId)?.name ?? '',
+          quantity: line.quantity,
+          unitPrice: line.quantity > 0 ? (line.unitPrice || 0) / line.quantity : line.unitPrice || 0,
+          discountShare: money.discountShares[i] ?? 0,
+          lineTotal: money.lineTotals[i] ?? 0,
           addedById: user.id,
           addedStage: 'INTAKE',
-        },
+        })),
       });
 
       // 4. Update Customer Stats

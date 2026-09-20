@@ -24,7 +24,12 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      country: { id: country.id, code: country.code, name: country.name },
+      // The currency travels with the country: every screen that needs the
+      // governorates is a screen that shows money in that country's currency.
+      country: {
+        id: country.id, code: country.code, name: country.name,
+        currencyCode: country.currencyCode, minorUnit: country.minorUnit,
+      },
       regions,
     });
   } catch (error) {

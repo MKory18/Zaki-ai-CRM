@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Package, Pencil, Loader2, Minus, Plus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Package, Pencil, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { amount, type Currency } from '@/lib/format';
+import { ProductLinesEditor, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
+
 
 /**
  * What was ordered.
@@ -61,11 +63,20 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    sellingPrice: String(order.sellingPrice ?? 0),
-    quantity: String(order.quantity ?? 1),
     discountAmount: String(order.discountAmount ?? 0),
     internalNotes: order.internalNotes ?? '',
   });
+  const [draft, setDraft] = useState<DraftLine[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+
+  // The catalogue is only needed once the form opens.
+  useEffect(() => {
+    if (!open || products.length) return;
+    fetch('/api/products')
+      .then((r) => (r.ok ? r.json() : { products: [] }))
+      .then((d) => setProducts(d.products ?? []))
+      .catch(() => setProducts([]));
+  }, [open, products.length]);
 
   const offerName = order.landingPageOffer?.name || order.offer?.name || null;
   const lines: Line[] =
@@ -86,11 +97,19 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
 
   async function openForm() {
     setForm({
-      sellingPrice: String(order.sellingPrice ?? 0),
-      quantity: String(order.quantity ?? 1),
       discountAmount: String(order.discountAmount ?? 0),
       internalNotes: order.internalNotes ?? '',
     });
+    setDraft(
+      lines.map((l) => ({
+        key: l.id,
+        productId: l.productId,
+        offerId: null,
+        quantity: l.quantity,
+        // The editor works in line totals, as the API does.
+        price: Number(l.lineTotal) || Number(l.unitPrice) * l.quantity,
+      }))
+    );
     setError(null);
     if (!canEdit) await onAcquireLock();
     setOpen(true);
@@ -105,8 +124,11 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           expectedVersion: order.version,
-          sellingPrice: Number(form.sellingPrice),
-          quantity: Number(form.quantity),
+          items: draft.map((l) => ({
+            productId: l.productId,
+            quantity: l.quantity,
+            unitPrice: l.price,
+          })),
           discountAmount: Number(form.discountAmount),
           internalNotes: form.internalNotes.trim() || null,
         }),
@@ -119,9 +141,6 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
       setBusy(false);
     }
   }
-
-  const step = (by: number) =>
-    setForm((f) => ({ ...f, quantity: String(Math.max(1, Number(f.quantity || 1) + by)) }));
 
   const inputClass =
     'w-full h-9 px-3 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]';
@@ -208,47 +227,23 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
 
       {open && (
         <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <label className="block">
-              <span className="block text-xs font-medium text-slate-600 mb-1">
-                سعر البيع{order.priceIncludesDelivery ? ' (شامل التوصيل)' : ''}
-              </span>
-              <input
-                type="number" min="0" step="0.01" dir="ltr"
-                value={form.sellingPrice}
-                onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })}
-                className={inputClass}
-              />
-            </label>
+          <ProductLinesEditor
+            lines={draft}
+            products={products}
+            currency={currency}
+            onChange={setDraft}
+            disabled={busy}
+          />
 
-            <label className="block">
-              <span className="block text-xs font-medium text-slate-600 mb-1">الكمية</span>
-              <div className="flex items-center gap-1">
-                <button type="button" onClick={() => step(-1)} className="h-9 w-9 rounded-[8px] border border-[#e3e8ef] text-slate-600">
-                  <Minus className="w-3.5 h-3.5 mx-auto" />
-                </button>
-                <input
-                  type="number" min="1" step="1" dir="ltr"
-                  value={form.quantity}
-                  onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                  className={`${inputClass} text-center`}
-                />
-                <button type="button" onClick={() => step(1)} className="h-9 w-9 rounded-[8px] border border-[#e3e8ef] text-slate-600">
-                  <Plus className="w-3.5 h-3.5 mx-auto" />
-                </button>
-              </div>
-            </label>
-
-            <label className="block">
-              <span className="block text-xs font-medium text-slate-600 mb-1">الخصم</span>
-              <input
-                type="number" min="0" step="0.01" dir="ltr"
-                value={form.discountAmount}
-                onChange={(e) => setForm({ ...form, discountAmount: e.target.value })}
-                className={inputClass}
-              />
-            </label>
-          </div>
+          <label className="block max-w-xs">
+            <span className="block text-xs font-medium text-slate-600 mb-1">الخصم على الطلب</span>
+            <input
+              type="number" min="0" step="0.01" dir="ltr"
+              value={form.discountAmount}
+              onChange={(e) => setForm({ ...form, discountAmount: e.target.value })}
+              className={inputClass}
+            />
+          </label>
 
           <label className="block">
             <span className="block text-xs font-medium text-slate-600 mb-1">ملاحظات داخلية</span>
