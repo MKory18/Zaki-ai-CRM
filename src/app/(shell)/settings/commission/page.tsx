@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { CommissionSettingsScreen } from '@/components/screens/CommissionSettingsScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/settings/commission');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/settings/commission');
+  return <CommissionSettingsScreen />;
 }

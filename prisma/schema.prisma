@@ -439,8 +439,10 @@ model Order {
   activities OrderActivity[]
   deliveryAttempts DeliveryAttempt[]
   financialTransactions FinancialTransaction[]
-  items          OrderItem[]
-  notes          OrderNote[]
+  items             OrderItem[]
+  notes             OrderNote[]
+  commissions       CommissionEntry[]
+  settlementMatches SettlementMatch[]
   region         Region?      @relation(fields: [regionId], references: [id], onDelete: Restrict)
   returnReceipt  ReturnReceipt?
   changeRequests OrderChangeRequest[]
@@ -1334,6 +1336,7 @@ model Country {
   regions Region[]
   stores  Store[]
   deliveryFees DeliveryFee[]
+  wallets Wallet[]
   orders  Order[]
   access  UserCountryAccess[]
 
@@ -1575,4 +1578,289 @@ model ReturnReceipt {
 
   @@index([companyId, createdAt])
   @@map("return_receipts")
+}
+
+// ─── WALLETS (Stage 6) ───
+// A wallet belongs to a COUNTRY, and its currency is chosen per wallet: a
+// country may hold a USD cash box beside its local one.
+model Wallet {
+  id             String   @id @default(uuid())
+  companyId      String
+  countryId      String
+  name           String
+  currencyCode   String
+  /// Balance the wallet started with; every change after it is a movement.
+  openingBalance Decimal  @db.Decimal(14, 3) @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  country   Country            @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  movements WalletMovement[]
+  closings  DailyClosing[]
+  receipts  StatementReceipt[]
+
+  @@unique([companyId, name])
+  @@index([companyId, countryId, isActive])
+  @@map("wallets")
+}
+
+// Every movement carries wallet, direction, amount, party, category and note.
+// NOTHING is ever deleted: a correction is a reversing entry that points at
+// the original (reversalOfId) and states its reason.
+model WalletMovement {
+  id             String   @id @default(uuid())
+  companyId      String
+  walletId       String
+  direction      String // IN | OUT
+  amount         Decimal  @db.Decimal(14, 3)
+  currencyCode   String
+  /// Who the money came from or went to (courier, employee, supplier...).
+  party          String
+  category       String // COURIER_SETTLEMENT | COMMISSION | EXPENSE | TRANSFER_IN | TRANSFER_OUT | ADJUSTMENT | OTHER
+  note           String
+  referenceType  String? // STATEMENT | TRANSFER | COMMISSION_PERIOD | ORDER
+  referenceId    String?
+  /// Set on a reversing entry; the original is never edited or deleted.
+  reversalOfId   String?  @unique
+  reversalReason String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  wallet     Wallet          @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  reversalOf WalletMovement? @relation("Reversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy WalletMovement? @relation("Reversal")
+
+  @@index([companyId, walletId, createdAt])
+  @@index([companyId, category])
+  @@index([referenceType, referenceId])
+  @@map("wallet_movements")
+}
+
+// Wallet to wallet, same or different country. The exchange rate is entered
+// by the user, stored here, and NEVER recalculated afterwards.
+model WalletTransfer {
+  id           String   @id @default(uuid())
+  companyId    String
+  fromWalletId String
+  toWalletId   String
+  amountOut    Decimal  @db.Decimal(14, 3)
+  amountIn     Decimal  @db.Decimal(14, 3)
+  exchangeRate Decimal  @db.Decimal(14, 6)
+  note         String
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@map("wallet_transfers")
+}
+
+// Per wallet, per day: book balance, the counted balance, and the gap.
+// A non-zero difference needs a written explanation, and the person who
+// records movements may not approve the closing.
+model DailyClosing {
+  id            String    @id @default(uuid())
+  companyId     String
+  walletId      String
+  date          DateTime  @db.Date
+  bookBalance   Decimal   @db.Decimal(14, 3)
+  actualBalance Decimal   @db.Decimal(14, 3)
+  difference    Decimal   @db.Decimal(14, 3)
+  explanation   String?
+  status        String    @default("OPEN") // OPEN | APPROVED
+  recordedById  String
+  approvedById  String?
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@unique([walletId, date])
+  @@index([companyId, status, date])
+  @@map("daily_closings")
+}
+
+// ─── SETTLEMENT (Stage 6) — three sequential entities ───
+// 1. Statement: what the courier SAYS it owes. The file hash makes a
+//    duplicate import impossible.
+model CourierStatement {
+  id                 String    @id @default(uuid())
+  companyId          String
+  storeId            String
+  deliveryProviderId String
+  reference          String
+  periodFrom         DateTime?
+  periodTo           DateTime?
+  /// Total the courier claims, read from the file itself.
+  totalAmount        Decimal   @db.Decimal(14, 3)
+  currencyCode       String
+  fileName           String
+  /// SHA-256 of the uploaded file: the same statement can never be imported twice.
+  fileHash           String
+  status             String    @default("IMPORTED") // IMPORTED | RECEIPTED | MATCHED | APPROVED
+  /// Required when the receipts do not add up to the statement total.
+  gapExplanation     String?
+  uploadedById       String
+  approvedById       String?
+  approvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  lines    StatementLine[]
+  receipts StatementReceipt[]
+  matches  SettlementMatch[]
+
+  @@unique([companyId, fileHash])
+  @@index([companyId, status, createdAt])
+  @@map("courier_statements")
+}
+
+/// One row of the courier file, as it was read.
+model StatementLine {
+  id          String   @id @default(uuid())
+  statementId String
+  merchantRef String?
+  barcode     String?
+  amount      Decimal  @db.Decimal(14, 3)
+  status      String? // the courier's own status word
+  rawRow      String?
+  createdAt   DateTime @default(now())
+
+  statement CourierStatement  @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  matches   SettlementMatch[]
+
+  @@index([statementId])
+  @@index([merchantRef])
+  @@map("statement_lines")
+}
+
+// 2. Receipt: what ACTUALLY arrived. Many lines per statement, each with its
+//    own wallet, currency and amount.
+model StatementReceipt {
+  id           String   @id @default(uuid())
+  companyId    String
+  statementId  String
+  walletId     String
+  amount       Decimal  @db.Decimal(14, 3)
+  currencyCode String
+  /// Stored when the wallet currency differs from the statement currency.
+  exchangeRate Decimal? @db.Decimal(14, 6)
+  receivedAt   DateTime @default(now())
+  note         String?
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  statement CourierStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  wallet    Wallet           @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, statementId])
+  @@map("statement_receipts")
+}
+
+// 3. Matching: runs on demand AFTER the receipt. Key: merchant reference,
+//    then courier barcode. NEVER the phone.
+model SettlementMatch {
+  id              String    @id @default(uuid())
+  companyId       String
+  statementId     String
+  statementLineId String?
+  orderId         String?
+  result          String // MATCHED | MISMATCHED | MISSING_IN_STATEMENT | MISSING_IN_SYSTEM
+  matchedBy       String? // MERCHANT_REF | BARCODE
+  expectedAmount  Decimal?  @db.Decimal(14, 3)
+  statementAmount Decimal?  @db.Decimal(14, 3)
+  difference      Decimal?  @db.Decimal(14, 3)
+  note            String?
+  resolvedById    String?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  statement     CourierStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  statementLine StatementLine?   @relation(fields: [statementLineId], references: [id], onDelete: SetNull)
+  order         Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, statementId, result])
+  @@index([orderId])
+  @@map("settlement_matches")
+}
+
+// ─── COMMISSION (Stage 6) ───
+// Rules are DATA with an effective_from date: changing a rule today never
+// recalculates a closed period.
+model CommissionRule {
+  id              String    @id @default(uuid())
+  companyId       String
+  name            String
+  /// Who it applies to: a role name, or one specific user.
+  appliesToRole   String?
+  appliesToUserId String?
+  basis           String // ORDER_DELIVERED (accrual point per contract)
+  type            String // PERCENT | FIXED
+  value           Decimal   @db.Decimal(12, 4)
+  /// Minimum sample before delivery-rate tiers may be applied.
+  minSampleOrders Int       @default(30)
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  isActive        Boolean   @default(true)
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  entries CommissionEntry[]
+
+  @@index([companyId, isActive, effectiveFrom])
+  @@map("commission_rules")
+}
+
+// Accrued on DELIVERED, payable only after settlement approval. A returned
+// order generates zero commission for every party, and a correction is a
+// reversing entry — the monthly period is locked once approved.
+model CommissionEntry {
+  id             String   @id @default(uuid())
+  companyId      String
+  orderId        String
+  userId         String
+  role           String
+  ruleId         String?
+  amount         Decimal  @db.Decimal(14, 3)
+  currencyCode   String
+  /// ACCRUED (delivered) -> PAYABLE (settlement approved) -> PAID, or REVERSED.
+  status         String   @default("ACCRUED")
+  /// YYYY-MM of the delivery; the period is locked when approved.
+  periodMonth    String
+  reversalOfId   String?  @unique
+  reversalReason String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  order      Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  rule       CommissionRule?  @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  reversalOf CommissionEntry? @relation("CommissionReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy CommissionEntry? @relation("CommissionReversal")
+
+  @@unique([orderId, userId, status])
+  @@index([companyId, periodMonth, status])
+  @@index([userId, periodMonth])
+  @@map("commission_entries")
+}
+
+/// Monthly commission statement per user: locked after approval, corrections
+/// are reversing entries in the next period.
+model CommissionPeriod {
+  id           String    @id @default(uuid())
+  companyId    String
+  userId       String
+  periodMonth  String
+  totalAmount  Decimal   @db.Decimal(14, 3)
+  currencyCode String
+  status       String    @default("OPEN") // OPEN | APPROVED | PAID
+  approvedById String?
+  approvedAt   DateTime?
+  paidAt       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([companyId, userId, periodMonth])
+  @@index([companyId, status])
+  @@map("commission_periods")
 }

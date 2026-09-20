@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { WalletsScreen } from '@/components/screens/finance/WalletsScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/finance/wallets');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/finance/wallets');
+  return <WalletsScreen />;
 }
