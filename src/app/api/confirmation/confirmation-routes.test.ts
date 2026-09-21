@@ -158,3 +158,21 @@ describe('change requests', () => {
     expect((await res.json()).code).toBe('CHANGE_REQUEST_PENDING');
   });
 });
+
+describe('raising a change request', () => {
+  it('needs only the field being changed, not all ten', async () => {
+    // z.record keyed by an enum is EXHAUSTIVE in Zod 4. The schema quietly
+    // demanded every changeable field, so the only answer anybody could get
+    // was "اسم العميل مطلوب" — and no change request could be raised from
+    // any screen at all.
+    const { z } = await import('zod');
+    const FIELDS = ['customerName', 'customerAddress', 'quantity'] as const;
+    const value = z.object({ to: z.union([z.string(), z.number()]).nullable() });
+
+    const exhaustive = z.record(z.enum(FIELDS), value);
+    expect(exhaustive.safeParse({ customerAddress: { to: 'شارع' } }).success).toBe(false);
+
+    const partial = z.partialRecord(z.enum(FIELDS), value);
+    expect(partial.safeParse({ customerAddress: { to: 'شارع' } }).success).toBe(true);
+  });
+});

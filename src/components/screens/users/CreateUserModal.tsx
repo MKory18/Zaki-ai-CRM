@@ -118,7 +118,20 @@ export function CreateUserModal({
     }
   }
 
-  const ready = name.trim().length >= 3 && email.trim() !== '' && password.length >= 8 && roleId !== '';
+  /**
+   * What is still missing, named.
+   *
+   * The button used to be disabled with nothing said, on a form long
+   * enough that the offending field was off-screen. Pressing a dead button
+   * and being told nothing is how somebody decides the page is broken.
+   */
+  const missing = [
+    name.trim().length < 3 ? 'الاسم (٣ أحرف على الأقل)' : null,
+    email.trim() === '' ? 'البريد الإلكتروني' : null,
+    password.length < 8 ? 'كلمة المرور (٨ أحرف على الأقل)' : null,
+    roleId === '' ? 'الدور' : null,
+  ].filter(Boolean) as string[];
+  const ready = missing.length === 0;
 
   return (
     <Modal
@@ -230,7 +243,15 @@ export function CreateUserModal({
 
         {error && <p className="text-xs text-[#fb323f]">{error}</p>}
 
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#e3e8ef]">
+        {/* Stuck to the bottom of the scrolling area: the form is long
+            enough that the button used to sit below the fold, and a save
+            you have to hunt for reads as a save that is not there. */}
+        <div className="sticky bottom-0 -mx-6 -mb-6 mt-2 flex flex-wrap items-center justify-end gap-2 border-t border-[#e3e8ef] bg-white px-6 py-3">
+          {!ready && (
+            <span className="me-auto text-[11px] text-[#c07f2a]">
+              ناقص: {missing.join('، ')}
+            </span>
+          )}
           <Button variant="outline" onClick={onClose}>إلغاء</Button>
           <Button onClick={submit} loading={saving} disabled={!ready}>إنشاء الحساب</Button>
         </div>

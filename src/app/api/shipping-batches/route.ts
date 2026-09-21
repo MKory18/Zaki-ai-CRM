@@ -59,6 +59,19 @@ export async function POST(req: Request) {
       providerId = provider.id;
     }
 
+    // One open trolley per courier: everything going to them rides on the
+    // same batch until it is handed over. A second open batch splits one
+    // pickup into two lists nobody can tell apart afterwards.
+    if (providerId) {
+      const open = await db.shippingBatch.findFirst({
+        where: { companyId, storeId, deliveryProviderId: providerId, status: 'READY' },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (open) {
+        return NextResponse.json({ batch: open, reused: true });
+      }
+    }
+
     // Server-generated batch number (company-scoped sequence with retry)
     const count = await db.shippingBatch.count({ where: { companyId } });
     const batchNumber = `SB-${new Date().getFullYear()}-${String(count + 1).padStart(5, '0')}`;

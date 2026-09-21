@@ -167,8 +167,22 @@ export async function POST(req: Request) {
     }
 
     const batch = await db.$transaction(async (tx) => {
+      // ONE OPEN TROLLEY PER COURIER.
+      //
+      // A courier collects once: everything going to them today rides on
+      // the same batch until somebody presses «سلّمت للشركة». Opening a
+      // second batch while the first is still being filled splits one
+      // pickup into two lists, and the warehouse then has to remember
+      // which of them the driver actually took.
+      const open = await tx.shippingBatch.findFirst({
+        where: { companyId, storeId, deliveryProviderId, status: 'READY' },
+        orderBy: { createdAt: 'desc' },
+      });
+
       const count = await tx.shippingBatch.count({ where: { companyId } });
-      const created = await tx.shippingBatch.create({
+      const created =
+        open ??
+        (await tx.shippingBatch.create({
         data: {
           companyId,
           storeId,
@@ -178,7 +192,7 @@ export async function POST(req: Request) {
           notes: notes ?? null,
           status: 'READY',
         },
-      });
+        }));
 
       for (const order of shippable) {
         const fee = await resolveDeliveryFee(tx, {

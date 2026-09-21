@@ -29,8 +29,15 @@ const CHANGEABLE_FIELDS = [
 ] as const;
 
 const createSchema = z.object({
+  // partialRecord, NOT record.
+  //
+  // In Zod 4 a record keyed by an enum is EXHAUSTIVE: it demands every key
+  // in the enum. So this schema quietly required all ten changeable fields
+  // on every request, and the only answer anybody could get was "اسم
+  // العميل مطلوب" — no change request could be raised at all, from any
+  // screen, since the upgrade.
   changes: z
-    .record(z.enum(CHANGEABLE_FIELDS), z.object({ to: z.union([z.string(), z.number()]).nullable() }))
+    .partialRecord(z.enum(CHANGEABLE_FIELDS), z.object({ to: z.union([z.string(), z.number()]).nullable() }))
     .refine((c) => Object.keys(c).length > 0, 'حدّد حقلاً واحداً على الأقل'),
   reason: z.string().trim().min(5, 'اذكر سبب التعديل').max(500),
   blocking: z.boolean().default(true),
