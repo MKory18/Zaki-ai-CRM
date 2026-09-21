@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Eye, Lightbulb, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { AskAi } from '@/components/growth/AskAi';
 
 /**
  * /growth/intelligence — what is bleeding, and what to do about it.
@@ -58,6 +59,9 @@ export function IntelligenceScreen() {
 
   return (
     <div className="max-w-4xl space-y-3">
+      {/* The AI sits under the rule-based findings, never instead of them:
+          those carry their evidence and can be checked, and the numbers it
+          is handed are the same numbers. */}
       <p className="text-xs text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
         تحليل مبني على طلباتك الفعلية — كل رقم هنا محسوب من طلبات موجودة، لا تقديرات. وما لا تكفي
         البيانات للإجابة عليه يُقال فيه «لا تكفي البيانات» بدل رقم يبدو معقولاً.
@@ -129,6 +133,7 @@ export function IntelligenceScreen() {
           </div>
         </>
       )}
+      <AskAi />
     </div>
   );
 }
