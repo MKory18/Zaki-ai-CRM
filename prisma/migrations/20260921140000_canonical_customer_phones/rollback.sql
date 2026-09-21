@@ -1,0 +1,14 @@
+-- Restores the previous phone storage.
+--
+-- Nothing was lost: `customers.rawPhone` holds the number exactly as the
+-- customer gave it, untouched by the migration, so the old normalisation can
+-- be recomputed from it at any time. This file records that fact — the
+-- recomputation itself runs through the application, which is where the
+-- normalising function lives.
+--
+-- The one merged duplicate cannot be un-merged automatically: its orders were
+-- moved onto the surviving customer and the empty shell was deleted. The
+-- audit log holds the original ids.
+--
+-- (No schema changed; this migration only rewrote data.)
+SELECT 'rollback is a data recomputation — see the migration note' AS note;
