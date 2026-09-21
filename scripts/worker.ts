@@ -3,9 +3,20 @@
  *
  * A real process, run alongside the app and independent of any browser:
  *
- *   npx tsx scripts/worker.ts            run forever
- *   npx tsx scripts/worker.ts --once     run every job once and exit
+ *   npm run worker                       run forever
+ *   npm run worker:once                  run every job once and exit
  *   npx tsx scripts/worker.ts --job=NAME run one job and exit
+ *
+ * It is a separate process from the web app on purpose, so deploying it is
+ * a matter of keeping one command alive:
+ *
+ *   pm2 start npm --name osm-worker -- run worker
+ *   # or a systemd unit whose ExecStart is: npm run worker
+ *
+ * Nothing schedules itself from inside the app, and nothing runs because a
+ * browser happened to be open: if this process is not running, the jobs are
+ * not running, and the run log in the database says exactly when each last
+ * ran.
  *
  * Deliberately node-cron-and-Redis-free. Each job keeps its own next-due
  * time in memory and its own backoff, and the database run log is what

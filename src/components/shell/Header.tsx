@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOut, Menu, Repeat, Search, Store } from 'lucide-react';
 import { apiFetch } from '@/lib/api-client';
+import { NotificationBell } from '@/components/shell/NotificationBell';
 import { ROLE_LABELS } from '@/types/auth';
 
 export interface ShellContextInfo {
@@ -77,6 +78,10 @@ export function Header({
       </form>
 
       <div className="flex items-center gap-3 mr-auto">
+        {/* Work is announced here. Thirteen places in the system create
+            notifications and nothing showed them until now. */}
+        <NotificationBell />
+
         <div className="text-left leading-tight hidden sm:block">
           <p className="text-xs font-semibold text-[#121926]">{userName}</p>
           <p className="text-[10px] text-[#697586]">
