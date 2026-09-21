@@ -1,0 +1,218 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Loader2, Plus, X } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { apiJson } from '@/lib/api-client';
+
+/**
+ * WHAT THIS RUN ACTUALLY COST.
+ *
+ * A batch could be created and never corrected, so most of this company's
+ * stock sits at a cost of zero — and every profit figure in the system is
+ * gross wearing the word "صافي". This is the only way to fix that.
+ *
+ * The unit cost is shown as it is typed, against what the batch costs now,
+ * because that one number is what every margin in the system is built on:
+ * it prices the remaining stock, and it is what each delivered order is
+ * charged. Entering it blind is how a batch ends up at ten times its cost
+ * and nobody notices until the month closes.
+ *
+ * The quantity is deliberately absent. Produced, sold and remaining belong
+ * to the stock ledger, and this dialog changes cost only.
+ */
+
+export interface BatchForCost {
+  id: string;
+  batchNumber: string;
+  quantityProduced: number;
+  quantitySold: number;
+  manufacturingCost: number;
+  packagingCost: number;
+  rawMaterialCost: number;
+  otherCosts: number;
+  costPerUnit: number;
+  totalProductionCost: number;
+  product?: { name: string; sku: string } | null;
+  costLines?: { label: string; amount: number }[];
+}
+
+const INPUT =
+  'w-full h-9 px-2 rounded-lg border border-[#e3e8ef] bg-white text-xs text-[#364152] focus:outline-none focus:border-[#b8256e]';
+
+const BUCKETS = [
+  { key: 'rawMaterialCost', label: 'المواد الخام' },
+  { key: 'manufacturingCost', label: 'التصنيع' },
+  { key: 'packagingCost', label: 'التغليف' },
+  { key: 'otherCosts', label: 'أخرى' },
+] as const;
+
+export function BatchCostDialog({
+  batch,
+  onClose,
+  onSaved,
+}: {
+  batch: BatchForCost;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [buckets, setBuckets] = useState({
+    rawMaterialCost: batch.rawMaterialCost,
+    manufacturingCost: batch.manufacturingCost,
+    packagingCost: batch.packagingCost,
+    otherCosts: batch.otherCosts,
+  });
+  const [lines, setLines] = useState<{ label: string; amount: number }[]>(batch.costLines ?? []);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const total =
+    Object.values(buckets).reduce((s, v) => s + (Number(v) || 0), 0) +
+    lines.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+  // Over what was PRODUCED, never over what was sold: dividing by the sold
+  // count would price the remaining stock at several times its cost.
+  const perUnit = batch.quantityProduced > 0 ? total / batch.quantityProduced : 0;
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiJson(`/api/production/${batch.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...buckets,
+          costLines: lines.filter((l) => l.label.trim()),
+          reason: reason.trim() || null,
+        }),
+      });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title={`كلفة التشغيلة ${batch.batchNumber}`}>
+      <div className="space-y-4">
+        <p className="text-[11px] text-[#697586]">
+          {batch.product?.name} · أُنتج {batch.quantityProduced} قطعة، بِيع منها {batch.quantitySold}.
+          تسري الكلفة على المخزون المتبقي وعلى الطلبات الجديدة — الطلبات المكتوبة سابقاً
+          تحمل كلفتها وقت البيع ولا تتغيّر. ولا تتأثر الكميات.
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          {BUCKETS.map((b) => (
+            <label key={b.key} className="block">
+              <span className="block text-[11px] text-[#697586] mb-1">{b.label}</span>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={buckets[b.key]}
+                onChange={(e) => setBuckets({ ...buckets, [b.key]: Number(e.target.value) })}
+                className={INPUT}
+                dir="ltr"
+              />
+            </label>
+          ))}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] text-[#697586]">بنود إضافية</span>
+            <button
+              type="button"
+              onClick={() => setLines([...lines, { label: '', amount: 0 }])}
+              disabled={lines.length >= 30}
+              className="inline-flex items-center gap-1 text-[11px] text-[#b8256e] hover:underline disabled:opacity-50"
+            >
+              <Plus className="w-3 h-3" /> بند
+            </button>
+          </div>
+          {lines.length === 0 ? (
+            <p className="text-[11px] text-[#9aa4b2]">لا بنود إضافية — «قالب»، «أجرة عامل»، «شحن المواد».</p>
+          ) : (
+            <div className="space-y-2">
+              {lines.map((line, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    value={line.label}
+                    placeholder="اسم البند"
+                    onChange={(e) =>
+                      setLines(lines.map((l, n) => (n === i ? { ...l, label: e.target.value } : l)))
+                    }
+                    className={`${INPUT} flex-1`}
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={line.amount}
+                    onChange={(e) =>
+                      setLines(lines.map((l, n) => (n === i ? { ...l, amount: Number(e.target.value) } : l)))
+                    }
+                    className={`${INPUT} w-28`}
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLines(lines.filter((_, n) => n !== i))}
+                    className="p-1.5 rounded-lg text-[#9aa4b2] hover:text-[#fb323f] hover:bg-[#feecee]"
+                    aria-label="احذف البند"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* The number every margin in the system is built on. */}
+        <div className="flex items-center justify-between rounded-lg bg-[#fdf5fa] border border-[#f2c9dd] px-3 py-2.5">
+          <span className="text-[11px] text-[#697586]">
+            الكلفة الكلية <span className="font-bold text-[#121926] tabular-nums">{total.toFixed(2)}</span>
+          </span>
+          <span className="text-xs">
+            كلفة الوحدة{' '}
+            <span className="font-black text-[#b8256e] tabular-nums">{perUnit.toFixed(2)}</span>
+            {batch.costPerUnit > 0 && Math.abs(perUnit - batch.costPerUnit) > 0.005 && (
+              <span className="text-[10px] text-[#9aa4b2]"> (كانت {batch.costPerUnit.toFixed(2)})</span>
+            )}
+          </span>
+        </div>
+
+        <label className="block">
+          <span className="block text-[11px] text-[#697586] mb-1">سبب التعديل</span>
+          <input
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="مثلاً: كلفة المواد لم تُدخل عند الإنشاء"
+            maxLength={200}
+            className={INPUT}
+          />
+        </label>
+
+        {error && (
+          <p className="text-xs text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-lg p-2.5">{error}</p>
+        )}
+
+        <div className="flex gap-2 justify-end pt-1">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>
+            إلغاء
+          </Button>
+          <Button size="sm" onClick={save} disabled={busy}>
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            احفظ الكلفة
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}

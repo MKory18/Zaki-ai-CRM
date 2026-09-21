@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { Factory, Plus, Calculator, Calendar, Boxes, Trash2 } from 'lucide-react';
+import { BatchCostDialog, type BatchForCost } from '@/components/production/BatchCostDialog';
 import { format } from 'date-fns';
 
 /**
@@ -40,6 +41,9 @@ export function ManufacturingScreen() {
 
   // Form State
   const [productId, setProductId] = useState('');
+  // A batch entered with no cost prices its stock at zero and every
+  // margin built on it is gross. This is where that gets fixed.
+  const [costing, setCosting] = useState<BatchForCost | null>(null);
   const [batchNumber, setBatchNumber] = useState('');
   const [quantityProduced, setQuantityProduced] = useState(1000);
   const [manufacturingCost, setManufacturingCost] = useState(2500);
@@ -178,6 +182,7 @@ export function ManufacturingScreen() {
                     <th className="px-6 py-3.5">الكلفة الكلية</th>
                     <th className="px-6 py-3.5">كلفة الوحدة</th>
                     <th className="px-6 py-3.5">التاريخ</th>
+                    <th className="px-6 py-3.5"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e3e8ef]">
@@ -205,12 +210,32 @@ export function ManufacturingScreen() {
                         ${b.totalProductionCost.toFixed(2)}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-black text-[#fb323f] bg-[#feecee] px-2.5 py-1 rounded-md text-xs">
-                          ${b.costPerUnit.toFixed(2)}
-                        </span>
+                        {b.costPerUnit > 0 ? (
+                          <span className="font-black text-[#121926] bg-[#f8fafc] px-2.5 py-1 rounded-md text-xs tabular-nums">
+                            ${b.costPerUnit.toFixed(2)}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setCosting(b)}
+                            title="هذه التشغيلة بلا كلفة، فالربح المحسوب منها إجمالي لا صافي"
+                            className="font-bold text-[#c07f2a] bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md text-xs hover:border-[#c07f2a]"
+                          >
+                            بلا كلفة
+                          </button>
+                        )}
                       </td>
                       <td className="px-6 py-3.5 text-[#9ca3af]">
                         {format(new Date(b.productionDate), 'd MMM yyyy')}
+                      </td>
+                      <td className="px-6 py-3.5">
+                        <button
+                          type="button"
+                          onClick={() => setCosting(b)}
+                          className="text-[11px] text-[#b8256e] hover:underline whitespace-nowrap"
+                        >
+                          عدّل الكلفة
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -220,6 +245,10 @@ export function ManufacturingScreen() {
           </CardContent>
         </Card>
       </div>
+
+      {costing && (
+        <BatchCostDialog batch={costing} onClose={() => setCosting(null)} onSaved={loadData} />
+      )}
 
       {/* Production Batch Modal with Section 5 Live Formula Calculator */}
       <Modal
