@@ -815,9 +815,16 @@ model DeliveryProvider {
   // named here, and the account's own ids live in apiConfig.
   adapterCode String?
   // Per-courier settings for that adapter — their companyId, service and
-  // vehicle type ids. NEVER credentials: email and password stay in the
-  // environment, out of the database and out of any API response.
+  // vehicle type ids. Not secret: these appear in every API response.
   apiConfig  Json?
+  // The account's login, encrypted at rest (AES-256-GCM, key in the
+  // environment only). A courier password cannot be hashed — we have to
+  // send it on every call — so it is encrypted instead, and a stolen
+  // database dump is not a stolen account. NEVER returned by any endpoint:
+  // screens are told that credentials exist, never what they are.
+  apiCredentials       String?
+  credentialsUpdatedAt DateTime?
+  credentialsUpdatedById String?
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

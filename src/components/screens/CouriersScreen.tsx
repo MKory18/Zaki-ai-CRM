@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Bike, Loader2, Plus, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { CourierCredentials } from '@/components/settings/CourierCredentials';
 
 /**
  * /settings/couriers — the shipping companies themselves. Their per-region
@@ -25,6 +26,7 @@ export function CouriersScreen() {
   const [rows, setRows] = useState<Courier[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT' });
+  const [accountFor, setAccountFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -159,12 +161,33 @@ export function CouriersScreen() {
                 <td className="px-4 py-2 text-[#697586]" dir="ltr">{c.code}</td>
                 <td className="px-4 py-2 text-[#697586]" dir="ltr">{c.phone ?? '—'}</td>
                 <td className="px-4 py-2">
-                  <button onClick={() => toggle(c)} disabled={busy} className={`text-xs px-3 py-1 rounded-[8px] border ${c.isActive ? 'border-[#e3e8ef] text-[#00a344]' : 'border-[#fecdd1] bg-[#feecee] text-[#fb323f]'}`}>
-                    {c.isActive ? 'نشطة' : 'موقوفة'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => toggle(c)} disabled={busy} className={`text-xs px-3 py-1 rounded-[8px] border ${c.isActive ? 'border-[#e3e8ef] text-[#00a344]' : 'border-[#fecdd1] bg-[#feecee] text-[#fb323f]'}`}>
+                      {c.isActive ? 'نشطة' : 'موقوفة'}
+                    </button>
+                    {/* An agent has no platform account: he is a person with a
+                        motorbike, settled by hand. Only a company has a login. */}
+                    {c.kind !== 'AGENT' && (
+                      <button
+                        onClick={() => setAccountFor(accountFor === c.id ? null : c.id)}
+                        className="rounded-[8px] border border-[#e3e8ef] px-3 py-1 text-xs text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+                      >
+                        الحساب والتكامل
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
+            {rows.map((c) =>
+              accountFor === c.id ? (
+                <tr key={`${c.id}-account`}>
+                  <td colSpan={5} className="bg-[#f8fafc] px-4 py-4">
+                    <CourierCredentials providerId={c.id} />
+                  </td>
+                </tr>
+              ) : null
+            )}
             {rows.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شركات شحن ولا مندوبون بعد.</td>

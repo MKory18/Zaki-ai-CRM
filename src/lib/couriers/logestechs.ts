@@ -293,3 +293,60 @@ export function logesTechsFromEnv(env: NodeJS.ProcessEnv = process.env): LogesTe
     },
   });
 }
+
+/**
+ * A courier's own LogesTechs account, as stored (encrypted) on its row.
+ *
+ * The sender and origin are part of the account, not of the platform: two
+ * couriers on LogesTechs ship from two warehouses under two logins, and
+ * their required sender fields differ. Keeping them together means an
+ * account is either complete or absent — never half-configured in a way
+ * that fails at their end on the first parcel.
+ */
+export interface LogesTechsCredentials {
+  email: string;
+  password: string;
+  companyId: number;
+  originCityId: number;
+  senderName: string;
+  senderPhone: string;
+  senderBusiness?: string;
+  originAddress?: string;
+  originAddress2?: string;
+  baseUrl?: string;
+  serviceTypeId?: number;
+  vehicleTypeId?: number;
+  parcelTypeId?: number;
+}
+
+/** The adapter for a stored account, or null when the account is incomplete. */
+export function logesTechsFromCredentials(c: LogesTechsCredentials): LogesTechsAdapter | null {
+  if (
+    !c?.email || !c?.password ||
+    !Number.isFinite(Number(c.companyId)) ||
+    !Number.isFinite(Number(c.originCityId)) ||
+    !c.senderName || !c.senderPhone
+  ) {
+    return null;
+  }
+
+  return new LogesTechsAdapter({
+    baseUrl: c.baseUrl,
+    email: c.email,
+    password: c.password,
+    companyId: Number(c.companyId),
+    serviceTypeId: Number.isFinite(Number(c.serviceTypeId)) ? Number(c.serviceTypeId) : undefined,
+    vehicleTypeId: Number.isFinite(Number(c.vehicleTypeId)) ? Number(c.vehicleTypeId) : undefined,
+    parcelTypeId: Number.isFinite(Number(c.parcelTypeId)) ? Number(c.parcelTypeId) : undefined,
+    sender: {
+      name: c.senderName,
+      phone: c.senderPhone,
+      businessName: c.senderBusiness,
+    },
+    origin: {
+      addressLine1: c.originAddress ?? '',
+      addressLine2: c.originAddress2,
+      cityId: Number(c.originCityId),
+    },
+  });
+}

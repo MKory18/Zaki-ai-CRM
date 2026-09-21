@@ -52,6 +52,12 @@ export async function POST(req: Request) {
 
     const provider = await db.deliveryProvider.create({
       data: { companyId, name, code: code.toUpperCase(), kind, phone, email, address, notes },
+      // Same reason as the PATCH: this row can hold an encrypted account,
+      // and returning it whole is how ciphertext reaches a browser.
+      select: {
+        id: true, name: true, code: true, kind: true, phone: true,
+        email: true, address: true, notes: true, isActive: true, createdAt: true,
+      },
     });
 
     await logAudit({

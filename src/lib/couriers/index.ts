@@ -1,6 +1,12 @@
 import type { CourierAdapter } from './types';
 import { manualAdapter } from './manual';
-import { LogesTechsAdapter, logesTechsFromEnv } from './logestechs';
+import {
+  LogesTechsAdapter,
+  logesTechsFromEnv,
+  logesTechsFromCredentials,
+  type LogesTechsCredentials,
+} from './logestechs';
+import { decryptJson } from '@/lib/secrets';
 
 /**
  * Adapter registry, keyed by DeliveryProvider.code.
@@ -27,8 +33,10 @@ export interface ProviderLike {
   apiEnabled?: boolean;
   /** Which integration it runs on. Falls back to its own code. */
   adapterCode?: string | null;
-  /** That account's ids on the platform — never credentials. */
+  /** That account's ids on the platform — not secret. */
   apiConfig?: unknown;
+  /** The account's login, encrypted. Decrypted here and nowhere else. */
+  apiCredentials?: string | null;
 }
 
 /**
@@ -39,9 +47,11 @@ export interface ProviderLike {
  * can run on the same platform under different accounts, which is why the
  * account's ids come from the courier row and not from the environment.
  *
- * Credentials still come from the environment. A courier with an adapter
- * named but no credentials configured stays MANUAL rather than failing at
- * the first call.
+ * Credentials come from the courier's own encrypted row when it has one,
+ * and from the environment otherwise — so a second shipping company no
+ * longer needs a deploy to be added, and the first one keeps working
+ * untouched. A courier with an adapter named but no credentials anywhere
+ * stays MANUAL rather than failing at the first call.
  */
 export function adapterFor(provider: ProviderLike | null | undefined): CourierAdapter {
   if (!provider?.apiEnabled) return manualAdapter;
@@ -49,11 +59,15 @@ export function adapterFor(provider: ProviderLike | null | undefined): CourierAd
   const key = (provider.adapterCode || provider.code).trim().toUpperCase();
 
   if (key === 'LOGESTECHS') {
-    const base = logesTechsFromEnv();
+    // This courier's own account first; the environment only when it has none.
+    const stored = decryptJson<LogesTechsCredentials>(provider.apiCredentials);
+    const base = stored ? logesTechsFromCredentials(stored) : logesTechsFromEnv();
     if (!base) return manualAdapter; // no credentials — nothing to call
 
     const config = (provider.apiConfig ?? {}) as Record<string, unknown>;
-    const companyId = Number(config.companyId);
+    // A stored account carries its own company id; only fall back to the
+    // config when it does not.
+    const companyId = Number(stored?.companyId ?? config.companyId);
     if (!Number.isFinite(companyId)) return manualAdapter;
 
     // The courier's own account on the platform, over the shared credentials.
