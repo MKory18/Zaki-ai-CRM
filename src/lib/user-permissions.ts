@@ -113,7 +113,28 @@ export function granterHoldsAll(
   // carries the narrower tier to someone when you hold the broader one is a
   // downgrade, not an escalation.
   const COVERAGE: Record<string, string> = { 'customers.view_basic': 'customers.view' };
+
+  // ── Hiring somebody is not the same as doing their job ──
+  //
+  // The rule above is sound for AUTHORITY: you must not hand out a power you
+  // do not hold. It was wrong for the keys below, which grant no power over
+  // anyone — they are the act of doing a shift's work. A company admin does
+  // not work the confirmation queue on purpose (the contract keeps that desk
+  // separate), and the result was an outcome nobody would defend: the person
+  // who runs the company could create ANOTHER COMPANY ADMIN — a strictly more
+  // powerful account — but could not hire a confirmation agent.
+  //
+  // So these keys are conferrable without holding them. Everything else still
+  // obeys the granter-must-hold rule: no key that reaches money, settings,
+  // other people's accounts, or a decision over somebody else's work is here.
+  const OPERATIONAL = new Set([
+    'confirmation.pull',   // take the next order from the pool
+    'confirmation.work',   // work the orders you are holding
+    'confirmation.issues', // flag a problem on one of them
+  ]);
+
   for (const g of grants) {
+    if (OPERATIONAL.has(g.permission)) continue;
     const requested = g.scope ?? 'ALL_COMPANY';
     let held = getPermissionScope(actor, g.permission);
     if (!held && COVERAGE[g.permission]) {
