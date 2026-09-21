@@ -51,6 +51,8 @@ export interface SealSource {
   /** The order's own shipping state — the parcel may have left alone. */
   shippingStatus?: string;
   shippedAt?: Date | string | null;
+  /** The waybill is printed and on the box. */
+  labelPrintedAt?: Date | string | null;
 }
 
 /** Shipping states in which the parcel is out of our hands. */
@@ -60,8 +62,8 @@ export interface Seal {
   sealed: boolean;
   /** The batch that sealed it, for a message a human can act on. */
   batchNumber?: string;
-  /** Which of the two facts closed it. */
-  reason?: 'BATCH' | 'SHIPPED';
+  /** Which of the three facts closed it. */
+  reason?: 'BATCH' | 'SHIPPED' | 'LABELLED';
 }
 
 /**
@@ -88,6 +90,14 @@ export function orderSeal(order: SealSource): Seal {
   // un-ship a parcel that already left.
   if (order.shippedAt || GONE.includes(order.shippingStatus ?? '')) {
     return { sealed: true, batchNumber: batch?.batchNumber, reason: 'SHIPPED' };
+  }
+  // The waybill is the address. Once it is printed and stuck on the box,
+  // changing the address in here changes nothing the driver will ever read
+  // — it only makes our record disagree with the parcel. This is the
+  // earliest of the three, and it is the one that matches what actually
+  // fixes a delivery: paper on a carton.
+  if (order.labelPrintedAt) {
+    return { sealed: true, batchNumber: batch?.batchNumber, reason: 'LABELLED' };
   }
   return { sealed: false };
 }
@@ -125,6 +135,8 @@ export function sealMessage(
   const where =
     reason === 'SHIPPED'
       ? 'الطلب شُحن وخرج من المستودع'
-      : `الطلب سُلِّم لشركة الشحن ضمن دفعة مقفلة${batchNumber ? ` (${batchNumber})` : ''}`;
+      : reason === 'LABELLED'
+        ? 'بوليصة الطلب طُبعت ولُصقت على الطرد — العنوان الذي سيقرأه السائق لم يعد يتغيّر من هنا'
+        : `الطلب سُلِّم لشركة الشحن ضمن دفعة مقفلة${batchNumber ? ` (${batchNumber})` : ''}`;
   return `${where}. لتعديل ${names} ارفع طلب تعديل ليُبَتّ فيه.`;
 }

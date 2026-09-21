@@ -104,9 +104,20 @@ interface ShippingSectionProps {
   ar: boolean;
   isRtl: boolean;
   onRefreshOrder: () => void | Promise<void>;
+  /**
+   * May this person move the shipment at all?
+   *
+   * The server already refuses them — every action here needs
+   * orders.change_status — but showing the buttons to a confirmation agent
+   * or a moderator invites a click that can only end in a red error, and
+   * teaches them the screen is unreliable. Worse, this modal opens from
+   * half a dozen screens, so "who is looking at it" is never obvious from
+   * the buttons alone.
+   */
+  canEdit?: boolean;
 }
 
-export function ShippingSection({ order, ar, isRtl, onRefreshOrder }: ShippingSectionProps) {
+export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = true }: ShippingSectionProps) {
   const [providers, setProviders] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -268,8 +279,14 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder }: ShippingSe
         </p>
       )}
 
+      {!canEdit && (
+        <p className="mb-3 text-[11px] text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-lg px-2.5 py-2">
+          الشحن والتوصيل للعرض فقط — تحريكه من صلاحية فريق الشحن.
+        </p>
+      )}
+
       {/* Quick transition actions (backend validates everything) */}
-      {!terminal && actions.length > 0 && (
+      {canEdit && !terminal && actions.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
           {actions.map((a) => (
             <button

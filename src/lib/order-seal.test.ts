@@ -133,3 +133,38 @@ describe('a parcel that left on its own', () => {
     expect(msg).toContain('طلب تعديل');
   });
 });
+
+describe('a waybill already on the box', () => {
+  // The earliest of the three seals, and the one that matches what really
+  // fixes a delivery: paper on a carton. Changing the address after it is
+  // printed changes nothing the driver will read — it only makes our
+  // record disagree with the parcel.
+  const openBatch = { status: 'READY', batchNumber: 'BATCH-2026-0007' };
+
+  it('seals the order even before it ships', () => {
+    const seal = orderSeal({
+      shippingBatch: openBatch,
+      shippingStatus: 'READY_FOR_PICKUP',
+      labelPrintedAt: new Date(),
+    });
+    expect(seal.sealed).toBe(true);
+    expect(seal.reason).toBe('LABELLED');
+  });
+
+  it('leaves it open while nothing has been printed', () => {
+    expect(
+      orderSeal({ shippingBatch: openBatch, shippingStatus: 'READY_FOR_PICKUP', labelPrintedAt: null }).sealed
+    ).toBe(false);
+  });
+
+  it('says the waybill is printed, not that a batch closed', () => {
+    const msg = sealMessage(undefined, ['customerAddress'], 'LABELLED');
+    expect(msg).toContain('بوليصة');
+    expect(msg).toContain('طلب تعديل');
+  });
+
+  it('lets shipping win when both are true — it is the later fact', () => {
+    const seal = orderSeal({ shippingStatus: 'SHIPPED', labelPrintedAt: new Date() });
+    expect(seal.reason).toBe('SHIPPED');
+  });
+});

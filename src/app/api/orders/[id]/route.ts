@@ -531,6 +531,7 @@ export async function PATCH(
         shippingBatch: batch,
         shippingStatus: existing.shippingStatus,
         shippedAt: (existing as { shippedAt?: Date | null }).shippedAt ?? null,
+        labelPrintedAt: (existing as { labelPrintedAt?: Date | null }).labelPrintedAt ?? null,
       });
       if (seal.sealed) {
         return NextResponse.json(

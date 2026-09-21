@@ -612,6 +612,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             order={order}
             ar={ar}
             isRtl={isRtl}
+            canEdit={mayChangeShipping}
             onRefreshOrder={async () => {
               if (order?.id) await loadOrder(order.id);
               onRefresh();
