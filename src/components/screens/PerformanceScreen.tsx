@@ -8,6 +8,7 @@ import { AlertTriangle, Download, Truck, Bike, Trophy, Coins, CheckCircle2 } fro
 import { apiJson } from '@/lib/api-client';
 import { DateRange } from '@/components/ui/DateRange';
 import { TeamPerformanceTable } from '@/components/performance/TeamPerformanceTable';
+import { AttributionTable, type AttributionRow } from '@/components/performance/AttributionTable';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -35,6 +36,10 @@ export function PerformanceScreen() {
   const [team, setTeam] = useState<any[] | null>(null);
   const [totals, setTotals] = useState<any>(null);
   const [couriers, setCouriers] = useState<any[] | null>(null);
+  // Who brought the business, and through which door. Same window as
+  // everything else on this screen.
+  const [moderators, setModerators] = useState<AttributionRow[] | null>(null);
+  const [channels, setChannels] = useState<AttributionRow[] | null>(null);
 
   /** Empty dates mean "the whole window"; the server clamps it to 90 days. */
   const dateQuery = range.from && range.to ? `startDate=${range.from}&endDate=${range.to}` : 'period=all';
@@ -51,6 +56,22 @@ export function PerformanceScreen() {
         setTotals(d.totals ?? null);
       })
       .catch(() => setTeam([]));
+  }, [dateQuery]);
+
+  useEffect(() => {
+    setModerators(null);
+    setChannels(null);
+    apiJson<{ moderators: AttributionRow[]; channels: AttributionRow[] }>(
+      `/api/growth/attribution?${dateQuery}`
+    )
+      .then((d) => {
+        setModerators(d.moderators ?? []);
+        setChannels(d.channels ?? []);
+      })
+      .catch(() => {
+        setModerators([]);
+        setChannels([]);
+      });
   }, [dateQuery]);
 
   useEffect(() => {
@@ -215,6 +236,28 @@ export function PerformanceScreen() {
           />
           <CardContent className="p-0">
             <TeamPerformanceTable rows={team as any} totals={totals} />
+          </CardContent>
+        </Card>
+
+        {/* Who brought it in */}
+        <Card>
+          <CardHeader
+            title="أداء المودريتورية"
+            subtitle="ما جلبه كلٌّ منهم وما بقي منه — النسب من الخطوة التي قبلها، لا من أعلى القمع"
+          />
+          <CardContent className="p-0">
+            <AttributionTable rows={moderators} empty="لا طلبات منسوبة لمودريتر في هذه المدة." />
+          </CardContent>
+        </Card>
+
+        {/* Which door it came through */}
+        <Card>
+          <CardHeader
+            title="أداء القنوات"
+            subtitle="الباب الذي جاء منه الطلب — وعمود «للطلب الواحد» يفرّق بين مصدر كبير ومصدر جيد"
+          />
+          <CardContent className="p-0">
+            <AttributionTable rows={channels} empty="لا طلبات مرتبطة بقناة في هذه المدة." />
           </CardContent>
         </Card>
 

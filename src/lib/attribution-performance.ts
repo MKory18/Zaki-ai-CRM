@@ -1,0 +1,161 @@
+import { db } from './db';
+
+/**
+ * WHO BROUGHT THE BUSINESS, AND WHAT BECAME OF IT.
+ *
+ * Two questions with one shape. A moderator brings orders in; a channel is
+ * the door they came through. Both are judged the same way, so they share
+ * one query and one table rather than growing two reports that slowly stop
+ * agreeing about what "delivered" means.
+ *
+ * The number that matters is the LAST one, not the first. Anyone can bring
+ * a hundred orders; what the business keeps is what was delivered and
+ * collected. So a row reads left to right as the funnel actually runs —
+ * brought, confirmed, delivered, collected — and the rates are computed
+ * from the step before, never from the top:
+ *
+ *   confirmation rate = confirmed ÷ decided   (still being worked is neither)
+ *   delivery rate     = delivered ÷ confirmed (an order never confirmed
+ *                       was never the courier's to deliver)
+ *
+ * Revenue is the SAME definition the profit screen uses: what was actually
+ * collected where we know it, and the order total where we do not. A second
+ * formula here is how two screens end up disagreeing about one week.
+ */
+
+/** Shipping states in which the goods reached the customer. */
+const DELIVERED = ['DELIVERED', 'PARTIALLY_DELIVERED'];
+const CONFIRMED_ONWARDS = ['CONFIRMED'];
+const REFUSED = ['REJECTED', 'CANCELLED'];
+
+export interface AttributionRow {
+  id: string;
+  name: string;
+  /** Extra label — a moderator's role, a channel's kind. */
+  kind: string | null;
+  brought: number;
+  confirmed: number;
+  rejected: number;
+  decided: number;
+  delivered: number;
+  returned: number;
+  confirmationRate: number | null;
+  deliveryRate: number | null;
+  revenue: number;
+  /** What one brought order is worth on average, after everything. */
+  revenuePerOrder: number | null;
+}
+
+interface Scope {
+  companyId: string;
+  storeId: string;
+  start?: Date;
+  end?: Date;
+}
+
+type GroupKey = 'moderatorId' | 'channelId';
+
+async function attribution(scope: Scope, key: GroupKey): Promise<AttributionRow[]> {
+  const { companyId, storeId, start, end } = scope;
+  const when = start || end ? { ...(start ? { gte: start } : {}), ...(end ? { lte: end } : {}) } : undefined;
+  const base = {
+    companyId,
+    storeId,
+    [key]: { not: null },
+    ...(when ? { createdAt: when } : {}),
+  } as Record<string, unknown>;
+
+  const by = [key] as ['moderatorId'] | ['channelId'];
+
+  const [brought, confirmed, rejected, delivered, returned, collected, uncollected] = await Promise.all([
+    db.order.groupBy({ by, where: base, _count: { _all: true } }),
+    db.order.groupBy({ by, where: { ...base, confirmationStatus: { in: CONFIRMED_ONWARDS } }, _count: { _all: true } }),
+    db.order.groupBy({ by, where: { ...base, confirmationStatus: { in: REFUSED } }, _count: { _all: true } }),
+    db.order.groupBy({ by, where: { ...base, shippingStatus: { in: DELIVERED } }, _count: { _all: true } }),
+    db.order.groupBy({ by, where: { ...base, shippingStatus: { in: ['RETURNED', 'RETURN_REQUESTED'] } }, _count: { _all: true } }),
+    // The same two-part revenue the profit screen uses.
+    db.order.groupBy({
+      by,
+      where: { ...base, shippingStatus: { in: DELIVERED }, collectedAmount: { not: null } },
+      _sum: { collectedAmount: true },
+    }),
+    db.order.groupBy({
+      by,
+      where: { ...base, shippingStatus: { in: DELIVERED }, collectedAmount: null },
+      _sum: { totalAmount: true },
+    }),
+  ]);
+
+  const idOf = (row: Record<string, unknown>) => row[key] as string | null;
+  const ids = [...new Set(brought.map(idOf).filter(Boolean) as string[])];
+  if (ids.length === 0) return [];
+
+  const names =
+    key === 'moderatorId'
+      ? new Map(
+          (await db.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, role: true } })).map(
+            (u) => [u.id, { name: u.name, kind: u.role as string | null }]
+          )
+        )
+      : new Map(
+          (
+            await db.orderChannel.findMany({
+              where: { id: { in: ids }, companyId },
+              select: { id: true, name: true, kind: true },
+            })
+          ).map((c) => [c.id, { name: c.name, kind: c.kind as string | null }])
+        );
+
+  const count = (rows: typeof brought, id: string) =>
+    (rows.find((r) => idOf(r as never) === id) as { _count?: { _all: number } } | undefined)?._count?._all ?? 0;
+
+  const rows = ids.map((id) => {
+    const who = names.get(id);
+    const ok = count(confirmed, id);
+    const no = count(rejected, id);
+    const decided = ok + no;
+    const got = count(delivered, id);
+    const total = count(brought, id);
+    const revenue =
+      Number(
+        (collected.find((r) => idOf(r as never) === id) as { _sum?: { collectedAmount: number | null } } | undefined)
+          ?._sum?.collectedAmount ?? 0
+      ) +
+      Number(
+        (uncollected.find((r) => idOf(r as never) === id) as { _sum?: { totalAmount: number | null } } | undefined)
+          ?._sum?.totalAmount ?? 0
+      );
+
+    return {
+      id,
+      name: who?.name ?? '—',
+      kind: who?.kind ?? null,
+      brought: total,
+      confirmed: ok,
+      rejected: no,
+      decided,
+      delivered: got,
+      returned: count(returned, id),
+      confirmationRate: decided > 0 ? Math.round((ok / decided) * 100) : null,
+      // Out of what was confirmed: an order never confirmed was never the
+      // courier's to deliver, and counting it against delivery blames the
+      // wrong step.
+      deliveryRate: ok > 0 ? Math.round((got / ok) * 100) : null,
+      revenue: Number(revenue.toFixed(2)),
+      revenuePerOrder: total > 0 ? Number((revenue / total).toFixed(2)) : null,
+    };
+  });
+
+  // What the business kept, biggest first.
+  return rows.sort((a, b) => b.revenue - a.revenue || b.brought - a.brought);
+}
+
+/** Orders credited to each moderator who entered them. */
+export function moderatorPerformance(scope: Scope): Promise<AttributionRow[]> {
+  return attribution(scope, 'moderatorId');
+}
+
+/** Orders credited to the door they came through. */
+export function channelPerformance(scope: Scope): Promise<AttributionRow[]> {
+  return attribution(scope, 'channelId');
+}
