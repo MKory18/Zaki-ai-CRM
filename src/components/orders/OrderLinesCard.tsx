@@ -64,7 +64,9 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     discountAmount: String(order.discountAmount ?? 0),
-    internalNotes: order.internalNotes ?? '',
+    // What the customer asked for, or what this order needs. Internal notes
+    // are a thread of their own below, not a box one person overwrites.
+    customerNotes: order.customerNotes ?? '',
   });
   const [draft, setDraft] = useState<DraftLine[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -105,7 +107,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
     }
     setForm({
       discountAmount: String(order.discountAmount ?? 0),
-      internalNotes: order.internalNotes ?? '',
+      customerNotes: order.customerNotes ?? '',
     });
     setDraft(
       lines.map((l) => ({
@@ -137,7 +139,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
             unitPrice: l.price,
           })),
           discountAmount: Number(form.discountAmount),
-          internalNotes: form.internalNotes.trim() || null,
+          customerNotes: form.customerNotes.trim() || null,
         }),
       });
       setOpen(false);
@@ -215,21 +217,11 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
         <p className="text-[11px] text-slate-400">سعر البيع شامل التوصيل.</p>
       )}
 
-      {(order.internalNotes || order.customerNotes) && !open && (
-        <div className="space-y-1.5">
-          {order.customerNotes && (
-            <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-[8px] px-2.5 py-1.5">
-              <span className="text-amber-700">ملاحظة العميل: </span>
-              {order.customerNotes}
-            </p>
-          )}
-          {order.internalNotes && (
-            <p className="text-xs text-slate-600 bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] px-2.5 py-1.5 whitespace-pre-line">
-              <span className="text-slate-400">ملاحظات داخلية: </span>
-              {order.internalNotes}
-            </p>
-          )}
-        </div>
+      {order.customerNotes && !open && (
+        <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-[8px] px-2.5 py-1.5 whitespace-pre-line">
+          <span className="text-amber-700">ملاحظات الطلب: </span>
+          {order.customerNotes}
+        </p>
       )}
 
       {open && (
@@ -253,12 +245,12 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
           </label>
 
           <label className="block">
-            <span className="block text-xs font-medium text-slate-600 mb-1">ملاحظات داخلية</span>
+            <span className="block text-xs font-medium text-slate-600 mb-1">ملاحظات الطلب</span>
             <textarea
               rows={2}
-              value={form.internalNotes}
-              onChange={(e) => setForm({ ...form, internalNotes: e.target.value })}
-              placeholder="ما يحتاج من يكمل هذا الطلب أن يعرفه"
+              value={form.customerNotes}
+              onChange={(e) => setForm({ ...form, customerNotes: e.target.value })}
+              placeholder="ما طلبه العميل: وقت التوصيل المفضل، تفاصيل العنوان…"
               className="w-full px-3 py-2 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]"
             />
           </label>

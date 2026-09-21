@@ -1,114 +1,108 @@
 'use client';
 
 import React from 'react';
-import { Check, Minus, CircleDot, PackagePlus, PhoneCall, PackageCheck, Truck, Flag } from 'lucide-react';
+import { Check, Minus } from 'lucide-react';
 import { arDateShort } from '@/lib/format';
-import type { Stage, StageKey } from '@/lib/order-stages';
+import type { Stage } from '@/lib/order-stages';
 
 /**
- * The order's journey, as five cards.
+ * The order's journey.
  *
- * It replaced a wall of emoji buttons and two separate history lists that
- * between them never said the one thing anybody opens an order to learn:
- * how far it has got, when each step happened, and who did it.
+ * Five boxes side by side gave each about 130 pixels, so every title, date
+ * and courier name arrived truncated — "الإغـ…", "Basha …", "1005192…" —
+ * and said less than nothing. The steps carry only what fits in a step: a
+ * mark, a name and a moment. What happened at each one is read underneath,
+ * on full-width lines, where a courier name is a courier name.
  *
  * Nothing here is a control. A passed stage is a record of something that
  * happened, and a record you can edit is not a record — the actions that
- * move an order on live below, where they belong.
+ * move an order on live below.
  */
 
-const ICONS: Record<StageKey, React.ElementType> = {
-  INTAKE: PackagePlus,
-  CONFIRMATION: PhoneCall,
-  WAREHOUSE: PackageCheck,
-  TRANSIT: Truck,
-  CLOSED: Flag,
-};
-
 export function OrderStages({ stages }: { stages: Stage[] }) {
+  const withFacts = stages.filter((s) => s.status !== 'PENDING' && (s.who || s.facts.length > 0));
+
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-      <h4 className="text-xs font-black text-slate-700 mb-3">مسار الطلب</h4>
+      <h4 className="text-xs font-black text-slate-700 mb-4">مسار الطلب</h4>
 
-      <ol className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+      {/* The steps. The connecting line sits behind them so it never pushes
+          a label out of its place. */}
+      <ol className="flex items-start" dir="rtl">
         {stages.map((stage, i) => {
-          const Icon = ICONS[stage.key];
           const done = stage.status === 'DONE';
           const current = stage.status === 'CURRENT';
           const skipped = stage.status === 'SKIPPED';
+          const reached = done || current || skipped;
 
           return (
-            <li
-              key={stage.key}
-              className={`relative rounded-xl border p-3 transition-colors ${
-                current
-                  ? 'border-[#b8256e] bg-[#fdf5fa]'
-                  : done
-                    ? 'border-[#c8f2d8] bg-[#f6fdf9]'
-                    : skipped
-                      ? 'border-[#e3e8ef] bg-[#f8fafc]'
-                      : 'border-dashed border-[#e3e8ef] bg-white'
-              }`}
-            >
-              <div className="flex items-center gap-2">
+            <li key={stage.key} className="flex-1 min-w-0 relative">
+              {/* Rail to the previous step — drawn to the right, in RTL. */}
+              {i > 0 && (
                 <span
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                  className={`absolute top-3.5 right-1/2 left-1/2 h-0.5 -z-0 ${
+                    reached ? 'bg-[#00a344]/40' : 'bg-[#e3e8ef]'
+                  }`}
+                  style={{ right: '50%', left: '50%', width: '100%', transform: 'translateX(50%)' }}
+                  aria-hidden="true"
+                />
+              )}
+
+              <div className="relative flex flex-col items-center gap-1.5">
+                <span
+                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold z-10 ${
                     current
-                      ? 'bg-[#b8256e] text-white'
+                      ? 'bg-[#b8256e] text-white ring-4 ring-[#b8256e]/15'
                       : done
                         ? 'bg-[#00a344] text-white'
                         : skipped
-                          ? 'bg-[#e3e8ef] text-[#9aa4b2]'
-                          : 'bg-[#f1f5f9] text-[#c3c8d4]'
+                          ? 'bg-white text-[#9aa4b2] border border-[#e3e8ef]'
+                          : 'bg-white text-[#c3c8d4] border border-dashed border-[#e3e8ef]'
                   }`}
                 >
-                  {done ? (
-                    <Check className="w-3.5 h-3.5" />
-                  ) : current ? (
-                    <CircleDot className="w-3.5 h-3.5" />
-                  ) : skipped ? (
-                    <Minus className="w-3.5 h-3.5" />
-                  ) : (
-                    <Icon className="w-3.5 h-3.5" />
-                  )}
+                  {done ? <Check className="w-3.5 h-3.5" /> : skipped ? <Minus className="w-3.5 h-3.5" /> : i + 1}
                 </span>
 
-                <span className="min-w-0">
-                  <span
-                    className={`block text-xs font-bold truncate ${
-                      current ? 'text-[#b8256e]' : done ? 'text-[#121926]' : 'text-[#9aa4b2]'
-                    }`}
-                  >
-                    {stage.title}
-                  </span>
-                  <span className="block text-[10px] text-[#9aa4b2]">
-                    {stage.at ? arDateShort(stage.at) : skipped ? 'لم يمر بها' : '—'}
-                  </span>
+                <span
+                  className={`text-[11px] font-bold text-center leading-tight ${
+                    current ? 'text-[#b8256e]' : done ? 'text-[#121926]' : 'text-[#9aa4b2]'
+                  }`}
+                >
+                  {stage.title}
                 </span>
 
-                <span className="ms-auto text-[10px] text-[#c3c8d4] tabular-nums">{i + 1}</span>
+                <span className="text-[10px] text-[#9aa4b2] text-center leading-tight">
+                  {stage.at ? arDateShort(stage.at) : skipped ? 'لم يمر بها' : '—'}
+                </span>
               </div>
-
-              {(stage.who || stage.facts.length > 0) && (
-                <dl className="mt-2 space-y-0.5 border-t border-[#e3e8ef] pt-2">
-                  {stage.who && (
-                    <div className="flex justify-between gap-2 text-[10px]">
-                      <dt className="text-[#9aa4b2]">بيد</dt>
-                      <dd className="text-[#364152] truncate">{stage.who}</dd>
-                    </div>
-                  )}
-                  {stage.facts.map((f) => (
-                    <div key={f.label} className="flex justify-between gap-2 text-[10px]">
-                      <dt className="text-[#9aa4b2]">{f.label}</dt>
-                      <dd className="text-[#364152] truncate" dir="auto">{f.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
             </li>
           );
         })}
       </ol>
+
+      {/* What happened, on lines wide enough to hold it. */}
+      {withFacts.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-[#e3e8ef] space-y-1.5">
+          {withFacts.map((stage) => (
+            <p key={stage.key} className="text-[11px] text-[#697586] flex flex-wrap gap-x-1.5">
+              <span
+                className={`font-bold shrink-0 ${
+                  stage.status === 'CURRENT' ? 'text-[#b8256e]' : 'text-[#364152]'
+                }`}
+              >
+                {stage.title}
+              </span>
+              {stage.who && <span className="text-[#364152]">· {stage.who}</span>}
+              {stage.facts.map((f) => (
+                <span key={f.label} className="min-w-0">
+                  <span className="text-[#9aa4b2]">· {f.label}: </span>
+                  <span className="text-[#364152]" dir="auto">{f.value}</span>
+                </span>
+              ))}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

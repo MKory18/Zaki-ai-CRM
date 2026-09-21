@@ -36,7 +36,10 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     // Cap page size (hard server-side limit) with a NaN guard
     const parsedLimit = parseInt(searchParams.get('limit') || '25', 10);
-    const limit = Math.min(Number.isNaN(parsedLimit) ? 25 : parsedLimit, 100);
+    // Twenty-five reads well; a batch being printed or exported needs all of
+    // it. The ceiling is what one screen can render without stalling, and the
+    // response says the real total either way, so the count never lies.
+    const limit = Math.min(Number.isNaN(parsedLimit) ? 25 : parsedLimit, 500);
 
     const whereClause: any = { companyId, storeId };
 
@@ -142,10 +145,6 @@ export async function GET(req: Request) {
           // list, so neither needs opening the order to see.
           region: { select: { id: true, name: true } },
           deliveryProvider: { select: { id: true, name: true, kind: true } },
-          callLogs: {
-            orderBy: { createdAt: 'desc' },
-            take: 3,
-          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

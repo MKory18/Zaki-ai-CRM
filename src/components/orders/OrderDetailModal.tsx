@@ -16,6 +16,7 @@ import { apiFetch, apiJson } from '@/lib/api-client';
 import { CustomerHistoryModal } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { OrderStages } from '@/components/orders/OrderStages';
+import { OrderNotes } from '@/components/orders/OrderNotes';
 import { orderStages } from '@/lib/order-stages';
 import { useRegions } from '@/hooks/useRegions';
 import { amount, arDateShort, arDateTime, type Currency } from '@/lib/format';
@@ -760,6 +761,9 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               </>
             )}
           </div>
+
+          {/* The conversation about this order, appended and never edited. */}
+          <OrderNotes orderId={order.id} />
 
           {/* Timeline — merged from every event table (src/lib/order-timeline.ts),
               not just the activity log, so it always matches the state above. */}
