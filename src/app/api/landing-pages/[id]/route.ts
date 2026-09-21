@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { validateSlug, clampStoredHtml, conversionRate } from '@/lib/landing-pages';
 import { validatePixelId } from '@/lib/landing-tracking';
 import { validateDomain, forgetHost } from '@/lib/landing-domain';
+import { zodMessage } from '@/lib/zod-message';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -68,7 +69,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     });
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const lp = await loadLandingPage(id, companyId, storeId);

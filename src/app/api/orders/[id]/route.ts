@@ -15,6 +15,7 @@ import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
 import { authorize, can } from '@/lib/authorization';
 import { orderSeal, sealedFieldsIn, sealMessage } from '@/lib/order-seal';
+import { zodMessage } from '@/lib/zod-message';
 
 /** Legacy combined status whitelist (mirrors the UI status config) */
 const ALLOWED_COMBINED_STATUSES = [
@@ -281,7 +282,7 @@ export async function PATCH(
     const parsed = patchSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات الطلب غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

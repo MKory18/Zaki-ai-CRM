@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { AI_PROVIDERS, aiSettings, saveAiSettings } from '@/lib/ai-provider';
 import { logAudit } from '@/lib/audit';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * GET/PUT /api/settings/ai — which AI, which model, whose key.
@@ -45,7 +46,7 @@ export async function PUT(req: Request) {
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

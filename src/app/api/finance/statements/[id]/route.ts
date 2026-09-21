@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { receiptGap } from '@/lib/settlement';
 import { recordMovement } from '@/lib/wallets';
 import { markPayableForOrders } from '@/lib/commission';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * One statement.
@@ -68,7 +69,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const parsed = patchSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const statement = await db.courierStatement.findFirst({

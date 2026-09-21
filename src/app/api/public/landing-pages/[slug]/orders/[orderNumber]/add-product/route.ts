@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { verifyAddonToken } from '@/lib/landing-pages';
 import { ORDER_NUMBER_RE } from '@/lib/order-ref';
+import { zodMessage } from '@/lib/zod-message';
 
 interface Ctx {
   params: Promise<{ slug: string; orderNumber: string }>;
@@ -92,7 +93,7 @@ export async function POST(req: Request, ctx: Ctx) {
     const parsed = addonSchema.safeParse(raw);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400, headers: CORS }
       );
     }

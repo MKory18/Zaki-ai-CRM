@@ -14,6 +14,7 @@ import { applyQueueFilter } from '@/lib/rbac';
 import { createNotification } from '@/lib/notification';
 import { apiError } from '@/lib/api-error';
 import { requirePermission, getPermissionScope } from '@/lib/authorization';
+import { zodMessage } from '@/lib/zod-message';
 
 export async function GET(req: Request) {
   try {
@@ -227,7 +228,7 @@ export async function POST(req: Request) {
     const parsed = orderSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات الطلب غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

@@ -12,6 +12,7 @@ import { logAudit } from '@/lib/audit';
 import { createNotification } from '@/lib/notification';
 import { apiError } from '@/lib/api-error';
 import { requirePermission } from '@/lib/authorization';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * POST /api/orders/ai-intake
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
       const check = confirmSchema.safeParse(body.parsed);
       if (!check.success) {
         return NextResponse.json(
-          { error: check.error.issues[0]?.message || 'بيانات الطلب غير صالحة' },
+          { error: zodMessage(check.error) },
           { status: 400 }
         );
       }

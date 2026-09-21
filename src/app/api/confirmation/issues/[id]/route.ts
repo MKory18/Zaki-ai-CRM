@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { assertVoidable, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines } from '@/lib/reservation';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * PATCH /api/confirmation/issues/:id — { action: 'correct' | 'void' }
@@ -30,7 +31,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const issue = await db.orderIssue.findFirst({

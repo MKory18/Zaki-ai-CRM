@@ -7,6 +7,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { maskPixelId, TRACKING_PLATFORMS, TRACKING_SCOPES } from '@/lib/tracking/tracking-types';
 import { pixelIdHint, validateTrackingPixelId } from '@/lib/tracking/tracking-validation';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Global tracking pixels — settings-scoped resource.
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

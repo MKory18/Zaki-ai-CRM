@@ -9,6 +9,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { resolveDeliveryFee } from '@/lib/delivery-fees';
 import { roundMinor } from '@/lib/money';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Return receiving.
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
 
     const parsed = receiveSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const input = parsed.data;
 

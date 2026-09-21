@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
+import { zodMessage } from '@/lib/zod-message';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -45,7 +46,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
     const parsed = createSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const v = parsed.data;
 

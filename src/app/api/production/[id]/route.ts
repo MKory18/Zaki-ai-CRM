@@ -6,6 +6,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { batchTotal, batchUnitCost } from '@/lib/product-cost';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * PATCH /api/production/[id] — correct what a run cost.
@@ -65,7 +66,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

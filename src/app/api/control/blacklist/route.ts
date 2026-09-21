@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { AlreadyBlocked, blockPhone, releaseBlock } from '@/lib/blacklist';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * GET    /api/control/blacklist   the list, active first
@@ -103,7 +104,7 @@ export async function POST(req: Request) {
 
     const parsed = blockSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     try {
@@ -143,7 +144,7 @@ export async function PATCH(req: Request) {
 
     const parsed = releaseSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     try {

@@ -6,6 +6,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { drawDownStock, onHandTotal, receiveStock } from '@/lib/receiving';
+import { zodMessage } from '@/lib/zod-message';
 
 export async function GET() {
   try {
@@ -111,7 +112,7 @@ export async function POST(req: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

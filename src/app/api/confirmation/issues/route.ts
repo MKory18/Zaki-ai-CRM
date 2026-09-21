@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { assertOrderAccess } from '@/lib/rbac';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * ENTRY ISSUES — data errors on orders a MODERATOR entered.
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const access = await assertOrderAccess(parsed.data.orderId, user, { companyId, storeId }, 'orders.view');

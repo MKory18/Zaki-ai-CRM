@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
+import { zodMessage } from '@/lib/zod-message';
 
 const providerSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
     await requirePermission('settings.edit');
     const parsed = providerSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const { name, code, kind, phone, email, address, notes } = parsed.data;
 

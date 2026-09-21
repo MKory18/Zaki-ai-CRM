@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { orderRefFields } from '@/lib/order-ref';
 import { planTransfer, TransferRefused, type TransferParty } from '@/lib/courier-transfer';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * POST /api/ops/tracking/transfer — move a parcel to another courier.
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const order = await db.order.findFirst({

@@ -5,6 +5,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { can, requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * ORDER CHANNELS — where the shop's orders come from.
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const existing = await db.orderChannel.findFirst({

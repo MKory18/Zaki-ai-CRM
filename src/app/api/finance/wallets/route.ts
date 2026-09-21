@@ -6,6 +6,7 @@ import { can, requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { walletBalance } from '@/lib/wallets';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Wallets.
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const country = await db.country.findFirst({

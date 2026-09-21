@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { builtInApps } from '@/lib/apps/registry';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Installing, enabling and removing an app.
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const { appCode, action } = parsed.data;
 

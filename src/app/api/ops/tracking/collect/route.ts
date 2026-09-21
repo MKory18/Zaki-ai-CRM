@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { recordMovement } from '@/lib/wallets';
 import { markPayableForOrders } from '@/lib/commission';
 import { roundMinor } from '@/lib/money';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * POST /api/ops/tracking/collect — settle by hand.
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const wallet = await db.wallet.findFirst({

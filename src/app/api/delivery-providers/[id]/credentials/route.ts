@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { encryptJson, decryptJson, encryptionAvailable, secretHint } from '@/lib/secrets';
 import { logesTechsFromCredentials, type LogesTechsCredentials } from '@/lib/couriers/logestechs';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * A courier's account on its shipping platform.
@@ -121,7 +122,7 @@ export async function PUT(req: Request, ctx: Ctx) {
     const parsed = credentialsSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات الحساب غير مكتملة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

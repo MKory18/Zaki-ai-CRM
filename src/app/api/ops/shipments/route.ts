@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { shipmentBlocks } from '@/lib/operations';
 import { codForOrder, resolveDeliveryFee } from '@/lib/delivery-fees';
 import { assertReadyToShip, type StateSource } from '@/lib/order-state';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Shipment creation.
@@ -118,7 +119,7 @@ export async function POST(req: Request) {
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const { deliveryProviderId, orderIds, acknowledgedOrderIds, notes } = parsed.data;
 

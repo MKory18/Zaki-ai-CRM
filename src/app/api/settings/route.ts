@@ -5,6 +5,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit, redactSensitiveValues } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Settings JSON validation (PATCH).
@@ -98,7 +99,7 @@ export async function PATCH(req: Request) {
       const parsed = settingsSchema.safeParse(settings);
       if (!parsed.success) {
         return NextResponse.json(
-          { error: `إعدادات غير صالحة: ${parsed.error.issues[0]?.message || 'قيم غير مسموحة'}` },
+          { error: `إعدادات غير صالحة: ${zodMessage(parsed.error)}` },
           { status: 400 }
         );
       }

@@ -6,6 +6,7 @@ import { can, requirePermission } from '@/lib/authorization';
 import { redactCustomerForWarehouse } from '@/lib/operations';
 import { apiErrorResponse } from '@/lib/api-error';
 import { signLabelBatch } from '@/lib/labels';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Labels.
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
 
     const parsed = tokenSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     // Only ids that really belong to this store may enter the token.

@@ -9,6 +9,7 @@ import { logAudit } from '@/lib/audit';
 import { encryptSecret, encryptionAvailable } from '@/lib/secrets';
 import { builtInApps, APP_CATEGORY_AR } from '@/lib/apps/registry';
 import { APP_EVENTS, APP_EVENT_AR, isAppEvent } from '@/lib/apps/events';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * GET  /api/apps — the shelf: built-ins and this company's own apps.
@@ -135,7 +136,7 @@ export async function POST(req: Request) {
 
     const parsed = registerSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const input = parsed.data;
 

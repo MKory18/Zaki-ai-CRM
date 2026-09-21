@@ -6,6 +6,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { offerInputSchema, clearOtherDefaults } from '@/lib/offers';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * A product's offers — the ONE place a bundle and its price are defined.
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
       .safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات العرض غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

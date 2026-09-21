@@ -5,6 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Commission rules — DATA, not code.
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const input = parsed.data;
     if (!input.appliesToRole && !input.appliesToUserId) {
@@ -107,7 +108,7 @@ export async function PATCH(req: Request) {
 
     const parsed = endSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const rule = await db.commissionRule.findFirst({ where: { id: parsed.data.ruleId, companyId } });

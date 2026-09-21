@@ -10,6 +10,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
+import { zodMessage } from '@/lib/zod-message';
 
 export async function GET() {
   try {
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

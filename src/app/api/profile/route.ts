@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireAuth, hashPassword, verifyPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { zodMessage } from '@/lib/zod-message';
 
 const profileSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80).optional(),
@@ -25,7 +26,7 @@ export async function PATCH(req: Request) {
     const parsed = profileSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

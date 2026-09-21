@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { blockingClosing, walletBalance } from '@/lib/wallets';
 import { roundMinor } from '@/lib/money';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Daily closing, per wallet.
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
 
     const parsed = recordSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const { walletId, actualBalance } = parsed.data;
     const date = dayOf(parsed.data.date);
@@ -164,7 +165,7 @@ export async function PATCH(req: Request) {
 
     const parsed = approveSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const closing = await db.dailyClosing.findFirst({

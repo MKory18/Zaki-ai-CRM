@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { CHANNEL_KINDS } from '../route';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * PATCH  /api/settings/channels/:id   rename, re-classify, retire
@@ -40,7 +41,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const parsed = patchSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     if (parsed.data.name && parsed.data.name !== channel.name) {

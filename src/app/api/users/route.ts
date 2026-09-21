@@ -11,6 +11,7 @@ import { isPrivilegedRoleName } from '@/lib/role-names';
 import { canConferRole } from '@/lib/user-permissions';
 import { geoAccessError, replaceGeoAccess } from '@/lib/geo-access';
 import { can } from '@/lib/authorization';
+import { zodMessage } from '@/lib/zod-message';
 
 const createUserSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80),
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
     const admin = await requirePermission('users.create');
     const parsed = createUserSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const { name, email, password, role, roleId, phone, commissionRate } = parsed.data;
     const countryIds = [...new Set(parsed.data.countryIds)];

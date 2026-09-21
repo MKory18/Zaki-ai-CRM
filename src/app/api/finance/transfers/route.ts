@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { recordMovement } from '@/lib/wallets';
 import { roundMinor } from '@/lib/money';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Wallet-to-wallet transfers, same or different country.
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const input = parsed.data;
     if (input.fromWalletId === input.toWalletId) {

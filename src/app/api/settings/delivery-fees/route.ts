@@ -5,6 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Delivery fee table: one row per courier per country per region.
@@ -61,7 +62,7 @@ export async function PUT(req: Request) {
 
     const parsed = upsertSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const input = parsed.data;
 

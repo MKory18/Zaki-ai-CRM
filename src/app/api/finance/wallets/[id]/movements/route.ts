@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { MOVEMENT_CATEGORIES, recordMovement, reverseMovement, walletBalance } from '@/lib/wallets';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * Wallet movements.
@@ -88,7 +89,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     const movement = await recordMovement(db, {
@@ -128,7 +129,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const parsed = reverseSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
     try {

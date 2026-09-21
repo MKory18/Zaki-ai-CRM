@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { offerInputSchema, clearOtherDefaults } from '@/lib/offers';
+import { zodMessage } from '@/lib/zod-message';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -31,7 +32,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const parsed = offerInputSchema.partial().safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات العرض غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

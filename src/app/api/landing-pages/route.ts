@@ -7,6 +7,7 @@ import { apiError } from '@/lib/api-error';
 import { validateSlug, conversionRate } from '@/lib/landing-pages';
 import { DEFAULT_THEME } from '@/lib/landing-theme';
 import { starterSections } from '@/lib/landing-sections';
+import { zodMessage } from '@/lib/zod-message';
 
 export async function GET(req: Request) {
   try {
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
     });
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const { name, slug, productId, htmlContent } = parsed.data;
 
