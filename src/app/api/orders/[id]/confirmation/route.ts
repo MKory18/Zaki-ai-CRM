@@ -350,10 +350,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 }
 
-/** schedule_follow_up keeps the current workflow state (NO_ANSWER stays, NEW moves to FOLLOW_UP_REQUIRED) */
+/**
+ * Where an order lands when a callback is scheduled on it.
+ *
+ * An order already waiting on a follow-up used to land NOWHERE: the map
+ * returned null for FOLLOW_UP_REQUIRED and the agent got "Cannot schedule
+ * follow-up from status FOLLOW_UP_REQUIRED". But moving the date is the
+ * most ordinary thing on this desk — she calls, the customer says "tomorrow
+ * instead", and the system refused to write the new date.
+ *
+ * So both waiting states re-schedule onto themselves. POSTPONED already
+ * did; FOLLOW_UP_REQUIRED now does too, and the route allows a
+ * self-transition precisely for this.
+ */
 function nextFollowUpTarget(from: ConfirmationStatus): ConfirmationStatus | null {
-  if (from === 'NEW' || from === 'IN_PROGRESS') return 'FOLLOW_UP_REQUIRED';
+  if (from === 'NEW' || from === 'IN_PROGRESS') return 'POSTPONED';
   if (from === 'NO_ANSWER') return 'FOLLOW_UP_REQUIRED';
-  if (from === 'POSTPONED') return 'POSTPONED'; // re-schedule
+  if (from === 'POSTPONED') return 'POSTPONED';                     // re-schedule
+  if (from === 'FOLLOW_UP_REQUIRED') return 'FOLLOW_UP_REQUIRED';   // re-schedule
   return null;
 }
