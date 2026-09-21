@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { landingThemeSchema } from './landing-theme';
 
 /** Request schemas for /api/geo/* — shared so create and update stay identical. */
 
@@ -76,6 +77,14 @@ export const storeUpdateSchema = z
     logo: z.string().url().max(500).nullable(),
     status: z.enum(STORE_STATUSES),
     type: z.enum(STORE_TYPES),
+    // ─── The store's public face ───
+    // '' clears a field; the storefront then simply shows one thing less.
+    storefrontEnabled: z.boolean(),
+    theme: landingThemeSchema.nullable(),
+    tagline: z.string().trim().max(120).nullable(),
+    about: z.string().trim().max(2000).nullable(),
+    supportPhone: z.string().trim().max(40).nullable(),
+    domain: z.string().trim().max(253).nullable(),
   })
   .partial()
   .strict();

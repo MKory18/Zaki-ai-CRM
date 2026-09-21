@@ -14,8 +14,9 @@ import { db } from './db';
  * price of not asking the database sixty times a second.
  */
 
+/** Where a hostname points, as a path to rewrite to. */
 interface Hit {
-  slug: string | null;
+  path: string | null;
   at: number;
 }
 
@@ -33,33 +34,47 @@ export function normalizeHost(host: string | null | undefined): string | null {
 }
 
 /**
- * The published page this hostname serves, or null when it serves none.
+ * What this hostname serves, as the path to rewrite to — or null.
  *
- * Only a PUBLISHED page answers: an unpublished draft on a live domain
- * would show a customer a page its owner has not released.
+ * A host can point at a landing page or at a whole storefront. Only a
+ * PUBLISHED page and an ENABLED storefront answer: a draft on a live domain
+ * would show a customer something its owner has not released.
+ *
+ * The landing page is checked first. The two are unique in their own tables
+ * and the settings screens refuse a host the other already holds, so a
+ * collision means somebody reached the database directly — and answering
+ * with the more specific of the two is the safer way to be wrong.
  */
-export async function slugForHost(host: string | null | undefined): Promise<string | null> {
+export async function pathForHost(host: string | null | undefined): Promise<string | null> {
   const bare = normalizeHost(host);
   if (!bare) return null;
 
   const hit = cache.get(bare);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.slug;
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.path;
 
-  let slug: string | null = null;
+  let path: string | null = null;
   try {
     const page = await db.landingPage.findFirst({
       where: { domain: bare, isPublished: true },
       select: { slug: true },
     });
-    slug = page?.slug ?? null;
+    if (page) {
+      path = `/lp/${page.slug}`;
+    } else {
+      const store = await db.store.findFirst({
+        where: { domain: bare, storefrontEnabled: true, status: 'ACTIVE' },
+        select: { slug: true },
+      });
+      if (store) path = `/s/${store.slug}`;
+    }
   } catch {
     // A database that is briefly unreachable must not take the whole app
     // down with it: an unresolved host falls through to the app as before.
     return null;
   }
 
-  cache.set(bare, { slug, at: Date.now() });
-  return slug;
+  cache.set(bare, { path, at: Date.now() });
+  return path;
 }
 
 /** Forget a host, so a domain just saved or removed takes effect at once. */

@@ -64,13 +64,22 @@ interface OrderFormProps {
    * is selected.
    */
   showOfferPicker?: boolean;
+  /**
+   * Where the order is posted.
+   *
+   * A landing page and a storefront are two doors into one shop, and the
+   * form is the same at both. Defaulting to the landing page's endpoint
+   * keeps every existing page working without being told about this.
+   */
+  endpoint?: string;
 }
 
 type FormState = 'idle' | 'loading' | 'success' | 'error';
 
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, endpoint }: OrderFormProps) {
+  const orderEndpoint = endpoint || `/api/public/landing-pages/${encodeURIComponent(slug)}/orders`;
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -146,7 +155,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
     setErrorMsg(null);
     setFieldErrors({});
     try {
-      const res = await fetch(`/api/public/landing-pages/${encodeURIComponent(slug)}/orders`, {
+      const res = await fetch(orderEndpoint, {
         method: 'POST',
         credentials: 'omit',
         headers: { 'Content-Type': 'application/json' },
@@ -190,7 +199,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
     setAddons((a) => ({ ...a, [recId]: 'adding' }));
     try {
       const res = await fetch(
-        `/api/public/landing-pages/${encodeURIComponent(slug)}/orders/${encodeURIComponent(result.orderNumber!)}/add-product`,
+        `${orderEndpoint}/${encodeURIComponent(result.orderNumber!)}/add-product`,
         {
           method: 'POST',
           credentials: 'omit',

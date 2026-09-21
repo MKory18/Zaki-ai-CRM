@@ -1257,6 +1257,19 @@ model Store {
   /// priced as price + fee and asked the customer for money the seller had
   /// never advertised. An offer may still override it.
   priceIncludesDelivery Boolean @default(false)
+  // ─── The store's public face ───
+  // A store was an internal boundary only. These give it a storefront,
+  // reusing the landing page's theme engine rather than growing a second
+  // one: the same accent colour, the same derived palette, the same CSS.
+  storefrontEnabled Boolean @default(false)
+  theme        String?   // JSON: { accent, mood, font, corners }
+  tagline      String?
+  about        String?   @db.Text
+  supportPhone String?
+  /// A hostname of the seller's own. Unique across stores, and checked
+  /// against landing page domains too — the proxy must never find two
+  /// answers for one host.
+  domain       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1269,6 +1282,7 @@ model Store {
   shippingBatches ShippingBatch[]
 
   @@unique([companyId, slug])
+  @@unique([domain])
   @@index([countryId, status])
   @@map("stores")
 }

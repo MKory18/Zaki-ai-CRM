@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { slugForHost } from '@/lib/landing-domain';
+import { pathForHost } from '@/lib/landing-domain';
 
 let cachedJwtSecret: Uint8Array | null = null;
 function getJwtSecret(): Uint8Array {
@@ -17,7 +17,10 @@ function getJwtSecret(): Uint8Array {
 
 const COOKIE_NAME = 'salesflow_session';
 
-const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/lp'];
+// Public by design: the login flow, landing pages, and storefronts. Each
+// carries its own guards — a storefront serves only an ENABLED one, and a
+// landing page only a PUBLISHED one.
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/lp', '/s'];
 
 /**
  * Edge pass: session presence and account state only.
@@ -91,19 +94,23 @@ export async function proxy(req: Request) {
 
   // ── A seller's own domain ──
   //
-  // A hostname pointed here in DNS serves one published landing page. The
-  // rewrite is invisible: the customer's address bar keeps the seller's
-  // domain, and the page underneath is the same /lp/<slug> as ever, with
-  // the same guards.
+  // A hostname pointed here in DNS serves one published landing page or one
+  // enabled storefront. The rewrite is invisible: the customer's address bar
+  // keeps the seller's domain, and the page underneath is the same public
+  // route as ever, with the same guards.
   //
-  // A host that belongs to no page falls straight through, so the app's own
+  // A host that belongs to nothing falls straight through, so the app's own
   // hostname costs one cached lookup per minute and nothing else. API paths
   // are left alone: the order the page posts must reach the real endpoint.
-  if (!pathname.startsWith('/api/') && !pathname.startsWith('/lp/') && !pathname.startsWith('/_next/')) {
-    const slug = await slugForHost(req.headers.get('host'));
-    if (slug) {
+  //
+  // A storefront has real paths under it (a product page), so the rewrite
+  // carries the rest of the path along — only the root is replaced.
+  if (!pathname.startsWith('/api/') && !pathname.startsWith('/lp/') &&
+      !pathname.startsWith('/s/') && !pathname.startsWith('/_next/')) {
+    const base = await pathForHost(req.headers.get('host'));
+    if (base) {
       const target = new URL(req.url);
-      target.pathname = `/lp/${slug}`;
+      target.pathname = pathname === '/' ? base : `${base}${pathname}`;
       return NextResponse.rewrite(target);
     }
   }

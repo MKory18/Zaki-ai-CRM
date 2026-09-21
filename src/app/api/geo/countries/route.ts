@@ -23,7 +23,16 @@ export async function GET() {
       where: { companyId },
       orderBy: { name: 'asc' },
       include: {
-        stores: { orderBy: { name: 'asc' }, select: { id: true, name: true, slug: true, logo: true, status: true, type: true } },
+        stores: {
+          orderBy: { name: 'asc' },
+          select: {
+            id: true, name: true, slug: true, logo: true, status: true, type: true,
+            // The storefront's own settings, so the panel edits what is
+            // stored rather than a copy it fetched separately.
+            storefrontEnabled: true, theme: true, tagline: true,
+            about: true, supportPhone: true, domain: true,
+          },
+        },
         _count: { select: { regions: true } },
       },
     });

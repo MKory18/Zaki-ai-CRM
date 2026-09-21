@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { db } = vi.hoisted(() => ({ db: { landingPage: { findFirst: vi.fn() } } }));
+const { db } = vi.hoisted(() => ({
+  db: { landingPage: { findFirst: vi.fn() }, store: { findFirst: vi.fn() } },
+}));
 vi.mock('./db', () => ({ db }));
 
-import { normalizeHost, validateDomain, slugForHost, forgetHost } from './landing-domain';
+import { normalizeHost, validateDomain, pathForHost, forgetHost } from './landing-domain';
 
 /**
  * A hostname the seller owns, pointed here, serving one landing page.
@@ -20,6 +22,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   forgetHost(host);
   db.landingPage.findFirst.mockResolvedValue({ slug: 'winter-offer' });
+  db.store.findFirst.mockResolvedValue(null);
 });
 afterEach(() => { delete process.env.APP_DOMAIN; });
 
@@ -65,33 +68,51 @@ describe('claiming a domain', () => {
 
 describe('resolving a host to a page', () => {
   it('serves only a published page', async () => {
-    await slugForHost(host);
+    expect(await pathForHost(host)).toBe('/lp/winter-offer');
     expect(db.landingPage.findFirst.mock.calls[0][0].where).toMatchObject({
       domain: host,
       isPublished: true,
     });
   });
 
+  it('falls to a storefront when no page holds the host', async () => {
+    db.landingPage.findFirst.mockResolvedValue(null);
+    db.store.findFirst.mockResolvedValue({ slug: 'sehha-plus' });
+    expect(await pathForHost('shop2.example.com')).toBe('/s/sehha-plus');
+    expect(db.store.findFirst.mock.calls[0][0].where).toMatchObject({
+      storefrontEnabled: true,
+      status: 'ACTIVE',
+    });
+    forgetHost('shop2.example.com');
+  });
+
+  it('does not serve a storefront that was never enabled', async () => {
+    db.landingPage.findFirst.mockResolvedValue(null);
+    db.store.findFirst.mockResolvedValue(null);
+    expect(await pathForHost('shop3.example.com')).toBeNull();
+    forgetHost('shop3.example.com');
+  });
+
   it('asks the database once, then remembers', async () => {
     // The proxy runs on every request, including every image.
-    await slugForHost(host);
-    await slugForHost(host);
-    await slugForHost('SHOP.EXAMPLE.COM:8080');
+    await pathForHost(host);
+    await pathForHost(host);
+    await pathForHost('SHOP.EXAMPLE.COM:8080');
     expect(db.landingPage.findFirst).toHaveBeenCalledTimes(1);
   });
 
   it('remembers a miss too — the app’s own host asks most often', async () => {
     db.landingPage.findFirst.mockResolvedValue(null);
-    expect(await slugForHost('unknown.example.com')).toBeNull();
-    await slugForHost('unknown.example.com');
+    expect(await pathForHost('unknown.example.com')).toBeNull();
+    await pathForHost('unknown.example.com');
     expect(db.landingPage.findFirst).toHaveBeenCalledTimes(1);
     forgetHost('unknown.example.com');
   });
 
   it('forgets on demand, so a domain just saved works at once', async () => {
-    await slugForHost(host);
+    await pathForHost(host);
     forgetHost(host);
-    await slugForHost(host);
+    await pathForHost(host);
     expect(db.landingPage.findFirst).toHaveBeenCalledTimes(2);
   });
 
@@ -99,11 +120,11 @@ describe('resolving a host to a page', () => {
     // A brief outage must not take every page down; it returns null and the
     // request is served as it was before custom domains existed.
     db.landingPage.findFirst.mockRejectedValue(new Error('connection refused'));
-    expect(await slugForHost('down.example.com')).toBeNull();
+    expect(await pathForHost('down.example.com')).toBeNull();
   });
 
   it('never queries for a local host', async () => {
-    await slugForHost('localhost:3000');
+    await pathForHost('localhost:3000');
     expect(db.landingPage.findFirst).not.toHaveBeenCalled();
   });
 });

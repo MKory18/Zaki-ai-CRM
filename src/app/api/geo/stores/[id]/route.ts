@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { firstIssue, storeUpdateSchema } from '@/lib/geo-schemas';
+import { validateDomain, forgetHost } from '@/lib/landing-domain';
 
 /** PATCH /api/geo/stores/:id (geo.manage). countryId is immutable; no DELETE. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -24,7 +25,37 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (clash) return NextResponse.json({ error: 'هذا المعرّف مستخدم لمتجر آخر' }, { status: 409 });
     }
 
-    const store = await db.store.update({ where: { id }, data: parsed.data });
+    // ── The custom domain ──
+    // Unique across stores AND against landing pages: the proxy resolves a
+    // host by asking both, and two claims on one host would make its answer
+    // depend on which table it read first.
+    const data: Record<string, unknown> = { ...parsed.data };
+    if (parsed.data.domain !== undefined) {
+      const raw = parsed.data.domain?.trim() ?? '';
+      if (!raw) {
+        data.domain = null;
+      } else {
+        const check = validateDomain(raw);
+        if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
+        const [otherStore, page] = await Promise.all([
+          db.store.findFirst({ where: { domain: check.domain, id: { not: id } }, select: { id: true } }),
+          db.landingPage.findFirst({ where: { domain: check.domain }, select: { id: true } }),
+        ]);
+        if (otherStore || page) {
+          return NextResponse.json({ error: 'هذا النطاق مستخدم بالفعل' }, { status: 409 });
+        }
+        data.domain = check.domain;
+      }
+      forgetHost(before.domain);
+      forgetHost(typeof data.domain === 'string' ? data.domain : null);
+    }
+
+    // The theme is stored as JSON, like a landing page's.
+    if (parsed.data.theme !== undefined) {
+      data.theme = parsed.data.theme ? JSON.stringify(parsed.data.theme) : null;
+    }
+
+    const store = await db.store.update({ where: { id }, data });
     await logAudit({
       companyId,
       userId: user.id,

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Globe, Loader2, Plus, Store } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { StorefrontSettings } from '@/components/settings/StorefrontSettings';
 
 /**
  * /settings/geo — countries, their stores and their regions in one screen.
@@ -42,6 +43,7 @@ export function GeoSettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [openCountry, setOpenCountry] = useState<string | null>(null);
   const [adding, setAdding] = useState<'country' | string | null>(null);
+  const [storefrontFor, setStorefrontFor] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -215,6 +217,13 @@ export function GeoSettingsScreen() {
                 </button>
               </li>
             ))}
+            {c.stores.map((s) =>
+              storefrontFor === s.id ? (
+                <li key={`${s.id}-storefront`} className="bg-[#f8fafc] p-4">
+                  <StorefrontSettings store={s as never} onSaved={load} />
+                </li>
+              ) : null
+            )}
             <li className="p-3">
               {adding === c.id ? (
                 <AddStore
