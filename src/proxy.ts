@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
+import { slugForHost } from '@/lib/landing-domain';
 
 let cachedJwtSecret: Uint8Array | null = null;
 function getJwtSecret(): Uint8Array {
@@ -85,7 +86,27 @@ function validateApiOrigin(req: Request): NextResponse | null {
 }
 
 export async function proxy(req: Request) {
-  const { pathname } = new URL(req.url);
+  const url = new URL(req.url);
+  const { pathname } = url;
+
+  // ── A seller's own domain ──
+  //
+  // A hostname pointed here in DNS serves one published landing page. The
+  // rewrite is invisible: the customer's address bar keeps the seller's
+  // domain, and the page underneath is the same /lp/<slug> as ever, with
+  // the same guards.
+  //
+  // A host that belongs to no page falls straight through, so the app's own
+  // hostname costs one cached lookup per minute and nothing else. API paths
+  // are left alone: the order the page posts must reach the real endpoint.
+  if (!pathname.startsWith('/api/') && !pathname.startsWith('/lp/') && !pathname.startsWith('/_next/')) {
+    const slug = await slugForHost(req.headers.get('host'));
+    if (slug) {
+      const target = new URL(req.url);
+      target.pathname = `/lp/${slug}`;
+      return NextResponse.rewrite(target);
+    }
+  }
 
   // API routes: origin validation on mutations; auth lives in each handler.
   // Public endpoints (landing pages, webhooks) are intentionally included —

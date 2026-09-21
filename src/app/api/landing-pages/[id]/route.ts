@@ -7,6 +7,7 @@ import { apiError } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { validateSlug, clampStoredHtml, conversionRate } from '@/lib/landing-pages';
 import { validatePixelId } from '@/lib/landing-tracking';
+import { validateDomain, forgetHost } from '@/lib/landing-domain';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -62,6 +63,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
       isPublished: z.boolean().optional(),
       metaPixelId: z.string().trim().max(20).optional().nullable(),
       metaPixelEnabled: z.boolean().optional(),
+      // '' clears the domain; the page goes back to /lp/<slug> only.
+      domain: z.string().trim().max(253).optional().nullable(),
     });
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -80,7 +83,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
       parsed.data.slug !== undefined ||
       parsed.data.productId !== undefined ||
       parsed.data.metaPixelId !== undefined ||
-      parsed.data.metaPixelEnabled !== undefined;
+      parsed.data.metaPixelEnabled !== undefined ||
+      parsed.data.domain !== undefined;
     if (needsEdit) await requirePermission('landing_pages.edit');
 
     const data: Record<string, unknown> = {};
@@ -98,6 +102,32 @@ export async function PATCH(req: Request, ctx: Ctx) {
       data.productId = parsed.data.productId;
     }
     if (parsed.data.isPublished !== undefined) data.isPublished = parsed.data.isPublished;
+
+    // ── Custom domain ──
+    if (parsed.data.domain !== undefined) {
+      const raw = parsed.data.domain?.trim() ?? '';
+      if (!raw) {
+        data.domain = null;
+        data.domainVerifiedAt = null;
+      } else {
+        const check = validateDomain(raw);
+        if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
+        // Unique across companies, so a clash is somebody else's claim and
+        // saying which company holds it would leak who our customers are.
+        const taken = await db.landingPage.findFirst({
+          where: { domain: check.domain, id: { not: lp.id } },
+          select: { id: true },
+        });
+        if (taken) {
+          return NextResponse.json({ error: 'هذا النطاق مستخدم بالفعل' }, { status: 409 });
+        }
+        data.domain = check.domain;
+      }
+      // The proxy caches host → page for a minute; a domain is changed at the
+      // exact moment somebody is waiting to see whether it works.
+      forgetHost(lp.domain);
+      forgetHost(typeof data.domain === 'string' ? data.domain : null);
+    }
 
     // ── Meta Pixel configuration (configuration, never code) ──
     if (parsed.data.metaPixelId !== undefined || parsed.data.metaPixelEnabled !== undefined) {
@@ -133,7 +163,15 @@ export async function PATCH(req: Request, ctx: Ctx) {
       return NextResponse.json({ success: true, landingPage: updated });
     } catch (e: any) {
       if (e?.code === 'P2002') {
-        return NextResponse.json({ error: 'هذا الرابط (slug) مستخدم بالفعل في شركتك' }, { status: 409 });
+        // Two unique keys reach here now; naming the wrong one sends the
+        // seller to change a field that was never the problem.
+        const onDomain = Array.isArray(e?.meta?.target)
+          ? e.meta.target.includes('domain')
+          : String(e?.meta?.target ?? '').includes('domain');
+        return NextResponse.json(
+          { error: onDomain ? 'هذا النطاق مستخدم بالفعل' : 'هذا الرابط (slug) مستخدم بالفعل في شركتك' },
+          { status: 409 }
+        );
       }
       throw e;
     }

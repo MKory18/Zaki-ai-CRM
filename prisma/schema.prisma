@@ -935,6 +935,12 @@ model LandingPage {
   metaPixelId      String?  // Meta/Facebook Pixel ID (digits only, validated server-side)
   metaPixelEnabled Boolean  @default(false) // false/empty → no Pixel script is ever loaded
   productId    String?
+  // A hostname of the seller's own, pointed at this app in DNS. Lowercase,
+  // and unique across every company: a hostname belongs to whoever proved
+  // it, and two claims on one would make the proxy's answer depend on which
+  // row it happened to read first.
+  domain           String?
+  domainVerifiedAt DateTime?
   isPublished  Boolean  @default(false)
   viewsCount   Int      @default(0) // view = one successful public page render (no PII)
   ordersCount  Int      @default(0)
@@ -956,6 +962,7 @@ model LandingPage {
   store   Store?   @relation(fields: [storeId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, slug])
+  @@unique([domain])
   @@index([companyId])
   @@index([companyId, isPublished])
   @@index([storeId])

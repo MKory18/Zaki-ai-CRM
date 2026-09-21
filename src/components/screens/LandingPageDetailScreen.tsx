@@ -20,7 +20,7 @@ export function LandingPageDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  const [form, setForm] = useState({ name: '', slug: '', productId: '' });
+  const [form, setForm] = useState({ name: '', slug: '', productId: '', domain: '' });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -46,7 +46,12 @@ export function LandingPageDetailScreen() {
     try {
       const data = await crmApi(`/api/landing-pages/${lpId}`);
       setLp(data.landingPage);
-      setForm({ name: data.landingPage.name, slug: data.landingPage.slug, productId: data.landingPage.productId || '' });
+      setForm({
+        name: data.landingPage.name,
+        slug: data.landingPage.slug,
+        productId: data.landingPage.productId || '',
+        domain: data.landingPage.domain || '',
+      });
     } catch (e: any) { setApiError(e.message); } finally { setLoading(false); }
   }, [lpId]);
 
@@ -64,7 +69,12 @@ export function LandingPageDetailScreen() {
     try {
       await crmApi(`/api/landing-pages/${lpId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ name: form.name, slug: form.slug.toLowerCase().trim(), productId: form.productId || null }),
+        body: JSON.stringify({
+          name: form.name,
+          slug: form.slug.toLowerCase().trim(),
+          productId: form.productId || null,
+          domain: form.domain.trim(),
+        }),
       });
       setSaveMsg('تم الحفظ ✓');
       await load();
@@ -204,6 +214,31 @@ export function LandingPageDetailScreen() {
                   <label className="text-xs font-semibold text-[#364152]">الرابط (slug)</label>
                   <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} dir="ltr" />
                 </div>
+                {/* A domain of the seller's own. The page keeps working at
+                    /lp/<slug> either way — the domain is a second door, not
+                    a replacement, so a mistyped DNS record never takes a
+                    live page offline. */}
+                <div>
+                  <label className="text-xs font-semibold text-[#364152]">نطاق خاص (اختياري)</label>
+                  <Input
+                    value={form.domain}
+                    onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                    dir="ltr"
+                    placeholder="shop.example.com"
+                  />
+                  <p className="mt-1 text-[10.5px] leading-relaxed text-[#697586]">
+                    وجّه النطاق إلى هذا الخادم بسجل <code dir="ltr">A</code> أو{' '}
+                    <code dir="ltr">CNAME</code> عند مزوّد النطاق، ثم اكتبه هنا. الصفحة
+                    تبقى تعمل على <code dir="ltr">/lp/{lp.slug}</code> في الحالتين، فالنطاق
+                    باب إضافي لا بديل — وخطأ في الـDNS لا يوقف صفحة تعمل.
+                  </p>
+                  {lp.domain && (
+                    <p className="mt-1 text-[10.5px] text-[#15803d]" dir="ltr">
+                      https://{lp.domain}
+                    </p>
+                  )}
+                </div>
+
                 <div>
                   <label className="text-xs font-semibold text-[#364152]">المنتج المرتبط</label>
                   <Select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
