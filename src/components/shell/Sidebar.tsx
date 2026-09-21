@@ -70,6 +70,18 @@ export function Sidebar({
       } catch {
         // Navigation still works without the browser remembering.
       }
+      // Folding has to actually fold. Every group opened by hand stayed
+      // open underneath the pin, so pressing «اطوِ القوائم» left the list
+      // exactly as it was and read as a dead button. The active group is
+      // kept: collapsing must never hide where you are standing.
+      if (!next) {
+        setOpen(new Set());
+        try {
+          localStorage.setItem(OPEN_GROUPS_KEY, '[]');
+        } catch {
+          /* remembering is a convenience, not a requirement */
+        }
+      }
       return next;
     });
   }

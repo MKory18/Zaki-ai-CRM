@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Copy, Check, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { LANDING_HTML_PROMPT, promptAsWordDocument } from '@/lib/landing-html-prompt';
+import { copyText } from '@/lib/clipboard';
 
 /**
  * Hands the seller the brief to give an AI.
@@ -17,7 +18,7 @@ export function HtmlPromptButtons() {
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(LANDING_HTML_PROMPT);
+      if (!(await copyText(LANDING_HTML_PROMPT))) throw new Error('clipboard');
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {

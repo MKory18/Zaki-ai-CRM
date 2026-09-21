@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { apiJson } from '@/lib/api-client';
+import { copyText } from '@/lib/clipboard';
 
 /**
  * /apps/store — what this system can be connected to.
@@ -296,7 +297,10 @@ function RegisterApp({
             <code className="min-w-0 flex-1 break-all font-mono text-[11px] text-[#121926]" dir="ltr">{secret}</code>
             <button
               onClick={async () => {
-                try { await navigator.clipboard.writeText(secret); setCopied(true); } catch { /* blocked clipboard */ }
+                // Shown once and never again, so a copy that silently
+                // fails loses the secret for good.
+                if (await copyText(secret)) setCopied(true);
+                else window.prompt('انسخ السرّ يدوياً — لن يُعرض مرة أخرى:', secret);
               }}
               className="shrink-0 cursor-pointer rounded-lg p-2 text-[#697586] hover:bg-white"
             >

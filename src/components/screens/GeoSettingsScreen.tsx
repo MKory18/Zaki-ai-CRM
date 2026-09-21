@@ -98,7 +98,7 @@ export function GeoSettingsScreen() {
     <div className="space-y-4 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[#121926]">البلدان والمتاجر والمحافظ</h1>
+          <h1 className="text-lg font-bold text-[#121926]">البلدان والمتاجر</h1>
           <p className="text-sm text-[#697586] mt-1">المتجر يرث كل الإعدادات من بلده.</p>
         </div>
         <button

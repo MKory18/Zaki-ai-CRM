@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { Send, RefreshCw, CheckCircle2, XCircle, Copy } from 'lucide-react';
+import { copyText } from '@/lib/clipboard';
 
 export function TelegramSettingsScreen() {
   const { currentUser } = useApp();
@@ -46,7 +47,7 @@ export function TelegramSettingsScreen() {
 
   const copyWebhook = () => {
     if (status?.webhookUrl) {
-      navigator.clipboard?.writeText(status.webhookUrl);
+      void copyText(status.webhookUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }

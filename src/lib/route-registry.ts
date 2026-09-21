@@ -127,7 +127,7 @@ export const NAV: NavGroup[] = [
     key: 'settings',
     label: 'الإعدادات',
     routes: [
-      r('/settings/geo', 'البلدان والمتاجر والمحافظ', 'Globe', ['geo.view']),
+      r('/settings/geo', 'البلدان والمتاجر', 'Globe', ['geo.view']),
       r('/settings/delivery-fees', 'أجور التوصيل', 'Receipt', ['settings.view']),
       r('/settings/commission', 'العمولات', 'Percent', ['settings.view']),
       r('/settings/couriers', 'شركات الشحن', 'Truck', ['settings.view']),

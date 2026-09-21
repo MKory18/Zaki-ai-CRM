@@ -97,7 +97,7 @@ export function FinanceProfitScreen() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.finance}</h1>
             <p className="text-xs text-[#697586] mt-1">
-              Section 17 Strict Financial Accounting: Real Delivered Profit, COGS, Shipping & Operational Expense Ledger
+              الربح من الموصَّل فقط — ناقص كلفة البضاعة والشحن والعمولات والمصاريف
             </p>
           </div>
 
@@ -107,38 +107,38 @@ export function FinanceProfitScreen() {
             className="flex items-center space-x-1.5"
           >
             <Plus className="w-4 h-4" />
-            <span>Record Business Expense</span>
+            <span>سجّل مصروفاً</span>
           </Button>
         </div>
 
         {/* Real Profit KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
-            title="Delivered Gross Revenue"
+            title="إيراد الموصَّل"
             value={`$${summary.totalRevenue.toFixed(2)}`}
-            subtitle="Verified delivered orders only"
+            subtitle="الطلبات المسلَّمة فعلاً، لا المؤكدة"
             icon={TrendingUp}
             color="blue"
           />
           <KpiCard
-            title="Real Net Profit"
+            title="صافي الربح"
             value={`$${summary.netProfit.toFixed(2)}`}
-            subtitle={`${summary.profitMargin}% Net Margin`}
+            subtitle={`هامش ${summary.profitMargin}%`}
             icon={DollarSign}
             color="emerald"
             trend={{ value: `${summary.profitMargin}%`, positive: summary.netProfit >= 0 }}
           />
           <KpiCard
-            title="Product COGS"
+            title="كلفة البضاعة"
             value={`$${summary.totalCOGS.toFixed(2)}`}
-            subtitle="Batch-based production cost"
+            subtitle="من كلفة التشغيلات — تُدخَل من شاشة التصنيع"
             icon={Receipt}
             color="amber"
           />
           <KpiCard
-            title="Operating Expenses"
+            title="المصاريف التشغيلية"
             value={`$${summary.totalOperationalExpenses.toFixed(2)}`}
-            subtitle="Marketing, shipping & overhead"
+            subtitle="إعلانات وشحن ورواتب وما إليها"
             icon={ArrowDownRight}
             color="rose"
           />
@@ -147,37 +147,37 @@ export function FinanceProfitScreen() {
         {/* Financial Flow Equation */}
         <Card>
           <CardHeader
-            title="Delivered Cash Flow Reconciliation"
-            subtitle="Financial verification matching Section 17 of specification"
+            title="من أين جاء الربح"
+            subtitle="كل رقم مطروح من الذي قبله — المجموع هو ما بقي فعلاً"
           />
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-center">
               <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-xs text-[#9ca3af] block">Gross Revenue</span>
+                <span className="text-xs text-[#9ca3af] block">إيراد الموصَّل</span>
                 <span className="text-lg font-bold text-[#00c853] mt-1 block">
                   +${summary.totalRevenue.toFixed(2)}
                 </span>
               </div>
               <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-xs text-[#9ca3af] block">COGS</span>
+                <span className="text-xs text-[#9ca3af] block">كلفة البضاعة</span>
                 <span className="text-lg font-bold text-[#fb323f] mt-1 block">
                   -${summary.totalCOGS.toFixed(2)}
                 </span>
               </div>
               <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-xs text-[#9ca3af] block">Shipping & Comm.</span>
+                <span className="text-xs text-[#9ca3af] block">شحن وعمولات</span>
                 <span className="text-lg font-bold text-[#fb323f] mt-1 block">
                   -${(summary.totalShipping + summary.totalCommissions).toFixed(2)}
                 </span>
               </div>
               <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-xs text-[#9ca3af] block">Expenses</span>
+                <span className="text-xs text-[#9ca3af] block">مصاريف</span>
                 <span className="text-lg font-bold text-[#fb323f] mt-1 block">
                   -${summary.totalOperationalExpenses.toFixed(2)}
                 </span>
               </div>
               <div className="bg-[#b8256e] p-3 rounded-xl">
-                <span className="text-xs text-white/80 block font-bold">NET CASH PROFIT</span>
+                <span className="text-xs text-white/80 block font-bold">الصافي</span>
                 <span className="text-xl font-black text-white mt-1 block">
                   ${summary.netProfit.toFixed(2)}
                 </span>
@@ -189,19 +189,19 @@ export function FinanceProfitScreen() {
         {/* Expenses Ledger */}
         <Card>
           <CardHeader
-            title="Business Expenses Ledger"
-            subtitle="Marketing campaigns, warehouse packaging supplies, commissions, and overhead"
+            title="سجل المصاريف"
+            subtitle="كل مصروف بتاريخه وبندِه — يُخصم مباشرة من صافي الربح"
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
                 <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-3.5">Date</th>
-                    <th className="px-6 py-3.5">Expense Title</th>
-                    <th className="px-6 py-3.5">Category</th>
-                    <th className="px-6 py-3.5">Amount</th>
-                    <th className="px-6 py-3.5">Notes</th>
+                    <th className="px-6 py-3.5">التاريخ</th>
+                    <th className="px-6 py-3.5">البند</th>
+                    <th className="px-6 py-3.5">النوع</th>
+                    <th className="px-6 py-3.5">المبلغ</th>
+                    <th className="px-6 py-3.5">ملاحظات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e3e8ef]">
@@ -270,13 +270,13 @@ export function FinanceProfitScreen() {
       <Modal
         isOpen={expenseModalOpen}
         onClose={() => setExpenseModalOpen(false)}
-        title="Record Operating Expense"
-        subtitle="Deducted directly from company net profit calculations"
+        title="مصروف جديد"
+        subtitle="يُخصم مباشرة من صافي ربح الشركة"
       >
         <form onSubmit={handleRecordExpense} className="space-y-4">
           <Input
-            label="Expense Title *"
-            placeholder="e.g. TikTok Ads Campaign #4"
+            label="البند *"
+            placeholder="مثلاً: حملة تيك توك رقم ٤"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -284,23 +284,23 @@ export function FinanceProfitScreen() {
 
           <div className="grid grid-cols-2 gap-3">
             <Select
-              label="Expense Category *"
+              label="النوع *"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               required
             >
-              <option value="MARKETING">MARKETING (Ads, Influencers)</option>
-              <option value="PACKAGING">PACKAGING (Boxes, Bubblewrap)</option>
-              <option value="SHIPPING">SHIPPING (Courier fees)</option>
-              <option value="COMMISSION">COMMISSION</option>
-              <option value="SALARIES">SALARIES</option>
-              <option value="OFFICE">OFFICE & UTILITIES</option>
-              <option value="MANUFACTURING">MANUFACTURING</option>
-              <option value="OTHER">OTHER</option>
+              <option value="MARKETING">تسويق وإعلانات</option>
+              <option value="PACKAGING">تغليف</option>
+              <option value="SHIPPING">شحن وتوصيل</option>
+              <option value="COMMISSION">عمولات</option>
+              <option value="SALARIES">رواتب</option>
+              <option value="OFFICE">مكتب وخدمات</option>
+              <option value="MANUFACTURING">تصنيع</option>
+              <option value="OTHER">أخرى</option>
             </Select>
 
             <Input
-              label="Amount ($) *"
+              label="المبلغ *"
               type="number"
               step="0.01"
               value={amount}
@@ -310,7 +310,7 @@ export function FinanceProfitScreen() {
           </div>
 
           <Input
-            label="Expense Date *"
+            label="التاريخ *"
             type="date"
             value={expenseDate}
             onChange={(e) => setExpenseDate(e.target.value)}
@@ -318,7 +318,7 @@ export function FinanceProfitScreen() {
           />
 
           <Textarea
-            label="Notes"
+            label="ملاحظات"
             placeholder="e.g. Targeting Cairo/Alexandria campaign"
             rows={2}
             value={notes}

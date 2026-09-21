@@ -11,6 +11,7 @@ import {
   Loader2, FileCode, MonitorPlay, Gift,
 } from 'lucide-react';
 import { screenApi as crmApi } from '@/lib/screen-api';
+import { copyText } from '@/lib/clipboard';
 
 export function LandingPageDetailScreen() {
   const params = useParams<{ id: string }>();
@@ -141,7 +142,12 @@ export function LandingPageDetailScreen() {
 
 
   const copyUrl = async () => {
-    try { await navigator.clipboard.writeText(publicUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {}
+    if (await copyText(publicUrl)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } else {
+      window.prompt('انسخ الرابط يدوياً:', publicUrl);
+    }
   };
 
   if (loading) {

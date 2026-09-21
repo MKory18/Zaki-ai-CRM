@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { screenApi as crmApi, qs } from '@/lib/screen-api';
 import { formatDate } from '@/lib/screen-api';
+import { copyText } from '@/lib/clipboard';
 
 export function LandingPagesScreen() {
   const [pages, setPages] = useState<any[]>([]);
@@ -46,7 +47,16 @@ export function LandingPagesScreen() {
     typeof window !== 'undefined' ? `${window.location.origin}/lp/${lp.slug}` : `/lp/${lp.slug}`;
 
   const copyUrl = async (lp: any) => {
-    try { await navigator.clipboard.writeText(publicUrl(lp)); setCopiedId(lp.id); setTimeout(() => setCopiedId(null), 1500); } catch {}
+    // Silence was the bug: over plain HTTP the clipboard API is missing and
+    // the old `catch {}` made the button look dead. Now it falls back, and
+    // when even that fails it says the link out loud so it can be copied by
+    // hand.
+    if (await copyText(publicUrl(lp))) {
+      setCopiedId(lp.id);
+      setTimeout(() => setCopiedId(null), 1500);
+    } else {
+      window.prompt('انسخ الرابط يدوياً:', publicUrl(lp));
+    }
   };
 
   const togglePublish = async (lp: any) => {
