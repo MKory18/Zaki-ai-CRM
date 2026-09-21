@@ -202,7 +202,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 flex items-center gap-2">
           <PhoneCall className="w-4 h-4 text-indigo-600" />
-          {ar ? 'سير عمل التأكيد وسجل التواصل' : 'Confirmation Workflow & Contact History'}
+          {ar ? 'تسجيل نتيجة الاتصال' : 'Record a call outcome'}
         </h4>
         <div className="flex items-center gap-2">
           {summary?.total > 0 && (
@@ -290,64 +290,6 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
           <button onClick={() => setFeedback(null)} className="opacity-60 hover:opacity-100 cursor-pointer shrink-0">✕</button>
         </div>
       )}
-
-      {/* Contact attempt history — append-only chronological */}
-      <div className="border-t border-slate-100 pt-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
-          <History className="w-3 h-3" />
-          {ar ? 'سجل التواصل مع العميل' : 'Customer Contact History'}
-          {busy && <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-500" />}
-        </p>
-
-        {attempts.length === 0 ? (
-          <p className="text-[11px] text-slate-400 py-2">
-            {ar ? 'لا توجد محاولات تواصل بعد.' : 'No contact attempts yet.'}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {attempts.map((att: any) => {
-              const cfg = RESULTS[att.result];
-              const isGood = ['ANSWERED', 'CONFIRMED'].includes(att.result);
-              const isBad = ['NO_ANSWER', 'WRONG_NUMBER', 'BUSY', 'REJECTED'].includes(att.result);
-              return (
-                <div
-                  key={att.id}
-                  className={`p-2.5 rounded-xl border text-xs ${
-                    isGood ? 'bg-green-50/60 border-green-200' : isBad ? 'bg-red-50/60 border-red-200' : 'bg-slate-50 border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="font-bold text-slate-800">
-                      📞 {ar ? `محاولة #${att.attemptNumber}` : `Attempt #${att.attemptNumber}`}
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      {arDateTime(att.createdAt)}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
-                    <span className="text-slate-500">
-                      {ar ? 'الموظف:' : 'Employee:'} <span className="font-semibold text-slate-700">{att.employee?.name}</span>
-                    </span>
-                    <span className="text-slate-500">
-                      {ar ? 'النتيجة:' : 'Result:'} <span className="font-semibold text-slate-700">{ar ? cfg?.ar ?? att.result : cfg?.en ?? att.result}</span>
-                    </span>
-                    <span className="text-slate-500">
-                      {ar ? 'القناة:' : 'Channel:'} <span className="text-slate-700">{(METHOD_LABELS as any)[att.contactMethod]?.[ar ? 'ar' : 'en'] ?? att.contactMethod}</span>
-                    </span>
-                    {att.nextFollowUpAt && (
-                      <span className="text-orange-600 font-semibold inline-flex items-center gap-1">
-                        <CalendarClock className="w-3 h-3" />
-                        {ar ? 'المتابعة:' : 'Next:'} {arDateShort(att.nextFollowUpAt)}
-                      </span>
-                    )}
-                  </div>
-                  {att.note && <p className="mt-1 text-slate-600 leading-relaxed">{att.note}</p>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
       {/* Quick-action form modal */}
       <Modal isOpen={!!openForm} onClose={() => setOpenForm(null)} title={formTitle()} maxWidth="md">

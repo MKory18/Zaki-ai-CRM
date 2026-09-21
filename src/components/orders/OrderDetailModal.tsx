@@ -15,6 +15,8 @@ import { useApp } from '@/context/AppContext';
 import { apiFetch, apiJson } from '@/lib/api-client';
 import { CustomerHistoryModal } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
+import { OrderStages } from '@/components/orders/OrderStages';
+import { orderStages } from '@/lib/order-stages';
 import { useRegions } from '@/hooks/useRegions';
 import { amount, arDateShort, arDateTime, type Currency } from '@/lib/format';
 import {
@@ -434,6 +436,13 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   // The store's currency, the same one the orders list prints.
   const money = (n: number) => amount(n, currency);
 
+  // Derived here from the order the screen already holds — the same way the
+  // state and the zone are derived, and never stored.
+  const stages = orderStages(order, {
+    contactAttempts: order._count?.contactAttempts,
+    deliveryAttempts: order._count?.deliveryAttempts,
+  });
+
   return (
     <Modal
       isOpen={isOpen}
@@ -588,7 +597,11 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             }}
           />
 
-          {/* ─── Phase D1: Quick confirmation actions + contact history ─── */}
+          {/* How far it has got, when, and by whom. Not a control: a passed
+              stage is a record, and a record you can edit is not a record. */}
+          <OrderStages stages={stages} />
+
+          {/* ─── Quick confirmation actions ─── */}
           <ConfirmationActions
             order={order}
             ar={ar}

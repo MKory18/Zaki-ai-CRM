@@ -170,6 +170,9 @@ export async function GET(
         activities: {
           orderBy: { createdAt: 'desc' },
         },
+        // Counts, not rows: the journey cards show how many attempts a stage
+        // took, and the attempts themselves are in the merged event log.
+        _count: { select: { contactAttempts: true, deliveryAttempts: true } },
         telegramMessages: {
           orderBy: { createdAt: 'desc' },
           select: { id: true, chatId: true, threadId: true, threadName: true, messageId: true, createdAt: true },
