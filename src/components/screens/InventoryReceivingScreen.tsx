@@ -21,6 +21,7 @@ interface ProductRow {
   name: string;
   sku?: string | null;
   status?: string;
+  sourceType?: 'MANUFACTURED' | 'PURCHASED';
   produced: number;
   sold: number;
   remaining: number;
@@ -51,14 +52,35 @@ export function InventoryReceivingScreen() {
   const rows = useMemo(() => {
     const q = term.trim();
     return (products ?? [])
+      // This screen is the door for what you BUY ready. What you make comes
+      // in through a production run, where its costs are broken down; the
+      // server refuses the other way round in any case.
+      .filter((p) => p.sourceType === 'PURCHASED')
       .filter((p) => (q ? p.name.includes(q) : true))
       .filter((p) => (onlyEmpty ? p.remaining <= 0 : true));
   }, [products, term, onlyEmpty]);
 
-  const emptyCount = (products ?? []).filter((p) => p.remaining <= 0).length;
+  const emptyCount = (products ?? [])
+    .filter((p) => p.sourceType === 'PURCHASED')
+    .filter((p) => p.remaining <= 0).length;
 
   return (
     <div className="max-w-5xl space-y-3">
+      <div>
+        <h1 className="text-2xl font-bold text-[#121926]">استلام بضاعة جاهزة</h1>
+        <p className="mt-1 text-xs leading-relaxed text-[#697586]">
+          الباب الذي تدخل منه بضاعة المنتجات التي تشتريها جاهزة، بسعر شرائها.
+          ما تصنّعه بنفسك يدخل من «تشغيلات الإنتاج» ببنود كلفته — ولهذا لا يظهر هنا.
+        </p>
+      </div>
+
+      {rows.length === 0 && (products?.length ?? 0) > 0 && !term && !onlyEmpty && (
+        <p className="rounded-[8px] border border-[#e3e8ef] bg-white p-6 text-center text-sm text-[#697586]">
+          لا منتجات جاهزة بعد — كل منتجاتك مصنّعة. يُحدَّد النوع عند إضافة المنتج،
+          ويمكن تغييره من صفحة المنتج.
+        </p>
+      )}
+
       <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 flex flex-wrap gap-3 items-end">
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[#364152] mb-1">ابحث عن المنتج</span>
@@ -179,11 +201,11 @@ function ReceiveDialog({
             await apiJson('/api/inventory', {
               method: 'POST',
               body: JSON.stringify({
+                action: 'receive',
                 productId: product.id,
                 quantity: Number(quantity),
-                type: 'PRODUCTION',
-                unitCost: unitCost ? Number(unitCost) : undefined,
-                reason: note.trim() || 'استلام بضاعة',
+                unitCost: unitCost ? Number(unitCost) : 0,
+                note: note.trim() || null,
               }),
             });
             onSaved(`أُضيفت ${quantity} وحدة إلى ${product.name}`);

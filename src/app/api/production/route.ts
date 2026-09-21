@@ -17,6 +17,8 @@ export async function GET(req: Request) {
         product: {
           select: { id: true, name: true, sku: true },
         },
+        // The named costs of this run, beside the four fixed buckets.
+        costLines: { orderBy: { sortOrder: 'asc' }, select: { label: true, amount: true } },
       },
       orderBy: { productionDate: 'desc' },
     });
@@ -101,7 +103,20 @@ export async function POST(req: Request) {
     // Phase S: tenant-validate the referenced product
     const prodCheck = await db.product.findFirst({ where: { id: productId, companyId } });
     if (!prodCheck) {
-      return NextResponse.json({ error: "Product not found in your company" }, { status: 404 });
+      return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
+    }
+
+    // A bought product entered as a production run puts invented
+    // manufacturing costs into the production reports — a run that never
+    // happened, with a cost breakdown nobody can trace to any work.
+    if (prodCheck.sourceType === 'PURCHASED') {
+      return NextResponse.json(
+        {
+          error: `«${prodCheck.name}» منتج جاهز — تُضاف كميته من «استلام بضاعة جاهزة» بسعر الشراء.`,
+          code: 'WRONG_DOOR',
+        },
+        { status: 409 }
+      );
     }
 
     const batch = await db.productionBatch.create({

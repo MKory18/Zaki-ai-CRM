@@ -41,7 +41,6 @@ export const NAV: NavGroup[] = [
       r('/orders', 'الطلبات', 'ShoppingCart', ['orders.view']),
       r('/customers', 'العملاء', 'Users', ['customers.view', 'customers.view_basic']),
       r('/products', 'المنتجات', 'Package', ['products.view']),
-      r('/manufacturing', 'التصنيع والتشغيلات', 'Factory', ['production.view']),
       r('/assistant', 'المساعد الذكي', 'Bot', ['ai.use']),
     ],
   },
@@ -71,9 +70,13 @@ export const NAV: NavGroup[] = [
   {
     key: 'inventory',
     label: 'المخزون',
+    // Stock has one home: what you have, the two doors it comes in through,
+    // and the history. Production used to sit beside "Products" as if it were
+    // a different subject; it is the door for the goods you make.
     routes: [
-      r('/inventory/receiving', 'استلام البضاعة', 'PackagePlus', ['inventory.adjust']),
       r('/inventory/balances', 'أرصدة المخزون', 'Boxes', ['inventory.view']),
+      r('/manufacturing', 'تشغيلات الإنتاج', 'Factory', ['production.view']),
+      r('/inventory/receiving', 'استلام بضاعة جاهزة', 'PackagePlus', ['inventory.adjust']),
       r('/inventory/movements', 'حركات المخزون', 'ArrowLeftRight', ['inventory.view']),
     ],
   },

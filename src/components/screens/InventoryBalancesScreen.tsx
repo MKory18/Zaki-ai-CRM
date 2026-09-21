@@ -17,12 +17,16 @@ export function InventoryBalancesScreen() {
   const [loading, setLoading] = useState(true);
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
 
-  // Adjustment State
+  // Stock count. NOT a way to add stock: goods come in through production
+  // or receiving, where they carry a cost. This is for when the shelf and
+  // the system disagree, and you enter what you COUNTED — never a delta.
+  // Typing a difference means doing the subtraction in your head at the one
+  // moment you are already unsure of the number.
   const [productId, setProductId] = useState('');
-  const [adjustQty, setAdjustQty] = useState(10);
-  const [type, setType] = useState('MANUAL_ADJUSTMENT');
-  const [reason, setReason] = useState('Stock count verification');
+  const [countedQuantity, setCountedQuantity] = useState(0);
+  const [reason, setReason] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
+  const [countError, setCountError] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -50,22 +54,28 @@ export function InventoryBalancesScreen() {
   const handleAdjustStock = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
+    setCountError(null);
     try {
       const res = await fetch('/api/inventory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, quantity: adjustQty, type, reason }),
+        body: JSON.stringify({ action: 'recount', productId, countedQuantity, reason }),
       });
-      if (res.ok) {
-        setAdjustModalOpen(false);
-        loadData();
-      }
-    } catch (e) {
-      console.error(e);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'تعذر تسجيل الجرد');
+      setAdjustModalOpen(false);
+      setReason('');
+      loadData();
+    } catch (e: any) {
+      setCountError(e.message || 'تعذر تسجيل الجرد');
     } finally {
       setModalLoading(false);
     }
   };
+
+  const selected = stockSummary.find((s) => s.id === productId);
+  const systemQty = selected?.remaining ?? 0;
+  const difference = countedQuantity - systemQty;
 
   return (
     <>
@@ -85,7 +95,7 @@ export function InventoryBalancesScreen() {
             className="flex items-center space-x-1.5"
           >
             <ArrowDownUp className="w-4 h-4" />
-            <span>Manual Stock Adjustment</span>
+            <span>جرد مخزون</span>
           </Button>
         </div>
 
@@ -108,15 +118,15 @@ export function InventoryBalancesScreen() {
 
                 <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
                   <div className="bg-[#f8fafc] p-2 rounded-lg">
-                    <span className="text-[#9ca3af] block text-[10px]">Produced</span>
+                    <span className="text-[#9ca3af] block text-[10px]">دخل</span>
                     <span className="font-bold text-[#121926]">{s.produced}</span>
                   </div>
                   <div className="bg-[#feecee] p-2 rounded-lg">
-                    <span className="text-[#fb323f] block text-[10px]">Sold</span>
+                    <span className="text-[#fb323f] block text-[10px]">خرج</span>
                     <span className="font-bold text-[#fb323f]">{s.sold}</span>
                   </div>
                   <div className="bg-[#feecee] p-2 rounded-lg">
-                    <span className="text-[#fb323f] block text-[10px]">Remaining</span>
+                    <span className="text-[#fb323f] block text-[10px]">متبقٍّ</span>
                     <span className="font-black text-[#fb323f]">{s.remaining}</span>
                   </div>
                 </div>
@@ -128,21 +138,21 @@ export function InventoryBalancesScreen() {
         {/* Inventory Movements Audit Table */}
         <Card>
           <CardHeader
-            title="Stock Movement History"
-            subtitle="Transparent audit trail of every stock increase, sale dispatch, return, and warehouse count"
+            title="سجل حركات المخزون"
+            subtitle="كل حركة: ما دخل، وما خرج مع تسليم، وما عاد مرتجعاً، وما صحّحه الجرد"
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
                 <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-3.5">Date</th>
-                    <th className="px-6 py-3.5">Product</th>
-                    <th className="px-6 py-3.5">Batch</th>
-                    <th className="px-6 py-3.5">Movement Type</th>
-                    <th className="px-6 py-3.5">Change</th>
-                    <th className="px-6 py-3.5">Balance After</th>
-                    <th className="px-6 py-3.5">Reason / Ref</th>
+                    <th className="px-6 py-3.5">التاريخ</th>
+                    <th className="px-6 py-3.5">المنتج</th>
+                    <th className="px-6 py-3.5">الدفعة</th>
+                    <th className="px-6 py-3.5">نوع الحركة</th>
+                    <th className="px-6 py-3.5">التغيير</th>
+                    <th className="px-6 py-3.5">الرصيد بعدها</th>
+                    <th className="px-6 py-3.5">السبب</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e3e8ef]">
@@ -190,63 +200,98 @@ export function InventoryBalancesScreen() {
         </Card>
       </div>
 
-      {/* Manual Stock Adjustment Modal */}
+      {/* Stock count. Adding stock is not possible here — goods enter
+          through production or receiving, where they carry a cost. */}
       <Modal
         isOpen={adjustModalOpen}
         onClose={() => setAdjustModalOpen(false)}
-        title="Manual Stock Adjustment"
-        subtitle="Records an auditable movement reason in the inventory history"
+        title="جرد مخزون"
+        subtitle="عندما يختلف الرف عن النظام — تُدخل ما عددته، والفرق يُحسب ويُسجَّل"
       >
         <form onSubmit={handleAdjustStock} className="space-y-4">
           <Select
-            label="Product *"
+            label="المنتج *"
             value={productId}
-            onChange={(e) => setProductId(e.target.value)}
+            onChange={(e) => { setProductId(e.target.value); setCountedQuantity(0); }}
             required
           >
             {stockSummary.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name} ({s.sku}) — Current: {s.remaining} units
+                {s.name} ({s.sku}) — النظام يقول {s.remaining}
               </option>
             ))}
           </Select>
 
           <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="Adjustment Type *"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              required
-            >
-              <option value="MANUAL_ADJUSTMENT">Manual Adjustment</option>
-              <option value="RETURN">Customer Return (+Stock)</option>
-              <option value="PRODUCTION">Production Count Correction</option>
-            </Select>
-
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-[#121926]">رصيد النظام</label>
+              <div className="rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2 text-sm font-bold tabular-nums text-[#697586]" dir="ltr">
+                {systemQty}
+              </div>
+            </div>
             <Input
-              label="Quantity Change (+ or -) *"
+              label="الكمية المعدودة *"
               type="number"
-              value={adjustQty}
-              onChange={(e) => setAdjustQty(parseInt(e.target.value, 10) || 0)}
+              min="0"
+              dir="ltr"
+              value={countedQuantity}
+              onChange={(e) => setCountedQuantity(parseInt(e.target.value, 10) || 0)}
               required
             />
           </div>
 
+          {/* The difference is shown, not typed: it is the number that will
+              actually be written, so it should be read before it is. */}
+          <div
+            className={`rounded-xl border p-3 text-center ${
+              difference === 0
+                ? 'border-[#e3e8ef] bg-[#f8fafc]'
+                : difference > 0
+                  ? 'border-[#bbf7d0] bg-[#f0fdf4]'
+                  : 'border-[#fecdd1] bg-[#feecee]'
+            }`}
+          >
+            <p className="text-[10px] font-medium text-[#697586]">الفرق الذي سيُسجَّل</p>
+            <p
+              className={`mt-0.5 text-lg font-black tabular-nums ${
+                difference === 0 ? 'text-[#697586]' : difference > 0 ? 'text-[#15803d]' : 'text-[#be123c]'
+              }`}
+              dir="ltr"
+            >
+              {difference > 0 ? `+${difference}` : difference}
+            </p>
+            <p className="mt-0.5 text-[10.5px] text-[#697586]">
+              {difference === 0
+                ? 'الجرد مطابق — لن يُسجَّل شيء.'
+                : difference > 0
+                  ? 'وُجد أكثر مما يعرفه النظام — يدخل بتكلفة المخزون الحالي لا بصفر.'
+                  : 'ناقص عن النظام — يُخصم من أقدم دفعة.'}
+            </p>
+          </div>
+
           <Textarea
-            label="Reason / Audit Note *"
-            placeholder="e.g. Physical stock count discrepancy, damaged item write-off..."
+            label="سبب الفرق *"
+            placeholder="مثال: جرد نهاية الشهر، تالف أثناء التخزين، خطأ في تسجيل سابق…"
             rows={2}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             required
           />
 
-          <div className="flex justify-end space-x-2 pt-2">
+          {countError && <p className="text-xs text-rose-600">{countError}</p>}
+
+          <p className="rounded-lg bg-[#f8fafc] p-2.5 text-[10.5px] leading-relaxed text-[#697586]">
+            إضافة بضاعة جديدة لا تتم من هنا: ما تصنعه يدخل من «تشغيلات الإنتاج»
+            ببنود كلفته، وما تشتريه جاهزاً من «استلام بضاعة جاهزة» بسعر شرائه.
+            البضاعة التي تدخل بلا تكلفة تخفض متوسط التكلفة وتُظهر ربحاً لم يتحقق.
+          </p>
+
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setAdjustModalOpen(false)}>
               {t.cancel}
             </Button>
-            <Button type="submit" loading={modalLoading}>
-              Apply Movement
+            <Button type="submit" loading={modalLoading} disabled={difference === 0 || reason.trim().length < 3}>
+              سجّل الجرد
             </Button>
           </div>
         </form>

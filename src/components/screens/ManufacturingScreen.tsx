@@ -10,6 +10,27 @@ import { useApp } from '@/context/AppContext';
 import { Factory, Plus, Calculator, Calendar, Boxes, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
+/**
+ * The costs that keep coming back, offered instead of typed.
+ *
+ * Every run has a handful of the same lines, and typing them by hand each
+ * time produces "اجرة عامل", "أجرة العامل" and "اجور عمال" on three batches
+ * of the same product — three labels that no report can add together.
+ * "أخرى" is still there for the one the list does not have.
+ */
+const COST_PRESETS = [
+  'أجور عمال',
+  'قالب',
+  'شحن المواد الخام',
+  'كهرباء ومحروقات',
+  'إيجار ورشة',
+  'ملصقات وطباعة',
+  'فحص مخبري',
+  'هالك وتالف',
+  'نقل داخلي',
+  'عمولة وسيط',
+];
+
 export function ManufacturingScreen() {
   const { t } = useApp();
   const [batches, setBatches] = useState<any[]>([]);
@@ -43,6 +64,11 @@ export function ManufacturingScreen() {
 
   const costPerUnit =
     quantityProduced > 0 ? (totalProductionCost / quantityProduced).toFixed(2) : '0.00';
+
+  // This screen is the door for what you MAKE. A bought product listed here
+  // would be entered as a run that never happened, with a cost breakdown
+  // nobody can trace to any work — and the server refuses it anyway.
+  const manufacturedProducts = products.filter((p: any) => p.sourceType !== 'PURCHASED');
 
   const loadData = async () => {
     setLoading(true);
@@ -113,9 +139,10 @@ export function ManufacturingScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.production}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">تشغيلات الإنتاج</h1>
             <p className="text-xs text-[#697586] mt-1">
-              Section 5 Manufacturing & Cost per unit calculation engine with inventory movement linkage
+              الباب الذي تدخل منه بضاعة المنتجات التي تصنّعها — كل تشغيلة ببنود كلفتها،
+              ومنها تُحسب تكلفة الوحدة التي يقرأها الربح.
             </p>
           </div>
 
@@ -128,29 +155,29 @@ export function ManufacturingScreen() {
             className="flex items-center space-x-1.5"
           >
             <Plus className="w-4 h-4" />
-            <span>Create Production Batch</span>
+            <span>تشغيلة جديدة</span>
           </Button>
         </div>
 
         {/* Batch List Table */}
         <Card>
           <CardHeader
-            title="Manufacturing Batches & Cost Accounting"
-            subtitle="Tracks unit cost, packaging overhead, and sold vs remaining batch inventory"
+            title="تشغيلات الإنتاج وحساب التكلفة"
+            subtitle="كل تشغيلة بكلفتها وكم بِيع منها وكم بقي — وتكلفة الوحدة محسوبة منها"
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
                 <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-3.5">Batch Number</th>
-                    <th className="px-6 py-3.5">Product</th>
-                    <th className="px-6 py-3.5">Produced</th>
-                    <th className="px-6 py-3.5">Sold</th>
-                    <th className="px-6 py-3.5">Remaining</th>
-                    <th className="px-6 py-3.5">Total Cost</th>
-                    <th className="px-6 py-3.5">Cost / Unit</th>
-                    <th className="px-6 py-3.5">Date</th>
+                    <th className="px-6 py-3.5">رقم التشغيلة</th>
+                    <th className="px-6 py-3.5">المنتج</th>
+                    <th className="px-6 py-3.5">أُنتج</th>
+                    <th className="px-6 py-3.5">بِيع</th>
+                    <th className="px-6 py-3.5">متبقٍّ</th>
+                    <th className="px-6 py-3.5">الكلفة الكلية</th>
+                    <th className="px-6 py-3.5">كلفة الوحدة</th>
+                    <th className="px-6 py-3.5">التاريخ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e3e8ef]">
@@ -164,14 +191,14 @@ export function ManufacturingScreen() {
                         <span className="text-[10px] text-[#9ca3af] font-mono">{b.product?.sku}</span>
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[#121926]">
-                        {b.quantityProduced} units
+                        {b.quantityProduced} قطعة
                       </td>
                       <td className="px-6 py-3.5 text-[#fb323f] font-medium">
-                        {b.quantitySold} units
+                        {b.quantitySold} قطعة
                       </td>
                       <td className="px-6 py-3.5">
                         <span className="font-bold text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded-full">
-                          {b.quantityRemaining} units
+                          {b.quantityRemaining} قطعة
                         </span>
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[#121926]">
@@ -183,7 +210,7 @@ export function ManufacturingScreen() {
                         </span>
                       </td>
                       <td className="px-6 py-3.5 text-[#9ca3af]">
-                        {format(new Date(b.productionDate), 'MMM d, yyyy')}
+                        {format(new Date(b.productionDate), 'd MMM yyyy')}
                       </td>
                     </tr>
                   ))}
@@ -198,8 +225,8 @@ export function ManufacturingScreen() {
       <Modal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        title="New Manufacturing Batch"
-        subtitle="Calculates Cost Per Unit automatically based on manufacturing, packaging, and raw material expenses"
+        title="تشغيلة إنتاج جديدة"
+        subtitle="تكلفة الوحدة تُحسب تلقائياً من كل بنود الكلفة التي تدخلها"
         maxWidth="xl"
       >
         <form onSubmit={handleCreateBatch} className="space-y-4">
@@ -211,12 +238,12 @@ export function ManufacturingScreen() {
 
           <div className="grid grid-cols-2 gap-3">
             <Select
-              label="Select Product *"
+              label="المنتج *"
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
               required
             >
-              {products.map((p) => (
+              {manufacturedProducts.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} ({p.sku})
                 </option>
@@ -224,7 +251,7 @@ export function ManufacturingScreen() {
             </Select>
 
             <Input
-              label="Batch Number *"
+              label="رقم التشغيلة *"
               value={batchNumber}
               onChange={(e) => setBatchNumber(e.target.value.toUpperCase())}
               required
@@ -232,7 +259,7 @@ export function ManufacturingScreen() {
           </div>
 
           <Input
-            label="Quantity Produced (Units) *"
+            label="الكمية المنتَجة (قطعة) *"
             type="number"
             min="1"
             value={quantityProduced}
@@ -248,28 +275,28 @@ export function ManufacturingScreen() {
 
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Manufacturing Cost ($)"
+                label="كلفة التصنيع"
                 type="number"
                 step="0.01"
                 value={manufacturingCost}
                 onChange={(e) => setManufacturingCost(parseFloat(e.target.value) || 0)}
               />
               <Input
-                label="Packaging Cost ($)"
+                label="كلفة التغليف"
                 type="number"
                 step="0.01"
                 value={packagingCost}
                 onChange={(e) => setPackagingCost(parseFloat(e.target.value) || 0)}
               />
               <Input
-                label="Raw Material Cost ($)"
+                label="كلفة المواد الخام"
                 type="number"
                 step="0.01"
                 value={rawMaterialCost}
                 onChange={(e) => setRawMaterialCost(parseFloat(e.target.value) || 0)}
               />
               <Input
-                label="Other / QC Costs ($)"
+                label="فحص الجودة / أخرى"
                 type="number"
                 step="0.01"
                 value={otherCosts}
@@ -283,15 +310,26 @@ export function ManufacturingScreen() {
             <div className="mt-4 border-t border-[#e3e8ef] pt-3">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-xs font-bold text-[#364152]">بنود كلفة إضافية</p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setCostLines([...costLines, { label: '', amount: 0 }])}
-                  disabled={costLines.length >= 30}
-                >
-                  <Plus className="h-3.5 w-3.5" /> أضف بنداً
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Select
+                    className="text-xs"
+                    value=""
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      setCostLines([
+                        ...costLines,
+                        { label: e.target.value === 'أخرى' ? '' : e.target.value, amount: 0 },
+                      ]);
+                    }}
+                    disabled={costLines.length >= 30}
+                  >
+                    <option value="">+ أضف بنداً…</option>
+                    {COST_PRESETS.map((label) => (
+                      <option key={label} value={label}>{label}</option>
+                    ))}
+                    <option value="أخرى">أخرى — أكتب الاسم بنفسي</option>
+                  </Select>
+                </div>
               </div>
 
               {costLines.length === 0 ? (
@@ -350,7 +388,7 @@ export function ManufacturingScreen() {
             <div className="flex items-center space-x-2">
               <Calculator className="w-5 h-5 text-[#fb323f]" />
               <div>
-                <p className="font-bold text-[#121926]">Total Production Cost: ${totalProductionCost.toFixed(2)}</p>
+                <p className="font-bold text-[#121926]">الكلفة الكلية: {totalProductionCost.toFixed(2)}</p>
                 <p className="text-[#697586]">
                   Formula: Mfg (${manufacturingCost}) + Packaging (${packagingCost}) + Raw (${rawMaterialCost})
                 </p>
@@ -358,7 +396,7 @@ export function ManufacturingScreen() {
             </div>
 
             <div className="text-right">
-              <span className="text-[#697586] block">Calculated Cost Per Unit:</span>
+              <span className="text-[#697586] block">تكلفة الوحدة المحسوبة:</span>
               <span className="text-xl font-black text-[#fb323f] block">
                 ${costPerUnit}
               </span>
