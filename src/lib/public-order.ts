@@ -6,6 +6,7 @@ import { matchRegion } from './regions';
 import { NEUTRAL_REFUSAL, isBlocked } from './blacklist';
 import { rateLimit } from './rate-limit';
 import { signAddonToken } from './landing-pages';
+import { emitAppEvent } from './apps/events';
 import {
   buildPublicOrderSchema,
   mapZodFieldErrors,
@@ -321,6 +322,21 @@ export async function createPublicOrder(
   } catch (e) {
     console.error('Public order notification failed (non-fatal):', e);
   }
+
+  // Tell the installed apps. Never inline with the write: an order that
+  // saved has saved, whatever any integration thinks about it.
+  await emitAppEvent(companyId, 'order.created', {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    total: Number(order.totalAmount),
+    currency: order.currency,
+    quantity: qty,
+    productId: product.id,
+    productName: product.name,
+    source: surface.source,
+    storeId: store.id,
+    city: v.city,
+  });
 
   // Short-lived add-on capability token for the success screen (upsells).
   // Stateless (no DB), order-scoped, 30-minute TTL.

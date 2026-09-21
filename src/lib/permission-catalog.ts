@@ -168,6 +168,10 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     module: 'apps',
     items: [
       { key: 'apps.view', ar: 'عرض التطبيقات', en: 'View apps' },
+      // Installing an app connects the company to something outside it, and
+      // registering one hands out a signing secret. Both are a separate
+      // authority from looking at the shelf.
+      { key: 'apps.manage', ar: 'تثبيت وتسجيل التطبيقات', en: 'Install & register apps' },
     ],
   },
   {

@@ -24,6 +24,8 @@ model Company {
   products           Product[]
   batches            ProductionBatch[]
   batchCostLines     ProductionBatchCost[]
+  apps               App[]
+  appInstalls        AppInstall[]
   inventoryMovements InventoryMovement[]
   offers             Offer[]
   customers          Customer[]
@@ -1842,4 +1844,90 @@ model CustomerBlock {
   // released block must be able to sit beside a new one for the same phone.
   @@index([companyId, phone, releasedAt])
   @@map("customer_blocks")
+}
+
+// ─── THE APP PLATFORM (additive) ───
+// Integrations used to exist without a common idea of "installed": a courier
+// adapter, tracking pixels, a WhatsApp connection, Telegram sources — each
+// with its own screen and no answer to "what is connected, and who turned it
+// on". Two kinds share one shelf: BUILT-IN apps declared in code (their
+// configuration already has a screen, so the store records the install and
+// links to it), and EXTERNAL apps a developer registers.
+
+/// An app registered by an outside developer. Built-ins are NOT here: they
+/// live in src/lib/apps/registry.ts, and a catalogue row for something that
+/// lives in code would be a second source of truth about what the code does.
+model App {
+  id            String   @id @default(uuid())
+  companyId     String
+  code          String
+  name          String
+  description   String?
+  developerName String?
+  iconUrl       String?
+  webhookUrl    String?
+  /// Event names it asked to hear about, as a JSON array.
+  events        String   @default("[]")
+  /// HMAC signing secret, encrypted at rest. Shown once at registration and
+  /// never again by any endpoint.
+  secret        String?
+  status        String   @default("ACTIVE") // ACTIVE | DISABLED
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  installs AppInstall[]
+
+  @@unique([companyId, code])
+  @@map("apps")
+}
+
+/// One company's installation of an app, built-in or external.
+model AppInstall {
+  id            String   @id @default(uuid())
+  companyId     String
+  /// The built-in's code or the external app's code — one column, so the
+  /// installed list is one query and one shape.
+  appCode       String
+  appId         String?
+  enabled       Boolean  @default(true)
+  /// Per-install settings, encrypted: an app's configuration is as sensitive
+  /// as the account it configures.
+  config        String?
+  installedById String?
+  installedAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  app        App?          @relation(fields: [appId], references: [id], onDelete: Cascade)
+  deliveries AppDelivery[]
+
+  @@unique([companyId, appCode])
+  @@index([companyId, enabled])
+  @@map("app_installs")
+}
+
+/// Every attempt to tell an app something. A webhook that fails silently is
+/// an integration that stops silently, and the developer cannot know.
+model AppDelivery {
+  id            String    @id @default(uuid())
+  companyId     String
+  installId     String
+  event         String
+  payload       String    @db.Text
+  url           String
+  status        String    @default("PENDING") // PENDING | OK | FAILED
+  attempts      Int       @default(0)
+  responseCode  Int?
+  error         String?
+  nextAttemptAt DateTime?
+  deliveredAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  install AppInstall @relation(fields: [installId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([companyId, createdAt])
+  @@map("app_deliveries")
 }

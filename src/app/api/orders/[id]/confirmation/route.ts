@@ -12,6 +12,7 @@ import { createNotification } from '@/lib/notification';
 import { can, authorize } from '@/lib/authorization';
 import { assertCancellable, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines, reserveOrderLines } from '@/lib/reservation';
+import { emitAppEvent } from '@/lib/apps/events';
 
 /**
  * POST /api/orders/[id]/confirmation — controlled confirmation workflow action.
@@ -301,6 +302,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     const fresh = await db.order.findUnique({ where: { id } });
+
+    // Tell the installed apps, after the commit. Confirming is when a lead
+    // becomes an order somebody will act on, which is the moment most
+    // integrations actually care about.
+    if (target === 'CONFIRMED' || target === 'CANCELLED') {
+      await emitAppEvent(companyId, target === 'CONFIRMED' ? 'order.confirmed' : 'order.cancelled', {
+        orderId: id,
+        orderNumber: fresh?.orderNumber ?? null,
+        confirmationStatus: target,
+        previousStatus: from,
+        total: Number(fresh?.totalAmount ?? 0),
+        currency: fresh?.currency ?? null,
+      });
+    }
 
     // Notify company managers on terminal confirmation outcomes — after commit, non-fatal
     if (target && (target === 'CONFIRMED' || target === 'REJECTED' || target === 'CANCELLED')) {

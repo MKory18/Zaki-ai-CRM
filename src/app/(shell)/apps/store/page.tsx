@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { AppStoreScreen } from '@/components/screens/AppStoreScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/apps/store');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/apps/store');
+  return <AppStoreScreen />;
 }

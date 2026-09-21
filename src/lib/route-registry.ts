@@ -120,8 +120,8 @@ export const NAV: NavGroup[] = [
     key: 'apps',
     label: 'التطبيقات',
     routes: [
-      r('/apps/store', 'متجر التطبيقات', 'LayoutGrid', ['apps.view'], 11),
-      r('/apps/installed', 'التطبيقات المثبتة', 'Blocks', ['apps.view'], 11),
+      r('/apps/store', 'متجر التطبيقات', 'LayoutGrid', ['apps.view']),
+      r('/apps/installed', 'التطبيقات المثبتة', 'Blocks', ['apps.view']),
     ],
   },
   {

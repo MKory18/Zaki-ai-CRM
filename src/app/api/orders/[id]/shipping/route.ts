@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { consumeOrderStock } from '@/lib/stock-consumption';
+import { emitAppEvent, type AppEvent } from '@/lib/apps/events';
 import { assertOrderAccess } from '@/lib/rbac';
 import {
   isValidShippingTransition, canEnterShipping, STATUS_TIMESTAMP,
@@ -311,6 +312,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         },
         { status: 409 }
       );
+    }
+
+    // ── Tell the installed apps what changed ──
+    // After the commit, and never able to undo it: an order that shipped has
+    // shipped, whatever an integration thinks about it.
+    const APP_EVENT_FOR: Record<string, AppEvent> = {
+      SHIPPED: 'order.shipped',
+      DELIVERED: 'order.delivered',
+      RETURNED: 'order.returned',
+      CANCELLED: 'order.cancelled',
+    };
+    if (newShippingStatus && newShippingStatus !== from && APP_EVENT_FOR[newShippingStatus]) {
+      await emitAppEvent(companyId, APP_EVENT_FOR[newShippingStatus], {
+        orderId: id,
+        orderNumber: order.orderNumber,
+        shippingStatus: newShippingStatus,
+        previousStatus: from,
+        total: Number(order.totalAmount),
+        currency: order.currency,
+        trackingNumber: order.trackingNumber ?? null,
+      });
     }
 
     // ── Logs: OrderStatusLog + OrderActivity + Audit (Section 21) ──
