@@ -15,6 +15,13 @@ import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
  *  - offers & prices arrive as server-rendered props straight from the DB.
  *  - the uploaded landing-page HTML (opaque-origin sandbox) cannot access
  *    or manipulate this form in any way.
+ *
+ * Theming: every brand colour here reads `var(--lp-*, <the old value>)`. On
+ * a block-built page those variables carry the seller's derived palette and
+ * the form wears the page's colours; anywhere else the fallback is exactly
+ * what was hard-coded before, so nothing already published changes. The form
+ * is the most important thing on the page — it was the one part that could
+ * not follow it.
  */
 
 export interface OfferView {
@@ -47,13 +54,23 @@ interface OrderFormProps {
   phonePlaceholder?: string;
   /** Phase 2: offer selected from custom-HTML placeholder (pre-validated by the bridge) */
   externalSelectedOfferId?: string | null;
+  /**
+   * Whether this form draws the offer list itself.
+   *
+   * A block-built page can carry its own `offers` block higher up. When it
+   * does, the form must NOT draw a second list: the visitor was choosing
+   * between three tiers and suddenly had six to look at. One picker per
+   * page, wherever the seller put it — the form then only states which one
+   * is selected.
+   */
+  showOfferPicker?: boolean;
 }
 
 type FormState = 'idle' | 'loading' | 'success' | 'error';
 
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true }: OrderFormProps) {
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -75,6 +92,21 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
       setSelectedOffer(externalSelectedOfferId);
     }
   }, [externalSelectedOfferId, offers]);
+
+  /**
+   * Announce which offer is selected, so anything else on the page that
+   * shows a price can follow it — the floating button, above all.
+   *
+   * Only the ID travels. A listener resolves the price from its own
+   * server-provided offers, exactly as the bridge does, so no price on this
+   * page ever comes out of a message.
+   */
+  React.useEffect(() => {
+    if (!selectedOffer) return;
+    try {
+      window.postMessage({ type: 'ZAKI_OFFER_SELECTED', offerId: selectedOffer }, '*');
+    } catch { /* never fatal */ }
+  }, [selectedOffer]);
   const [totals, setTotals] = useState<{ total: number } | null>(null);
 
   const offer = useMemo(() => offers.find((o) => o.id === selectedOffer) || offers[0], [offers, selectedOffer]);
@@ -191,7 +223,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
   }
 
   const inputCls =
-    'w-full rounded-xl border border-[#e3e8ef] bg-white px-4 py-3 text-base text-[#121926] placeholder:text-[#9aa4b2] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e] transition-colors';
+    'w-full rounded-xl border border-[#e3e8ef] bg-white px-4 py-3 text-base text-[#121926] placeholder:text-[#9aa4b2] focus:outline-none focus:ring-2 focus:ring-[var(--lp-accent-border,#e8b9d0)] focus:border-[var(--lp-accent,#b8256e)] transition-colors';
   const labelCls = 'block text-sm font-semibold text-[#364152] mb-1.5';
   const fieldErr = (key: string) => fieldErrors[key];
   const FieldError = ({ k }: { k: string }) =>
@@ -206,18 +238,21 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
     <section
       id="zaki-order-form"
       dir="rtl"
-      className="w-full bg-[#f7f7f8] px-4 py-10 sm:px-6"
+      className="w-full bg-[var(--lp-page,#f7f7f8)] px-4 py-10 sm:px-6"
       aria-label="نموذج الطلب"
     >
       <div className="mx-auto w-full max-w-md">
         <div className="rounded-2xl border border-[#e3e8ef] bg-white shadow-sm overflow-hidden">
-          {/* Header */}
-          <div className="bg-[#121926] px-5 py-5 text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#697586]">
+          {/* Header. On a themed page this band IS the accent colour, so
+              everything in it takes the readable ink the theme derived —
+              accent text on an accent band would be invisible. On a page
+              with no theme the old navy and its old colours stand. */}
+          <div className="bg-[var(--lp-accent,#121926)] px-5 py-5 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--lp-accent-text,#697586)] opacity-75">
               اطلب الآن
             </p>
-            <h2 className="mt-1 text-xl font-bold text-white">{productName}</h2>
-            <p className="mt-1 text-2xl font-extrabold text-[#b8256e]" dir="ltr">
+            <h2 className="mt-1 text-xl font-bold text-[var(--lp-accent-text,#ffffff)]">{productName}</h2>
+            <p className="mt-1 text-2xl font-extrabold text-[var(--lp-accent-text,#b8256e)]" dir="ltr">
               {fmt(offer ? offer.price : basePrice)} {currency}
             </p>
           </div>
@@ -230,7 +265,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 رقم الطلب: <span className="font-bold">{result.orderNumber}</span>
               </p>
               {totals && (
-                <p className="mt-1 text-sm font-semibold text-[#b8256e]" dir="ltr">
+                <p className="mt-1 text-sm font-semibold text-[var(--lp-accent,#b8256e)]" dir="ltr">
                   الإجمالي الحالي: {fmt(totals.total)} {currency}
                 </p>
               )}
@@ -257,7 +292,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-[#121926]">{rec.name}</p>
-                            <p className="text-sm font-bold text-[#b8256e]" dir="ltr">
+                            <p className="text-sm font-bold text-[var(--lp-accent,#b8256e)]" dir="ltr">
                               {fmt(rec.price)} {currency}
                             </p>
                           </div>
@@ -270,7 +305,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                               type="button"
                               onClick={() => addRecommendation(rec.id)}
                               disabled={st === 'adding'}
-                              className="shrink-0 rounded-lg bg-[#b8256e] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#b8256e]/90 disabled:opacity-60 active:scale-95"
+                              className="shrink-0 rounded-lg bg-[var(--lp-accent,#b8256e)] px-3 py-2 text-xs font-bold text-white transition hover:bg-[var(--lp-accent-dark,#a01f5f)] disabled:opacity-60 active:scale-95"
                             >
                               {st === 'adding' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'أضف إلى طلبي'}
                             </button>
@@ -288,7 +323,29 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
           ) : (
             <form onSubmit={onSubmit} noValidate className="space-y-4 px-5 py-6">
               {/* ─── Offers (server-provided — replaces the quantity stepper) ─── */}
-              {hasOffers && (
+              {/* The page's own offers block is the picker; here it is a
+                  dropdown, so the choice can still be changed at the last
+                  moment without scrolling back up the page. */}
+              {hasOffers && !showOfferPicker && offer && (
+                <div>
+                  <label htmlFor="zf-offer" className={labelCls}>العرض المختار</label>
+                  <select
+                    id="zf-offer"
+                    value={selectedOffer}
+                    onChange={(e) => setSelectedOffer(e.target.value)}
+                    disabled={state === 'loading'}
+                    className={inputCls}
+                  >
+                    {offers.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name} — {o.quantity} قطعة
+                        {o.freeQuantity > 0 ? ` + ${o.freeQuantity} هدية` : ''} — {fmt(o.price)} {currency}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {hasOffers && showOfferPicker && (
                 <div>
                   <span className={labelCls}>اختر العرض</span>
                   <div className="space-y-2">
@@ -302,7 +359,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                           type="button"
                           onClick={() => { setSelectedOffer(o.id); setFieldErrors((fe) => { const n = { ...fe }; delete n.offerId; return n; }); }}
                           className={`w-full rounded-xl border-2 p-3.5 text-start transition ${
-                            sel ? 'border-[#b8256e] bg-[#fdf2f7]' : 'border-[#e3e8ef] bg-white hover:border-[#b8256e]/40'
+                            sel ? 'border-[var(--lp-accent,#b8256e)] bg-[#fdf2f7]' : 'border-[#e3e8ef] bg-white hover:border-[var(--lp-accent-border,#e8b9d0)]'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
@@ -318,17 +375,17 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                               </p>
                               {oOriginal > o.price && (
                                 <p className="mt-0.5 text-[11px] font-medium text-[#00a344]">
-                                  وفرت {fmt(oOriginal - o.price)}$
+                                  وفرت {fmt(oOriginal - o.price)} {currency}
                                 </p>
                               )}
                             </div>
                             <div className="shrink-0 text-end">
-                              <p className="text-lg font-extrabold text-[#b8256e]" dir="ltr">
-                                {fmt(o.price)}$
+                              <p className="text-lg font-extrabold text-[var(--lp-accent,#b8256e)]" dir="ltr">
+                                {fmt(o.price)} {currency}
                               </p>
                               {oOriginal > o.price && (
                                 <p className="text-xs text-[#9aa4b2] line-through" dir="ltr">
-                                  {fmt(oOriginal)}$
+                                  {fmt(oOriginal)} {currency}
                                 </p>
                               )}
                             </div>
@@ -336,7 +393,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                           <div className="mt-2 flex items-center justify-end">
                             <span
                               className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold transition ${
-                                sel ? 'bg-[#b8256e] text-white' : 'bg-[#f8fafc] text-[#697586]'
+                                sel ? 'bg-[var(--lp-accent,#b8256e)] text-white' : 'bg-[#f8fafc] text-[#697586]'
                               }`}
                             >
                               {sel ? '✓ العرض المختار' : 'اختر هذا العرض'}
@@ -357,7 +414,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {/* الاسم الكامل */}
               <div>
                 <label htmlFor="zf-full_name" className={labelCls}>
-                  الاسم الكامل <span className="text-[#b8256e]">*</span>
+                  الاسم الكامل <span className="text-[var(--lp-accent,#b8256e)]">*</span>
                 </label>
                 <input
                   id="zf-full_name"
@@ -377,7 +434,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {/* رقم الهاتف */}
               <div>
                 <label htmlFor="zf-phone" className={labelCls}>
-                  رقم الهاتف <span className="text-[#b8256e]">*</span>
+                  رقم الهاتف <span className="text-[var(--lp-accent,#b8256e)]">*</span>
                 </label>
                 <input
                   id="zf-phone"
@@ -399,7 +456,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {/* العنوان */}
               <div>
                 <label htmlFor="zf-address" className={labelCls}>
-                  العنوان <span className="text-[#b8256e]">*</span>
+                  العنوان <span className="text-[var(--lp-accent,#b8256e)]">*</span>
                 </label>
                 <input
                   id="zf-address"
@@ -419,7 +476,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {/* المدينة / الولاية — searchable Syrian locations */}
               <div className="relative">
                 <label htmlFor="zf-city" className={labelCls}>
-                  المدينة / الولاية <span className="text-[#b8256e]">*</span>
+                  المدينة / الولاية <span className="text-[var(--lp-accent,#b8256e)]">*</span>
                 </label>
                 <button
                   type="button"
@@ -453,7 +510,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                           key={name}
                           type="button"
                           onClick={() => { setCityValue(name); setCityOpen(false); setCityQuery(''); setFieldErrors((fe) => { const n = { ...fe }; delete n.city; return n; }); }}
-                          className={`block w-full px-4 py-2 text-start text-sm hover:bg-[#f8fafc] ${cityValue === name ? 'bg-[#fdf2f7] font-semibold text-[#b8256e]' : 'text-[#364152]'}`}
+                          className={`block w-full px-4 py-2 text-start text-sm hover:bg-[#f8fafc] ${cityValue === name ? 'bg-[#fdf2f7] font-semibold text-[var(--lp-accent,#b8256e)]' : 'text-[#364152]'}`}
                         >
                           {name}
                         </button>
@@ -483,7 +540,16 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               </div>
 
               {/* Honeypot — hidden from humans */}
-              <div className="absolute -left-[9999px]" aria-hidden="true">
+              {/* Bot honeypot. It used to hide at `left: -9999px`, which in
+                  an RTL page is not off-canvas at all — it is 9999px of real
+                  horizontal scroll, and the page slid side to side on every
+                  phone. Hidden by size and opacity instead: still in the DOM
+                  for a bot to fill, invisible and unscrollable for a person. */}
+              <div
+                className="absolute h-px w-px overflow-hidden opacity-0"
+                style={{ pointerEvents: 'none' }}
+                aria-hidden="true"
+              >
                 <label htmlFor="zf-website">Website</label>
                 <input id="zf-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
               </div>
@@ -500,7 +566,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               <button
                 type="submit"
                 disabled={state === 'loading' || (!hasOffers && false) || (hasOffers && !selectedOffer)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#b8256e] px-5 py-4 text-base font-bold text-white shadow-sm transition hover:bg-[#b8256e]/90 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99]"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--lp-accent,#b8256e)] px-5 py-4 text-base font-bold text-[var(--lp-accent-text,#ffffff)] shadow-sm transition hover:bg-[var(--lp-accent-dark,#a01f5f)] disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99]"
               >
                 {state === 'loading' ? (
                   <>
@@ -517,7 +583,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
 
               {offer && savings > 0 && (
                 <p className="text-center text-xs font-medium text-[#00a344]">
-                  بدل {fmt(originalPrice)}$ — {fmt(offer.price)}$ • وفرت {fmt(savings)}$
+                  بدل {fmt(originalPrice)} — {fmt(offer.price)} {currency} • وفرت {fmt(savings)}
                   {offer.freeQuantity > 0 ? ` • 🎁 +${offer.freeQuantity} هدية` : ''}
                 </p>
               )}

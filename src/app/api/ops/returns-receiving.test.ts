@@ -7,6 +7,7 @@ const { db, requireContext, requirePermission, logAudit } = vi.hoisted(() => ({
     order: { findFirst: vi.fn(), update: vi.fn() },
     returnReceipt: { create: vi.fn() },
     inventoryMovement: { findFirst: vi.fn(), create: vi.fn() },
+    productionBatch: { findFirst: vi.fn(), create: vi.fn(), aggregate: vi.fn() },
     orderItem: { updateMany: vi.fn() },
     orderNote: { create: vi.fn() },
     deliveryFee: { findFirst: vi.fn() },
@@ -42,7 +43,12 @@ beforeEach(() => {
     items: [{ id: 'i1', productId: 'p1', productName: 'مقشر', quantity: 3, freeQuantity: 0 }],
   });
   db.returnReceipt.create.mockImplementation(async ({ data }: any) => ({ id: 'rr1', ...data }));
-  db.inventoryMovement.findFirst.mockResolvedValue({ balanceAfter: 10 });
+  // No RETURN movement for this order yet — receiving one twice must not
+  // restore the goods twice.
+  db.inventoryMovement.findFirst.mockResolvedValue(null);
+  db.productionBatch.findFirst.mockResolvedValue({ costPerUnit: 4 });
+  db.productionBatch.create.mockResolvedValue({ id: 'b-ret' });
+  db.productionBatch.aggregate.mockResolvedValue({ _sum: { quantityRemaining: 12 } });
   db.orderItem.updateMany.mockResolvedValue({ count: 1 });
   db.order.update.mockResolvedValue({});
   db.orderNote.create.mockResolvedValue({});
@@ -68,6 +74,19 @@ describe('return receiving', () => {
     await POST(body({ orderId: ORDER_ID, receivedQty: 2, damagedQty: 1, countedAndInspected: true }));
     expect(db.inventoryMovement.create).toHaveBeenCalledTimes(1);
     expect(db.inventoryMovement.create.mock.calls[0][0].data).toMatchObject({ type: 'RETURN', quantity: 2, balanceAfter: 12 });
+  });
+
+  it('puts the sound units into a real batch, not only into the ledger', async () => {
+    // A ledger line on its own moves nothing: stock lives in batches, and
+    // without one the shipment screen keeps reporting a shortage for goods
+    // the ledger says are back on the shelf.
+    await POST(body({ orderId: ORDER_ID, receivedQty: 2, damagedQty: 1, countedAndInspected: true }));
+    expect(db.productionBatch.create).toHaveBeenCalledTimes(1);
+    expect(db.productionBatch.create.mock.calls[0][0].data).toMatchObject({
+      quantityRemaining: 2,
+      quantitySold: 0,
+      costPerUnit: 4,
+    });
   });
 
   it('takes the courier return fee from the table, never from the receiver', async () => {

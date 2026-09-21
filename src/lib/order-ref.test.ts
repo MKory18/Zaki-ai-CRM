@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { db } = vi.hoisted(() => ({ db: { order: { findFirst: vi.fn(), count: vi.fn() } } }));
 vi.mock('./db', () => ({ db }));
 
-import { nextOrderNumber, orderRefFields } from './order-ref';
+import { ORDER_NUMBER_RE, nextOrderNumber, orderRefFields } from './order-ref';
 
 const AT = new Date('2026-09-20T10:00:00Z');
 
@@ -70,5 +70,24 @@ describe('orderRefFields', () => {
     db.order.findFirst.mockResolvedValue({ orderNumber: 'ORD-2026-0007' });
     const refs = await orderRefFields(db as never, 'c1', 'ORD', 0, AT);
     expect(refs).toEqual({ orderNumber: 'ORD-2026-0008', merchantRef: 'ORD-2026-0008' });
+  });
+});
+
+describe('the shape of an order number', () => {
+  it('accepts what the generator actually produces, for any store prefix', async () => {
+    // The public upsell route used to carry its own pattern demanding a
+    // literal "ORD-". Every Syrian and Jordanian order failed it, so the
+    // upsell had never once succeeded.
+    for (const prefix of ['SY', 'JO', 'ORD', 'EG1']) {
+      db.order.findFirst.mockResolvedValue(null);
+      const n = await nextOrderNumber(db as never, 'c1', prefix, 0, AT);
+      expect(ORDER_NUMBER_RE.test(n), n).toBe(true);
+    }
+  });
+
+  it('still refuses something that is not an order number', () => {
+    for (const bad of ['', 'SY-2026', 'SY-26-0001', '../../etc', 'SY-2026-0001; DROP', 'sy-2026-0001']) {
+      expect(ORDER_NUMBER_RE.test(bad), bad).toBe(false);
+    }
   });
 });

@@ -13,6 +13,8 @@ import {
   parseLandingSettings,
   MAX_LANDING_CSS_BYTES,
 } from '@/lib/landing-html-sanitize';
+import { landingThemeSchema } from '@/lib/landing-theme';
+import { landingSectionsSchema } from '@/lib/landing-sections';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -46,6 +48,11 @@ export async function PUT(req: Request, ctx: Ctx) {
       html: z.string().max(MAX_LANDING_HTML_BYTES).optional().nullable(),
       css: z.string().max(MAX_LANDING_CSS_BYTES).optional().nullable(),
       settings: z.unknown().optional().nullable(),
+      // The block builder saves through this same endpoint: one place where
+      // a page's content is written, one permission, one rate limit.
+      builderMode: z.enum(['BLOCKS', 'HTML']).optional(),
+      theme: landingThemeSchema.optional().nullable(),
+      sections: z.unknown().optional().nullable(),
     });
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -70,6 +77,22 @@ export async function PUT(req: Request, ctx: Ctx) {
     if (parsed.data.settings !== undefined) {
       const settings = parseLandingSettings(parsed.data.settings ?? null);
       data.pageSettings = settings ? JSON.stringify(settings) : null;
+    }
+    if (parsed.data.builderMode !== undefined) {
+      data.builderMode = parsed.data.builderMode;
+    }
+    if (parsed.data.theme !== undefined) {
+      data.theme = parsed.data.theme ? JSON.stringify(parsed.data.theme) : null;
+    }
+    if (parsed.data.sections !== undefined) {
+      // Re-validated here, not trusted from the editor: the public renderer
+      // reads these blocks straight out of the row, so the row is the last
+      // place a malformed block can be stopped.
+      const sections = landingSectionsSchema.safeParse(parsed.data.sections ?? []);
+      if (!sections.success) {
+        return NextResponse.json({ error: 'أقسام الصفحة غير صالحة' }, { status: 400 });
+      }
+      data.sections = sections.data.length ? JSON.stringify(sections.data) : null;
     }
 
     const updated = await db.landingPage.update({

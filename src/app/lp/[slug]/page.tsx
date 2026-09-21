@@ -8,6 +8,11 @@ import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
 import { detectOrderIntent } from '@/lib/landing-dynamic';
 import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixels';
 import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
+import { parseSections, ensureForm } from '@/lib/landing-sections';
+import { paletteFor, paletteVars, DEFAULT_THEME } from '@/lib/landing-theme';
+import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
+import { BLOCK_CSS, fontHref } from '@/components/landing/blocks/styles';
+import { availableStock } from '@/lib/reservation';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -33,17 +38,63 @@ interface Props {
  */
 export const dynamic = 'force-dynamic';
 
-async function fetchOffers(landingPageId: string) {
-  return db.landingPageOffer.findMany({
+/**
+ * The offers this page sells.
+ *
+ * They belong to the PRODUCT, so raising a price in the catalogue reaches
+ * every page selling it. A page that still carries its own legacy offers
+ * keeps serving them — orders reference those ids, and a live page must not
+ * start refusing the ids it is already handing out.
+ */
+async function fetchOffers(landingPageId: string, companyId: string, productId: string | null) {
+  if (productId) {
+    const fromProduct = await db.offer.findMany({
+      where: { companyId, productId, status: 'ACTIVE' },
+      orderBy: [{ sortOrder: 'asc' }, { quantity: 'asc' }],
+      select: {
+        id: true, name: true, quantity: true, freeQuantity: true,
+        sellingPrice: true, compareAtPrice: true, isDefault: true,
+      },
+    });
+    if (fromProduct.length > 0) {
+      return fromProduct.map((o) => ({
+        id: o.id,
+        name: o.name,
+        quantity: o.quantity,
+        freeQuantity: o.freeQuantity,
+        price: o.sellingPrice,
+        // A "was" price that is not above the price is not a saving.
+        compareAtPrice: o.compareAtPrice !== null && o.compareAtPrice > o.sellingPrice ? o.compareAtPrice : null,
+        isDefault: o.isDefault,
+      }));
+    }
+  }
+
+  const legacy = await db.landingPageOffer.findMany({
     where: { landingPageId, isActive: true },
     orderBy: [{ sortOrder: 'asc' }, { price: 'asc' }],
     select: { id: true, name: true, quantity: true, freeQuantity: true, price: true, isDefault: true },
   });
+  return legacy.map((o) => ({ ...o, compareAtPrice: null as number | null }));
 }
 
-async function loadLpData(landingPageId: string) {
+/**
+ * The stored theme, or the default when it is missing or corrupt.
+ * A page whose theme JSON went bad still sells, in the house colours.
+ */
+function safeTheme(raw: string | null | undefined): Partial<typeof DEFAULT_THEME> {
+  if (!raw) return DEFAULT_THEME;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : DEFAULT_THEME;
+  } catch {
+    return DEFAULT_THEME;
+  }
+}
+
+async function loadLpData(landingPageId: string, companyId: string, productId: string | null) {
   const [offers, recs] = await Promise.all([
-    fetchOffers(landingPageId),
+    fetchOffers(landingPageId, companyId, productId),
     db.landingPageRecommendation.findMany({
       where: { landingPageId, isActive: true, product: { status: 'ACTIVE' } },
       orderBy: { sortOrder: 'asc' },
@@ -74,9 +125,12 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
     slug: string;
     isPublished?: boolean;
     htmlContent?: string | null;
+    builderMode?: string | null;
+    theme?: string | null;
+    sections?: string | null;
     product?: { id: string; name: string; basePrice: number } | null;
     company?: { id: string; currency: string };
-    store?: { countryId: string; country: { code: string } } | null;
+    store?: { countryId: string; country: { code: string; currencyCode: string } } | null;
   } | null = null;
 
   // Active offers + post-order recommendations (server-side, DB prices only)
@@ -93,13 +147,16 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
           name: true,
           slug: true,
           htmlContent: true,
+          builderMode: true,
+          theme: true,
+          sections: true,
           product: { select: { id: true, name: true, basePrice: true } },
           company: { select: { id: true, currency: true } },
-          store: { select: { countryId: true, country: { select: { code: true } } } },
+          store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
         },
       });
       if (lp) {
-        [offers, recommendations] = await loadLpData(lp.id);
+        [offers, recommendations] = await loadLpData(lp.id, lp.company!.id, lp.product?.id ?? null);
       }
     }
   }
@@ -113,14 +170,17 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
         slug: true,
         isPublished: true,
         htmlContent: true,
+        builderMode: true,
+        theme: true,
+        sections: true,
         company: { select: { id: true, currency: true } },
         product: { select: { id: true, name: true, basePrice: true } },
-        store: { select: { countryId: true, country: { select: { code: true } } } },
+        store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
       },
     });
     if (!lp || !lp.isPublished) notFound();
 
-    [offers, recommendations] = await loadLpData(lp.id);
+    [offers, recommendations] = await loadLpData(lp.id, lp.company!.id, lp.product?.id ?? null);
 
     // Fire-and-forget view counter (non-fatal, no PII)
     db.landingPage
@@ -144,7 +204,11 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
   const rawSrc = `/lp/${encodeURIComponent(lp.slug)}/raw${previewToken ? `?p=${encodeURIComponent(previewToken)}` : ''}`;
   const productName = lp.product?.name || lp.name;
   const price = lp.product?.basePrice ?? 0;
-  const currency = lp.company?.currency || 'USD';
+  // The currency of the COUNTRY this page sells into, not of the company that
+  // owns it. A Syrian buyer was being shown Jordanian dinars because the
+  // company happens to be Jordanian, and the offer prices on the page were
+  // never in dinars — they were entered for this store.
+  const currency = lp.store?.country.currencyCode || lp.company?.currency || 'USD';
 
   // ── Form visibility rule ──
   //  - Legacy pages (NO data-zaki-* markers at all): trusted OrderForm renders
@@ -173,6 +237,63 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
       }
     : null;
 
+  // ── Where the offer list lives ──
+  // A block page may carry its own `offers` block. Then THAT is the picker
+  // and the form must not draw a second one: the visitor was choosing among
+  // three tiers and would suddenly be looking at six.
+  const sections = lp.builderMode === 'BLOCKS' ? ensureForm(parseSections(lp.sections)) : [];
+  const pageHasOffersBlock = sections.some((s) => s.type === 'offers' && s.enabled);
+
+  // The trusted form is identical in both modes; only its surroundings differ.
+  const orderForm = (
+    <LandingFormBridge
+      offers={offers.map((o) => ({ ...o }))}
+      currency={currency}
+      product={lp.product ? { id: lp.product.id, name: lp.product.name } : null}
+    >
+      <OrderForm
+        slug={lp.slug}
+        productName={productName}
+        basePrice={price}
+        currency={currency}
+        offers={offers.map((o) => ({ ...o }))}
+        recommendations={recommendations}
+        regions={regions}
+        phonePlaceholder={ruleFor(countryCode)?.example}
+        showOfferPicker={!pageHasOffersBlock}
+      />
+    </LandingFormBridge>
+  );
+
+  // ── Mode A: the block builder ──
+  // A page authored from themed blocks. No iframe: nothing on it is
+  // untrusted, because nothing on it was written as markup — the seller
+  // chose blocks and filled in text, and this renderer drew them.
+  if (sections.length > 0) {
+    const palette = paletteFor(safeTheme(lp.theme));
+    const href = fontHref(safeTheme(lp.theme).font ?? DEFAULT_THEME.font);
+
+    // Real stock, for the one block allowed to mention it. Unknown stays
+    // unknown: the block renders nothing rather than inventing a number.
+    let stock: number | null = null;
+    if (lp.product && lp.company) {
+      stock = await availableStock(db, lp.company.id, lp.product.id).catch(() => null);
+    }
+
+    return (
+      <div dir="rtl" className="lp-root" style={paletteVars(palette) as React.CSSProperties}>
+        {href && <link rel="stylesheet" href={href} />}
+        <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS }} />
+        <LandingTrackingPixels pixels={trackingPixels} viewContent={viewContent} />
+        <PageBlocks
+          sections={sections}
+          ctx={{ palette, productName, price, currency, stock, offers, form: orderForm }}
+        />
+      </div>
+    );
+  }
+
+  // ── Mode B: raw HTML, unchanged ──
   return (
     <div dir="rtl" className="flex min-h-screen flex-col bg-[#f7f7f8]">
       {/* 0. Global Tracking (Meta/TikTok/Snapchat) — trusted page only;
@@ -192,24 +313,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
 
       {/* 2. Trusted native order form — rendered only when the page asks for
           ordering (or on legacy pages without behavior-layer markers) */}
-      {showOrderForm && (
-        <LandingFormBridge
-          offers={offers.map((o) => ({ ...o }))}
-          currency={currency}
-          product={lp.product ? { id: lp.product.id, name: lp.product.name } : null}
-        >
-          <OrderForm
-            slug={lp.slug}
-            productName={productName}
-            basePrice={price}
-            currency={currency}
-            offers={offers.map((o) => ({ ...o }))}
-            recommendations={recommendations}
-            regions={regions}
-            phonePlaceholder={ruleFor(countryCode)?.example}
-          />
-        </LandingFormBridge>
-      )}
+      {showOrderForm && orderForm}
 
       {/* 3. Footer */}
       <footer className="border-t border-[#e3e8ef] bg-white px-4 py-8">

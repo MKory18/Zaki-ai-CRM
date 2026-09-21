@@ -5,6 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { CORE_STATES, deriveCoreState, getZone, whereForState, type CoreState, type StateSource } from '@/lib/order-state';
 import { orderRefFields } from '@/lib/order-ref';
 import { computeCod } from '@/lib/money';
+import { productCosts } from '@/lib/product-cost';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { activeBlock } from '@/lib/blacklist';
@@ -417,10 +418,19 @@ export async function POST(req: Request) {
     const qtyTotal = requestedLines.reduce((sum, l) => sum + l.quantity, 0);
     const price = money.subtotal;
 
-    // Cost of goods across every line, from each product's latest batch.
+    // Cost of goods across every line, at the WEIGHTED AVERAGE of the stock
+    // actually on hand. It used to read `batches[0]` — whichever batch the
+    // query returned first, which is an accident rather than a policy, and
+    // it moved every order's reported profit by the gap between two
+    // arbitrary runs.
+    const costByProduct = await productCosts(
+      db,
+      companyId,
+      [...new Set(requestedLines.map((l) => l.productId))]
+    );
     const estimatedCostOfGoods = Number(
       requestedLines
-        .reduce((sum, l) => sum + (productById.get(l.productId)?.batches[0]?.costPerUnit || 0) * l.quantity, 0)
+        .reduce((sum, l) => sum + (costByProduct.get(l.productId)?.average || 0) * l.quantity, 0)
         .toFixed(2)
     );
 

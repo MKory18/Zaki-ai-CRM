@@ -37,42 +37,17 @@ export async function GET(_req: Request, ctx: Ctx) {
   }
 }
 
-export async function POST(req: Request, ctx: Ctx) {
-  try {
-    const { companyId, storeId } = await requireContext();
-    await requirePermission('landing_pages.edit');
-    const { id } = await ctx.params;
-
-    const lp = await db.landingPage.findFirst({ where: { id, companyId, storeId }, select: { id: true } });
-    if (!lp) return NextResponse.json({ error: 'غير موجودة' }, { status: 404 });
-
-    const parsed = offerSchema.safeParse(await req.json());
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' }, { status: 400 });
-    }
-    const v = parsed.data;
-
-    const offer = await db.$transaction(async (tx) => {
-      // Only one default per page
-      if (v.isDefault) {
-        await tx.landingPageOffer.updateMany({ where: { landingPageId: id, isDefault: true }, data: { isDefault: false } });
-      }
-      return tx.landingPageOffer.create({
-        data: {
-          landingPageId: id,
-          name: v.name,
-          quantity: v.quantity,
-          freeQuantity: v.freeQuantity,
-          price: v.price,
-          isDefault: v.isDefault,
-          sortOrder: v.sortOrder,
-          isActive: v.isActive,
-        },
-      });
-    });
-    return NextResponse.json({ success: true, offer }, { status: 201 });
-  } catch (error) {
-    const { body, status } = apiError(error);
-    return NextResponse.json(body, { status });
-  }
+/**
+ * Creating a page-specific offer is closed.
+ *
+ * Offers belong to the product now — one bundle, one price, wherever it is
+ * sold. This endpoint stays only so that the pages which already have their
+ * own offers can be READ and cleaned up; letting it create more would
+ * rebuild the exact fork that was just removed.
+ */
+export async function POST() {
+  return NextResponse.json(
+    { error: 'عروض صفحة الهبوط أُلغيت — تُدار العروض من صفحة المنتج نفسه.' },
+    { status: 410 }
+  );
 }

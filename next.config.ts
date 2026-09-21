@@ -53,6 +53,31 @@ const lpRawOverrideHeaders = [
   },
 ];
 
+// The public landing page, and only it, may load its Arabic display font
+// from Google Fonts.
+//
+// The dashboard's CSP stays shut: a seller choosing a heading font is no
+// reason to open a third-party style source across the whole admin. Scoping
+// it here keeps the page's own stylesheet and script rules exactly as strict
+// as the catch-all — the two lines added are a font stylesheet and the font
+// files it points at, nothing else.
+const lpPageHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; '),
+  },
+];
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   serverExternalPackages: ['sharp'],
@@ -61,7 +86,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
-      // After the catch-all so it overrides XFO / CSP for the LP raw HTML
+      // After the catch-all so each overrides the CSP for its own route.
+      { source: '/lp/:slug', headers: lpPageHeaders },
       { source: '/lp/:slug/raw', headers: lpRawOverrideHeaders },
     ];
   },

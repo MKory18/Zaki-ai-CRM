@@ -37,6 +37,7 @@ export function ProductsScreen() {
   const [sku, setSku] = useState('');
   const [description, setDescription] = useState('');
   const [basePrice, setBasePrice] = useState(20);
+  const [sourceType, setSourceType] = useState<'MANUFACTURED' | 'PURCHASED'>('MANUFACTURED');
   const [status, setStatus] = useState('ACTIVE');
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -157,7 +158,7 @@ export function ProductsScreen() {
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, sku, description, basePrice, status }),
+        body: JSON.stringify({ name, sku, description, basePrice, status, sourceType }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -397,6 +398,36 @@ export function ProductsScreen() {
                 <option value="INACTIVE">غير نشط</option>
                 <option value="OUT_OF_STOCK">نفد من المخزون</option>
               </Select>
+            </div>
+
+            {/* Which door this product's stock comes in through. Both write
+                the same ledger; a ready-made good entered as a "production
+                run" puts invented manufacturing costs into your cost
+                reports, which is why it is asked once, here. */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-[#121926]">مصدر المنتج *</label>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {([
+                  ['MANUFACTURED', 'نصنّعه', 'تشغيلة إنتاج ببنود كلفة — مواد، أجور، تغليف'],
+                  ['PURCHASED', 'جاهز نشتريه', 'استلام بضاعة بسعر شراء للقطعة'],
+                ] as const).map(([key, title, hint]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSourceType(key)}
+                    className={`cursor-pointer rounded-xl border p-3 text-start transition ${
+                      sourceType === key
+                        ? 'border-[#b8256e] bg-[#fdf2f7]'
+                        : 'border-[#e3e8ef] bg-white hover:border-[#b8256e]/40'
+                    }`}
+                  >
+                    <span className={`block text-sm font-bold ${sourceType === key ? 'text-[#b8256e]' : 'text-[#121926]'}`}>
+                      {title}
+                    </span>
+                    <span className="mt-0.5 block text-[10.5px] leading-relaxed text-[#697586]">{hint}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <Textarea
               label="الوصف"

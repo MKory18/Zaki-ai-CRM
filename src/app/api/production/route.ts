@@ -2,7 +2,7 @@
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
-import { calculateBatchCosts } from '@/lib/financial';
+import { batchTotal, batchUnitCost } from '@/lib/product-cost';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 
@@ -75,13 +75,28 @@ export async function POST(req: Request) {
     const raw = parseFloat(rawMaterialCost) || 0;
     const other = parseFloat(otherCosts) || 0;
 
-    const { totalProductionCost, costPerUnit } = calculateBatchCosts({
-      quantityProduced: qty,
+    // Free-form cost lines — "قالب", "أجرة عامل", "شحن المواد". Four fixed
+    // buckets never matched a real run; they matched whatever fitted into
+    // four words. The buckets stay for the batches that use them, and the
+    // total is the buckets plus the lines.
+    const costLines: { label: string; amount: number }[] = Array.isArray(body.costLines)
+      ? body.costLines
+          .map((l: { label?: unknown; amount?: unknown }) => ({
+            label: String(l?.label ?? '').trim().slice(0, 80),
+            amount: Math.max(0, Number(l?.amount) || 0),
+          }))
+          .filter((l: { label: string; amount: number }) => l.label.length > 0)
+          .slice(0, 30)
+      : [];
+
+    const { total: totalProductionCost } = batchTotal({
       manufacturingCost: mfg,
       packagingCost: pack,
       rawMaterialCost: raw,
       otherCosts: other,
+      costLines,
     });
+    const costPerUnit = batchUnitCost(totalProductionCost, qty);
 
     // Phase S: tenant-validate the referenced product
     const prodCheck = await db.product.findFirst({ where: { id: productId, companyId } });
@@ -91,6 +106,9 @@ export async function POST(req: Request) {
 
     const batch = await db.productionBatch.create({
       data: {
+        costLines: costLines.length
+          ? { create: costLines.map((l, i) => ({ companyId, label: l.label, amount: l.amount, sortOrder: i })) }
+          : undefined,
         companyId,
         productId,
         batchNumber: batchNumber.trim().toUpperCase(),

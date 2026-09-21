@@ -23,6 +23,8 @@ import {
   Boxes,
 } from 'lucide-react';
 import Link from 'next/link';
+import { ProductOffers } from '@/components/products/ProductOffers';
+import { ProductStock } from '@/components/products/ProductStock';
 import { format } from 'date-fns';
 
 export function ProductDetailScreen() {
@@ -32,6 +34,7 @@ export function ProductDetailScreen() {
   const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('products.edit');
 
   const [product, setProduct] = useState<any>(null);
+  const [currencyCode, setCurrencyCode] = useState('USD');
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +51,7 @@ export function ProductDetailScreen() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setProduct(data.product);
+      setCurrencyCode(data.currencyCode || 'USD');
       setAnalytics(data.analytics);
     } catch (err: any) {
       setError(err.message);
@@ -337,25 +341,15 @@ export function ProductDetailScreen() {
           </CardContent>
         </Card>
 
-        {/* Offers */}
-        <Card>
-          <CardHeader
-            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><Tag className="w-4 h-4 text-[#fb323f]" /><span>العروض الترويجية</span></span>}
-            action={<Link href="/promotions"><Button size="sm" variant="outline">إدارة العروض</Button></Link>}
-          />
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {product.offers?.length === 0 && <p className="text-xs text-[#9ca3af]">لا توجد عروض بعد.</p>}
-            {product.offers?.map((o: any) => (
-              <div key={o.id} className="border border-[#e3e8ef] rounded-xl p-3 flex items-center space-x-3 rtl:space-x-reverse">
-                <ProductThumb src={primary?.url} size="sm" />
-                <div className="text-xs">
-                  <p className="font-bold text-[#121926]">{o.name}</p>
-                  <p className="text-[#fb323f] font-bold">${o.sellingPrice.toFixed(2)} × {o.quantity}</p>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        {/* Stock, cost and the one door that adds more. */}
+        <ProductStock productId={productId} canManage={!!canManage} />
+
+        {/* Offers — edited here, read everywhere. */}
+        <ProductOffers
+          productId={productId}
+          basePrice={product.basePrice ?? 0}
+          currency={currencyCode}
+        />
 
         {/* Recent Orders */}
         <Card>

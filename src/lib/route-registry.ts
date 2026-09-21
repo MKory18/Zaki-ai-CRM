@@ -41,7 +41,6 @@ export const NAV: NavGroup[] = [
       r('/orders', 'الطلبات', 'ShoppingCart', ['orders.view']),
       r('/customers', 'العملاء', 'Users', ['customers.view', 'customers.view_basic']),
       r('/products', 'المنتجات', 'Package', ['products.view']),
-      r('/promotions', 'العروض الترويجية', 'Tag', ['offers.view', 'offers.manage']),
       r('/manufacturing', 'التصنيع والتشغيلات', 'Factory', ['production.view']),
       r('/assistant', 'المساعد الذكي', 'Bot', ['ai.use']),
     ],

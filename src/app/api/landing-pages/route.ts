@@ -5,6 +5,8 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { validateSlug, conversionRate } from '@/lib/landing-pages';
+import { DEFAULT_THEME } from '@/lib/landing-theme';
+import { starterSections } from '@/lib/landing-sections';
 
 export async function GET(req: Request) {
   try {
@@ -82,6 +84,12 @@ export async function POST(req: Request) {
           slug,
           productId: productId || null,
           htmlContent: htmlContent?.slice(0, 2 * 1024 * 1024) || null,
+          // A new page starts in the block builder with a real page already
+          // in it — an empty canvas is not a starting point, it is a second
+          // task. A page created FROM uploaded HTML stays an HTML page.
+          builderMode: htmlContent ? 'HTML' : 'BLOCKS',
+          theme: htmlContent ? null : JSON.stringify(DEFAULT_THEME),
+          sections: htmlContent ? null : JSON.stringify(starterSections()),
           createdById: user.id,
         },
       });

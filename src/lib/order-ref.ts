@@ -4,6 +4,17 @@ import { db } from './db';
 type Tx = Prisma.TransactionClient | typeof db;
 
 /**
+ * What an order number looks like: `<PREFIX>-<YEAR>-<SEQ>`, where the prefix
+ * is the store's own — "SY-2026-0148", "JO-2026-0007".
+ *
+ * It lives here, beside the generator that produces it, because it did not:
+ * a public route carried its own copy demanding a literal "ORD-", a prefix
+ * nothing has generated since numbering became per-store, and it silently
+ * rejected every request it guarded.
+ */
+export const ORDER_NUMBER_RE = /^[A-Z0-9]{2,10}-[0-9]{4}-[0-9]{4,8}$/;
+
+/**
  * ORDER REFERENCE — one generator for every intake path (manual, AI, Telegram,
  * landing page). Before Stage 3 each path built its own string, which is how
  * two orders end up with the same number.

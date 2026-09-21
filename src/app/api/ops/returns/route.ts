@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { restoreOrderStock } from '@/lib/stock-consumption';
 import { requireContext } from '@/lib/geo-context';
 import { can, requirePermission } from '@/lib/authorization';
 import { redactCustomerForWarehouse } from '@/lib/operations';
@@ -138,32 +139,18 @@ export async function POST(req: Request) {
       });
 
       // Stock re-entry happens HERE, after the acknowledgement, never before.
-      if (input.receivedQty > 0) {
-        let remaining = input.receivedQty;
-        for (const line of order.items) {
-          if (remaining <= 0) break;
-          const take = Math.min(remaining, line.quantity + line.freeQuantity);
-          remaining -= take;
-
-          const balance = await tx.inventoryMovement.findFirst({
-            where: { companyId, productId: line.productId },
-            orderBy: { createdAt: 'desc' },
-            select: { balanceAfter: true },
-          });
-          await tx.inventoryMovement.create({
-            data: {
-              companyId,
-              productId: line.productId,
-              type: 'RETURN',
-              quantity: take,
-              balanceAfter: (balance?.balanceAfter ?? 0) + take,
-              referenceId: order.id,
-              reason: `مرتجع ${order.orderNumber} — بعد العد والفحص`,
-              createdById: user.id,
-            },
-          });
-        }
-      }
+      //
+      // This used to write only a ledger line. Units live in batches, so a
+      // line on its own moved nothing: the ledger read "5 returned" while
+      // every batch held exactly what it held before, and the shipment
+      // screen still reported the shortage. The goods now go back into a
+      // batch of their own at the cost they left at.
+      await restoreOrderStock(tx, {
+        orderId: order.id,
+        companyId,
+        receivedQty: input.receivedQty,
+        userId: user.id,
+      });
 
       await tx.orderItem.updateMany({ where: { orderId: order.id, reservedQty: { gt: 0 } }, data: { reservedQty: 0 } });
       await tx.order.update({

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import {
-  Globe, Upload, Copy, ExternalLink, ArrowRight, Plus, Trash2, Star, Pencil,
+  Globe, Upload, Copy, ExternalLink, ArrowRight, Plus, Trash2, Pencil,
   Loader2, FileCode, MonitorPlay, Gift,
 } from 'lucide-react';
 import { screenApi as crmApi } from '@/lib/screen-api';
@@ -30,19 +30,11 @@ export function LandingPageDetailScreen() {
   const [previewToken, setPreviewToken] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Offers
-  const [offers, setOffers] = useState<any[]>([]);
-  const [offerForm, setOfferForm] = useState<any>(null);
-  const [offerSaving, setOfferSaving] = useState(false);
   // Recommendations
   const [recs, setRecs] = useState<any[]>([]);
   const [recProductId, setRecProductId] = useState('');
   const [recSaving, setRecSaving] = useState(false);
 
-  const loadOffers = useCallback(async () => {
-    if (!lpId) return;
-    try { const d = await crmApi(`/api/landing-pages/${lpId}/offers`); setOffers(d.offers || []); } catch {}
-  }, [lpId]);
   const loadRecs = useCallback(async () => {
     if (!lpId) return;
     try { const d = await crmApi(`/api/landing-pages/${lpId}/recommendations`); setRecs(d.recommendations || []); } catch {}
@@ -60,8 +52,8 @@ export function LandingPageDetailScreen() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    if (lpId) { loadOffers(); loadRecs(); }
-  }, [lpId, loadOffers, loadRecs]);
+    if (lpId) { loadRecs(); }
+  }, [lpId, loadRecs]);
   useEffect(() => {
     crmApi('/api/products?limit=200').then((d) => setProducts(d.products || [])).catch(() => {});
   }, []);
@@ -111,38 +103,6 @@ export function LandingPageDetailScreen() {
   };
   const refreshPreviewRef = useRef(refreshPreview);
 
-  // ─── Offers management ───
-  const saveOffer = async () => {
-    if (!offerForm) return;
-    setOfferSaving(true);
-    try {
-      if (offerForm.id) {
-        await crmApi(`/api/landing-pages/${lpId}/offers/${offerForm.id}`, { method: 'PATCH', body: JSON.stringify(offerForm) });
-      } else {
-        await crmApi(`/api/landing-pages/${lpId}/offers`, { method: 'POST', body: JSON.stringify(offerForm) });
-      }
-      setOfferForm(null);
-      await loadOffers();
-      await refreshPreview();
-    } catch (e: any) { alert(e.message); } finally { setOfferSaving(false); }
-  };
-
-  const deleteOffer = async (offerId: string) => {
-    try {
-      await crmApi(`/api/landing-pages/${lpId}/offers/${offerId}`, { method: 'DELETE' });
-      await loadOffers();
-      await refreshPreview();
-    } catch (e: any) { alert(e.message); }
-  };
-
-  const toggleDefaultOffer = async (o: any) => {
-    try {
-      await crmApi(`/api/landing-pages/${lpId}/offers/${o.id}`, { method: 'PATCH', body: JSON.stringify({ isDefault: true }) });
-      await loadOffers();
-      await refreshPreview();
-    } catch (e: any) { alert(e.message); }
-  };
-
   // ─── Recommendations management ───
   const addRecommendation = async () => {
     if (!recProductId) return;
@@ -189,35 +149,51 @@ export function LandingPageDetailScreen() {
     );
   }
 
+  // An offer price with no currency beside it is a number, not a price —
+  // and this company sells into more than one country.
+  const currencyCode: string = lp.store?.country?.currencyCode || lp.company?.currency || '';
+
   return (
     <>
-      <div className="p-6 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Button variant="secondary" size="sm" onClick={() => (window.location.href = '/growth/landing-pages')}>
-              <ArrowRight className="w-4 h-4" /> رجوع
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-[#1a2232] flex items-center gap-2">
-                <Globe className="w-6 h-6 text-[#b8256e]" /> تحرير صفحة الهبوط
-              </h1>
-              <p className="text-xs text-[#697586] mt-0.5">{lp.name}</p>
-            </div>
-            <Badge variant={lp.isPublished ? 'success' : 'warning'}>{lp.isPublished ? 'منشورة' : 'مسودة'}</Badge>
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+        {/* On a phone the title, the badge and two buttons cannot share one
+            row: the heading wrapped onto three lines and the buttons left
+            the screen. So the row breaks, and the actions sit together on
+            their own line where they are still one tap each. */}
+        <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
+          {/* Row one on a phone: where you came from, and where this page
+              stands. The title gets its own line rather than being squeezed
+              to "تحري.." between a button and a badge. */}
+          <Button variant="secondary" size="sm" onClick={() => (window.location.href = '/growth/landing-pages')}>
+            <ArrowRight className="w-4 h-4" /> رجوع
+          </Button>
+          <Badge variant={lp.isPublished ? 'success' : 'warning'}>{lp.isPublished ? 'منشورة' : 'مسودة'}</Badge>
+
+          <div className="order-last min-w-0 basis-full sm:order-none sm:basis-auto">
+            <h1 className="text-lg sm:text-2xl font-bold text-[#1a2232] flex items-center gap-2">
+              <Globe className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-[#b8256e]" />
+              تحرير صفحة الهبوط
+            </h1>
+            <p className="text-xs text-[#697586] mt-0.5 truncate">{lp.name}</p>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-1 items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => (window.location.href = `/growth/landing-pages/${lpId}/editor`)}>
-              <Pencil className="w-4 h-4" /> Custom Editor
+              <Pencil className="w-4 h-4" /> المحرّر
             </Button>
-            <Button onClick={togglePublish} variant={lp.isPublished ? 'outline' : 'success'}>
+            <Button size="sm" onClick={togglePublish} variant={lp.isPublished ? 'outline' : 'success'}>
               {lp.isPublished ? 'إلغاء النشر' : 'نشر الصفحة'}
             </Button>
           </div>
         </div>
 
+        {/* `min-w-0` on the columns is not cosmetic: a grid item's automatic
+            minimum size is its min-content width, and a text input's is about
+            twenty characters. Without it the column refused to shrink and the
+            whole page scrolled sideways by 185px on a phone. */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* ─── Settings + upload ─── */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <Card>
               <CardContent className="p-4 space-y-4">
                 <div>
@@ -279,68 +255,28 @@ export function LandingPageDetailScreen() {
               </CardContent>
             </Card>
 
+            {/* Offers live on the PRODUCT now — one bundle, one price,
+                wherever it is sold. This card used to hold a second copy,
+                and raising a price in the catalogue never reached it. */}
             <Card>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-[#1a2232] flex items-center gap-2">
-                    <Gift className="w-4 h-4 text-[#b8256e]" /> عروض المنتج
-                  </h3>
-                  <Button size="sm" onClick={() => setOfferForm({ name: '', quantity: 1, freeQuantity: 0, price: lp.product?.basePrice ?? 0, isDefault: offers.length === 0, sortOrder: offers.length, isActive: true })}>
-                    <Plus className="w-4 h-4" /> إضافة عرض
-                  </Button>
-                </div>
-                {offers.length === 0 ? (
-                  <p className="text-xs text-[#697586]">لا توجد عروض — سيقوم النموذج بعرض سعر المنتج الأساسي فقط.</p>
+              <CardContent className="p-4 space-y-2">
+                <h3 className="font-semibold text-[#1a2232] flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-[#b8256e]" /> عروض المنتج
+                </h3>
+                <p className="text-[11px] leading-relaxed text-[#697586]">
+                  العروض تُدار من صفحة المنتج نفسه، وهذه الصفحة تقرأ منها مباشرة —
+                  فتغيير السعر هناك يصل إلى هنا وإلى كل مكان يبيع نفس المنتج.
+                </p>
+                {lp.productId ? (
+                  <a href={`/products/${lp.productId}`}>
+                    <Button variant="outline" size="sm">
+                      <Gift className="w-4 h-4" /> إدارة عروض هذا المنتج
+                    </Button>
+                  </a>
                 ) : (
-                  <div className="space-y-2">
-                    {offers.map((o: any) => (
-                      <div key={o.id} className="flex items-center gap-2 rounded-xl border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2.5">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-[#121926] flex items-center gap-1.5">
-                            {o.name}
-                            {o.isDefault && <Star className="w-3.5 h-3.5 text-[#ffab00] fill-[#ffab00]" />}
-                          </p>
-                          <p className="text-[11px] text-[#697586]" dir="ltr">
-                            {o.quantity} قطعة{o.freeQuantity > 0 ? ` + ${o.freeQuantity} هدية` : ''} — {o.price}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          {!o.isDefault && (
-                            <button title="اجعلها الافتراضية" onClick={() => toggleDefaultOffer(o)} className="p-1.5 rounded-lg hover:bg-[#eef2f6] text-[#697586]"><Star className="w-4 h-4" /></button>
-                          )}
-                          <button title="تعديل" onClick={() => setOfferForm({ ...o })} className="p-1.5 rounded-lg hover:bg-[#eef2f6] text-[#364152]"><Pencil className="w-4 h-4" /></button>
-                          <button title="حذف" onClick={() => deleteOffer(o.id)} className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Offer form */}
-                {offerForm && (
-                  <div className="space-y-2 rounded-xl border border-[#b8256e]/30 bg-[#fdf2f7] p-3">
-                    <Input placeholder="اسم العرض (مثال: قطعتان + هدية)" value={offerForm.name} onChange={(e: any) => setOfferForm({ ...offerForm, name: e.target.value })} />
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input type="number" min="1" placeholder="الكمية" value={offerForm.quantity} onChange={(e: any) => setOfferForm({ ...offerForm, quantity: e.target.value })} />
-                      <Input type="number" min="0" placeholder="الكمية المجانية" value={offerForm.freeQuantity} onChange={(e: any) => setOfferForm({ ...offerForm, freeQuantity: e.target.value })} />
-                      <Input type="number" min="0" step="0.01" placeholder="السعر" value={offerForm.price} onChange={(e: any) => setOfferForm({ ...offerForm, price: e.target.value })} />
-                      <Input type="number" min="0" placeholder="الترتيب" value={offerForm.sortOrder} onChange={(e: any) => setOfferForm({ ...offerForm, sortOrder: e.target.value })} />
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-1.5 text-xs text-[#364152]">
-                        <input type="checkbox" checked={!!offerForm.isDefault} onChange={(e: any) => setOfferForm({ ...offerForm, isDefault: e.target.checked })} /> العرض الافتراضي
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs text-[#364152]">
-                        <input type="checkbox" checked={!!offerForm.isActive} onChange={(e: any) => setOfferForm({ ...offerForm, isActive: e.target.checked })} /> فعال
-                      </label>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => setOfferForm(null)}>إلغاء</Button>
-                      <Button size="sm" onClick={saveOffer} disabled={offerSaving || !offerForm.name?.trim()}>
-                        {offerSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} حفظ العرض
-                      </Button>
-                    </div>
-                  </div>
+                  <p className="text-[11px] text-[#c2410c]">
+                    اربط الصفحة بمنتج أولاً حتى تظهر عروضه عليها.
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -414,7 +350,7 @@ export function LandingPageDetailScreen() {
           </div>
 
           {/* ─── Preview (sandboxed, opaque origin) ─── */}
-          <div>
+          <div className="min-w-0">
             <Card className="h-full">
               <CardContent className="p-4 flex flex-col h-full">
                 <h3 className="font-semibold text-[#1a2232] flex items-center gap-2 mb-3">

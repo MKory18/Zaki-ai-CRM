@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { verifyAddonToken } from '@/lib/landing-pages';
+import { ORDER_NUMBER_RE } from '@/lib/order-ref';
 
 interface Ctx {
   params: Promise<{ slug: string; orderNumber: string }>;
@@ -46,7 +47,12 @@ export async function POST(req: Request, ctx: Ctx) {
     if (!/^[a-z0-9-]{2,60}$/.test(slug)) {
       return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
     }
-    if (!/^ORD-[0-9]{4}-[0-9]{4,8}$/.test(decodeURIComponent(orderNumber))) {
+    // The shape comes from the generator, not from a copy kept here: this
+    // check used to demand a literal "ORD-" that nothing has produced since
+    // numbering became per-store, and so refused every upsell before it
+    // could be looked up. The token is what proves ownership; this only
+    // keeps a malformed id out of the query.
+    if (!ORDER_NUMBER_RE.test(decodeURIComponent(orderNumber))) {
       return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
     }
 

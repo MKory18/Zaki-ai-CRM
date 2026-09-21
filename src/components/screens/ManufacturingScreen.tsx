@@ -7,7 +7,7 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { Factory, Plus, Calculator, Calendar, Boxes } from 'lucide-react';
+import { Factory, Plus, Calculator, Calendar, Boxes, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 export function ManufacturingScreen() {
@@ -25,6 +25,10 @@ export function ManufacturingScreen() {
   const [packagingCost, setPackagingCost] = useState(800);
   const [rawMaterialCost, setRawMaterialCost] = useState(700);
   const [otherCosts, setOtherCosts] = useState(0);
+  // Free-form cost lines. Four fixed buckets never matched a real run —
+  // they matched whatever fitted into four words — so a batch can name as
+  // many costs as the work actually had.
+  const [costLines, setCostLines] = useState<{ label: string; amount: number }[]>([]);
   const [notes, setNotes] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -34,7 +38,8 @@ export function ManufacturingScreen() {
     (manufacturingCost || 0) +
     (packagingCost || 0) +
     (rawMaterialCost || 0) +
-    (otherCosts || 0);
+    (otherCosts || 0) +
+    costLines.reduce((sum, l) => sum + (l.amount || 0), 0);
 
   const costPerUnit =
     quantityProduced > 0 ? (totalProductionCost / quantityProduced).toFixed(2) : '0.00';
@@ -84,6 +89,7 @@ export function ManufacturingScreen() {
           packagingCost,
           rawMaterialCost,
           otherCosts,
+          costLines: costLines.filter((l) => l.label.trim()),
           notes,
         }),
       });
@@ -269,6 +275,73 @@ export function ManufacturingScreen() {
                 value={otherCosts}
                 onChange={(e) => setOtherCosts(parseFloat(e.target.value) || 0)}
               />
+            </div>
+
+            {/* Whatever else this run actually cost. A mould, a day of
+                labour, the courier who brought the raw material — each with
+                its own name, so the total can be explained a month later. */}
+            <div className="mt-4 border-t border-[#e3e8ef] pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-bold text-[#364152]">بنود كلفة إضافية</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCostLines([...costLines, { label: '', amount: 0 }])}
+                  disabled={costLines.length >= 30}
+                >
+                  <Plus className="h-3.5 w-3.5" /> أضف بنداً
+                </Button>
+              </div>
+
+              {costLines.length === 0 ? (
+                <p className="text-[10.5px] leading-relaxed text-[#697586]">
+                  اختياري — أضف أي كلفة لا تناسبها الخانات الأربع أعلاه: قالب، أجرة عامل،
+                  شحن مواد، كهرباء. كل بند باسمه ومبلغه، ويدخل في المجموع وفي تكلفة الوحدة.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {costLines.map((line, i) => (
+                    <div key={i} className="flex items-end gap-2">
+                      <div className="min-w-0 flex-1">
+                        <Input
+                          label={i === 0 ? 'البند' : undefined}
+                          placeholder="مثال: أجرة عامل"
+                          value={line.label}
+                          onChange={(e) =>
+                            setCostLines(costLines.map((l, n) => (n === i ? { ...l, label: e.target.value } : l)))
+                          }
+                        />
+                      </div>
+                      <div className="w-32 shrink-0">
+                        <Input
+                          label={i === 0 ? 'كم كلّف' : undefined}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          dir="ltr"
+                          value={line.amount}
+                          onChange={(e) =>
+                            setCostLines(
+                              costLines.map((l, n) =>
+                                n === i ? { ...l, amount: parseFloat(e.target.value) || 0 } : l
+                              )
+                            )
+                          }
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        title="حذف البند"
+                        onClick={() => setCostLines(costLines.filter((_, n) => n !== i))}
+                        className="mb-1 cursor-pointer rounded-lg p-2 text-rose-600 hover:bg-rose-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

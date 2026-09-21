@@ -11,7 +11,7 @@ export function Input({ label, error, helperText, className, id, ...props }: Inp
   const inputId = id || props.name;
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       {label && (
         <label htmlFor={inputId} className="block text-xs font-medium text-[#121926] mb-1.5">
           {label}
@@ -20,7 +20,7 @@ export function Input({ label, error, helperText, className, id, ...props }: Inp
       <input
         id={inputId}
         className={clsx(
-          'w-full px-3 py-2 text-sm bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors placeholder:text-[#9aa4b2]',
+          'w-full min-w-0 px-3 py-2 text-sm bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors placeholder:text-[#9aa4b2]',
           error ? 'border-[#fb323f] focus:border-[#fb323f] focus:ring-[#fb323f]/20' : 'border-[#e3e8ef]',
           className
         )}
@@ -42,7 +42,7 @@ export function Select({ label, error, options, children, className, id, ...prop
   const selectId = id || props.name;
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       {label && (
         <label htmlFor={selectId} className="block text-xs font-medium text-[#121926] mb-1.5">
           {label}
@@ -51,7 +51,7 @@ export function Select({ label, error, options, children, className, id, ...prop
       <select
         id={selectId}
         className={clsx(
-          'w-full px-3 py-2 text-sm bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors',
+          'w-full min-w-0 px-3 py-2 text-sm bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors',
           error ? 'border-[#fb323f]' : 'border-[#e3e8ef]',
           className
         )}
@@ -79,7 +79,7 @@ export function Textarea({ label, error, className, id, ...props }: TextareaProp
   const textareaId = id || props.name;
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       {label && (
         <label htmlFor={textareaId} className="block text-xs font-medium text-[#121926] mb-1.5">
           {label}
@@ -88,7 +88,7 @@ export function Textarea({ label, error, className, id, ...props }: TextareaProp
       <textarea
         id={textareaId}
         className={clsx(
-          'w-full px-3 py-2 text-sm bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors placeholder:text-[#9aa4b2]',
+          'w-full min-w-0 px-3 py-2 text-sm bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors placeholder:text-[#9aa4b2]',
           error ? 'border-[#fb323f]' : 'border-[#e3e8ef]',
           className
         )}

@@ -23,6 +23,7 @@ model Company {
   users              User[]
   products           Product[]
   batches            ProductionBatch[]
+  batchCostLines     ProductionBatchCost[]
   inventoryMovements InventoryMovement[]
   offers             Offer[]
   customers          Customer[]
@@ -146,6 +147,10 @@ model Product {
   description String?
   descriptionEn String?
   image       String?
+  // How this product's stock comes in. MANUFACTURED opens a production batch
+  // with a cost breakdown; PURCHASED opens a receiving batch with one unit
+  // cost. Both land in the same ledger — this only picks the door.
+  sourceType  String?  // 'MANUFACTURED' | 'PURCHASED'
   status      String   @default("ACTIVE") // ACTIVE, INACTIVE, OUT_OF_STOCK
   basePrice   Float    @default(0.0)
   categoryId  String?
@@ -214,10 +219,30 @@ model ProductionBatch {
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   inventoryMovements InventoryMovement[]
+  costLines          ProductionBatchCost[]
 
   @@unique([companyId, batchNumber])
   @@index([companyId, productId])
   @@map("production_batches")
+}
+
+/// One named cost on a production batch — "قالب", "أجرة عامل", "شحن المواد".
+/// The four fixed buckets on the batch stay for the batches that use them;
+/// a batch's total is those four plus these lines.
+model ProductionBatchCost {
+  id        String   @id @default(uuid())
+  companyId String
+  batchId   String
+  label     String
+  amount    Float    @default(0)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  batch   ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@map("production_batch_costs")
 }
 
 model InventoryMovement {
@@ -248,9 +273,16 @@ model Offer {
   productId        String
   name             String
   quantity         Int      @default(1)
+  // Units given free on top of `quantity` — "3 قطع + 1 مجاناً".
+  freeQuantity     Int      @default(0)
   sellingPrice     Float
+  // The struck-through "was" price. Display only: it never enters computeCod.
+  compareAtPrice   Float?
   discount         Float    @default(0.0)
   deliveryIncluded Boolean  @default(true)
+  // The bundle preselected on the landing page and the quick-order screen.
+  isDefault        Boolean  @default(false)
+  sortOrder        Int      @default(0)
   status           String   @default("ACTIVE") // ACTIVE, INACTIVE
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -260,6 +292,7 @@ model Offer {
   orders  Order[]
 
   @@index([companyId, productId])
+  @@index([productId, status, sortOrder])
   @@map("offers")
 }
 
@@ -886,6 +919,12 @@ model LandingPage {
   htmlContent  String?  @db.Text
   cssContent   String?  @db.Text // custom CSS from the visual editor (sanitized server-side)
   pageSettings String?  // JSON: { width, maxWidth, background, direction, fontFamily } — additive base styles
+  // How this page is authored. 'BLOCKS' = themed section builder (default for
+  // new pages); 'HTML' = the raw upload, kept as an alternative. NULL reads
+  // as 'HTML', which is what every page predating the builder is.
+  builderMode  String?  // 'BLOCKS' | 'HTML'
+  theme        String?  // JSON: { accent, mood, font, corners } — one colour, palette derived
+  sections     String?  @db.Text // JSON: ordered LandingSection[]
   metaPixelId      String?  // Meta/Facebook Pixel ID (digits only, validated server-side)
   metaPixelEnabled Boolean  @default(false) // false/empty → no Pixel script is ever loaded
   productId    String?

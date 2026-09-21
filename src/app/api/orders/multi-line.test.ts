@@ -25,6 +25,7 @@ const { db, requireContext, requirePermission, logAudit, activeBlock, createNoti
     orderItem: { createMany: vi.fn(), create: vi.fn() },
     orderActivity: { create: vi.fn() },
     orderStatusLog: { create: vi.fn() },
+    productionBatch: { findMany: vi.fn() },
     $transaction: vi.fn(),
   },
   requireContext: vi.fn(),
@@ -98,6 +99,12 @@ beforeEach(() => {
   db.store.findFirst.mockResolvedValue({ priceIncludesDelivery: true });
   db.user.findFirst.mockResolvedValue({ id: 'u1', commissionRate: 0 });
   db.order.create.mockResolvedValue({ id: 'o-new', orderNumber: 'SY-2026-0200' });
+  // Stock on hand, per product, at the cost it was bought or made at. The
+  // order's cost of goods is the weighted average of what is actually there.
+  db.productionBatch.findMany.mockResolvedValue([
+    { productId: CREAM.id, quantityRemaining: 100, costPerUnit: 5 },
+    { productId: DROPS.id, quantityRemaining: 100, costPerUnit: 7 },
+  ]);
   db.$transaction.mockImplementation(async (fn: any) => fn(db));
 });
 
@@ -136,7 +143,7 @@ describe('an order can hold more than one product', () => {
     expect(order.totalAmount).toBe(60);
   });
 
-  it('costs the goods from each product’s own batch, not the first one twice', async () => {
+  it('costs the goods at each product’s own weighted stock cost', async () => {
     await post(body({
       items: [
         { productId: CREAM.id, quantity: 2, unitPrice: 40 },  // 2 × 5

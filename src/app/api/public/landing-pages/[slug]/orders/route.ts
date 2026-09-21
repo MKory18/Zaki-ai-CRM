@@ -152,31 +152,50 @@ export async function POST(req: Request, ctx: Ctx) {
     const product = lp.product;
 
     // ─── Offer resolution (server-authoritative) ───
-    // If the client sends an offerId it MUST belong to THIS landing page;
-    // quantity / freeQuantity / price all come from the DB offer — any
-    // client-sent quantity/price is ignored by the schema design.
-    // Pages WITHOUT offers fall back to the base product price (qty 1).
+    // The offers belong to the PRODUCT, not to this page: one bundle, one
+    // price, wherever it is sold. quantity / freeQuantity / price all come
+    // from the row — a quantity or a price sent by the browser is ignored.
+    //
+    // A page's own legacy offers are still honoured, because orders already
+    // reference them and a live page must not start refusing the ids it is
+    // currently serving. New pages never create them.
     let offer = null as
-      | { id: string; name: string; quantity: number; freeQuantity: number; price: number }
+      | { id: string; name: string; quantity: number; freeQuantity: number; price: number; fromProduct: boolean }
       | null;
+
+    const productOffers = product
+      ? await db.offer.findMany({
+          where: { companyId, productId: product.id, status: 'ACTIVE' },
+          orderBy: [{ sortOrder: 'asc' }, { quantity: 'asc' }],
+          select: { id: true, name: true, quantity: true, freeQuantity: true, sellingPrice: true },
+        })
+      : [];
+
     if (v.offerId) {
-      const found = await db.landingPageOffer.findFirst({
-        where: { id: v.offerId, landingPageId: lp.id, isActive: true },
-      });
-      if (!found) {
-        return NextResponse.json(
-          {
-            ...ORDER_VALIDATION_ERROR_BODY,
-            fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' },
-          },
-          { status: 400, headers: CORS }
-        );
+      const fromProduct = productOffers.find((o) => o.id === v.offerId);
+      if (fromProduct) {
+        offer = { ...fromProduct, price: fromProduct.sellingPrice, fromProduct: true };
+      } else {
+        const legacy = await db.landingPageOffer.findFirst({
+          where: { id: v.offerId, landingPageId: lp.id, isActive: true },
+        });
+        if (!legacy) {
+          return NextResponse.json(
+            {
+              ...ORDER_VALIDATION_ERROR_BODY,
+              fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' },
+            },
+            { status: 400, headers: CORS }
+          );
+        }
+        offer = { ...legacy, fromProduct: false };
       }
-      offer = found;
     } else {
-      const offerCount = await db.landingPageOffer.count({ where: { landingPageId: lp.id, isActive: true } });
-      if (offerCount > 0) {
-        // The page HAS offers — an explicit selection is required
+      const legacyCount = await db.landingPageOffer.count({
+        where: { landingPageId: lp.id, isActive: true },
+      });
+      if (productOffers.length > 0 || legacyCount > 0) {
+        // Offers exist — an explicit selection is required.
         return NextResponse.json(
           {
             ...ORDER_VALIDATION_ERROR_BODY,
@@ -285,7 +304,11 @@ export async function POST(req: Request, ctx: Ctx) {
               version: 1,
               source: LANDING_PAGE_SOURCE,
               landingPageId: lp.id,
-              landingPageOfferId: offer?.id ?? null,
+              // A product offer is recorded in the column the rest of the
+              // system reads for profit and reporting; a legacy page offer
+              // stays where it was, so old orders keep their meaning.
+              offerId: offer?.fromProduct ? offer.id : null,
+              landingPageOfferId: offer && !offer.fromProduct ? offer.id : null,
               customerNotes: v.notes || null,
               internalNotes: null,
             },

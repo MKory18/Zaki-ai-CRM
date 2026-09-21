@@ -6,6 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { buildBehaviorScript, BEHAVIOR_CSS } from '@/lib/landing-dynamic';
+import { BlockBuilder } from '@/components/landing/blocks/BlockBuilder';
+import { HtmlPromptButtons } from '@/components/landing/HtmlPromptButtons';
+import { type LandingTheme, DEFAULT_THEME } from '@/lib/landing-theme';
+import {
+  type LandingSection, parseSections, ensureForm, starterSections,
+} from '@/lib/landing-sections';
 import {
   ArrowRight, Save, Eye, Globe, Code2, Palette, Monitor, Tablet, Smartphone,
   Image as ImageIcon, Package, MousePointerClick, Gift, ListPlus, Type, Upload, Loader2,
@@ -227,6 +233,11 @@ export function LandingPageEditorScreen() {
   const [css, setCss] = useState('');
   const [settings, setSettings] = useState<any>({ width: 'full', background: '#ffffff', direction: 'rtl', fontFamily: '' });
 
+  // ── The block builder, the other way to author this page ──
+  const [mode, setMode] = useState<'BLOCKS' | 'HTML'>('HTML');
+  const [theme, setTheme] = useState<LandingTheme>(DEFAULT_THEME);
+  const [sections, setSections] = useState<LandingSection[]>([]);
+
   const [tab, setTab] = useState<Tab>('html');
   const [device, setDevice] = useState<Device>('desktop');
   const [dirty, setDirty] = useState(false);
@@ -252,6 +263,20 @@ export function LandingPageEditorScreen() {
       if (page.pageSettings) {
         try { setSettings({ width: 'full', background: '#ffffff', direction: 'rtl', fontFamily: '', ...JSON.parse(page.pageSettings) }); } catch {}
       }
+
+      // Block builder state. A page with no blocks yet gets a real starter
+      // page rather than a blank canvas — including every page that predates
+      // the builder, the moment its owner switches over.
+      setMode(page.builderMode === 'BLOCKS' ? 'BLOCKS' : 'HTML');
+      if (page.theme) {
+        try { setTheme({ ...DEFAULT_THEME, ...JSON.parse(page.theme) }); } catch {}
+      }
+      // Test what was STORED, not what survives ensureForm — that always
+      // returns at least a form, so asking it would hide an empty page
+      // behind a single lonely block.
+      const stored = parseSections(page.sections);
+      setSections(stored.length ? ensureForm(stored) : starterSections());
+
       setDirty(false);
       // Phase 2 preview data — this page's own DB records (no secrets)
       setPreviewData({
@@ -260,7 +285,7 @@ export function LandingPageEditorScreen() {
           : null,
         offers: [],
         recommendations: [],
-        currency: 'USD',
+        currency: page.store?.country?.currencyCode || page.company?.currency || 'USD',
       });
       try {
         const off = await crmApi(`/api/landing-pages/${lpId}/offers`);
@@ -310,6 +335,12 @@ export function LandingPageEditorScreen() {
     });
   };
 
+  // Both authoring modes are saved on every save. Switching modes must never
+  // be the thing that loses the other mode's work: the HTML stays on the row
+  // while the blocks are being built, and the blocks stay while the HTML is.
+  const contentPayload = () =>
+    JSON.stringify({ html, css, settings, builderMode: mode, theme, sections });
+
   const saveDraft = async () => {
     if (!lpId) return;
     setSaving(true);
@@ -317,7 +348,7 @@ export function LandingPageEditorScreen() {
     try {
       await crmApi(`/api/landing-pages/${lpId}/content`, {
         method: 'PUT',
-        body: JSON.stringify({ html, css, settings }),
+        body: contentPayload(),
       });
       setSaveMsg({ ok: true, text: 'تم حفظ المسودة' });
       setDirty(false);
@@ -334,7 +365,7 @@ export function LandingPageEditorScreen() {
     setSaveMsg(null);
     try {
       // save first, then publish — published page must reflect the latest draft
-      await crmApi(`/api/landing-pages/${lpId}/content`, { method: 'PUT', body: JSON.stringify({ html, css, settings }) });
+      await crmApi(`/api/landing-pages/${lpId}/content`, { method: 'PUT', body: contentPayload() });
       await crmApi(`/api/landing-pages/${lpId}`, { method: 'PATCH', body: JSON.stringify({ isPublished: !lp.isPublished }) });
       setLp({ ...lp, isPublished: !lp.isPublished });
       setDirty(false);
@@ -346,8 +377,9 @@ export function LandingPageEditorScreen() {
     }
   };
 
-  const uploadImages = async (files: FileList) => {
-    if (!lpId || files.length === 0) return;
+  /** Uploads and returns the stored URLs — the one upload path both modes use. */
+  const uploadFiles = async (files: FileList): Promise<string[]> => {
+    if (!lpId || files.length === 0) return [];
     setUploading(true);
     setSaveMsg(null);
     try {
@@ -356,7 +388,19 @@ export function LandingPageEditorScreen() {
       const res = await fetch(`/api/landing-pages/${lpId}/image`, { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      const urls: string[] = data.urls || [];
+      return (data.urls as string[]) || [];
+    } catch (e: any) {
+      setSaveMsg({ ok: false, text: e.message || 'تعذر رفع الصور' });
+      return [];
+    } finally {
+      setUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
+
+  const uploadImages = async (files: FileList) => {
+    try {
+      const urls = await uploadFiles(files);
       if (urls.length > 0) {
         const imgTag = urls.map((u) => `<img src="${u}" alt="">`).join('\n');
         insertAtCursor(imgTag);
@@ -365,9 +409,6 @@ export function LandingPageEditorScreen() {
       }
     } catch (e: any) {
       setSaveMsg({ ok: false, text: e.message || 'تعذر رفع الصور' });
-    } finally {
-      setUploading(false);
-      if (imageInputRef.current) imageInputRef.current.value = '';
     }
   };
 
@@ -424,6 +465,21 @@ export function LandingPageEditorScreen() {
             {dirty && <span className="text-[10px] text-[#ffab00]">● تغييرات غير محفوظة</span>}
           </div>
           <div className="flex items-center gap-2">
+            {/* Which way this page is authored. Both are kept on the row, so
+                switching is a view change, not a loss. */}
+            <div className="flex rounded-lg border border-[#e3e8ef] p-0.5">
+              {([['BLOCKS', 'مصمّم البلوكات'], ['HTML', 'HTML']] as const).map(([m, label]) => (
+                <button
+                  key={m}
+                  onClick={() => { setMode(m); setDirty(true); }}
+                  className={`cursor-pointer rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
+                    mode === m ? 'bg-[#b8256e] text-white' : 'text-[#697586] hover:text-[#b8256e]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             {saveMsg && <span className={`text-xs ${saveMsg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{saveMsg.text}</span>}
             <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} حفظ
@@ -440,11 +496,34 @@ export function LandingPageEditorScreen() {
           </div>
         </div>
 
-        {/* ─── 3-column workspace ─── */}
-        <div className="grid flex-1 grid-cols-1 lg:grid-cols-[220px_1fr_260px]">
-          {/* LEFT: Insert toolbar */}
-          <div className="border-b border-[#e3e8ef] bg-white p-3 lg:border-b-0 lg:border-l lg:border-[#e3e8ef]">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">إدراج</p>
+        {mode === 'BLOCKS' ? (
+          <BlockBuilder
+            theme={theme}
+            sections={sections}
+            onTheme={(t) => { setTheme(t); setDirty(true); }}
+            onSections={(s) => { setSections(s); setDirty(true); }}
+            onUpload={uploadFiles}
+            product={lp.product ? { name: lp.product.name, price: lp.product.basePrice } : null}
+            currency={previewData?.currency || 'USD'}
+            offers={previewData?.offers || []}
+          />
+        ) : (
+        /* ─── 3-column workspace ─── */
+        <div className="flex flex-1 flex-col gap-3 bg-[#f1f5f9] p-3 lg:grid lg:grid-cols-[1fr_300px] lg:items-start">
+          {/* RIGHT COLUMN (second on a phone): the tools, folded away. */}
+          <div className="order-2 space-y-3 rounded-xl border border-[#e3e8ef] bg-white p-3 lg:order-2">
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">
+                اكتب الـHTML بالذكاء الاصطناعي
+              </p>
+              <p className="mb-2 text-[10px] leading-relaxed text-[#697586]">
+                هذا البرومبت يشرح كل قيود النظام — ما يُحذف عند الحفظ، وكيف تربط
+                الأزرار بنموذج الطلب الحقيقي. الصقه في أي مساعد ذكاء اصطناعي.
+              </p>
+              <HtmlPromptButtons />
+            </div>
+
+            <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">إدراج</p>
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
               {INSERT_SNIPPETS.map((item) => (
                 <button
@@ -541,8 +620,8 @@ data-zaki-z-index="9999"`}</pre>
             </p>
           </div>
 
-          {/* CENTER: editors + live preview */}
-          <div className="flex flex-col gap-3 bg-[#f1f5f9] p-3">
+          {/* The code and the preview, with the whole width to themselves. */}
+          <div className="order-1 flex min-w-0 flex-col gap-3 lg:order-1">
             {/* Code editors */}
             <div className="overflow-hidden rounded-xl border border-[#e3e8ef]">
               <div className="flex items-center gap-1 border-b border-[#202939] bg-[#121926] px-2 py-1.5">
@@ -628,8 +707,8 @@ data-zaki-z-index="9999"`}</pre>
             </div>
           </div>
 
-          {/* RIGHT: Page settings */}
-          <div className="border-t border-[#e3e8ef] bg-white p-4 lg:border-r lg:border-t-0">
+          {/* Page settings — beneath the tools, same column. */}
+          <div className="order-3 rounded-xl border border-[#e3e8ef] bg-white p-4 lg:order-3">
             <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">إعدادات الصفحة</p>
             <div className="space-y-4">
               <div>
@@ -703,6 +782,7 @@ data-zaki-z-index="9999"`}</pre>
             </div>
           </div>
         </div>
+        )}
       </div>
     </>
   );

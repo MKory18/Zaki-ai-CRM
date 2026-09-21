@@ -121,7 +121,7 @@ export async function POST(req: Request) {
     await requirePermission('products.create');
 
     const body = await req.json();
-    const { name, nameEn, sku, description, descriptionEn, basePrice, status } = body;
+    const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType } = body;
 
     if (!name || !sku) {
       return NextResponse.json({ error: 'Name and SKU are required' }, { status: 400 });
@@ -150,6 +150,11 @@ export async function POST(req: Request) {
         sku: sku.trim().toUpperCase(),
         description: description?.trim(),
         basePrice: parseFloat(basePrice) || 0,
+        // Which door this product's stock comes in through. Both write the
+        // same ledger; this only decides which form you are shown, and a
+        // ready-made good entered as a "production run" corrupts the
+        // production cost reports.
+        sourceType: sourceType === 'PURCHASED' ? 'PURCHASED' : 'MANUFACTURED',
         status: status || 'ACTIVE',
       },
     });

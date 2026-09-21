@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { consumeOrderStock } from '@/lib/stock-consumption';
 import { assertOrderAccess } from '@/lib/rbac';
 import {
   isValidShippingTransition, canEnterShipping, STATUS_TIMESTAMP,
@@ -34,7 +35,7 @@ import { orderLinesForGuard } from '@/lib/reservation';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId, storeId } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
 
     // Order access first, then shipping authority evaluated against the order
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
@@ -273,11 +274,34 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     updateData.version = { increment: 1 };
 
-    // Atomic versioned save
-    const saved = await db.order.updateMany({
-      where: { id, companyId, version: expectedVersion },
-      data: updateData,
+    // Atomic versioned save.
+    //
+    // Delivery consumes stock in the SAME transaction as the status change.
+    // It used to consume nothing at all: the reservation was released the
+    // moment the order left the open set, the batch kept its full remainder,
+    // and the unit went quietly back on sale. Doing it here means there is
+    // no instant in which an order is delivered and its goods are still
+    // available to somebody else.
+    let consumption: { taken: number; short: number; alreadyDone: boolean } | null = null;
+
+    const saved = await db.$transaction(async (tx) => {
+      const res = await tx.order.updateMany({
+        where: { id, companyId, version: expectedVersion },
+        data: updateData,
+      });
+      if (res.count !== 1) return res;
+
+      if (newShippingStatus === 'DELIVERED' || newShippingStatus === 'PARTIALLY_DELIVERED') {
+        consumption = await consumeOrderStock(tx, {
+          orderId: id,
+          companyId,
+          allowNegativeStock: country.allowNegativeStock,
+          userId: user.id,
+        });
+      }
+      return res;
     });
+
     if (saved.count !== 1) {
       return NextResponse.json(
         {
