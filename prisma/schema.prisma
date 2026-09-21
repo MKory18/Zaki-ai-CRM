@@ -35,6 +35,7 @@ model Company {
   expenses           Expense[]
   notifications      Notification[]
   auditLogs          AuditLog[]
+  attendanceMarks    AttendanceMark[]
   aiSummaries        AiDailySummary[]
   productImages      ProductImage[]
   deliveryProviders  DeliveryProvider[]
@@ -111,6 +112,7 @@ model User {
   signedOrders   Order[]   @relation("OrderSignedBy")
   callLogs       CallLog[]
   auditLogs      AuditLog[]
+  attendanceMarks AttendanceMark[]
   claimHistory   OrderClaimHistory[]
   statusLogs     OrderStatusLog[]
   contactAttempts OrderContactAttempt[]
@@ -1930,4 +1932,37 @@ model AppDelivery {
   @@index([status, nextAttemptAt])
   @@index([companyId, createdAt])
   @@map("app_deliveries")
+}
+
+/// THE FINGERPRINT — append-only marks of arriving and leaving.
+///
+/// AUTO is the login: signing in IS the fingerprint, and an account opens on
+/// one device at a time, so it cannot be pressed from somebody else's phone.
+/// MANUAL is the "استلمت" / "سلّمت" buttons, for hours that leave no trace in
+/// the order records — a meeting, a training, a queue that stayed empty.
+///
+/// Nothing derived is stored. Hours worked, lateness and late-day counts are
+/// computed from these moments and the country's work hours, so changing the
+/// shift never leaves a stale number behind.
+model AttendanceMark {
+  id        String   @id @default(uuid())
+  /// Null for a platform-level account, which belongs to no company.
+  companyId String?
+  userId    String
+  /// LOGIN | CHECK_IN | CHECK_OUT
+  kind      String
+  /// AUTO (the system saw it) | MANUAL (somebody pressed it)
+  source    String   @default("AUTO")
+  at        DateTime @default(now())
+  note      String?
+  createdAt DateTime @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// Restrict, not cascade: deleting a user must not quietly erase the
+  /// record of the days they worked.
+  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, at])
+  @@index([userId, at])
+  @@map("attendance_marks")
 }

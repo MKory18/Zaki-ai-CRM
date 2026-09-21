@@ -5,7 +5,7 @@ const { db } = vi.hoisted(() => ({
     orderClaimHistory: { findMany: vi.fn() },
     orderStatusLog: { findMany: vi.fn() },
     orderContactAttempt: { groupBy: vi.fn() },
-    order: { groupBy: vi.fn() },
+    order: { groupBy: vi.fn(), findMany: vi.fn() },
     user: { findMany: vi.fn() },
   },
 }));
@@ -48,6 +48,7 @@ beforeEach(() => {
   db.orderStatusLog.findMany.mockResolvedValue([]);
   db.orderContactAttempt.groupBy.mockResolvedValue([]);
   db.order.groupBy.mockResolvedValue([]);
+  db.order.findMany.mockResolvedValue([]);
   db.user.findMany.mockResolvedValue([{ id: SARA, name: 'سارة', role: 'CONFIRMATION_AGENT' }]);
 });
 
@@ -253,7 +254,55 @@ describe('contact attempts', () => {
       decision(SARA, 'CONFIRMED', at(20, 10)),
       decision(SARA, 'REJECTED', at(20, 11)),
     ]);
-    db.orderContactAttempt.groupBy.mockResolvedValue([{ employeeId: SARA, _count: { _all: 5 } }]);
+    db.orderContactAttempt.groupBy.mockResolvedValue([
+      { employeeId: SARA, orderId: 'o1', _count: { _all: 5 }, _min: { createdAt: at(20, 10) } },
+    ]);
     expect((await row()).attemptsPerDecision).toBe(2.5);
+  });
+});
+
+describe('the response clock', () => {
+  it('measures from pulling the order to the first thing done about it', async () => {
+    // Claimed at 09:00, first call logged at 09:25.
+    db.orderContactAttempt.groupBy.mockResolvedValue([
+      { employeeId: SARA, orderId: 'o1', _count: { _all: 2 }, _min: { createdAt: at(20, 9, 25) } },
+    ]);
+    db.order.findMany.mockResolvedValue([
+      { id: 'o1', claimedAt: at(20, 9, 0), claimedById: SARA },
+    ]);
+    expect((await row()).medianFirstActionMinutes).toBe(25);
+  });
+
+  it('does not charge the first agent for the second one’s delay', async () => {
+    // The order was transferred; it is no longer hers, so the wait on it is
+    // not hers either.
+    db.orderContactAttempt.groupBy.mockResolvedValue([
+      { employeeId: SARA, orderId: 'o1', _count: { _all: 1 }, _min: { createdAt: at(20, 14, 0) } },
+    ]);
+    db.order.findMany.mockResolvedValue([
+      { id: 'o1', claimedAt: at(20, 9, 0), claimedById: 'somebody-else' },
+    ]);
+    expect((await row()).medianFirstActionMinutes).toBeNull();
+  });
+
+  it('skips an order that was never pulled from the pool', async () => {
+    db.orderContactAttempt.groupBy.mockResolvedValue([
+      { employeeId: SARA, orderId: 'o1', _count: { _all: 1 }, _min: { createdAt: at(20, 14, 0) } },
+    ]);
+    db.order.findMany.mockResolvedValue([{ id: 'o1', claimedAt: null, claimedById: SARA }]);
+    expect((await row()).medianFirstActionMinutes).toBeNull();
+  });
+
+  it('adds up attempts across every order the person touched', async () => {
+    db.orderStatusLog.findMany.mockResolvedValue([
+      decision(SARA, 'CONFIRMED', at(20, 10)),
+      decision(SARA, 'CONFIRMED', at(20, 11)),
+    ]);
+    db.orderContactAttempt.groupBy.mockResolvedValue([
+      { employeeId: SARA, orderId: 'o1', _count: { _all: 3 }, _min: { createdAt: at(20, 10) } },
+      { employeeId: SARA, orderId: 'o2', _count: { _all: 1 }, _min: { createdAt: at(20, 11) } },
+    ]);
+    expect((await row()).attempts).toBe(4);
+    expect((await row()).attemptsPerDecision).toBe(2);
   });
 });

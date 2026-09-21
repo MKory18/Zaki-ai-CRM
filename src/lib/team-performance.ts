@@ -56,6 +56,11 @@ export interface EmployeeRow {
   medianConfirmMinutes: number | null;
   /** Typical business minutes between one claim and the next — the cadence. */
   medianGapMinutes: number | null;
+  /**
+   * Typical business minutes from pulling an order to the first thing done
+   * about it. The number the customer actually feels.
+   */
+  medianFirstActionMinutes: number | null;
   /** Calls, WhatsApps and the rest, and how many it typically takes. */
   attempts: number;
   attemptsPerDecision: number | null;
@@ -122,10 +127,14 @@ export async function teamPerformance(input: {
       },
       take: ROW_CAP,
     }),
+    // Grouped by order as well as person, so the same pass gives both how
+    // many times they tried and when they first did — no second query for
+    // the response clock.
     db.orderContactAttempt.groupBy({
-      by: ['employeeId'],
+      by: ['employeeId', 'orderId'],
       where: { companyId, ...inStore, ...(when ? { createdAt: when } : {}) },
       _count: { _all: true },
+      _min: { createdAt: true },
     }),
     // Workload is a "right now" question, so it carries no window: an agent
     // holding twelve open orders is holding them today regardless of when
@@ -161,6 +170,35 @@ export async function teamPerformance(input: {
   });
   const personOf = new Map(people.map((p) => [p.id, p]));
 
+  // THE RESPONSE CLOCK, averaged. How long from pulling an order to the
+  // first thing done about it — the wait the customer actually feels.
+  // Only orders still shown as claimed by the same person are measured: an
+  // order transferred to somebody else would otherwise charge the first
+  // agent for the second one's delay.
+  const attemptOrderIds = [...new Set(attempts.map((a) => a.orderId))].slice(0, ROW_CAP);
+  const claimedAtOf = attemptOrderIds.length
+    ? new Map(
+        (
+          await db.order.findMany({
+            where: { id: { in: attemptOrderIds }, companyId, storeId },
+            select: { id: true, claimedAt: true, claimedById: true },
+          })
+        ).map((o) => [o.id, o])
+      )
+    : new Map();
+
+  const firstActionSpans = new Map<string, number[]>();
+  for (const a of attempts) {
+    const order = claimedAtOf.get(a.orderId);
+    const startedAt = order?.claimedAt;
+    const firstAt = a._min.createdAt;
+    if (!startedAt || !firstAt || order.claimedById !== a.employeeId || firstAt < startedAt) continue;
+    const span = businessMinutesBetween(startedAt, firstAt, calendar);
+    const list = firstActionSpans.get(a.employeeId);
+    if (list) list.push(span);
+    else firstActionSpans.set(a.employeeId, [span]);
+  }
+
   // One pass per record type, bucketed by person.
   const claimTimes = new Map<string, Date[]>();
   for (const c of claims) {
@@ -195,7 +233,8 @@ export async function teamPerformance(input: {
     else bump(rejected, who);
   }
 
-  const attemptsOf = new Map(attempts.map((a) => [a.employeeId, a._count._all]));
+  const attemptsOf = new Map<string, number>();
+  for (const a of attempts) attemptsOf.set(a.employeeId, (attemptsOf.get(a.employeeId) ?? 0) + a._count._all);
   const openOf = new Map(openNow.map((o) => [o.claimedById as string, o._count._all]));
 
   const employees: EmployeeRow[] = [...ids].map((id) => {
@@ -226,6 +265,7 @@ export async function teamPerformance(input: {
       confirmationRate: decided > 0 ? Math.round((ok / decided) * 100) : null,
       medianConfirmMinutes: median(confirmSpans.get(id) ?? []),
       medianGapMinutes: median(gaps),
+      medianFirstActionMinutes: median(firstActionSpans.get(id) ?? []),
       attempts: tries,
       // No logged attempts is an absence of records, not a rate of zero —
       // plenty of confirming happens on a phone the system never sees, and

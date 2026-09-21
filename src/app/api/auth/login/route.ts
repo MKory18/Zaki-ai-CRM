@@ -8,6 +8,7 @@ import {
 } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
+import { markLogin } from '@/lib/attendance';
 import { UserRole, UserStatus, ROLE_PERMISSIONS } from '@/types/auth';
 
 export async function POST(req: Request) {
@@ -76,6 +77,11 @@ export async function POST(req: Request) {
       data: { lastLoginAt: new Date(), tokenVersion: { increment: 1 } },
       select: { tokenVersion: true },
     });
+
+    // Signing in IS the fingerprint. There is no button to forget, and
+    // since an account opens on one device at a time, it is a mark nobody
+    // can press from somebody else's phone. It never blocks the login.
+    await markLogin(user.companyId, user.id);
 
     await logAudit({
       companyId: user.companyId || 'platform',

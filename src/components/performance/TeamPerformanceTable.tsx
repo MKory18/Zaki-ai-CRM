@@ -30,8 +30,15 @@ export interface TeamRow {
   confirmationRate: number | null;
   medianConfirmMinutes: number | null;
   medianGapMinutes: number | null;
+  medianFirstActionMinutes: number | null;
   attempts: number;
   attemptsPerDecision: number | null;
+  daysPresent: number;
+  daysLate: number;
+  totalLateMinutes: number;
+  avgPresentMinutes: number | null;
+  daysWithoutWork: number;
+  daysLateEstimated: number;
 }
 
 /** The jobs on this desk, in the order a manager reads them. */
@@ -69,6 +76,20 @@ function duration(minutes: number | null): string {
   return restHours ? `${days} ي ${restHours} س` : `${days} ي`;
 }
 
+/**
+ * Presence and lateness are wall-clock, not working minutes, so they never
+ * collapse into "days". Eight hours at the desk is "8 س" — calling it
+ * "1 ي" would read as a whole day off.
+ */
+function clock(minutes: number | null): string {
+  if (minutes === null) return '—';
+  if (minutes === 0) return 'أقل من دقيقة';
+  if (minutes < 60) return `${minutes} د`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours} س ${rest} د` : `${hours} س`;
+}
+
 function rateTone(rate: number | null): string {
   if (rate === null) return 'text-[#9aa4b2]';
   if (rate >= 70) return 'text-[#00a344]';
@@ -83,10 +104,14 @@ const HEADS = [
   { key: 'rejected', label: 'رفض', hint: 'مرفوض أو ملغى' },
   { key: 'noAnswer', label: 'لا يرد' },
   { key: 'rate', label: 'نسبة التأكيد', hint: 'المؤكد ÷ ما وصل إلى قرار' },
+  { key: 'firstAction', label: 'أول اتصال', hint: 'وسيط دقائق العمل من سحب الطلب حتى أول إجراء عليه' },
   { key: 'confirmTime', label: 'زمن التأكيد', hint: 'وسيط دقائق العمل من السحب حتى التأكيد' },
   { key: 'gap', label: 'بين طلب وطلب', hint: 'وسيط دقائق العمل بين سحب وآخر' },
   { key: 'attempts', label: 'محاولات/قرار', hint: 'اتصالات ورسائل لكل طلب وصل إلى قرار' },
   { key: 'openNow', label: 'مفتوح الآن', hint: 'ما يحمله الآن، بصرف النظر عن المدة' },
+  { key: 'daysPresent', label: 'أيام حضور', hint: 'أيام ظهر فيها أثر حضور — دخول أو بصمة أو شغل' },
+  { key: 'daysLate', label: 'أيام تأخير', hint: 'أيام وصل فيها بعد بداية الدوام — العطلة لا تُحسب' },
+  { key: 'present', label: 'متوسط التواجد', hint: 'متوسط ساعات التواجد في اليوم الواحد' },
 ];
 
 export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null; totals?: TeamRow | null }) {
@@ -146,10 +171,42 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
                 <td className={`px-4 py-3 text-center tabular-nums font-bold ${rateTone(r.confirmationRate)}`}>
                   {r.confirmationRate === null ? '—' : `${r.confirmationRate}%`}
                 </td>
+                <Text value={duration(r.medianFirstActionMinutes)} />
                 <Text value={duration(r.medianConfirmMinutes)} />
                 <Text value={duration(r.medianGapMinutes)} />
                 <Text value={r.attemptsPerDecision === null ? '—' : String(r.attemptsPerDecision)} />
                 <Num value={r.openNow} tone={r.openNow > 10 ? 'text-[#c07f2a]' : undefined} />
+                <td
+                  className="px-4 py-3 text-center tabular-nums font-semibold text-[#121926]"
+                  title={r.daysWithoutWork > 0 ? `${r.daysWithoutWork} يوم حضور بلا أي إجراء مسجَّل` : undefined}
+                >
+                  {r.daysPresent === 0 ? <span className="text-[#c3c8d4]">0</span> : r.daysPresent}
+                  {r.daysWithoutWork > 0 && (
+                    <span className="text-[10px] text-[#c07f2a] font-normal"> ({r.daysWithoutWork} بلا شغل)</span>
+                  )}
+                </td>
+                <td
+                  className={`px-4 py-3 text-center tabular-nums font-semibold ${
+                    r.daysLate > 0 ? 'text-[#fb323f]' : 'text-[#c3c8d4]'
+                  }`}
+                  title={
+                    r.daysLate > 0
+                      ? `مجموع التأخير ${clock(r.totalLateMinutes)}` +
+                        (r.daysLateEstimated > 0
+                          ? ` · ${r.daysLateEstimated} منها وقت الوصول فيه مُقدَّر من أول إجراء (لم يُسجَّل «استلمت»)`
+                          : '')
+                      : undefined
+                  }
+                >
+                  {r.daysLate}
+                  {r.daysLate > 0 && (
+                    <span className="text-[10px] font-normal"> ({clock(r.totalLateMinutes)})</span>
+                  )}
+                  {r.daysLateEstimated > 0 && (
+                    <span className="text-[10px] text-[#9aa4b2] font-normal"> ≈</span>
+                  )}
+                </td>
+                <Text value={clock(r.avgPresentMinutes)} />
               </tr>
             ))}
           </tbody>
@@ -166,7 +223,11 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
               <td className={`px-4 py-3 text-center tabular-nums font-black ${rateTone(totals.confirmationRate)}`}>
                 {totals.confirmationRate === null ? '—' : `${totals.confirmationRate}%`}
               </td>
+              <td />
               <Text value={duration(totals.medianConfirmMinutes)} bold />
+              <td />
+              <td />
+              <td />
               <td />
               <td />
               <td />

@@ -7,6 +7,7 @@ import { customerRisk } from '@/lib/customer-risk';
 import { POSTPONE_LEAD_DAYS } from '@/lib/confirmation-queue';
 import { deriveCoreState, type StateSource } from '@/lib/order-state';
 import { NO_ANSWER_LIMIT } from '@/lib/confirmation-workflow';
+import { firstActionTimes } from '@/lib/response-clock';
 
 /**
  * GET /api/confirmation/mine — the agent's own two sections:
@@ -19,6 +20,8 @@ const OPEN = ['NEW', 'IN_PROGRESS', 'NO_ANSWER', 'FOLLOW_UP_REQUIRED', 'POSTPONE
 
 const ORDER_SELECT = {
   id: true, orderNumber: true, merchantRef: true, createdAt: true, confirmedAt: true, version: true,
+  // When she pulled it — the moment the response clock starts.
+  claimedAt: true,
   confirmationStatus: true, shippingStatus: true, totalAmount: true, currency: true,
   postponedUntil: true, postponePreferredTime: true, postponeCount: true,
   nextFollowUpAt: true, followUpReason: true, discountAmount: true,
@@ -66,9 +69,23 @@ export async function GET() {
     const riskByCustomer = new Map(customerIds.map((id, i) => [id, risks[i]]));
     const noAnswer = await noAnswerCounts(inConfirmation.map((o) => o.id));
 
+    // The response clock. An order pulled from the pool and not yet called
+    // is the most expensive thing on this desk, so she sees how long each
+    // one has been waiting on her, and how long since she took anything new.
+    const firstAction = await firstActionTimes(inConfirmation.map((o) => o.id));
+    const lastClaim = await db.orderClaimHistory.findFirst({
+      where: { companyId, userId: user.id, action: 'CLAIMED', order: { storeId } },
+      select: { createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
     return NextResponse.json({
       leadDays: POSTPONE_LEAD_DAYS,
       noAnswerLimit: NO_ANSWER_LIMIT,
+      // The server's own clock, so a wrong clock on her machine cannot make
+      // an order look answered or overdue.
+      serverNow: new Date().toISOString(),
+      lastClaimAt: lastClaim?.createdAt ?? null,
       // One derived state and one repeat-customer counter everywhere.
       inConfirmation: inConfirmation.map((o) => ({
         ...o,
@@ -76,6 +93,7 @@ export async function GET() {
         previousOrders: Math.max(0, (o.customer.totalOrders ?? 1) - 1),
         risk: riskByCustomer.get(o.customer.id) ?? null,
         noAnswerCount: noAnswer.get(o.id) ?? 0,
+        firstActionAt: firstAction.get(o.id) ?? null,
       })),
       confirmed: confirmed.map((o) => ({
         ...o,

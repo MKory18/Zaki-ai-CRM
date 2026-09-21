@@ -4,6 +4,7 @@ import { can } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { getDateRange, type DateFilter } from '@/lib/analytics';
 import { teamPerformance } from '@/lib/team-performance';
+import { attendance } from '@/lib/attendance';
 
 /**
  * GET /api/orders/confirmation/team?period=&startDate=&endDate=
@@ -34,21 +35,45 @@ export async function GET(req: Request) {
     };
     const { start, end } = getDateRange(filter);
 
-    const result = await teamPerformance({
-      companyId,
-      storeId,
-      calendar: {
-        workHoursStart: country.workHoursStart,
-        workHoursEnd: country.workHoursEnd,
-        weekendDays: country.weekendDays,
-        timezone: country.timezone,
-      },
-      start,
-      end,
-    });
+    const calendar = {
+      workHoursStart: country.workHoursStart,
+      workHoursEnd: country.workHoursEnd,
+      weekendDays: country.weekendDays,
+      timezone: country.timezone,
+    };
+
+    const result = await teamPerformance({ companyId, storeId, calendar, start, end });
+
+    // Attendance rides along on the same window, for the same people. Two
+    // requests for one table would let the halves disagree about the dates.
+    const marks =
+      start && end
+        ? await attendance({
+            companyId,
+            storeId,
+            userIds: result.employees.map((e) => e.id),
+            calendar,
+            start,
+            end,
+          })
+        : new Map();
 
     return NextResponse.json({
       ...result,
+      employees: result.employees.map((e) => {
+        const a = marks.get(e.id);
+        return {
+          ...e,
+          // Days here, days late, and the hours actually spent — the
+          // fingerprint, beside the work it produced.
+          daysPresent: a?.daysPresent ?? 0,
+          daysLate: a?.daysLate ?? 0,
+          totalLateMinutes: a?.totalLateMinutes ?? 0,
+          avgPresentMinutes: a?.avgPresentMinutes ?? null,
+          daysWithoutWork: a?.daysWithoutWork ?? 0,
+          daysLateEstimated: a?.daysLateEstimated ?? 0,
+        };
+      }),
       window: { start: start?.toISOString() ?? null, end: end?.toISOString() ?? null },
       definitions: {
         claimed: 'الطلبات التي سحبها الموظف من المجمّع خلال المدة',
@@ -57,6 +82,12 @@ export async function GET(req: Request) {
         medianConfirmMinutes: 'وسيط دقائق العمل من سحب الطلب حتى تأكيده — خارج الدوام لا يُحتسب',
         medianGapMinutes: 'وسيط دقائق العمل بين سحب طلب والذي يليه',
         openNow: 'ما يحمله الموظف مفتوحاً الآن، بصرف النظر عن المدة',
+        medianFirstActionMinutes: 'وسيط دقائق العمل من سحب الطلب حتى أول إجراء عليه',
+        daysPresent: 'أيام ظهر فيها أثر حضور — دخول، أو بصمة، أو شغل',
+        daysLate: 'أيام وصل فيها بعد بداية الدوام (العطلة لا تُحسب تأخيراً)',
+        avgPresentMinutes: 'متوسط دقائق التواجد في اليوم الواحد',
+        daysWithoutWork: 'أيام كان حاضراً بلا أي إجراء مسجَّل',
+        daysLateEstimated: 'من أيام التأخير، كم يوم وقت الوصول فيه مُقدَّر من أول إجراء لأن أحداً لم يبصم',
       },
     });
   } catch (error) {
