@@ -11,10 +11,19 @@
  *
  *   HIDDEN — enforced somewhere but absent from the catalogue, so nobody can
  *            grant it through the UI at all.
+ *
+ *   ORPHAN — in the catalogue and enforced, but no ROLE grants it. The screen
+ *            behind it is closed to everybody including the owner, and it
+ *            fails silently: a 403 on a feature that was fully built. Ten of
+ *            them were live at once, among them the whole landing-pages
+ *            module.
+ *
+ * The orphan check needs the database, so it is skipped when there is none.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { PERMISSION_MODULES } from '../src/lib/permission-catalog';
+import { db } from '../src/lib/db';
 import { ALL_ROUTES } from '../src/lib/route-registry';
 
 const SRC = join(process.cwd(), 'src');
@@ -83,6 +92,31 @@ if (hidden.length) {
   console.log();
 }
 
-if (!dead.length && !hidden.length) console.log('✓ الشاشة مطابقة لما يفرضه النظام');
+async function orphans(): Promise<string[]> {
+  try {
+    const rows = await db.rolePermission.findMany({ select: { permission: true } });
+    const granted = new Set(rows.map((r) => r.permission));
+    return [...catalogued.keys()].filter((k) => !granted.has(k)).sort();
+  } catch {
+    return [];
+  }
+}
 
-process.exit(dead.length || hidden.length ? 1 : 0);
+async function main() {
+  const unheld = await orphans();
+
+  if (unheld.length) {
+    console.log(`✗ لا يمنحها أي دور (${unheld.length}) — الشاشة خلفها مقفلة على الجميع:`);
+    for (const key of unheld) console.log(`   ${key.padEnd(32)} [${catalogued.get(key)}]`);
+    console.log();
+  }
+
+  if (!dead.length && !hidden.length && !unheld.length) {
+    console.log('✓ الشاشة مطابقة لما يفرضه النظام، وكل صلاحية يملكها دور');
+  }
+
+  await db.$disconnect().catch(() => undefined);
+  process.exit(dead.length || hidden.length || unheld.length ? 1 : 0);
+}
+
+void main();
