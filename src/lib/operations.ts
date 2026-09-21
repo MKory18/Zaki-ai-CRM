@@ -14,6 +14,8 @@ export interface PreparationLine {
   orderNumber: string;
   customerName: string;
   regionName: string | null;
+  /** A change request still waiting on this order, if there is one. */
+  pendingChangeRequestId: string | null;
   quantity: number;
   freeQuantity: number;
   reservedQty: number;
@@ -61,6 +63,10 @@ export async function preparationGroups(tx: Tx, scope: { companyId: string; stor
           id: true, orderNumber: true, confirmationStatus: true, shippingStatus: true,
           customer: { select: { fullName: true } },
           region: { select: { name: true } },
+          // A change request waiting on this order is the one thing the
+          // packer must see BEFORE the box is taped: packing to an address
+          // somebody is asking to change is work done twice.
+          changeRequests: { where: { status: 'PENDING' }, select: { id: true } },
         },
       },
     },
@@ -85,6 +91,7 @@ export async function preparationGroups(tx: Tx, scope: { companyId: string; stor
       orderNumber: item.order.orderNumber,
       customerName: item.order.customer.fullName,
       regionName: item.order.region?.name ?? null,
+      pendingChangeRequestId: item.order.changeRequests?.[0]?.id ?? null,
       quantity: item.quantity,
       freeQuantity: item.freeQuantity,
       reservedQty: item.reservedQty,

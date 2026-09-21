@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronLeft, Loader2, PackageCheck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { ChangeRequestReview } from '@/components/orders/ChangeRequestReview';
 
 /**
  * /ops/preparation — grouped BY PRODUCT, collapsible. Orders, required,
@@ -14,6 +15,7 @@ interface Line {
   orderNumber: string;
   customerName: string;
   regionName: string | null;
+  pendingChangeRequestId: string | null;
   quantity: number;
   freeQuantity: number;
   reservedQty: number;
@@ -34,6 +36,9 @@ export function PreparationScreen() {
   const [data, setData] = useState<{ allowNegativeStock: boolean; totals: { products: number; orders: number; shortages: number }; groups: Group[] } | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  // A request waiting on an order is the one thing the packer must see
+  // before the box is taped.
+  const [reviewing, setReviewing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -101,6 +106,7 @@ export function PreparationScreen() {
                   <th className="text-right font-medium px-4 py-2">المحافظة</th>
                   <th className="text-right font-medium px-4 py-2">الكمية</th>
                   <th className="text-right font-medium px-4 py-2">محجوز</th>
+                  <th className="text-right font-medium px-4 py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e3e8ef]">
@@ -116,6 +122,19 @@ export function PreparationScreen() {
                     <td className={`px-4 py-2 tabular-nums ${l.reservedQty >= l.quantity + l.freeQuantity ? 'text-[#00a344]' : 'text-[#fb323f]'}`}>
                       {l.reservedQty}
                     </td>
+                    <td className="px-4 py-2">
+                      {l.pendingChangeRequestId && (
+                        <button
+                          type="button"
+                          onClick={() => setReviewing(l.pendingChangeRequestId!)}
+                          title="طلب تعديل بانتظار البتّ — راجعه قبل التغليف"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-[11px] font-semibold text-[#c07f2a] hover:border-[#c07f2a]"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#c07f2a] animate-pulse" aria-hidden />
+                          طلب تعديل
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -123,6 +142,14 @@ export function PreparationScreen() {
           )}
         </section>
       ))}
+
+      {reviewing && (
+        <ChangeRequestReview
+          requestId={reviewing}
+          onClose={() => setReviewing(null)}
+          onDecided={load}
+        />
+      )}
     </div>
   );
 }

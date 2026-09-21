@@ -157,3 +157,31 @@ describe('warehouse payloads', () => {
     expect(redactCustomerForWarehouse(customer, true)).toEqual(customer);
   });
 });
+
+describe('a change request waiting on an order being packed', () => {
+  it('travels with the line, so the packer sees it before taping the box', async () => {
+    // Packing to an address somebody is asking to change is work done twice.
+    db.orderItem.findMany.mockResolvedValue([
+      item({ order: { ...item().order, changeRequests: [{ id: 'cr-1' }] } }),
+    ]);
+    stock(10, 0);
+    const [group] = await preparationGroups(db as never, scope);
+    expect(group.lines[0].pendingChangeRequestId).toBe('cr-1');
+  });
+
+  it('is null when there is none', async () => {
+    db.orderItem.findMany.mockResolvedValue([item({ order: { ...item().order, changeRequests: [] } })]);
+    stock(10, 0);
+    const [group] = await preparationGroups(db as never, scope);
+    expect(group.lines[0].pendingChangeRequestId).toBeNull();
+  });
+
+  it('does not crash a packing screen when the relation is missing', async () => {
+    // An older caller, or a select that forgot it, must not take the
+    // warehouse's screen down.
+    db.orderItem.findMany.mockResolvedValue([item()]);
+    stock(10, 0);
+    const [group] = await preparationGroups(db as never, scope);
+    expect(group.lines[0].pendingChangeRequestId).toBeNull();
+  });
+});
