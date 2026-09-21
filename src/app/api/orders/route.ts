@@ -32,6 +32,7 @@ export async function GET(req: Request) {
     const from = searchParams.get('from')?.trim();
     const to = searchParams.get('to')?.trim();
     const lateDays = searchParams.get('lateDays')?.trim();
+    const regionId = searchParams.get('regionId')?.trim();
     const page = parseInt(searchParams.get('page') || '1', 10);
     // Cap page size (hard server-side limit) with a NaN guard
     const parsedLimit = parseInt(searchParams.get('limit') || '25', 10);
@@ -55,6 +56,10 @@ export async function GET(req: Request) {
       // A state nothing can currently be in returns nothing, rather than
       // silently returning everything.
       whereClause.AND = [...(whereClause.AND ?? []), stateWhere ?? { id: '' }];
+    }
+
+    if (regionId && regionId !== 'all') {
+      whereClause.regionId = regionId;
     }
 
     // Which courier is carrying it — 'none' finds the ones nobody has taken.

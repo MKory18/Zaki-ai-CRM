@@ -5,7 +5,7 @@ import { History, Loader2, ShieldAlert } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { OrderStateBadge } from './OrderStateBadge';
-import { arDate, arDateShort } from '@/lib/format';
+import { arDate } from '@/lib/format';
 
 /**
  * "Has this customer ordered before?" — a small counter next to the order
@@ -33,10 +33,6 @@ interface HistoryResponse {
   orders: HistoryOrder[];
 }
 
-interface TimelineResponse {
-  state: string;
-  events: { id: string; kind: string; at: string; title: string; detail?: string | null; actorName?: string | null }[];
-}
 
 const RISK: Record<string, { text: string; cls: string }> = {
   SAFE: { text: 'خطورة منخفضة', cls: 'bg-emerald-50 text-[#00a344] border-emerald-100' },
@@ -91,25 +87,21 @@ export function CustomerHistoryModal({
   orderId?: string;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<'history' | 'timeline'>(orderId ? 'timeline' : 'history');
   const [history, setHistory] = useState<HistoryResponse | null>(null);
-  const [timeline, setTimeline] = useState<TimelineResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // This customer's OTHER orders, and nothing else. The order's own history
+  // lives inside the order, where it belongs — two tabs here meant the
+  // button answered two questions and you never knew which you would get.
   useEffect(() => {
     const q = orderId ? `?exclude=${orderId}` : '';
     apiJson<HistoryResponse>(`/api/customers/${customerId}/history${q}`)
       .then(setHistory)
       .catch((e) => setError(e instanceof Error ? e.message : 'تعذر تحميل السجل'));
-    if (orderId) {
-      apiJson<TimelineResponse>(`/api/orders/${orderId}/timeline`)
-        .then(setTimeline)
-        .catch(() => undefined);
-    }
   }, [customerId, orderId]);
 
   return (
-    <Modal isOpen onClose={onClose} title="سجل العميل والطلب" subtitle={history?.customer.fullName} maxWidth="2xl">
+    <Modal isOpen onClose={onClose} title="طلبات العميل السابقة" subtitle={history?.customer.fullName} maxWidth="2xl">
       {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3 mb-3">{error}</p>}
 
       {history && (
@@ -129,37 +121,10 @@ export function CustomerHistoryModal({
         </div>
       )}
 
-      {orderId && (
-        <div className="flex gap-2 mb-3 border-b border-[#e3e8ef]">
-          <Tab active={tab === 'timeline'} onClick={() => setTab('timeline')}>
-            سجل الطلب {timeline ? `(${timeline.events.length})` : ''}
-          </Tab>
-          <Tab active={tab === 'history'} onClick={() => setTab('history')}>
-            طلبات سابقة {history ? `(${history.orders.length})` : ''}
-          </Tab>
-        </div>
-      )}
-
-      {!history && !timeline ? (
+      {!history ? (
         <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-10">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
-      ) : tab === 'timeline' && orderId ? (
-        <ol className="space-y-2">
-          {timeline?.events.length === 0 && <p className="text-sm text-[#697586]">لا توجد أحداث بعد.</p>}
-          {timeline?.events.map((e) => (
-            <li key={e.id} className="flex gap-3 text-sm">
-              <span className="text-[11px] text-[#9aa4b2] whitespace-nowrap pt-0.5" dir="ltr">
-                {arDateShort(e.at)}
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-[#121926]">{e.title}</span>
-                {e.detail && <span className="block text-xs text-[#697586] break-words">{e.detail}</span>}
-                {e.actorName && <span className="block text-[11px] text-[#9aa4b2]">{e.actorName}</span>}
-              </span>
-            </li>
-          ))}
-        </ol>
       ) : (
         <div className="space-y-2">
           {history?.orders.length === 0 && (
@@ -192,15 +157,3 @@ export function CustomerHistoryModal({
   );
 }
 
-function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-2 text-sm border-b-2 -mb-px ${
-        active ? 'border-[#b8256e] text-[#b8256e] font-medium' : 'border-transparent text-[#697586]'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}

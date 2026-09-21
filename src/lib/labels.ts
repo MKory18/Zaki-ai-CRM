@@ -50,10 +50,20 @@ export async function verifyLabelBatch(token: string): Promise<LabelBatch | null
 }
 
 /** Label sizes in millimetres; "custom" is allowed via the API. */
+/**
+ * The papers a waybill is actually printed on.
+ *
+ * Thermal rolls first, because that is what a label printer holds; the A
+ * sizes are for an ordinary office printer, where several labels share one
+ * sheet. Sizes are in millimetres, portrait, and the print stylesheet sets
+ * the page to exactly these.
+ */
 export const LABEL_SIZES = [
-  { key: '100x150', label: '100×150 مم', width: 100, height: 150 },
-  { key: '100x100', label: '100×100 مم', width: 100, height: 100 },
-  { key: 'a6', label: 'A6 (105×148 مم)', width: 105, height: 148 },
+  { key: '100x150', label: '100×150 مم (حراري)', width: 100, height: 150 },
+  { key: '100x100', label: '100×100 مم (حراري)', width: 100, height: 100 },
+  { key: 'a6', label: 'A6 — 105×148 مم', width: 105, height: 148 },
+  { key: 'a5', label: 'A5 — 148×210 مم', width: 148, height: 210 },
+  { key: 'a4', label: 'A4 — 210×297 مم', width: 210, height: 297 },
 ] as const;
 
 /**

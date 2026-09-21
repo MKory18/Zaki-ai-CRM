@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { DateRange } from '@/components/ui/DateRange';
+import { useRegions } from '@/hooks/useRegions';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ProductThumb } from '@/components/ui/ProductThumb';
@@ -17,6 +18,7 @@ import {
   Search,
   RotateCcw,
   Clock,
+  Printer,
   Filter,
   Download,
   Plus,
@@ -53,6 +55,11 @@ export function OrdersScreen() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [lateOnly, setLateOnly] = useState(false);
+  const [regionId, setRegionId] = useState('all');
+  // The governorates of the selected country — the same list the order forms use.
+  const { regions } = useRegions();
+  /** Show everything the filter matches, not just this page. */
+  const [showAll, setShowAll] = useState(false);
   const [sources, setSources] = useState<{ name: string; count: number }[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Workflow queue (backend-enforced per role — server rejects unauthorized queues)
@@ -127,6 +134,8 @@ export function OrdersScreen() {
       if (fromDate) params.set('from', fromDate);
       if (toDate) params.set('to', toDate);
       if (lateOnly) params.set('lateDays', '10');
+      if (regionId !== 'all') params.set('regionId', regionId);
+      if (showAll) params.set('limit', '500');
       if (queue) params.set('queue', queue);
 
       const res = await apiFetch(`/api/orders?${params.toString()}`);
@@ -154,7 +163,7 @@ export function OrdersScreen() {
       // Only the latest request may clear the shared loading flag
       if (seq === loadOrdersSeq.current) setLoading(false);
     }
-  }, [search, status, productId, moderatorId, source, courierId, fromDate, toDate, lateOnly, queue]);
+  }, [search, status, productId, moderatorId, source, courierId, regionId, fromDate, toDate, lateOnly, showAll, queue]);
 
   // Keep the ref in sync each render (after loadOrders exists)
   useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
@@ -194,7 +203,7 @@ export function OrdersScreen() {
   const activeFilters =
     (search ? 1 : 0) + (status !== 'all' ? 1 : 0) + (source !== 'all' ? 1 : 0) +
     (productId !== 'all' ? 1 : 0) + (courierId !== 'all' ? 1 : 0) +
-    (fromDate ? 1 : 0) + (toDate ? 1 : 0) + (lateOnly ? 1 : 0);
+    (fromDate ? 1 : 0) + (toDate ? 1 : 0) + (lateOnly ? 1 : 0) + (regionId !== 'all' ? 1 : 0);
 
   const resetFilters = () => {
     setSearchInput('');
@@ -206,6 +215,8 @@ export function OrdersScreen() {
     setFromDate('');
     setToDate('');
     setLateOnly(false);
+    setRegionId('all');
+    setShowAll(false);
     setSelected(new Set());
   };
 
@@ -217,9 +228,35 @@ export function OrdersScreen() {
       else next.add(id);
       return next;
     });
+  const firstOnPage = orders.length ? (pagination.page - 1) * pagination.limit + 1 : 0;
+  const lastOnPage = (pagination.page - 1) * pagination.limit + orders.length;
   const allOnPageSelected = orders.length > 0 && orders.every((o) => selected.has(o.id));
   const toggleAll = () =>
     setSelected(allOnPageSelected ? new Set() : new Set(orders.map((o) => o.id)));
+
+  /** Waybills for the ticked rows, on the default thermal size. The labels
+   *  screen is where the size is chosen; printing from here is for the
+   *  common case of "these ones, now". */
+  const [printing, setPrinting] = useState(false);
+  const handlePrintLabels = async () => {
+    if (selected.size === 0) return;
+    setPrinting(true);
+    setError(null);
+    try {
+      const res = await apiFetch('/api/ops/labels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderIds: [...selected], width: 100, height: 150 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.errorAr || data.error || 'تعذر تجهيز البوالص');
+      window.open(data.printPath, '_blank');
+    } catch (e: any) {
+      setError(e?.message || 'تعذر تجهيز البوالص');
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   /** Export only the ticked rows, by id, through the same report endpoint. */
   const handleExportSelected = () => {
@@ -228,10 +265,14 @@ export function OrdersScreen() {
     window.open(`/api/reports/export?${params.toString()}`, '_blank');
   };
 
+  /** Everything the filters match — not the page in front of you. */
   const handleExportCSV = () => {
-    // Export respects the current filters (same params as loadOrders)
     const params = new URLSearchParams({ q: search, status, productId, moderatorId, source });
     if (courierId !== 'all') params.set('courierId', courierId);
+    if (regionId !== 'all') params.set('regionId', regionId);
+    if (fromDate) params.set('from', fromDate);
+    if (toDate) params.set('to', toDate);
+    if (lateOnly) params.set('lateDays', '10');
     if (queue) params.set('queue', queue);
     window.open(`/api/reports/export?${params.toString()}`, '_blank');
   };
@@ -293,30 +334,6 @@ export function OrdersScreen() {
             which queue am I in, what am I looking for, and how do I narrow
             it. The old grid mixed all three into six equal cells. */}
         <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-xs divide-y divide-[#e3e8ef]">
-          {/* Queues — server-enforced per role */}
-          <div className="flex flex-wrap gap-1.5 p-3">
-            {[
-              { key: '', ar: 'الكل' },
-              { key: 'available', ar: 'متاح للاستلام' },
-              { key: 'my_orders', ar: 'طلباتي' },
-              { key: 'assigned_to_me', ar: 'مسندة لي' },
-              { key: 'processing', ar: 'قيد المعالجة' },
-              { key: 'all_company', ar: 'كل الشركة' },
-            ].map((q) => (
-              <button
-                key={q.key || 'all'}
-                onClick={() => setQueue(q.key)}
-                className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
-                  queue === q.key
-                    ? 'bg-[#b8256e] text-white border-[#b8256e]'
-                    : 'bg-white text-[#364152] border-[#e3e8ef] hover:border-[#b8256e]/40 hover:text-[#b8256e]'
-                }`}
-              >
-                {q.ar}
-              </button>
-            ))}
-          </div>
-
           {/* Search — pressing Enter or the button runs it; it no longer
               fires on every keystroke, which made a long phone number send
               a request per digit. */}
@@ -355,7 +372,7 @@ export function OrdersScreen() {
           </div>
 
           {/* Narrowing */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 p-3">
             <Select value={status} onChange={(e) => setStatus(e.target.value)} className="text-xs py-2">
               <option value="all">كل الحالات</option>
               {FILTERABLE_STATES.map((st) => (
@@ -374,6 +391,13 @@ export function OrdersScreen() {
               <option value="all">كل المنتجات</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </Select>
+
+            <Select value={regionId} onChange={(e) => setRegionId(e.target.value)} className="text-xs py-2">
+              <option value="all">كل المحافظات</option>
+              {regions.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </Select>
 
@@ -408,7 +432,11 @@ export function OrdersScreen() {
             <span className="text-xs font-semibold text-[#b8256e]">
               محدَّد: {selected.size} طلب
             </span>
-            <Button size="sm" variant="outline" onClick={handleExportSelected} className="ms-auto">
+            <Button size="sm" variant="outline" onClick={handlePrintLabels} loading={printing} className="ms-auto">
+              <Printer className="w-3.5 h-3.5" />
+              طباعة البوالص
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleExportSelected}>
               <Download className="w-3.5 h-3.5" />
               تصدير المحدَّد
             </Button>
@@ -426,7 +454,7 @@ export function OrdersScreen() {
             how much — and never runs off the edge. */}
         <Card>
           <CardContent className="p-0">
-            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[#e3e8ef] bg-[#f8fafc] text-[11px] text-[#697586]">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b border-[#e3e8ef] bg-[#f8fafc] text-[11px] text-[#697586]">
               <input
                 type="checkbox"
                 checked={allOnPageSelected}
@@ -434,7 +462,31 @@ export function OrdersScreen() {
                 aria-label="تحديد كل الطلبات في هذه الصفحة"
                 className="w-4 h-4 accent-[#b8256e] cursor-pointer"
               />
-              <span>{orders.length ? `${orders.length} طلب في هذه الصفحة` : ''}</span>
+              {orders.length > 0 && (
+                <span className="tabular-nums">
+                  عرض {firstOnPage}–{lastOnPage} من أصل {pagination.total} طلب
+                  {activeFilters > 0 && <span className="text-[#b8256e]"> (مفلترة)</span>}
+                </span>
+              )}
+              {/* Twenty-five at a time is right for reading and wrong for
+                  acting: printing or exporting a filtered batch means having
+                  all of it in front of you. */}
+              {!showAll && pagination.totalPages > 1 && (
+                <button
+                  onClick={() => setShowAll(true)}
+                  className="ms-auto text-[11px] font-medium text-[#b8256e] hover:underline"
+                >
+                  إظهار كل النتائج ({pagination.total})
+                </button>
+              )}
+              {showAll && (
+                <button
+                  onClick={() => setShowAll(false)}
+                  className="ms-auto text-[11px] font-medium text-[#697586] hover:underline"
+                >
+                  العودة للعرض بالصفحات
+                </button>
+              )}
             </div>
 
             {orders.length === 0 ? (

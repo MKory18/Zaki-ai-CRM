@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { rateLimit } from '@/lib/rate-limit';
 import { requirePermission } from '@/lib/authorization';
+import { CORE_STATES, whereForState, type CoreState } from '@/lib/order-state';
 
 /**
  * CSV export safety:
@@ -67,9 +68,38 @@ export async function GET(req: Request) {
       ? idsParam.split(',').map((v) => v.trim()).filter(Boolean).slice(0, MAX_EXPORT_ROWS)
       : null;
 
+    // The same narrowing the screen was showing. Exporting "the filtered
+    // orders" used to mean the date window only, so a CSV taken while a
+    // courier or a state was selected quietly contained everything else too.
+    const filters: Record<string, unknown> = {};
+    const q = searchParams.get('q')?.trim();
+    const status = searchParams.get('status')?.trim();
+    const productId = searchParams.get('productId')?.trim();
+    const sourceParam = searchParams.get('source')?.trim();
+    const courierId = searchParams.get('courierId')?.trim();
+    const regionId = searchParams.get('regionId')?.trim();
+
+    if (status && status !== 'all' && CORE_STATES.includes(status as CoreState)) {
+      const stateWhere = whereForState(status as CoreState);
+      if (stateWhere) filters.AND = [stateWhere];
+    }
+    if (productId && productId !== 'all') filters.productId = productId;
+    if (sourceParam && sourceParam !== 'all') filters.source = sourceParam;
+    if (regionId && regionId !== 'all') filters.regionId = regionId;
+    if (courierId && courierId !== 'all') {
+      filters.deliveryProviderId = courierId === 'none' ? null : courierId;
+    }
+    if (q) {
+      filters.OR = [
+        { orderNumber: { contains: q } },
+        { customer: { fullName: { contains: q } } },
+        { customer: { phone: { contains: q } } },
+      ];
+    }
+
     const where = ids
       ? { companyId, storeId, id: { in: ids } }
-      : { companyId, storeId, createdAt: { gte: start, lte: end } };
+      : { companyId, storeId, createdAt: { gte: start, lte: end }, ...filters };
 
     // Guard: reject exports exceeding the row cap before fetching anything
     const totalRows = await db.order.count({ where });
