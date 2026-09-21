@@ -4,12 +4,28 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
-import { TrendingUp, Flame, AlertTriangle, Download, Calendar, PhoneCall, Truck, Bike } from 'lucide-react';
+import { AlertTriangle, Download, Truck, Bike, Trophy, Coins, CheckCircle2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { DateRange } from '@/components/ui/DateRange';
+import { TeamPerformanceTable } from '@/components/performance/TeamPerformanceTable';
+
+/** The last thirty days, which is what "how are we doing" nearly always means. */
+function lastThirtyDays() {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 29);
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return { from: iso(from), to: iso(to) };
+}
 
 export function PerformanceScreen() {
   const { t } = useApp();
-  const [period, setPeriod] = useState<'today' | 'yesterday' | '7d' | '30d' | 'month' | 'last_month' | 'all'>('all');
+  // ONE date filter for the whole screen. There used to be an English
+  // period strip here and no filter at all on the people below it, so the
+  // product table and the team table were answering about different spans
+  // of time on the same page.
+  const [range, setRange] = useState(lastThirtyDays);
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   // Who is doing the work, and how well. The endpoints behind these were
@@ -17,16 +33,27 @@ export function PerformanceScreen() {
   // dashboard's analytics, and neither answered "which agent" or
   // "which courier".
   const [team, setTeam] = useState<any[] | null>(null);
+  const [totals, setTotals] = useState<any>(null);
   const [couriers, setCouriers] = useState<any[] | null>(null);
+
+  /** Empty dates mean "the whole window"; the server clamps it to 90 days. */
+  const dateQuery = range.from && range.to ? `startDate=${range.from}&endDate=${range.to}` : 'period=all';
 
   useEffect(() => {
     loadData();
-  }, [period]);
+  }, [dateQuery]);
 
   useEffect(() => {
-    apiJson<{ employees: any[] }>('/api/orders/confirmation/team')
-      .then((d) => setTeam(d.employees ?? []))
+    setTeam(null);
+    apiJson<{ employees: any[]; totals: any }>(`/api/orders/confirmation/team?${dateQuery}`)
+      .then((d) => {
+        setTeam(d.employees ?? []);
+        setTotals(d.totals ?? null);
+      })
       .catch(() => setTeam([]));
+  }, [dateQuery]);
+
+  useEffect(() => {
     apiJson<{ providers: any[] }>('/api/orders/shipping/performance')
       .then((d) => setCouriers(d.providers ?? []))
       .catch(() => setCouriers([]));
@@ -35,7 +62,7 @@ export function PerformanceScreen() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/analytics?period=${period}`);
+      const res = await fetch(`/api/analytics?${dateQuery}`);
       if (res.ok) {
         const data = await res.json();
         setAnalytics(data);
@@ -59,25 +86,13 @@ export function PerformanceScreen() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.analytics}</h1>
             <p className="text-xs text-[#697586] mt-1">
-              Section 18 & 19 In-depth Product Profit Analysis, Rankings & Date Range Performance
+              ربح كل منتج، وترتيب المنتجات، وأداء الفريق — للمدة المختارة
             </p>
           </div>
 
-          <div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-y-2">
-            <div className="bg-white border border-[#e3e8ef] rounded-lg p-1 flex text-xs font-medium text-[#364152]">
-              {(['today', 'yesterday', '7d', '30d', 'month', 'last_month', 'all'] as const).map(
-                (p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPeriod(p)}
-                    className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                      period === p ? 'bg-[#fb323f] text-white font-semibold' : 'hover:bg-[#f8fafc]'
-                    }`}
-                  >
-                    {p.replace('_', ' ').toUpperCase()}
-                  </button>
-                )
-              )}
+          <div className="flex items-center gap-2 flex-wrap gap-y-2">
+            <div className="w-56">
+              <DateRange value={range} onChange={setRange} label="كل المدة" />
             </div>
 
             <Button
@@ -87,95 +102,67 @@ export function PerformanceScreen() {
               className="flex items-center space-x-1"
             >
               <Download className="w-4 h-4" />
-              <span>Export CSV</span>
+              <span>تصدير CSV</span>
             </Button>
           </div>
         </div>
 
-        {/* Section 19 Rankings Showcase */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="bg-[#feecee] border border-[#f5c6cb] p-4 rounded-xl">
-            <span className="text-[10px] font-bold text-[#fb323f] uppercase tracking-wider block">
-              🏆 Most Requested Product
-            </span>
-            <p className="font-bold text-[#121926] text-sm mt-1">
-              {analytics?.rankings?.mostRequested?.name || 'N/A'}
-            </p>
-            <p className="text-xs text-[#fb323f] font-semibold mt-0.5">
-              {analytics?.rankings?.mostRequested?.totalOrders || 0} Orders
-            </p>
-          </div>
-
-          <div className="bg-[#feecee] border border-[#f5c6cb] p-4 rounded-xl">
-            <span className="text-[10px] font-bold text-[#fb323f] uppercase tracking-wider block">
-              💰 Most Profitable Product
-            </span>
-            <p className="font-bold text-[#121926] text-sm mt-1">
-              {analytics?.rankings?.mostProfitable?.name || 'N/A'}
-            </p>
-            <p className="text-xs text-[#fb323f] font-semibold mt-0.5">
-              +${analytics?.rankings?.mostProfitable?.netProfit?.toFixed(2) || '0.00'} Net Yield
-            </p>
-          </div>
-
-          <div className="bg-[#feecee] border border-[#f5c6cb] p-4 rounded-xl">
-            <span className="text-[10px] font-bold text-[#fb323f] uppercase tracking-wider block">
-              ✅ Most Confirmed
-            </span>
-            <p className="font-bold text-[#121926] text-sm mt-1">
-              {analytics?.rankings?.mostConfirmed?.name || 'N/A'}
-            </p>
-            <p className="text-xs text-[#fb323f] font-semibold mt-0.5">
-              {analytics?.rankings?.mostConfirmed?.confirmedOrders || 0} Confirmed
-            </p>
-          </div>
-
-          <div className="bg-amber-50 border border-[#f4dcb8] p-4 rounded-xl">
-            <span className="text-[10px] font-bold text-[#c07f2a] uppercase tracking-wider block">
-              🚚 Most Delivered
-            </span>
-            <p className="font-bold text-[#121926] text-sm mt-1">
-              {analytics?.rankings?.mostDelivered?.name || 'N/A'}
-            </p>
-            <p className="text-xs text-[#ffab00] font-semibold mt-0.5">
-              {analytics?.rankings?.mostDelivered?.deliveredOrders || 0} Delivered
-            </p>
-          </div>
-
-          <div className="bg-[#feecee] border border-[#f5c6cb] p-4 rounded-xl">
-            <span className="text-[10px] font-bold text-[#fb323f] uppercase tracking-wider block">
-              ⚠️ Highest Rejections
-            </span>
-            <p className="font-bold text-[#121926] text-sm mt-1">
-              {analytics?.rankings?.highestRejection?.name || 'N/A'}
-            </p>
-            <p className="text-xs text-[#fb323f] font-semibold mt-0.5">
-              {analytics?.rankings?.highestRejection?.rejectedOrders || 0} Rejected
-            </p>
-          </div>
+        {/* The five headlines, read at a glance before any table. */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <Rank
+            icon={<Trophy className="w-3.5 h-3.5" />}
+            label="الأكثر طلباً"
+            name={analytics?.rankings?.mostRequested?.name}
+            note={`${analytics?.rankings?.mostRequested?.totalOrders || 0} طلب`}
+          />
+          <Rank
+            icon={<Coins className="w-3.5 h-3.5" />}
+            label="الأكثر ربحاً"
+            name={analytics?.rankings?.mostProfitable?.name}
+            note={`صافي ${(analytics?.rankings?.mostProfitable?.netProfit || 0).toFixed(2)}$`}
+          />
+          <Rank
+            icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+            label="الأكثر تأكيداً"
+            name={analytics?.rankings?.mostConfirmed?.name}
+            note={`${analytics?.rankings?.mostConfirmed?.confirmedOrders || 0} مؤكد`}
+          />
+          <Rank
+            icon={<Truck className="w-3.5 h-3.5" />}
+            label="الأكثر توصيلاً"
+            name={analytics?.rankings?.mostDelivered?.name}
+            note={`${analytics?.rankings?.mostDelivered?.deliveredOrders || 0} موصَّل`}
+          />
+          <Rank
+            icon={<AlertTriangle className="w-3.5 h-3.5" />}
+            label="الأكثر رفضاً"
+            name={analytics?.rankings?.highestRejection?.name}
+            note={`${analytics?.rankings?.highestRejection?.rejectedOrders || 0} مرفوض`}
+            warn
+          />
         </div>
 
         {/* Section 18: Product Profit Analysis Table */}
         <Card>
           <CardHeader
-            title="Product Profit Analysis Ledger (Section 18)"
-            subtitle="Accurate attribution of delivered revenue, batch COGS, shipping deduction, and net margin percentage"
+            title="ربح كل منتج"
+            subtitle="الإيراد من الموصَّل فقط، ناقص كلفة البضاعة من الدفعات وكلفة الشحن"
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
                 <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-3.5">Product SKU</th>
-                    <th className="px-6 py-3.5">Total Orders</th>
-                    <th className="px-6 py-3.5">Confirmed</th>
-                    <th className="px-6 py-3.5">Delivered</th>
-                    <th className="px-6 py-3.5">Rejected</th>
-                    <th className="px-6 py-3.5">Delivered Revenue</th>
-                    <th className="px-6 py-3.5">COGS</th>
-                    <th className="px-6 py-3.5">Shipping Cost</th>
-                    <th className="px-6 py-3.5">Net Profit</th>
-                    <th className="px-6 py-3.5">Profit Margin</th>
+                    <th className="px-6 py-3.5">المنتج</th>
+                    <th className="px-6 py-3.5">الطلبات</th>
+                    <th className="px-6 py-3.5">مؤكد</th>
+                    <th className="px-6 py-3.5">موصَّل</th>
+                    <th className="px-6 py-3.5">مرفوض</th>
+                    <th className="px-6 py-3.5">إيراد الموصَّل</th>
+                    <th className="px-6 py-3.5">كلفة البضاعة</th>
+                    <th className="px-6 py-3.5">كلفة الشحن</th>
+                    <th className="px-6 py-3.5">صافي الربح</th>
+                    <th className="px-6 py-3.5">هامش الربح</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e3e8ef]">
@@ -186,10 +173,10 @@ export function PerformanceScreen() {
                         <span className="font-mono text-[10px] text-[#9ca3af]">{prod.sku}</span>
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[#121926]">{prod.totalOrders}</td>
-                      <td className="px-6 py-3.5 font-bold text-[#fb323f]">
+                      <td className="px-6 py-3.5 font-bold text-[#00a344]">
                         {prod.confirmedOrders}
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#fb323f]">
+                      <td className="px-6 py-3.5 font-bold text-[#00a344]">
                         {prod.deliveredOrders}
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[#fb323f]">
@@ -204,11 +191,11 @@ export function PerformanceScreen() {
                       <td className="px-6 py-3.5 text-[#fb323f] font-medium">
                         -${prod.shippingCost.toFixed(2)}
                       </td>
-                      <td className="px-6 py-3.5 font-black text-[#fb323f]">
+                      <td className="px-6 py-3.5 font-black text-[#121926]">
                         ${prod.netProfit.toFixed(2)}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded text-xs">
+                        <span className="font-bold text-[#b8256e] bg-[#fdf5fa] px-2 py-0.5 rounded text-xs">
                           {prod.profitMargin}%
                         </span>
                       </td>
@@ -224,34 +211,10 @@ export function PerformanceScreen() {
         <Card>
           <CardHeader
             title="أداء موظفي التأكيد"
-            subtitle="المعالَج = ما وصل إلى مؤكد أو مرفوض؛ ما زال قيد العمل لا يُحسب نجاحاً ولا فشلاً"
+            subtitle="الأزمنة بدقائق العمل — خارج الدوام والعطلة لا يُحتسب — والقيم وسيط لا متوسط"
           />
           <CardContent className="p-0">
-            {team === null ? (
-              <p className="p-6 text-sm text-[#9aa4b2] text-center">جارٍ التحميل…</p>
-            ) : team.length === 0 ? (
-              <p className="p-6 text-sm text-[#9aa4b2] text-center">لا أحد استلم طلبات بعد.</p>
-            ) : (
-              <ul className="divide-y divide-[#e3e8ef]">
-                {team.map((e) => (
-                  <li key={e.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-xs">
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-[#121926] min-w-[130px]">
-                      <PhoneCall className="w-3.5 h-3.5 text-[#b8256e]" />
-                      {e.name}
-                    </span>
-                    <Metric label="استلم" value={e.claimed} />
-                    <Metric label="أكّد" value={e.confirmed} tone="text-[#00a344]" />
-                    <Metric label="رفض" value={e.rejected} tone="text-[#fb323f]" />
-                    <Metric label="لا يرد" value={e.noAnswer} />
-                    <Metric label="قيد العمل" value={e.open} />
-                    <span className="ms-auto tabular-nums font-bold text-[#121926]">
-                      {e.confirmationRate === null ? '—' : `${e.confirmationRate}%`}
-                      <span className="text-[10px] text-[#9aa4b2] font-normal"> نسبة التأكيد</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <TeamPerformanceTable rows={team as any} totals={totals} />
           </CardContent>
         </Card>
 
@@ -302,5 +265,37 @@ function Metric({ label, value, tone }: { label: string; value: number | string;
     <span className="text-[#697586]">
       {label}: <span className={`tabular-nums font-semibold ${tone ?? 'text-[#121926]'}`}>{value}</span>
     </span>
+  );
+}
+
+/**
+ * One headline. The five of them used to be red emoji boxes with English
+ * capitals — the only place in the system that looked like that.
+ */
+function Rank({
+  icon,
+  label,
+  name,
+  note,
+  warn,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  name?: string;
+  note: string;
+  warn?: boolean;
+}) {
+  const tone = warn ? 'text-[#c07f2a]' : 'text-[#b8256e]';
+  return (
+    <div className="bg-white border border-[#e3e8ef] p-3.5 rounded-xl">
+      <span className={`text-[10px] font-bold ${tone} inline-flex items-center gap-1.5`}>
+        {icon}
+        {label}
+      </span>
+      <p className="font-bold text-[#121926] text-sm mt-1.5 line-clamp-1" title={name}>
+        {name || '—'}
+      </p>
+      <p className="text-[11px] text-[#697586] font-semibold mt-0.5 tabular-nums">{note}</p>
+    </div>
   );
 }

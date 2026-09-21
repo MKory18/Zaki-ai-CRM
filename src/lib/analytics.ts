@@ -27,6 +27,18 @@ function windowStart(): Date {
   return min;
 }
 
+/** "yyyy-MM-dd" → that day's first instant locally. Null for anything else. */
+function startOfLocalDay(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+}
+
+/** "yyyy-MM-dd" → that day's last instant locally. Null for anything else. */
+function endOfLocalDay(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59, 999) : null;
+}
+
 /** An explicit start, pulled forward if it reaches past the safety window. */
 function clampStart(start: Date): Date {
   const min = windowStart();
@@ -38,9 +50,15 @@ export function getDateRange(filter: DateFilter): { start?: Date; end?: Date } {
   const period = filter.period || 'all';
 
   if (filter.startDate && filter.endDate) {
-    // Explicit ranges are also clamped to the 90-day safety window
-    let start = new Date(filter.startDate);
-    const end = new Date(filter.endDate);
+    // A picked day is the WHOLE day, in the reader's own time.
+    //
+    // "2026-09-21" parses as midnight UTC, so picking a single day used to
+    // produce a window of zero width — start and end the same instant — and
+    // every figure on the screen came back zero. Worse, the period branches
+    // below build their dates in local time, so the two halves of this
+    // function disagreed about when a day begins.
+    let start = startOfLocalDay(filter.startDate) ?? new Date(filter.startDate);
+    const end = endOfLocalDay(filter.endDate) ?? new Date(filter.endDate);
     if (end.getTime() - start.getTime() > MAX_WINDOW_DAYS * 24 * 60 * 60 * 1000) {
       start = clampStart(start);
     }
