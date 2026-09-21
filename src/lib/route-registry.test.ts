@@ -22,10 +22,18 @@ describe('navigation contract', () => {
     ]);
   });
 
-  it('lists 52 unique routes', () => {
+  it('lists 51 unique routes', () => {
+    // 52 until /ops/labels was folded into the shipping batches screen:
+    // printing, the sizes and the courier CSV all live where the batch is.
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(52);
-    expect(new Set(paths).size).toBe(52);
+    expect(paths).toHaveLength(51);
+    expect(new Set(paths).size).toBe(51);
+  });
+
+  it('no longer carries a separate labels page', () => {
+    // Deleting a screen is only done when nothing was lost with it — the
+    // print run, the paper size and the CSV are all on the batch now.
+    expect(ALL_ROUTES.map((r) => r.path)).not.toContain('/ops/labels');
   });
 
   it('only references permissions that exist in the catalog', () => {

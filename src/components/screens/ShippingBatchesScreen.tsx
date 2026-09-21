@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock } from 'lucide-react';
+import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock, Download } from 'lucide-react';
 import { apiJson, apiFetch } from '@/lib/api-client';
 import type { DispatchSummary } from '@/lib/courier-dispatch';
 import { arDateShort } from '@/lib/format';
@@ -106,8 +106,13 @@ export function ShippingBatchesScreen() {
     }
   }
 
-  /** Every waybill in the batch, on one print run, on this device's paper. */
-  async function printBatch(batch: Batch) {
+  /**
+   * Every waybill in the batch, on one print run, on this device's paper —
+   * or the same batch as the CSV some couriers take as a bulk upload
+   * instead of paper. The CSV used to live on a separate labels screen; it
+   * moved here with the printing rather than being lost with it.
+   */
+  async function printBatch(batch: Batch, format?: 'csv') {
     setBusy(batch.id);
     setError(null);
     try {
@@ -126,7 +131,7 @@ export function ShippingBatchesScreen() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.errorAr || data.error || 'تعذر تجهيز البوالص');
-      window.open(data.printPath, '_blank');
+      window.open(format === 'csv' ? `${data.printPath}&format=csv` : data.printPath, '_blank');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر الطباعة');
     } finally {
@@ -263,6 +268,16 @@ export function ShippingBatchesScreen() {
                   >
                     {busy === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
                     طباعة بوالص الدفعة
+                  </button>
+
+                  <button
+                    onClick={() => printBatch(b, 'csv')}
+                    disabled={busy === b.id || b._count.orders === 0}
+                    title="ملف للرفع الجماعي عند شركات الشحن التي تقبله بدل الورق"
+                    className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-[#697586] hover:text-[#b8256e] inline-flex items-center gap-1.5 disabled:opacity-40"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    CSV
                   </button>
 
                   {/* Send the orders to the courier and take their barcodes.
