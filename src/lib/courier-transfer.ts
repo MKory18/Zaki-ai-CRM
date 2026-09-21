@@ -44,6 +44,22 @@ export interface TransferPlan {
   reason: string;
 }
 
+/**
+ * A company takes parcels by the trolley, not one at a time.
+ *
+ * Handing an order to a company with no batch open means it sits assigned
+ * to somebody who has not agreed to carry anything today — invisible on
+ * every batch screen, and nobody's job. So the transfer waits until there
+ * is a trolley to put it on.
+ *
+ * An AGENT is different and deliberately exempt: he takes a parcel by hand,
+ * now, and making him wait for a batch to be opened would be paperwork
+ * standing in front of a man at the counter.
+ */
+export function requiresOpenBatch(to: TransferParty): boolean {
+  return to.kind === 'COMPANY';
+}
+
 export class TransferRefused extends Error {
   constructor(
     readonly code: string,

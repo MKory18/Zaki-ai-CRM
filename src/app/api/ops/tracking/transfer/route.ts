@@ -6,7 +6,8 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { orderRefFields } from '@/lib/order-ref';
-import { planTransfer, TransferRefused, type TransferParty } from '@/lib/courier-transfer';
+import { planTransfer, requiresOpenBatch, TransferRefused, type TransferParty } from '@/lib/courier-transfer';
+import { reserveOrderLines } from '@/lib/reservation';
 import { zodMessage } from '@/lib/zod-message';
 
 /**
@@ -78,6 +79,29 @@ export async function POST(req: Request) {
       throw e;
     }
 
+    // A company takes parcels by the trolley. Handing one to a company with
+    // no batch open leaves it assigned to somebody who has not agreed to
+    // carry anything today — invisible on every batch screen and nobody's
+    // job. An agent is exempt: he takes it by hand, now.
+    let openBatch: { id: string; batchNumber: string } | null = null;
+    if (requiresOpenBatch(target)) {
+      openBatch = await db.shippingBatch.findFirst({
+        where: { companyId, storeId, deliveryProviderId: to.id, status: 'READY' },
+        select: { id: true, batchNumber: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!openBatch) {
+        return NextResponse.json(
+          {
+            error: `لا توجد دفعة مفتوحة لـ${to.name}. افتح دفعة لها أولاً، ثم أعد التحويل.`,
+            code: 'NO_OPEN_BATCH',
+            providerId: to.id,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const runTransfer = (attempt: number) =>
       db.$transaction(async (tx) => {
       if (plan.mode === 'DIRECT') {
@@ -86,6 +110,7 @@ export async function POST(req: Request) {
           where: { id: order.id },
           data: {
             deliveryProviderId: to.id,
+            shippingBatchId: openBatch?.id ?? null,
             shippingStatus: plan.nextStatus,
             trackingNumber: null, // the old courier's barcode is not ours to carry over
             shippedAt: null,
@@ -146,8 +171,10 @@ export async function POST(req: Request) {
               confirmationStatus: 'CONFIRMED',
               shippingStatus: plan.nextStatus,
               settlementStatus: 'NOT_APPLICABLE',
-              // Assigned from scratch on the shipment screen.
-              deliveryProviderId: null,
+              // Straight onto the open trolley of the company it is going
+              // to — there is nothing left to decide about it.
+              deliveryProviderId: to.id,
+              shippingBatchId: openBatch?.id ?? null,
               source: order.source,
               customerNotes: order.customerNotes,
               internalNotes: `بديل عن ${order.orderNumber}: ${plan.reason}`,
@@ -173,6 +200,14 @@ export async function POST(req: Request) {
           },
         });
       }
+
+      // The goods for the replacement come off the shelf NOW, not when the
+      // first company finally sends the parcel back. The customer is
+      // waiting on this one, and a replacement that cannot be picked is not
+      // a replacement. The original's units stay reserved against it until
+      // the return is received — two reservations for one sale is the true
+      // position while two parcels exist.
+      await reserveOrderLines(tx, replacement.id, { allowNegativeStock: country.allowNegativeStock });
 
       for (const [orderId, note] of [
         [order.id, `سُحب من ${from?.name} — صدر البديل ${replacement.orderNumber}`],
