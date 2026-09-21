@@ -121,34 +121,47 @@ export function ContactButtons({
       </button>
 
       {open && (
-        <div
-          dir="rtl"
-          className="absolute top-full end-0 z-30 mt-1 w-72 rounded-xl border border-[#e3e8ef] bg-white shadow-lg p-1.5"
-        >
-          {templates === null ? (
-            <p className="p-2 text-[11px] text-[#9aa4b2]">جارٍ التحميل…</p>
-          ) : shown.length === 0 ? (
-            <p className="p-2 text-[11px] text-[#9aa4b2]">
-              لا رسائل جاهزة لهذه القناة — أضِفها من إعدادات النظام.
-            </p>
-          ) : (
-            shown.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => send(t)}
-                className="w-full text-start p-2 rounded-lg hover:bg-[#fdf5fa] transition-colors"
-              >
-                <span className="block text-[11px] font-semibold text-[#121926]">{t.name}</span>
-                {/* The filled text, not the template: what the customer will
-                    actually read is the only useful preview. */}
-                <span className="block text-[10px] text-[#697586] line-clamp-2 mt-0.5">
-                  {fillTemplate(t.body, context)}
-                </span>
-              </button>
-            ))
-          )}
-        </div>
+        <>
+          {/* On a phone the list is a sheet, so it needs something to sit on
+              — and a tap anywhere outside it has to close it, the same as
+              the click-away does on a desk. */}
+          <div className="fixed inset-0 z-30 bg-black/20 sm:hidden" onClick={() => setOpen(null)} />
+          <div
+            dir="rtl"
+            /**
+             * Phone: a sheet pinned to the bottom of the SCREEN. The row this
+             * button sits in belongs to a table that scrolls sideways, so a
+             * menu anchored to the cell lands half off the display — which is
+             * exactly where an agent would be reading it from.
+             * Desk: the ordinary dropdown under the button.
+             */
+            className="fixed inset-x-2 bottom-2 z-40 max-h-[60vh] overflow-y-auto rounded-xl border border-[#e3e8ef] bg-white shadow-xl p-1.5 sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-full sm:end-0 sm:z-30 sm:mt-1 sm:w-72 sm:max-h-none sm:shadow-lg"
+          >
+            {templates === null ? (
+              <p className="p-2 text-[11px] text-[#9aa4b2]">جارٍ التحميل…</p>
+            ) : shown.length === 0 ? (
+              <p className="p-2 text-[11px] text-[#9aa4b2]">
+                لا رسائل جاهزة لهذه القناة — أضِفها من إعدادات النظام.
+              </p>
+            ) : (
+              shown.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => send(t)}
+                  className="w-full text-start p-2.5 sm:p-2 rounded-lg hover:bg-[#fdf5fa] active:bg-[#fdf5fa] transition-colors"
+                >
+                  <span className="block text-[11px] font-semibold text-[#121926]">{t.name}</span>
+                  {/* The filled text, not the template: what the customer will
+                      actually read is the only useful preview. */}
+                  <span className="block text-[10px] text-[#697586] line-clamp-2 mt-0.5">
+                    {fillTemplate(t.body, context)}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );
