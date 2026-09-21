@@ -4,6 +4,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronLeft, Loader2, PackageCheck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { ChangeRequestReview } from '@/components/orders/ChangeRequestReview';
+import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
+import { RejectDialog } from '@/components/screens/confirmation/ActionDialogs';
+import { Pencil, XCircle } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
 /**
  * /ops/preparation — grouped BY PRODUCT, collapsible. Orders, required,
@@ -39,6 +43,30 @@ export function PreparationScreen() {
   // A request waiting on an order is the one thing the packer must see
   // before the box is taped.
   const [reviewing, setReviewing] = useState<string | null>(null);
+  // The customer rings while the box is being packed: change it, or stop
+  // it. Both have to be reachable from the row the packer is looking at,
+  // not from a screen somebody has to go and find.
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<{ id: string; orderNumber: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  /**
+   * Who is standing at this screen.
+   *
+   * It is the packing line, and the person on it is a warehouse hand who
+   * holds seven permissions — all of them about stock and preparation, none
+   * about orders. Cancelling a customer's order was never their job, and
+   * the customer's phone number is redacted from their view on purpose.
+   *
+   * So the two controls appear for whoever ALSO has the authority: a
+   * supervisor or an owner looking at the same screen. Showing them to the
+   * packer would be two buttons that can only ever produce a red error.
+   */
+  const { currentUser } = useApp();
+  const perms = currentUser?.permissions ?? [];
+  const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN';
+  const mayOpenOrder = isAdmin || perms.includes('orders.view');
+  const mayCancel = isAdmin || perms.includes('orders.unlock');
 
   const load = useCallback(async () => {
     try {
@@ -122,7 +150,27 @@ export function PreparationScreen() {
                     <td className={`px-4 py-2 tabular-nums ${l.reservedQty >= l.quantity + l.freeQuantity ? 'text-[#00a344]' : 'text-[#fb323f]'}`}>
                       {l.reservedQty}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      {mayOpenOrder && (
+                        <button
+                          type="button"
+                          onClick={() => setOpenOrderId(l.orderId)}
+                          title="افتح الطلب وعدّله — ما لم تكن بوليصته قد طُبعت"
+                          className="p-1 rounded-lg text-[#9aa4b2] hover:text-[#b8256e] hover:bg-[#fdf5fa]"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {mayCancel && (
+                        <button
+                          type="button"
+                          onClick={() => setCancelling({ id: l.orderId, orderNumber: l.orderNumber })}
+                          title="ألغِ الطلب — يعود المحجوز من بضاعته إلى المخزون"
+                          className="p-1 rounded-lg text-[#9aa4b2] hover:text-[#fb323f] hover:bg-[#feecee]"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       {l.pendingChangeRequestId && (
                         <button
                           type="button"
@@ -142,6 +190,49 @@ export function PreparationScreen() {
           )}
         </section>
       ))}
+
+      {openOrderId && (
+        <OrderDetailModal
+          isOpen
+          orderId={openOrderId}
+          onClose={() => setOpenOrderId(null)}
+          onRefresh={load}
+        />
+      )}
+
+      {cancelling && (
+        <RejectDialog
+          open
+          orderNumber={cancelling.orderNumber}
+          busy={busy}
+          onClose={() => setCancelling(null)}
+          onSubmit={async (value) => {
+            setBusy(true);
+            setError(null);
+            try {
+              // Through the ordinary cancellation path: it checks whether
+              // the parcel can still be taken off the shelf, releases the
+              // reservation, and records who stopped it.
+              const fresh = await apiJson<{ order: { version: number } }>(`/api/orders/${cancelling.id}`);
+              await apiJson(`/api/orders/${cancelling.id}/confirmation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'cancel',
+                  note: `${value.rejectionReason}${value.note ? ` — ${value.note}` : ''}`,
+                  expectedVersion: fresh.order.version,
+                }),
+              });
+              setCancelling(null);
+              await load();
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'تعذر الإلغاء');
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      )}
 
       {reviewing && (
         <ChangeRequestReview
