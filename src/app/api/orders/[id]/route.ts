@@ -52,6 +52,10 @@ const patchSchema = z.object({
     .min(1)
     .max(20)
     .optional(),
+  // Where this order came through. Correcting it is an ordinary edit: the
+  // numbers are counted per channel and an order filed under the wrong one
+  // is a wrong number, not a wrong label.
+  channelId: z.string().uuid().nullable().optional(),
   // The governorate the order ships to. The delivery-fee table is keyed on
   // it, so it is editable here rather than only at intake.
   regionId: z.string().uuid().optional().nullable(),
@@ -281,7 +285,7 @@ export async function PATCH(
       status, moderatorId, internalNotes, customerNotes, postponedUntil, trackingCode,
       confirmationStatus, shippingStatus, expectedVersion,
       customerName, customerPhone, customerAltPhone, customerAddress, regionId,
-      sellingPrice, quantity, discountAmount, shippingCost, productId, items,
+      sellingPrice, quantity, discountAmount, shippingCost, productId, items, channelId,
     } = parsed.data;
 
     // ── Authorization chain: visibility/assignment (RBAC engine) → canonical
@@ -442,6 +446,21 @@ export async function PATCH(
     }
     if (postponedUntil !== undefined) {
       updateData.postponedUntil = postponedUntil ? new Date(postponedUntil) : null;
+    }
+    if (channelId !== undefined) {
+      if (channelId === null) {
+        updateData.channelId = null;
+      } else {
+        const channel = await db.orderChannel.findFirst({
+          where: { id: channelId, companyId },
+          select: { id: true, name: true },
+        });
+        if (!channel) {
+          return NextResponse.json({ error: 'القناة غير موجودة' }, { status: 404 });
+        }
+        updateData.channelId = channel.id;
+        updateData.source = channel.name;
+      }
     }
     if (trackingCode !== undefined) {
       updateData.trackingNumber = trackingCode || null;

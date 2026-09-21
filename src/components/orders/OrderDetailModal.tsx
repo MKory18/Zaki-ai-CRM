@@ -74,6 +74,32 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   const [currency, setCurrency] = useState<Currency | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
+  const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
+  const [channelOpen, setChannelOpen] = useState(false);
+  const [channelDraft, setChannelDraft] = useState('');
+
+  useEffect(() => {
+    if (!isOpen || channels.length) return;
+    apiJson<{ channels: { id: string; name: string; isActive: boolean }[] }>('/api/settings/channels')
+      .then((d) => setChannels((d.channels ?? []).filter((c) => c.isActive)))
+      .catch(() => setChannels([]));
+  }, [isOpen, channels.length]);
+
+  const saveChannel = async () => {
+    if (!order?.id) return;
+    try {
+      await apiJson(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expectedVersion: order.version, channelId: channelDraft || null }),
+      });
+      setChannelOpen(false);
+      await loadOrder(order.id);
+      onRefresh();
+    } catch (e) {
+      setActionFeedback({ type: 'error', text: e instanceof Error ? e.message : 'تعذر حفظ القناة' });
+    }
+  };
   // The COD breakdown, computed server-side by the one cod function.
   const [cod, setCod] = useState<
     { subtotal: number; discount: number; deliveryFee: number; cod: number; includesDelivery: boolean } | null
@@ -672,27 +698,54 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             </div>
           </div>
 
-          {/* Where the order came from. A sheet import and a moderator typing
-              it in are different origins, and "غير معيّن" for an imported
-              order read as a gap in the data rather than as its answer. */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-            <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 mb-2 flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-[#b8256e]" />
-              جهة الطلب
-            </h4>
-            {order.moderator ? (
-              <>
-                <p className="text-sm font-bold text-slate-900">
-                  مودريتور: {order.moderator.name}
+          {/* Where the order came from. Editable, because the numbers are
+              counted per channel and an order filed under the wrong one is a
+              wrong number rather than a wrong label. */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-xs font-black text-slate-700 flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-[#b8256e]" />
+                جهة الطلب
+              </h4>
+              <button
+                onClick={() => { setChannelOpen((v) => !v); setChannelDraft(order.channelId ?? ''); }}
+                className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600 hover:text-[#b8256e] inline-flex items-center gap-1.5"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                {channelOpen ? 'إغلاق' : 'تعديل'}
+              </button>
+            </div>
+
+            {channelOpen ? (
+              <div className="space-y-2">
+                <select
+                  value={channelDraft}
+                  onChange={(e) => setChannelDraft(e.target.value)}
+                  className="w-full h-9 px-3 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]"
+                >
+                  <option value="">— بلا قناة —</option>
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={saveChannel}
+                  className="text-xs px-3 py-1.5 rounded-[8px] bg-[#b8256e] text-white font-medium"
+                >
+                  حفظ القناة
+                </button>
+                <p className="text-[11px] text-slate-400">
+                  القنوات تُدار من الإعدادات ← قنوات الطلبات.
                 </p>
-                <p className="text-xs text-slate-500" dir="ltr">{order.moderator.email || '—'}</p>
-              </>
+              </div>
             ) : (
-              <p className="text-sm font-bold text-slate-900">{order.source || '—'}</p>
+              <>
+                <p className="text-sm font-bold text-slate-900">{order.source || '—'}</p>
+                {order.moderator?.name && (
+                  <p className="text-[11px] text-slate-400">أدخله: {order.moderator.name}</p>
+                )}
+              </>
             )}
-            <p className="text-[11px] text-slate-400 mt-1">
-              القناة: {order.source || '—'}
-            </p>
           </div>
 
           {/* Timeline — merged from every event table (src/lib/order-timeline.ts),

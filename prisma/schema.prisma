@@ -49,6 +49,7 @@ model Company {
   trackingPixels    TrackingPixel[]
   countries         Country[]
   customerBlocks    CustomerBlock[]
+  orderChannels     OrderChannel[]
   stores            Store[]
 
   @@map("companies")
@@ -297,6 +298,10 @@ model Order {
   companyId            String
   orderNumber          String
   customerId           String
+  /// The channel this order came through. The free-text `source` below is
+  /// kept as it was written, so an order never loses where it said it came
+  /// from when a channel is renamed or retired.
+  channelId            String?
   productId            String
   offerId              String?
   quantity             Int       @default(1)
@@ -420,6 +425,7 @@ model Order {
   country    Country?        @relation(fields: [countryId], references: [id], onDelete: Restrict)
   store      Store?          @relation(fields: [storeId], references: [id], onDelete: Restrict)
   customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  channel    OrderChannel?   @relation(fields: [channelId], references: [id], onDelete: SetNull)
   product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   offer      Offer?          @relation(fields: [offerId], references: [id], onDelete: SetNull)
   moderator  User?           @relation("ModeratorOrders", fields: [moderatorId], references: [id], onDelete: SetNull)
@@ -1177,6 +1183,36 @@ model Region {
 
   @@unique([countryId, name])
   @@map("regions")
+}
+
+/// Where orders come from, as the shop defines them.
+///
+/// The order's `source` was free text, so the same channel arrived spelled
+/// three ways and the filter offered a list written into a screen while the
+/// orders in front of it carried something else entirely. A channel is a row
+/// now: named once, picked from a list, and countable.
+///
+/// `kind` is the platform behind the name — several channels can share one
+/// ("تيكتوك - صفحة الكريم" and "تيكتوك - صفحة القطرة" are both TIKTOK), which
+/// is what makes per-platform reporting possible without losing the detail.
+model OrderChannel {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  /// LANDING_PAGE | FACEBOOK | INSTAGRAM | TIKTOK | WHATSAPP | TELEGRAM |
+  /// PHONE | SHEET | WEBSITE | OTHER
+  kind      String   @default("OTHER")
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orders  Order[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+  @@map("order_channels")
 }
 
 model Store {

@@ -48,7 +48,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const [regionId, setRegionId] = useState('');
   const customerCity = regions.find((r) => r.id === regionId)?.name ?? '';
   const [lines, setLines] = useState<DraftLine[]>([newLine()]);
-  const [source, setSource] = useState('Facebook Ads');
+  const [channelId, setChannelId] = useState('');
+  const [channels, setChannels] = useState<{ id: string; name: string; isActive: boolean }[]>([]);
   const [moderatorId, setModeratorId] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
   const [internalNotes, setInternalNotes] = useState('');
@@ -71,7 +72,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       setCustomerAddress('');
       setRegionId('');
       setLines([newLine()]);
-      setSource('Facebook Ads');
+      setChannelId('');
       setModeratorId('');
       setCustomerNotes('');
       setInternalNotes('');
@@ -83,7 +84,15 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
   const loadFormData = async () => {
     try {
-      const [prodRes, modRes] = await Promise.all([fetch('/api/products'), fetch('/api/moderators')]);
+      const [prodRes, modRes, chRes] = await Promise.all([
+        fetch('/api/products'),
+        fetch('/api/moderators'),
+        fetch('/api/settings/channels'),
+      ]);
+      if (chRes.ok) {
+        const chData = await chRes.json();
+        setChannels((chData.channels ?? []).filter((c: any) => c.isActive));
+      }
       if (prodRes.ok) {
         const pData = await prodRes.json();
         setProducts(pData.products || []);
@@ -150,7 +159,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           })),
           // The delivery fee follows the courier and is set when the shipment
           // is created; sending a zero here would read as free delivery.
-          source,
+          channelId: channelId || null,
           moderatorId: moderatorId || null,
           customerNotes,
           internalNotes,
@@ -307,15 +316,20 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             </Select>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">مصدر الطلب</label>
-              <Select value={source} onChange={(e) => setSource(e.target.value)}>
-                <option value="Facebook Ads">إعلانات فيسبوك</option>
-                <option value="TikTok">تيك توك</option>
-                <option value="Instagram">إنستغرام</option>
-                <option value="WhatsApp">واتساب</option>
-                <option value="Website">الموقع</option>
-                <option value="الشيت">الشيت</option>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">قناة الطلب</label>
+              {/* The shop's own channels, not a list written into this form —
+                  they are what the numbers are counted by. */}
+              <Select value={channelId} onChange={(e) => setChannelId(e.target.value)}>
+                <option value="">— اختر القناة —</option>
+                {channels.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
               </Select>
+              {channels.length === 0 && (
+                <p className="text-[11px] text-slate-400 mt-1">
+                  لا قنوات بعد — تُضاف من الإعدادات ← قنوات الطلبات.
+                </p>
+              )}
             </div>
           </div>
         </div>

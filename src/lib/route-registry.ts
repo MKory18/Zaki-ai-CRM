@@ -128,6 +128,7 @@ export const NAV: NavGroup[] = [
       r('/settings/delivery-fees', 'أجور التوصيل', 'Receipt', ['settings.view']),
       r('/settings/commission', 'العمولات', 'Percent', ['settings.view']),
       r('/settings/couriers', 'شركات الشحن', 'Truck', ['settings.view']),
+      r('/settings/channels', 'قنوات الطلبات', 'Radio', ['settings.view']),
       r('/settings/pixels', 'البكسلات والتتبع', 'Radar', ['settings.view']),
       r('/settings/whatsapp', 'إعدادات واتساب', 'MessageCircle', ['whatsapp.manage']),
       r('/settings/telegram', 'إعدادات تلجرام', 'Send', ['telegram.manage']),

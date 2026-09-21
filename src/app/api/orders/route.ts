@@ -215,7 +215,11 @@ export async function POST(req: Request) {
       quantity: z.coerce.number().int().min(1).max(999).optional(),
       sellingPrice: z.coerce.number().min(0).max(100000).optional(),
       shippingCost: z.coerce.number().min(0).max(1000).optional(),
-      source: z.string().trim().max(40).optional(),
+      source: z.string().trim().max(60).optional(),
+      // The channel this came through. Its name is written into `source` too,
+      // so the order keeps saying where it came from even if the channel is
+      // later renamed or retired.
+      channelId: z.string().uuid().optional().nullable(),
       moderatorId: z.string().max(64).optional().nullable(),
       customerNotes: z.string().trim().max(500).optional().nullable(),
       internalNotes: z.string().trim().max(500).optional().nullable(),
@@ -242,10 +246,24 @@ export async function POST(req: Request) {
       sellingPrice,
       shippingCost,
       source,
+      channelId,
       moderatorId,
       customerNotes,
       internalNotes,
     } = v;
+
+    // The channel, if one was named: it must be ours, and its name becomes
+    // the order's written source.
+    let channel: { id: string; name: string } | null = null;
+    if (channelId) {
+      channel = await db.orderChannel.findFirst({
+        where: { id: channelId, companyId, isActive: true },
+        select: { id: true, name: true },
+      });
+      if (!channel) {
+        return NextResponse.json({ error: 'القناة غير موجودة أو موقوفة' }, { status: 400 });
+      }
+    }
 
     // The order's lines, however they were sent: an explicit array, or the
     // single-product shorthand. Everything below works on this one list, so
@@ -463,7 +481,8 @@ export async function POST(req: Request) {
               currentOwnerId: null,
               signatureStatus: 'UNSIGNED',
               version: 1,
-              source: source || 'Manual',
+              channelId: channel?.id ?? null,
+              source: channel?.name || source || 'Manual',
               customerNotes: customerNotes?.trim() || null,
               internalNotes: internalNotes?.trim() || null,
             },
