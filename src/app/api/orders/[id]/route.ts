@@ -13,7 +13,7 @@ import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
-import { authorize } from '@/lib/authorization';
+import { authorize, can } from '@/lib/authorization';
 
 /** Legacy combined status whitelist (mirrors the UI status config) */
 const ALLOWED_COMBINED_STATUSES = [
@@ -462,6 +462,21 @@ export async function PATCH(
       updateData.postponedUntil = postponedUntil ? new Date(postponedUntil) : null;
     }
     if (channelId !== undefined) {
+      // The channel is the order's attribution — which campaign, page or
+      // person the sale is credited to, and what every source report reads.
+      // A confirmation agent editing the order she is working on must not be
+      // able to move that credit; it is a different authority from fixing an
+      // address or a quantity.
+      if (!can(user, 'orders.assign')) {
+        return NextResponse.json(
+          {
+            error: 'لا تملك صلاحية تغيير جهة الطلب',
+            errorAr: 'لا تملك صلاحية تغيير جهة الطلب',
+            code: 'CHANNEL_FORBIDDEN',
+          },
+          { status: 403 }
+        );
+      }
       if (channelId === null) {
         updateData.channelId = null;
       } else {
@@ -478,6 +493,20 @@ export async function PATCH(
     }
     if (trackingCode !== undefined) {
       updateData.trackingNumber = trackingCode || null;
+    }
+
+    // Shipping and delivery cost belong to the shipping authority, not to
+    // whoever may edit the order. The agent on the phone fixes a wrong
+    // address; she does not decide what the parcel costs to send.
+    if (shippingCost !== undefined && !can(user, 'orders.change_status')) {
+      return NextResponse.json(
+        {
+          error: 'لا تملك صلاحية تعديل الشحن والتوصيل',
+          errorAr: 'لا تملك صلاحية تعديل الشحن والتوصيل',
+          code: 'SHIPPING_FORBIDDEN',
+        },
+        { status: 403 }
+      );
     }
 
     // ── Order line editing (price / quantity / discount / shipping / product) ──

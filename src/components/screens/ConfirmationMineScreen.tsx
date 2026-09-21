@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Phone, PhoneOff, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Phone, PhoneOff, ShieldAlert } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
+import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import {
   ChangeRequestDialog,
   IssueDialog,
@@ -72,6 +73,7 @@ export function ConfirmationMineScreen() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -250,6 +252,16 @@ export function ConfirmationMineScreen() {
                 )}
 
                 <footer className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#e3e8ef]">
+                  {/* The order she is working on, opened in the same screen
+                      everyone else sees it in. She fixes what the customer
+                      just told her — a wrong name, a wrong street, a second
+                      unit — without leaving the queue. The fields she has no
+                      authority over are not shown, and are refused by the
+                      server even if they were. */}
+                  <Action onClick={() => setOpenOrderId(order.id)} icon={<Pencil className="w-3.5 h-3.5" />}>
+                    افتح وعدّل
+                  </Action>
+
                   <Action onClick={() => logAttempt(order, 'PHONE', 'ANSWERED')} busy={busyId === order.id} icon={<Phone className="w-3.5 h-3.5" />}>
                     ردّ على الاتصال
                   </Action>
@@ -376,6 +388,17 @@ export function ConfirmationMineScreen() {
           busy={busyId === dialog.order.id}
           onClose={() => setDialog(null)}
           onSubmit={(value) => submitChange(dialog.order, value)}
+        />
+      )}
+
+      {/* The same modal the rest of the system opens an order in — not a
+          second, smaller copy that would drift from it. */}
+      {openOrderId && (
+        <OrderDetailModal
+          isOpen
+          orderId={openOrderId}
+          onClose={() => setOpenOrderId(null)}
+          onRefresh={load}
         />
       )}
     </div>

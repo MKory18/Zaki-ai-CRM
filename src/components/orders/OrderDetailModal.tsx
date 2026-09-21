@@ -73,6 +73,13 @@ interface OrderDetailModalProps {
 
 export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters }: OrderDetailModalProps) {
   const { t, locale, isRtl, currentUser } = useApp();
+
+  // Two fields the person editing may not have authority over. The server
+  // decides; these mirror it so the screen never offers what it will refuse.
+  const perms = currentUser?.permissions ?? [];
+  const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN';
+  const mayChangeChannel = isAdmin || perms.includes('orders.assign');
+  const mayChangeShipping = isAdmin || perms.includes('orders.change_status');
   const ar = locale === 'ar';
   const [order, setOrder] = useState<any>(null);
   const [currency, setCurrency] = useState<Currency | null>(null);
@@ -221,7 +228,16 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       if (num(editForm.sellingPrice) !== undefined && num(editForm.sellingPrice) !== order.sellingPrice) body.sellingPrice = num(editForm.sellingPrice);
       if (num(editForm.quantity) !== undefined && num(editForm.quantity) !== order.quantity) body.quantity = num(editForm.quantity);
       if (num(editForm.discountAmount) !== undefined && num(editForm.discountAmount) !== order.discountAmount) body.discountAmount = num(editForm.discountAmount);
-      if (num(editForm.shippingCost) !== undefined && num(editForm.shippingCost) !== order.shippingCost) body.shippingCost = num(editForm.shippingCost);
+      // Shipping belongs to the shipping authority. Without it the field is
+      // not sent at all — an unchanged value is not an edit, and sending it
+      // would earn a 403 for a number nobody touched.
+      if (
+        mayChangeShipping &&
+        num(editForm.shippingCost) !== undefined &&
+        num(editForm.shippingCost) !== order.shippingCost
+      ) {
+        body.shippingCost = num(editForm.shippingCost);
+      }
       const fields = Object.keys(body).filter((k) => k !== 'expectedVersion');
       if (fields.length === 0) {
         setEditError('لا توجد تغييرات للحفظ');
@@ -733,13 +749,20 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 <UserCheck className="w-4 h-4 text-[#b8256e]" />
                 جهة الطلب
               </h4>
-              <button
-                onClick={() => { setChannelOpen((v) => !v); setChannelDraft(order.channelId ?? ''); }}
-                className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600 hover:text-[#b8256e] inline-flex items-center gap-1.5"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                {channelOpen ? 'إغلاق' : 'تعديل'}
-              </button>
+              {/* The channel is the order's attribution — which campaign or
+                  page the sale is credited to. Changing it moves that credit,
+                  which is a different authority from fixing an address. The
+                  server refuses it either way; hiding it just stops a button
+                  that would only ever fail. */}
+              {mayChangeChannel && (
+                <button
+                  onClick={() => { setChannelOpen((v) => !v); setChannelDraft(order.channelId ?? ''); }}
+                  className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600 hover:text-[#b8256e] inline-flex items-center gap-1.5"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  {channelOpen ? 'إغلاق' : 'تعديل'}
+                </button>
+              )}
             </div>
 
             {channelOpen ? (
