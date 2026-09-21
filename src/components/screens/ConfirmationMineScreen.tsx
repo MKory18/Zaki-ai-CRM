@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, PhoneOff, Search, ShieldAlert, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Phone, PhoneOff, Search, ShieldAlert, X, XCircle } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
@@ -11,6 +11,7 @@ import {
   ChangeRequestDialog,
   IssueDialog,
   PostponeDialog,
+  RejectDialog,
   type PostponeValue,
 } from './confirmation/ActionDialogs';
 
@@ -72,7 +73,7 @@ const RISK_LABEL: Record<string, { text: string; cls: string }> = {
 };
 
 type DialogState =
-  | { kind: 'postpone' | 'issue' | 'change'; order: OrderRow }
+  | { kind: 'postpone' | 'issue' | 'change' | 'reject'; order: OrderRow }
   | null;
 
 export function ConfirmationMineScreen() {
@@ -111,6 +112,19 @@ export function ConfirmationMineScreen() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  /**
+   * Dial, and record that she dialled.
+   *
+   * The phone is a link so the desk phone or the handset takes over, and
+   * the attempt is logged in the same click — a call nobody recorded is a
+   * call that did not happen as far as every counter on this system is
+   * concerned.
+   */
+  const callCustomer = (order: OrderRow) => {
+    window.location.href = `tel:${order.customer.rawPhone}`;
+    void logAttempt(order, 'PHONE', 'ANSWERED');
   };
 
   const logAttempt = (order: OrderRow, method: 'PHONE' | 'WHATSAPP' | 'SMS', result: string) =>
@@ -171,6 +185,24 @@ export function ConfirmationMineScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: order.id, reason: value.reason, note: value.note || undefined }),
+      })
+    );
+  };
+
+  /** The customer said no. Through the same rejection path as everywhere. */
+  const submitReject = (order: OrderRow, value: { rejectionReason: string; note: string }) => {
+    setDialog(null);
+    void act(order.id, () =>
+      apiJson(`/api/orders/${order.id}/confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reject',
+          rejectionReason: value.rejectionReason,
+          rejectionNote: value.note || undefined,
+          note: value.note || undefined,
+          expectedVersion: order.version,
+        }),
       })
     );
   };
@@ -330,12 +362,20 @@ export function ConfirmationMineScreen() {
                         : `متبقٍ ${remaining} محاولات قبل الإغلاق التلقائي`}
                   </span>
 
+                  <Action onClick={() => callCustomer(order)} busy={busyId === order.id} icon={<Phone className="w-3.5 h-3.5" />}>
+                    اتصال
+                  </Action>
+
                   <Action onClick={() => logAttempt(order, 'WHATSAPP', 'ANSWERED')} busy={busyId === order.id} icon={<MessageCircle className="w-3.5 h-3.5" />}>
                     واتساب
                   </Action>
                   <Action onClick={() => setDialog({ kind: 'postpone', order })} busy={busyId === order.id} icon={<Clock className="w-3.5 h-3.5" />}>
                     تأجيل {order.postponeCount > 0 && `(${order.postponeCount})`}
                   </Action>
+                  <Action onClick={() => setDialog({ kind: 'reject', order })} busy={busyId === order.id} danger icon={<XCircle className="w-3.5 h-3.5" />}>
+                    ألغِ
+                  </Action>
+
                   <Action onClick={() => setDialog({ kind: 'issue', order })} busy={busyId === order.id} icon={<AlertTriangle className="w-3.5 h-3.5" />}>
                     إشكال إدخال
                   </Action>
@@ -434,6 +474,15 @@ export function ConfirmationMineScreen() {
           busy={busyId === dialog.order.id}
           onClose={() => setDialog(null)}
           onSubmit={(value) => submitIssue(dialog.order, value)}
+        />
+      )}
+      {dialog?.kind === 'reject' && (
+        <RejectDialog
+          open
+          orderNumber={dialog.order.orderNumber}
+          busy={busyId === dialog.order.id}
+          onClose={() => setDialog(null)}
+          onSubmit={(value) => submitReject(dialog.order, value)}
         />
       )}
       {dialog?.kind === 'change' && (

@@ -7,6 +7,8 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { addBusinessMinutes } from '@/lib/business-calendar';
 import { zodMessage } from '@/lib/zod-message';
+import { createNotification } from '@/lib/notification';
+import { deciderFor } from '@/lib/change-request-routing';
 
 /**
  * Change requests on an order (contract PART 2 / invariant 7).
@@ -104,6 +106,50 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         slaDueAt: addBusinessMinutes(new Date(), CHANGE_REQUEST_SLA_MINUTES, cal),
       },
     });
+
+    // Tell whoever has to answer it.
+    //
+    // Without this the request sat on a screen until somebody happened to
+    // open it. The agent presses «طلب تعديل» with a customer on the phone
+    // and then has no idea whether anyone will ever look — so she calls a
+    // supervisor anyway, and the whole mechanism becomes a slower way of
+    // doing what she was already doing.
+    //
+    // It goes to the person the routing rule names: the agent holding the
+    // order before confirmation, the supervisors after it. Never to the
+    // requester — being told about your own request is noise.
+    const decider = deciderFor({
+      confirmationStatus: order.confirmationStatus,
+      claimedById: (order as { claimedById?: string | null }).claimedById ?? null,
+    });
+    const recipients =
+      decider.kind === 'HOLDING_AGENT'
+        ? [decider.userId]
+        : (
+            await db.user.findMany({
+              where: {
+                companyId,
+                status: 'ACTIVE',
+                role: { in: ['COMPANY_ADMIN', 'MANAGER', 'CONFIRMATION_SUPERVISOR'] },
+              },
+              select: { id: true },
+            })
+          ).map((u) => u.id);
+
+    await Promise.all(
+      recipients
+        .filter((rid) => rid && rid !== user.id)
+        .map((rid) =>
+          createNotification({
+            companyId,
+            userId: rid,
+            type: 'SYSTEM_ALERT',
+            title: `طلب تعديل على ${order.orderNumber}`,
+            message: `${user.name ?? 'موظف'}: ${parsed.data.reason}`,
+            link: '/control/change-requests',
+          }).catch(() => undefined)
+        )
+    );
 
     await logAudit({
       companyId,

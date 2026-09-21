@@ -288,3 +288,95 @@ export function ChangeRequestDialog({
     </Modal>
   );
 }
+
+/**
+ * The customer said no.
+ *
+ * Reasons are a fixed list, not free text, because "ألغى" in a hundred
+ * rows tells nobody anything while "السعر مرتفع" repeated forty times is a
+ * price decision waiting to be made. The list is the same one the server
+ * accepts — an unknown reason is refused there, so a free-text box would
+ * only produce errors.
+ */
+export const REJECT_REASONS = [
+  { value: 'CUSTOMER_CHANGED_MIND', label: 'غيّر رأيه' },
+  { value: 'PRICE_TOO_HIGH', label: 'السعر مرتفع' },
+  { value: 'CUSTOMER_DOES_NOT_WANT_PRODUCT', label: 'لا يريد المنتج' },
+  { value: 'DUPLICATE_ORDER', label: 'طلب مكرر' },
+  { value: 'WRONG_NUMBER', label: 'رقم خاطئ' },
+  { value: 'FAKE_ORDER', label: 'طلب وهمي' },
+  { value: 'OUT_OF_SERVICE_AREA', label: 'خارج نطاق التوصيل' },
+  { value: 'OTHER', label: 'سبب آخر' },
+] as const;
+
+export function RejectDialog({
+  open,
+  orderNumber,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  orderNumber: string;
+  busy?: boolean;
+  onClose: () => void;
+  onSubmit: (value: { rejectionReason: string; note: string }) => void;
+}) {
+  const [rejectionReason, setReason] = useState<string>('CUSTOMER_CHANGED_MIND');
+  const [note, setNote] = useState('');
+  // The server demands a note of its own for OTHER; asking here saves a
+  // round trip that ends in a red error.
+  const noteRequired = rejectionReason === 'OTHER';
+
+  return (
+    <Modal isOpen={open} onClose={onClose} title="إلغاء الطلب" subtitle={orderNumber} maxWidth="sm">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit({ rejectionReason, note });
+        }}
+        className="space-y-3"
+      >
+        <p className="text-xs text-[#697586]">
+          يُغلق الطلب ويعود المحجوز من بضاعته إلى المخزون. القرار يُسجَّل باسمك.
+        </p>
+        <Field label="السبب">
+          <select value={rejectionReason} onChange={(e) => setReason(e.target.value)} className={FIELD_CLS}>
+            {REJECT_REASONS.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={noteRequired ? 'التفاصيل (إلزامية)' : 'تفاصيل (اختياري)'}>
+          <textarea
+            required={noteRequired}
+            minLength={noteRequired ? 5 : undefined}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            maxLength={500}
+            className={FIELD_CLS}
+          />
+        </Field>
+        <div className="flex gap-2 pt-2">
+          <button
+            type="submit"
+            disabled={busy}
+            className="px-4 py-2 rounded-[8px] bg-[#fb323f] text-white text-sm font-medium disabled:opacity-60"
+          >
+            ألغِ الطلب
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]"
+          >
+            تراجع
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
