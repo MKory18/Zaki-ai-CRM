@@ -101,7 +101,11 @@ export function ShiftChip() {
     <div className="flex items-center gap-2">
       {counter && (
         <span
-          className="hidden lg:inline text-[11px] text-[#697586] tabular-nums whitespace-nowrap"
+          // Was hidden below 1024px, which is most screens people actually
+          // work on — so the counter they asked for was invisible to the
+          // two roles it was built for. It shows from a phone up now; only
+          // the very narrowest layout drops it.
+          className="hidden sm:inline text-[11px] text-[#697586] tabular-nums whitespace-nowrap"
           title="يُحتسب من ساعة الخادم"
         >
           {counter}

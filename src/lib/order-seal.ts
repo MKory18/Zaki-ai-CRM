@@ -48,21 +48,48 @@ export const SEALED_FIELDS = [
 
 export interface SealSource {
   shippingBatch?: { status: string; batchNumber: string } | null;
+  /** The order's own shipping state — the parcel may have left alone. */
+  shippingStatus?: string;
+  shippedAt?: Date | string | null;
 }
+
+/** Shipping states in which the parcel is out of our hands. */
+const GONE = ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PARTIALLY_DELIVERED', 'FAILED_DELIVERY', 'RETURN_REQUESTED', 'RETURNED'];
 
 export interface Seal {
   sealed: boolean;
   /** The batch that sealed it, for a message a human can act on. */
   batchNumber?: string;
+  /** Which of the two facts closed it. */
+  reason?: 'BATCH' | 'SHIPPED';
 }
 
-/** Has this order's batch been handed over? */
+/**
+ * Is this order out of our hands?
+ *
+ * TWO ways in, and either is enough.
+ *
+ * The batch being handed over is the common one: the trolley left, so
+ * everything on it left. But an order can ship on its own — marked shipped
+ * by hand, dispatched individually, moved between couriers — while the
+ * batch it belongs to is still open and taking work. Keying only on the
+ * batch left exactly that order editable after the parcel was on a van,
+ * which is the case that costs money: a driver at an address nobody told
+ * him about, collecting an amount nobody agreed to.
+ *
+ * So the order's own shipping state seals it too. Whichever happens first.
+ */
 export function orderSeal(order: SealSource): Seal {
   const batch = order.shippingBatch;
-  if (!batch || !SEALED_BATCH_STATUSES.includes(batch.status as (typeof SEALED_BATCH_STATUSES)[number])) {
-    return { sealed: false };
+  if (batch && SEALED_BATCH_STATUSES.includes(batch.status as (typeof SEALED_BATCH_STATUSES)[number])) {
+    return { sealed: true, batchNumber: batch.batchNumber, reason: 'BATCH' };
   }
-  return { sealed: true, batchNumber: batch.batchNumber };
+  // shippedAt is the fact; a status that moved on afterwards does not
+  // un-ship a parcel that already left.
+  if (order.shippedAt || GONE.includes(order.shippingStatus ?? '')) {
+    return { sealed: true, batchNumber: batch?.batchNumber, reason: 'SHIPPED' };
+  }
+  return { sealed: false };
 }
 
 /**
@@ -89,8 +116,15 @@ const FIELD_NAMES: Record<string, string> = {
   shippingCost: 'الشحن والتوصيل',
 };
 
-export function sealMessage(batchNumber: string | undefined, fields: string[]): string {
+export function sealMessage(
+  batchNumber: string | undefined,
+  fields: string[],
+  reason: Seal['reason'] = 'BATCH'
+): string {
   const names = fields.map((f) => FIELD_NAMES[f] ?? f).join('، ');
-  const batch = batchNumber ? ` (${batchNumber})` : '';
-  return `الطلب سُلِّم لشركة الشحن ضمن دفعة مقفلة${batch}. لتعديل ${names} ارفع طلب تعديل ليُبَتّ فيه.`;
+  const where =
+    reason === 'SHIPPED'
+      ? 'الطلب شُحن وخرج من المستودع'
+      : `الطلب سُلِّم لشركة الشحن ضمن دفعة مقفلة${batchNumber ? ` (${batchNumber})` : ''}`;
+  return `${where}. لتعديل ${names} ارفع طلب تعديل ليُبَتّ فيه.`;
 }

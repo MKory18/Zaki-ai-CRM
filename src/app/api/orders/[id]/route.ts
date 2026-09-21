@@ -525,12 +525,18 @@ export async function PATCH(
         where: { orders: { some: { id } }, companyId },
         select: { status: true, batchNumber: true },
       });
-      const seal = orderSeal({ shippingBatch: batch });
+      // The order's own state counts too: a parcel can leave on its own
+      // while the batch it came from is still open and taking work.
+      const seal = orderSeal({
+        shippingBatch: batch,
+        shippingStatus: existing.shippingStatus,
+        shippedAt: (existing as { shippedAt?: Date | null }).shippedAt ?? null,
+      });
       if (seal.sealed) {
         return NextResponse.json(
           {
-            error: sealMessage(seal.batchNumber, sealedAsked),
-            errorAr: sealMessage(seal.batchNumber, sealedAsked),
+            error: sealMessage(seal.batchNumber, sealedAsked, seal.reason),
+            errorAr: sealMessage(seal.batchNumber, sealedAsked, seal.reason),
             code: 'ORDER_SEALED',
             fields: sealedAsked,
             batchNumber: seal.batchNumber,

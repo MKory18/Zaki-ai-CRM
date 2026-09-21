@@ -95,3 +95,41 @@ describe('the sealed statuses', () => {
     expect([...SEALED_BATCH_STATUSES]).toEqual(['SHIPPED', 'CLOSED']);
   });
 });
+
+describe('a parcel that left on its own', () => {
+  // The case the batch rule missed: an order marked shipped by hand, or
+  // dispatched individually, while its batch is still open and taking
+  // work. That is the expensive one — a driver at an address nobody told
+  // him about, collecting an amount nobody agreed to.
+  const openBatch = { status: 'READY', batchNumber: 'BATCH-2026-0009' };
+
+  it('is sealed once it has shipped, whatever the batch says', () => {
+    const seal = orderSeal({ shippingBatch: openBatch, shippingStatus: 'SHIPPED' });
+    expect(seal.sealed).toBe(true);
+    expect(seal.reason).toBe('SHIPPED');
+  });
+
+  it('stays sealed through every state after shipping', () => {
+    for (const status of ['OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED_DELIVERY', 'RETURN_REQUESTED', 'RETURNED']) {
+      expect(orderSeal({ shippingStatus: status }).sealed, status).toBe(true);
+    }
+  });
+
+  it('is sealed by the fact it once shipped, even if the status moved back', () => {
+    expect(orderSeal({ shippingStatus: 'NOT_READY', shippedAt: new Date() }).sealed).toBe(true);
+  });
+
+  it('is still open while it is only being packed', () => {
+    for (const status of ['NOT_READY', 'PACKING', 'READY_FOR_SHIPPING', 'READY_FOR_PICKUP']) {
+      expect(orderSeal({ shippingBatch: openBatch, shippingStatus: status }).sealed, status).toBe(false);
+    }
+  });
+
+  it('says the parcel left, not that a batch closed', () => {
+    // Naming a closed batch that is not closed would send somebody looking
+    // for the wrong thing.
+    const msg = sealMessage(undefined, ['customerAddress'], 'SHIPPED');
+    expect(msg).toContain('شُحن وخرج من المستودع');
+    expect(msg).toContain('طلب تعديل');
+  });
+});
