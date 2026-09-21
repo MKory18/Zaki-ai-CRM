@@ -16,7 +16,10 @@ import { firstActionTimes } from '@/lib/response-clock';
  * in the browser.
  */
 
-const OPEN = ['NEW', 'IN_PROGRESS', 'NO_ANSWER', 'FOLLOW_UP_REQUIRED', 'POSTPONED'];
+/** On her desk right now. */
+const WORKABLE = ['NEW', 'IN_PROGRESS', 'NO_ANSWER'];
+/** Waiting on a date — hers, but not today's work until the date arrives. */
+const WAITING = ['FOLLOW_UP_REQUIRED', 'POSTPONED'];
 
 const ORDER_SELECT = {
   id: true, orderNumber: true, merchantRef: true, createdAt: true, confirmedAt: true, version: true,
@@ -47,10 +50,28 @@ export async function GET() {
     await requirePermission('confirmation.work');
 
     const scope = { companyId, storeId, claimedById: user.id };
+    const now = new Date();
 
     const [inConfirmation, confirmed] = await Promise.all([
       db.order.findMany({
-        where: { ...scope, confirmationStatus: { in: OPEN } },
+        where: {
+          ...scope,
+          OR: [
+            { confirmationStatus: { in: WORKABLE } },
+            // A postponed order leaves her list and comes back by itself on
+            // the day it is due. Leaving it there all week buries the three
+            // orders she can actually do something about today; taking it
+            // away for good would lose it.
+            {
+              confirmationStatus: { in: WAITING },
+              OR: [
+                { postponedUntil: { lte: now } },
+                { AND: [{ postponedUntil: null }, { nextFollowUpAt: { lte: now } }] },
+                { AND: [{ postponedUntil: null }, { nextFollowUpAt: null }] },
+              ],
+            },
+          ],
+        },
         orderBy: [{ nextFollowUpAt: 'asc' }, { claimedAt: 'asc' }],
         take: 200,
         select: ORDER_SELECT,
@@ -73,8 +94,14 @@ export async function GET() {
     // "How long since I took anything new" is the header chip's question,
     // answered once there rather than twice.
     const firstAction = await firstActionTimes(inConfirmation.map((o) => o.id));
+    const waitingLater = await db.order.count({
+      where: { ...scope, confirmationStatus: { in: WAITING }, postponedUntil: { gt: now } },
+    });
+
     return NextResponse.json({
       leadDays: POSTPONE_LEAD_DAYS,
+      /** Postponed to a later day — off her desk, not gone. */
+      waitingLater,
       noAnswerLimit: NO_ANSWER_LIMIT,
       // The server's own clock, so a wrong clock on her machine cannot make
       // an order look answered or overdue.

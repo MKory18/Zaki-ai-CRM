@@ -29,8 +29,42 @@ const LABELS: Record<CoreState, { ar: string; cls: string }> = {
   VOIDED: { ar: 'مُبطل', cls: 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]' },
 };
 
-export function OrderStateBadge({ state }: { state: string }) {
+/**
+ * `beforeShipping` splits the one word "ملغى" into the two things it means.
+ *
+ * Cancelled before the parcel left costs nothing and the units go straight
+ * back on the shelf. Cancelled after means a parcel is out there, a courier
+ * will be paid, and the stock only returns through the returns door. One
+ * badge for both hides the only part anybody needs.
+ *
+ * It is derived, never stored: the core state list stays closed.
+ */
+export function OrderStateBadge({
+  state,
+  beforeShipping,
+}: {
+  state: string;
+  beforeShipping?: boolean;
+}) {
   const cfg = LABELS[state as CoreState];
+  if (state === 'CANCELLED' && beforeShipping !== undefined) {
+    return (
+      <span
+        className={`inline-block text-[11px] px-2 py-0.5 rounded-[6px] border whitespace-nowrap ${
+          beforeShipping
+            ? 'bg-amber-50 text-[#c07f2a] border-amber-100'
+            : 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]'
+        }`}
+        title={
+          beforeShipping
+            ? 'أُلغي قبل أن يُشحن — لا طرد خارج المستودع والبضاعة عادت للرف'
+            : 'أُلغي بعد الشحن — الطرد خارج المستودع، والبضاعة تعود عند استلام المرتجع'
+        }
+      >
+        {beforeShipping ? 'ملغى قبل الشحن' : 'ملغى بعد الشحن'}
+      </span>
+    );
+  }
   return (
     <span
       className={`inline-block text-[11px] px-2 py-0.5 rounded-[6px] border whitespace-nowrap ${

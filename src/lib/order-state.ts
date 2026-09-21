@@ -119,6 +119,22 @@ const SHIPPED_ONWARDS = new Set([
 ]);
 
 /** Has this order ever left the warehouse? (shippedAt is authoritative) */
+/**
+ * A cancellation before the goods ever left, told apart from one after.
+ *
+ * NOT a new state — the contract keeps the core list closed and this is
+ * derived from two columns we already have. But the difference is the whole
+ * story of the order: cancelled before shipping costs nothing and the units
+ * go straight back on the shelf; cancelled after shipping means a parcel is
+ * out there, a courier will be paid, and the stock only returns when it is
+ * received back through the returns door.
+ *
+ * A screen that shows both as "ملغى" is hiding the only part anybody needs.
+ */
+export function cancelledBeforeShipping(order: StateSource): boolean {
+  return deriveCoreState(order) === 'CANCELLED' && !hasEverShipped(order);
+}
+
 export function hasEverShipped(order: StateSource): boolean {
   return !!order.shippedAt || SHIPPED_ONWARDS.has(order.shippingStatus);
 }

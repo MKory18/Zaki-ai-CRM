@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Phone, PhoneOff, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, PhoneOff, Search, ShieldAlert, X } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
@@ -56,6 +56,8 @@ interface OrderRow {
 
 interface MineResponse {
   leadDays: number;
+  /** Postponed to a later day — off her desk, not gone. */
+  waitingLater: number;
   noAnswerLimit: number;
   /** The server's clock, so a wrong clock on her machine changes nothing. */
   serverNow: string;
@@ -80,6 +82,10 @@ export function ConfirmationMineScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [openOrderId, setOpenOrderId] = useState<string | null>(null);
+  // Searching her own desk, not the whole store: she has a customer on the
+  // phone reading out a number, and scrolling for it is the slow way.
+  const [findOpen, setFindOpen] = useState('');
+  const [findDone, setFindDone] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -188,6 +194,25 @@ export function ConfirmationMineScreen() {
     );
   }
 
+  // Digits only, both sides: she types 0999 or 999 and the stored number
+  // may be either. Matching on the bare digits means the shape of the
+  // number — leading zero, country code, spaces — never hides a match.
+  const digits = (v: string) => v.replace(/\D/g, '');
+  const matches = (order: OrderRow, term: string) => {
+    const q = term.trim();
+    if (!q) return true;
+    const d = digits(q);
+    if (d && (digits(order.customer.rawPhone).includes(d) || digits(order.customer.phone).includes(d))) return true;
+    if (digits(order.orderNumber).includes(d) && d) return true;
+    const text = q.toLowerCase();
+    return (
+      order.orderNumber.toLowerCase().includes(text) ||
+      order.customer.fullName.toLowerCase().includes(text)
+    );
+  };
+  const inConfirmation = data.inConfirmation.filter((o) => matches(o, findOpen));
+  const confirmed = data.confirmed.filter((o) => matches(o, findDone));
+
   return (
     <div className="space-y-6 max-w-5xl">
       {error && (
@@ -198,14 +223,25 @@ export function ConfirmationMineScreen() {
       )}
 
       <section>
-        <h2 className="text-sm font-bold text-[#121926] mb-3">قيد التأكيد ({data.inConfirmation.length})</h2>
+        <SectionHead
+          title="قيد التأكيد"
+          count={inConfirmation.length}
+          total={data.inConfirmation.length}
+          value={findOpen}
+          onChange={setFindOpen}
+          note={
+            data.waitingLater > 0
+              ? `و${data.waitingLater} مؤجّلة ليوم لاحق — تعود إلى هنا في موعدها`
+              : undefined
+          }
+        />
         <div className="space-y-3">
-          {data.inConfirmation.length === 0 && (
+          {inConfirmation.length === 0 && (
             <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
               لا يوجد طلب بيدك الآن. اسحب طلباً من مركز التأكيد.
             </p>
           )}
-          {data.inConfirmation.map((order) => {
+          {inConfirmation.map((order) => {
             const remaining = Math.max(0, data.noAnswerLimit - order.noAnswerCount);
             return (
               <article key={order.id} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
@@ -273,10 +309,6 @@ export function ConfirmationMineScreen() {
                     افتح وعدّل
                   </Action>
 
-                  <Action onClick={() => logAttempt(order, 'PHONE', 'ANSWERED')} busy={busyId === order.id} icon={<Phone className="w-3.5 h-3.5" />}>
-                    ردّ على الاتصال
-                  </Action>
-
                   {/* 1/2/3 counter — the third no-answer closes the order by rule */}
                   <Action
                     onClick={() => logAttempt(order, 'PHONE', 'NO_ANSWER')}
@@ -318,19 +350,26 @@ export function ConfirmationMineScreen() {
       </section>
 
       <section>
-        <h2 className="text-sm font-bold text-[#121926] mb-3">مؤكدة ({data.confirmed.length})</h2>
+        <SectionHead
+          title="مؤكدة"
+          count={confirmed.length}
+          total={data.confirmed.length}
+          value={findDone}
+          onChange={setFindDone}
+        />
         <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-[#f8fafc] text-[#697586] text-xs">
               <tr>
                 <th className="text-right font-medium px-4 py-2">الطلب</th>
                 <th className="text-right font-medium px-4 py-2">العميل</th>
+                <th className="text-right font-medium px-4 py-2">الهاتف</th>
                 <th className="text-right font-medium px-4 py-2">المبلغ</th>
                 <th className="text-right font-medium px-4 py-2"> </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e3e8ef]">
-              {data.confirmed.map((order) => (
+              {confirmed.map((order) => (
                 <tr key={order.id}>
                   <td className="px-4 py-2 font-medium text-[#121926]" dir="ltr">{order.orderNumber}</td>
                   <td className="px-4 py-2 text-[#364152]">
@@ -342,6 +381,11 @@ export function ConfirmationMineScreen() {
                         previousOrders={order.previousOrders}
                       />
                     </span>
+                  </td>
+                  <td className="px-4 py-2 text-[#364152]" dir="ltr">
+                    <a href={`tel:${order.customer.rawPhone}`} className="tabular-nums hover:text-[#b8256e]">
+                      {order.customer.rawPhone}
+                    </a>
                   </td>
                   <td className="px-4 py-2 tabular-nums text-[#364152]" dir="ltr">
                     {order.totalAmount} {order.currency}
@@ -361,9 +405,9 @@ export function ConfirmationMineScreen() {
                   </td>
                 </tr>
               ))}
-              {data.confirmed.length === 0 && (
+              {confirmed.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-[#697586]">
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-[#697586]">
                     لا توجد طلبات مؤكدة بعد.
                   </td>
                 </tr>
@@ -457,6 +501,56 @@ function ResponseClock({
     >
       بانتظار أول اتصال منذ {humanMinutes(waiting)}
     </span>
+  );
+}
+
+/**
+ * A section's title, its count, and a box to find one row in it.
+ *
+ * The count says "3 of 12" while a search is running, because a filtered
+ * list that says 3 with no context reads as "you only have three".
+ */
+function SectionHead({
+  title,
+  count,
+  total,
+  value,
+  onChange,
+  note,
+}: {
+  title: string;
+  count: number;
+  total: number;
+  value: string;
+  onChange: (v: string) => void;
+  note?: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-3">
+      <h2 className="text-sm font-bold text-[#121926]">
+        {title} ({value.trim() ? `${count} من ${total}` : total})
+      </h2>
+      {note && <span className="text-[11px] text-[#9aa4b2]">{note}</span>}
+      <div className="relative ms-auto">
+        <Search className="w-3.5 h-3.5 text-[#9aa4b2] absolute top-1/2 -translate-y-1/2 end-2.5" />
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="رقم الهاتف أو الطلب أو الاسم"
+          className="h-8 w-56 ps-2.5 pe-8 rounded-lg border border-[#e3e8ef] bg-white text-[11px] text-[#364152] focus:outline-none focus:border-[#b8256e]"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            aria-label="امسح البحث"
+            className="absolute top-1/2 -translate-y-1/2 start-1.5 text-[#9aa4b2] hover:text-[#fb323f]"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
