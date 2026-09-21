@@ -58,6 +58,19 @@ export function ContactButtons({
 
   if (!phone) return null;
 
+  /**
+   * Can this machine actually send an SMS?
+   *
+   * `sms:` is a phone thing. On a desktop browser the link resolves to
+   * nothing at all: the button is pressed, the page does not move, and
+   * there is no error — which reads as a broken screen rather than as "use
+   * your phone for this". WhatsApp is different, because wa.me opens
+   * WhatsApp Web perfectly well from a desk.
+   */
+  const onPhone =
+    typeof navigator !== 'undefined' &&
+    (navigator.maxTouchPoints > 1 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
   const send = (t: MessageTemplate) => {
     const text = fillTemplate(t.body, context);
     if (open === 'WHATSAPP') {
@@ -83,7 +96,17 @@ export function ContactButtons({
         <Phone className="w-3.5 h-3.5" />
         {!compact && 'اتصال'}
       </a>
-      <button type="button" title="رسالة نصية" onClick={() => setOpen(open === 'SMS' ? null : 'SMS')} className={btn}>
+      <button
+        type="button"
+        disabled={!onPhone}
+        title={
+          onPhone
+            ? 'رسالة نصية'
+            : 'الرسائل النصية تُرسَل من الهاتف — افتح النظام على موبايلك لاستعمالها'
+        }
+        onClick={() => setOpen(open === 'SMS' ? null : 'SMS')}
+        className={`${btn} ${onPhone ? '' : 'opacity-40 cursor-not-allowed'}`}
+      >
         <MessageSquare className="w-3.5 h-3.5" />
         {!compact && 'SMS'}
       </button>
