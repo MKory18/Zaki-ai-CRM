@@ -12,7 +12,12 @@ const { db, requireContext, requirePermission, logAudit, recordMovement, markPay
       courierStatement: { findFirst: vi.fn(), update: vi.fn() },
       statementReceipt: { create: vi.fn(), aggregate: vi.fn() },
       wallet: { findFirst: vi.fn() },
-      order: { updateMany: vi.fn() },
+      // Approving a statement now also closes the deliveries it reports.
+      order: { updateMany: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+      orderActivity: { create: vi.fn() },
+      orderItem: { findMany: vi.fn() },
+      inventoryMovement: { findFirst: vi.fn(), create: vi.fn() },
+      productionBatch: { findMany: vi.fn(), update: vi.fn() },
       dailyClosing: { findFirst: vi.fn(), findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn() },
       walletMovement: { findFirst: vi.fn() },
       $transaction: vi.fn(async (fn: any) => fn(db)),
@@ -46,6 +51,8 @@ vi.mock('@/lib/commission', async (orig) => ({
   markPayableForOrders: (...a: unknown[]) => markPayableForOrders(...a),
 }));
 
+vi.mock('@/lib/stock-consumption', () => ({ consumeOrderStock: vi.fn().mockResolvedValue({ taken: 0, short: 0, alreadyDone: false }) }));
+
 import { PATCH as approveStatement } from '@/app/api/finance/statements/[id]/route';
 import { POST as recordClosing, PATCH as approveClosing } from '@/app/api/finance/closing/route';
 
@@ -57,6 +64,10 @@ const params = { params: Promise.resolve({ id: ID }) };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Nothing still in flight unless a test says so.
+  db.order.findMany.mockResolvedValue([]);
+  db.orderItem.findMany.mockResolvedValue([]);
+  db.inventoryMovement.findFirst.mockResolvedValue(null);
   requireContext.mockResolvedValue({
     user: { id: 'u1', name: 'Accountant', role: 'ACCOUNTANT', status: 'ACTIVE' },
     companyId: 'c1', storeId: 's1',
@@ -182,5 +193,68 @@ describe('daily closing', () => {
 
     const res = await approveClosing(body({ closingId: CLOSING_ID }));
     expect(res.status).toBe(200);
+  });
+});
+
+describe('the statement is the delivery proof', () => {
+  // The courier has told us in writing that they delivered this parcel and
+  // collected this amount. Reading that and then asking somebody to tick
+  // "delivered" by hand is the same fact entered twice — and every order
+  // nobody got round to ticking sat in the tracking list forever, long
+  // after the money had arrived.
+  const ID2 = '11111111-1111-4111-8111-111111111111';
+  const approveWith = async (matches: unknown[], inFlight: unknown[]) => {
+    db.courierStatement.findFirst.mockResolvedValue({
+      id: ID2,
+      status: 'MATCHED',
+      reference: 'ST-1',
+      gapExplanation: null,
+      periodTo: new Date('2026-09-20T00:00:00.000Z'),
+      // A statement cannot be approved with no receipt at all.
+      receipts: [{ id: 'r1', walletId: 'w1', amount: 50.01 }],
+      matches,
+    });
+    db.courierStatement.update.mockResolvedValue({ id: ID2 });
+    db.order.findMany.mockResolvedValue(inFlight);
+    receiptGap.mockResolvedValue({ claimed: 0, received: 0, gap: 0, needsExplanation: false, explained: false });
+    return approveStatement(
+      new Request('http://localhost/x', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approve: true }),
+      }),
+      { params: Promise.resolve({ id: ID2 }) }
+    );
+  };
+
+  it('closes a matched order that is still in flight', async () => {
+    const res = await approveWith(
+      [{ orderId: 'o1', result: 'MATCHED', statementAmount: 50.01 }],
+      [{ id: 'o1', orderNumber: 'SY-1' }]
+    );
+    expect(res.status).toBe(200);
+    const written = db.order.update.mock.calls[0][0].data;
+    expect(written.shippingStatus).toBe('DELIVERED');
+    expect(written.collectedAmount).toBe(50.01);
+    // The courier's period end, not the moment somebody uploaded a file.
+    expect(written.deliveredAt).toEqual(new Date('2026-09-20T00:00:00.000Z'));
+  });
+
+  it('leaves an order that was already delivered by hand alone', async () => {
+    // Whoever stood there and recorded it knew more than a spreadsheet.
+    await approveWith([{ orderId: 'o1', result: 'MATCHED', statementAmount: 50 }], []);
+    expect(db.order.update).not.toHaveBeenCalled();
+  });
+
+  it('does not close an order the statement did not match', async () => {
+    await approveWith([{ orderId: 'o1', result: 'MISMATCHED', statementAmount: 10 }], []);
+    expect(db.order.findMany.mock.calls[0][0].where.id).toEqual({ in: [] });
+  });
+
+  it('only ever touches orders still in flight', async () => {
+    await approveWith([{ orderId: 'o1', result: 'MATCHED', statementAmount: 50 }], []);
+    expect(db.order.findMany.mock.calls[0][0].where.shippingStatus).toEqual({
+      in: ['SHIPPED', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP'],
+    });
   });
 });

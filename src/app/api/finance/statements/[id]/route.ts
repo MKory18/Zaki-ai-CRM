@@ -5,6 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
+import { consumeOrderStock } from '@/lib/stock-consumption';
 import { receiptGap } from '@/lib/settlement';
 import { recordMovement } from '@/lib/wallets';
 import { markPayableForOrders } from '@/lib/commission';
@@ -74,7 +75,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const statement = await db.courierStatement.findFirst({
       where: { id, companyId, storeId },
-      include: { receipts: true, matches: { select: { orderId: true, result: true } } },
+      include: { receipts: true, matches: { select: { orderId: true, result: true, statementAmount: true } } },
     });
     if (!statement) return NextResponse.json({ error: 'الكشف غير موجود' }, { status: 404 });
     if (statement.status === 'APPROVED') {
@@ -150,9 +151,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
 
       // Settled orders make their commission payable — not before.
-      const settledOrderIds = statement.matches
-        .filter((m) => m.result === 'MATCHED' && m.orderId)
-        .map((m) => m.orderId as string);
+      const matched = statement.matches.filter((m) => m.result === 'MATCHED' && m.orderId);
+      const settledOrderIds = matched.map((m) => m.orderId as string);
       await markPayableForOrders(tx, companyId, settledOrderIds);
       if (settledOrderIds.length > 0) {
         await tx.order.updateMany({
@@ -161,7 +161,68 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         });
       }
 
-      return row;
+      // ── The statement IS the delivery proof ──
+      //
+      // The courier has told us, in writing, that they delivered this
+      // parcel and collected this amount. Reading that and then asking
+      // somebody to tick "delivered" by hand is the same fact entered
+      // twice — and every order nobody got round to ticking sat in the
+      // tracking list forever, long after the money had arrived.
+      //
+      // Only the ones still in flight are moved: an order already marked
+      // delivered keeps its own date and amount, because whoever stood
+      // there and recorded it knew more than a spreadsheet does.
+      const inFlight = await tx.order.findMany({
+        where: {
+          id: { in: settledOrderIds },
+          companyId,
+          shippingStatus: { in: ['SHIPPED', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP'] },
+        },
+        select: { id: true, orderNumber: true },
+      });
+      const amountOf = new Map(
+        matched.map((m) => [m.orderId as string, m.statementAmount == null ? null : Number(m.statementAmount)])
+      );
+      // The period's end is when the courier says the money was in, and is
+      // closer to the truth than the moment somebody uploaded a file.
+      const deliveredAt = statement.periodTo ?? new Date();
+
+      for (const order of inFlight) {
+        const collected = amountOf.get(order.id);
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            shippingStatus: 'DELIVERED',
+            deliveredAt,
+            ...(collected != null ? { collectedAmount: collected } : {}),
+            version: { increment: 1 },
+          },
+        });
+        // Delivery is what takes the goods off the shelf for good. The
+        // helper refuses to do it twice, so an order delivered by hand and
+        // then settled is not counted out of stock again.
+        await consumeOrderStock(tx as never, {
+          orderId: order.id,
+          companyId,
+          allowNegativeStock: true,
+          userId: user.id,
+        });
+        await tx.orderActivity.create({
+          data: {
+            companyId,
+            orderId: order.id,
+            userId: user.id,
+            action: 'DELIVERED_BY_STATEMENT',
+            newStatus: 'DELIVERED',
+            metadata: JSON.stringify({
+              statement: statement.reference,
+              collected: collected ?? null,
+            }),
+          },
+        });
+      }
+
+      return { row, deliveredCount: inFlight.length };
     });
 
     await logAudit({
@@ -170,7 +231,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       newData: { gap: gap.gap, explanation: explanation ?? null, receipts: statement.receipts.length },
     });
 
-    return NextResponse.json({ statement: approved, gap });
+    return NextResponse.json({
+      statement: approved.row,
+      gap,
+      // How many the statement itself closed, so the screen can say it
+      // rather than leaving somebody to notice the tracking list shrank.
+      deliveredByStatement: approved.deliveredCount,
+    });
   } catch (error) {
     return apiErrorResponse(error);
   }
