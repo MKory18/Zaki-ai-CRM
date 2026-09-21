@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  ChevronDown, ChevronUp, Eye, EyeOff, Trash2, Plus, Upload, Loader2,
+  Eye, EyeOff, Trash2, Plus, Upload, Loader2, GripVertical,
   Monitor, Smartphone, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -56,13 +56,28 @@ export function BlockBuilder(props: Props) {
   const patch = (id: string, fields: Record<string, unknown>) =>
     onSections(sections.map((s) => (s.id === id ? ({ ...s, ...fields } as LandingSection) : s)));
 
-  const move = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= sections.length) return;
+  /**
+   * Reordering by dragging, with the keyboard as an equal.
+   *
+   * The arrows are gone: nudging a block from the bottom to the top was
+   * eleven clicks, and each one re-rendered the page under the cursor so
+   * the next arrow had moved. Dragging says what you mean in one gesture.
+   *
+   * `moveTo` is a LIFT AND INSERT, not a swap. Swapping neighbours is fine
+   * for one step and wrong for a drag: dropping block 8 onto position 2
+   * should slide 2–7 down, not trade 8 with 2 and scramble the middle.
+   */
+  const moveTo = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= sections.length) return;
     const next = [...sections];
-    [next[i], next[j]] = [next[j], next[i]];
+    const [lifted] = next.splice(from, 1);
+    next.splice(to, 0, lifted);
     onSections(next);
   };
+
+  /** Which row is under the cursor right now, for the drop line. */
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
   const available = (Object.keys(SECTION_LABEL) as SectionType[]).filter(
     (t) => !(SINGLETON.includes(t) && sections.some((s) => s.type === t))
@@ -174,28 +189,59 @@ export function BlockBuilder(props: Props) {
 
           <ul className="space-y-1.5">
             {sections.map((s, i) => (
-              <li key={s.id} className="rounded-lg border border-[#e3e8ef]">
+              <li
+                key={s.id}
+                onDragOver={(e) => {
+                  if (dragFrom === null) return;
+                  e.preventDefault();
+                  setDragOver(i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragFrom !== null) moveTo(dragFrom, i);
+                  setDragFrom(null);
+                  setDragOver(null);
+                }}
+                className={`rounded-lg border transition-colors ${
+                  dragFrom === i
+                    ? 'border-[#b8256e] opacity-40'
+                    : dragOver === i && dragFrom !== null
+                      ? 'border-[#b8256e] bg-[#fdf5fa]'
+                      : 'border-[#e3e8ef]'
+                }`}
+              >
                 <div className="flex items-center gap-1 px-2 py-1.5">
-                  <div className="flex flex-col">
-                    <button
-                      type="button"
-                      onClick={() => move(i, -1)}
-                      disabled={i === 0}
-                      className="cursor-pointer text-[#9aa4b2] hover:text-[#b8256e] disabled:opacity-25"
-                      title="لأعلى"
-                    >
-                      <ChevronUp className="h-3 w-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => move(i, 1)}
-                      disabled={i === sections.length - 1}
-                      className="cursor-pointer text-[#9aa4b2] hover:text-[#b8256e] disabled:opacity-25"
-                      title="لأسفل"
-                    >
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
-                  </div>
+                  {/* The handle, not the whole row: a row that drags from
+                      anywhere cannot also have buttons you click. */}
+                  <button
+                    type="button"
+                    draggable
+                    onDragStart={(e) => {
+                      setDragFrom(i);
+                      e.dataTransfer.effectAllowed = 'move';
+                      // Firefox refuses to start a drag without payload.
+                      e.dataTransfer.setData('text/plain', s.id);
+                    }}
+                    onDragEnd={() => {
+                      setDragFrom(null);
+                      setDragOver(null);
+                    }}
+                    onKeyDown={(e) => {
+                      // The keyboard is not a lesser way to do this.
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        moveTo(i, i - 1);
+                      } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        moveTo(i, i + 1);
+                      }
+                    }}
+                    title="اسحب لترتيب البلوك — أو الأسهم من لوحة المفاتيح"
+                    aria-label={`رتّب ${SECTION_LABEL[s.type]}`}
+                    className="cursor-grab active:cursor-grabbing p-0.5 text-[#c3c8d4] hover:text-[#b8256e] focus:outline-none focus:text-[#b8256e]"
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </button>
 
                   <button
                     type="button"
