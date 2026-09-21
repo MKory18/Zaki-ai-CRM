@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { ruleFor } from '@/lib/phone-rules';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { transitStatus } from '@/lib/delivery-fees';
@@ -18,7 +19,7 @@ const IN_FLIGHT = ['SHIPPED', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP', 'FAILED_DE
 
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId } = await requireContext();
+    const { companyId, storeId, country } = await requireContext();
     await requirePermission('ops.track');
 
     const q = new URL(req.url).searchParams;
@@ -88,7 +89,10 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({ count: rows.length, orders: rows, lateCount: rows.filter((r) => r.late).length });
+    return NextResponse.json({
+      // wa.me needs the number in full international form, and the rows
+      // carry it in local form. The country is known here, not in the browser.
+      dialCode: ruleFor(country.code)?.dialCode ?? null, count: rows.length, orders: rows, lateCount: rows.filter((r) => r.late).length });
   } catch (error) {
     return apiErrorResponse(error);
   }

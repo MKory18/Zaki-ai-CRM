@@ -58,6 +58,21 @@ const FIELDS: Record<string, string> = {
   countedQuantity: 'الكمية المعدودة',
   width: 'العرض',
   height: 'الارتفاع',
+  body: 'نص الرسالة',
+  templates: 'الرسائل',
+  changes: 'التعديلات',
+  decision: 'القرار',
+  kind: 'النوع',
+  until: 'التاريخ',
+  provider: 'المزوّد',
+  costLines: 'بنود الكلفة',
+  rejectionReason: 'سبب الإلغاء',
+  followUpReason: 'سبب المتابعة',
+  trackingNumber: 'رقم التتبع',
+  batchNumber: 'رقم الدفعة',
+  sku: 'رمز المنتج',
+  category: 'النوع',
+  role: 'الدور',
 };
 
 /**

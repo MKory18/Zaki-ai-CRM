@@ -1,0 +1,132 @@
+'use client';
+
+import React, { useEffect, useRef, useState } from 'react';
+import { MessageCircle, MessageSquare, Phone } from 'lucide-react';
+import { apiJson } from '@/lib/api-client';
+import { fillTemplate, waNumber, type FillContext, type MessageTemplate } from '@/lib/message-templates';
+
+/**
+ * CALL, SMS, WHATSAPP — from the row the parcel is on.
+ *
+ * Nothing goes through a gateway. The buttons open the phone's own apps
+ * with the text already written, so the message leaves from the company's
+ * number — the one the customer recognises and can reply to — and there is
+ * no account, no key, no per-message cost and no delivery report nobody
+ * reads.
+ *
+ * The templates are the company's own, edited in settings. Picking one is
+ * two clicks because the alternative is typing the same sentence forty
+ * times a day, which is where the wrong order number comes from.
+ */
+
+export function ContactButtons({
+  phone,
+  context,
+  countryCode,
+  compact,
+}: {
+  phone: string | null | undefined;
+  context: FillContext;
+  /** Digits, e.g. "963" — wa.me needs the number in full international form. */
+  countryCode?: string | null;
+  compact?: boolean;
+}) {
+  const [templates, setTemplates] = useState<MessageTemplate[] | null>(null);
+  const [open, setOpen] = useState<'SMS' | 'WHATSAPP' | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open || templates) return;
+    apiJson<{ templates: MessageTemplate[] }>('/api/settings/messages')
+      .then((d) => setTemplates(d.templates ?? []))
+      .catch(() => setTemplates([]));
+  }, [open, templates]);
+
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(null);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(null);
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
+  if (!phone) return null;
+
+  const send = (t: MessageTemplate) => {
+    const text = fillTemplate(t.body, context);
+    if (open === 'WHATSAPP') {
+      const to = waNumber(phone, countryCode);
+      window.open(`https://wa.me/${to}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    } else {
+      // `?body=` is what both iOS and Android accept today; older Nokia-era
+      // handsets wanted `?` vs `&` differently and are not a concern here.
+      window.location.href = `sms:${phone}?body=${encodeURIComponent(text)}`;
+    }
+    setOpen(null);
+  };
+
+  const btn = `inline-flex items-center justify-center rounded-lg border border-[#e3e8ef] text-[#697586] hover:text-[#b8256e] hover:border-[#b8256e]/50 transition-colors ${
+    compact ? 'h-7 w-7' : 'h-8 px-2 gap-1 text-[11px]'
+  }`;
+
+  const shown = (templates ?? []).filter((t) => t.channel === 'BOTH' || t.channel === open);
+
+  return (
+    <div className="relative inline-flex items-center gap-1" ref={box}>
+      <a href={`tel:${phone}`} title="اتصال" className={btn}>
+        <Phone className="w-3.5 h-3.5" />
+        {!compact && 'اتصال'}
+      </a>
+      <button type="button" title="رسالة نصية" onClick={() => setOpen(open === 'SMS' ? null : 'SMS')} className={btn}>
+        <MessageSquare className="w-3.5 h-3.5" />
+        {!compact && 'SMS'}
+      </button>
+      <button
+        type="button"
+        title="واتساب"
+        onClick={() => setOpen(open === 'WHATSAPP' ? null : 'WHATSAPP')}
+        className={btn}
+      >
+        <MessageCircle className="w-3.5 h-3.5" />
+        {!compact && 'واتساب'}
+      </button>
+
+      {open && (
+        <div
+          dir="rtl"
+          className="absolute top-full end-0 z-30 mt-1 w-72 rounded-xl border border-[#e3e8ef] bg-white shadow-lg p-1.5"
+        >
+          {templates === null ? (
+            <p className="p-2 text-[11px] text-[#9aa4b2]">جارٍ التحميل…</p>
+          ) : shown.length === 0 ? (
+            <p className="p-2 text-[11px] text-[#9aa4b2]">
+              لا رسائل جاهزة لهذه القناة — أضِفها من إعدادات النظام.
+            </p>
+          ) : (
+            shown.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => send(t)}
+                className="w-full text-start p-2 rounded-lg hover:bg-[#fdf5fa] transition-colors"
+              >
+                <span className="block text-[11px] font-semibold text-[#121926]">{t.name}</span>
+                {/* The filled text, not the template: what the customer will
+                    actually read is the only useful preview. */}
+                <span className="block text-[10px] text-[#697586] line-clamp-2 mt-0.5">
+                  {fillTemplate(t.body, context)}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

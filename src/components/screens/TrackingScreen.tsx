@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Bike, Clock, HandCoins, Loader2, Search, Truck } from 'lucide-react';
+import { ContactButtons } from '@/components/orders/ContactButtons';
 import { TransferDialog } from '@/components/screens/tracking/TransferDialog';
 import { CollectDialog } from '@/components/screens/tracking/CollectDialog';
 import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
@@ -67,7 +68,7 @@ const COLLECTION_LABEL: Record<string, string> = {
 export function TrackingScreen() {
   const [term, setTerm] = useState('');
   const [status, setStatus] = useState('');
-  const [data, setData] = useState<{ orders: Row[]; lateCount: number } | null>(null);
+  const [data, setData] = useState<{ orders: Row[]; lateCount: number; dialCode?: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [transferFor, setTransferFor] = useState<Row | null>(null);
@@ -253,7 +254,27 @@ export function TrackingScreen() {
                   </td>
                   <td className="px-3 py-2 font-medium text-[#121926]" dir="ltr">{o.merchantRef ?? o.orderNumber}</td>
                   <td className="px-3 py-2 text-[#697586]" dir="ltr">{o.trackingNumber ?? '—'}</td>
-                  <td className="px-3 py-2 text-[#364152]">{o.customer.fullName}</td>
+                  <td className="px-3 py-2 text-[#364152]">
+                    <span className="block">{o.customer.fullName}</span>
+                    {/* Reach the customer from the row the parcel is on: the
+                        answer to "where is it" is a message, and retyping
+                        the same sentence forty times a day is where the
+                        wrong order number comes from. */}
+                    <ContactButtons
+                      compact
+                      phone={o.customer.phone}
+                      countryCode={data.dialCode}
+                      context={{
+                        orderNumber: o.merchantRef ?? o.orderNumber,
+                        customerName: o.customer.fullName,
+                        amount: o.totalAmount,
+                        currency: o.currency,
+                        courier: o.deliveryProvider?.name ?? null,
+                        barcode: o.trackingNumber,
+                        region: o.region?.name ?? o.customer.city,
+                      }}
+                    />
+                  </td>
                   <td className="px-3 py-2 text-[#697586]">{o.region?.name ?? o.customer.city}</td>
                   <td className="px-3 py-2">
                     {o.deliveryProvider ? (
