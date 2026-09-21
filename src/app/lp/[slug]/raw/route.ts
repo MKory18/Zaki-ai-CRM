@@ -59,8 +59,8 @@ export async function GET(req: Request, ctx: Ctx) {
         select: {
           id: true, name: true, slug: true, htmlContent: true, cssContent: true, pageSettings: true,
           company: { select: { currency: true } },
+          productId: true, companyId: true,
           product: { select: { name: true, nameEn: true, image: true, description: true, basePrice: true } },
-          offers: { where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { price: 'asc' }], select: { id: true, name: true, quantity: true, freeQuantity: true, price: true, isDefault: true } },
           recommendations: { where: { isActive: true, product: { status: 'ACTIVE' } }, orderBy: { sortOrder: 'asc' }, select: { id: true, product: { select: { name: true, basePrice: true, image: true } } } },
         },
       });
@@ -73,8 +73,8 @@ export async function GET(req: Request, ctx: Ctx) {
       select: {
         id: true, name: true, slug: true, htmlContent: true, cssContent: true, pageSettings: true,
         company: { select: { currency: true } },
+        productId: true, companyId: true,
         product: { select: { name: true, nameEn: true, image: true, description: true, basePrice: true } },
-        offers: { where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { price: 'asc' }], select: { id: true, name: true, quantity: true, freeQuantity: true, price: true, isDefault: true } },
         recommendations: { where: { isActive: true, product: { status: 'ACTIVE' } }, orderBy: { sortOrder: 'asc' }, select: { id: true, product: { select: { name: true, basePrice: true, image: true } } } },
       },
     });
@@ -119,13 +119,28 @@ ${settings.width === 'contained' && settings.maxWidth ? `.zaki-page-wrap{max-wid
   // the custom HTML can only place markers, never set prices/ids. The
   // interaction script is hard-coded server output (see landing-dynamic.ts).
   const currency = lp.company?.currency || 'USD';
+
+  // The offers come from the PRODUCT, like everywhere else. This page used to
+  // read a per-page copy of the same tiers; there is only one copy now, so a
+  // price raised in the catalogue reaches the uploaded HTML too.
+  const productOffers = lp.productId
+    ? await db.offer.findMany({
+        where: { companyId: lp.companyId, productId: lp.productId, status: 'ACTIVE' },
+        orderBy: [{ sortOrder: 'asc' }, { quantity: 'asc' }],
+        select: { id: true, name: true, quantity: true, freeQuantity: true, sellingPrice: true, isDefault: true },
+      })
+    : [];
+
   html = resolveDynamicPlaceholders({
     html,
     slug: lp.slug,
     product: lp.product
       ? { name: lp.product.name, nameEn: lp.product.nameEn, image: lp.product.image, description: lp.product.description, price: lp.product.basePrice }
       : null,
-    offers: (lp.offers || []).map((o) => ({ id: o.id, name: o.name, quantity: o.quantity, freeQuantity: o.freeQuantity, price: o.price, isDefault: o.isDefault })),
+    offers: productOffers.map((o) => ({
+      id: o.id, name: o.name, quantity: o.quantity,
+      freeQuantity: o.freeQuantity, price: o.sellingPrice, isDefault: o.isDefault,
+    })),
     recommendations: (lp.recommendations || []).map((r) => ({ id: r.id, name: r.product?.name || '', price: r.product?.basePrice ?? 0, image: r.product?.image || null })),
     currency,
   });

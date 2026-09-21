@@ -42,11 +42,10 @@ export const dynamic = 'force-dynamic';
  * The offers this page sells.
  *
  * They belong to the PRODUCT, so raising a price in the catalogue reaches
- * every page selling it. A page that still carries its own legacy offers
- * keeps serving them — orders reference those ids, and a live page must not
- * start refusing the ids it is already handing out.
+ * every page selling it. There was once a second, per-page copy of the same
+ * tiers; it is gone, along with the drift between them.
  */
-async function fetchOffers(landingPageId: string, companyId: string, productId: string | null) {
+async function fetchOffers(_landingPageId: string, companyId: string, productId: string | null) {
   if (productId) {
     const fromProduct = await db.offer.findMany({
       where: { companyId, productId, status: 'ACTIVE' },
@@ -56,26 +55,20 @@ async function fetchOffers(landingPageId: string, companyId: string, productId: 
         sellingPrice: true, compareAtPrice: true, isDefault: true,
       },
     });
-    if (fromProduct.length > 0) {
-      return fromProduct.map((o) => ({
-        id: o.id,
-        name: o.name,
-        quantity: o.quantity,
-        freeQuantity: o.freeQuantity,
-        price: o.sellingPrice,
-        // A "was" price that is not above the price is not a saving.
-        compareAtPrice: o.compareAtPrice !== null && o.compareAtPrice > o.sellingPrice ? o.compareAtPrice : null,
-        isDefault: o.isDefault,
-      }));
-    }
+    return fromProduct.map((o) => ({
+      id: o.id,
+      name: o.name,
+      quantity: o.quantity,
+      freeQuantity: o.freeQuantity,
+      price: o.sellingPrice,
+      // A "was" price that is not above the price is not a saving.
+      compareAtPrice: o.compareAtPrice !== null && o.compareAtPrice > o.sellingPrice ? o.compareAtPrice : null,
+      isDefault: o.isDefault,
+    }));
   }
 
-  const legacy = await db.landingPageOffer.findMany({
-    where: { landingPageId, isActive: true },
-    orderBy: [{ sortOrder: 'asc' }, { price: 'asc' }],
-    select: { id: true, name: true, quantity: true, freeQuantity: true, price: true, isDefault: true },
-  });
-  return legacy.map((o) => ({ ...o, compareAtPrice: null as number | null }));
+  // No product, no offers. The form then shows the page's own base price.
+  return [];
 }
 
 /**

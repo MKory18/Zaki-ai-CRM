@@ -415,7 +415,6 @@ model Order {
   financeFinalizedById String?
   source               String    @default("Manual") // Facebook Ads, TikTok, Instagram, WhatsApp, Manual, Website, Landing Page
   landingPageId        String?
-  landingPageOfferId   String?
   freeQuantity         Int       @default(0) // gift units from a landing-page offer (additive)
   internalNotes        String?
   customerNotes        String?
@@ -474,7 +473,6 @@ model Order {
   followUpResolver User?     @relation("FollowUpResolvedBy", fields: [followUpResolvedById], references: [id], onDelete: SetNull)
   callLogs   CallLog[]
   landingPage LandingPage? @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
-  landingPageOffer LandingPageOffer? @relation(fields: [landingPageOfferId], references: [id], onDelete: SetNull)
   addOns     OrderAddOn[]
   activities OrderActivity[]
   deliveryAttempts DeliveryAttempt[]
@@ -516,7 +514,6 @@ model Order {
   @@index([companyId, confirmationStatus])
   @@index([companyId, settlementStatus])
   @@index([companyId, landingPageId])
-  @@index([companyId, landingPageOfferId])
   @@index([lockedById, lockExpiresAt])
   @@index([storeId, createdAt])
   @@index([countryId])
@@ -954,7 +951,6 @@ model LandingPage {
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   creator User?    @relation("LandingPageCreator", fields: [createdById], references: [id], onDelete: SetNull)
   orders  Order[]
-  offers  LandingPageOffer[]
   recommendations LandingPageRecommendation[]
   addOns  OrderAddOn[]
   // Geo context (Stage 2): orders from this page land in this store.
@@ -967,28 +963,6 @@ model LandingPage {
   @@index([companyId, isPublished])
   @@index([storeId])
   @@map("landing_pages")
-}
-// ─── LANDING PAGE OFFERS (additive) ───
-// Per-landing-page product offers (quantity bundles with gifts).
-// price is server-authoritative — never trusted from the browser.
-model LandingPageOffer {
-  id            String   @id @default(uuid())
-  landingPageId String
-  name          String
-  quantity      Int
-  freeQuantity  Int      @default(0)
-  price         Float
-  isDefault     Boolean  @default(false)
-  sortOrder     Int      @default(0)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  landingPage LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
-  orders      Order[]
-
-  @@index([landingPageId, isActive])
-  @@map("landing_page_offers")
 }
 
 // ─── LANDING PAGE RECOMMENDATIONS (additive) ───

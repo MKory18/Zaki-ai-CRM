@@ -153,7 +153,6 @@ export async function GET(
         },
         deliveryProvider: { select: { id: true, name: true, code: true } },
         landingPage: { select: { id: true, name: true, slug: true } },
-        landingPageOffer: { select: { id: true, name: true, quantity: true, freeQuantity: true, price: true } },
         addOns: { orderBy: { createdAt: 'asc' } },
         moderator: { select: { id: true, name: true, email: true, phone: true } },
         claimer: { select: { id: true, name: true } },

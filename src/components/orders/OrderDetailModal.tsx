@@ -453,7 +453,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       isOpen={isOpen}
       onClose={onClose}
       title={`الطلب ${order.orderNumber}`}
-      subtitle={`أُنشئ في ${arDateTime(order.createdAt)} • قناة الطلب: ${order.source.split(' → ')[0]}${order.source.includes(' → ') ? ` • المصدر: ${order.source.split(' → ')[1]}` : ''}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}${order.landingPageOffer?.name ? ` • العرض: ${order.landingPageOffer.name}` : ''}${(order.source === 'Telegram' || order.source.startsWith('Telegram → ')) && (order as any).telegramMessages?.[0] ? ` • تيليجرام: رسالة #${(order as any).telegramMessages[0].messageId}${(order as any).telegramMessages[0].threadId ? ` • موضوع: ${(order as any).telegramMessages[0].threadName || (order as any).telegramMessages[0].threadId}` : ''}` : ''}`}
+      subtitle={`أُنشئ في ${arDateTime(order.createdAt)} • قناة الطلب: ${order.source.split(' → ')[0]}${order.source.includes(' → ') ? ` • المصدر: ${order.source.split(' → ')[1]}` : ''}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}${order.offer?.name ? ` • العرض: ${order.offer.name}` : ''}${(order.source === 'Telegram' || order.source.startsWith('Telegram → ')) && (order as any).telegramMessages?.[0] ? ` • تيليجرام: رسالة #${(order as any).telegramMessages[0].messageId}${(order as any).telegramMessages[0].threadId ? ` • موضوع: ${(order as any).telegramMessages[0].threadName || (order as any).telegramMessages[0].threadId}` : ''}` : ''}`}
       maxWidth="4xl"
     >
       {/* ─── Prev/Next order navigation (below the header, inside the modal) ─── */}
@@ -654,7 +654,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               <div className="flex justify-between">
                 <span className="text-slate-500">العرض / الكمية:</span>
                 <span className="font-medium text-slate-900">
-                  {order.landingPageOffer?.name || order.offer?.name || 'مباشر'} ({order.quantity} {t.units}{order.freeQuantity ? ` + ${order.freeQuantity} هدية` : ''})
+                  {order.offer?.name || 'مباشر'} ({order.quantity} {t.units}{order.freeQuantity ? ` + ${order.freeQuantity} هدية` : ''})
                 </span>
               </div>
               {order.addOns?.length > 0 && (

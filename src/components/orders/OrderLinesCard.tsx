@@ -49,7 +49,6 @@ interface Props {
     productNameSnapshot?: string | null;
     productImageSnapshot?: string | null;
     offer?: { id: string; name: string; quantity: number; sellingPrice: number } | null;
-    landingPageOffer?: { name: string } | null;
     deliveryProvider?: { id: string; name: string } | null;
   };
   currency: Currency | null;
@@ -80,7 +79,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
       .catch(() => setProducts([]));
   }, [open, products.length]);
 
-  const offerName = order.landingPageOffer?.name || order.offer?.name || null;
+  const offerName = order.offer?.name || null;
   const lines: Line[] =
     order.items?.length
       ? order.items

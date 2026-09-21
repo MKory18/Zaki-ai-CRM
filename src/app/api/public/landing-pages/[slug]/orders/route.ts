@@ -155,12 +155,9 @@ export async function POST(req: Request, ctx: Ctx) {
     // The offers belong to the PRODUCT, not to this page: one bundle, one
     // price, wherever it is sold. quantity / freeQuantity / price all come
     // from the row — a quantity or a price sent by the browser is ignored.
-    //
-    // A page's own legacy offers are still honoured, because orders already
-    // reference them and a live page must not start refusing the ids it is
-    // currently serving. New pages never create them.
+    // There was once a second, per-page copy of the same tiers; it is gone.
     let offer = null as
-      | { id: string; name: string; quantity: number; freeQuantity: number; price: number; fromProduct: boolean }
+      | { id: string; name: string; quantity: number; freeQuantity: number; price: number }
       | null;
 
     const productOffers = product
@@ -173,28 +170,18 @@ export async function POST(req: Request, ctx: Ctx) {
 
     if (v.offerId) {
       const fromProduct = productOffers.find((o) => o.id === v.offerId);
-      if (fromProduct) {
-        offer = { ...fromProduct, price: fromProduct.sellingPrice, fromProduct: true };
-      } else {
-        const legacy = await db.landingPageOffer.findFirst({
-          where: { id: v.offerId, landingPageId: lp.id, isActive: true },
-        });
-        if (!legacy) {
-          return NextResponse.json(
-            {
-              ...ORDER_VALIDATION_ERROR_BODY,
-              fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' },
-            },
-            { status: 400, headers: CORS }
-          );
-        }
-        offer = { ...legacy, fromProduct: false };
+      if (!fromProduct) {
+        return NextResponse.json(
+          {
+            ...ORDER_VALIDATION_ERROR_BODY,
+            fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' },
+          },
+          { status: 400, headers: CORS }
+        );
       }
+      offer = { ...fromProduct, price: fromProduct.sellingPrice };
     } else {
-      const legacyCount = await db.landingPageOffer.count({
-        where: { landingPageId: lp.id, isActive: true },
-      });
-      if (productOffers.length > 0 || legacyCount > 0) {
+      if (productOffers.length > 0) {
         // Offers exist — an explicit selection is required.
         return NextResponse.json(
           {
@@ -304,11 +291,9 @@ export async function POST(req: Request, ctx: Ctx) {
               version: 1,
               source: LANDING_PAGE_SOURCE,
               landingPageId: lp.id,
-              // A product offer is recorded in the column the rest of the
-              // system reads for profit and reporting; a legacy page offer
-              // stays where it was, so old orders keep their meaning.
-              offerId: offer?.fromProduct ? offer.id : null,
-              landingPageOfferId: offer && !offer.fromProduct ? offer.id : null,
+              // Recorded in the column the rest of the system reads for
+              // profit and reporting.
+              offerId: offer?.id ?? null,
               customerNotes: v.notes || null,
               internalNotes: null,
             },
