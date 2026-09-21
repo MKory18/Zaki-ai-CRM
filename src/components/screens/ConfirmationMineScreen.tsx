@@ -3,8 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Phone, PhoneOff, ShieldAlert } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
-import { Elapsed, humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
-import { ShiftButton } from '@/components/attendance/ShiftButton';
+import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
@@ -60,7 +59,6 @@ interface MineResponse {
   noAnswerLimit: number;
   /** The server's clock, so a wrong clock on her machine changes nothing. */
   serverNow: string;
-  lastClaimAt: string | null;
   inConfirmation: OrderRow[];
   confirmed: OrderRow[];
 }
@@ -198,11 +196,6 @@ export function ConfirmationMineScreen() {
       {notice && (
         <p className="text-sm text-[#c07f2a] bg-amber-50 border border-amber-100 rounded-[8px] p-3">{notice}</p>
       )}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#e3e8ef] rounded-[8px] px-4 py-2.5">
-        <SinceLastClaim at={data.lastClaimAt} serverNow={data.serverNow} />
-        <ShiftButton />
-      </div>
 
       <section>
         <h2 className="text-sm font-bold text-[#121926] mb-3">قيد التأكيد ({data.inConfirmation.length})</h2>
@@ -463,23 +456,6 @@ function ResponseClock({
       }`}
     >
       بانتظار أول اتصال منذ {humanMinutes(waiting)}
-    </span>
-  );
-}
-
-/**
- * How long since she took anything new. An agent with an empty desk and a
- * full pool is idle; an agent holding twelve open orders is not, so this is
- * information beside the queue, never an accusation.
- */
-function SinceLastClaim({ at, serverNow }: { at: string | null; serverNow: string }) {
-  if (!at) {
-    return <span className="text-[11px] text-[#9aa4b2]">لم تسحبي طلباً بعد.</span>;
-  }
-  return (
-    <span className="text-[11px] text-[#697586] tabular-nums inline-flex items-center gap-1.5">
-      <Clock className="w-3.5 h-3.5 text-[#9aa4b2]" />
-      <Elapsed since={at} serverNow={serverNow} prefix="آخر طلب سحبتِه منذ" />
     </span>
   );
 }

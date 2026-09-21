@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db, requireContext } = vi.hoisted(() => ({
-  db: { attendanceMark: { findFirst: vi.fn(), create: vi.fn() } },
+  db: {
+    attendanceMark: { findFirst: vi.fn(), create: vi.fn(), findMany: vi.fn() },
+    orderClaimHistory: { findFirst: vi.fn() },
+    order: { findFirst: vi.fn() },
+  },
   requireContext: vi.fn(),
 }));
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 
-import { POST } from './mark/route';
+import { GET, POST } from './mark/route';
 
 /**
  * The fingerprint button. An attendance system has exactly one thing it
@@ -32,6 +36,9 @@ beforeEach(() => {
     country: { timezone: 'Asia/Amman', workHoursStart: '09:00', workHoursEnd: '17:00' },
   });
   db.attendanceMark.findFirst.mockResolvedValue(null);
+  db.attendanceMark.findMany.mockResolvedValue([]);
+  db.orderClaimHistory.findFirst.mockResolvedValue(null);
+  db.order.findFirst.mockResolvedValue(null);
   db.attendanceMark.create.mockResolvedValue({ at: new Date('2026-09-21T06:00:00Z') });
 });
 
@@ -74,5 +81,58 @@ describe('marking attendance', () => {
     await post({ kind: 'CHECK_OUT' });
     expect(db.attendanceMark.findFirst.mock.calls[0][0].where.kind).toBe('CHECK_OUT');
     expect(db.attendanceMark.create).toHaveBeenCalled();
+  });
+});
+
+describe('who is shown a shift at all', () => {
+  const asRole = (role: string) =>
+    requireContext.mockResolvedValue({
+      user: { id: 'me', name: 'من', role },
+      companyId: 'c1',
+      storeId: 's1',
+      country: { timezone: 'Asia/Amman', workHoursStart: '09:00', workHoursEnd: '17:00' },
+    });
+
+  it('does not offer one to the owner', async () => {
+    // The person who sets the hours does not clock in, and a button shown
+    // to them teaches everybody that the control is decorative.
+    asRole('SUPER_ADMIN');
+    expect(await (await GET()).json()).toEqual({ shift: false });
+    expect(db.attendanceMark.findMany).not.toHaveBeenCalled();
+  });
+
+  it('does not offer one to the company admin either', async () => {
+    asRole('COMPANY_ADMIN');
+    expect((await (await GET()).json()).shift).toBe(false);
+  });
+
+  it('offers one to a confirmation agent', async () => {
+    asRole('CONFIRMATION_AGENT');
+    expect((await (await GET()).json()).shift).toBe(true);
+  });
+
+  it("counts a confirmation agent by what she pulls from the pool", async () => {
+    asRole('CONFIRMATION_AGENT');
+    db.orderClaimHistory.findFirst.mockResolvedValue({ createdAt: new Date('2026-09-21T06:00:00Z') });
+    const body = await (await GET()).json();
+    expect(body.lastAction.label).toContain('سحبته');
+    expect(db.order.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('counts a moderator by what he brings in', async () => {
+    // Same question, a different record: a moderator never claims from the
+    // pool, so a claim-based counter would read "—" forever.
+    asRole('MODERATOR');
+    db.order.findFirst.mockResolvedValue({ createdAt: new Date('2026-09-21T06:00:00Z') });
+    const body = await (await GET()).json();
+    expect(body.lastAction.label).toContain('رفعته');
+    expect(db.order.findFirst.mock.calls[0][0].where.moderatorId).toBe('me');
+  });
+
+  it('says plainly when there is nothing to count yet', async () => {
+    asRole('MODERATOR');
+    const body = await (await GET()).json();
+    expect(body.shift).toBe(true);
+    expect(body.lastAction).toBeNull();
   });
 });

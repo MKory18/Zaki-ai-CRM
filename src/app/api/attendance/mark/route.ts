@@ -63,9 +63,56 @@ export async function POST(req: Request) {
  * GET /api/attendance/mark — where today stands for the person asking, so
  * the button can say "استلمت" or "سلّمت" rather than guessing.
  */
+/** Whose day is measured by a shift. The owner's is not. */
+const SHIFT_ROLES = [
+  'CONFIRMATION_AGENT',
+  'CONFIRMATION_SUPERVISOR',
+  'MODERATOR',
+  'WAREHOUSE',
+  'DELIVERY_AGENT',
+  'SETTLEMENT_OFFICER',
+  'ACCOUNTANT',
+  'MANAGER',
+];
+
+/**
+ * The last thing this person did that their job is counted by.
+ *
+ * A confirmation agent is counted by what she pulls from the pool; a
+ * moderator by what he brings in. Same question, two records, so the chip
+ * in the header says the right sentence without the browser knowing any
+ * rule about roles.
+ */
+async function lastOwnAction(role: string, userId: string, companyId: string, storeId: string) {
+  if (role === 'MODERATOR') {
+    const order = await db.order.findFirst({
+      where: { companyId, storeId, moderatorId: userId },
+      select: { createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return order ? { at: order.createdAt, label: 'آخر طلب رفعته منذ', empty: 'لم ترفع طلباً بعد' } : null;
+  }
+  if (role === 'CONFIRMATION_AGENT' || role === 'CONFIRMATION_SUPERVISOR') {
+    const claim = await db.orderClaimHistory.findFirst({
+      where: { companyId, userId, action: 'CLAIMED', order: { storeId } },
+      select: { createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return claim ? { at: claim.createdAt, label: 'آخر طلب سحبته منذ', empty: 'لم تسحب طلباً بعد' } : null;
+  }
+  return null;
+}
+
 export async function GET() {
   try {
-    const { user, country } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
+
+    // The owner does not clock in. Showing a shift button to the person who
+    // sets the shift is noise, and it is the fastest way to teach everybody
+    // that the control is decorative.
+    if (!SHIFT_ROLES.includes(user.role)) {
+      return NextResponse.json({ shift: false });
+    }
 
     // Midnight in the country's own day, not the server's.
     const now = new Date();
@@ -84,11 +131,18 @@ export async function GET() {
     const arrivals = todays.filter((m) => m.kind !== 'CHECK_OUT');
     const departures = todays.filter((m) => m.kind === 'CHECK_OUT');
 
+    const last = await lastOwnAction(user.role, user.id, companyId, storeId);
+
     return NextResponse.json({
+      shift: true,
       arrivedAt: arrivals[0]?.at ?? null,
       leftAt: departures[departures.length - 1]?.at ?? null,
       checkedIn: todays.some((m) => m.kind === 'CHECK_IN'),
-      shift: { start: country.workHoursStart, end: country.workHoursEnd },
+      hours: { start: country.workHoursStart, end: country.workHoursEnd },
+      // The server's own clock, so a wrong clock on their machine cannot
+      // make the counter lie.
+      serverNow: new Date().toISOString(),
+      lastAction: last,
     });
   } catch (error) {
     return apiErrorResponse(error);

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Menu, Repeat, Search, Store } from 'lucide-react';
 import { apiFetch } from '@/lib/api-client';
 import { NotificationBell } from '@/components/shell/NotificationBell';
+import { ShiftChip } from '@/components/attendance/ShiftChip';
 import { ROLE_LABELS } from '@/types/auth';
 
 export interface ShellContextInfo {
@@ -29,6 +30,8 @@ export function Header({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  /** The owner's search. Everyone else works from their own queue. */
+  const canSearch = userRole === 'SUPER_ADMIN';
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +70,12 @@ export function Header({
         )}
       </div>
 
+      {/* Searching the whole store by phone or customer name is the owner's
+          tool, not the floor's. The RESULTS were always scoped — the orders
+          service filters by role, so an agent typing the URL by hand still
+          only ever sees her own — but a box inviting everyone to look up any
+          customer is not the same thing as a box only the owner has. */}
+      {canSearch && (
       <form onSubmit={submitSearch} className="hidden md:flex flex-1 max-w-md items-center relative">
         <Search className="w-4 h-4 text-[#9aa4b2] absolute right-3" />
         <input
@@ -76,8 +85,15 @@ export function Header({
           className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] text-sm focus:outline-none focus:border-[#b8256e]"
         />
       </form>
+      )}
 
       <div className="flex items-center gap-3 mr-auto">
+        {/* Am I on shift, and how long since my last order. It lives here
+            rather than above a queue: same place on every screen, beside
+            the name, and never in the path of somebody clicking fast. The
+            server decides who sees it — the owner does not clock in. */}
+        <ShiftChip />
+
         {/* Work is announced here. Thirteen places in the system create
             notifications and nothing showed them until now. */}
         <NotificationBell />

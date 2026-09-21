@@ -69,23 +69,16 @@ export async function GET() {
     const riskByCustomer = new Map(customerIds.map((id, i) => [id, risks[i]]));
     const noAnswer = await noAnswerCounts(inConfirmation.map((o) => o.id));
 
-    // The response clock. An order pulled from the pool and not yet called
-    // is the most expensive thing on this desk, so she sees how long each
-    // one has been waiting on her, and how long since she took anything new.
+    // The response clock: how long each order has been waiting on her.
+    // "How long since I took anything new" is the header chip's question,
+    // answered once there rather than twice.
     const firstAction = await firstActionTimes(inConfirmation.map((o) => o.id));
-    const lastClaim = await db.orderClaimHistory.findFirst({
-      where: { companyId, userId: user.id, action: 'CLAIMED', order: { storeId } },
-      select: { createdAt: true },
-      orderBy: { createdAt: 'desc' },
-    });
-
     return NextResponse.json({
       leadDays: POSTPONE_LEAD_DAYS,
       noAnswerLimit: NO_ANSWER_LIMIT,
       // The server's own clock, so a wrong clock on her machine cannot make
       // an order look answered or overdue.
       serverNow: new Date().toISOString(),
-      lastClaimAt: lastClaim?.createdAt ?? null,
       // One derived state and one repeat-customer counter everywhere.
       inConfirmation: inConfirmation.map((o) => ({
         ...o,
