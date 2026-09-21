@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Loader2, Truck } from 'lucide-react';
+import { AlertTriangle, Loader2, PauseCircle, RotateCcw, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 
@@ -25,6 +25,8 @@ interface Row {
   blocks: Block[];
   selectable: boolean;
   hardBlocked: boolean;
+  shipHoldUntil: string | null;
+  shipHoldReason: string | null;
 }
 
 export function ShipmentsNewScreen() {
@@ -35,6 +37,9 @@ export function ShipmentsNewScreen() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
   const [exceptions, setExceptions] = useState<{ orderNumber: string; reasons: string[] }[]>([]);
+  /** Looking at what is ready, or at what is being held back. */
+  const [view, setView] = useState<'ready' | 'held'>('ready');
+  const [holding, setHolding] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -50,10 +55,33 @@ export function ShipmentsNewScreen() {
       .catch(() => undefined);
   }, []);
 
+  /** Hold it back from today's shipment, or put it back in the queue. */
+  const toggleHold = async (row: Row) => {
+    setHolding(row.id);
+    setError(null);
+    try {
+      await apiJson('/api/ops/shipments/hold', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          view === 'held'
+            ? { orderId: row.id, release: true }
+            : { orderId: row.id, reason: window.prompt('سبب التأجيل (اختياري):') ?? undefined }
+        ),
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر التأجيل');
+    } finally {
+      setHolding(null);
+    }
+  };
+
   const load = useCallback(async () => {
     setError(null);
     const q = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => v && q.set(k, v));
+    if (view === 'held') q.set('held', 'only');
     try {
       const data = await apiJson<{ orders: Row[] }>(`/api/ops/shipments?${q}`);
       setRows(data.orders);
@@ -61,7 +89,7 @@ export function ShipmentsNewScreen() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحميل');
     }
-  }, [filters]);
+  }, [filters, view]);
 
   useEffect(() => {
     void load();
@@ -148,7 +176,24 @@ export function ShipmentsNewScreen() {
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+        <>
+        <div className="flex gap-1.5 mb-2">
+        {([['ready', 'جاهزة للشحن'], ['held', 'مؤجَّلة']] as const).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setView(k)}
+            className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors ${
+              view === k
+                ? 'bg-[#b8256e] text-white border-[#b8256e]'
+                : 'bg-white text-[#364152] border-[#e3e8ef] hover:border-[#b8256e]/40'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-[#f8fafc] text-[#697586] text-xs">
               <tr>
@@ -160,6 +205,7 @@ export function ShipmentsNewScreen() {
                 <th className="text-right font-medium px-3 py-2">المحافظة</th>
                 <th className="text-right font-medium px-3 py-2">تفصيل التحصيل</th>
                 <th className="text-right font-medium px-3 py-2">تنبيهات</th>
+                <th className="text-right font-medium px-3 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e3e8ef]">
@@ -209,6 +255,41 @@ export function ShipmentsNewScreen() {
                       </div>
                     )}
                   </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {/* Not this week, the customer said. The order is good;
+                        it simply must not go out yet — and cancelling it
+                        would throw away a sale and free stock he still
+                        wants. */}
+                    <button
+                      type="button"
+                      onClick={() => toggleHold(r)}
+                      disabled={holding === r.id}
+                      title={
+                        view === 'held'
+                          ? 'أعِده إلى قائمة الشحن'
+                          : 'أجّله — لن يدخل أي شحنة حتى تُفرج عنه، والبضاعة تبقى محجوزة له'
+                      }
+                      className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-lg border transition-colors disabled:opacity-50 ${
+                        view === 'held'
+                          ? 'border-[#e3e8ef] text-[#00a344] hover:border-[#00a344]'
+                          : 'border-[#e3e8ef] text-[#697586] hover:border-[#c07f2a] hover:text-[#c07f2a]'
+                      }`}
+                    >
+                      {holding === r.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : view === 'held' ? (
+                        <RotateCcw className="w-3 h-3" />
+                      ) : (
+                        <PauseCircle className="w-3 h-3" />
+                      )}
+                      {view === 'held' ? 'أرجِعه' : 'أجّل'}
+                    </button>
+                    {r.shipHoldReason && (
+                      <span className="block text-[10px] text-[#9aa4b2] mt-0.5 max-w-[10rem] truncate" title={r.shipHoldReason}>
+                        {r.shipHoldReason}
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {rows.length === 0 && (
@@ -222,6 +303,7 @@ export function ShipmentsNewScreen() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

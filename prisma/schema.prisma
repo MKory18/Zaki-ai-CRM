@@ -423,6 +423,12 @@ model Order {
   internalNotes        String?
   customerNotes        String?
   postponedUntil       DateTime?
+  /// Held back from today's shipment — NOT the confirmation postpone.
+  /// `postponedUntil` means "call them back on Thursday" and belongs to the
+  /// agent; this means "do not put it in a van yet" and belongs to whoever
+  /// builds the shipment.
+  shipHoldUntil        DateTime?
+  shipHoldReason       String?
   // Stage 4: what the customer asked for, and how often they have asked.
   postponePreferredTime String?  // free text slot, e.g. "مساءً" or "18:00-20:00"
   postponeCount        Int       @default(0)

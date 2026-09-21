@@ -43,6 +43,8 @@ export async function GET(req: Request) {
     // not a filter: orders waiting for a courier have none assigned yet.
     const providerId = q.get('courier');
     const regionId = q.get('region');
+    /** 'only' lists what is on hold instead of what is ready. */
+    const held = q.get('held');
     const productId = q.get('product');
 
     const orders = await db.order.findMany({
@@ -51,6 +53,11 @@ export async function GET(req: Request) {
         storeId,
         confirmationStatus: 'CONFIRMED',
         shippingStatus: { in: ['NOT_READY', 'PACKING', 'READY_FOR_SHIPPING'] },
+        // Held back by hand: the customer asked for it not to go out yet.
+        // A hold with no date is open-ended and only ends when released.
+        ...(held === 'only'
+          ? { shipHoldUntil: { not: null } }
+          : { OR: [{ shipHoldUntil: null }, { shipHoldUntil: { lte: new Date() } }] }),
         ...(regionId ? { regionId } : {}),
         ...(productId ? { items: { some: { productId } } } : {}),
         ...(from || to
@@ -61,6 +68,7 @@ export async function GET(req: Request) {
       take: 300,
       select: {
         id: true, orderNumber: true, merchantRef: true, createdAt: true, currency: true,
+        shipHoldUntil: true, shipHoldReason: true,
         priceIncludesDelivery: true, deliveryFee: true, regionId: true, deliveryProviderId: true,
         customerId: true, companyId: true, confirmationStatus: true, shippingStatus: true, shippedAt: true,
         customer: { select: { id: true, fullName: true, phone: true, city: true, totalOrders: true } },
