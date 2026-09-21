@@ -22,10 +22,10 @@ describe('navigation contract', () => {
     ]);
   });
 
-  it('lists 52 unique routes', () => {
+  it('lists 53 unique routes', () => {
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(52);
-    expect(new Set(paths).size).toBe(52);
+    expect(paths).toHaveLength(53);
+    expect(new Set(paths).size).toBe(53);
   });
 
   it('only references permissions that exist in the catalog', () => {

@@ -4,11 +4,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { Hammer, ChevronDown } from 'lucide-react';
+import { Hammer, ChevronDown, ListTree, List } from 'lucide-react';
 import type { NavGroup } from '@/lib/route-registry';
 import { iconFor } from './icons';
 
 const OPEN_GROUPS_KEY = 'osm.sidebar.open';
+const PINNED_KEY = 'osm.sidebar.pinned';
 
 /**
  * The ten contract groups, RTL. The server already removed every route this
@@ -41,6 +42,8 @@ export function Sidebar({
   );
 
   const [open, setOpen] = useState<Set<string>>(new Set());
+  /** Everything showing at once, and staying that way. */
+  const [pinned, setPinned] = useState(false);
 
   // What was left open last time, per browser. A missing or unreadable value
   // is not a failure: the active group opens either way.
@@ -52,7 +55,24 @@ export function Sidebar({
       stored = [];
     }
     setOpen(new Set(Array.isArray(stored) ? stored : []));
+    try {
+      setPinned(localStorage.getItem(PINNED_KEY) === '1');
+    } catch {
+      setPinned(false);
+    }
   }, []);
+
+  function togglePinned() {
+    setPinned((was) => {
+      const next = !was;
+      try {
+        localStorage.setItem(PINNED_KEY, next ? '1' : '0');
+      } catch {
+        // Navigation still works without the browser remembering.
+      }
+      return next;
+    });
+  }
 
   function toggle(key: string) {
     setOpen((prev) => {
@@ -95,24 +115,30 @@ export function Sidebar({
 
         <nav className="flex-1 overflow-y-auto sidebar-scroll py-3 space-y-0.5">
           {groups.map((group) => {
-            const isOpen = open.has(group.key) || activeGroup === group.key;
+            const isOpen = pinned || open.has(group.key) || activeGroup === group.key;
             const count = group.routes.length;
 
             return (
             <div key={group.key} className="pb-1">
-              <button
-                onClick={() => toggle(group.key)}
-                aria-expanded={isOpen}
-                className="w-full flex items-center justify-between gap-2 px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[#5b6474] hover:text-[#9aa4b2] transition-colors"
-              >
-                <span className="flex items-center gap-2">
+              {pinned ? (
+                <p className="px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[#5b6474]">
                   {group.label}
-                  {!isOpen && <span className="text-[#3f4757] tabular-nums">{count}</span>}
-                </span>
-                <ChevronDown
-                  className={clsx('w-3.5 h-3.5 transition-transform', isOpen ? '' : '-rotate-90')}
-                />
-              </button>
+                </p>
+              ) : (
+                <button
+                  onClick={() => toggle(group.key)}
+                  aria-expanded={isOpen}
+                  className="w-full flex items-center justify-between gap-2 px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[#5b6474] hover:text-[#9aa4b2] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    {group.label}
+                    {!isOpen && <span className="text-[#3f4757] tabular-nums">{count}</span>}
+                  </span>
+                  <ChevronDown
+                    className={clsx('w-3.5 h-3.5 transition-transform', isOpen ? '' : '-rotate-90')}
+                  />
+                </button>
+              )}
               {isOpen && group.routes.map((route) => {
                 const Icon = iconFor(route.icon);
                 const isActive = pathname === route.path || pathname.startsWith(route.path + '/');
@@ -153,6 +179,17 @@ export function Sidebar({
             );
           })}
         </nav>
+
+        {/* Show everything at once, or fold it back. Fifty screens in one
+            scroll is a hunt; ten headings is a menu. Whichever you prefer is
+            remembered on this browser. */}
+        <button
+          onClick={togglePinned}
+          className="shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[#202939] text-[11px] text-[#5b6474] hover:text-[#9aa4b2] transition-colors"
+        >
+          {pinned ? <List className="w-3.5 h-3.5" /> : <ListTree className="w-3.5 h-3.5" />}
+          {pinned ? 'اطوِ القوائم' : 'اعرض كل القوائم'}
+        </button>
       </aside>
     </>
   );

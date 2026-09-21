@@ -84,6 +84,7 @@ export const NAV: NavGroup[] = [
     routes: [
       r('/finance/collection', 'التحصيل والكشوف', 'FileSpreadsheet', ['settlement.upload', 'settlement.view']),
       r('/finance/matching', 'المطابقة', 'GitCompare', ['settlement.review']),
+      r('/finance/agents', 'عهدة المندوبين', 'Bike', ['settlement.view', 'settlement.review']),
       r('/finance/wallets', 'المحافظ والحركات', 'Wallet', ['finance.cashbox']),
       r('/finance/transfers', 'التحويلات', 'Repeat', ['finance.cashbox']),
       r('/finance/closing', 'الإغلاق اليومي', 'Lock', ['finance.cashbox']),
