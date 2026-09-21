@@ -96,6 +96,13 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
         ];
 
   async function openForm() {
+    // The button says إغلاق once the form is open, so pressing it again has
+    // to close it — it used to re-open the form onto itself and look dead.
+    if (open) {
+      setOpen(false);
+      setError(null);
+      return;
+    }
     setForm({
       discountAmount: String(order.discountAmount ?? 0),
       internalNotes: order.internalNotes ?? '',

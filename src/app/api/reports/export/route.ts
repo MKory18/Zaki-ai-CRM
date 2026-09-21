@@ -59,11 +59,17 @@ export async function GET(req: Request) {
       start = minStart;
     }
 
-    const where = {
-      companyId,
-      storeId,
-      createdAt: { gte: start, lte: end },
-    };
+    // A hand-picked set of orders is exported as itself: the date window is
+    // the guard for "everything since", and it has no business narrowing a
+    // list somebody ticked row by row.
+    const idsParam = searchParams.get('ids');
+    const ids = idsParam
+      ? idsParam.split(',').map((v) => v.trim()).filter(Boolean).slice(0, MAX_EXPORT_ROWS)
+      : null;
+
+    const where = ids
+      ? { companyId, storeId, id: { in: ids } }
+      : { companyId, storeId, createdAt: { gte: start, lte: end } };
 
     // Guard: reject exports exceeding the row cap before fetching anything
     const totalRows = await db.order.count({ where });

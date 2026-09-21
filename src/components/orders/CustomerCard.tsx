@@ -57,6 +57,13 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
   });
 
   async function openForm() {
+    // The button says إغلاق once the form is open, so pressing it again has
+    // to close it — it used to re-open the form onto itself and look dead.
+    if (open) {
+      setOpen(false);
+      setError(null);
+      return;
+    }
     setForm({
       fullName: order.customer.fullName ?? '',
       phone: order.customer.rawPhone || order.customer.phone || '',

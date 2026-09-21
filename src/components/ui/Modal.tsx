@@ -52,7 +52,15 @@ export function Modal({
   // it bubbled up and opened the row behind it — clicking "السجل" landed you
   // in the order instead of the history.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+      // The portal moves the modal out of the row in the DOM, but a React
+      // event still travels up the COMPONENT tree — so a click on a tab
+      // inside this modal reached the row's onClick and opened the order
+      // behind it. Nothing that happens inside a modal belongs to whatever
+      // rendered it.
+      onClick={(e) => e.stopPropagation()}
+    >
       <div
         className="fixed inset-0"
         onClick={onClose}

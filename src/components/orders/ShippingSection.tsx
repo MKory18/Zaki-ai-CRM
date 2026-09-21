@@ -80,7 +80,10 @@ const RETURN_REASONS: Record<string, { ar: string; en: string }> = {
 
 /** Next allowed transitions per current status (mirrors backend map for UX only) */
 const NEXT_ACTIONS: Record<string, { to: string; labelAr: string; labelEn: string; cls: string }[]> = {
-  NOT_READY: [{ to: 'READY_FOR_SHIPPING', labelAr: '📦 تجهيز للشحن', labelEn: '📦 Ready for Shipping', cls: 'border-blue-300 text-blue-700 hover:bg-blue-50' }],
+  // NOT_READY offers nothing here on purpose. An order becomes ready to ship
+  // in the preparation screen, where the stock is actually reserved against
+  // its lines; a button here only ever produced "الشحن يتطلب طلباً مؤكداً".
+  NOT_READY: [],
   READY_FOR_SHIPPING: [{ to: 'PACKING', labelAr: '📦 بدء التغليف', labelEn: '📦 Start Packing', cls: 'border-indigo-300 text-indigo-700 hover:bg-indigo-50' }],
   PACKING: [{ to: 'READY_FOR_PICKUP', labelAr: '🚚 جاهز للاستلام', labelEn: '🚚 Ready for Pickup', cls: 'border-cyan-300 text-cyan-700 hover:bg-cyan-50' }],
   READY_FOR_PICKUP: [{ to: 'SHIPPED', labelAr: '🚀 تم الشحن', labelEn: '🚀 Shipped', cls: 'border-violet-300 text-violet-700 hover:bg-violet-50' }],

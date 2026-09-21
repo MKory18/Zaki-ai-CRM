@@ -485,83 +485,48 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             }}
           />
 
-          {/* Current Status — the DERIVED state, the same one the orders list,
-              the queues and the shipment screens show. The stored `status`
-              column is legacy and drifts out of step with reality. */}
-          <div className="rounded-2xl border border-slate-200 p-4 bg-gradient-to-l from-slate-50 to-white">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <span className="text-[11px] font-semibold text-slate-400 block mb-1.5">
-                  {ar ? 'حالة الطلب' : 'Order State'}
-                </span>
-                <span className="flex flex-wrap items-center gap-2">
-                  <OrderStateBadge state={order.state} />
+          {/* The state, and the facts that travel with it. No button: the
+              edit lock is taken by whichever card you actually edit, and a
+              standalone "تعديل" here neither advanced nor stopped anything. */}
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-xs">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span className="text-[11px] font-semibold text-slate-400">حالة الطلب</span>
+              <OrderStateBadge state={order.state} />
 
-                  {/* Who is carrying it, and whether the money came back. */}
-                  {order.deliveryProvider && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-200 bg-white text-[11px] font-semibold text-slate-600">
-                      {order.deliveryProvider.kind === 'AGENT' ? (
-                        <Bike className="w-3 h-3 text-[#b8256e]" />
-                      ) : (
-                        <Truck className="w-3 h-3 text-slate-400" />
-                      )}
-                      {order.deliveryProvider.name}
-                    </span>
+              {order.deliveryProvider && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-200 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
+                  {order.deliveryProvider.kind === 'AGENT' ? (
+                    <Bike className="w-3 h-3 text-[#b8256e]" />
+                  ) : (
+                    <Truck className="w-3 h-3 text-slate-400" />
                   )}
-                  {order.trackingNumber && (
-                    <span className="px-2.5 py-1 rounded-full border border-slate-200 bg-white text-[11px] font-mono text-slate-500" dir="ltr">
-                      {order.trackingNumber}
-                    </span>
-                  )}
-                  {order.settlementStatus && order.settlementStatus !== 'NOT_APPLICABLE' && (
-                    <span
-                      className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold ${
-                        order.settlementStatus === 'SETTLED'
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                          : 'bg-amber-50 border-amber-200 text-amber-700'
-                      }`}
-                    >
-                      {SETTLEMENT_AR[order.settlementStatus] ?? order.settlementStatus}
-                    </span>
-                  )}
+                  {order.deliveryProvider.name}
                 </span>
-              </div>
+              )}
+              {order.trackingNumber && (
+                <span className="px-2.5 py-1 rounded-full border border-slate-200 bg-[#f8fafc] text-[11px] font-mono text-slate-500" dir="ltr">
+                  {order.trackingNumber}
+                </span>
+              )}
+              {order.settlementStatus && order.settlementStatus !== 'NOT_APPLICABLE' && (
+                <span
+                  className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold ${
+                    order.settlementStatus === 'SETTLED'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : 'bg-amber-50 border-amber-200 text-amber-700'
+                  }`}
+                >
+                  {SETTLEMENT_AR[order.settlementStatus] ?? order.settlementStatus}
+                </span>
+              )}
 
-              <div className="flex items-center gap-2">
-                {/* No free status dropdown here. Every transition an order can
-                    make is offered, in order and guarded, by the confirmation
-                    and shipping sections below. A dropdown that could jump a
-                    NEW order straight to "تم التوصيل ✓" wrote the delivery
-                    date and marked the money collected without anyone ever
-                    opening the collection screen. */}
-                {order.lockedById === currentUser?.id && lockActive ? (
-                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1.5">
-                    <Pencil className="w-3 h-3" />
-                    وضع التعديل مفتوح
-                  </span>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={handleEnterEditMode}
-                    loading={ownership.actionLoading === 'lock'}
-                    disabled={lockActive && order.lockedById !== currentUser?.id}
-                    className="bg-red-600 hover:bg-red-700"
-                    title={t.acquiringLock}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    {t.enterEditMode}
-                  </Button>
-                )}
-              </div>
+              {editingLockedByOther && (
+                <span className="ms-auto text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1 inline-flex items-center gap-1.5">
+                  <Lock className="w-3 h-3" />
+                  {t.editingBy} {lockHolderName}
+                </span>
+              )}
             </div>
-
-            {editingLockedByOther && (
-              <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5 mt-3 inline-flex items-center gap-1.5">
-                <Lock className="w-3 h-3" />
-                {t.editingBy} {lockHolderName}
-              </p>
-            )}
-
           </div>
 
           <CustomerCard

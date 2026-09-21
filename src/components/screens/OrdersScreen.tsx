@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Select, Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Input';
+import { DateRange } from '@/components/ui/DateRange';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ProductThumb } from '@/components/ui/ProductThumb';
@@ -14,6 +15,8 @@ import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import {
   Search,
+  RotateCcw,
+  Clock,
   Filter,
   Download,
   Plus,
@@ -38,12 +41,20 @@ export function OrdersScreen() {
   const [loading, setLoading] = useState(true);
 
   // Filter States
+  // What is typed, and what has actually been searched for. They used to be
+  // one value, so every keystroke sent a request.
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [productId, setProductId] = useState('all');
   const [moderatorId, setModeratorId] = useState('all');
   const [source, setSource] = useState('all');
   const [courierId, setCourierId] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [lateOnly, setLateOnly] = useState(false);
+  const [sources, setSources] = useState<{ name: string; count: number }[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   // Workflow queue (backend-enforced per role — server rejects unauthorized queues)
   const [queue, setQueue] = useState('');
 
@@ -71,10 +82,11 @@ export function OrdersScreen() {
 
   const loadMetadata = async () => {
     try {
-      const [pRes, mRes, cRes] = await Promise.all([
+      const [pRes, mRes, cRes, sRes] = await Promise.all([
         fetch('/api/products'),
         fetch('/api/moderators'),
         fetch('/api/delivery-providers'),
+        fetch('/api/orders/sources'),
       ]);
       if (pRes.ok) {
         const pData = await pRes.json();
@@ -87,6 +99,10 @@ export function OrdersScreen() {
       if (cRes.ok) {
         const cData = await cRes.json();
         setCouriers(cData.providers ?? cData.deliveryProviders ?? []);
+      }
+      if (sRes.ok) {
+        const sData = await sRes.json();
+        setSources(sData.sources ?? []);
       }
     } catch (e) {
       console.error(e);
@@ -108,6 +124,9 @@ export function OrdersScreen() {
         source,
       });
       if (courierId !== 'all') params.set('courierId', courierId);
+      if (fromDate) params.set('from', fromDate);
+      if (toDate) params.set('to', toDate);
+      if (lateOnly) params.set('lateDays', '10');
       if (queue) params.set('queue', queue);
 
       const res = await apiFetch(`/api/orders?${params.toString()}`);
@@ -117,6 +136,8 @@ export function OrdersScreen() {
       if (res.ok) {
         const data = await res.json();
         setOrders(data.orders || []);
+        // A tick on a row that is no longer listed means nothing.
+        setSelected(new Set());
         if (data.currency) setCurrency(data.currency);
         setPagination(data.pagination || { total: 0, page: 1, limit: 25, totalPages: 1 });
       } else {
@@ -133,7 +154,7 @@ export function OrdersScreen() {
       // Only the latest request may clear the shared loading flag
       if (seq === loadOrdersSeq.current) setLoading(false);
     }
-  }, [search, status, productId, moderatorId, source, courierId, queue]);
+  }, [search, status, productId, moderatorId, source, courierId, fromDate, toDate, lateOnly, queue]);
 
   // Keep the ref in sync each render (after loadOrders exists)
   useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
@@ -166,6 +187,46 @@ export function OrdersScreen() {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
+
+  /** Run the typed search. Nothing goes to the server until this. */
+  const runSearch = () => setSearch(searchInput.trim());
+
+  const activeFilters =
+    (search ? 1 : 0) + (status !== 'all' ? 1 : 0) + (source !== 'all' ? 1 : 0) +
+    (productId !== 'all' ? 1 : 0) + (courierId !== 'all' ? 1 : 0) +
+    (fromDate ? 1 : 0) + (toDate ? 1 : 0) + (lateOnly ? 1 : 0);
+
+  const resetFilters = () => {
+    setSearchInput('');
+    setSearch('');
+    setStatus('all');
+    setSource('all');
+    setProductId('all');
+    setCourierId('all');
+    setFromDate('');
+    setToDate('');
+    setLateOnly(false);
+    setSelected(new Set());
+  };
+
+  /** Selection is per page: it clears whenever the rows underneath change. */
+  const toggleRow = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allOnPageSelected = orders.length > 0 && orders.every((o) => selected.has(o.id));
+  const toggleAll = () =>
+    setSelected(allOnPageSelected ? new Set() : new Set(orders.map((o) => o.id)));
+
+  /** Export only the ticked rows, by id, through the same report endpoint. */
+  const handleExportSelected = () => {
+    if (selected.size === 0) return;
+    const params = new URLSearchParams({ ids: [...selected].join(',') });
+    window.open(`/api/reports/export?${params.toString()}`, '_blank');
+  };
 
   const handleExportCSV = () => {
     // Export respects the current filters (same params as loadOrders)
@@ -228,114 +289,110 @@ export function OrdersScreen() {
           </div>
         </div>
 
-        {/* Filters & Search Bar */}
-        <div className="bg-white border border-[#e3e8ef] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-          {/* Workflow queue tabs (server-enforced per role) */}
-          <div className="sm:col-span-2 flex flex-wrap gap-1.5">
+        {/* One bar, three rows that each answer a different question:
+            which queue am I in, what am I looking for, and how do I narrow
+            it. The old grid mixed all three into six equal cells. */}
+        <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-xs divide-y divide-[#e3e8ef]">
+          {/* Queues — server-enforced per role */}
+          <div className="flex flex-wrap gap-1.5 p-3">
             {[
-              { key: '', ar: 'الكل', en: 'All' },
-              { key: 'available', ar: '🟢 متاح للاستلام', en: '🟢 Available' },
-              { key: 'my_orders', ar: '🔵 طلباتي', en: '🔵 My Orders' },
-              { key: 'assigned_to_me', ar: '🟡 مسندة لي', en: '🟡 Assigned to Me' },
-              { key: 'processing', ar: '⚙️ قيد المعالجة', en: '⚙️ Processing' },
-              { key: 'all_company', ar: '🏢 كل الشركة', en: '🏢 All Company' },
+              { key: '', ar: 'الكل' },
+              { key: 'available', ar: 'متاح للاستلام' },
+              { key: 'my_orders', ar: 'طلباتي' },
+              { key: 'assigned_to_me', ar: 'مسندة لي' },
+              { key: 'processing', ar: 'قيد المعالجة' },
+              { key: 'all_company', ar: 'كل الشركة' },
             ].map((q) => (
               <button
                 key={q.key || 'all'}
-                onClick={() => { setQueue(q.key); }}
-                className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
+                onClick={() => setQueue(q.key)}
+                className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
                   queue === q.key
                     ? 'bg-[#b8256e] text-white border-[#b8256e]'
                     : 'bg-white text-[#364152] border-[#e3e8ef] hover:border-[#b8256e]/40 hover:text-[#b8256e]'
                 }`}
               >
-                {ar ? q.ar : q.en}
+                {q.ar}
               </button>
             ))}
           </div>
-          <div className="relative sm:col-span-2">
-            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
-            <input
-              type="text"
-              placeholder={t.searchOrders}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]"
-            />
+
+          {/* Search — pressing Enter or the button runs it; it no longer
+              fires on every keystroke, which made a long phone number send
+              a request per digit. */}
+          <div className="flex flex-wrap items-center gap-2 p-3">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+              <input
+                type="text"
+                placeholder="ابحث برقم الطلب، اسم العميل، أو الهاتف…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
+                className="w-full ps-9 pe-3 py-2 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]"
+              />
+            </div>
+            <Button size="sm" onClick={runSearch} className="shrink-0">
+              <Search className="w-3.5 h-3.5" />
+              بحث
+            </Button>
+            <Button
+              size="sm"
+              variant={lateOnly ? undefined : 'outline'}
+              onClick={() => setLateOnly((v) => !v)}
+              title="طلبات مضى عليها 10 أيام أو أكثر ولم تُغلق بعد"
+              className="shrink-0"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              متأخرة 10 أيام+
+            </Button>
+            {activeFilters > 0 && (
+              <Button size="sm" variant="outline" onClick={resetFilters} className="shrink-0 text-[#fb323f]">
+                <RotateCcw className="w-3.5 h-3.5" />
+                إعادة تعيين ({activeFilters})
+              </Button>
+            )}
           </div>
 
-          <Select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="text-xs py-2"
-          >
-            {/* The same states the badges show — the legacy status column is
-                not a vocabulary anyone on this screen reads. */}
-            <option value="all">كل الحالات</option>
-            {FILTERABLE_STATES.map((st) => (
-              <option key={st} value={st}>
-                {STATE_LABEL_AR[st]}
-              </option>
-            ))}
-          </Select>
+          {/* Narrowing */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 p-3">
+            <Select value={status} onChange={(e) => setStatus(e.target.value)} className="text-xs py-2">
+              <option value="all">كل الحالات</option>
+              {FILTERABLE_STATES.map((st) => (
+                <option key={st} value={st}>{STATE_LABEL_AR[st]}</option>
+              ))}
+            </Select>
 
-          <Select
-            value={productId}
-            onChange={(e) => setProductId(e.target.value)}
-            className="text-xs py-2"
-          >
-            <option value="all">{t.allProducts}</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
+            <Select value={source} onChange={(e) => setSource(e.target.value)} className="text-xs py-2">
+              <option value="all">كل الجهات</option>
+              {sources.map((sc) => (
+                <option key={sc.name} value={sc.name}>{sc.name} ({sc.count})</option>
+              ))}
+            </Select>
 
-          <Select
-            value={moderatorId}
-            onChange={(e) => setModeratorId(e.target.value)}
-            className="text-xs py-2"
-          >
-            <option value="all">{t.allModerators}</option>
-            {moderators.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </Select>
+            <Select value={productId} onChange={(e) => setProductId(e.target.value)} className="text-xs py-2">
+              <option value="all">كل المنتجات</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </Select>
 
-          <Select
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-            className="text-xs py-2"
-          >
-            <option value="all">كل المصادر</option>
-            <option value="Manual">Manual</option>
-            <option value="Facebook Ads">Facebook Ads</option>
-            <option value="Messenger">Messenger</option>
-            <option value="WhatsApp">WhatsApp</option>
-            <option value="Telegram">Telegram</option>
-            <option value="AI">AI</option>
-            <option value="Landing Page">Landing Page</option>
-            <option value="Website">Website</option>
-            <option value="TikTok">TikTok</option>
-            <option value="Instagram">Instagram</option>
-          </Select>
+            <Select value={courierId} onChange={(e) => setCourierId(e.target.value)} className="text-xs py-2">
+              <option value="all">كل شركات الشحن</option>
+              <option value="none">بلا شركة شحن بعد</option>
+              {couriers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.kind === 'AGENT' ? `مندوب · ${c.name}` : c.name}
+                </option>
+              ))}
+            </Select>
 
-          <Select
-            value={courierId}
-            onChange={(e) => setCourierId(e.target.value)}
-            className="text-xs py-2"
-          >
-            <option value="all">كل شركات الشحن</option>
-            <option value="none">بلا شركة شحن بعد</option>
-            {couriers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.kind === 'AGENT' ? `مندوب · ${c.name}` : c.name}
-              </option>
-            ))}
-          </Select>
+            <DateRange
+              label="تاريخ الطلب"
+              value={{ from: fromDate, to: toDate }}
+              onChange={(r) => { setFromDate(r.from); setToDate(r.to); }}
+            />
+          </div>
         </div>
 
         {/* Load error banner */}
@@ -346,145 +403,142 @@ export function OrdersScreen() {
           </div>
         )}
 
-        {/* Orders Table */}
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 bg-[#fdf5fa] border border-[#f2c9dd] rounded-xl px-4 py-2.5">
+            <span className="text-xs font-semibold text-[#b8256e]">
+              محدَّد: {selected.size} طلب
+            </span>
+            <Button size="sm" variant="outline" onClick={handleExportSelected} className="ms-auto">
+              <Download className="w-3.5 h-3.5" />
+              تصدير المحدَّد
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setSelected(new Set())}>
+              إلغاء التحديد
+            </Button>
+          </div>
+        )}
+
+        {/* Orders — rows, not a table.
+            Eleven columns could not fit any screen: the product name broke
+            one word per line, the date stacked into three, and the whole
+            thing scrolled sideways. A row that reflows says the same things
+            in the order somebody reads them — who, what, where it stands,
+            how much — and never runs off the edge. */}
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3.5">{t.thOrderNumber}</th>
-                    <th className="px-6 py-3.5">{t.thCustomer}</th>
-                    <th className="px-6 py-3.5">{t.thProduct} & {t.thOffer}</th>
-                    <th className="px-6 py-3.5">{t.thTotal}</th>
-                    <th className="px-6 py-3.5">{t.status}</th>
-                    <th className="px-6 py-3.5">شركة الشحن</th>
-                    <th className="px-6 py-3.5">السجل</th>
-                    <th className="px-6 py-3.5">{t.thModerator}</th>
-                    <th className="px-6 py-3.5">{t.thDate}</th>
-                    <th className="px-6 py-3.5 text-right rtl:text-left">{t.thActions}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
-                  {orders.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="py-12 text-center text-[#9ca3af]">
-                        {loading ? t.loading : t.noOrders}
-                      </td>
-                    </tr>
-                  ) : (
-                    orders.map((order) => (
-                      <tr
-                        key={order.id}
-                        className="hover:bg-[#f8fafc] transition-colors cursor-pointer"
-                        onClick={() => setSelectedOrderId(order.id)}
-                      >
-                        <td className="px-6 py-3.5">
-                          <span className="font-bold text-[#fb323f] block">
-                            {order.orderNumber}
-                          </span>
-                          <span className="text-[10px] text-[#9ca3af] block mt-0.5">
-                            {order.source}
-                          </span>
-                        </td>
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[#e3e8ef] bg-[#f8fafc] text-[11px] text-[#697586]">
+              <input
+                type="checkbox"
+                checked={allOnPageSelected}
+                onChange={toggleAll}
+                aria-label="تحديد كل الطلبات في هذه الصفحة"
+                className="w-4 h-4 accent-[#b8256e] cursor-pointer"
+              />
+              <span>{orders.length ? `${orders.length} طلب في هذه الصفحة` : ''}</span>
+            </div>
 
-                        <td className="px-6 py-3.5">
-                          <p className="font-semibold text-[#121926]">{order.customer?.fullName}</p>
-                          <div className="flex items-center space-x-1 mt-0.5">
-                            <span className="font-mono text-[11px] text-[#697586]">
-                              {order.customer?.rawPhone || order.customer?.phone}
-                            </span>
-                            <span className="text-[11px] text-[#9ca3af]">
-                              • {order.region?.name ?? order.customer?.city ?? '—'}
-                            </span>
-                          </div>
-                        </td>
+            {orders.length === 0 ? (
+              <p className="py-12 text-center text-sm text-[#9ca3af]">
+                {loading ? t.loading : t.noOrders}
+              </p>
+            ) : (
+              <ul className="divide-y divide-[#e3e8ef]">
+                {orders.map((order) => (
+                  <li
+                    key={order.id}
+                    onClick={() => setSelectedOrderId(order.id)}
+                    className={`px-4 py-3 cursor-pointer transition-colors ${
+                      selected.has(order.id) ? 'bg-[#fdf5fa]' : 'hover:bg-[#f8fafc]'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span onClick={(e) => e.stopPropagation()} className="pt-1 shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(order.id)}
+                          onChange={() => toggleRow(order.id)}
+                          aria-label={`تحديد الطلب ${order.orderNumber}`}
+                          className="w-4 h-4 accent-[#b8256e] cursor-pointer"
+                        />
+                      </span>
 
-                        <td className="px-6 py-3.5">
-                          <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
-                            <ProductThumb
-                              src={order.productImageSnapshot || order.product?.image}
-                              alt={order.productNameSnapshot || order.product?.name}
-                              size="sm"
-                            />
-                            <div>
-                              <p className="font-medium text-[#121926]">{order.productNameSnapshot || order.product?.name}</p>
-                              <p className="text-[11px] text-[#9ca3af]">
-                                {order.offer?.name || 'قياسي'} ({order.quantity} وحدة)
-                              </p>
-                            </div>
-                          </div>
-                        </td>
+                      <ProductThumb
+                        src={order.productImageSnapshot || order.product?.image}
+                        alt={order.productNameSnapshot || order.product?.name}
+                        size="md"
+                      />
 
-                        <td className="px-6 py-3.5 font-bold text-[#121926] tabular-nums" dir="ltr">
-                          {currency.code
-                            ? formatMoney(Number(order.totalAmount || 0), currency.code, currency.minorUnit)
-                            : Number(order.totalAmount || 0).toFixed(2)}
-                        </td>
-
-                        <td className="px-6 py-3.5">
-                          {/* The derived state, the same one every other screen shows */}
+                      <div className="min-w-0 flex-1 space-y-1">
+                        {/* Line 1 — which order, and where it stands. */}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="font-bold text-[#fb323f] text-xs" dir="ltr">{order.orderNumber}</span>
                           <OrderStateBadge state={order.state} />
-                        </td>
-
-                        {/* Who is carrying it. An order past confirmation with
-                            nobody on it is the thing worth spotting here. */}
-                        <td className="px-6 py-3.5">
-                          {order.deliveryProvider ? (
-                            <span className="inline-flex items-center gap-1.5 text-[11px] text-[#364152]">
+                          {order.deliveryProvider && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-[#697586]">
                               {order.deliveryProvider.kind === 'AGENT' ? (
-                                <Bike className="w-3.5 h-3.5 text-[#b8256e] shrink-0" />
+                                <Bike className="w-3 h-3 text-[#b8256e]" />
                               ) : (
-                                <Truck className="w-3.5 h-3.5 text-[#697586] shrink-0" />
+                                <Truck className="w-3 h-3 text-[#9aa4b2]" />
                               )}
-                              <span className="truncate max-w-[120px]">{order.deliveryProvider.name}</span>
+                              {order.deliveryProvider.name}
                             </span>
-                          ) : (
-                            <span className="text-[11px] text-[#9aa4b2]">—</span>
                           )}
                           {order.trackingNumber && (
-                            <span className="block mt-0.5 font-mono text-[10px] text-[#9aa4b2]" dir="ltr">
+                            <span className="text-[10px] font-mono text-[#9aa4b2]" dir="ltr">
                               {order.trackingNumber}
                             </span>
                           )}
-                        </td>
+                        </div>
 
-                        <td className="px-6 py-3.5">
+                        {/* Line 2 — who it goes to. */}
+                        <p className="text-sm text-[#121926] truncate">
+                          {order.customer?.fullName}
+                          <span className="text-[11px] text-[#697586]" dir="ltr">
+                            {' · '}{order.customer?.rawPhone || order.customer?.phone}
+                          </span>
+                          <span className="text-[11px] text-[#9aa4b2]">
+                            {' · '}{order.region?.name ?? order.customer?.city ?? '—'}
+                          </span>
+                        </p>
+
+                        {/* Line 3 — what is in it. */}
+                        <p className="text-xs text-[#697586] truncate">
+                          {order.productNameSnapshot || order.product?.name}
+                          <span className="text-[#9aa4b2]">
+                            {' × '}{order.quantity}
+                            {order.offer?.name ? ` · ${order.offer.name}` : ''}
+                          </span>
+                        </p>
+
+                        {/* Line 4 — where it came from and when. */}
+                        <p className="text-[11px] text-[#9aa4b2] truncate">
+                          {order.source || '—'}
+                          {order.moderator?.name ? ` · ${order.moderator.name}` : ''}
+                          {' · '}
+                          {format(new Date(order.createdAt), 'd MMMM yyyy · HH:mm', { locale: arLocale })}
+                        </p>
+                      </div>
+
+                      {/* The money and the two things you do with a row. */}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <span className="font-bold text-[#121926] text-sm tabular-nums" dir="ltr">
+                          {currency.code
+                            ? formatMoney(Number(order.totalAmount || 0), currency.code, currency.minorUnit)
+                            : Number(order.totalAmount || 0).toFixed(2)}
+                        </span>
+                        <span onClick={(e) => e.stopPropagation()}>
                           <CustomerHistoryButton
                             customerId={order.customer?.id}
                             orderId={order.id}
                             previousOrders={order.previousOrders ?? 0}
                           />
-                        </td>
-
-                        <td className="px-6 py-3.5">
-                          <span className="font-medium text-[#364152] block">
-                            {order.moderator?.name || 'غير مسند'}
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-3.5 text-[#9ca3af]">
-                          {format(new Date(order.createdAt), 'd MMMM yyyy · HH:mm', { locale: arLocale })}
-                        </td>
-
-                        <td className="px-6 py-3.5 text-right rtl:text-left">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedOrderId(order.id);
-                            }}
-                          >
-                            {t.detailsAndCalls}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {/* Pagination Bar */}
             <div className="px-6 py-3 border-t border-[#e3e8ef] flex items-center justify-between text-xs text-[#697586]">

@@ -29,6 +29,9 @@ export async function GET(req: Request) {
     const productId = searchParams.get('productId')?.trim();
     const moderatorId = searchParams.get('moderatorId')?.trim();
     const courierId = searchParams.get('courierId')?.trim();
+    const from = searchParams.get('from')?.trim();
+    const to = searchParams.get('to')?.trim();
+    const lateDays = searchParams.get('lateDays')?.trim();
     const page = parseInt(searchParams.get('page') || '1', 10);
     // Cap page size (hard server-side limit) with a NaN guard
     const parsedLimit = parseInt(searchParams.get('limit') || '25', 10);
@@ -61,6 +64,30 @@ export async function GET(req: Request) {
 
     if (productId && productId !== 'all') {
       whereClause.productId = productId;
+    }
+
+    // Created between two dates, inclusive of the whole closing day.
+    if (from || to) {
+      whereClause.createdAt = {};
+      if (from) whereClause.createdAt.gte = new Date(`${from}T00:00:00.000Z`);
+      if (to) whereClause.createdAt.lte = new Date(`${to}T23:59:59.999Z`);
+    }
+
+    // Orders still open after N days. "Late" means nothing has closed them —
+    // a delivered order from last year is not late, it is finished — so the
+    // closed states are excluded rather than the date alone being tested.
+    if (lateDays) {
+      const days = Number(lateDays);
+      if (!Number.isFinite(days) || days < 1 || days > 365) {
+        return NextResponse.json({ error: 'عدد أيام غير صالح' }, { status: 400 });
+      }
+      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      whereClause.AND = [
+        ...(whereClause.AND ?? []),
+        { createdAt: { lte: cutoff } },
+        { shippingStatus: { notIn: ['DELIVERED', 'PARTIALLY_DELIVERED', 'RETURNED', 'CANCELLED'] } },
+        { confirmationStatus: { notIn: ['CANCELLED', 'REJECTED'] } },
+      ];
     }
 
     // Source filter (Manual, Facebook Ads, WhatsApp, Landing Page, ...)
