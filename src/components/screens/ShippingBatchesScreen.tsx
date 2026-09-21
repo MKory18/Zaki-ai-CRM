@@ -5,6 +5,7 @@ import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock } from 'lucid
 import { apiJson, apiFetch } from '@/lib/api-client';
 import type { DispatchSummary } from '@/lib/courier-dispatch';
 import { arDateShort } from '@/lib/format';
+import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
 
 /**
  * /ops/batches — the handovers to the couriers.
@@ -44,6 +45,7 @@ export function ShippingBatchesScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   const [result, setResult] = useState<{ batchId: string; summary: DispatchSummary } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const labelSize = useLabelSize();
 
   const load = useCallback(async () => {
     try {
@@ -104,7 +106,7 @@ export function ShippingBatchesScreen() {
     }
   }
 
-  /** Every waybill in the batch, on one print run. */
+  /** Every waybill in the batch, on one print run, on this device's paper. */
   async function printBatch(batch: Batch) {
     setBusy(batch.id);
     setError(null);
@@ -120,7 +122,7 @@ export function ShippingBatchesScreen() {
       const res = await apiFetch('/api/ops/labels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderIds, width: 100, height: 150 }),
+        body: JSON.stringify({ orderIds, ...labelSize.dims }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.errorAr || data.error || 'تعذر تجهيز البوالص');
@@ -159,7 +161,7 @@ export function ShippingBatchesScreen() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {([
           ['all', `الكل (${total})`],
           ['READY', `قيد التجميع (${counts.READY})`],
@@ -178,6 +180,8 @@ export function ShippingBatchesScreen() {
             {label}
           </button>
         ))}
+        {/* The paper every «طباعة بوالص الدفعة» below will use. */}
+        <LabelSizePicker compact className="ms-auto flex items-center" />
       </div>
 
       {error && (

@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { DateRange } from '@/components/ui/DateRange';
+import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
 import { useRegions } from '@/hooks/useRegions';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
@@ -234,9 +235,10 @@ export function OrdersScreen() {
   const toggleAll = () =>
     setSelected(allOnPageSelected ? new Set() : new Set(orders.map((o) => o.id)));
 
-  /** Waybills for the ticked rows, on the default thermal size. The labels
-   *  screen is where the size is chosen; printing from here is for the
-   *  common case of "these ones, now". */
+  /** Waybills for the ticked rows, on whatever paper this device prints on.
+   *  The size used to be hard-coded here, so the same order came out
+   *  thermal-sized from this screen and A4-sized from the labels screen. */
+  const labelSize = useLabelSize();
   const [printing, setPrinting] = useState(false);
   const handlePrintLabels = async () => {
     if (selected.size === 0) return;
@@ -246,7 +248,7 @@ export function OrdersScreen() {
       const res = await apiFetch('/api/ops/labels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderIds: [...selected], width: 100, height: 150 }),
+        body: JSON.stringify({ orderIds: [...selected], ...labelSize.dims }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.errorAr || data.error || 'تعذر تجهيز البوالص');
@@ -432,7 +434,10 @@ export function OrdersScreen() {
             <span className="text-xs font-semibold text-[#b8256e]">
               محدَّد: {selected.size} طلب
             </span>
-            <Button size="sm" variant="outline" onClick={handlePrintLabels} loading={printing} className="ms-auto">
+            {/* The paper sits beside the button that uses it, so nobody
+                prints thirty labels before discovering the size. */}
+            <LabelSizePicker compact className="ms-auto flex items-center" />
+            <Button size="sm" variant="outline" onClick={handlePrintLabels} loading={printing}>
               <Printer className="w-3.5 h-3.5" />
               طباعة البوالص
             </Button>

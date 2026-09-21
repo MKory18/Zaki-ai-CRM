@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Download, Loader2, Printer } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
-import { LABEL_SIZES } from '@/lib/labels';
+import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
 
 /**
  * /ops/labels — filter, pick a size, print. The print link carries a signed
@@ -30,8 +30,9 @@ export function LabelsScreen() {
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
   const [filters, setFilters] = useState({ courier: '', region: '', from: '', to: '', printed: '' });
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [size, setSize] = useState<string>(LABEL_SIZES[0].key);
-  const [custom, setCustom] = useState({ width: 100, height: 150 });
+  // The same remembered choice every other print button reads, so this
+  // screen and the orders screen can never disagree about the paper.
+  const labelSize = useLabelSize();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -60,17 +61,6 @@ export function LabelsScreen() {
     void load();
   }, [load]);
 
-  const dims = () => {
-    const preset = LABEL_SIZES.find((s) => s.key === size);
-    if (!preset) return custom;
-    return {
-      width: preset.width,
-      height: preset.height,
-      sheetWidth: preset.sheet?.width,
-      sheetHeight: preset.sheet?.height,
-    };
-  };
-
   const openBatch = async (format?: 'csv') => {
     const orderIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
     if (orderIds.length === 0) {
@@ -83,7 +73,7 @@ export function LabelsScreen() {
       const { printPath } = await apiJson<{ printPath: string }>('/api/ops/labels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderIds, ...dims() }),
+        body: JSON.stringify({ orderIds, ...labelSize.dims }),
       });
       window.open(format === 'csv' ? `${printPath}&format=csv` : printPath, '_blank', 'noopener');
       await load();
@@ -124,26 +114,8 @@ export function LabelsScreen() {
             <option value="yes">مطبوعة</option>
           </select>
         </Field>
-        <Field label="المقاس">
-          <select value={size} onChange={(e) => setSize(e.target.value)} className={INPUT}>
-            {LABEL_SIZES.map((s) => (
-              <option key={s.key} value={s.key}>{s.label}</option>
-            ))}
-            <option value="custom">مقاس مخصص</option>
-          </select>
-        </Field>
+        <LabelSizePicker />
       </div>
-
-      {size === 'custom' && (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 flex gap-3">
-          <Field label="العرض (مم)">
-            <input type="number" min={40} max={300} value={custom.width} onChange={(e) => setCustom({ ...custom, width: Number(e.target.value) })} className={INPUT} dir="ltr" />
-          </Field>
-          <Field label="الارتفاع (مم)">
-            <input type="number" min={40} max={300} value={custom.height} onChange={(e) => setCustom({ ...custom, height: Number(e.target.value) })} className={INPUT} dir="ltr" />
-          </Field>
-        </div>
-      )}
 
       {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
 
