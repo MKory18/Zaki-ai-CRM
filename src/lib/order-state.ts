@@ -50,6 +50,8 @@ export interface StateSource {
   shippingStatus: string;
   claimedById?: string | null;
   shippedAt?: Date | string | null;
+  /** When the waybill was printed — the moment the parcel is committed. */
+  labelPrintedAt?: Date | string | null;
 }
 
 const SHIPPING_TO_CORE: Record<string, CoreState> = {
@@ -122,15 +124,34 @@ export function hasEverShipped(order: StateSource): boolean {
 }
 
 /**
+ * Is the parcel still ours to take back off the shelf?
+ *
+ * `hasEverShipped` starts at SHIPPED, but a parcel is packed, labelled and
+ * handed to the courier a stage earlier. In that window the order could be
+ * cancelled, its reservation dropped, and the units counted as available
+ * again — while they were sitting in a van. Once the waybill is printed the
+ * goods are committed: they come back through the returns door, counted,
+ * or they do not come back at all.
+ */
+export function hasLeftWarehouse(order: StateSource): boolean {
+  return (
+    hasEverShipped(order) ||
+    !!order.labelPrintedAt ||
+    order.shippingStatus === 'READY_FOR_PICKUP'
+  );
+}
+
+/**
  * Cancellation after SHIPPED is refused — it becomes a cancel request and
  * ends as RETURNED with a reason (contract invariant 4).
  */
 export function assertCancellable(order: StateSource): GuardResult {
-  if (hasEverShipped(order)) {
+  if (hasLeftWarehouse(order)) {
     return {
       allowed: false,
       code: 'CANCEL_AFTER_SHIPPED',
-      message: 'لا يمكن إلغاء طلب تم شحنه — يُسجَّل كطلب إلغاء وينتهي كمرتجع بسبب',
+      message:
+        'الطرد سُلّم لشركة الشحن وطُبعت بوليصته — يُسجَّل كطلب إلغاء وتعود بضاعته للمخزون عند استلام المرتجع وعدّه',
     };
   }
   return { allowed: true };
@@ -138,8 +159,8 @@ export function assertCancellable(order: StateSource): GuardResult {
 
 /** VOID is refused for any order that has ever reached SHIPPED (invariant 9). */
 export function assertVoidable(order: StateSource): GuardResult {
-  if (hasEverShipped(order)) {
-    return { allowed: false, code: 'ALREADY_SHIPPED', message: 'لا يمكن إبطال طلب وصل إلى الشحن' };
+  if (hasLeftWarehouse(order)) {
+    return { allowed: false, code: 'ALREADY_SHIPPED', message: 'لا يمكن إبطال طلب سُلّم لشركة الشحن' };
   }
   return { allowed: true };
 }

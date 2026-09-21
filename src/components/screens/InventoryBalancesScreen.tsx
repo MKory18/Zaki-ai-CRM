@@ -27,6 +27,7 @@ export function InventoryBalancesScreen() {
   const [reason, setReason] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [countError, setCountError] = useState<string | null>(null);
+  const [term, setTerm] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -73,6 +74,11 @@ export function InventoryBalancesScreen() {
     }
   };
 
+  const q = term.trim();
+  const visible = q
+    ? stockSummary.filter((s) => s.name.includes(q) || (s.sku || '').toUpperCase().includes(q.toUpperCase()))
+    : stockSummary;
+
   const selected = stockSummary.find((s) => s.id === productId);
   const systemQty = selected?.remaining ?? 0;
   const difference = countedQuantity - systemQty;
@@ -99,20 +105,43 @@ export function InventoryBalancesScreen() {
           </Button>
         </div>
 
-        {/* Stock Summary Cards */}
+        {/* Every product and what it holds. 105 cards need a way in, so the
+            search comes before them rather than after the scroll. */}
+        <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-3">
+          <input
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="ابحث باسم المنتج أو رمزه…"
+            className="w-full min-w-0 h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+          />
+          <p className="mt-1.5 text-[10.5px] text-[#697586]">
+            {visible.length} من {stockSummary.length} منتج
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stockSummary.map((s) => (
+          {visible.map((s) => (
             <Card key={s.id}>
               <CardContent className="p-5 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
                     <span className="font-mono text-xs font-bold text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded">
                       {s.sku}
                     </span>
-                    <h3 className="font-bold text-[#121926] text-sm mt-1">{s.name}</h3>
+                    <a
+                      href={`/products/${s.id}`}
+                      className="mt-1 block text-sm font-bold text-[#121926] hover:text-[#b8256e]"
+                    >
+                      {s.name}
+                    </a>
+                    {/* Which door adds to this one — the question you ask
+                        the moment you see it is empty. */}
+                    <span className="mt-1 inline-block rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-semibold text-[#475467]">
+                      {s.sourceType === 'PURCHASED' ? 'جاهز — يُستلم' : 'مصنّع — تشغيلة'}
+                    </span>
                   </div>
                   <Badge variant={s.remaining > 50 ? 'success' : 'danger'}>
-                    {s.remaining > 50 ? 'In Stock' : 'Low Stock'}
+                    {s.remaining > 50 ? 'متوفر' : 'رصيد منخفض'}
                   </Badge>
                 </div>
 

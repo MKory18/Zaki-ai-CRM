@@ -20,7 +20,11 @@ export const SHIPPING_TRANSITIONS: Record<ShippingStatus, ShippingStatus[]> = {
   NOT_READY: ['READY_FOR_SHIPPING'],
   READY_FOR_SHIPPING: ['PACKING'],
   PACKING: ['READY_FOR_PICKUP'],
-  READY_FOR_PICKUP: ['SHIPPED'],
+  // A parcel can be labelled, handed over, and then cancelled by the
+  // customer before it ever moves. Without a way back from here the only
+  // route was to mark it SHIPPED and then failed — recording a journey that
+  // never happened, and dating the stock movement to it.
+  READY_FOR_PICKUP: ['SHIPPED', 'RETURN_REQUESTED'],
   SHIPPED: ['OUT_FOR_DELIVERY'],
   // A partial delivery is reached at the door, like a whole one.
   OUT_FOR_DELIVERY: ['DELIVERED', 'PARTIALLY_DELIVERED', 'FAILED_DELIVERY'],

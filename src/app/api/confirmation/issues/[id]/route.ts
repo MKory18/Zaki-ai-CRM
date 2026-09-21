@@ -35,7 +35,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const issue = await db.orderIssue.findFirst({
       where: { id, companyId, order: { storeId } },
-      include: { order: { select: { id: true, confirmationStatus: true, shippingStatus: true, shippedAt: true } } },
+      include: { order: { select: { id: true, confirmationStatus: true, shippingStatus: true, shippedAt: true, labelPrintedAt: true } } },
     });
     if (!issue) return NextResponse.json({ error: 'الإشكال غير موجود' }, { status: 404 });
     if (issue.status !== 'OPEN') {

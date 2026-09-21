@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { computeCod } from '@/lib/money';
-import { hasEverShipped, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
+import { hasEverShipped, assertCancellable, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
+import { releaseOrderLines } from '@/lib/reservation';
 import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -398,6 +399,17 @@ export async function PATCH(
       }
 
       if (status === 'REJECTED' || status === 'CANCELLED') {
+        // The same guard the confirmation route applies. This legacy path
+        // wrote CANCELLED without it, so a parcel already handed to a
+        // courier could be cancelled here — and its units counted as back
+        // on the shelf while they sat in a van.
+        const cancellable = assertCancellable(existing as StateSource);
+        if (!cancellable.allowed) {
+          return NextResponse.json(
+            { error: cancellable.message, errorAr: cancellable.message, code: cancellable.code },
+            { status: 409 }
+          );
+        }
         updateData.moderatorCommission = 0; // No commission for rejected orders
         updateData.confirmationStatus = 'CANCELLED';
       }
@@ -743,6 +755,10 @@ export async function PATCH(
           where: { id: existing.customerId },
           data: { cancelledOrders: { increment: 1 } },
         });
+        // Stock is never held by a dead order. The reservation is dropped in
+        // THIS transaction, so a failure cannot leave the units reserved
+        // against an order that no longer exists in any queue.
+        await releaseOrderLines(tx, id);
       }
 
       // Status logs — one per changed category (mirrors the confirmation route)
