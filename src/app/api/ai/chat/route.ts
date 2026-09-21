@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
     // Pull ground-truth analytics first
     const analytics = await getCompanyAnalytics({ companyId, storeId }, { period });
-    const answer = await askAiAssistant(question, analytics.aiContext);
+    const answer = await askAiAssistant(question, analytics.aiContext, companyId);
 
     return NextResponse.json({
       success: true,

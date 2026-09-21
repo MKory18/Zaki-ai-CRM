@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
 import { Settings, Building2, Key, Webhook, ShieldCheck, Check } from 'lucide-react';
+import { AiSettingsCard } from '@/components/settings/AiSettingsCard';
 
 export function SystemSettingsScreen() {
   const { t } = useApp();
@@ -230,6 +231,8 @@ export function SystemSettingsScreen() {
             </Button>
           </div>
         </form>
+
+        <AiSettingsCard />
       </div>
     </>
   );
