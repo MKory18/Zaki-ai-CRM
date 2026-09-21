@@ -18,6 +18,9 @@ const { db, requireContext, assertOrderAccess, authorize, logAudit, activeBlock 
     orderNote: { create: vi.fn() },
     orderActivity: { create: vi.fn() },
     orderStatusLog: { create: vi.fn() },
+    // A phone is one of the fields the courier acts on, so the edit path now
+    // asks whether the order's batch has been handed over.
+    shippingBatch: { findFirst: vi.fn() },
     $transaction: vi.fn(),
   },
   requireContext: vi.fn(),
@@ -79,6 +82,8 @@ beforeEach(() => {
   assertOrderAccess.mockResolvedValue({ allowed: true, order: existing });
   authorize.mockReturnValue({ allowed: true });
   db.customer.findFirst.mockResolvedValue(null);
+  // These orders are still being worked; nothing has gone to a courier.
+  db.shippingBatch.findFirst.mockResolvedValue(null);
   db.$transaction.mockImplementation(async (fn: any) => fn(db));
   db.order.updateMany.mockResolvedValue({ count: 1 });
   db.order.findFirst.mockResolvedValue(existing);

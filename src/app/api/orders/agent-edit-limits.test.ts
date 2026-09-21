@@ -19,6 +19,7 @@ const { db, requireContext, authorize, can, logAudit } = vi.hoisted(() => ({
   db: {
     order: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     orderChannel: { findFirst: vi.fn() },
+    shippingBatch: { findFirst: vi.fn() },
     customer: { update: vi.fn() },
     orderStatusLog: { create: vi.fn() },
     orderActivity: { create: vi.fn() },
@@ -132,5 +133,39 @@ describe('someone who holds the authority', () => {
   it('may change the shipping cost', async () => {
     const res = await patch({ expectedVersion: 3, shippingCost: 7 });
     expect(res.status).not.toBe(403);
+  });
+});
+
+describe('an order whose batch has gone to the courier', () => {
+  beforeEach(asManager);
+
+  it('refuses the edit and points at a change request', async () => {
+    // The parcel is on a van. The address the driver holds is fixed
+    // somewhere we do not control, so this becomes somebody's decision,
+    // not somebody's edit.
+    db.shippingBatch.findFirst.mockResolvedValue({ status: 'SHIPPED', batchNumber: 'BATCH-2026-0007' });
+    const res = await patch({ expectedVersion: 3, customerAddress: 'شارع آخر' });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.code).toBe('ORDER_SEALED');
+    expect(body.fields).toEqual(['customerAddress']);
+    expect(body.error).toContain('طلب تعديل');
+  });
+
+  it('still lets a note through — it changes nothing for the driver', async () => {
+    db.shippingBatch.findFirst.mockResolvedValue({ status: 'SHIPPED', batchNumber: 'B' });
+    const res = await patch({ expectedVersion: 3, internalNotes: 'اتصل الزبون' });
+    expect(res.status).not.toBe(409);
+  });
+
+  it('edits normally while the batch is still open', async () => {
+    db.shippingBatch.findFirst.mockResolvedValue({ status: 'READY', batchNumber: 'B' });
+    const res = await patch({ expectedVersion: 3, customerAddress: 'شارع آخر' });
+    expect(res.status).not.toBe(409);
+  });
+
+  it('does not even look for a batch when nothing sealed was asked for', async () => {
+    await patch({ expectedVersion: 3, internalNotes: 'x' });
+    expect(db.shippingBatch.findFirst).not.toHaveBeenCalled();
   });
 });

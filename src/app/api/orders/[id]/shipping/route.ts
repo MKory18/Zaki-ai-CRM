@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { SEALED_BATCH_STATUSES } from '@/lib/order-seal';
 import { requireContext } from '@/lib/geo-context';
 import { consumeOrderStock } from '@/lib/stock-consumption';
 import { emitAppEvent, type AppEvent } from '@/lib/apps/events';
@@ -237,6 +238,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const batch = await db.shippingBatch.findFirst({ where: { id: shippingBatchId, companyId, storeId } });
         if (!batch) {
           return NextResponse.json({ error: 'Shipping batch not found in your company' }, { status: 404 });
+        }
+        // A batch stops taking work the moment the courier takes it away.
+        // Adding an order to a trolley that is already on a van is an order
+        // the driver does not have, on a manifest that says he does.
+        if (SEALED_BATCH_STATUSES.includes(batch.status as (typeof SEALED_BATCH_STATUSES)[number])) {
+          return NextResponse.json(
+            {
+              error: `الدفعة ${batch.batchNumber} سلِّمت لشركة الشحن ولم تعد تستقبل طلبات. أنشئ دفعة جديدة.`,
+              errorAr: `الدفعة ${batch.batchNumber} سلِّمت لشركة الشحن ولم تعد تستقبل طلبات. أنشئ دفعة جديدة.`,
+              code: 'BATCH_CLOSED_FOR_INTAKE',
+            },
+            { status: 409 }
+          );
         }
         updateData.shippingBatchId = batch.id;
         break;

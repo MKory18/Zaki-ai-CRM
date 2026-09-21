@@ -14,6 +14,7 @@ import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
 import { authorize, can } from '@/lib/authorization';
+import { orderSeal, sealedFieldsIn, sealMessage } from '@/lib/order-seal';
 
 /** Legacy combined status whitelist (mirrors the UI status config) */
 const ALLOWED_COMBINED_STATUSES = [
@@ -507,6 +508,35 @@ export async function PATCH(
         },
         { status: 403 }
       );
+    }
+
+    // ── The seal: a batch that has been handed over ──
+    //
+    // Once "استلمت شركة الشحن" is pressed the parcels have left the
+    // building, and the address the driver holds, the goods in the box and
+    // the amount he collects are all fixed somewhere we do not control.
+    // What was a direct edit becomes a change request: somebody who can
+    // still reach the courier decides, and says what has to happen if the
+    // change is no longer possible. Silence never approves it.
+    const sealedAsked = sealedFieldsIn(parsed.data as Record<string, unknown>);
+    if (sealedAsked.length > 0) {
+      const batch = await db.shippingBatch.findFirst({
+        where: { orders: { some: { id } }, companyId },
+        select: { status: true, batchNumber: true },
+      });
+      const seal = orderSeal({ shippingBatch: batch });
+      if (seal.sealed) {
+        return NextResponse.json(
+          {
+            error: sealMessage(seal.batchNumber, sealedAsked),
+            errorAr: sealMessage(seal.batchNumber, sealedAsked),
+            code: 'ORDER_SEALED',
+            fields: sealedAsked,
+            batchNumber: seal.batchNumber,
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // ── Order line editing (price / quantity / discount / shipping / product) ──
