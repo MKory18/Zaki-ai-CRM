@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Boxes, Truck, Bike, Loader2, Printer, Send, Lock } from 'lucide-react';
+import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock } from 'lucide-react';
 import { apiJson, apiFetch } from '@/lib/api-client';
+import type { DispatchSummary } from '@/lib/courier-dispatch';
 import { arDateShort } from '@/lib/format';
 
 /**
@@ -41,6 +42,7 @@ export function ShippingBatchesScreen() {
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<'all' | 'READY' | 'SHIPPED' | 'CLOSED'>('all');
   const [busy, setBusy] = useState<string | null>(null);
+  const [result, setResult] = useState<{ batchId: string; summary: DispatchSummary } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -71,6 +73,32 @@ export function ShippingBatchesScreen() {
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحديث');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * Hand this batch's orders to the courier and take back their barcodes.
+   *
+   * Reported per order, because twenty orders where three fail is seventeen
+   * parcels that must still ship — and the three need the courier's own
+   * words about why, not a single red line.
+   */
+  async function dispatch(batch: Batch) {
+    setBusy(batch.id);
+    setError(null);
+    setResult(null);
+    try {
+      const summary = await apiJson<DispatchSummary>(`/api/ops/shipments/${batch.id}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      setResult({ batchId: batch.id, summary });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر الترحيل');
     } finally {
       setBusy(null);
     }
@@ -193,6 +221,36 @@ export function ShippingBatchesScreen() {
 
                 {b.notes && <p className="text-[11px] text-[#697586]">{b.notes}</p>}
 
+                {result?.batchId === b.id && (
+                  <div className="rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] p-2.5 space-y-1">
+                    <p className="text-[11px] font-bold text-[#121926]">
+                      رُحّل {result.summary.sent}
+                      {result.summary.skipped > 0 && ` · تُخطّي ${result.summary.skipped}`}
+                      {result.summary.failed > 0 && ` · فشل ${result.summary.failed}`}
+                    </p>
+                    {result.summary.outcomes
+                      .filter((o) => !o.ok)
+                      .map((o) => (
+                        <p key={o.orderId} className="text-[10.5px] text-[#697586]">
+                          <span className="font-mono" dir="ltr">{o.orderNumber}</span>
+                          {' — '}
+                          {o.skipped === 'ALREADY_SENT'
+                            ? 'له باركود أصلاً'
+                            : o.skipped === 'NOT_AUTOMATED'
+                              ? 'شركة يدوية — لا API'
+                              : o.skipped === 'NO_PROVIDER'
+                                ? 'بلا شركة شحن'
+                                : o.error}
+                        </p>
+                      ))}
+                    {result.summary.outcomes.filter((o) => o.ok).length > 0 && (
+                      <p className="text-[10.5px] text-[#15803d]">
+                        الباركودات محفوظة على الطلبات — تظهر على البوليصة وتُتابَع بها الحالة.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   <button
                     onClick={() => printBatch(b)}
@@ -202,6 +260,22 @@ export function ShippingBatchesScreen() {
                     {busy === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
                     طباعة بوالص الدفعة
                   </button>
+
+                  {/* Send the orders to the courier and take their barcodes.
+                      Separate from marking the batch handed over: one is a
+                      call to their server, the other is our own record, and
+                      a courier's API being down must not stop a warehouse
+                      from closing a batch. */}
+                  {b.status === 'READY' && (
+                    <button
+                      onClick={() => dispatch(b)}
+                      disabled={busy === b.id || b._count.orders === 0}
+                      className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#b8256e] text-[#b8256e] font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+                    >
+                      {busy === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Barcode className="w-3.5 h-3.5" />}
+                      رحّل إلى الشركة واجلب الباركود
+                    </button>
+                  )}
 
                   {b.status === 'READY' && (
                     <button
