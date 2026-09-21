@@ -27,7 +27,13 @@ import {
 interface CreateOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  /**
+   * The created order, so a caller can act on it immediately — the batches
+   * screen confirms it on the spot, through the ordinary confirmation
+   * endpoint rather than a second path that would have to re-implement
+   * reservation and the status log.
+   */
+  onSuccess: (order?: { id: string; orderNumber?: string }) => void;
 }
 
 export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModalProps) {
@@ -167,7 +173,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'فشل إنشاء الطلب');
-      onSuccess();
+      onSuccess(data.order ?? data);
       onClose();
     } catch (err: any) {
       setError(err.message);

@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock, Download } from 'lucide-react';
+import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock, Download, Plus } from 'lucide-react';
 import { apiJson, apiFetch } from '@/lib/api-client';
 import type { DispatchSummary } from '@/lib/courier-dispatch';
 import { arDateShort } from '@/lib/format';
 import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
+import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 
 /**
  * /ops/batches — the handovers to the couriers.
@@ -46,6 +47,10 @@ export function ShippingBatchesScreen() {
   const [result, setResult] = useState<{ batchId: string; summary: DispatchSummary } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const labelSize = useLabelSize();
+  // Somebody phoned and ordered. There is nothing to confirm — the call WAS
+  // the confirmation — so the order goes straight to the packing line.
+  const [addingOrder, setAddingOrder] = useState(false);
+  const [addNotice, setAddNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -103,6 +108,38 @@ export function ShippingBatchesScreen() {
       setError(e instanceof Error ? e.message : 'تعذر الترحيل');
     } finally {
       setBusy(null);
+    }
+  }
+
+  /**
+   * Create the order, then confirm it through the ORDINARY confirmation
+   * endpoint.
+   *
+   * Not a second confirmation path: that one reserves the stock, stamps who
+   * confirmed and when, and writes the status log. Re-implementing any of
+   * that here would be a copy that drifts, and the first thing to drift
+   * would be the reservation — which is how a shelf ends up promising units
+   * it does not have.
+   */
+  async function addConfirmedOrder(order?: { id: string; orderNumber?: string }) {
+    await load();
+    if (!order?.id) return;
+    try {
+      const fresh = await apiJson<{ order: { version: number } }>(`/api/orders/${order.id}`);
+      await apiJson(`/api/orders/${order.id}/confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'confirm', expectedVersion: fresh.order.version }),
+      });
+      setAddNotice(`تم إنشاء ${order.orderNumber ?? 'الطلب'} وتأكيده — صار في شاشة التجهيز.`);
+    } catch (e) {
+      // The order exists either way; say so plainly rather than leaving
+      // somebody to wonder whether it was created at all.
+      setError(
+        `أُنشئ ${order.orderNumber ?? 'الطلب'} لكن تعذّر تأكيده تلقائياً: ${
+          e instanceof Error ? e.message : ''
+        } — أكّده من شاشة الطلبات.`
+      );
     }
   }
 
@@ -185,9 +222,24 @@ export function ShippingBatchesScreen() {
             {label}
           </button>
         ))}
+        <button
+          onClick={() => setAddingOrder(true)}
+          className="ms-auto inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#b8256e] text-white text-[11px] font-semibold hover:bg-[#a01f60]"
+          title="زبون اتصل وطلب — يُنشأ مؤكداً ويذهب مباشرة إلى التجهيز"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          أضف طلباً مؤكداً
+        </button>
+
         {/* The paper every «طباعة بوالص الدفعة» below will use. */}
-        <LabelSizePicker compact className="ms-auto flex items-center" />
+        <LabelSizePicker compact className="flex items-center" />
       </div>
+
+      {addNotice && (
+        <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">
+          {addNotice}
+        </p>
+      )}
 
       {error && (
         <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>
@@ -323,6 +375,11 @@ export function ShippingBatchesScreen() {
           })}
         </ul>
       )}
+    <CreateOrderModal
+        isOpen={addingOrder}
+        onClose={() => setAddingOrder(false)}
+        onSuccess={addConfirmedOrder}
+      />
     </div>
   );
 }
