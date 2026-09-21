@@ -133,14 +133,28 @@ export async function GET(req: Request) {
 
     await db.order.updateMany({ where: { id: { in: orders.map((o) => o.id) } }, data: { labelPrintedAt: new Date() } });
 
+    // How many labels the chosen paper holds, and therefore where the page
+    // breaks. A sheet that fits none of them still gets one per page rather
+    // than clipping it.
+    const pageW = batch.sheetWidth ?? batch.width;
+    const pageH = batch.sheetHeight ?? batch.height;
+    const across = Math.max(1, Math.floor(pageW / batch.width));
+    const down = Math.max(1, Math.floor(pageH / batch.height));
+    const perPage = Math.max(1, across * down);
+
     const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>بوالص الشحن</title>
 <style>
-  @page { size: ${batch.width}mm ${batch.height}mm; margin: 0; }
+  @page { size: ${pageW}mm ${pageH}mm; margin: 0; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: Tahoma, Arial, sans-serif; color: #121926; }
-  .label { width: ${batch.width}mm; height: ${batch.height}mm; padding: 4mm; page-break-after: always;
-           display: flex; flex-direction: column; gap: 2mm; border-bottom: 1px dashed #ccc; }
+  body { margin: 0; font-family: Tahoma, Arial, sans-serif; color: #121926;
+         display: flex; flex-wrap: wrap; align-content: flex-start; width: ${pageW}mm; }
+  /* On a thermal roll the page IS the label. On office paper as many fit as
+     fit, and only the last one on a sheet breaks the page — a run of thirty
+     orders used to eat thirty sheets for a quarter of their area each. */
+  .label { width: ${batch.width}mm; height: ${batch.height}mm; padding: 4mm;
+           display: flex; flex-direction: column; gap: 2mm; border: 1px dashed #ccc; }
+  .label:nth-child(${perPage}n) { page-break-after: always; }
   .head { display: flex; justify-content: space-between; align-items: center; font-size: 10pt; border-bottom: 1px solid #000; padding-bottom: 1mm; }
   .who .name { font-size: 12pt; font-weight: bold; margin: 0 0 1mm; }
   .who p { margin: 0; font-size: 9pt; }

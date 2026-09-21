@@ -21,6 +21,9 @@ const tokenSchema = z.object({
   orderIds: z.array(z.string().uuid()).min(1).max(200),
   width: z.number().int().min(40).max(300).default(100),
   height: z.number().int().min(40).max(300).default(150),
+  // The paper. Omitted means the page is the label — a thermal roll.
+  sheetWidth: z.number().int().min(40).max(500).optional(),
+  sheetHeight: z.number().int().min(40).max(500).optional(),
 });
 
 export async function GET(req: Request) {
@@ -91,6 +94,8 @@ export async function POST(req: Request) {
       orderIds: owned.map((o) => o.id),
       width: parsed.data.width,
       height: parsed.data.height,
+      sheetWidth: parsed.data.sheetWidth,
+      sheetHeight: parsed.data.sheetHeight,
     });
 
     return NextResponse.json({ token, count: owned.length, printPath: `/api/ops/labels/print?t=${token}` });

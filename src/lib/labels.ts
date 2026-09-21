@@ -22,6 +22,9 @@ export interface LabelBatch {
   /** Millimetres; the operator may pick a custom size. */
   width: number;
   height: number;
+  /** The paper. Omitted means the page is the label — a thermal roll. */
+  sheetWidth?: number;
+  sheetHeight?: number;
 }
 
 export async function signLabelBatch(batch: LabelBatch): Promise<string> {
@@ -43,13 +46,14 @@ export async function verifyLabelBatch(token: string): Promise<LabelBatch | null
       orderIds,
       width: typeof payload.width === 'number' ? payload.width : 100,
       height: typeof payload.height === 'number' ? payload.height : 150,
+      sheetWidth: typeof payload.sheetWidth === 'number' ? payload.sheetWidth : undefined,
+      sheetHeight: typeof payload.sheetHeight === 'number' ? payload.sheetHeight : undefined,
     };
   } catch {
     return null;
   }
 }
 
-/** Label sizes in millimetres; "custom" is allowed via the API. */
 /**
  * The papers a waybill is actually printed on.
  *
@@ -58,13 +62,26 @@ export async function verifyLabelBatch(token: string): Promise<LabelBatch | null
  * sheet. Sizes are in millimetres, portrait, and the print stylesheet sets
  * the page to exactly these.
  */
-export const LABEL_SIZES = [
+export interface LabelSize {
+  key: string;
+  label: string;
+  /** The label itself, in millimetres. */
+  width: number;
+  height: number;
+  /** The paper it is printed on. Omitted means the page IS the label —
+   *  a thermal roll, one waybill per page. */
+  sheet?: { width: number; height: number };
+}
+
+export const LABEL_SIZES: readonly LabelSize[] = [
   { key: '100x150', label: '100×150 مم (حراري)', width: 100, height: 150 },
   { key: '100x100', label: '100×100 مم (حراري)', width: 100, height: 100 },
-  { key: 'a6', label: 'A6 — 105×148 مم', width: 105, height: 148 },
-  { key: 'a5', label: 'A5 — 148×210 مم', width: 148, height: 210 },
-  { key: 'a4', label: 'A4 — 210×297 مم', width: 210, height: 297 },
-] as const;
+  // On office paper the waybill is not the page: several share a sheet, or
+  // a run of thirty orders eats thirty sheets for a quarter of their area.
+  { key: 'a6', label: 'A6 على ورقة A4 (4 لكل ورقة)', width: 105, height: 148, sheet: { width: 210, height: 297 } },
+  { key: 'a5', label: 'A5 على ورقة A4 (2 لكل ورقة)', width: 148, height: 210, sheet: { width: 210, height: 297 } },
+  { key: 'a4', label: 'A4 كاملة (بوليصة لكل ورقة)', width: 210, height: 297, sheet: { width: 210, height: 297 } },
+];
 
 /**
  * Code 128B barcode as SVG paths — no runtime dependency, no external call.

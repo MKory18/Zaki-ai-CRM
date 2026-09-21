@@ -12,6 +12,7 @@ import { OrderLinesCard } from '@/components/orders/OrderLinesCard';
 import { ConfirmationActions } from '@/components/orders/ConfirmationActions';
 import { ShippingSection } from '@/components/orders/ShippingSection';
 import { useApp } from '@/context/AppContext';
+import { userCan } from '@/lib/can';
 import { apiFetch, apiJson } from '@/lib/api-client';
 import { CustomerHistoryModal } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
@@ -437,6 +438,9 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   // The store's currency, the same one the orders list prints.
   const money = (n: number) => amount(n, currency);
 
+  const mayRecordCalls =
+    userCan(currentUser, 'orders.confirm') || userCan(currentUser, 'confirmation.work');
+
   // Derived here from the order the screen already holds — the same way the
   // state and the zone are derived, and never stored.
   const stages = orderStages(order, {
@@ -602,7 +606,14 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               stage is a record, and a record you can edit is not a record. */}
           <OrderStages stages={stages} />
 
-          {/* ─── Quick confirmation actions ─── */}
+          {/* What was said about it, under what happened to it. */}
+          <OrderNotes orderId={order.id} />
+
+          {/* Recording a call outcome is the confirmation agent's job. For an
+              owner this screen is oversight, and a panel of buttons whose
+              every press the server refuses is worse than no panel. The
+              server still enforces it — this only stops offering it. */}
+          {mayRecordCalls && (
           <ConfirmationActions
             order={order}
             ar={ar}
@@ -612,6 +623,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               onRefresh();
             }}
           />
+          )}
 
         </div>
 
@@ -761,9 +773,6 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               </>
             )}
           </div>
-
-          {/* The conversation about this order, appended and never edited. */}
-          <OrderNotes orderId={order.id} />
 
           {/* Timeline — merged from every event table (src/lib/order-timeline.ts),
               not just the activity log, so it always matches the state above. */}

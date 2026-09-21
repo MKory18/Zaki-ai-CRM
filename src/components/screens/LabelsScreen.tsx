@@ -62,7 +62,13 @@ export function LabelsScreen() {
 
   const dims = () => {
     const preset = LABEL_SIZES.find((s) => s.key === size);
-    return preset ? { width: preset.width, height: preset.height } : custom;
+    if (!preset) return custom;
+    return {
+      width: preset.width,
+      height: preset.height,
+      sheetWidth: preset.sheet?.width,
+      sheetHeight: preset.sheet?.height,
+    };
   };
 
   const openBatch = async (format?: 'csv') => {
