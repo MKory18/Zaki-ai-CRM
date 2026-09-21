@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { requirePermission } from '@/lib/authorization';
+import { mayDecide } from '@/lib/change-request-routing';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 
@@ -26,7 +26,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
-    await requirePermission('control.change_requests');
 
     const parsed = decideSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -38,7 +37,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const request = await db.orderChangeRequest.findFirst({
       where: { id, companyId, order: { storeId } },
-      include: { order: { select: { id: true, orderNumber: true } } },
+      // Who may decide depends on how far the order has travelled, so the
+      // stage travels with the request.
+      include: {
+        order: {
+          select: { id: true, orderNumber: true, confirmationStatus: true, claimedById: true },
+        },
+      },
     });
     if (!request) return NextResponse.json({ error: 'طلب التعديل غير موجود' }, { status: 404 });
     if (request.status !== 'PENDING') {
@@ -47,6 +52,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (request.requestedById === user.id) {
       return NextResponse.json(
         { error: 'لا يمكنك اعتماد طلب تعديل قدّمته بنفسك', code: 'SELF_APPROVAL' },
+        { status: 403 }
+      );
+    }
+
+    // The only person who can answer "can this still be changed?" is the one
+    // holding the order. Before confirmation that is the agent on the phone
+    // with the customer; after it the order is in a batch or on a van and the
+    // question becomes whether the courier can still be reached — which was
+    // never the agent's authority. A supervisor may decide either way, so an
+    // escalation path never depends on one person being at their desk.
+    const routing = mayDecide(user, request.order);
+    if (!routing.allowed) {
+      return NextResponse.json(
+        {
+          error: routing.reason,
+          errorAr: routing.reason,
+          code: 'NOT_THE_DECIDER',
+          decider: routing.decider,
+        },
         { status: 403 }
       );
     }
