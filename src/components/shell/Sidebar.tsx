@@ -1,16 +1,24 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { Hammer } from 'lucide-react';
+import { Hammer, ChevronDown } from 'lucide-react';
 import type { NavGroup } from '@/lib/route-registry';
 import { iconFor } from './icons';
+
+const OPEN_GROUPS_KEY = 'osm.sidebar.open';
 
 /**
  * The ten contract groups, RTL. The server already removed every route this
  * user may not open (visibleNav) — nothing here decides access.
+ *
+ * The groups collapse. Fifty screens in one scroll means hunting for the one
+ * you want; folded, the sidebar shows ten headings and you open the one you
+ * are working in. The group holding the current page always opens itself, so
+ * you are never looking at a closed list that contains where you are, and
+ * what you leave open is remembered on this browser.
  */
 export function Sidebar({
   groups,
@@ -22,6 +30,43 @@ export function Sidebar({
   onClose?: () => void;
 }) {
   const pathname = usePathname();
+
+  /** The group the current page lives in — always open, never collapsible shut. */
+  const activeGroup = useMemo(
+    () =>
+      groups.find((g) =>
+        g.routes.some((r) => pathname === r.path || pathname.startsWith(r.path + '/'))
+      )?.key ?? null,
+    [groups, pathname]
+  );
+
+  const [open, setOpen] = useState<Set<string>>(new Set());
+
+  // What was left open last time, per browser. A missing or unreadable value
+  // is not a failure: the active group opens either way.
+  useEffect(() => {
+    let stored: string[] = [];
+    try {
+      stored = JSON.parse(localStorage.getItem(OPEN_GROUPS_KEY) ?? '[]');
+    } catch {
+      stored = [];
+    }
+    setOpen(new Set(Array.isArray(stored) ? stored : []));
+  }, []);
+
+  function toggle(key: string) {
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify([...next]));
+      } catch {
+        // A browser that refuses storage still gets working navigation.
+      }
+      return next;
+    });
+  }
 
   return (
     <>
@@ -49,12 +94,26 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 overflow-y-auto sidebar-scroll py-3 space-y-0.5">
-          {groups.map((group) => (
+          {groups.map((group) => {
+            const isOpen = open.has(group.key) || activeGroup === group.key;
+            const count = group.routes.length;
+
+            return (
             <div key={group.key} className="pb-1">
-              <p className="px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[#5b6474]">
-                {group.label}
-              </p>
-              {group.routes.map((route) => {
+              <button
+                onClick={() => toggle(group.key)}
+                aria-expanded={isOpen}
+                className="w-full flex items-center justify-between gap-2 px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[#5b6474] hover:text-[#9aa4b2] transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  {group.label}
+                  {!isOpen && <span className="text-[#3f4757] tabular-nums">{count}</span>}
+                </span>
+                <ChevronDown
+                  className={clsx('w-3.5 h-3.5 transition-transform', isOpen ? '' : '-rotate-90')}
+                />
+              </button>
+              {isOpen && group.routes.map((route) => {
                 const Icon = iconFor(route.icon);
                 const isActive = pathname === route.path || pathname.startsWith(route.path + '/');
                 return (
@@ -91,7 +150,8 @@ export function Sidebar({
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </nav>
       </aside>
     </>

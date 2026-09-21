@@ -19,10 +19,17 @@ const REJECTED_STATUSES = ['REJECTED', 'CANCELLED', 'RETURNED', 'FAILED_DELIVERY
 const PRODUCT_REJECTED_STATUSES = ['REJECTED', 'CANCELLED', 'RETURNED'];
 const SHIPPED_STATUSES = ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
-function clampStart(start: Date): Date {
+/** The earliest moment any analytics query may reach back to. */
+function windowStart(): Date {
   const min = new Date();
-  min.setHours(23, 59, 59, 999);
+  min.setHours(0, 0, 0, 0);
   min.setDate(min.getDate() - MAX_WINDOW_DAYS);
+  return min;
+}
+
+/** An explicit start, pulled forward if it reaches past the safety window. */
+function clampStart(start: Date): Date {
+  const min = windowStart();
   return start < min ? min : start;
 }
 
@@ -74,8 +81,11 @@ export function getDateRange(filter: DateFilter): { start?: Date; end?: Date } {
     }
     case 'all':
     default:
-      // 'all' is clamped to the last 90 days (see MAX_WINDOW_DAYS above)
-      return { start: clampStart(todayStart), end: todayEnd };
+      // "الكل" means the whole safety window, not today. It used to call
+      // clampStart(todayStart), and clamping TODAY against a 90-day-ago
+      // minimum returns today — so every headline figure on the dashboard
+      // was the last 24 hours wearing the label "الكل".
+      return { start: windowStart(), end: todayEnd };
   }
 }
 
@@ -179,16 +189,57 @@ export async function getCompanyAnalytics(
     operationalExpenses: totalExpenses,
   });
 
-  // ─── 3. Product stats: GROUP BY (productId, status) with conditional sums ───
-  const productGroups = await db.order.groupBy({
-    by: ['productId', 'status'],
-    where: baseWhere,
-    _count: { _all: true },
-    _sum: {
-      totalAmount: true,
-      estimatedCostOfGoods: true,
-      shippingCost: true,
-    },
+  // ─── 3. Product stats, read from the order LINES ───
+  //
+  // Grouping on orders.productId counts a whole order against its first
+  // product: an order holding a cream and a serum put both its revenue and
+  // its delivery under the cream, and the serum looked like it never sold.
+  // The lines are where the products actually are, so each one is counted
+  // with its own quantity and its own share of the money.
+  const lineGroups = await db.orderItem.groupBy({
+    by: ['productId', 'orderId'],
+    where: { order: baseWhere },
+    _sum: { lineTotal: true, quantity: true },
+  });
+
+  // The status and the costs belong to the ORDER; a line inherits them, and
+  // the order's costs are split across its lines by their share of value so
+  // the parts still add back up to the whole.
+  const orderIds = Array.from(new Set(lineGroups.map((g) => g.orderId)));
+  const orderRows = orderIds.length
+    ? await db.order.findMany({
+        where: { id: { in: orderIds } },
+        select: {
+          id: true, status: true, totalAmount: true,
+          estimatedCostOfGoods: true, shippingCost: true,
+        },
+      })
+    : [];
+  const orderOf = new Map(orderRows.map((o) => [o.id, o]));
+
+  // Each order's total line value, to allocate its costs proportionally.
+  const orderLineValue = new Map<string, number>();
+  for (const g of lineGroups) {
+    orderLineValue.set(g.orderId, (orderLineValue.get(g.orderId) ?? 0) + Number(g._sum.lineTotal ?? 0));
+  }
+
+  const productGroups = lineGroups.map((g) => {
+    const order = orderOf.get(g.orderId);
+    const share = (() => {
+      const whole = orderLineValue.get(g.orderId) ?? 0;
+      if (whole <= 0) return 1;
+      return Number(g._sum.lineTotal ?? 0) / whole;
+    })();
+    return {
+      productId: g.productId,
+      status: order?.status ?? 'NEW',
+      _count: { _all: 1 },
+      _sum: {
+        totalAmount: (Number(order?.totalAmount ?? 0)) * share,
+        estimatedCostOfGoods: (Number(order?.estimatedCostOfGoods ?? 0)) * share,
+        shippingCost: (Number(order?.shippingCost ?? 0)) * share,
+      },
+    };
   });
 
   const productIds = Array.from(new Set(productGroups.map((g) => g.productId)));

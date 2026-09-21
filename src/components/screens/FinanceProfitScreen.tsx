@@ -21,6 +21,8 @@ import { format } from 'date-fns';
 export function FinanceProfitScreen() {
   const { t } = useApp();
   const [data, setData] = useState<any>(null);
+  // Per-product profit, from the endpoint that had no screen.
+  const [profitability, setProfitability] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
 
@@ -35,6 +37,10 @@ export function FinanceProfitScreen() {
   const loadFinance = async () => {
     setLoading(true);
     try {
+      fetch('/api/finance/profitability?limit=20')
+        .then((r) => (r.ok ? r.json() : { products: [] }))
+        .then((d) => setProfitability(d.products ?? d ?? []))
+        .catch(() => setProfitability([]));
       const res = await fetch('/api/finance');
       if (res.ok) {
         const json = await res.json();
@@ -219,6 +225,43 @@ export function FinanceProfitScreen() {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Which products actually make money. The endpoint behind this was
+            built and never connected, so the profit screen could say what the
+            shop earned but not what earned it. */}
+        <Card>
+          <CardHeader title="ربحية المنتجات" subtitle="من الطلبات المسلَّمة — الإيراد ناقص كلفة البضاعة والشحن" />
+          <CardContent className="p-0">
+            {profitability === null ? (
+              <p className="p-6 text-sm text-[#9aa4b2] text-center">جارٍ التحميل…</p>
+            ) : profitability.length === 0 ? (
+              <p className="p-6 text-sm text-[#9aa4b2] text-center">لا مبيعات مسلَّمة بعد.</p>
+            ) : (
+              <ul className="divide-y divide-[#e3e8ef]">
+                {profitability.map((p: any) => (
+                  <li key={p.id ?? p.name} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-xs">
+                    <span className="font-semibold text-[#121926] min-w-[150px] truncate">{p.name}</span>
+                    <span className="text-[#697586]">
+                      طلبات: <span className="tabular-nums text-[#121926] font-semibold">{p.ordersCount}</span>
+                    </span>
+                    <span className="text-[#697586]">
+                      مسلَّم: <span className="tabular-nums text-[#121926] font-semibold">{p.deliveredOrders}</span>
+                    </span>
+                    <span className="text-[#697586]">
+                      إيراد: <span className="tabular-nums text-[#121926] font-semibold">{Number(p.revenue).toFixed(2)}</span>
+                    </span>
+                    <span className="ms-auto tabular-nums font-bold text-[#00a344]">
+                      {Number(p.netProfit).toFixed(2)}
+                      <span className="text-[10px] text-[#9aa4b2] font-normal">
+                        {' '}صافي · {p.profitMargin ?? 0}%
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>
