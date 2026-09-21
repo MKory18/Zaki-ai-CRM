@@ -56,6 +56,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
               scopeIds: p.scopeIds ?? undefined,
             })),
           },
+          // The copy was issued with what it was copied from — that is its
+          // baseline, not whatever the source role drifts to afterwards.
+          defaults: {
+            create: source.permissions.map((p) => ({
+              permission: p.permission,
+              scope: p.scope,
+              scopeIds: p.scopeIds ?? undefined,
+            })),
+          },
         },
         include: { permissions: true },
       });

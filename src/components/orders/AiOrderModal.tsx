@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
-import { SYRIAN_GOVERNORATES } from '@/lib/syria';
+import { useRegions } from '@/hooks/useRegions';
 import {
   Sparkles,
   Wand2,
@@ -52,6 +52,9 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ParseResult | null>(null);
+  // Governorates of the selected country (never a hard-coded country list).
+  const { regions, countryName } = useRegions();
+  const regionNames = regions.map((r) => r.name);
 
   // Editable confirmed fields
   const [products, setProducts] = useState<any[]>([]);
@@ -225,29 +228,23 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               <Input label="الاسم" value={p.customerName} onChange={(e) => setResult({ ...result, parsed: { ...p, customerName: e.target.value } })} />
               <Input label="الرقم" value={p.phone} onChange={(e) => setResult({ ...result, parsed: { ...p, phone: e.target.value } })} />
               <Select
-              label="المحافظة السورية"
-              value={
-                SYRIAN_GOVERNORATES.includes(p.governorate) || p.governorate === 'أخرى'
-                  ? p.governorate
-                  : 'أخرى'
-              }
+              label={`المحافظة${countryName ? ` — ${countryName}` : ''}`}
+              value={regionNames.includes(p.governorate) ? p.governorate : ''}
               onChange={(e) =>
                 setResult({ ...result, parsed: { ...p, governorate: e.target.value } })
               }
             >
-              {SYRIAN_GOVERNORATES.map((gov) => (
+              <option value="">اختر المحافظة</option>
+              {regionNames.map((gov) => (
                 <option key={gov} value={gov}>
                   {gov}
                 </option>
               ))}
-              <option value="أخرى">أخرى / خارج سوريا</option>
             </Select>
-            {!SYRIAN_GOVERNORATES.includes(p.governorate) && p.governorate && (
-              <Input
-                label="المحافظة (كما وردت في الطلب)"
-                value={p.governorate}
-                onChange={(e) => setResult({ ...result, parsed: { ...p, governorate: e.target.value } })}
-              />
+            {p.governorate && !regionNames.includes(p.governorate) && (
+              <p className="text-[11px] text-[#c07f2a]">
+                «{p.governorate}» ليست من محافظات {countryName ?? 'البلد الحالي'} — اختر المحافظة الصحيحة.
+              </p>
             )}
             <Input label="العنوان" value={p.address} onChange={(e) => setResult({ ...result, parsed: { ...p, address: e.target.value } })} />
             </div>

@@ -8,6 +8,7 @@ import {
 } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
+import { markLogin } from '@/lib/attendance';
 import { UserRole, UserStatus, ROLE_PERMISSIONS } from '@/types/auth';
 
 export async function POST(req: Request) {
@@ -61,7 +62,26 @@ export async function POST(req: Request) {
     }
 
     // Update last login
-    await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    // ── One account, one device at a time ──
+    //
+    // Every session carries the tokenVersion it was signed with, and
+    // verifySessionToken refuses a token whose version is no longer the
+    // user's. Bumping it here means signing in anywhere signs out
+    // everywhere else — the newest sign-in wins.
+    //
+    // This is what stops one account being shared by three people: not a
+    // rule in a handbook, but a session that stops working the moment
+    // somebody else uses the same login.
+    const refreshed = await db.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), tokenVersion: { increment: 1 } },
+      select: { tokenVersion: true },
+    });
+
+    // Signing in IS the fingerprint. There is no button to forget, and
+    // since an account opens on one device at a time, it is a mark nobody
+    // can press from somebody else's phone. It never blocks the login.
+    await markLogin(user.companyId, user.id);
 
     await logAudit({
       companyId: user.companyId || 'platform',
@@ -79,7 +99,7 @@ export async function POST(req: Request) {
       role,
       status,
       companyId: user.companyId,
-      tv: user.tokenVersion,
+      tv: refreshed.tokenVersion,
       remember: !!remember,
     });
 

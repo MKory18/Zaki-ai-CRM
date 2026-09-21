@@ -320,6 +320,17 @@ async function main() {
   await prisma.inventoryMovement.deleteMany();
   await prisma.productionBatch.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.returnReceipt.deleteMany();
+  await prisma.deliveryFee.deleteMany();
+  await prisma.orderIssue.deleteMany();
+  await prisma.orderChangeRequest.deleteMany();
+  await prisma.orderNote.deleteMany();
+  await prisma.orderItem.deleteMany();
+  await prisma.userStoreAccess.deleteMany();
+  await prisma.userCountryAccess.deleteMany();
+  await prisma.store.deleteMany();
+  await prisma.region.deleteMany();
+  await prisma.country.deleteMany();
   await prisma.user.deleteMany();
   await prisma.company.deleteMany();
 
@@ -376,6 +387,35 @@ async function main() {
     },
   });
 
+  // Contract roles the confirmation centre needs (Stage 2/4).
+  await prisma.user.create({
+    data: {
+      companyId: company.id, email: 'agent@bioderma.com', name: 'موظف التأكيد',
+      passwordHash, role: 'CONFIRMATION_AGENT', status: 'ACTIVE',
+    },
+  });
+  await prisma.user.create({
+    data: {
+      companyId: company.id, email: 'supervisor@bioderma.com', name: 'مشرف التأكيد',
+      passwordHash, role: 'CONFIRMATION_SUPERVISOR', status: 'ACTIVE',
+    },
+  });
+  await prisma.user.create({
+    data: {
+      companyId: company.id, email: 'warehouse@bioderma.com', name: 'أمين المستودع',
+      passwordHash, role: 'WAREHOUSE', status: 'ACTIVE',
+    },
+  });
+  // Settlement is a separate pair of hands from the cashbox: whoever imports
+  // and approves a courier statement must not be the one who approves the
+  // day's closing.
+  await prisma.user.create({
+    data: {
+      companyId: company.id, email: 'settlement@bioderma.com', name: 'موظف التسويات',
+      passwordHash, role: 'SETTLEMENT_OFFICER', status: 'ACTIVE',
+    },
+  });
+
   const modsData = [
     { email: 'sara@bioderma.com', name: 'سارة محمود', phone: '+962 790 000 001', commissionRate: 5 },
     { email: 'omar@bioderma.com', name: 'عمر خالد', phone: '+962 790 000 002', commissionRate: 5 },
@@ -387,6 +427,50 @@ async function main() {
     });
   }
   console.log('✅ Users & roles created');
+
+  // Geo context: default country + store, every company user may enter it
+  // (same shape as the stage1_geo_context migration backfill).
+  const country = await prisma.country.create({
+    data: {
+      companyId: company.id, code: 'JO', name: 'الأردن', currencyCode: 'JOD', minorUnit: 3,
+      weekendDays: [5, 6], timezone: 'Asia/Amman', orderPrefix: 'ORD',
+    },
+  });
+  const store = await prisma.store.create({
+    data: { companyId: company.id, countryId: country.id, name: company.name, slug: 'main' },
+  });
+  const companyUsers = await prisma.user.findMany({ where: { companyId: company.id }, select: { id: true } });
+  await prisma.userCountryAccess.createMany({
+    data: companyUsers.map((u) => ({ userId: u.id, countryId: country.id })),
+  });
+  // Governorates of the country, and a courier with a fee per governorate:
+  // without a fee row a shipment is blocked by rule, so the demo data has to
+  // carry the whole chain.
+  const JO_REGIONS = [
+    'عمّان', 'إربد', 'الزرقاء', 'البلقاء', 'المفرق', 'الكرك',
+    'جرش', 'مأدبا', 'عجلون', 'العقبة', 'معان', 'الطفيلة',
+  ];
+  await prisma.region.createMany({
+    data: JO_REGIONS.map((name, i) => ({ countryId: country.id, name, sortOrder: i })),
+  });
+  const regions = await prisma.region.findMany({ where: { countryId: country.id } });
+
+  const courier = await prisma.deliveryProvider.create({
+    data: { companyId: company.id, name: 'أرامكس الأردن', code: 'ARAMEX-JO', phone: '+962 6 000 0000' },
+  });
+  await prisma.deliveryFee.createMany({
+    data: regions.map((r) => ({
+      companyId: company.id,
+      countryId: country.id,
+      deliveryProviderId: courier.id,
+      regionId: r.id,
+      fee: r.name === 'عمّان' ? 2.5 : 3.5,
+      lateThresholdDays: r.name === 'عمّان' ? 2 : 4,
+      returnFee: 1.5,
+    })),
+  });
+
+  console.log('✅ Country, store, regions, courier & delivery fees created');
 
   // Products + offers
   let batchNo = 1;
@@ -483,9 +567,12 @@ async function main() {
   const scrub = await prisma.product.findFirst({ where: { sku: 'MB-SCRUB-01' } });
   const scrubOffer = await prisma.offer.findFirst({ where: { productId: scrub!.id, quantity: 1 } });
 
+  const amman = regions.find((r) => r.name === 'عمّان')!;
+
   const order1 = await prisma.order.create({
     data: {
-      companyId: company.id, orderNumber: 'ORD-2026-0001',
+      companyId: company.id, countryId: country.id, storeId: store.id,
+      orderNumber: 'ORD-2026-0001', merchantRef: 'ORD-2026-0001', regionId: amman.id,
       customerId: cust1.id, productId: scrub!.id, offerId: scrubOffer!.id,
       quantity: 1, sellingPrice: 12, shippingCost: 0, totalAmount: 12,
       currency: 'JOD', moderatorId: modSara!.id,
@@ -512,9 +599,10 @@ async function main() {
       address: 'تلاع العلي', city: 'عمّان', country: 'الأردن', totalOrders: 1,
     },
   });
-  await prisma.order.create({
+  const order2 = await prisma.order.create({
     data: {
-      companyId: company.id, orderNumber: 'ORD-2026-0002',
+      companyId: company.id, countryId: country.id, storeId: store.id,
+      orderNumber: 'ORD-2026-0002', merchantRef: 'ORD-2026-0002', regionId: amman.id,
       customerId: cust2.id, productId: scarProd!.id, offerId: scarOffer!.id,
       quantity: 2, sellingPrice: 35, shippingCost: 0, totalAmount: 35,
       currency: 'USD', moderatorId: modOmar!.id,
@@ -522,6 +610,28 @@ async function main() {
       estimatedCostOfGoods: Number((35 * 0.35).toFixed(2)),
       status: 'CONFIRMED', source: 'TikTok',
       confirmedAt: new Date(),
+    },
+  });
+
+  // Order lines: unit price derived from the order total (legacy sellingPrice
+  // is the total for the whole quantity), discount share stays on the line.
+  await prisma.orderItem.createMany({
+    data: [
+      {
+        companyId: company.id, orderId: order1.id, productId: scrub!.id, productName: scrub!.name,
+        quantity: 1, unitPrice: 12, lineTotal: 12, addedStage: 'INTAKE',
+      },
+      {
+        companyId: company.id, orderId: order2.id, productId: scarProd!.id, productName: scarProd!.name,
+        quantity: 2, unitPrice: 17.5, lineTotal: 35, addedStage: 'INTAKE',
+      },
+    ],
+  });
+
+  await prisma.orderNote.create({
+    data: {
+      companyId: company.id, orderId: order1.id, authorId: modSara!.id, kind: 'follow_up',
+      body: 'الزبون أكد الطلب وطلب التوصيل صباحاً.',
     },
   });
 

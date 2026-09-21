@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
+import { computeCod } from '@/lib/money';
+import { hasEverShipped, assertCancellable, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
+import { releaseOrderLines } from '@/lib/reservation';
 import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
-import { authorize } from '@/lib/authorization';
+import { authorize, can } from '@/lib/authorization';
+import { orderSeal, sealedFieldsIn, sealMessage } from '@/lib/order-seal';
+import { zodMessage } from '@/lib/zod-message';
 
 /** Legacy combined status whitelist (mirrors the UI status config) */
 const ALLOWED_COMBINED_STATUSES = [
@@ -33,7 +39,29 @@ const patchSchema = z.object({
   // Customer fields are validated when present (trimmed strings)
   customerName: z.string().trim().min(2).max(80).optional(),
   customerPhone: z.string().trim().min(7).max(20).optional(),
+  // The second number the customer answers on. Empty clears it.
+  customerAltPhone: z.string().trim().max(20).nullable().optional(),
   customerAddress: z.string().trim().max(300).optional(),
+  // The order's lines, replaced as a set: what is sent IS the order now, so
+  // removing a product is simply leaving it out.
+  items: z
+    .array(
+      z.object({
+        productId: z.string().min(10).max(64),
+        quantity: z.coerce.number().int().min(1).max(999),
+        unitPrice: z.coerce.number().min(0).max(100000),
+      })
+    )
+    .min(1)
+    .max(20)
+    .optional(),
+  // Where this order came through. Correcting it is an ordinary edit: the
+  // numbers are counted per channel and an order filed under the wrong one
+  // is a wrong number, not a wrong label.
+  channelId: z.string().uuid().nullable().optional(),
+  // The governorate the order ships to. The delivery-fee table is keyed on
+  // it, so it is editable here rather than only at intake.
+  regionId: z.string().uuid().optional().nullable(),
   postponedUntil: parseableDate.nullable().optional(),
   trackingCode: z.string().trim().max(100).optional().nullable(),
   confirmationStatus: z.enum(CONFIRMATION_STATUSES).optional(),
@@ -52,8 +80,8 @@ const patchSchema = z.object({
  * so prev/next navigation matches the exact list context (filters + tenant + RBAC).
  */
 async function buildNavigationWhere(order: { createdAt: Date; companyId: string }, searchParams: URLSearchParams) {
-  const { user, companyId } = await requireCompanyTenant();
-  const where: any = { companyId: order.companyId };
+  const { user, companyId, storeId } = await requireContext();
+  const where: any = { companyId, storeId };
 
   // RBAC: self-scoped roles navigate within their own visibility envelope
   // (same orderVisibilityWhere used by the list API's queue filtering)
@@ -94,13 +122,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId, country } = await requireContext();
     const { searchParams } = new URL(req.url);
 
     // ── Phase S: role-scoped access (same envelope as the list API) ──
     // Self-scoped roles may only read orders assigned/claimed/created by them
     // or claimable queue items — never another employee's private orders.
-    const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found' }, { status: map[access.reason] });
@@ -112,8 +140,21 @@ export async function GET(
         customer: true,
         product: true,
         offer: true,
+        region: { select: { id: true, name: true } },
+        // The real order lines. The legacy productId column holds only the
+        // first one, so anything reading the order as a whole — partial
+        // delivery, preparation, returns — needs these.
+        items: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true, productId: true, productName: true,
+            quantity: true, freeQuantity: true, unitPrice: true,
+            discountShare: true, lineTotal: true, reservedQty: true,
+            deliveredQty: true, returnedQty: true,
+          },
+        },
+        deliveryProvider: { select: { id: true, name: true, code: true } },
         landingPage: { select: { id: true, name: true, slug: true } },
-        landingPageOffer: { select: { id: true, name: true, quantity: true, freeQuantity: true, price: true } },
         addOns: { orderBy: { createdAt: 'asc' } },
         moderator: { select: { id: true, name: true, email: true, phone: true } },
         claimer: { select: { id: true, name: true } },
@@ -131,6 +172,9 @@ export async function GET(
         activities: {
           orderBy: { createdAt: 'desc' },
         },
+        // Counts, not rows: the journey cards show how many attempts a stage
+        // took, and the attempts themselves are in the merged event log.
+        _count: { select: { contactAttempts: true, deliveryAttempts: true } },
         telegramMessages: {
           orderBy: { createdAt: 'desc' },
           select: { id: true, chatId: true, threadId: true, threadName: true, messageId: true, createdAt: true },
@@ -190,7 +234,36 @@ export async function GET(
       // Navigation is best-effort; never fail the order fetch because of it
     }
 
-    return NextResponse.json({ order, previousOrderId, nextOrderId });
+    // The SAME derived state every other screen shows. The stored `status`
+    // column is legacy and drifts: an order can read CONFIRMED there while it
+    // is already READY_TO_SHIP. One truth, computed in one place.
+    const state = deriveCoreState(order as unknown as StateSource);
+
+    // What the customer actually pays at the door, from the ONE cod function
+    // (contract invariant: never computed in a screen). With a price that
+    // includes delivery the fee is already inside the line prices, so the
+    // detail screen can state that instead of listing a fee above a total
+    // that does not contain it.
+    const cod = computeCod({
+      lines: (order.items ?? []).map((line) => ({
+        quantity: line.quantity,
+        unitPrice: Number(line.unitPrice),
+      })),
+      deliveryFee: Number(order.deliveryFee ?? order.shippingCost ?? 0),
+      discount: Number(order.discountAmount ?? 0),
+      priceIncludesDelivery: order.priceIncludesDelivery === true,
+      minorUnit: country.minorUnit,
+    });
+
+    return NextResponse.json({
+      order: { ...order, state, zone: getZone(state) },
+      // The store's own currency, so the detail screen shows the same money
+      // the list does instead of a hard-coded dollar sign.
+      currency: { code: country.currencyCode, minorUnit: country.minorUnit },
+      cod: { ...cod, includesDelivery: order.priceIncludesDelivery === true },
+      previousOrderId,
+      nextOrderId,
+    });
   } catch (error) {
     const { body, status } = apiError(error);
     return NextResponse.json(body, { status });
@@ -203,27 +276,27 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId, country } = await requireContext();
 
     // Server-side Zod validation — never trust client input
     const parsed = patchSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات الطلب غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }
     const {
       status, moderatorId, internalNotes, customerNotes, postponedUntil, trackingCode,
       confirmationStatus, shippingStatus, expectedVersion,
-      customerName, customerPhone, customerAddress,
-      sellingPrice, quantity, discountAmount, shippingCost, productId,
+      customerName, customerPhone, customerAltPhone, customerAddress, regionId,
+      sellingPrice, quantity, discountAmount, shippingCost, productId, items, channelId,
     } = parsed.data;
 
     // ── Authorization chain: visibility/assignment (RBAC engine) → canonical
     // orders.edit permission with scope evaluation (ASSIGNED scope enforces
     // own-assignment, so no separate any/own check is needed) ──
-    const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
@@ -327,6 +400,17 @@ export async function PATCH(
       }
 
       if (status === 'REJECTED' || status === 'CANCELLED') {
+        // The same guard the confirmation route applies. This legacy path
+        // wrote CANCELLED without it, so a parcel already handed to a
+        // courier could be cancelled here — and its units counted as back
+        // on the shelf while they sat in a van.
+        const cancellable = assertCancellable(existing as StateSource);
+        if (!cancellable.allowed) {
+          return NextResponse.json(
+            { error: cancellable.message, errorAr: cancellable.message, code: cancellable.code },
+            { status: 409 }
+          );
+        }
         updateData.moderatorCommission = 0; // No commission for rejected orders
         updateData.confirmationStatus = 'CANCELLED';
       }
@@ -379,8 +463,81 @@ export async function PATCH(
     if (postponedUntil !== undefined) {
       updateData.postponedUntil = postponedUntil ? new Date(postponedUntil) : null;
     }
+    if (channelId !== undefined) {
+      // The channel is the order's attribution — which campaign, page or
+      // person the sale is credited to, and what every source report reads.
+      // A confirmation agent editing the order she is working on must not be
+      // able to move that credit; it is a different authority from fixing an
+      // address or a quantity.
+      if (!can(user, 'orders.assign')) {
+        return NextResponse.json(
+          {
+            error: 'لا تملك صلاحية تغيير جهة الطلب',
+            errorAr: 'لا تملك صلاحية تغيير جهة الطلب',
+            code: 'CHANNEL_FORBIDDEN',
+          },
+          { status: 403 }
+        );
+      }
+      if (channelId === null) {
+        updateData.channelId = null;
+      } else {
+        const channel = await db.orderChannel.findFirst({
+          where: { id: channelId, companyId },
+          select: { id: true, name: true },
+        });
+        if (!channel) {
+          return NextResponse.json({ error: 'القناة غير موجودة' }, { status: 404 });
+        }
+        updateData.channelId = channel.id;
+        updateData.source = channel.name;
+      }
+    }
     if (trackingCode !== undefined) {
       updateData.trackingNumber = trackingCode || null;
+    }
+
+    // Shipping and delivery cost belong to the shipping authority, not to
+    // whoever may edit the order. The agent on the phone fixes a wrong
+    // address; she does not decide what the parcel costs to send.
+    if (shippingCost !== undefined && !can(user, 'orders.change_status')) {
+      return NextResponse.json(
+        {
+          error: 'لا تملك صلاحية تعديل الشحن والتوصيل',
+          errorAr: 'لا تملك صلاحية تعديل الشحن والتوصيل',
+          code: 'SHIPPING_FORBIDDEN',
+        },
+        { status: 403 }
+      );
+    }
+
+    // ── The seal: a batch that has been handed over ──
+    //
+    // Once "استلمت شركة الشحن" is pressed the parcels have left the
+    // building, and the address the driver holds, the goods in the box and
+    // the amount he collects are all fixed somewhere we do not control.
+    // What was a direct edit becomes a change request: somebody who can
+    // still reach the courier decides, and says what has to happen if the
+    // change is no longer possible. Silence never approves it.
+    const sealedAsked = sealedFieldsIn(parsed.data as Record<string, unknown>);
+    if (sealedAsked.length > 0) {
+      const batch = await db.shippingBatch.findFirst({
+        where: { orders: { some: { id } }, companyId },
+        select: { status: true, batchNumber: true },
+      });
+      const seal = orderSeal({ shippingBatch: batch });
+      if (seal.sealed) {
+        return NextResponse.json(
+          {
+            error: sealMessage(seal.batchNumber, sealedAsked),
+            errorAr: sealMessage(seal.batchNumber, sealedAsked),
+            code: 'ORDER_SEALED',
+            fields: sealedAsked,
+            batchNumber: seal.batchNumber,
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // ── Order line editing (price / quantity / discount / shipping / product) ──
@@ -390,20 +547,94 @@ export async function PATCH(
       quantity !== undefined ||
       discountAmount !== undefined ||
       shippingCost !== undefined ||
-      productId !== undefined;
+      productId !== undefined ||
+      items !== undefined;
+
+    // The lines this edit leaves the order with. An explicit array replaces
+    // them; otherwise the existing lines carry on, adjusted by whatever
+    // single-line fields were sent.
+    let nextLines: { productId: string; quantity: number; unitPrice: number }[] = [];
+    let lineProducts = new Map<string, { id: string; name: string }>();
+    let lineMoney: ReturnType<typeof computeCod> | null = null;
+
     if (editingLine) {
-      const nextPrice = sellingPrice ?? existing.sellingPrice;
-      const nextQty = quantity ?? existing.quantity;
-      const nextDiscount = discountAmount ?? existing.discountAmount;
-      const nextShipping = shippingCost ?? existing.shippingCost;
-      if (nextDiscount > nextPrice * nextQty) {
+      if (items) {
+        // Replacing the set deletes the rows it drops, and those rows carry
+        // the reservation and what was actually delivered or returned. Once
+        // stock has been held against a line, or the parcel has left, the
+        // line is a record of something that happened — not a draft.
+        const committed = await db.orderItem.findFirst({
+          where: {
+            orderId: id,
+            OR: [{ reservedQty: { gt: 0 } }, { deliveredQty: { gt: 0 } }, { returnedQty: { gt: 0 } }],
+          },
+          select: { id: true },
+        });
+        if (committed || hasEverShipped(existing as StateSource)) {
+          return NextResponse.json(
+            {
+              error: 'لا يمكن تعديل بنود طلب حُجزت بضاعته أو خرج للشحن — عدّل الكميات من شاشة المرتجعات',
+              code: 'LINES_COMMITTED',
+            },
+            { status: 409 }
+          );
+        }
+
+        const ids = [...new Set(items.map((l) => l.productId))];
+        const rows = await db.product.findMany({
+          where: { id: { in: ids }, companyId },
+          select: { id: true, name: true },
+        });
+        if (rows.length !== ids.length) {
+          return NextResponse.json({ error: 'أحد المنتجات غير موجود في هذه الشركة' }, { status: 404 });
+        }
+        lineProducts = new Map(rows.map((r) => [r.id, r]));
+        nextLines = items.map((l) => ({ ...l }));
+      } else {
+        // The single-line shorthand: price is the TOTAL for the quantity, the
+        // same meaning intake gives it.
+        nextLines = [
+          {
+            productId: productId ?? existing.productId,
+            quantity: quantity ?? existing.quantity,
+            unitPrice: sellingPrice ?? existing.sellingPrice,
+          },
+        ];
+      }
+
+      const nextDiscount = discountAmount ?? Number(existing.discountAmount ?? 0);
+      const nextShipping = shippingCost ?? Number(existing.shippingCost ?? 0);
+
+      // ONE COD function — never a second formula. The one that used to live
+      // here read `sellingPrice * quantity`, multiplying a price that is
+      // already the line's total by the quantity again, and added the
+      // delivery fee even on a store whose prices include it.
+      const money = computeCod({
+        lines: nextLines.map((l) => ({
+          quantity: l.quantity,
+          unitPrice: l.quantity > 0 ? l.unitPrice / l.quantity : l.unitPrice,
+        })),
+        discount: nextDiscount,
+        deliveryFee: nextShipping,
+        priceIncludesDelivery: existing.priceIncludesDelivery === true,
+        minorUnit: country.minorUnit,
+      });
+
+      if (nextDiscount > money.subtotal) {
         return NextResponse.json({ error: 'الخصم لا يمكن أن يتجاوز إجمالي قيمة الطلب' }, { status: 400 });
       }
-      updateData.sellingPrice = nextPrice;
-      updateData.quantity = nextQty;
-      updateData.discountAmount = nextDiscount;
+
+      updateData.sellingPrice = money.subtotal;
+      updateData.quantity = nextLines.reduce((sum, l) => sum + l.quantity, 0);
+      updateData.discountAmount = money.discount;
       updateData.shippingCost = nextShipping;
-      updateData.totalAmount = nextPrice * nextQty + nextShipping - nextDiscount;
+      updateData.totalAmount = money.cod;
+      // The order is named after its first line, as it is at intake.
+      updateData.productId = nextLines[0].productId;
+      if (items) {
+        updateData.productNameSnapshot = lineProducts.get(nextLines[0].productId)?.name ?? existing.productNameSnapshot;
+      }
+      lineMoney = money;
     }
     if (productId !== undefined && productId !== existing.productId) {
       const product = await db.product.findFirst({ where: { id: productId, companyId }, select: { id: true, name: true } });
@@ -414,8 +645,48 @@ export async function PATCH(
       updateData.productNameSnapshot = product.name;
     }
 
+    // Region edit — must belong to THIS order's country, so a Jordanian
+    // order can never be pointed at a Syrian governorate.
+    let regionName: string | undefined;
+    if (regionId !== undefined) {
+      if (regionId === null) {
+        updateData.regionId = null;
+      } else {
+        const region = await db.region.findFirst({
+          where: { id: regionId, countryId: existing.countryId, isActive: true },
+          select: { id: true, name: true },
+        });
+        if (!region) {
+          return NextResponse.json(
+            { error: 'المحافظة غير موجودة في بلد هذا الطلب', code: 'REGION_NOT_IN_COUNTRY' },
+            { status: 400 }
+          );
+        }
+        updateData.regionId = region.id;
+        regionName = region.name;
+      }
+    }
+
     // Customer information edit (name / phone / address) — applied to the linked Customer row
-    const editingCustomer = customerName !== undefined || customerPhone !== undefined || customerAddress !== undefined;
+    const editingCustomer =
+      customerName !== undefined || customerPhone !== undefined || customerAddress !== undefined ||
+      customerAltPhone !== undefined || regionName !== undefined;
+    // A corrected phone has to actually be a phone for this country —
+    // otherwise "fixing" a wrong number just writes a different wrong one.
+    if (customerPhone !== undefined && !isValidPhoneFor(country.code, customerPhone)) {
+      return NextResponse.json(
+        { error: phoneErrorFor(country.code), code: 'INVALID_PHONE', field: 'customerPhone' },
+        { status: 400 }
+      );
+    }
+    // The second number is optional, but a number that is there must be real.
+    if (customerAltPhone && !isValidPhoneFor(country.code, customerAltPhone)) {
+      return NextResponse.json(
+        { error: phoneErrorFor(country.code), code: 'INVALID_PHONE', field: 'customerAltPhone' },
+        { status: 400 }
+      );
+    }
+
     if (editingCustomer && customerPhone !== undefined) {
       const normalized = normalizePhoneNumber(customerPhone);
       const dupe = await db.customer.findFirst({
@@ -444,14 +715,41 @@ export async function PATCH(
         throw new Error('VERSION_CONFLICT: This order was updated by another user. Please refresh before saving.');
       }
 
+      // The lines themselves, only when an explicit set was sent. Replacing
+      // them wholesale is what the screen does — a product removed from the
+      // list is removed from the order — and it happens in this transaction
+      // so the order's totals and its lines can never disagree.
+      if (items && lineMoney) {
+        await tx.orderItem.deleteMany({ where: { orderId: id } });
+        await tx.orderItem.createMany({
+          data: nextLines.map((line, i) => ({
+            companyId,
+            orderId: id,
+            productId: line.productId,
+            productName: lineProducts.get(line.productId)?.name ?? '',
+            quantity: line.quantity,
+            unitPrice: line.quantity > 0 ? line.unitPrice / line.quantity : line.unitPrice,
+            discountShare: lineMoney!.discountShares[i] ?? 0,
+            lineTotal: lineMoney!.lineTotals[i] ?? 0,
+            addedById: user.id,
+            addedStage: 'EDIT',
+          })),
+        });
+      }
+
       // Customer information edit — same transaction as the order write
       if (editingCustomer) {
         const custData: any = {};
         if (customerName !== undefined) custData.fullName = customerName;
         if (customerAddress !== undefined) custData.address = customerAddress;
+        // Keep the written city in step with the chosen governorate.
+        if (regionName !== undefined) custData.city = regionName;
         if (customerPhone !== undefined) {
           custData.phone = normalizePhoneNumber(customerPhone);
           custData.rawPhone = customerPhone;
+        }
+        if (customerAltPhone !== undefined) {
+          custData.altPhone = customerAltPhone?.trim() || null;
         }
         if (Object.keys(custData).length > 0) {
           await tx.customer.update({ where: { id: existing.customerId }, data: custData });
@@ -516,6 +814,10 @@ export async function PATCH(
           where: { id: existing.customerId },
           data: { cancelledOrders: { increment: 1 } },
         });
+        // Stock is never held by a dead order. The reservation is dropped in
+        // THIS transaction, so a failure cannot leave the units reserved
+        // against an order that no longer exists in any queue.
+        await releaseOrderLines(tx, id);
       }
 
       // Status logs — one per changed category (mirrors the confirmation route)
@@ -583,6 +885,7 @@ export async function PATCH(
           ...(productId !== undefined ? ['productId'] : []),
           ...(customerName !== undefined ? ['customerName'] : []),
           ...(customerPhone !== undefined ? ['customerPhone'] : []),
+          ...(customerAltPhone !== undefined ? ['customerAltPhone'] : []),
           ...(customerAddress !== undefined ? ['customerAddress'] : []),
         ];
         await tx.orderActivity.create({

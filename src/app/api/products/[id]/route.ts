@@ -5,6 +5,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { deleteStoredFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
 import { can, authorize } from '@/lib/authorization';
+import { requireContext } from '@/lib/geo-context';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,7 +23,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!viewAuth.allowed) {
       return NextResponse.json({ error: 'Forbidden: missing required permission products.view' }, { status: 403 });
     }
-    return NextResponse.json({ product });
+    // The currency of the COUNTRY this store sells into — not the company's.
+    // A Syrian store was labelling its prices in Jordanian dinars because the
+    // company that owns it is Jordanian, and the landing page selling the
+    // same product said something else.
+    let currencyCode = 'USD';
+    try {
+      const { country } = await requireContext();
+      currencyCode = country.currencyCode;
+    } catch {
+      const company = await db.company.findUnique({
+        where: { id: companyId },
+        select: { currency: true },
+      });
+      currencyCode = company?.currency || 'USD';
+    }
+
+    return NextResponse.json({ product, currencyCode });
   } catch (error: any) {
     return apiErrorResponse(error);
   }
@@ -35,7 +52,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { user, companyId } = await requireCompanyTenant();
 
     const body = await req.json();
-    const { name, nameEn, sku, description, descriptionEn, basePrice, status } = body;
+    const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType } = body;
 
     const existing = await db.product.findUnique({ where: { id } });
     if (!existing || existing.companyId !== companyId) {
@@ -76,6 +93,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(nameEn !== undefined ? { nameEn: nameEn?.trim() || null } : {}),
         ...(sku ? { sku: sku.trim().toUpperCase() } : {}),
         ...(description !== undefined ? { description: description?.trim() || null } : {}),
+        ...(sourceType === 'PURCHASED' || sourceType === 'MANUFACTURED' ? { sourceType } : {}),
         ...(descriptionEn !== undefined ? { descriptionEn: descriptionEn?.trim() || null } : {}),
         ...(basePrice !== undefined ? { basePrice: parseFloat(basePrice) || 0 } : {}),
         ...(status ? { status } : {}),

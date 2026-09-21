@@ -154,6 +154,15 @@ export async function POST(req: Request) {
               scopeIds: (p.scopeIds as unknown) ?? undefined,
             })),
           },
+          // The matrix it was issued with, kept apart from the editable rows
+          // so "restore defaults" has something honest to return to later.
+          defaults: {
+            create: permissions.map((p) => ({
+              permission: p.permission,
+              scope: p.scope ?? 'ALL_COMPANY',
+              scopeIds: (p.scopeIds as unknown) ?? undefined,
+            })),
+          },
         },
         include: { permissions: true },
       });

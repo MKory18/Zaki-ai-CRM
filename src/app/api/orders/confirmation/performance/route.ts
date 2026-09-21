@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
 
 
@@ -16,7 +16,7 @@ import { can } from '@/lib/authorization';
  */
 export async function GET(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     const { searchParams } = new URL(req.url);
     const requestedEmployeeId = searchParams.get('employeeId')?.trim();
     const scope = searchParams.get('scope') || 'me';
@@ -44,6 +44,7 @@ export async function GET(req: Request) {
     // Company-isolated base
     const mine = (extra: Record<string, unknown> = {}) => ({
       companyId,
+      storeId,
       claimedById: employeeId,
       ...extra,
     });
@@ -57,18 +58,18 @@ export async function GET(req: Request) {
       // Currently processing (mid-workflow, not terminal)
       db.order.count({ where: mine({ confirmationStatus: { in: ['IN_PROGRESS', 'NO_ANSWER', 'FOLLOW_UP_REQUIRED', 'POSTPONED'] } }) }),
       // Confirmed by this employee
-      db.order.count({ where: { companyId, confirmedById: employeeId, confirmationStatus: 'CONFIRMED' } }),
+      db.order.count({ where: { companyId, storeId, confirmedById: employeeId, confirmationStatus: 'CONFIRMED' } }),
       // Rejected (claimed by this employee, terminal rejected)
       db.order.count({ where: mine({ confirmationStatus: 'REJECTED' }) }),
       // No-answer cases
       db.order.count({ where: mine({ confirmationStatus: 'NO_ANSWER' }) }),
       // Follow-ups completed by this employee
-      db.order.count({ where: { companyId, followUpResolvedById: employeeId, followUpStatus: 'COMPLETED' } }),
+      db.order.count({ where: { companyId, storeId, followUpResolvedById: employeeId, followUpStatus: 'COMPLETED' } }),
       // Contact attempts by this employee (for avg attempts per order)
-      db.orderContactAttempt.count({ where: { companyId, employeeId } }),
+      db.orderContactAttempt.count({ where: { companyId, employeeId, order: { storeId } } }),
       // Orders confirmed WITH timestamps (for avg confirmation time)
       db.order.findMany({
-        where: { companyId, confirmedById: employeeId, confirmedAt: { not: null }, claimedAt: { not: null } },
+        where: { companyId, storeId, confirmedById: employeeId, confirmedAt: { not: null }, claimedAt: { not: null } },
         select: { claimedAt: true, confirmedAt: true },
         take: 500,
         orderBy: { confirmedAt: 'desc' },
@@ -97,16 +98,16 @@ export async function GET(req: Request) {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const confirmedToday = await db.orderStatusLog.count({
-      where: { companyId, changedById: employeeId, statusType: 'CONFIRMATION', newValue: 'CONFIRMED', createdAt: { gte: startOfToday } },
+      where: { companyId, order: { storeId }, changedById: employeeId, statusType: 'CONFIRMATION', newValue: 'CONFIRMED', createdAt: { gte: startOfToday } },
     });
     const rejectedToday = await db.orderStatusLog.count({
-      where: { companyId, changedById: employeeId, statusType: 'CONFIRMATION', newValue: 'REJECTED', createdAt: { gte: startOfToday } },
+      where: { companyId, order: { storeId }, changedById: employeeId, statusType: 'CONFIRMATION', newValue: 'REJECTED', createdAt: { gte: startOfToday } },
     });
     const contactedToday = await db.orderContactAttempt.count({
-      where: { companyId, employeeId, createdAt: { gte: startOfToday } },
+      where: { companyId, order: { storeId }, employeeId, createdAt: { gte: startOfToday } },
     });
     const noAnswerToday = await db.orderStatusLog.count({
-      where: { companyId, changedById: employeeId, statusType: 'CONFIRMATION', newValue: 'NO_ANSWER', createdAt: { gte: startOfToday } },
+      where: { companyId, order: { storeId }, changedById: employeeId, statusType: 'CONFIRMATION', newValue: 'NO_ANSWER', createdAt: { gte: startOfToday } },
     });
 
     return NextResponse.json({

@@ -1,0 +1,16 @@
+-- One canonical form for a stored phone number.
+--
+-- customers.phone was written by an Egypt-specific normaliser (it knew +20
+-- and the 010/011/012/015 mobile heads and nothing else) while the blacklist
+-- matched on canonicalPhone, which knows Syria, Jordan, Saudi Arabia, the
+-- Emirates and Iraq. Two functions, two answers, one number.
+--
+-- The data proved it: the same man was stored twice, as 0966793918 and as
+-- 963966793918. And a blocked number was searched for in a form the customer
+-- table never used, so it could walk through.
+--
+-- The rewrite itself runs through the application (scripts/canonical-phones),
+-- because the canonical form is defined in TypeScript and must stay defined
+-- in exactly one place. This file marks the point in the history where the
+-- storage changed meaning.
+SELECT 'canonical phone storage — applied via scripts/canonical-phones.ts' AS note;

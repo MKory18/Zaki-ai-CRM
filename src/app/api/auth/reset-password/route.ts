@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { hashPassword, sessionCookieOptions, COOKIE_NAME, createSessionToken } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { UserRole, UserStatus, ROLE_PERMISSIONS } from '@/types/auth';
+import { zodMessage } from '@/lib/zod-message';
 
 const resetSchema = z
   .object({
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     const parsed = resetSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || 'بيانات غير صالحة' },
+        { error: zodMessage(parsed.error) },
         { status: 400 }
       );
     }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
 import {
   isValidTransition, REJECTION_REASONS, FOLLOW_UP_REASONS,
@@ -10,6 +10,9 @@ import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
 import { can, authorize } from '@/lib/authorization';
+import { assertCancellable, type StateSource } from '@/lib/order-state';
+import { releaseOrderLines, reserveOrderLines } from '@/lib/reservation';
+import { emitAppEvent } from '@/lib/apps/events';
 
 /**
  * POST /api/orders/[id]/confirmation — controlled confirmation workflow action.
@@ -30,10 +33,10 @@ import { can, authorize } from '@/lib/authorization';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId, country } = await requireContext();
 
     // Confirmation status authority (scope evaluated against the loaded order)
-    const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
@@ -67,11 +70,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const body = await req.json();
     const {
-      action, result, note, nextFollowUpAt, followUpReason,
+      action, result, note, nextFollowUpAt, followUpReason, preferredTime,
       rejectionReason, rejectionNote, expectedVersion,
     } = body as {
       action?: string; result?: string; contactMethod?: string; note?: string;
-      nextFollowUpAt?: string; followUpReason?: string;
+      nextFollowUpAt?: string; followUpReason?: string; preferredTime?: string;
       rejectionReason?: string; rejectionNote?: string; expectedVersion?: number;
     };
 
@@ -144,6 +147,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         if (!can(user, 'orders.unlock')) {
           return NextResponse.json({ error: 'Forbidden: only administrators may cancel orders' }, { status: 403 });
         }
+        // No cancellation after SHIPPED — it becomes a cancel request and
+        // ends as RETURNED with a reason (contract invariant 4).
+        const cancellable = assertCancellable(order as StateSource);
+        if (!cancellable.allowed) {
+          return NextResponse.json(
+            { error: cancellable.message, errorAr: cancellable.message, code: cancellable.code },
+            { status: 409 }
+          );
+        }
         if (!note || note.trim().length < 5) {
           return NextResponse.json({ error: 'Cancellation requires a reason (min 5 chars)' }, { status: 400 });
         }
@@ -164,6 +176,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           return NextResponse.json({ error: 'nextFollowUpAt must be in the future (server time)' }, { status: 400 });
         }
         updateData.nextFollowUpAt = d;
+        // Postpone details the confirmation screen shows back to the agent:
+        // when the customer asked for, and how often they have asked.
+        if (target === 'POSTPONED') {
+          updateData.postponedUntil = d;
+          updateData.postponeCount = { increment: 1 };
+          if (typeof preferredTime === 'string' && preferredTime.trim()) {
+            updateData.postponePreferredTime = preferredTime.trim().slice(0, 40);
+          }
+        }
         updateData.followUpStatus = 'SCHEDULED';
         updateData.followUpReason =
           followUpReason && (FOLLOW_UP_REASONS as readonly string[]).includes(followUpReason)
@@ -242,6 +263,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         throw new Error('VERSION_CONFLICT: This order was updated by another user. Please refresh before saving.');
       }
 
+      // ── Reservation follows the decision, inside THIS transaction ──
+      // Confirming reserves every line; rejecting or cancelling releases
+      // them, so stock is never held by a dead order.
+      if (target === 'CONFIRMED') {
+        await reserveOrderLines(tx, id, { allowNegativeStock: country.allowNegativeStock });
+      } else if (target === 'REJECTED' || target === 'CANCELLED') {
+        await releaseOrderLines(tx, id);
+      }
+
       // ── Logs: StatusLog (always on transition) + Activity ──
       if (target && target !== from) {
         await tx.orderStatusLog.create({
@@ -272,6 +302,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     const fresh = await db.order.findUnique({ where: { id } });
+
+    // Tell the installed apps, after the commit. Confirming is when a lead
+    // becomes an order somebody will act on, which is the moment most
+    // integrations actually care about.
+    if (target === 'CONFIRMED' || target === 'CANCELLED') {
+      await emitAppEvent(companyId, target === 'CONFIRMED' ? 'order.confirmed' : 'order.cancelled', {
+        orderId: id,
+        orderNumber: fresh?.orderNumber ?? null,
+        confirmationStatus: target,
+        previousStatus: from,
+        total: Number(fresh?.totalAmount ?? 0),
+        currency: fresh?.currency ?? null,
+      });
+    }
 
     // Notify company managers on terminal confirmation outcomes — after commit, non-fatal
     if (target && (target === 'CONFIRMED' || target === 'REJECTED' || target === 'CANCELLED')) {
@@ -306,10 +350,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 }
 
-/** schedule_follow_up keeps the current workflow state (NO_ANSWER stays, NEW moves to FOLLOW_UP_REQUIRED) */
+/**
+ * Where an order lands when a callback is scheduled on it.
+ *
+ * An order already waiting on a follow-up used to land NOWHERE: the map
+ * returned null for FOLLOW_UP_REQUIRED and the agent got "Cannot schedule
+ * follow-up from status FOLLOW_UP_REQUIRED". But moving the date is the
+ * most ordinary thing on this desk — she calls, the customer says "tomorrow
+ * instead", and the system refused to write the new date.
+ *
+ * So both waiting states re-schedule onto themselves. POSTPONED already
+ * did; FOLLOW_UP_REQUIRED now does too, and the route allows a
+ * self-transition precisely for this.
+ */
 function nextFollowUpTarget(from: ConfirmationStatus): ConfirmationStatus | null {
-  if (from === 'NEW' || from === 'IN_PROGRESS') return 'FOLLOW_UP_REQUIRED';
+  if (from === 'NEW' || from === 'IN_PROGRESS') return 'POSTPONED';
   if (from === 'NO_ANSWER') return 'FOLLOW_UP_REQUIRED';
-  if (from === 'POSTPONED') return 'POSTPONED'; // re-schedule
+  if (from === 'POSTPONED') return 'POSTPONED';                     // re-schedule
+  if (from === 'FOLLOW_UP_REQUIRED') return 'FOLLOW_UP_REQUIRED';   // re-schedule
   return null;
 }

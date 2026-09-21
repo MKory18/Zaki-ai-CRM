@@ -1,80 +1,92 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
+import { requirePermission } from '@/lib/authorization';
+import { getCompanyAnalytics } from '@/lib/analytics';
 
 /**
  * GET /api/finance/summary?from=&to=
- * Server-side aggregated financial summary (no raw orders shipped to client).
- * Permission: finance.view required.
+ *
+ * The money, aggregated on the server — no raw orders sent to a browser.
+ *
+ * This used to SUM stored columns: totalRevenue, grossProfit, netProfit,
+ * productCost, packagingCost, advertisingCost, otherCost, subtotal,
+ * discount. Not one of them is ever written. On the live database that is
+ * zero of a hundred and fifty-five orders for every single one, so this
+ * endpoint answered every question with zero and a null margin — and it
+ * looked like a company that had sold nothing.
+ *
+ * It now delegates to the one analytics engine, which reads the columns that
+ * ARE written: totalAmount on delivered orders, their shipping, their
+ * commissions, their cost of goods, and the company's own expenses. One
+ * place computes profit; this endpoint shapes it for its screen.
  */
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
-    const { requirePermission } = await import('@/lib/authorization');
+    const { companyId, storeId } = await requireContext();
     await requirePermission('finance.view');
     const { searchParams } = new URL(req.url);
 
-    const from = searchParams.get('from') ? new Date(searchParams.get('from')!) : undefined;
-    const to = searchParams.get('to') ? new Date(searchParams.get('to')!) : undefined;
-    const range: any = {};
-    if (from && !isNaN(from.getTime())) range.gte = from;
-    if (to && !isNaN(to.getTime())) range.lte = to;
-    const dateWhere = Object.keys(range).length ? { createdAt: range } : {};
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    const hasRange = Boolean(from && to);
 
-    // Server-side aggregation — never load orders into the browser
-    const agg = await db.order.aggregate({
-      where: { companyId, ...dateWhere, confirmationStatus: 'CONFIRMED' },
-      _sum: {
-        totalRevenue: true, grossProfit: true, netProfit: true,
-        productCost: true, packagingCost: true, advertisingCost: true,
-        otherCost: true, shippingCost: true, moderatorCommission: true,
-        subtotal: true, discount: true,
-      },
-      _count: true,
-      _avg: { totalRevenue: true },
-    });
+    const analytics = await getCompanyAnalytics(
+      { companyId, storeId },
+      // An explicit start+end wins over the period in getDateRange, so the
+      // range travels without inventing a period name it does not know.
+      hasRange ? { startDate: from!, endDate: to! } : { period: 'all' }
+    );
 
-    const [settledCount, pendingCount, refundedCount] = await Promise.all([
-      db.order.count({ where: { companyId, ...dateWhere, settlementStatus: 'SETTLED' } }),
-      db.order.count({ where: { companyId, ...dateWhere, settlementStatus: { in: ['PENDING', 'PENDING_COLLECTION'] } } }),
-      db.order.count({ where: { companyId, ...dateWhere, settlementStatus: { in: ['REFUNDED', 'PARTIALLY_REFUNDED'] } } }),
+    const f = analytics.financials;
+
+    // Settlement is a different question from profit — where the money is,
+    // not how much of it is ours — so it is still counted here directly.
+    const dateWhere = hasRange
+      ? { createdAt: { gte: new Date(from!), lte: new Date(to!) } }
+      : {};
+    const [settled, pending, refunded] = await Promise.all([
+      db.order.count({ where: { companyId, storeId, ...dateWhere, settlementStatus: 'SETTLED' } }),
+      db.order.count({
+        where: { companyId, storeId, ...dateWhere, settlementStatus: { in: ['PENDING', 'PENDING_COLLECTION'] } },
+      }),
+      db.order.count({
+        where: { companyId, storeId, ...dateWhere, settlementStatus: { in: ['REFUNDED', 'PARTIALLY_REFUNDED'] } },
+      }),
     ]);
 
-    const ordersConfirmed = agg._count || 0;
-    const totalRevenue = agg._sum.totalRevenue ?? 0;
-    const netProfit = agg._sum.netProfit ?? 0;
-    const profitMargin = Number(totalRevenue) > 0
-      ? Number((Number(netProfit) / Number(totalRevenue) * 100).toFixed(1))
-      : null;
-    const avgOrderValue = ordersConfirmed > 0
-      ? Number((Number(totalRevenue) / ordersConfirmed).toFixed(2))
-      : null;
+    const delivered = analytics.ordersCount.delivered;
 
     return NextResponse.json({
       summary: {
-        ordersConfirmed,
-        totalRevenue: String(totalRevenue ?? 0),
-        grossProfit: String(agg._sum.grossProfit ?? 0),
-        netProfit: String(netProfit ?? 0),
-        profitMargin,
-        avgOrderValue,
+        ordersConfirmed: analytics.ordersCount.confirmed,
+        ordersDelivered: delivered,
+        // Revenue is what was DELIVERED. A confirmed order that never
+        // reached a door is not money; counting it is how a forecast
+        // becomes a figure people spend against.
+        totalRevenue: f.deliveredRevenue,
+        grossProfit: f.grossProfit,
+        netProfit: f.netProfit,
+        profitMargin: f.profitMargin,
+        avgOrderValue: delivered > 0 ? Number((f.deliveredRevenue / delivered).toFixed(2)) : null,
         costs: {
-          product: String(agg._sum.productCost ?? 0),
-          packaging: String(agg._sum.packagingCost ?? 0),
-          shipping: String(agg._sum.shippingCost ?? 0),
-          advertising: String(agg._sum.advertisingCost ?? 0),
-          other: String(agg._sum.otherCost ?? 0),
-          commissions: String(agg._sum.moderatorCommission ?? 0),
+          product: f.costOfGoodsSold,
+          shipping: f.shippingCosts,
+          commissions: f.moderatorCommissions,
+          operational: f.operationalExpenses,
         },
-        settlement: { settled: settledCount, pending: pendingCount, refunded: refundedCount },
+        settlement: { settled, pending, refunded },
       },
       definitions: {
-        profitMargin: 'netProfit / totalRevenue %',
-        avgOrderValue: 'totalRevenue / confirmed orders',
+        totalRevenue: 'مجموع مبالغ الطلبات المسلَّمة',
+        grossProfit: 'الإيراد المسلَّم − تكلفة البضاعة',
+        netProfit: 'الإيراد المسلَّم − البضاعة − الشحن − العمولات − المصاريف التشغيلية',
+        profitMargin: 'صافي الربح ÷ الإيراد المسلَّم %',
+        avgOrderValue: 'الإيراد المسلَّم ÷ عدد الطلبات المسلَّمة',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return apiErrorResponse(error);
   }
 }

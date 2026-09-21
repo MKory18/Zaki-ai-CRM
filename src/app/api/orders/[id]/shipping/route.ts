@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { SEALED_BATCH_STATUSES } from '@/lib/order-seal';
+import { requireContext } from '@/lib/geo-context';
+import { consumeOrderStock } from '@/lib/stock-consumption';
+import { emitAppEvent, type AppEvent } from '@/lib/apps/events';
 import { assertOrderAccess } from '@/lib/rbac';
 import {
   isValidShippingTransition, canEnterShipping, STATUS_TIMESTAMP,
@@ -10,6 +13,8 @@ import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
 import { can, authorize } from '@/lib/authorization';
+import { assertCancellable, assertReadyToShip, type StateSource } from '@/lib/order-state';
+import { orderLinesForGuard } from '@/lib/reservation';
 
 /**
  * POST /api/orders/[id]/shipping — controlled shipping workflow action.
@@ -32,10 +37,10 @@ import { can, authorize } from '@/lib/authorization';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId, country } = await requireContext();
 
     // Order access first, then shipping authority evaluated against the order
-    const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
@@ -120,6 +125,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           );
         }
 
+        // ── No cancellation once the order has shipped (invariant 4) ──
+        // Checked BEFORE the transition validator so the admin override path
+        // cannot bypass it either.
+        if (newShippingStatus === 'CANCELLED') {
+          const cancellable = assertCancellable(order as StateSource);
+          if (!cancellable.allowed) {
+            return NextResponse.json(
+              { error: cancellable.message, errorAr: cancellable.message, code: cancellable.code },
+              { status: 409 }
+            );
+          }
+        }
+
         // ── Controlled transitions (Section 3) ──
         if (!isValidShippingTransition(from, newShippingStatus)) {
           // SUPER_ADMIN override with reason
@@ -131,6 +149,40 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 errorAr: `انتقال شحن غير صالح: ${from} → ${newShippingStatus}`,
                 code: 'INVALID_TRANSITION',
               },
+              { status: 409 }
+            );
+          }
+        }
+
+        // ── A blocking change request stops OUR forward transitions ──
+        // (courier webhook events are recorded regardless and mark the
+        // request as changed during review — contract invariant 7.)
+        const FORWARD = ['PACKING', 'READY_FOR_SHIPPING', 'READY_FOR_PICKUP', 'SHIPPED', 'OUT_FOR_DELIVERY'];
+        if (FORWARD.includes(newShippingStatus)) {
+          const pending = await db.orderChangeRequest.findFirst({
+            where: { orderId: id, status: 'PENDING', blocking: true },
+            select: { id: true, reason: true },
+          });
+          if (pending) {
+            return NextResponse.json(
+              {
+                error: 'يوجد طلب تعديل قيد المراجعة على هذا الطلب',
+                errorAr: 'يوجد طلب تعديل قيد المراجعة على هذا الطلب',
+                code: 'CHANGE_REQUEST_PENDING',
+                changeRequestId: pending.id,
+              },
+              { status: 409 }
+            );
+          }
+        }
+
+        // ── Reservation gate: one unreserved line blocks READY_TO_SHIP ──
+        if (newShippingStatus === 'READY_FOR_SHIPPING' || newShippingStatus === 'READY_FOR_PICKUP') {
+          const lines = await orderLinesForGuard(db, id);
+          const ready = assertReadyToShip(order as StateSource, lines);
+          if (!ready.allowed) {
+            return NextResponse.json(
+              { error: ready.message, errorAr: ready.message, code: ready.code },
               { status: 409 }
             );
           }
@@ -183,9 +235,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
       case 'assign_batch': {
         if (!shippingBatchId) return NextResponse.json({ error: 'shippingBatchId is required' }, { status: 400 });
-        const batch = await db.shippingBatch.findFirst({ where: { id: shippingBatchId, companyId } });
+        const batch = await db.shippingBatch.findFirst({ where: { id: shippingBatchId, companyId, storeId } });
         if (!batch) {
           return NextResponse.json({ error: 'Shipping batch not found in your company' }, { status: 404 });
+        }
+        // A batch stops taking work the moment the courier takes it away.
+        // Adding an order to a trolley that is already on a van is an order
+        // the driver does not have, on a manifest that says he does.
+        if (SEALED_BATCH_STATUSES.includes(batch.status as (typeof SEALED_BATCH_STATUSES)[number])) {
+          return NextResponse.json(
+            {
+              error: `الدفعة ${batch.batchNumber} سلِّمت لشركة الشحن ولم تعد تستقبل طلبات. أنشئ دفعة جديدة.`,
+              errorAr: `الدفعة ${batch.batchNumber} سلِّمت لشركة الشحن ولم تعد تستقبل طلبات. أنشئ دفعة جديدة.`,
+              code: 'BATCH_CLOSED_FOR_INTAKE',
+            },
+            { status: 409 }
+          );
         }
         updateData.shippingBatchId = batch.id;
         break;
@@ -224,11 +289,34 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     updateData.version = { increment: 1 };
 
-    // Atomic versioned save
-    const saved = await db.order.updateMany({
-      where: { id, companyId, version: expectedVersion },
-      data: updateData,
+    // Atomic versioned save.
+    //
+    // Delivery consumes stock in the SAME transaction as the status change.
+    // It used to consume nothing at all: the reservation was released the
+    // moment the order left the open set, the batch kept its full remainder,
+    // and the unit went quietly back on sale. Doing it here means there is
+    // no instant in which an order is delivered and its goods are still
+    // available to somebody else.
+    let consumption: { taken: number; short: number; alreadyDone: boolean } | null = null;
+
+    const saved = await db.$transaction(async (tx) => {
+      const res = await tx.order.updateMany({
+        where: { id, companyId, version: expectedVersion },
+        data: updateData,
+      });
+      if (res.count !== 1) return res;
+
+      if (newShippingStatus === 'DELIVERED' || newShippingStatus === 'PARTIALLY_DELIVERED') {
+        consumption = await consumeOrderStock(tx, {
+          orderId: id,
+          companyId,
+          allowNegativeStock: country.allowNegativeStock,
+          userId: user.id,
+        });
+      }
+      return res;
     });
+
     if (saved.count !== 1) {
       return NextResponse.json(
         {
@@ -238,6 +326,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         },
         { status: 409 }
       );
+    }
+
+    // ── Tell the installed apps what changed ──
+    // After the commit, and never able to undo it: an order that shipped has
+    // shipped, whatever an integration thinks about it.
+    const APP_EVENT_FOR: Record<string, AppEvent> = {
+      SHIPPED: 'order.shipped',
+      DELIVERED: 'order.delivered',
+      RETURNED: 'order.returned',
+      CANCELLED: 'order.cancelled',
+    };
+    if (newShippingStatus && newShippingStatus !== from && APP_EVENT_FOR[newShippingStatus]) {
+      await emitAppEvent(companyId, APP_EVENT_FOR[newShippingStatus], {
+        orderId: id,
+        orderNumber: order.orderNumber,
+        shippingStatus: newShippingStatus,
+        previousStatus: from,
+        total: Number(order.totalAmount),
+        currency: order.currency,
+        trackingNumber: order.trackingNumber ?? null,
+      });
     }
 
     // ── Logs: OrderStatusLog + OrderActivity + Audit (Section 21) ──

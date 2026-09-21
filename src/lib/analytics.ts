@@ -19,10 +19,29 @@ const REJECTED_STATUSES = ['REJECTED', 'CANCELLED', 'RETURNED', 'FAILED_DELIVERY
 const PRODUCT_REJECTED_STATUSES = ['REJECTED', 'CANCELLED', 'RETURNED'];
 const SHIPPED_STATUSES = ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
-function clampStart(start: Date): Date {
+/** The earliest moment any analytics query may reach back to. */
+function windowStart(): Date {
   const min = new Date();
-  min.setHours(23, 59, 59, 999);
+  min.setHours(0, 0, 0, 0);
   min.setDate(min.getDate() - MAX_WINDOW_DAYS);
+  return min;
+}
+
+/** "yyyy-MM-dd" → that day's first instant locally. Null for anything else. */
+function startOfLocalDay(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+}
+
+/** "yyyy-MM-dd" → that day's last instant locally. Null for anything else. */
+function endOfLocalDay(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59, 999) : null;
+}
+
+/** An explicit start, pulled forward if it reaches past the safety window. */
+function clampStart(start: Date): Date {
+  const min = windowStart();
   return start < min ? min : start;
 }
 
@@ -31,9 +50,15 @@ export function getDateRange(filter: DateFilter): { start?: Date; end?: Date } {
   const period = filter.period || 'all';
 
   if (filter.startDate && filter.endDate) {
-    // Explicit ranges are also clamped to the 90-day safety window
-    let start = new Date(filter.startDate);
-    const end = new Date(filter.endDate);
+    // A picked day is the WHOLE day, in the reader's own time.
+    //
+    // "2026-09-21" parses as midnight UTC, so picking a single day used to
+    // produce a window of zero width — start and end the same instant — and
+    // every figure on the screen came back zero. Worse, the period branches
+    // below build their dates in local time, so the two halves of this
+    // function disagreed about when a day begins.
+    let start = startOfLocalDay(filter.startDate) ?? new Date(filter.startDate);
+    const end = endOfLocalDay(filter.endDate) ?? new Date(filter.endDate);
     if (end.getTime() - start.getTime() > MAX_WINDOW_DAYS * 24 * 60 * 60 * 1000) {
       start = clampStart(start);
     }
@@ -74,8 +99,11 @@ export function getDateRange(filter: DateFilter): { start?: Date; end?: Date } {
     }
     case 'all':
     default:
-      // 'all' is clamped to the last 90 days (see MAX_WINDOW_DAYS above)
-      return { start: clampStart(todayStart), end: todayEnd };
+      // "الكل" means the whole safety window, not today. It used to call
+      // clampStart(todayStart), and clamping TODAY against a 90-day-ago
+      // minimum returns today — so every headline figure on the dashboard
+      // was the last 24 hours wearing the label "الكل".
+      return { start: windowStart(), end: todayEnd };
   }
 }
 
@@ -87,7 +115,16 @@ function round2(n: number): number {
   return Number(n.toFixed(2));
 }
 
-export async function getCompanyAnalytics(companyId: string, filter: DateFilter = {}) {
+/**
+ * scope.storeId = one store's orders; null = every store of the company
+ * (company-level reports such as the AI daily summary). Expenses have no
+ * store dimension yet and are always company-wide.
+ */
+export async function getCompanyAnalytics(
+  scope: { companyId: string; storeId: string | null },
+  filter: DateFilter = {}
+) {
+  const { companyId, storeId } = scope;
   const { start, end } = getDateRange(filter);
 
   const dateFilter =
@@ -100,7 +137,7 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
         }
       : {};
 
-  const baseWhere = { companyId, ...dateFilter };
+  const baseWhere = { companyId, ...(storeId ? { storeId } : {}), ...dateFilter };
 
   // ─── 1. Status breakdown: single GROUP BY instead of fetching all rows ───
   const statusGroups = await db.order.groupBy({
@@ -126,15 +163,33 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
   const postponedOrders = statusCount.get('POSTPONED') || 0;
   const rejectedOrders = countOf(REJECTED_STATUSES);
   const shippedOrders = countOf(SHIPPED_STATUSES);
-  const deliveredOrders = statusCount.get('DELIVERED') || 0;
+  // Counted from the shipping status for the same reason the money is: the
+  // legacy column is not written by every path that delivers an order.
+  const deliveredOrders = await db.order.count({
+    where: { ...baseWhere, shippingStatus: { in: ['DELIVERED', 'PARTIALLY_DELIVERED'] } },
+  });
 
   const confirmationRate = totalOrders > 0 ? (confirmedOrders / totalOrders) * 100 : 0;
   const deliveryRate = confirmedOrders > 0 ? (deliveredOrders / confirmedOrders) * 100 : 0;
 
   // ─── 2. Delivered-order financial aggregates + expenses (SUM in PostgreSQL) ───
-  const [deliveredAgg, expensesAgg] = await Promise.all([
+  //
+  // Read from `shippingStatus`, not from the legacy combined `status`. There
+  // are two paths that deliver an order — the shipping transition and the
+  // door-side partial-delivery recorder — and only the first kept the legacy
+  // column in step. So a delivery recorded at the door contributed nothing
+  // to revenue at all, and a PARTIAL one could not contribute even in
+  // principle: its status has no legacy spelling.
+  //
+  // Revenue is what was COLLECTED where that is known. A partial delivery is
+  // exactly the case where the order's total and the money taken differ, and
+  // it is the money taken that is revenue.
+  const DELIVERED_SHIPPING = ['DELIVERED', 'PARTIALLY_DELIVERED'];
+  const deliveredWhere = { ...baseWhere, shippingStatus: { in: DELIVERED_SHIPPING } };
+
+  const [deliveredAgg, collectedAgg, expensesAgg] = await Promise.all([
     db.order.aggregate({
-      where: { ...baseWhere, status: 'DELIVERED' },
+      where: deliveredWhere,
       _sum: {
         totalAmount: true,
         estimatedCostOfGoods: true,
@@ -143,6 +198,18 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
       },
       _count: { _all: true },
     }),
+    // COALESCE has no Prisma aggregate, so the two halves are summed apart:
+    // orders where the door recorded a figure, and orders where it did not.
+    Promise.all([
+      db.order.aggregate({
+        where: { ...deliveredWhere, collectedAmount: { not: null } },
+        _sum: { collectedAmount: true },
+      }),
+      db.order.aggregate({
+        where: { ...deliveredWhere, collectedAmount: null },
+        _sum: { totalAmount: true },
+      }),
+    ]),
     db.expense.aggregate({
       where: {
         companyId,
@@ -153,6 +220,9 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
   ]);
 
   const totalExpenses = expensesAgg._sum.amount || 0;
+  const [withCollected, withoutCollected] = collectedAgg;
+  const deliveredRevenue =
+    Number(withCollected._sum.collectedAmount || 0) + Number(withoutCollected._sum.totalAmount || 0);
 
   // calculateRealProfit works on an order list; feeding it the pre-aggregated
   // sums reproduces the exact same arithmetic (and rounding) without loading rows.
@@ -160,7 +230,7 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
     deliveredOrders: [
       {
         sellingPrice: 0,
-        totalAmount: deliveredAgg._sum.totalAmount || 0,
+        totalAmount: deliveredRevenue,
         quantity: deliveredAgg._count._all || 1,
         shippingCost: deliveredAgg._sum.shippingCost || 0,
         moderatorCommission: deliveredAgg._sum.moderatorCommission || 0,
@@ -170,16 +240,57 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
     operationalExpenses: totalExpenses,
   });
 
-  // ─── 3. Product stats: GROUP BY (productId, status) with conditional sums ───
-  const productGroups = await db.order.groupBy({
-    by: ['productId', 'status'],
-    where: baseWhere,
-    _count: { _all: true },
-    _sum: {
-      totalAmount: true,
-      estimatedCostOfGoods: true,
-      shippingCost: true,
-    },
+  // ─── 3. Product stats, read from the order LINES ───
+  //
+  // Grouping on orders.productId counts a whole order against its first
+  // product: an order holding a cream and a serum put both its revenue and
+  // its delivery under the cream, and the serum looked like it never sold.
+  // The lines are where the products actually are, so each one is counted
+  // with its own quantity and its own share of the money.
+  const lineGroups = await db.orderItem.groupBy({
+    by: ['productId', 'orderId'],
+    where: { order: baseWhere },
+    _sum: { lineTotal: true, quantity: true },
+  });
+
+  // The status and the costs belong to the ORDER; a line inherits them, and
+  // the order's costs are split across its lines by their share of value so
+  // the parts still add back up to the whole.
+  const orderIds = Array.from(new Set(lineGroups.map((g) => g.orderId)));
+  const orderRows = orderIds.length
+    ? await db.order.findMany({
+        where: { id: { in: orderIds } },
+        select: {
+          id: true, status: true, totalAmount: true,
+          estimatedCostOfGoods: true, shippingCost: true,
+        },
+      })
+    : [];
+  const orderOf = new Map(orderRows.map((o) => [o.id, o]));
+
+  // Each order's total line value, to allocate its costs proportionally.
+  const orderLineValue = new Map<string, number>();
+  for (const g of lineGroups) {
+    orderLineValue.set(g.orderId, (orderLineValue.get(g.orderId) ?? 0) + Number(g._sum.lineTotal ?? 0));
+  }
+
+  const productGroups = lineGroups.map((g) => {
+    const order = orderOf.get(g.orderId);
+    const share = (() => {
+      const whole = orderLineValue.get(g.orderId) ?? 0;
+      if (whole <= 0) return 1;
+      return Number(g._sum.lineTotal ?? 0) / whole;
+    })();
+    return {
+      productId: g.productId,
+      status: order?.status ?? 'NEW',
+      _count: { _all: 1 },
+      _sum: {
+        totalAmount: (Number(order?.totalAmount ?? 0)) * share,
+        estimatedCostOfGoods: (Number(order?.estimatedCostOfGoods ?? 0)) * share,
+        shippingCost: (Number(order?.shippingCost ?? 0)) * share,
+      },
+    };
   });
 
   const productIds = Array.from(new Set(productGroups.map((g) => g.productId)));

@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -35,7 +36,7 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const widthStyles = {
     sm: 'max-w-sm',
@@ -46,8 +47,20 @@ export function Modal({
     '4xl': 'max-w-4xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+  // Rendered through a portal, into <body>. A modal opened from inside a
+  // clickable row used to be a DOM child of that row, so every click inside
+  // it bubbled up and opened the row behind it — clicking "السجل" landed you
+  // in the order instead of the history.
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+      // The portal moves the modal out of the row in the DOM, but a React
+      // event still travels up the COMPONENT tree — so a click on a tab
+      // inside this modal reached the row's onClick and opened the order
+      // behind it. Nothing that happens inside a modal belongs to whatever
+      // rendered it.
+      onClick={(e) => e.stopPropagation()}
+    >
       <div
         className="fixed inset-0"
         onClick={onClose}
@@ -73,6 +86,7 @@ export function Modal({
         </div>
         <div className="p-6 overflow-y-auto flex-1">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

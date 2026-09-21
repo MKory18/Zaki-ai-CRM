@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { getCompanyAnalytics } from '@/lib/analytics';
 import { generateAiBusinessAnalysis } from '@/lib/ai';
 import { requirePermission } from '@/lib/authorization';
 
 export async function GET() {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId } = await requireContext();
 
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -37,13 +37,13 @@ export async function GET() {
 
 export async function POST() {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId } = await requireContext();
     await requirePermission('ai.use');
 
     const todayStr = new Date().toISOString().split('T')[0];
 
     // Compute real analytics first
-    const analytics = await getCompanyAnalytics(companyId, { period: 'all' });
+    const analytics = await getCompanyAnalytics({ companyId, storeId: null }, { period: 'all' });
     const aiContext = analytics.aiContext;
 
     // Call AI analyzer

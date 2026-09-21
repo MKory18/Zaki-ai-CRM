@@ -24,6 +24,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const updated = await db.deliveryProvider.update({
       where: { id },
+      // An explicit select, not the whole row: the row carries the encrypted
+      // account, and `provider: updated` would have handed the ciphertext to
+      // every caller of this endpoint.
+      select: {
+        id: true, name: true, code: true, kind: true, phone: true,
+        email: true, address: true, notes: true, isActive: true,
+        apiEnabled: true, adapterCode: true, updatedAt: true,
+      },
       data: {
         ...(name ? { name: name.trim() } : {}),
         ...(phone !== undefined ? { phone: phone?.trim() || null } : {}),

@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { getCompanyAnalytics, DateFilter } from '@/lib/analytics';
 import { rateLimit } from '@/lib/rate-limit';
 
 export async function GET(req: Request) {
   try {
-    const { companyId, user } = await requireCompanyTenant();
+    const { companyId, storeId, user } = await requireContext();
     // Canonical gate — analytics access is explicit, not implicit by role
     await requirePermission('analytics.view');
 
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     const endDate = searchParams.get('endDate') || undefined;
 
     const filter: DateFilter = { period, startDate, endDate };
-    const analytics = await getCompanyAnalytics(companyId, filter);
+    const analytics = await getCompanyAnalytics({ companyId, storeId }, filter);
 
     return NextResponse.json(analytics);
   } catch (error: any) {

@@ -11,61 +11,71 @@
  */
 
 import { z } from 'zod';
-import { isSyrianLocation } from '@/lib/locations/syria';
+import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 
 /**
- * Syrian phone validation:
- *  - accepts: 09XXXXXXXX / 9XXXXXXXX (mobile), landlines with area codes
- *    (011/021/031/033/041/043/051/052/053/06…), with or without
- *    +963 / 00963 / 963 prefixes, spaces/dashes/parentheses tolerated.
- *  - rejects: letters, very short numbers (<9 digits), nonsense values.
+ * The country the page sells into, resolved server-side from
+ * slug → LandingPage → Store → Country. It is never taken from the browser.
+ *
+ * `regions` are that country's own region names (the Region table). When a
+ * country has none recorded yet, the city becomes free text instead of being
+ * rejected outright — an unconfigured country must not silently stop taking
+ * orders.
  */
-export function isValidSyrianPhone(raw: string): boolean {
-  if (!/^[+0-9()\s-]+$/.test(raw)) return false;
-  let digits = raw.replace(/\D/g, '');
-  if (digits.startsWith('00963')) digits = digits.slice(5);
-  else if (digits.startsWith('963') && digits.length > 9) digits = digits.slice(3);
-  // After prefix stripping: 9–12 digits.
-  //  - mobile: 09XXXXXXXX (10 digits) or 9XXXXXXXX (9 digits)
-  //  - landline: 0 + area code + number (10 digits, e.g. 011/021/033/041…)
-  if (digits.length < 9 || digits.length > 12) return false;
-  if (!/^(?:0[1-9]|9)/.test(digits)) return false; // 0XXXXXXXX or 9XXXXXXXX
-  return true;
+export interface OrderLocale {
+  countryCode: string | null;
+  regions: string[];
 }
 
-export const publicOrderSchema = z.object({
-  full_name: z
-    .string({ message: 'يرجى إدخال الاسم الكامل.' })
-    .trim()
-    .min(2, 'يرجى إدخال الاسم الكامل.')
-    .max(80, 'الاسم طويل جدًا.'),
-  phone: z
-    .string({ message: 'يرجى إدخال رقم هاتف صحيح.' })
-    .trim()
-    .min(6, 'يرجى إدخال رقم هاتف صحيح.')
-    .max(25, 'رقم الهاتف طويل جدًا.')
-    .refine(isValidSyrianPhone, 'يرجى إدخال رقم هاتف سوري صحيح.'),
-  address: z
-    .string({ message: 'يرجى إدخال العنوان.' })
-    .trim()
-    .min(5, 'يرجى إدخال العنوان بشكل أوضح.')
-    .max(200, 'العنوان طويل جدًا.'),
-  city: z
-    .string({ message: 'يرجى اختيار المدينة.' })
-    .trim()
-    .min(2, 'يرجى اختيار المدينة.')
-    .max(60, 'يرجى اختيار المدينة.')
-    .refine((v) => isSyrianLocation(v), 'يرجى اختيار المدينة من القائمة.'),
-  // Optional: pages WITHOUT offers fall back to the base product price.
-  // When present it must reference a real offer (ownership checked in the route).
-  offerId: z.string().trim().max(64, 'يرجى اختيار أحد العروض.').optional().default(''),
-  notes: z.string().trim().max(500, 'الملاحظات طويلة جدًا.').optional().default(''),
-  // Spam protections (checked below, never stored)
-  website: z.string().max(0, 'Spam detected').optional().default(''),
-  ts: z.string().max(20).optional().default(''),
-});
+/** Matches a submitted city against the country's regions, ignoring case and spacing. */
+export function isKnownRegion(regions: string[], value: string): boolean {
+  const v = value.trim().toLocaleLowerCase('ar');
+  return regions.some((r) => r.trim().toLocaleLowerCase('ar') === v);
+}
 
-export type PublicOrderInput = z.infer<typeof publicOrderSchema>;
+export function buildPublicOrderSchema(locale: OrderLocale) {
+  const hasRegions = locale.regions.length > 0;
+
+  return z.object({
+    full_name: z
+      .string({ message: 'يرجى إدخال الاسم الكامل.' })
+      .trim()
+      .min(2, 'يرجى إدخال الاسم الكامل.')
+      .max(80, 'الاسم طويل جدًا.'),
+    phone: z
+      .string({ message: 'يرجى إدخال رقم هاتف صحيح.' })
+      .trim()
+      .min(6, 'يرجى إدخال رقم هاتف صحيح.')
+      .max(25, 'رقم الهاتف طويل جدًا.')
+      .refine((p) => isValidPhoneFor(locale.countryCode, p), phoneErrorFor(locale.countryCode)),
+    address: z
+      .string({ message: 'يرجى إدخال العنوان.' })
+      .trim()
+      .min(5, 'يرجى إدخال العنوان بشكل أوضح.')
+      .max(200, 'العنوان طويل جدًا.'),
+    city: z
+      .string({ message: 'يرجى اختيار المدينة.' })
+      .trim()
+      .min(2, 'يرجى اختيار المدينة.')
+      .max(60, 'يرجى اختيار المدينة.')
+      .refine(
+        (v) => !hasRegions || isKnownRegion(locale.regions, v),
+        'يرجى اختيار المدينة من القائمة.'
+      ),
+    // Optional: pages WITHOUT offers fall back to the base product price.
+    // When present it must reference a real offer (ownership checked in the route).
+    offerId: z.string().trim().max(64, 'يرجى اختيار أحد العروض.').optional().default(''),
+    notes: z.string().trim().max(500, 'الملاحظات طويلة جدًا.').optional().default(''),
+    // Spam protections (checked below, never stored)
+    website: z.string().max(0, 'Spam detected').optional().default(''),
+    ts: z.string().max(20).optional().default(''),
+  });
+}
+
+export type PublicOrderInput = z.infer<ReturnType<typeof buildPublicOrderSchema>>;
+
+/** Any Arabic letter — the marker of a message we authored ourselves. */
+const ARABIC = /[؀-ۿ]/;
 
 /** Zod issue path → Arabic field error (path key → message). */
 const FIELD_ERROR_MESSAGES: Record<string, string> = {
@@ -85,8 +95,13 @@ export function mapZodFieldErrors(error: z.ZodError): Record<string, string> {
   const fieldErrors: Record<string, string> = {};
   for (const issue of error.issues) {
     const key = String(issue.path[0] ?? '');
-    if (!key) continue;
-    if (!fieldErrors[key]) fieldErrors[key] = FIELD_ERROR_MESSAGES[key] || 'يرجى التأكد من صحة بيانات الطلب.';
+    if (!key || fieldErrors[key]) continue;
+    // Our own messages are Arabic and Zod's internals are not, so an Arabic
+    // message is one we wrote and is safe to show — and more specific than
+    // the fallback ("رقم هاتف أردني صحيح" instead of "رقم هاتف صحيح").
+    fieldErrors[key] = ARABIC.test(issue.message)
+      ? issue.message
+      : FIELD_ERROR_MESSAGES[key] || 'يرجى التأكد من صحة بيانات الطلب.';
   }
   return fieldErrors;
 }

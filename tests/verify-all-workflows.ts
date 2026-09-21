@@ -232,7 +232,7 @@ async function runVerification() {
   console.log('✅ Steps 16, 17, 18: Real Net Profit Formula Verified with 100% precision:', profitResult);
 
   // 12. Step 19: Product Analytics & Rankings
-  const analytics = await getCompanyAnalytics(company.id, { period: 'all' });
+  const analytics = await getCompanyAnalytics({ companyId: company.id, storeId: null }, { period: 'all' });
   if (!analytics.rankings.mostProfitable) {
     throw new Error('Analytics failed to calculate product rankings');
   }

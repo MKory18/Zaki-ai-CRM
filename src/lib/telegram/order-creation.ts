@@ -12,10 +12,15 @@
  */
 import { db } from '../db';
 import { logAudit } from '../audit';
+import { resolveRegionId } from '@/lib/regions';
+import { orderRefFields } from '../order-ref';
+import { computeCod } from '../money';
 import { createNotification } from '../notification';
 
 export interface CreateTelegramOrderInput {
   companyId: string;
+  /** Store of the Telegram source (null = source not bound to a store yet). */
+  storeId: string | null;
   customer: { id: string; firstOrderDate: Date | null; totalOrders: number };
   product: { id: string; name: string; image: string | null; basePrice: number };
   quantity: number;
@@ -36,7 +41,7 @@ export interface CreateTelegramOrderInput {
 
 export type CreateTelegramOrderResult =
   | { ok: true; orderId: string; orderNumber: string }
-  | { ok: false; reason: 'NO_SYSTEM_ACTOR' | 'CREATION_FAILED' | 'PRODUCT_NOT_FOUND' | 'MISSING_PRICE' };
+  | { ok: false; reason: 'NO_SYSTEM_ACTOR' | 'CREATION_FAILED' | 'PRODUCT_NOT_FOUND' | 'MISSING_PRICE' | 'NO_STORE' };
 
 /** Sane upper bound for a Telegram-provided order total. */
 const MAX_UNIT_PRICE = 100_000;
@@ -81,7 +86,14 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   const actor = await resolveSystemActor(input.companyId);
   if (!actor) return { ok: false, reason: 'NO_SYSTEM_ACTOR' };
 
-  const { companyId, customer, product, quantity, address, notes, priceText, pageName, telegram } = input;
+  const { companyId, storeId, customer, product, quantity, address, notes, priceText, pageName, telegram } = input;
+
+  if (!storeId) return { ok: false, reason: 'NO_STORE' };
+  const store = await db.store.findFirst({
+    where: { id: storeId, companyId },
+    select: { id: true, countryId: true, country: { select: { currencyCode: true, orderPrefix: true, minorUnit: true } } },
+  });
+  if (!store) return { ok: false, reason: 'NO_STORE' };
 
   /**
    * PRICING (business rule): the Telegram message price is the TOTAL ORDER
@@ -112,28 +124,40 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   // Note: order.totalAmount stores the Telegram total as-is. The orders PATCH
   // API recomputes total on later edits via its own formula — that is
   // pre-existing behavior for ALL orders, not a double-multiply here.
+  // ONE COD function (contract PART 5). Telegram orders carry no fee yet.
+  const money = computeCod({
+    lines: [{ quantity, unitPrice: price }],
+    deliveryFee: shipCost,
+    minorUnit: store.country.minorUnit,
+  });
+
   const unitCost = productRow.batches[0]?.costPerUnit || 0;
   const estimatedCostOfGoods = Number((unitCost * quantity).toFixed(2));
   const now = new Date();
 
   try {
+    // The delivery fee is keyed on the region, so bind it at intake.
+    const resolvedRegionId = await resolveRegionId(db, store.countryId, input.governorate ?? address);
+
     const order = await db.$transaction(async (tx) => {
       let created: any = null;
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
-          const count = await tx.order.count({ where: { companyId } });
-          const orderNumber = `ORD-${now.getFullYear()}-${String(count + 1 + attempt).padStart(4, '0')}`;
+          const refs = await orderRefFields(tx, companyId, store.country.orderPrefix, attempt, now);
           created = await tx.order.create({
             data: {
               companyId,
-              orderNumber,
+              countryId: store.countryId,
+              storeId: store.id,
+              regionId: resolvedRegionId,
+              ...refs,
               customerId: customer.id,
               productId: productRow.id,
               quantity,
               sellingPrice: price,
               shippingCost: shipCost,
               totalAmount,
-              currency: 'USD',
+              currency: store.country.currencyCode,
               moderatorId: null,
               moderatorCommission: 0,
               estimatedCostOfGoods,
@@ -168,6 +192,21 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
         }
       }
       if (!created) throw new Error('Failed to generate a unique order number');
+
+      // Order line: the Telegram price is the order TOTAL, so the unit price
+      // is derived once here and never multiplied again.
+      await tx.orderItem.create({
+        data: {
+          companyId,
+          orderId: created.id,
+          productId: productRow.id,
+          productName: productRow.name,
+          quantity,
+          unitPrice: money.subtotal / quantity,
+          lineTotal: money.lineTotals[0] ?? money.subtotal,
+          addedStage: 'INTAKE',
+        },
+      });
 
       await tx.customer.update({
         where: { id: customer.id },

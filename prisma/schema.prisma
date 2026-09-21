@@ -23,6 +23,9 @@ model Company {
   users              User[]
   products           Product[]
   batches            ProductionBatch[]
+  batchCostLines     ProductionBatchCost[]
+  apps               App[]
+  appInstalls        AppInstall[]
   inventoryMovements InventoryMovement[]
   offers             Offer[]
   customers          Customer[]
@@ -32,6 +35,7 @@ model Company {
   expenses           Expense[]
   notifications      Notification[]
   auditLogs          AuditLog[]
+  attendanceMarks    AttendanceMark[]
   aiSummaries        AiDailySummary[]
   productImages      ProductImage[]
   deliveryProviders  DeliveryProvider[]
@@ -39,14 +43,6 @@ model Company {
   financialTransactions FinancialTransaction[]
   landingPages      LandingPage[]
   orderAddOns       OrderAddOn[]
-  crmCompanies      CrmCompany[]
-  crmContacts       CrmContact[]
-  crmLeads          CrmLead[]
-  crmDeals          CrmDeal[]
-  crmTasks          CrmTask[]
-  crmActivities     CrmActivity[]
-  crmNotes          CrmNote[]
-  crmInvoices       CrmInvoice[]
   roles             Role[]
   categories        Category[]
   whatsappConnections WhatsAppConnection[]
@@ -55,6 +51,10 @@ model Company {
   telegramSources   TelegramSource[]
   telegramMessages  TelegramMessage[]
   trackingPixels    TrackingPixel[]
+  countries         Country[]
+  customerBlocks    CustomerBlock[]
+  orderChannels     OrderChannel[]
+  stores            Store[]
 
   @@map("companies")
 }
@@ -112,6 +112,7 @@ model User {
   signedOrders   Order[]   @relation("OrderSignedBy")
   callLogs       CallLog[]
   auditLogs      AuditLog[]
+  attendanceMarks AttendanceMark[]
   claimHistory   OrderClaimHistory[]
   statusLogs     OrderStatusLog[]
   contactAttempts OrderContactAttempt[]
@@ -130,12 +131,10 @@ model User {
   userPermissions UserPermission[]
   permissionsGranted UserPermission[] @relation("UserPermissionGranter")
   whatsappAssignedConversations WhatsAppConversation[] @relation("WhatsAppAssignee")
-  crmContactOwners    CrmContact[]  @relation("CrmContactOwner")
-  crmLeadAssignees    CrmLead[]     @relation("CrmLeadAssignee")
-  crmDealAssignees    CrmDeal[]     @relation("CrmDealAssignee")
-  crmTaskAssignees    CrmTask[]     @relation("CrmTaskAssignee")
-  crmActivities       CrmActivity[] @relation("CrmActivityUser")
-  crmNotes            CrmNote[]     @relation("CrmNoteUser")
+  countryAccess       UserCountryAccess[]
+  storeAccess         UserStoreAccess[]
+  customerBlocks        CustomerBlock[] @relation("CustomerBlockedBy")
+  customerBlockReleases CustomerBlock[] @relation("CustomerBlockReleasedBy")
 
   @@index([companyId])
   @@index([role])
@@ -152,6 +151,10 @@ model Product {
   description String?
   descriptionEn String?
   image       String?
+  // How this product's stock comes in. MANUFACTURED opens a production batch
+  // with a cost breakdown; PURCHASED opens a receiving batch with one unit
+  // cost. Both land in the same ledger — this only picks the door.
+  sourceType  String?  // 'MANUFACTURED' | 'PURCHASED'
   status      String   @default("ACTIVE") // ACTIVE, INACTIVE, OUT_OF_STOCK
   basePrice   Float    @default(0.0)
   categoryId  String?
@@ -164,6 +167,7 @@ model Product {
   inventoryMovements InventoryMovement[]
   offers             Offer[]
   orders             Order[]
+  orderItems         OrderItem[]
   landingPages       LandingPage[]
   recommendations    LandingPageRecommendation[]
   addOns             OrderAddOn[]
@@ -219,10 +223,30 @@ model ProductionBatch {
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   inventoryMovements InventoryMovement[]
+  costLines          ProductionBatchCost[]
 
   @@unique([companyId, batchNumber])
   @@index([companyId, productId])
   @@map("production_batches")
+}
+
+/// One named cost on a production batch — "قالب", "أجرة عامل", "شحن المواد".
+/// The four fixed buckets on the batch stay for the batches that use them;
+/// a batch's total is those four plus these lines.
+model ProductionBatchCost {
+  id        String   @id @default(uuid())
+  companyId String
+  batchId   String
+  label     String
+  amount    Float    @default(0)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  batch   ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@map("production_batch_costs")
 }
 
 model InventoryMovement {
@@ -253,9 +277,16 @@ model Offer {
   productId        String
   name             String
   quantity         Int      @default(1)
+  // Units given free on top of `quantity` — "3 قطع + 1 مجاناً".
+  freeQuantity     Int      @default(0)
   sellingPrice     Float
+  // The struck-through "was" price. Display only: it never enters computeCod.
+  compareAtPrice   Float?
   discount         Float    @default(0.0)
   deliveryIncluded Boolean  @default(true)
+  // The bundle preselected on the landing page and the quick-order screen.
+  isDefault        Boolean  @default(false)
+  sortOrder        Int      @default(0)
   status           String   @default("ACTIVE") // ACTIVE, INACTIVE
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -265,6 +296,7 @@ model Offer {
   orders  Order[]
 
   @@index([companyId, productId])
+  @@index([productId, status, sortOrder])
   @@map("offers")
 }
 
@@ -303,6 +335,10 @@ model Order {
   companyId            String
   orderNumber          String
   customerId           String
+  /// The channel this order came through. The free-text `source` below is
+  /// kept as it was written, so an order never loses where it said it came
+  /// from when a channel is renamed or retired.
+  channelId            String?
   productId            String
   offerId              String?
   quantity             Int       @default(1)
@@ -383,18 +419,49 @@ model Order {
   financeFinalizedById String?
   source               String    @default("Manual") // Facebook Ads, TikTok, Instagram, WhatsApp, Manual, Website, Landing Page
   landingPageId        String?
-  landingPageOfferId   String?
   freeQuantity         Int       @default(0) // gift units from a landing-page offer (additive)
   internalNotes        String?
   customerNotes        String?
   postponedUntil       DateTime?
+  // Stage 4: what the customer asked for, and how often they have asked.
+  postponePreferredTime String?  // free text slot, e.g. "مساءً" or "18:00-20:00"
+  postponeCount        Int       @default(0)
   confirmedAt          DateTime?
   deliveredAt          DateTime?
+  // Geo context (Stage 1). Nullable until every order-creation path writes it.
+  countryId            String?
+  storeId              String?
+  // Stage 3: courier-facing reference, generated for EVERY order (POS, landing
+  // page, Telegram). Read-only once set; sent in the courier reference field.
+  merchantRef          String?
+  // Stage 5: the delivery region drives the fee table and the late threshold.
+  regionId             String?
+  // A manual fee override always carries a reason (written to the audit log).
+  deliveryFeeOverrideReason String?
+  // A courier may only be changed at shipment creation. Afterwards the
+  // parcel is taken back and a REPLACEMENT order is raised, which re-enters
+  // preparation and is assigned from scratch; these two link the pair.
+  replacesOrderId      String?   @unique
+  // Stage 9 — what the customer actually paid at the door. Set only on a
+  // partial delivery, and it INCLUDES the full delivery fee: the courier
+  // travelled whether or not every line was taken, so the fee is never
+  // prorated. Null everywhere else, which is what lets settlement tell a
+  // partial from a whole one.
+  collectedAmount      Decimal?  @db.Decimal(12, 2)
+  // A split order's parent. Children carry a suffixed number (SY-0044-A).
+  parentOrderId        String?
+  labelPrintedAt       DateTime?
+  // Snapshot of the offer's delivery policy: if ANY line includes delivery the
+  // whole order does, and the fee is deducted from revenue instead of added.
+  priceIncludesDelivery Boolean  @default(false)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
   company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  country    Country?        @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  store      Store?          @relation(fields: [storeId], references: [id], onDelete: Restrict)
   customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  channel    OrderChannel?   @relation(fields: [channelId], references: [id], onDelete: SetNull)
   product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   offer      Offer?          @relation(fields: [offerId], references: [id], onDelete: SetNull)
   moderator  User?           @relation("ModeratorOrders", fields: [moderatorId], references: [id], onDelete: SetNull)
@@ -410,17 +477,29 @@ model Order {
   followUpResolver User?     @relation("FollowUpResolvedBy", fields: [followUpResolvedById], references: [id], onDelete: SetNull)
   callLogs   CallLog[]
   landingPage LandingPage? @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
-  landingPageOffer LandingPageOffer? @relation(fields: [landingPageOfferId], references: [id], onDelete: SetNull)
   addOns     OrderAddOn[]
   activities OrderActivity[]
   deliveryAttempts DeliveryAttempt[]
   financialTransactions FinancialTransaction[]
+  items             OrderItem[]
+  notes             OrderNote[]
+  commissions       CommissionEntry[]
+  settlementMatches SettlementMatch[]
+  region         Region?      @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  replaces       Order?       @relation("OrderReplacement", fields: [replacesOrderId], references: [id], onDelete: SetNull)
+  replacedBy     Order?       @relation("OrderReplacement")
+  parentOrder    Order?       @relation("OrderSplit", fields: [parentOrderId], references: [id], onDelete: SetNull)
+  splitChildren  Order[]      @relation("OrderSplit")
+  returnReceipt  ReturnReceipt?
+  changeRequests OrderChangeRequest[]
+  issues         OrderIssue[]
   claimHistory OrderClaimHistory[]
   statusLogs   OrderStatusLog[]
   contactAttempts OrderContactAttempt[]
   telegramMessages TelegramMessage[]
 
   @@unique([companyId, orderNumber])
+  @@unique([companyId, merchantRef])
   @@index([companyId, createdAt]) // hot path: list ordering + prev/next navigation + analytics windows
   @@index([companyId, status])
   @@index([companyId, confirmationStatus, claimedById])
@@ -439,8 +518,11 @@ model Order {
   @@index([companyId, confirmationStatus])
   @@index([companyId, settlementStatus])
   @@index([companyId, landingPageId])
-  @@index([companyId, landingPageOfferId])
   @@index([lockedById, lockExpiresAt])
+  @@index([storeId, createdAt])
+  @@index([countryId])
+  @@index([companyId, labelPrintedAt])
+  @@index([regionId])
   @@map("orders")
 }
 
@@ -569,8 +651,9 @@ model Role {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company     Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company     Company?                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   permissions RolePermission[]
+  defaults    RolePermissionDefault[]
   users       User[]
 
   @@unique([companyId, name])
@@ -591,6 +674,26 @@ model RolePermission {
   @@unique([roleId, permission])
   @@index([roleId])
   @@map("role_permissions")
+}
+
+/// The matrix a role was issued with — what "restore defaults" returns to.
+/// Written once when the role is created (and seeded from the system
+/// templates for the roles that predate this table); never touched by an
+/// edit, which is the whole point: the editable rows cannot also be the
+/// record of what they started as.
+model RolePermissionDefault {
+  id         String   @id @default(uuid())
+  roleId     String
+  permission String
+  scope      String   @default("ALL_COMPANY")
+  scopeIds   Json?
+  createdAt  DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@index([roleId])
+  @@map("role_permission_defaults")
 }
 
 model UserPermission {
@@ -697,12 +800,32 @@ model DeliveryProvider {
   companyId  String
   name       String
   code       String   @unique
+  // COMPANY = a shipping company with its own pipeline and statements.
+  // AGENT   = a مندوب: immediate delivery, settled by hand, and the only
+  //           party an order may be moved away from without a replacement.
+  kind       String   @default("COMPANY")
   phone      String?
   email      String?
   address    String?
   isActive   Boolean  @default(true)
   apiEnabled Boolean  @default(false)
   apiBaseUrl String?
+  // Which integration this courier runs on. A courier is not a platform:
+  // Basha Delivery ships through LogesTechs, and another courier could ship
+  // through the same platform under a different account. So the adapter is
+  // named here, and the account's own ids live in apiConfig.
+  adapterCode String?
+  // Per-courier settings for that adapter — their companyId, service and
+  // vehicle type ids. Not secret: these appear in every API response.
+  apiConfig  Json?
+  // The account's login, encrypted at rest (AES-256-GCM, key in the
+  // environment only). A courier password cannot be hashed — we have to
+  // send it on every call — so it is encrypted instead, and a stolen
+  // database dump is not a stolen account. NEVER returned by any endpoint:
+  // screens are told that credentials exist, never what they are.
+  apiCredentials       String?
+  credentialsUpdatedAt DateTime?
+  credentialsUpdatedById String?
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -711,6 +834,7 @@ model DeliveryProvider {
   orders  Order[]
   batches ShippingBatch[]
   attempts DeliveryAttempt[]
+  fees    DeliveryFee[]
 
   @@index([companyId, isActive])
   @@map("delivery_providers")
@@ -732,9 +856,13 @@ model ShippingBatch {
   provider DeliveryProvider? @relation(fields: [deliveryProviderId], references: [id], onDelete: SetNull)
   creator  User             @relation("ShippingBatchCreator", fields: [createdById], references: [id], onDelete: Restrict)
   orders   Order[]
+  // Geo context (Stage 2): a batch only holds orders of one store.
+  storeId  String?
+  store    Store?           @relation(fields: [storeId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, batchNumber])
   @@index([companyId, status])
+  @@index([storeId, status])
   @@map("shipping_batches")
 }
 
@@ -765,229 +893,6 @@ model DeliveryAttempt {
 // ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯
 // CRM MODULE ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ Contacts, Companies, Leads, Deals, Tasks, Activities, Notes, Invoices
 // ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¯
-
-model CrmCompany {
-  id        String   @id @default(uuid())
-  companyId String
-  name      String
-  industry  String?
-  website   String?
-  phone     String?
-  email     String?
-  address   String?
-  city      String?
-  country   String?
-  size      String?  // SMALL, MEDIUM, LARGE, ENTERPRISE
-  status    String   @default("ACTIVE") // ACTIVE, INACTIVE, PROSPECT
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  contacts CrmContact[]
-  deals    CrmDeal[]
-  invoices CrmInvoice[]
-  crmNotes CrmNote[]
-
-  @@index([companyId, name])
-  @@index([companyId, status])
-  @@map("crm_companies")
-}
-
-model CrmContact {
-  id            String    @id @default(uuid())
-  companyId     String
-  crmCompanyId  String?
-  firstName     String
-  lastName      String?
-  email         String?
-  phone         String
-  position      String?
-  status        String    @default("ACTIVE") // ACTIVE, INACTIVE
-  ownerId       String?
-  notes         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  crmCompany CrmCompany? @relation(fields: [crmCompanyId], references: [id], onDelete: SetNull)
-  owner      User?       @relation("CrmContactOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  deals      CrmDeal[]
-  tasks      CrmTask[]
-  activities CrmActivity[]
-  crmNotes CrmNote[]
-  invoices   CrmInvoice[]
-
-  @@index([companyId, phone])
-  @@index([companyId, email])
-  @@index([companyId, crmCompanyId])
-  @@map("crm_contacts")
-}
-
-model CrmLead {
-  id                 String    @id @default(uuid())
-  companyId          String
-  name               String
-  email              String?
-  phone              String?
-  companyName        String?
-  source             String    @default("MANUAL") // MANUAL, WEBSITE, REFERRAL, SOCIAL_MEDIA, CAMPAIGN, OTHER
-  status             String    @default("NEW") // NEW, CONTACTED, QUALIFIED, UNQUALIFIED, CONVERTED
-  score              Int       @default(0)
-  assignedToId       String?
-  convertedContactId String?
-  convertedDealId    String?
-  notes              String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  assignedTo  User?       @relation("CrmLeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  activities  CrmActivity[]
-  crmNotes CrmNote[]
-
-  @@index([companyId, status])
-  @@index([companyId, assignedToId])
-  @@map("crm_leads")
-}
-
-model CrmDeal {
-  id                String    @id @default(uuid())
-  companyId         String
-  title             String
-  value             Float     @default(0.0)
-  currency          String    @default("USD")
-  stage             String    @default("NEW") // NEW, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST
-  probability       Int       @default(10) // 0-100
-  expectedCloseDate DateTime?
-  closedAt          DateTime?
-  crmContactId      String?
-  crmCompanyId      String?
-  assignedToId      String?
-  position          Int       @default(0)
-  notes             String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  crmContact CrmContact?  @relation(fields: [crmContactId], references: [id], onDelete: SetNull)
-  crmCompany CrmCompany?  @relation(fields: [crmCompanyId], references: [id], onDelete: SetNull)
-  assignedTo User?        @relation("CrmDealAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  activities CrmActivity[]
-  crmNotes CrmNote[]
-  tasks      CrmTask[]
-  invoices   CrmInvoice[]
-
-  @@index([companyId, stage])
-  @@index([companyId, crmContactId])
-  @@index([companyId, assignedToId])
-  @@map("crm_deals")
-}
-
-model CrmTask {
-  id            String    @id @default(uuid())
-  companyId     String
-  title         String
-  description   String?
-  dueDate       DateTime?
-  priority      String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  status        String    @default("TODO") // TODO, IN_PROGRESS, DONE, CANCELLED
-  assignedToId  String?
-  crmContactId  String?
-  crmDealId     String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  assignedTo  User?       @relation("CrmTaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  crmContact  CrmContact? @relation(fields: [crmContactId], references: [id], onDelete: SetNull)
-  crmDeal     CrmDeal?    @relation(fields: [crmDealId], references: [id], onDelete: SetNull)
-
-  @@index([companyId, status])
-  @@index([companyId, dueDate])
-  @@index([companyId, assignedToId])
-  @@map("crm_tasks")
-}
-
-model CrmActivity {
-  id           String   @id @default(uuid())
-  companyId    String
-  type         String   // CALL, EMAIL, MEETING, NOTE, STATUS_CHANGE, DEAL_STAGE
-  subject      String
-  description  String?
-  crmContactId String?
-  crmDealId    String?
-  crmLeadId    String?
-  userId       String?
-  occurredAt   DateTime @default(now())
-  createdAt    DateTime @default(now())
-
-  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  crmContact CrmContact? @relation(fields: [crmContactId], references: [id], onDelete: Cascade)
-  crmDeal    CrmDeal?    @relation(fields: [crmDealId], references: [id], onDelete: Cascade)
-  crmLead    CrmLead?    @relation(fields: [crmLeadId], references: [id], onDelete: Cascade)
-  user       User?       @relation("CrmActivityUser", fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([companyId, occurredAt])
-  @@index([companyId, type])
-  @@map("crm_activities")
-}
-
-model CrmNote {
-  id            String   @id @default(uuid())
-  companyId     String
-  body          String
-  crmContactId  String?
-  crmCompanyId  String?
-  crmDealId     String?
-  crmLeadId     String?
-  userId        String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  crmContact CrmContact? @relation(fields: [crmContactId], references: [id], onDelete: Cascade)
-  crmCompany CrmCompany? @relation(fields: [crmCompanyId], references: [id], onDelete: Cascade)
-  crmDeal    CrmDeal?    @relation(fields: [crmDealId], references: [id], onDelete: Cascade)
-  crmLead    CrmLead?    @relation(fields: [crmLeadId], references: [id], onDelete: Cascade)
-  user       User?       @relation("CrmNoteUser", fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([companyId, crmContactId])
-  @@index([companyId, crmDealId])
-  @@map("crm_notes")
-}
-
-model CrmInvoice {
-  id             String    @id @default(uuid())
-  companyId      String
-  invoiceNumber  String
-  crmContactId   String?
-  crmCompanyId   String?
-  crmDealId      String?
-  status         String    @default("DRAFT") // DRAFT, SENT, PAID, PARTIALLY_PAID, OVERDUE, CANCELLED
-  issueDate      DateTime  @default(now())
-  dueDate        DateTime?
-  subtotal       Float     @default(0.0)
-  taxRate        Float     @default(0.0)
-  taxAmount      Float     @default(0.0)
-  total          Float     @default(0.0)
-  amountPaid     Float     @default(0.0)
-  currency       String    @default("USD")
-  itemsJson      String    @default("[]") // JSON: [{description, quantity, unitPrice}]
-  notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  crmContact CrmContact? @relation(fields: [crmContactId], references: [id], onDelete: SetNull)
-  crmCompany CrmCompany? @relation(fields: [crmCompanyId], references: [id], onDelete: SetNull)
-  crmDeal    CrmDeal?    @relation(fields: [crmDealId], references: [id], onDelete: SetNull)
-
-  @@unique([companyId, invoiceNumber])
-  @@index([companyId, status])
-  @@index([companyId, crmContactId])
-  @@map("crm_invoices")
-}
 
 // ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ Phase D3: Financial transactions ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ append-only audit-grade money records ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬
 model FinancialTransaction {
@@ -1022,9 +927,21 @@ model LandingPage {
   htmlContent  String?  @db.Text
   cssContent   String?  @db.Text // custom CSS from the visual editor (sanitized server-side)
   pageSettings String?  // JSON: { width, maxWidth, background, direction, fontFamily } — additive base styles
+  // How this page is authored. 'BLOCKS' = themed section builder (default for
+  // new pages); 'HTML' = the raw upload, kept as an alternative. NULL reads
+  // as 'HTML', which is what every page predating the builder is.
+  builderMode  String?  // 'BLOCKS' | 'HTML'
+  theme        String?  // JSON: { accent, mood, font, corners } — one colour, palette derived
+  sections     String?  @db.Text // JSON: ordered LandingSection[]
   metaPixelId      String?  // Meta/Facebook Pixel ID (digits only, validated server-side)
   metaPixelEnabled Boolean  @default(false) // false/empty → no Pixel script is ever loaded
   productId    String?
+  // A hostname of the seller's own, pointed at this app in DNS. Lowercase,
+  // and unique across every company: a hostname belongs to whoever proved
+  // it, and two claims on one would make the proxy's answer depend on which
+  // row it happened to read first.
+  domain           String?
+  domainVerifiedAt DateTime?
   isPublished  Boolean  @default(false)
   viewsCount   Int      @default(0) // view = one successful public page render (no PII)
   ordersCount  Int      @default(0)
@@ -1038,36 +955,18 @@ model LandingPage {
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   creator User?    @relation("LandingPageCreator", fields: [createdById], references: [id], onDelete: SetNull)
   orders  Order[]
-  offers  LandingPageOffer[]
   recommendations LandingPageRecommendation[]
   addOns  OrderAddOn[]
+  // Geo context (Stage 2): orders from this page land in this store.
+  storeId String?
+  store   Store?   @relation(fields: [storeId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, slug])
+  @@unique([domain])
   @@index([companyId])
   @@index([companyId, isPublished])
+  @@index([storeId])
   @@map("landing_pages")
-}
-// ─── LANDING PAGE OFFERS (additive) ───
-// Per-landing-page product offers (quantity bundles with gifts).
-// price is server-authoritative — never trusted from the browser.
-model LandingPageOffer {
-  id            String   @id @default(uuid())
-  landingPageId String
-  name          String
-  quantity      Int
-  freeQuantity  Int      @default(0)
-  price         Float
-  isDefault     Boolean  @default(false)
-  sortOrder     Int      @default(0)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  landingPage LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
-  orders      Order[]
-
-  @@index([landingPageId, isActive])
-  @@map("landing_page_offers")
 }
 
 // ─── LANDING PAGE RECOMMENDATIONS (additive) ───
@@ -1220,6 +1119,9 @@ model TelegramSource {
 
   company  Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   messages TelegramMessage[]
+  // Geo context (Stage 2): orders parsed from this chat land in this store.
+  storeId  String?
+  store    Store?            @relation(fields: [storeId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, chatId, topicId])
   @@index([chatId])
@@ -1260,4 +1162,807 @@ model TelegramMessage {
   @@index([companyId, sourceId])
   @@index([orderId])
   @@map("telegram_messages")
+}
+
+// ─── GEO CONTEXT (Stage 1, additive) ───
+// Company -> Country -> Store. A store inherits currency, minor unit,
+// regions, work hours, weekend days, order prefix and allowNegativeStock
+// from its country; none of these are stored on Store.
+model Country {
+  id                 String   @id @default(uuid())
+  companyId          String
+  code               String // ISO 3166-1 alpha-2 (e.g. SY, JO); "ZZ" = not yet set
+  name               String
+  currencyCode       String // ISO 4217 (e.g. SYP, JOD)
+  minorUnit          Int      @default(2) // decimal places for this currency
+  workHoursStart     String   @default("09:00") // HH:mm, country-local
+  workHoursEnd       String   @default("17:00")
+  weekendDays        Int[]    @default([5]) // 0 = Sunday ... 6 = Saturday
+  timezone           String   @default("Asia/Damascus") // IANA
+  orderPrefix        String   @default("ORD")
+  allowNegativeStock Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  regions Region[]
+  stores  Store[]
+  deliveryFees DeliveryFee[]
+  wallets Wallet[]
+  orders  Order[]
+  access  UserCountryAccess[]
+
+  @@unique([companyId, code])
+  @@index([companyId, isActive])
+  @@map("countries")
+}
+
+// Governorate / region inside a country. Replaces the hard-coded list in
+// src/lib/locations/syria.ts once every caller reads from here.
+model Region {
+  id        String   @id @default(uuid())
+  countryId String
+  name      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  country      Country       @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  orders       Order[]
+  deliveryFees DeliveryFee[]
+
+  @@unique([countryId, name])
+  @@map("regions")
+}
+
+/// Where orders come from, as the shop defines them.
+///
+/// The order's `source` was free text, so the same channel arrived spelled
+/// three ways and the filter offered a list written into a screen while the
+/// orders in front of it carried something else entirely. A channel is a row
+/// now: named once, picked from a list, and countable.
+///
+/// `kind` is the platform behind the name — several channels can share one
+/// ("تيكتوك - صفحة الكريم" and "تيكتوك - صفحة القطرة" are both TIKTOK), which
+/// is what makes per-platform reporting possible without losing the detail.
+model OrderChannel {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  /// LANDING_PAGE | FACEBOOK | INSTAGRAM | TIKTOK | WHATSAPP | TELEGRAM |
+  /// PHONE | SHEET | WEBSITE | OTHER
+  kind      String   @default("OTHER")
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orders  Order[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+  @@map("order_channels")
+}
+
+model Store {
+  id        String   @id @default(uuid())
+  companyId String
+  countryId String
+  name      String
+  slug      String
+  logo      String?
+  status    String   @default("ACTIVE") // ACTIVE | PAUSED
+  type      String   @default("MULTI_PRODUCT") // MULTI_PRODUCT | SINGLE_PRODUCT
+  /// Whether the advertised price already contains the delivery fee.
+  /// A shop-wide pricing policy, not a per-offer one: it used to live only
+  /// on the offer, so a direct order on a delivery-inclusive store was
+  /// priced as price + fee and asked the customer for money the seller had
+  /// never advertised. An offer may still override it.
+  priceIncludesDelivery Boolean @default(false)
+  // ─── The store's public face ───
+  // A store was an internal boundary only. These give it a storefront,
+  // reusing the landing page's theme engine rather than growing a second
+  // one: the same accent colour, the same derived palette, the same CSS.
+  storefrontEnabled Boolean @default(false)
+  theme        String?   // JSON: { accent, mood, font, corners }
+  tagline      String?
+  about        String?   @db.Text
+  supportPhone String?
+  /// A hostname of the seller's own. Unique across stores, and checked
+  /// against landing page domains too — the proxy must never find two
+  /// answers for one host.
+  domain       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  country Country           @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  orders  Order[]
+  access  UserStoreAccess[]
+  landingPages    LandingPage[]
+  telegramSources TelegramSource[]
+  shippingBatches ShippingBatch[]
+
+  @@unique([companyId, slug])
+  @@unique([domain])
+  @@index([countryId, status])
+  @@map("stores")
+}
+
+// Which countries a user may enter. Users holding geo.manage see every
+// country of their company without rows here.
+model UserCountryAccess {
+  id        String   @id @default(uuid())
+  userId    String
+  countryId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, countryId])
+  @@index([countryId])
+  @@map("user_country_access")
+}
+
+// Optional narrowing inside an accessible country. No rows for a country
+// = every store of that country is accessible.
+model UserStoreAccess {
+  id        String   @id @default(uuid())
+  userId    String
+  storeId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
+  @@index([storeId])
+  @@map("user_store_access")
+}
+
+// ─── ORDER LINES (Stage 3) ───
+// One row per product line. Reservation and discount live HERE, never on the
+// order: an order with a single unreserved line cannot reach READY_TO_SHIP,
+// and a partial return must refund that line's real share of the discount.
+model OrderItem {
+  id            String   @id @default(uuid())
+  companyId     String
+  orderId       String
+  productId     String
+  productName   String // snapshot at creation
+  quantity      Int
+  freeQuantity  Int      @default(0) // gift units: real stock, zero price
+  unitPrice     Decimal  @db.Decimal(12, 2)
+  discountShare Decimal  @db.Decimal(12, 2) @default(0) // proportional share of the order discount
+  lineTotal     Decimal  @db.Decimal(12, 2) // quantity * unitPrice - discountShare
+  reservedQty   Int      @default(0)
+  // Stage 9 — partial delivery. What the customer actually took of this
+  // line. Null until the parcel is settled at the door; after that
+  // deliveredQty + returnedQty equals quantity + freeQuantity.
+  deliveredQty  Int?
+  returnedQty   Int?
+  addedById     String? // who added the line (cross-sell attribution)
+  addedStage    String? // INTAKE | CONFIRMATION | CUSTODY
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([companyId, productId])
+  @@map("order_items")
+}
+
+// ─── ORDER NOTES (Stage 3) ───
+// The context layer. Immutable by contract: no edit, no delete, corrections
+// are new notes. Never add a typed field for something a note already covers.
+model OrderNote {
+  id        String   @id @default(uuid())
+  companyId String
+  orderId   String
+  body      String
+  authorId  String?
+  kind      String   @default("internal") // follow_up | return | settlement | internal
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@index([companyId, kind])
+  @@map("order_notes")
+}
+
+// ─── CHANGE REQUESTS (Stage 4) ───
+// A confirmed order is read-only for the agent: changing it goes through a
+// request. A BLOCKING request stops OUR forward transitions only — courier
+// webhook events are always recorded and flag the request as changed during
+// review (contract invariant 7).
+model OrderChangeRequest {
+  id            String   @id @default(uuid())
+  companyId     String
+  orderId       String
+  requestedById String
+  requestedRole String
+  /// { field: { from, to } } — what the requester wants changed
+  changes       Json
+  reason        String
+  status        String   @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  blocking      Boolean  @default(true)
+  /// SLA deadline; expiry escalates, it NEVER auto-approves (silence is not consent)
+  slaDueAt      DateTime?
+  escalatedAt   DateTime?
+  changedDuringReview Boolean @default(false)
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status, createdAt])
+  @@index([orderId, status])
+  @@map("order_change_requests")
+}
+
+// ─── ENTRY ISSUES (Stage 4) ───
+// Only for orders a moderator entered: a store-sourced order has no
+// moderator to return it to. An issue is never counted as a cancellation
+// against the agent, and the order keeps its original created_at.
+model OrderIssue {
+  id           String    @id @default(uuid())
+  companyId    String
+  orderId      String
+  raisedById   String
+  reason       String // WRONG_PHONE | WRONG_ADDRESS | WRONG_PRODUCT | MISSING_DATA | DUPLICATE | OTHER
+  note         String?
+  status       String    @default("OPEN") // OPEN | CORRECTED | VOIDED
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status, createdAt])
+  @@index([orderId])
+  @@map("order_issues")
+}
+
+// ─── DELIVERY FEES (Stage 5) ───
+// A separate row per courier per country per region, with the fee and the
+// late-threshold days used by tracking. The fee on an order is a snapshot;
+// changing the table never rewrites a live order.
+model DeliveryFee {
+  id                 String   @id @default(uuid())
+  companyId          String
+  countryId          String
+  deliveryProviderId String
+  regionId           String
+  fee                Decimal  @db.Decimal(12, 2)
+  /// Days in transit after which tracking marks the shipment late.
+  lateThresholdDays  Int      @default(3)
+  /// Fee charged by the courier for a returned shipment.
+  returnFee          Decimal  @db.Decimal(12, 2) @default(0)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  country  Country          @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  provider DeliveryProvider @relation(fields: [deliveryProviderId], references: [id], onDelete: Cascade)
+  region   Region           @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@unique([deliveryProviderId, regionId])
+  @@index([companyId, countryId])
+  @@map("delivery_fees")
+}
+
+// ─── RETURN RECEIVING (Stage 5) ───
+// Nothing re-enters stock before a physical count and inspection: the
+// acknowledgement is a column, not a checkbox in the UI. Missing units are
+// computed (shipped - received - damaged), never typed.
+model ReturnReceipt {
+  id                String   @id @default(uuid())
+  companyId         String
+  orderId           String   @unique
+  expectedQty       Int
+  receivedQty       Int
+  damagedQty        Int      @default(0)
+  missingQty        Int      @default(0)
+  courierFeeCharged Boolean  @default(false)
+  courierFeeAmount  Decimal  @db.Decimal(12, 2) @default(0)
+  /// Set only when the receiver confirms they counted and inspected the goods.
+  inspectedById     String
+  inspectedAt       DateTime @default(now())
+  note              String?
+  /// Stock movement created after the acknowledgement, if any.
+  stockRestored     Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@map("return_receipts")
+}
+
+// ─── WALLETS (Stage 6) ───
+// A wallet belongs to a COUNTRY, and its currency is chosen per wallet: a
+// country may hold a USD cash box beside its local one.
+model Wallet {
+  id             String   @id @default(uuid())
+  companyId      String
+  countryId      String
+  name           String
+  currencyCode   String
+  /// Balance the wallet started with; every change after it is a movement.
+  openingBalance Decimal  @db.Decimal(14, 3) @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  country   Country            @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  movements WalletMovement[]
+  closings  DailyClosing[]
+  receipts  StatementReceipt[]
+
+  @@unique([companyId, name])
+  @@index([companyId, countryId, isActive])
+  @@map("wallets")
+}
+
+// Every movement carries wallet, direction, amount, party, category and note.
+// NOTHING is ever deleted: a correction is a reversing entry that points at
+// the original (reversalOfId) and states its reason.
+model WalletMovement {
+  id             String   @id @default(uuid())
+  companyId      String
+  walletId       String
+  direction      String // IN | OUT
+  amount         Decimal  @db.Decimal(14, 3)
+  currencyCode   String
+  /// Who the money came from or went to (courier, employee, supplier...).
+  party          String
+  category       String // COURIER_SETTLEMENT | COMMISSION | EXPENSE | TRANSFER_IN | TRANSFER_OUT | ADJUSTMENT | OTHER
+  note           String
+  referenceType  String? // STATEMENT | TRANSFER | COMMISSION_PERIOD | ORDER
+  referenceId    String?
+  /// Set on a reversing entry; the original is never edited or deleted.
+  reversalOfId   String?  @unique
+  reversalReason String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  wallet     Wallet          @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  reversalOf WalletMovement? @relation("Reversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy WalletMovement? @relation("Reversal")
+
+  @@index([companyId, walletId, createdAt])
+  @@index([companyId, category])
+  @@index([referenceType, referenceId])
+  @@map("wallet_movements")
+}
+
+// Wallet to wallet, same or different country. The exchange rate is entered
+// by the user, stored here, and NEVER recalculated afterwards.
+model WalletTransfer {
+  id           String   @id @default(uuid())
+  companyId    String
+  fromWalletId String
+  toWalletId   String
+  amountOut    Decimal  @db.Decimal(14, 3)
+  amountIn     Decimal  @db.Decimal(14, 3)
+  exchangeRate Decimal  @db.Decimal(14, 6)
+  note         String
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@map("wallet_transfers")
+}
+
+// Per wallet, per day: book balance, the counted balance, and the gap.
+// A non-zero difference needs a written explanation, and the person who
+// records movements may not approve the closing.
+model DailyClosing {
+  id            String    @id @default(uuid())
+  companyId     String
+  walletId      String
+  date          DateTime  @db.Date
+  bookBalance   Decimal   @db.Decimal(14, 3)
+  actualBalance Decimal   @db.Decimal(14, 3)
+  difference    Decimal   @db.Decimal(14, 3)
+  explanation   String?
+  status        String    @default("OPEN") // OPEN | APPROVED
+  recordedById  String
+  approvedById  String?
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@unique([walletId, date])
+  @@index([companyId, status, date])
+  @@map("daily_closings")
+}
+
+// ─── SETTLEMENT (Stage 6) — three sequential entities ───
+// 1. Statement: what the courier SAYS it owes. The file hash makes a
+//    duplicate import impossible.
+model CourierStatement {
+  id                 String    @id @default(uuid())
+  companyId          String
+  storeId            String
+  deliveryProviderId String
+  reference          String
+  periodFrom         DateTime?
+  periodTo           DateTime?
+  /// Total the courier claims, read from the file itself.
+  totalAmount        Decimal   @db.Decimal(14, 3)
+  currencyCode       String
+  fileName           String
+  /// SHA-256 of the uploaded file: the same statement can never be imported twice.
+  fileHash           String
+  status             String    @default("IMPORTED") // IMPORTED | RECEIPTED | MATCHED | APPROVED
+  /// Required when the receipts do not add up to the statement total.
+  gapExplanation     String?
+  uploadedById       String
+  approvedById       String?
+  approvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  lines    StatementLine[]
+  receipts StatementReceipt[]
+  matches  SettlementMatch[]
+
+  @@unique([companyId, fileHash])
+  @@index([companyId, status, createdAt])
+  @@map("courier_statements")
+}
+
+/// One row of the courier file, as it was read.
+model StatementLine {
+  id          String   @id @default(uuid())
+  statementId String
+  merchantRef String?
+  barcode     String?
+  // The NET: what the courier hands over after keeping their fee. This is
+  // the figure a receipt is measured against.
+  amount      Decimal  @db.Decimal(14, 3)
+  // What they say they collected from the customer, and the fee they kept.
+  // Both are stated so a difference in the net can be traced to its cause:
+  // a collection short, or a fee higher than agreed.
+  collected   Decimal? @db.Decimal(14, 3)
+  fee         Decimal? @db.Decimal(14, 3)
+  status      String? // the courier's own status word
+  rawRow      String?
+  createdAt   DateTime @default(now())
+
+  statement CourierStatement  @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  matches   SettlementMatch[]
+
+  @@index([statementId])
+  @@index([merchantRef])
+  @@map("statement_lines")
+}
+
+// 2. Receipt: what ACTUALLY arrived. Many lines per statement, each with its
+//    own wallet, currency and amount.
+model StatementReceipt {
+  id           String   @id @default(uuid())
+  companyId    String
+  statementId  String
+  walletId     String
+  amount       Decimal  @db.Decimal(14, 3)
+  currencyCode String
+  /// Stored when the wallet currency differs from the statement currency.
+  exchangeRate Decimal? @db.Decimal(14, 6)
+  receivedAt   DateTime @default(now())
+  note         String?
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  statement CourierStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  wallet    Wallet           @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, statementId])
+  @@map("statement_receipts")
+}
+
+// 3. Matching: runs on demand AFTER the receipt. Key: merchant reference,
+//    then courier barcode. NEVER the phone.
+model SettlementMatch {
+  id              String    @id @default(uuid())
+  companyId       String
+  statementId     String
+  statementLineId String?
+  orderId         String?
+  result          String // MATCHED | MISMATCHED | MISSING_IN_STATEMENT | MISSING_IN_SYSTEM
+  matchedBy       String? // MERCHANT_REF | BARCODE
+  expectedAmount  Decimal?  @db.Decimal(14, 3)
+  statementAmount Decimal?  @db.Decimal(14, 3)
+  difference      Decimal?  @db.Decimal(14, 3)
+  // The delivery fee is checked in its own right. With the price INCLUDING
+  // delivery, a fee higher than agreed quietly eats the revenue: the net
+  // still "arrives", just smaller. Stating both sides names the cause.
+  expectedFee     Decimal?  @db.Decimal(14, 3)
+  statementFee    Decimal?  @db.Decimal(14, 3)
+  feeDifference   Decimal?  @db.Decimal(14, 3)
+  note            String?
+  resolvedById    String?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  statement     CourierStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  statementLine StatementLine?   @relation(fields: [statementLineId], references: [id], onDelete: SetNull)
+  order         Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, statementId, result])
+  @@index([orderId])
+  @@map("settlement_matches")
+}
+
+// ─── COMMISSION (Stage 6) ───
+// Rules are DATA with an effective_from date: changing a rule today never
+// recalculates a closed period.
+model CommissionRule {
+  id              String    @id @default(uuid())
+  companyId       String
+  name            String
+  /// Who it applies to: a role name, or one specific user.
+  appliesToRole   String?
+  appliesToUserId String?
+  basis           String // ORDER_DELIVERED (accrual point per contract)
+  type            String // PERCENT | FIXED
+  value           Decimal   @db.Decimal(12, 4)
+  /// Minimum sample before delivery-rate tiers may be applied.
+  minSampleOrders Int       @default(30)
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  isActive        Boolean   @default(true)
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  entries CommissionEntry[]
+
+  @@index([companyId, isActive, effectiveFrom])
+  @@map("commission_rules")
+}
+
+// Accrued on DELIVERED, payable only after settlement approval. A returned
+// order generates zero commission for every party, and a correction is a
+// reversing entry — the monthly period is locked once approved.
+model CommissionEntry {
+  id             String   @id @default(uuid())
+  companyId      String
+  orderId        String
+  userId         String
+  role           String
+  ruleId         String?
+  amount         Decimal  @db.Decimal(14, 3)
+  currencyCode   String
+  /// ACCRUED (delivered) -> PAYABLE (settlement approved) -> PAID, or REVERSED.
+  status         String   @default("ACCRUED")
+  /// YYYY-MM of the delivery; the period is locked when approved.
+  periodMonth    String
+  reversalOfId   String?  @unique
+  reversalReason String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  order      Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  rule       CommissionRule?  @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  reversalOf CommissionEntry? @relation("CommissionReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy CommissionEntry? @relation("CommissionReversal")
+
+  @@unique([orderId, userId, status])
+  @@index([companyId, periodMonth, status])
+  @@index([userId, periodMonth])
+  @@map("commission_entries")
+}
+
+/// Monthly commission statement per user: locked after approval, corrections
+/// are reversing entries in the next period.
+model CommissionPeriod {
+  id           String    @id @default(uuid())
+  companyId    String
+  userId       String
+  periodMonth  String
+  totalAmount  Decimal   @db.Decimal(14, 3)
+  currencyCode String
+  status       String    @default("OPEN") // OPEN | APPROVED | PAID
+  approvedById String?
+  approvedAt   DateTime?
+  paidAt       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([companyId, userId, periodMonth])
+  @@index([companyId, status])
+  @@map("commission_periods")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Stage 7 — the scheduler.
+//
+// Half the system is inert without it: claims that should auto-release wait
+// for someone to open a screen, postponed orders resurface only if a human
+// remembers, commission accrues only when asked. A run log per job is what
+// makes a missed window visible instead of silent.
+// ─────────────────────────────────────────────────────────────────────────
+
+model JobRun {
+  id         String    @id @default(uuid())
+  jobName    String
+  status     String    @default("RUNNING") // RUNNING | SUCCEEDED | FAILED
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  /** How many things the run actually acted on — 0 is a valid quiet run. */
+  processed  Int       @default(0)
+  /** A short human summary, and the error when it failed. */
+  detail     String?
+  error      String?
+  /** Which company/country the run covered, when a job is scoped. */
+  companyId  String?
+  countryId  String?
+
+  @@index([jobName, startedAt])
+  @@index([status, startedAt])
+  @@map("job_runs")
+}
+
+// Blocking a customer.
+//
+// Keyed on the PHONE, not on a customer row: the phone is the identity, and
+// somebody refused delivery three times will happily order again under a new
+// name. Company-wide and never country-scoped — the same person is the same
+// person in every store.
+//
+// A block is never deleted, only RELEASED, so the history of who blocked
+// whom and why survives the decision to let them back.
+model CustomerBlock {
+  id            String    @id @default(uuid())
+  companyId     String
+  /** Normalized digits, the same form customer.phone is stored in. */
+  phone         String
+  /** Kept for the screen; the phone is what is matched on. */
+  name          String?
+  reason        String
+  blockedById   String
+  createdAt     DateTime  @default(now())
+  releasedAt    DateTime?
+  releasedById  String?
+  releaseReason String?
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  blockedBy  User    @relation("CustomerBlockedBy", fields: [blockedById], references: [id], onDelete: Restrict)
+  releasedBy User?   @relation("CustomerBlockReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
+
+  // One ACTIVE block per phone is enforced in the service, not here: a
+  // released block must be able to sit beside a new one for the same phone.
+  @@index([companyId, phone, releasedAt])
+  @@map("customer_blocks")
+}
+
+// ─── THE APP PLATFORM (additive) ───
+// Integrations used to exist without a common idea of "installed": a courier
+// adapter, tracking pixels, a WhatsApp connection, Telegram sources — each
+// with its own screen and no answer to "what is connected, and who turned it
+// on". Two kinds share one shelf: BUILT-IN apps declared in code (their
+// configuration already has a screen, so the store records the install and
+// links to it), and EXTERNAL apps a developer registers.
+
+/// An app registered by an outside developer. Built-ins are NOT here: they
+/// live in src/lib/apps/registry.ts, and a catalogue row for something that
+/// lives in code would be a second source of truth about what the code does.
+model App {
+  id            String   @id @default(uuid())
+  companyId     String
+  code          String
+  name          String
+  description   String?
+  developerName String?
+  iconUrl       String?
+  webhookUrl    String?
+  /// Event names it asked to hear about, as a JSON array.
+  events        String   @default("[]")
+  /// HMAC signing secret, encrypted at rest. Shown once at registration and
+  /// never again by any endpoint.
+  secret        String?
+  status        String   @default("ACTIVE") // ACTIVE | DISABLED
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  installs AppInstall[]
+
+  @@unique([companyId, code])
+  @@map("apps")
+}
+
+/// One company's installation of an app, built-in or external.
+model AppInstall {
+  id            String   @id @default(uuid())
+  companyId     String
+  /// The built-in's code or the external app's code — one column, so the
+  /// installed list is one query and one shape.
+  appCode       String
+  appId         String?
+  enabled       Boolean  @default(true)
+  /// Per-install settings, encrypted: an app's configuration is as sensitive
+  /// as the account it configures.
+  config        String?
+  installedById String?
+  installedAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  app        App?          @relation(fields: [appId], references: [id], onDelete: Cascade)
+  deliveries AppDelivery[]
+
+  @@unique([companyId, appCode])
+  @@index([companyId, enabled])
+  @@map("app_installs")
+}
+
+/// Every attempt to tell an app something. A webhook that fails silently is
+/// an integration that stops silently, and the developer cannot know.
+model AppDelivery {
+  id            String    @id @default(uuid())
+  companyId     String
+  installId     String
+  event         String
+  payload       String    @db.Text
+  url           String
+  status        String    @default("PENDING") // PENDING | OK | FAILED
+  attempts      Int       @default(0)
+  responseCode  Int?
+  error         String?
+  nextAttemptAt DateTime?
+  deliveredAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  install AppInstall @relation(fields: [installId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([companyId, createdAt])
+  @@map("app_deliveries")
+}
+
+/// THE FINGERPRINT — append-only marks of arriving and leaving.
+///
+/// AUTO is the login: signing in IS the fingerprint, and an account opens on
+/// one device at a time, so it cannot be pressed from somebody else's phone.
+/// MANUAL is the "استلمت" / "سلّمت" buttons, for hours that leave no trace in
+/// the order records — a meeting, a training, a queue that stayed empty.
+///
+/// Nothing derived is stored. Hours worked, lateness and late-day counts are
+/// computed from these moments and the country's work hours, so changing the
+/// shift never leaves a stale number behind.
+model AttendanceMark {
+  id        String   @id @default(uuid())
+  /// Null for a platform-level account, which belongs to no company.
+  companyId String?
+  userId    String
+  /// LOGIN | CHECK_IN | CHECK_OUT
+  kind      String
+  /// AUTO (the system saw it) | MANUAL (somebody pressed it)
+  source    String   @default("AUTO")
+  at        DateTime @default(now())
+  note      String?
+  createdAt DateTime @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// Restrict, not cascade: deleting a user must not quietly erase the
+  /// record of the days they worked.
+  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, at])
+  @@index([userId, at])
+  @@map("attendance_marks")
 }

@@ -304,7 +304,7 @@ function AnalyticsPixelsTab() {
             </div>
           )}
           <Link
-            href="/analytics"
+            href="/growth/performance"
             className="inline-flex items-center gap-1 text-xs font-semibold text-[#b8256e] hover:underline"
           >
             التحليلات الكاملة <ArrowLeft className="h-3 w-3" />

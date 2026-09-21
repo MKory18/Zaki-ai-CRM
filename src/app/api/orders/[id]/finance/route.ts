@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
 import { isValidSettlementTransition, computeFinancials, TRANSACTION_TYPES } from '@/lib/finance-workflow';
 import { logAudit } from '@/lib/audit';
@@ -18,13 +18,13 @@ const toMoney = (v: any) => (v === null || v === undefined ? null : new Prisma.D
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     // Access: finance/settlement viewers get company-wide read; the order's own
     // agent keeps access via assertOrderAccess (assignment scope).
     const hasFinanceView = can(user, 'finance.view') || can(user, 'settlement.view');
     if (!hasFinanceView) {
-      const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+      const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
       if (!access.allowed) {
         const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
         return NextResponse.json({ error: 'Order not found' }, { status: map[access.reason] });
@@ -64,7 +64,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     const body = await req.json();
     const {
@@ -73,7 +73,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       settlementStatus, settlementNote, expectedVersion,
     } = body as Record<string, any>;
 
-    const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
       return NextResponse.json({ error: 'Order not found' }, { status: map[access.reason] });

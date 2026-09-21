@@ -38,8 +38,15 @@ export function isValidTransition(from: string, to: string): boolean {
 /** Reject reason codes (structured — not free text) */
 export const REJECTION_REASONS = [
   'PRICE_TOO_HIGH', 'CUSTOMER_CHANGED_MIND', 'CUSTOMER_DOES_NOT_WANT_PRODUCT',
-  'DUPLICATE_ORDER', 'WRONG_NUMBER', 'FAKE_ORDER', 'OUT_OF_SERVICE_AREA', 'OTHER',
+  'DUPLICATE_ORDER', 'WRONG_NUMBER', 'FAKE_ORDER', 'OUT_OF_SERVICE_AREA',
+  // Its own distinct reason: the third no-answer closes the order by rule,
+  // so it is never mixed with a customer's refusal in any report.
+  'NO_ANSWER_3_ATTEMPTS',
+  'OTHER',
 ] as const;
+
+/** No-answer attempts before the order closes itself (contract: 1/2/3). */
+export const NO_ANSWER_LIMIT = 3;
 export type RejectionReason = (typeof REJECTION_REASONS)[number];
 
 /** Follow-up reasons */

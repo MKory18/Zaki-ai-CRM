@@ -1,3 +1,4 @@
+import { aiChat, AiNotConfigured } from './ai-provider';
 /**
  * OpenRouter AI Service for SALESFLOW
  * Business Intelligence Assistant & Daily Summary Generator
@@ -154,10 +155,11 @@ Always format your response as valid JSON matching this schema:
   return { summary, observations, risks, recommendations };
 }
 
-export async function askAiAssistant(question: string, context: AiBusinessContext): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
-
+export async function askAiAssistant(
+  question: string,
+  context: AiBusinessContext,
+  companyId?: string
+): Promise<string> {
   const systemPrompt = `You are the SALESFLOW Executive Business AI Advisor.
 You have real-time access to the company's verified operational and financial database context.
 CRITICAL RULES:
@@ -166,48 +168,23 @@ CRITICAL RULES:
 3. Be professional, concise, actionable, and executive-ready.
 4. Support both English and Arabic when queried.`;
 
-  if (apiKey) {
+  // The vendor, the model and the key are the company's choice now, not a
+  // deploy-time constant. A failure falls through to the grounded summary
+  // below rather than showing an error: an answer built from our own
+  // numbers is the one place the AI cannot be wrong.
+  if (companyId) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      const answer = await aiChat({
+        companyId,
+        system: systemPrompt,
+        user: `Business Metrics Context:
+${JSON.stringify(context, null, 2)}
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://salesflow.io',
-          'X-Title': 'SALESFLOW Assistant',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            {
-              role: 'user',
-              content: `Business Metrics Context:\n${JSON.stringify(
-                context,
-                null,
-                2
-              )}\n\nUser Question: ${question}`,
-            },
-          ],
-          temperature: 0.3,
-        }),
-        signal: controller.signal,
+User Question: ${question}`,
       });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const json = await response.json();
-        return (
-          json.choices?.[0]?.message?.content ||
-          'Unable to retrieve complete response from AI service.'
-        );
-      }
+      if (answer) return answer;
     } catch (e) {
-      console.warn('AI Assistant query failed or timed out:', e);
+      if (!(e instanceof AiNotConfigured)) console.warn('AI assistant call failed:', e);
     }
   }
 

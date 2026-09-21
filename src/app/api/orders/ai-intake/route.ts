@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
+import { orderRefFields } from '@/lib/order-ref';
+import { resolveRegionId } from '@/lib/regions';
+import { computeCod } from '@/lib/money';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { createNotification } from '@/lib/notification';
 import { apiError } from '@/lib/api-error';
 import { requirePermission } from '@/lib/authorization';
+import { zodMessage } from '@/lib/zod-message';
 
 /**
  * POST /api/orders/ai-intake
@@ -77,7 +82,7 @@ Rules: keep original Arabic text, quantity is a number, price is a number withou
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId, countryId, country } = await requireContext();
     await requirePermission('orders.create');
 
     const body = await req.json();
@@ -101,7 +106,7 @@ export async function POST(req: Request) {
       const check = confirmSchema.safeParse(body.parsed);
       if (!check.success) {
         return NextResponse.json(
-          { error: check.error.issues[0]?.message || 'بيانات الطلب غير صالحة' },
+          { error: zodMessage(check.error) },
           { status: 400 }
         );
       }
@@ -115,6 +120,16 @@ export async function POST(req: Request) {
       }
 
       const normalizedPhone = normalizePhoneNumber(p.phone);
+
+      // Blacklist, company-wide. Staff get the real reason.
+      const block = await activeBlock(db, companyId, p.phone);
+      if (block) {
+        return NextResponse.json(
+          { error: `هذا الرقم محظور: ${block.reason}`, code: 'CUSTOMER_BLOCKED', blockId: block.id },
+          { status: 409 }
+        );
+      }
+
       let customer = await db.customer.findUnique({
         where: { companyId_phone: { companyId, phone: normalizedPhone } },
       });
@@ -160,20 +175,32 @@ export async function POST(req: Request) {
         }
       }
 
-      const count = await db.order.count({ where: { companyId } });
-      const orderNumber = `ORD-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+      const refs = await orderRefFields(db, companyId, country.orderPrefix);
+      // ONE COD function (contract PART 5); no delivery fee at intake.
+      const money = computeCod({
+        lines: [{ quantity: qty, unitPrice: qty > 0 ? price / qty : price }],
+        minorUnit: country.minorUnit,
+      });
+
+      // Bind the governorate written in the message to a real Region: the
+      // delivery fee is keyed on it, so an order without one cannot be priced
+      // or shipped.
+      const resolvedRegionId = await resolveRegionId(db, countryId, p.governorate ?? customer.city);
 
       const order = await db.order.create({
         data: {
           companyId,
-          orderNumber,
+          countryId,
+          storeId,
+          regionId: resolvedRegionId,
+          ...refs,
           customerId: customer.id,
           productId: product.id,
           quantity: qty,
           sellingPrice: price,
           shippingCost: 0,
-          totalAmount: price,
-          currency: 'USD',
+          totalAmount: money.cod,
+          currency: country.currencyCode,
         moderatorId: assignedModeratorId,
         moderatorCommission,
         estimatedCostOfGoods: Number((unitCost * qty).toFixed(2)),
@@ -182,6 +209,21 @@ export async function POST(req: Request) {
         status: 'NEW',
           source: p.source?.trim() || 'AI Intake',
           customerNotes: p.notes?.trim() && p.notes !== '-' ? p.notes.trim() : null,
+        },
+      });
+
+      // Order line — reservation and discount share live per line.
+      await db.orderItem.create({
+        data: {
+          companyId,
+          orderId: order.id,
+          productId: product.id,
+          productName: product.name,
+          quantity: qty,
+          unitPrice: money.subtotal / qty,
+          lineTotal: money.lineTotals[0] ?? money.subtotal,
+          addedById: user.id,
+          addedStage: 'INTAKE',
         },
       });
 

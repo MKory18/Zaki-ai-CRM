@@ -63,7 +63,7 @@ async function main() {
   for (const period of periods) {
     const [oldRes, newRes] = await Promise.all([
       oldAnalytics(companyId, { period }),
-      newAnalytics(companyId, { period }),
+      newAnalytics({ companyId, storeId: null }, { period }),
     ]);
 
     const oldM = stripVolatile(oldRes);

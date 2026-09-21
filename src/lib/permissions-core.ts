@@ -128,6 +128,20 @@ function scopeAwareKey(legacy: string): string {
   }
 }
 
+/** Roles that own countries/stores (parity with migration stage1_geo_context). */
+export const GEO_MANAGER_ROLES: readonly string[] = ['COMPANY_ADMIN', 'MANAGER'];
+
+/** geo.* companions for the legacy path: managers get geo.manage + geo.view,
+ *  anyone who can view settings gets geo.view (same rule as the migration). */
+function addGeoCompanions(role: string, keys: { has(k: string): boolean }, add: (k: string) => void): void {
+  if (GEO_MANAGER_ROLES.includes(role)) {
+    add('geo.manage');
+    add('geo.view');
+  } else if (keys.has('settings.view')) {
+    add('geo.view');
+  }
+}
+
 /** DB-shaped user (subset needed). */
 export interface DbUserLike {
   id: string;
@@ -142,12 +156,15 @@ export async function computeEffectiveGrants(user: DbUserLike): Promise<Effectiv
 
   const grants: Record<string, Grant> = {};
 
-  // 2. Role grants (DB) — fallback to legacy map when no roleId
-  if (user.roleId) {
-    const rows = await db.rolePermission.findMany({
-      where: { roleId: user.roleId },
-      select: { permission: true, scope: true, scopeIds: true },
-    });
+  // 2. Role grants (DB). A user without roleId inherits the system role
+  //    template named like their legacy role string, so role edits in the
+  //    permissions screen reach every user. The in-code legacy map is used
+  //    only when no such template exists.
+  const rows = await db.rolePermission.findMany({
+    where: user.roleId ? { roleId: user.roleId } : { role: { companyId: null, name: user.role } },
+    select: { permission: true, scope: true, scopeIds: true },
+  });
+  if (user.roleId || rows.length > 0) {
     for (const r of rows) {
       grants[r.permission] = { scope: r.scope as Scope, scopeIds: (r.scopeIds as unknown[]) ?? null };
     }
@@ -162,6 +179,11 @@ export async function computeEffectiveGrants(user: DbUserLike): Promise<Effectiv
         grants[key] = mapped;
       }
     }
+    addGeoCompanions(
+      user.role,
+      { has: (k) => grants[k] !== undefined },
+      (k) => { grants[k] ??= { scope: 'ALL_COMPANY' }; }
+    );
   }
 
   // 3. User overrides — DENY wins, ALLOW wins over role absence/scope
@@ -199,6 +221,7 @@ export function legacyEffectiveKeys(role: UserRole): string[] {
     }
   }
   if (role === 'ACCOUNTANT' || role === 'SETTLEMENT_OFFICER') keys.add('products.view');
+  addGeoCompanions(role, keys, (k) => keys.add(k));
   return [...keys];
 }
 
@@ -218,4 +241,5 @@ export function catalogExtensionKeys(keys: Set<string>): Set<string> {
   if (out.has('roles.edit')) { out.add('roles.create'); out.add('roles.delete'); }
   return out;
 }
+
 

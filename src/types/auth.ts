@@ -14,7 +14,10 @@ export type UserRole =
   // Specialized operational roles
   | 'CONFIRMATION_AGENT'
   | 'FOLLOW_UP_AGENT'
-  | 'SETTLEMENT_OFFICER';
+  | 'SETTLEMENT_OFFICER'
+  // Contract roles (Stage 2). Grants live only in the DB system templates.
+  | 'WAREHOUSE'
+  | 'CONFIRMATION_SUPERVISOR';
 
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
 
@@ -251,6 +254,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports.view', 'analytics.view',
   ],
 
+  // Grants come from the DB system role templates (migration stage2_store_scope_roles).
+  WAREHOUSE: [],
+  CONFIRMATION_SUPERVISOR: [],
+
   PENDING_USER: [],
 };
 
@@ -260,9 +267,11 @@ export const ASSIGNABLE_ROLES: UserRole[] = [
   'MODERATOR',
   'CONFIRMATION_AGENT',
   'FOLLOW_UP_AGENT',
+  'CONFIRMATION_SUPERVISOR',
   'SETTLEMENT_OFFICER',
   'ACCOUNTANT',
   'DELIVERY_MANAGER',
+  'WAREHOUSE',
   'MANAGER',
   'COMPANY_ADMIN',
   'SUPER_ADMIN',
@@ -281,6 +290,8 @@ export const ROLE_LABELS: Record<UserRole, { ar: string; en: string }> = {
   SETTLEMENT_OFFICER: { ar: 'مدقق التسويات', en: 'Settlement Officer' },
   ACCOUNTANT: { ar: 'المحاسب', en: 'Accountant' },
   DELIVERY_MANAGER: { ar: 'مدير التوصيل', en: 'Delivery Manager' },
+  WAREHOUSE: { ar: 'المستودع', en: 'Warehouse' },
+  CONFIRMATION_SUPERVISOR: { ar: 'مشرف التأكيد', en: 'Confirmation Supervisor' },
   PENDING_USER: { ar: 'حساب معلق', en: 'Pending User' },
 };
 

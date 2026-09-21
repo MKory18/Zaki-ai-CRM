@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { apiFetch } from '@/lib/api-client';
-import { format } from 'date-fns';
+import { arDateShort } from '@/lib/format';
 import {
   Truck,
   Package,
@@ -25,6 +25,24 @@ import {
   History,
   Hash,
 } from 'lucide-react';
+
+/** Delivery attempt outcomes, stored as codes and read as words. */
+const ATTEMPT_RESULT_AR: Record<string, string> = {
+  DELIVERED: 'سُلّم',
+  PARTIALLY_DELIVERED: 'سُلّم جزئياً',
+  FAILED: 'فشل',
+  FAILED_DELIVERY: 'فشل التوصيل',
+  CUSTOMER_NOT_AVAILABLE: 'العميل غير متواجد',
+  PHONE_UNREACHABLE: 'الهاتف مغلق',
+  WRONG_ADDRESS: 'عنوان خاطئ',
+  CUSTOMER_REFUSED: 'العميل رفض الاستلام',
+  ADDRESS_NOT_FOUND: 'العنوان غير موجود',
+  AREA_NOT_SERVICED: 'المنطقة خارج التغطية',
+  CUSTOMER_REQUESTED_DELAY: 'العميل طلب التأجيل',
+  RESCHEDULED: 'أُعيدت جدولته',
+  OTHER: 'أخرى',
+};
+
 
 const SHIPPING_STATE: Record<string, { ar: string; en: string; cls: string }> = {
   NOT_READY: { ar: 'غير جاهز', en: 'Not Ready', cls: 'bg-slate-100 text-slate-600 border-slate-300' },
@@ -62,7 +80,10 @@ const RETURN_REASONS: Record<string, { ar: string; en: string }> = {
 
 /** Next allowed transitions per current status (mirrors backend map for UX only) */
 const NEXT_ACTIONS: Record<string, { to: string; labelAr: string; labelEn: string; cls: string }[]> = {
-  NOT_READY: [{ to: 'READY_FOR_SHIPPING', labelAr: '📦 تجهيز للشحن', labelEn: '📦 Ready for Shipping', cls: 'border-blue-300 text-blue-700 hover:bg-blue-50' }],
+  // NOT_READY offers nothing here on purpose. An order becomes ready to ship
+  // in the preparation screen, where the stock is actually reserved against
+  // its lines; a button here only ever produced "الشحن يتطلب طلباً مؤكداً".
+  NOT_READY: [],
   READY_FOR_SHIPPING: [{ to: 'PACKING', labelAr: '📦 بدء التغليف', labelEn: '📦 Start Packing', cls: 'border-indigo-300 text-indigo-700 hover:bg-indigo-50' }],
   PACKING: [{ to: 'READY_FOR_PICKUP', labelAr: '🚚 جاهز للاستلام', labelEn: '🚚 Ready for Pickup', cls: 'border-cyan-300 text-cyan-700 hover:bg-cyan-50' }],
   READY_FOR_PICKUP: [{ to: 'SHIPPED', labelAr: '🚀 تم الشحن', labelEn: '🚀 Shipped', cls: 'border-violet-300 text-violet-700 hover:bg-violet-50' }],
@@ -227,9 +248,9 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder }: ShippingSe
         <Info label={ar ? 'شركة التوصيل' : 'Provider'} value={order.deliveryProvider?.name || (ar ? 'غير معيّنة' : 'None')} />
         <Info label={ar ? 'رقم التتبع' : 'Tracking #'} value={order.trackingNumber || '—'} mono />
         <Info label={ar ? 'دفعة الشحن' : 'Batch'} value={order.shippingBatch?.batchNumber || '—'} mono />
-        <Info label={ar ? 'شُحن في' : 'Shipped At'} value={order.shippedAt ? format(new Date(order.shippedAt), 'd MMM, h:mm a') : '—'} />
-        <Info label={ar ? 'خرج للتوصيل' : 'Out for Delivery'} value={order.outForDeliveryAt ? format(new Date(order.outForDeliveryAt), 'd MMM, h:mm a') : '—'} />
-        <Info label={ar ? 'سُلّم في' : 'Delivered At'} value={order.deliveredAt ? format(new Date(order.deliveredAt), 'd MMM, h:mm a') : '—'} />
+        <Info label={ar ? 'شُحن في' : 'Shipped At'} value={arDateShort(order.shippedAt)} />
+        <Info label={ar ? 'خرج للتوصيل' : 'Out for Delivery'} value={arDateShort(order.outForDeliveryAt)} />
+        <Info label={ar ? 'سُلّم في' : 'Delivered At'} value={arDateShort(order.deliveredAt)} />
       </div>
 
       {/* Failure/return reasons */}
@@ -313,9 +334,9 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder }: ShippingSe
               }`}>
                 <div className="flex items-center justify-between flex-wrap gap-1">
                   <span className="font-bold text-slate-800">
-                    {ar ? `محاولة #${att.attemptNumber}` : `Attempt #${att.attemptNumber}`} — {att.result}
+                    {ar ? `محاولة #${att.attemptNumber}` : `Attempt #${att.attemptNumber}`} — {ATTEMPT_RESULT_AR[att.result] ?? att.result}
                   </span>
-                  <span className="text-slate-400">{format(new Date(att.createdAt), 'd MMM, h:mm a')}</span>
+                  <span className="text-slate-400">{arDateShort(att.createdAt)}</span>
                 </div>
                 <div className="text-slate-500 mt-0.5 flex flex-wrap gap-x-3">
                   <span>{ar ? 'بواسطة:' : 'By:'} <span className="font-semibold">{att.agent?.name ?? '—'}</span></span>

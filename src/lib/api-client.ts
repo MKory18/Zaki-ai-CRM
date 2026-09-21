@@ -46,6 +46,19 @@ export async function apiFetch(input: string, init?: RequestInit): Promise<Respo
     window.location.href = '/login';
     throw new Error('انتهت الجلسة، جارٍ إعادة التوجيه');
   }
+  // Country/store selection missing or revoked (src/lib/geo-context.ts) —
+  // back to the picker instead of showing a half-scoped screen.
+  if (res.status === 400) {
+    const code = await res
+      .clone()
+      .json()
+      .then((d: { code?: string }) => d?.code)
+      .catch(() => undefined);
+    if (code === 'CONTEXT_REQUIRED' || code === 'STORE_REQUIRED') {
+      window.location.href = '/entry';
+      throw new Error('يجب اختيار البلد والمتجر');
+    }
+  }
   return res;
 }
 

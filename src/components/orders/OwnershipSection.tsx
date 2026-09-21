@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
-import { format } from 'date-fns';
+import { arDateShort, arTime } from '@/lib/format';
 import {
   UserCheck,
   Pencil,
@@ -22,6 +22,17 @@ import {
   ShieldCheck,
   Unlock,
 } from 'lucide-react';
+
+/** The reasons a claim is recorded with — stored as codes, read as words. */
+const CLAIM_REASON_AR: Record<string, string> = {
+  PULL_NEXT: 'سحب من الطابور',
+  MANUAL_CLAIM: 'استلام يدوي',
+  ADMIN_OVERRIDE: 'تجاوز إداري',
+  AUTO_RELEASE: 'تحرير تلقائي',
+  LOCK_EXPIRED: 'انتهت مدة القفل',
+  REASSIGNED: 'إعادة إسناد',
+};
+
 
 interface OwnershipApi {
   actionLoading: 'claim' | 'lock' | 'release' | null;
@@ -143,7 +154,7 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
         <Field label={ar ? 'استلمه' : 'Claimed By'} value={order.claimer?.name || '—'} />
         <Field
           label={ar ? 'وقت الاستلام' : 'Claimed At'}
-          value={order.claimedAt ? format(new Date(order.claimedAt), 'd MMM — h:mm a') : '—'}
+          value={arDateShort(order.claimedAt)}
         />
         <Field
           label={ar ? 'وقّع رسمياً' : 'Signed By'}
@@ -151,7 +162,7 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
         />
         <Field
           label={ar ? 'وقت التوقيع' : 'Signed At'}
-          value={order.signedAt ? format(new Date(order.signedAt), 'd MMM — h:mm a') : '—'}
+          value={arDateShort(order.signedAt)}
         />
       </div>
 
@@ -166,10 +177,10 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
             </p>
             <p className="text-amber-700 mt-0.5">
               {ar ? 'بدأ التعديل:' : 'Started:'}{' '}
-              {order.lockedAt ? format(new Date(order.lockedAt), 'h:mm a') : '—'}
+              {arTime(order.lockedAt)}
               {' • '}
               {ar ? 'ينتهي القفل:' : 'Lock expires:'}{' '}
-              {order.lockExpiresAt ? format(new Date(order.lockExpiresAt), 'h:mm a') : '—'}
+              {arTime(order.lockExpiresAt)}
             </p>
           </div>
         </div>
@@ -268,9 +279,9 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
                   {' — '}
                   {ar ? ({ CLAIMED: 'استلام', RELEASED: 'تحرير', TRANSFERRED: 'نقل', OVERRIDDEN: 'تجاوز إداري', UNLOCKED: 'إلغاء قفل' } as Record<string,string>)[h.action] ?? h.action
                     : h.action.toLowerCase()}
-                  {h.reason ? ` (${h.reason})` : ''}
+                  {h.reason ? ` (${CLAIM_REASON_AR[h.reason] ?? h.reason})` : ''}
                 </span>
-                <span className="text-slate-400">{format(new Date(h.createdAt), 'd MMM, h:mm a')}</span>
+                <span className="text-slate-400">{arDateShort(h.createdAt)}</span>
               </div>
             ))}
           </div>

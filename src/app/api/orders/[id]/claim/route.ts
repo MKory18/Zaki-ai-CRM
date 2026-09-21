@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
 import { atomicClaim, isLockActive, lockConfig, ownershipSnapshot } from '@/lib/order-locks';
 import { logAudit } from '@/lib/audit';
@@ -15,7 +15,7 @@ import { can } from '@/lib/authorization';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     const { searchParams } = new URL(req.url);
     const mode = searchParams.get('mode');
     const body = await req.json().catch(() => ({}));
@@ -30,7 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return NextResponse.json({ error: 'Override requires a reason (min 5 chars)' }, { status: 400 });
       }
 
-      const access = await assertOrderAccess(id, user, companyId, 'orders.view');
+      const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
       if (!access.allowed) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 
       const order = access.order;
@@ -88,7 +88,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Forbidden: missing required permission orders.claim' }, { status: 403 });
     }
 
-    let access = await assertOrderAccess(id, user, companyId);
+    let access = await assertOrderAccess(id, user, { companyId, storeId });
     if (!access.allowed && access.reason === 'NOT_ASSIGNED') {
       // Self-scoped roles may claim orders from the CLAIMABLE QUEUE (same
       // predicate as applyQueueFilter 'available' in rbac.ts): unclaimed,
@@ -180,11 +180,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     if (!can(user, 'orders.release')) {
       return NextResponse.json({ error: 'Forbidden: missing required permission orders.release' }, { status: 403 });
     }
-    const access = await assertOrderAccess(id, user, companyId);
+    const access = await assertOrderAccess(id, user, { companyId, storeId });
     if (!access.allowed) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 
     const order = access.order;

@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { PendingScreen } from '@/components/layout/AppLayout';
+import { PendingScreen } from '@/components/shell/AccountScreens';
 
 export default function PendingPage() {
   const { currentUser, refreshUser } = useApp();

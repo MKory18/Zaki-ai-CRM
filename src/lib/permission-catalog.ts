@@ -30,7 +30,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'orders.view', ar: 'عرض الطلبات', en: 'View orders', scopes: ['ALL_COMPANY', 'OWN', 'ASSIGNED'] },
       { key: 'orders.edit', ar: 'تعديل الطلبات', en: 'Edit orders', scopes: ['ALL_COMPANY', 'OWN', 'ASSIGNED'] },
       { key: 'orders.create', ar: 'إنشاء طلبات', en: 'Create orders' },
-      { key: 'orders.delete', ar: 'حذف الطلبات', en: 'Delete orders' },
       { key: 'orders.assign', ar: 'إسناد الطلبات', en: 'Assign orders' },
       { key: 'orders.claim', ar: 'استلام الطلبات', en: 'Claim orders' },
       { key: 'orders.release', ar: 'تحرير الطلبات', en: 'Release orders' },
@@ -42,12 +41,9 @@ export const PERMISSION_MODULES: CatalogModule[] = [
   {
     module: 'customers',
     items: [
-      { key: 'customers.view', ar: 'عرض العملاء', en: 'View customers' },
-      { key: 'customers.view_basic', ar: 'عرض بيانات العميل الأساسية', en: 'View basic customer info' },
+      { key: 'customers.view', ar: 'عرض العملاء', en: 'View customers', scopes: ['ALL_COMPANY', 'OWN'] },
+      { key: 'customers.view_basic', ar: 'عرض بيانات العميل الأساسية', en: 'View basic customer info', scopes: ['ALL_COMPANY', 'OWN'] },
       { key: 'customers.create', ar: 'إنشاء عملاء', en: 'Create customers' },
-      { key: 'customers.edit', ar: 'تعديل العملاء', en: 'Edit customers' },
-      { key: 'customers.freeze', ar: 'تجميد عملاء', en: 'Freeze customers' },
-      { key: 'customers.unfreeze', ar: 'فك تجميد العملاء', en: 'Unfreeze customers' },
     ],
   },
   {
@@ -59,15 +55,8 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'products.delete', ar: 'حذف منتجات', en: 'Delete products' },
       { key: 'products.change_price', ar: 'تغيير أسعار المنتجات', en: 'Change product prices' },
       { key: 'products.upload_images', ar: 'رفع صور المنتجات', en: 'Upload product images' },
-    ],
-  },
-  {
-    module: 'categories',
-    items: [
-      { key: 'categories.view', ar: 'عرض الفئات', en: 'View categories' },
-      { key: 'categories.create', ar: 'إنشاء فئات', en: 'Create categories' },
-      { key: 'categories.edit', ar: 'تعديل الفئات', en: 'Edit categories' },
-      { key: 'categories.delete', ar: 'حذف الفئات', en: 'Delete categories' },
+      // Reading the category list, which the permission scope pickers need.
+      { key: 'categories.view', ar: 'عرض التصنيفات', en: 'View categories' },
     ],
   },
   {
@@ -75,44 +64,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     items: [
       { key: 'offers.view', ar: 'عرض العروض', en: 'View offers' },
       { key: 'offers.manage', ar: 'إدارة العروض', en: 'Manage offers' },
-    ],
-  },
-  {
-    module: 'crm',
-    items: [
-      { key: 'crm.view', ar: 'عرض وحدة CRM', en: 'View CRM module' },
-      { key: 'crm.manage', ar: 'إدارة CRM (إنشاء/تعديل/حذف)', en: 'Manage CRM (create/update/delete)' },
-      { key: 'crm.contacts.view', ar: 'عرض جهات الاتصال', en: 'View CRM contacts' },
-      { key: 'crm.contacts.create', ar: 'إنشاء جهات اتصال', en: 'Create CRM contacts' },
-      { key: 'crm.contacts.edit', ar: 'تعديل جهات الاتصال', en: 'Edit CRM contacts' },
-      { key: 'crm.contacts.delete', ar: 'حذف جهات الاتصال', en: 'Delete CRM contacts' },
-      { key: 'crm.companies.view', ar: 'عرض الشركات', en: 'View CRM companies' },
-      { key: 'crm.companies.create', ar: 'إنشاء شركات', en: 'Create CRM companies' },
-      { key: 'crm.companies.edit', ar: 'تعديل الشركات', en: 'Edit CRM companies' },
-      { key: 'crm.companies.delete', ar: 'حذف الشركات', en: 'Delete CRM companies' },
-      { key: 'crm.leads.view', ar: 'عرض العملاء المحتملين', en: 'View CRM leads' },
-      { key: 'crm.leads.create', ar: 'إنشاء عملاء محتملين', en: 'Create CRM leads' },
-      { key: 'crm.leads.edit', ar: 'تعديل العملاء المحتملين', en: 'Edit CRM leads' },
-      { key: 'crm.leads.delete', ar: 'حذف العملاء المحتملين', en: 'Delete CRM leads' },
-      { key: 'crm.deals.view', ar: 'عرض الصفقات', en: 'View CRM deals' },
-      { key: 'crm.deals.create', ar: 'إنشاء صفقات', en: 'Create CRM deals' },
-      { key: 'crm.deals.edit', ar: 'تعديل الصفقات', en: 'Edit CRM deals' },
-      { key: 'crm.deals.delete', ar: 'حذف الصفقات', en: 'Delete CRM deals' },
-      { key: 'crm.tasks.view', ar: 'عرض مهام CRM', en: 'View CRM tasks' },
-      { key: 'crm.tasks.create', ar: 'إنشاء مهام CRM', en: 'Create CRM tasks' },
-      { key: 'crm.tasks.edit', ar: 'تعديل مهام CRM', en: 'Edit CRM tasks' },
-      { key: 'crm.tasks.delete', ar: 'حذف مهام CRM', en: 'Delete CRM tasks' },
-      { key: 'crm.invoices.view', ar: 'عرض فواتير CRM', en: 'View CRM invoices' },
-      { key: 'crm.invoices.create', ar: 'إنشاء فواتير CRM', en: 'Create CRM invoices' },
-      { key: 'crm.invoices.edit', ar: 'تعديل فواتير CRM', en: 'Edit CRM invoices' },
-      { key: 'crm.invoices.delete', ar: 'حذف فواتير CRM', en: 'Delete CRM invoices' },
-      { key: 'crm.notes.view', ar: 'عرض ملاحظات CRM', en: 'View CRM notes' },
-      { key: 'crm.notes.create', ar: 'إنشاء ملاحظات CRM', en: 'Create CRM notes' },
-      { key: 'crm.notes.edit', ar: 'تعديل ملاحظات CRM', en: 'Edit CRM notes' },
-      { key: 'crm.notes.delete', ar: 'حذف ملاحظات CRM', en: 'Delete CRM notes' },
-      { key: 'crm.activities.view', ar: 'عرض أنشطة CRM', en: 'View CRM activities' },
-      { key: 'crm.activities.create', ar: 'إنشاء أنشطة CRM', en: 'Create CRM activities' },
-      { key: 'crm.activities.delete', ar: 'حذف أنشطة CRM', en: 'Delete CRM activities' },
     ],
   },
   {
@@ -161,10 +112,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'users.view', ar: 'عرض المستخدمين', en: 'View users' },
       { key: 'users.create', ar: 'إنشاء مستخدمين', en: 'Create users' },
       { key: 'users.edit', ar: 'تعديل المستخدمين', en: 'Edit users' },
-      { key: 'users.delete', ar: 'حذف المستخدمين', en: 'Delete users' },
-      { key: 'users.manage', ar: 'إدارة كاملة للمستخدمين', en: 'Full user management' },
-      { key: 'users.manage_roles', ar: 'إدارة الأدوار', en: 'Manage roles' },
-      { key: 'moderators.manage', ar: 'إدارة الموديريتورز', en: 'Manage moderators' },
     ],
   },
   {
@@ -181,6 +128,57 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     items: [
       { key: 'settings.view', ar: 'عرض الإعدادات', en: 'View settings' },
       { key: 'settings.edit', ar: 'تعديل إعدادات النظام', en: 'Edit system settings' },
+      // Enforced on /api/admin/jobs but was missing here, so nobody could be
+      // granted it through the screen.
+      { key: 'settings.manage', ar: 'تشغيل المهام المجدولة', en: 'Run scheduled jobs' },
+    ],
+  },
+  {
+    module: 'confirmation',
+    items: [
+      { key: 'confirmation.pull', ar: 'سحب الطلب التالي', en: 'Pull next order' },
+      { key: 'confirmation.work', ar: 'العمل على طلباتي والمؤجلة', en: 'Work own and postponed orders' },
+      { key: 'confirmation.supervise', ar: 'الإشراف على التأكيد (عرض القائمة)', en: 'Supervise confirmation (list view)' },
+      { key: 'confirmation.issues', ar: 'إشكالات الإدخال', en: 'Entry issues' },
+    ],
+  },
+  {
+    module: 'ops',
+    items: [
+      { key: 'ops.prepare', ar: 'التجهيز', en: 'Preparation' },
+      { key: 'ops.ship', ar: 'إنشاء الشحنات', en: 'Create shipments' },
+      { key: 'ops.labels', ar: 'البوالص', en: 'Labels' },
+      { key: 'ops.track', ar: 'متابعة الشحن', en: 'Tracking' },
+      { key: 'ops.returns', ar: 'المرتجعات', en: 'Returns' },
+    ],
+  },
+  {
+    module: 'control',
+    items: [
+      { key: 'control.change_requests', ar: 'طلبات التعديل', en: 'Change requests' },
+      { key: 'control.discount_alerts', ar: 'تنبيهات الخصم', en: 'Discount alerts' },
+      { key: 'control.blacklist', ar: 'القائمة السوداء', en: 'Blacklist' },
+    ],
+  },
+  {
+    module: 'growth',
+    items: [{ key: 'growth.intelligence', ar: 'مركز الذكاء', en: 'Business intelligence' }],
+  },
+  {
+    module: 'apps',
+    items: [
+      { key: 'apps.view', ar: 'عرض التطبيقات', en: 'View apps' },
+      // Installing an app connects the company to something outside it, and
+      // registering one hands out a signing secret. Both are a separate
+      // authority from looking at the shelf.
+      { key: 'apps.manage', ar: 'تثبيت وتسجيل التطبيقات', en: 'Install & register apps' },
+    ],
+  },
+  {
+    module: 'geo',
+    items: [
+      { key: 'geo.view', ar: 'عرض البلدان والمتاجر', en: 'View countries & stores' },
+      { key: 'geo.manage', ar: 'إدارة البلدان والمتاجر والمناطق', en: 'Manage countries, stores & regions' },
     ],
   },
   {
@@ -191,7 +189,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'landing_pages.edit', ar: 'تعديل صفحات الهبوط', en: 'Edit landing pages' },
       { key: 'landing_pages.delete', ar: 'حذف صفحات هبوط', en: 'Delete landing pages' },
       { key: 'landing_pages.publish', ar: 'نشر / إلغاء نشر صفحات الهبوط', en: 'Publish / unpublish landing pages' },
-      { key: 'landing_pages.analytics', ar: 'عرض تحليلات صفحات الهبوط', en: 'View landing page analytics' },
     ],
   },
   {
@@ -208,7 +205,6 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     items: [
       { key: 'telegram.view', ar: 'عرض طلبات تيليجرام', en: 'View Telegram integration' },
       { key: 'telegram.manage', ar: 'إدارة ربط تيليجرام', en: 'Manage Telegram integration' },
-      { key: 'telegram.receive_orders', ar: 'استقبال طلبات تيليجرام', en: 'Receive Telegram orders' },
     ],
   },
   {
@@ -244,7 +240,6 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   products: { ar: 'المنتجات', en: 'Products' },
   categories: { ar: 'الفئات', en: 'Categories' },
   offers: { ar: 'العروض', en: 'Offers' },
-  crm: { ar: 'إدارة علاقات العملاء', en: 'CRM' },
   inventory: { ar: 'المخزون', en: 'Inventory' },
   production: { ar: 'الإنتاج', en: 'Production' },
   finance: { ar: 'المالية', en: 'Finance' },
@@ -253,6 +248,12 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   users: { ar: 'المستخدمون', en: 'Users' },
   roles: { ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' },
   settings: { ar: 'الإعدادات', en: 'Settings' },
+  geo: { ar: 'البلدان والمتاجر', en: 'Countries & Stores' },
+  confirmation: { ar: 'مركز التأكيد', en: 'Confirmation' },
+  ops: { ar: 'التشغيل', en: 'Operations' },
+  control: { ar: 'الرقابة', en: 'Control' },
+  growth: { ar: 'النمو', en: 'Growth' },
+  apps: { ar: 'التطبيقات', en: 'Apps' },
   audit: { ar: 'سجل التدقيق', en: 'Audit Logs' },
   whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
   telegram: { ar: 'تيليجرام', en: 'Telegram' },
