@@ -3,7 +3,7 @@
 import React from 'react';
 import { Check, Minus } from 'lucide-react';
 import { arDateShort } from '@/lib/format';
-import type { Stage } from '@/lib/order-stages';
+import { humanMinutes, type Stage } from '@/lib/order-stages';
 
 /**
  * The order's journey.
@@ -73,6 +73,11 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
 
                 <span className="text-[10px] text-[#9aa4b2] text-center leading-tight">
                   {stage.at ? arDateShort(stage.at) : skipped ? 'لم يمر بها' : '—'}
+                  {stage.minutes !== null && (
+                    <span className={`block ${stage.ongoing ? 'text-[#c2410c]' : 'text-[#9aa4b2]'}`}>
+                      {humanMinutes(stage.minutes)}
+                    </span>
+                  )}
                 </span>
               </div>
             </li>
@@ -93,6 +98,14 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
                 {stage.title}
               </span>
               {stage.who && <span className="text-[#364152]">· {stage.who}</span>}
+              {/* How long it took, or how long it is taking. The stage an
+                  order is in now is the one worth watching while it is still
+                  three days and not after it became a week. */}
+              {stage.minutes !== null && (
+                <span className={stage.ongoing ? 'font-semibold text-[#c2410c]' : 'text-[#697586]'}>
+                  · {stage.ongoing ? 'منذ ' : 'استغرقت '}{humanMinutes(stage.minutes)}
+                </span>
+              )}
               {stage.facts.map((f) => (
                 <span key={f.label} className="min-w-0">
                   <span className="text-[#9aa4b2]">· {f.label}: </span>

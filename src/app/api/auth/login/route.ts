@@ -61,7 +61,21 @@ export async function POST(req: Request) {
     }
 
     // Update last login
-    await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    // ── One account, one device at a time ──
+    //
+    // Every session carries the tokenVersion it was signed with, and
+    // verifySessionToken refuses a token whose version is no longer the
+    // user's. Bumping it here means signing in anywhere signs out
+    // everywhere else — the newest sign-in wins.
+    //
+    // This is what stops one account being shared by three people: not a
+    // rule in a handbook, but a session that stops working the moment
+    // somebody else uses the same login.
+    const refreshed = await db.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), tokenVersion: { increment: 1 } },
+      select: { tokenVersion: true },
+    });
 
     await logAudit({
       companyId: user.companyId || 'platform',
@@ -79,7 +93,7 @@ export async function POST(req: Request) {
       role,
       status,
       companyId: user.companyId,
-      tv: user.tokenVersion,
+      tv: refreshed.tokenVersion,
       remember: !!remember,
     });
 

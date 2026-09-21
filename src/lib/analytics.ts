@@ -145,15 +145,33 @@ export async function getCompanyAnalytics(
   const postponedOrders = statusCount.get('POSTPONED') || 0;
   const rejectedOrders = countOf(REJECTED_STATUSES);
   const shippedOrders = countOf(SHIPPED_STATUSES);
-  const deliveredOrders = statusCount.get('DELIVERED') || 0;
+  // Counted from the shipping status for the same reason the money is: the
+  // legacy column is not written by every path that delivers an order.
+  const deliveredOrders = await db.order.count({
+    where: { ...baseWhere, shippingStatus: { in: ['DELIVERED', 'PARTIALLY_DELIVERED'] } },
+  });
 
   const confirmationRate = totalOrders > 0 ? (confirmedOrders / totalOrders) * 100 : 0;
   const deliveryRate = confirmedOrders > 0 ? (deliveredOrders / confirmedOrders) * 100 : 0;
 
   // ─── 2. Delivered-order financial aggregates + expenses (SUM in PostgreSQL) ───
-  const [deliveredAgg, expensesAgg] = await Promise.all([
+  //
+  // Read from `shippingStatus`, not from the legacy combined `status`. There
+  // are two paths that deliver an order — the shipping transition and the
+  // door-side partial-delivery recorder — and only the first kept the legacy
+  // column in step. So a delivery recorded at the door contributed nothing
+  // to revenue at all, and a PARTIAL one could not contribute even in
+  // principle: its status has no legacy spelling.
+  //
+  // Revenue is what was COLLECTED where that is known. A partial delivery is
+  // exactly the case where the order's total and the money taken differ, and
+  // it is the money taken that is revenue.
+  const DELIVERED_SHIPPING = ['DELIVERED', 'PARTIALLY_DELIVERED'];
+  const deliveredWhere = { ...baseWhere, shippingStatus: { in: DELIVERED_SHIPPING } };
+
+  const [deliveredAgg, collectedAgg, expensesAgg] = await Promise.all([
     db.order.aggregate({
-      where: { ...baseWhere, status: 'DELIVERED' },
+      where: deliveredWhere,
       _sum: {
         totalAmount: true,
         estimatedCostOfGoods: true,
@@ -162,6 +180,18 @@ export async function getCompanyAnalytics(
       },
       _count: { _all: true },
     }),
+    // COALESCE has no Prisma aggregate, so the two halves are summed apart:
+    // orders where the door recorded a figure, and orders where it did not.
+    Promise.all([
+      db.order.aggregate({
+        where: { ...deliveredWhere, collectedAmount: { not: null } },
+        _sum: { collectedAmount: true },
+      }),
+      db.order.aggregate({
+        where: { ...deliveredWhere, collectedAmount: null },
+        _sum: { totalAmount: true },
+      }),
+    ]),
     db.expense.aggregate({
       where: {
         companyId,
@@ -172,6 +202,9 @@ export async function getCompanyAnalytics(
   ]);
 
   const totalExpenses = expensesAgg._sum.amount || 0;
+  const [withCollected, withoutCollected] = collectedAgg;
+  const deliveredRevenue =
+    Number(withCollected._sum.collectedAmount || 0) + Number(withoutCollected._sum.totalAmount || 0);
 
   // calculateRealProfit works on an order list; feeding it the pre-aggregated
   // sums reproduces the exact same arithmetic (and rounding) without loading rows.
@@ -179,7 +212,7 @@ export async function getCompanyAnalytics(
     deliveredOrders: [
       {
         sellingPrice: 0,
-        totalAmount: deliveredAgg._sum.totalAmount || 0,
+        totalAmount: deliveredRevenue,
         quantity: deliveredAgg._count._all || 1,
         shippingCost: deliveredAgg._sum.shippingCost || 0,
         moderatorCommission: deliveredAgg._sum.moderatorCommission || 0,

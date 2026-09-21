@@ -30,6 +30,20 @@ export interface Stage {
   at: Date | null;
   who: string | null;
   facts: StageFact[];
+  /**
+   * How long the order sat in this stage, in minutes.
+   *
+   * A finished stage is measured to the moment the next one began; the stage
+   * an order is in NOW is measured to this moment, because "three days in
+   * confirmation" is the number worth seeing while it is still three days
+   * and not after it became a week.
+   *
+   * Null when the stage was never entered — a duration of zero would read as
+   * "instant" for something that never happened.
+   */
+  minutes: number | null;
+  /** True when `minutes` is still running. */
+  ongoing: boolean;
 }
 
 /** The order of the journey. A stage is DONE once a later one has begun. */
@@ -77,9 +91,36 @@ const date = (v: Date | string | null | undefined): Date | null => {
  * `contactAttempts` and `deliveryAttempts` are counts the caller already has;
  * they are facts of their stage rather than a reason to query again here.
  */
+/** Minutes between two moments, never negative — clocks and imports disagree. */
+function minutesBetween(from: Date, to: Date): number {
+  return Math.max(0, Math.round((to.getTime() - from.getTime()) / 60_000));
+}
+
+/**
+ * "٣ أيام و٤ ساعات" — a duration a person reads, not a number they divide.
+ *
+ * Deliberately two units at most. "4 days, 3 hours, 12 minutes" is three
+ * facts where one was asked for, and the minutes stop mattering the moment
+ * the days appear.
+ */
+export function humanMinutes(minutes: number | null): string {
+  if (minutes === null) return '—';
+  if (minutes < 1) return 'أقل من دقيقة';
+  if (minutes < 60) return `${minutes} دقيقة`;
+
+  const hours = Math.floor(minutes / 60);
+  const restMin = minutes % 60;
+  if (hours < 24) return restMin ? `${hours} ساعة و${restMin} دقيقة` : `${hours} ساعة`;
+
+  const days = Math.floor(hours / 24);
+  const restHours = hours % 24;
+  return restHours ? `${days} يوم و${restHours} ساعة` : `${days} يوم`;
+}
+
 export function orderStages(
   order: StageSource,
-  counts: { contactAttempts?: number; deliveryAttempts?: number } = {}
+  counts: { contactAttempts?: number; deliveryAttempts?: number } = {},
+  now: Date = new Date()
 ): Stage[] {
   const state = deriveCoreState(order);
   const currentStage = state === 'VOIDED' ? 'CLOSED' : stageOfZone(getZone(state));
@@ -99,6 +140,20 @@ export function orderStages(
     WAREHOUSE: confirmedAt,
     TRANSIT: shippedAt,
     CLOSED: deliveredAt ?? returnedAt ?? date(order.failedAt),
+  };
+
+  /**
+   * When each stage ENDED: the moment the next stage that actually happened
+   * began. A skipped stage in between must not swallow the time — an order
+   * that went from confirmation straight to transit spent that time in the
+   * warehouse stage whether or not anyone stamped it.
+   */
+  const endedAt = (index: number): Date | null => {
+    for (let i = index + 1; i < ORDER.length; i++) {
+      const next = enteredAt[ORDER[i]];
+      if (next) return next;
+    }
+    return null;
   };
 
   return ORDER.map((key, index) => {
@@ -159,6 +214,12 @@ export function orderStages(
       }
     }
 
-    return { key, title: TITLES[key], status, at: enteredAt[key], who, facts };
+    // How long it took, or how long it is taking.
+    const start = enteredAt[key];
+    const end = endedAt(index);
+    const ongoing = Boolean(start && !end && status === 'CURRENT');
+    const minutes = start ? minutesBetween(start, end ?? now) : null;
+
+    return { key, title: TITLES[key], status, at: start, who, facts, minutes, ongoing };
   });
 }
