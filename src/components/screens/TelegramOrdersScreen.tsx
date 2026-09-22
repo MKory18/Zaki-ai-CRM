@@ -266,7 +266,7 @@ export function TelegramOrdersScreen() {
 
         {/* Sources */}
         <Card>
-          <CardHeader title={<h2 className="text-sm font-bold text-[#121926]">المجموعات والمواضيع المرتبطة</h2>} className="border-b-0 pb-0 px-6 pt-4" />
+          <CardHeader title="المجموعات والمواضيع المرتبطة" className="border-b-0 pb-0 px-6 pt-4" />
           <CardContent className="p-0 mt-3">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -316,7 +316,7 @@ export function TelegramOrdersScreen() {
         {/* Recent messages */}
         <Card>
           <CardHeader
-            title={<h2 className="text-sm font-bold text-[#121926]">الرسائل الأخيرة</h2>}
+            title="الرسائل الأخيرة"
             className="border-b-0 pb-0 px-6 pt-4"
             action={
               <div className="w-40">

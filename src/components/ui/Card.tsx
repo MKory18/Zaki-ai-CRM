@@ -27,6 +27,12 @@ export function CardHeader({
   action,
   className,
 }: {
+  /**
+   * Rendered inside the card's own <h3>, so pass text — or inline content
+   * such as a <span> carrying an icon. A heading or a block element here
+   * produces invalid HTML and a hydration error at runtime, which React
+   * only reports once the screen is opened.
+   */
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
