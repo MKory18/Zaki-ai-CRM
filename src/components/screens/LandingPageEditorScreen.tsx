@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
+import { findMediaUrls, inlineMedia, toDataUrl } from '@/lib/preview-media';
 import { buildBehaviorScript, BEHAVIOR_CSS } from '@/lib/landing-dynamic';
 import { BlockBuilder } from '@/components/landing/blocks/BlockBuilder';
 import { HtmlPromptButtons } from '@/components/landing/HtmlPromptButtons';
@@ -207,17 +208,25 @@ function resolvePreviewPlaceholders(html: string, data: PreviewData): string {
   return out;
 }
 
-function buildPreviewDoc(html: string, css: string, settings: any, data: PreviewData | null): string {
+function buildPreviewDoc(
+  html: string,
+  css: string,
+  settings: any,
+  data: PreviewData | null,
+  media: Map<string, string>
+): string {
   const dir = settings?.direction === 'ltr' ? 'ltr' : 'rtl';
   const bg = typeof settings?.background === 'string' ? settings.background : '#ffffff';
   const ff = settings?.fontFamily ? `font-family:${settings.fontFamily};` : '';
   const wrapMax = settings?.width === 'contained' && settings?.maxWidth ? `.zaki-page-wrap{max-width:${settings.maxWidth}px;margin:0 auto;padding:0 16px;}` : '';
   const body = quickSanitize(html);
-  const resolved = data ? resolvePreviewPlaceholders(body, data) : body;
+  const withData = data ? resolvePreviewPlaceholders(body, data) : body;
+  // Stored images cannot be fetched from an opaque origin — inline them.
+  const resolved = inlineMedia(withData, media);
   return `<!doctype html><html dir="${dir}" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style id="zaki-behavior-preview-style">${BEHAVIOR_CSS}</style>
 <style>body{margin:0;background:${bg};${ff}}${wrapMax}</style>
-<style>${css || ''}</style>
+<style>${inlineMedia(css || '', media)}</style>
 </head><body>${resolved}</body></html>`;
 }
 
@@ -254,6 +263,8 @@ export function LandingPageEditorScreen() {
   const [varOpen, setVarOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  /** Stored images, read with the dashboard's session, for the opaque iframe. */
+  const [media, setMedia] = useState<Map<string, string>>(new Map());
   const htmlRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -314,9 +325,42 @@ export function LandingPageEditorScreen() {
   // WITHOUT allow-same-origin — opaque origin: scripts (ours + user markup
   // stripped of them) cannot touch the dashboard DOM, cookies or storage.
   const previewDoc = useMemo(
-    () => buildPreviewDoc(html, css, settings, previewData),
-    [html, css, settings, previewData]
+    () => buildPreviewDoc(html, css, settings, previewData, media),
+    [html, css, settings, previewData, media]
   );
+
+  /**
+   * Read the stored images the preview needs.
+   *
+   * The iframe has an opaque origin, so it sends no cookies and every
+   * /api/media URL comes back 401 — a broken image the seller reads as a
+   * failed upload. The dashboard has the session, so it fetches them here
+   * and the preview shows them inline. Cached per URL: the preview rebuilds
+   * on every keystroke.
+   */
+  useEffect(() => {
+    // Joined with a space, not concatenated: two URLs run together read as
+    // ONE impossible path, which is silently fetched and silently fails.
+    const wanted = findMediaUrls(
+      [
+        html,
+        previewData?.product?.image ?? '',
+        ...(previewData?.recommendations ?? []).map((r) => r.image ?? ''),
+        lp?.product?.image ?? '',
+      ].join(' '),
+      css
+    );
+    const missing = wanted.filter((u) => !media.has(u));
+    if (missing.length === 0) return;
+    let live = true;
+    void Promise.all(missing.map(async (u) => [u, await toDataUrl(u)] as const)).then((pairs) => {
+      if (!live) return;
+      const found = pairs.filter((p): p is [string, string] => Boolean(p[1]));
+      if (found.length === 0) return;
+      setMedia((prev) => new Map([...prev, ...found]));
+    });
+    return () => { live = false; };
+  }, [html, css, previewData, lp, media]);
   useEffect(() => {
     const t = setTimeout(() => setPreviewKey((k) => k + 1), 400);
     return () => clearTimeout(t);
