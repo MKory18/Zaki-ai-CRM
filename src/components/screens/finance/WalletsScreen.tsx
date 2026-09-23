@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, RotateCcw, Wallet as WalletIcon } from 'lucide-react';
+import { Loader2, Plus, RotateCcw, Wallet as WalletIcon, Pencil, Trash2, Power, Check, X} from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 
@@ -55,6 +55,9 @@ export function WalletsScreen() {
   const [movements, setMovements] = useState<Movement[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [newName, setNewName] = useState('');
   const [recordOpen, setRecordOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [reverseFor, setReverseFor] = useState<Movement | null>(null);
@@ -95,11 +98,59 @@ export function WalletsScreen() {
     await Promise.all([loadWallets(), loadMovements(active)]);
   }
 
+  const patchWallet = async (body: Record<string, unknown>, ok: string) => {
+    if (!wallet) return;
+    setBusy(true);
+    setError(null);
+    setDone(null);
+    try {
+      await apiJson(`/api/finance/wallets/${wallet.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      setDone(ok);
+      setRenaming(false);
+      await loadWallets();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Delete asks the server, which decides. A wallet any money has passed
+   * through is stopped instead and says what is holding it — its movements
+   * ARE the ledger, and there is nothing to re-enter.
+   */
+  const removeWallet = async () => {
+    if (!wallet) return;
+    if (!confirm(`حذف «${wallet.name}»؟ إن مرّ بها أي مبلغ فستُوقَف بدل الحذف، والسجلّات تبقى كما هي.`)) return;
+    setBusy(true);
+    setError(null);
+    setDone(null);
+    try {
+      const d = await apiJson<{ message?: string; deleted?: boolean }>(
+        `/api/finance/wallets/${wallet.id}`,
+        { method: 'DELETE' }
+      );
+      setDone(d.message ?? null);
+      if (d.deleted) setActive('');
+      await loadWallets();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر الحذف');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl space-y-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-[#697586]">
-          المحفظة تتبع بلداً واحداً وتحمل عملتها الخاصة — ولا تُحذف أبداً، تُوقَف فقط، لأن حركاتها سجل دائم.
+          المحفظة تتبع متجراً واحداً وتحمل عملته. حركاتها سجل دائم: ما مرّ بها مبلغ يُوقَف
+          ولا يُحذف — ولا يُحذف فعلياً إلا ما لم يمرّ به شيء.
         </p>
         <button
           onClick={() => setCreating(true)}
@@ -147,15 +198,83 @@ export function WalletsScreen() {
           {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
 
           <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#e3e8ef]">
-              <h2 className="text-sm font-medium text-[#121926]">حركات {wallet?.name ?? ''}</h2>
-              <button
-                disabled={!wallet?.isActive}
-                onClick={() => setRecordOpen(true)}
-                className="h-8 px-3 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
-              >
-                <Plus className="w-3.5 h-3.5" /> حركة جديدة
-              </button>
+            {/* The wallet's own actions live here, on the one that is
+                selected — not repeated on every card, where they would be
+                twelve buttons for one decision. */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-[#e3e8ef]">
+              {renaming && wallet ? (
+                <span className="flex items-center gap-1.5">
+                  <input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="h-8 w-44 rounded-[8px] border border-[#e3e8ef] px-2 text-sm"
+                  />
+                  <button
+                    onClick={() => patchWallet({ name: newName.trim() }, 'تم تغيير الاسم')}
+                    disabled={busy || newName.trim().length < 2}
+                    title="احفظ"
+                    className="cursor-pointer rounded-lg p-1.5 text-[#00a344] hover:bg-[#e6f9ee] disabled:opacity-40"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setRenaming(false)}
+                    title="ألغِ"
+                    className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#f8fafc]"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </span>
+              ) : (
+                <h2 className="text-sm font-medium text-[#121926]">حركات {wallet?.name ?? ''}</h2>
+              )}
+
+              <span className="flex items-center gap-1.5">
+                {wallet && !renaming && (
+                  <>
+                    <button
+                      onClick={() => { setRenaming(true); setNewName(wallet.name); }}
+                      title="عدّل الاسم"
+                      className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#fdf5fa] hover:text-[#b8256e]"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        patchWallet(
+                          { isActive: !wallet.isActive },
+                          wallet.isActive ? 'أُوقِفت المحفظة' : 'أُعيد تشغيل المحفظة'
+                        )
+                      }
+                      disabled={busy}
+                      title={wallet.isActive ? 'أوقف المحفظة' : 'أعِد تشغيلها'}
+                      className={`cursor-pointer rounded-lg p-1.5 disabled:opacity-40 ${
+                        wallet.isActive
+                          ? 'text-[#697586] hover:bg-[#fff6e5] hover:text-[#c07f2a]'
+                          : 'text-[#00a344] hover:bg-[#e6f9ee]'
+                      }`}
+                    >
+                      <Power className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={removeWallet}
+                      disabled={busy}
+                      title="احذف"
+                      className="cursor-pointer rounded-lg p-1.5 text-[#9aa4b2] hover:bg-[#feecee] hover:text-[#fb323f] disabled:opacity-40"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <span className="mx-1 h-5 w-px bg-[#e3e8ef]" />
+                  </>
+                )}
+                <button
+                  disabled={!wallet?.isActive}
+                  onClick={() => setRecordOpen(true)}
+                  className="h-8 px-3 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Plus className="w-3.5 h-3.5" /> حركة جديدة
+                </button>
+              </span>
             </div>
 
             {!movements ? (
