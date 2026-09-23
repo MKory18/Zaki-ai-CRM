@@ -1,0 +1,11 @@
+DROP INDEX IF EXISTS "products_companyId_store_id_sku_key";
+CREATE UNIQUE INDEX IF NOT EXISTS "products_companyId_sku_key" ON "products"("companyId", "sku");
+DROP INDEX IF EXISTS "inventory_movements_companyId_store_id_idx";
+DROP INDEX IF EXISTS "production_batches_companyId_store_id_idx";
+DROP INDEX IF EXISTS "products_companyId_store_id_idx";
+ALTER TABLE "inventory_movements" DROP CONSTRAINT IF EXISTS "inventory_movements_store_id_fkey";
+ALTER TABLE "production_batches" DROP CONSTRAINT IF EXISTS "production_batches_store_id_fkey";
+ALTER TABLE "products" DROP CONSTRAINT IF EXISTS "products_store_id_fkey";
+ALTER TABLE "inventory_movements" DROP COLUMN IF EXISTS "store_id";
+ALTER TABLE "production_batches" DROP COLUMN IF EXISTS "store_id";
+ALTER TABLE "products" DROP COLUMN IF EXISTS "store_id";

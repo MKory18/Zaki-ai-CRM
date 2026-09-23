@@ -16,8 +16,27 @@ import type { Prisma } from '@prisma/client';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
-/** Reserved units of a product across every order that is still open. */
-export async function reservedElsewhere(tx: Tx, companyId: string, productId: string, exceptOrderId?: string) {
+/**
+ * STOCK IS A STORE'S, NOT A COMPANY'S.
+ *
+ * Two stores drawing on one pile can each promise a customer what the other
+ * has already taken, and neither count is wrong on its own screen. So every
+ * question about stock is asked of one store.
+ *
+ * `storeId` is optional only while the existing rows are being placed. Left
+ * out, these behave exactly as they did before — nothing silently changes
+ * meaning half way through a migration. Once every batch carries a store,
+ * the callers pass it and the pool is separated for good.
+ */
+
+/** Reserved units of a product across every order of this store still open. */
+export async function reservedElsewhere(
+  tx: Tx,
+  companyId: string,
+  productId: string,
+  exceptOrderId?: string,
+  storeId?: string | null
+) {
   const agg = await tx.orderItem.aggregate({
     where: {
       companyId,
@@ -25,6 +44,8 @@ export async function reservedElsewhere(tx: Tx, companyId: string, productId: st
       ...(exceptOrderId ? { orderId: { not: exceptOrderId } } : {}),
       reservedQty: { gt: 0 },
       order: {
+        // The order already knows its store — this side needs no migration.
+        ...(storeId ? { storeId } : {}),
         confirmationStatus: { notIn: ['REJECTED', 'CANCELLED'] },
         shippingStatus: { notIn: ['DELIVERED', 'RETURNED', 'CANCELLED'] },
       },
@@ -34,20 +55,26 @@ export async function reservedElsewhere(tx: Tx, companyId: string, productId: st
   return agg._sum.reservedQty ?? 0;
 }
 
-/** Units sitting in production batches (what physically exists). */
-export async function onHand(tx: Tx, companyId: string, productId: string) {
+/** Units sitting in this store's production batches (what physically exists). */
+export async function onHand(tx: Tx, companyId: string, productId: string, storeId?: string | null) {
   const agg = await tx.productionBatch.aggregate({
-    where: { companyId, productId },
+    where: { companyId, productId, ...(storeId ? { storeId } : {}) },
     _sum: { quantityRemaining: true },
   });
   return agg._sum.quantityRemaining ?? 0;
 }
 
 /** What a new reservation may still take. */
-export async function availableStock(tx: Tx, companyId: string, productId: string, exceptOrderId?: string) {
+export async function availableStock(
+  tx: Tx,
+  companyId: string,
+  productId: string,
+  exceptOrderId?: string,
+  storeId?: string | null
+) {
   const [physical, reserved] = await Promise.all([
-    onHand(tx, companyId, productId),
-    reservedElsewhere(tx, companyId, productId, exceptOrderId),
+    onHand(tx, companyId, productId, storeId),
+    reservedElsewhere(tx, companyId, productId, exceptOrderId, storeId),
   ]);
   return physical - reserved;
 }

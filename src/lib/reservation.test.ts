@@ -10,7 +10,7 @@ const { db } = vi.hoisted(() => ({
 }));
 vi.mock('./db', () => ({ db }));
 
-import { releaseOrderLines, reserveOrderLines } from './reservation';
+import { onHand, releaseOrderLines, reservedElsewhere, reserveOrderLines } from './reservation';
 
 const line = (over: Partial<Record<string, unknown>> = {}) => ({
   id: 'i1', companyId: 'c1', productId: 'p1', productName: 'X', quantity: 2, freeQuantity: 0, reservedQty: 0, ...over,
@@ -76,5 +76,42 @@ describe('releaseOrderLines', () => {
       where: { orderId: 'o1', reservedQty: { gt: 0 } },
       data: { reservedQty: 0 },
     });
+  });
+});
+
+/**
+ * Stock is a store's, not a company's.
+ *
+ * Two stores drawing on one pile can each promise a customer what the other
+ * has already taken, and neither screen is wrong on its own. These check
+ * that a store is asked about, and — just as important — that leaving the
+ * store out keeps the old behaviour exactly, so nothing changes meaning
+ * half way through placing the existing rows.
+ */
+describe('stock asked of one store', () => {
+  it("counts only that store's batches", async () => {
+    await onHand(db as never, 'c1', 'p1', 's1');
+    expect(db.productionBatch.aggregate).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { companyId: 'c1', productId: 'p1', storeId: 's1' } })
+    );
+  });
+
+  it('counts every batch when no store is given — unchanged behaviour', async () => {
+    await onHand(db as never, 'c1', 'p1');
+    expect(db.productionBatch.aggregate).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { companyId: 'c1', productId: 'p1' } })
+    );
+  });
+
+  it("counts only that store's reservations", async () => {
+    await reservedElsewhere(db as never, 'c1', 'p1', undefined, 's1');
+    const where = db.orderItem.aggregate.mock.calls.at(-1)![0].where;
+    expect(where.order.storeId).toBe('s1');
+  });
+
+  it('counts every reservation when no store is given', async () => {
+    await reservedElsewhere(db as never, 'c1', 'p1');
+    const where = db.orderItem.aggregate.mock.calls.at(-1)![0].where;
+    expect(where.order.storeId).toBeUndefined();
   });
 });

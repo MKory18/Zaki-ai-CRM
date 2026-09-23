@@ -145,6 +145,10 @@ model User {
 model Product {
   id          String   @id @default(uuid())
   companyId   String
+  /// Which store's catalogue this article belongs to. A store here is a
+  /// separate business: its own goods, its own stock, its own shelf.
+  /// Null only until a product from before this is placed.
+  storeId     String?  @map("store_id")
   name        String
   nameEn      String?
   sku         String
@@ -162,6 +166,7 @@ model Product {
   updatedAt   DateTime @updatedAt
 
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  store              Store?              @relation(fields: [storeId], references: [id], onDelete: Restrict)
   category           Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   batches            ProductionBatch[]
   inventoryMovements InventoryMovement[]
@@ -173,7 +178,8 @@ model Product {
   addOns             OrderAddOn[]
   images             ProductImage[]
 
-  @@unique([companyId, sku])
+  @@unique([companyId, storeId, sku])
+  @@index([companyId, storeId])
   @@index([companyId])
   @@map("products")
 }
@@ -202,6 +208,10 @@ model ProductImage {
 
 model ProductionBatch {
   id                  String   @id @default(uuid())
+  /// Where these goods physically are. Stock is the store's, not the
+  /// company's: two stores selling out of one pile can each promise what
+  /// the other has already taken.
+  storeId   String?  @map("store_id")
   companyId           String
   productId           String
   batchNumber         String
@@ -251,6 +261,9 @@ model ProductionBatchCost {
 
 model InventoryMovement {
   id           String   @id @default(uuid())
+  /// The store whose stock moved. The log has to answer the same question
+  /// the balance does.
+  storeId      String?  @map("store_id")
   companyId    String
   productId    String
   batchId      String?
@@ -1309,6 +1322,7 @@ model Store {
   shippingBatches ShippingBatch[]
   couriers        DeliveryProvider[]
   wallets         Wallet[]
+  products        Product[]
 
   @@unique([companyId, slug])
   @@unique([domain])
