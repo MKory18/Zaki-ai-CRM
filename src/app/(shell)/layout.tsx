@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shell } from '@/components/shell/Shell';
+import { ConfirmProvider } from '@/components/ui/Confirm';
 import { requireShellContext } from '@/lib/page-guard';
 import { visibleNav } from '@/lib/route-registry';
 import { listAccessibleCountries, listAccessibleStores } from '@/lib/geo-context';
@@ -29,7 +30,9 @@ export default async function ShellLayout({ children }: { children: React.ReactN
         canSwitch,
       }}
     >
-      {children}
+      {/* One dialog for the whole app: every screen that needs to ask
+          before doing something asks in here, not in a browser box. */}
+      <ConfirmProvider>{children}</ConfirmProvider>
     </Shell>
   );
 }

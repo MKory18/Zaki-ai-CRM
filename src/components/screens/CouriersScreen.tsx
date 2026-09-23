@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useConfirm } from '@/components/ui/Confirm';
 import Link from 'next/link';
 import { Bike, Check, Loader2, Pencil, Plus, Store as StoreIcon, Trash2, Truck, X } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
@@ -36,6 +37,7 @@ interface StoreRow {
 }
 
 export function CouriersScreen() {
+  const ask = useConfirm();
   const [rows, setRows] = useState<Courier[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT', adapterCode: 'MANUAL' });
@@ -163,7 +165,12 @@ export function CouriersScreen() {
    * statements that name it are not ours to rewrite.
    */
   const remove = async (c: Courier) => {
-    if (!confirm(`حذف «${c.name}»؟ إن كانت مرتبطة بطلبات أو كشوف فستُعطَّل بدل الحذف، والسجلّات القديمة تبقى كما هي.`)) return;
+    const ok = await ask({
+      title: `حذف «${c.name}»؟`,
+      body: 'إن كانت مرتبطة بطلبات أو كشوف فستُعطَّل بدل الحذف، والسجلّات القديمة تبقى كما هي.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setBusy(true);
     setError(null);
     setNote(null);

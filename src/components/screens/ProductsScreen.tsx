@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { useConfirm } from '@/components/ui/Confirm';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -28,6 +29,7 @@ import Link from 'next/link';
 export function ProductsScreen() {
   const { t, locale } = useApp();
   const router = useRouter();
+  const ask = useConfirm();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -102,7 +104,12 @@ export function ProductsScreen() {
   };
 
   const handleDelete = async (p: any) => {
-    if (!confirm(`حذف المنتج "${productName(p, locale)}" نهائياً؟\nسيتم حذف صوره أيضاً. لا يمكن التراجع.`)) return;
+    const ok = await ask({
+      title: `حذف المنتج «${productName(p, locale)}» نهائياً؟`,
+      body: 'ستُحذف صوره أيضاً، ولا يمكن التراجع.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/products/${p.id}`, { method: 'DELETE' });
       const data = await res.json();

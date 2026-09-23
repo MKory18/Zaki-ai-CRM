@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2, Plus, RotateCcw, Wallet as WalletIcon, Pencil, Trash2, Power, Check, X} from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { useConfirm } from '@/components/ui/Confirm';
 
 /**
  * /finance/wallets — balances and the movement ledger. A recorded movement is
@@ -50,6 +51,7 @@ const CATEGORY_AR: Record<string, string> = {
 };
 
 export function WalletsScreen() {
+  const ask = useConfirm();
   const [wallets, setWallets] = useState<WalletRow[] | null>(null);
   const [active, setActive] = useState<string>('');
   const [movements, setMovements] = useState<Movement[] | null>(null);
@@ -126,7 +128,12 @@ export function WalletsScreen() {
    */
   const removeWallet = async () => {
     if (!wallet) return;
-    if (!confirm(`حذف «${wallet.name}»؟ إن مرّ بها أي مبلغ فستُوقَف بدل الحذف، والسجلّات تبقى كما هي.`)) return;
+    const ok = await ask({
+      title: `حذف «${wallet.name}»؟`,
+      body: 'إن مرّ بها أي مبلغ فستُوقَف بدل الحذف، والسجلّات تبقى كما هي.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setBusy(true);
     setError(null);
     setDone(null);

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { useConfirm } from '@/components/ui/Confirm';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import {
   AlertTriangle,
@@ -323,6 +324,7 @@ function AnalyticsPixelsTab() {
 /* ═══════════════════════ TAB 2: بكسل التتبع ═══════════════════════ */
 
 function TrackingPixelsTab() {
+  const ask = useConfirm();
   const [pixels, setPixels] = useState<PixelRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [platform, setPlatform] = useState<Platform>('META');
@@ -423,7 +425,7 @@ function TrackingPixelsTab() {
   };
 
   const remove = async (p: PixelRow) => {
-    if (!window.confirm(`حذف رقم التتبع "${p.pixelId}"؟`)) return;
+    if (!(await ask({ title: `حذف رقم التتبع «${p.pixelId}»؟`, tone: 'danger' }))) return;
     try {
       const res = await fetch(`/api/settings/tracking-pixels/${p.id}`, { method: 'DELETE' });
       if (res.ok) {

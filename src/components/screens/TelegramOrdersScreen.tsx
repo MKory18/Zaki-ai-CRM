@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { useConfirm } from '@/components/ui/Confirm';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -72,6 +73,7 @@ const REVIEW_REASONS: Record<string, string> = {
 
 export function TelegramOrdersScreen() {
   const { currentUser } = useApp();
+  const ask = useConfirm();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<any>(null);
@@ -156,7 +158,12 @@ export function TelegramOrdersScreen() {
   };
 
   const deleteSource = async (s: TelegramSource) => {
-    if (!confirm(`حذف الربط مع "${s.chatTitle || s.chatId}"؟ لن يتم حذف الطلبات السابقة.`)) return;
+    const ok = await ask({
+      title: `حذف الربط مع «${s.chatTitle || s.chatId}»؟`,
+      body: 'الطلبات السابقة تبقى كما هي.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setBusyId(s.id);
     try {
       await crmApi(`/api/telegram/sources/${s.id}`, { method: 'DELETE' });

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Check, Copy, Loader2, RefreshCw, Webhook } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
 import { copyText } from '@/lib/clipboard';
@@ -26,6 +27,7 @@ interface Status {
 }
 
 export function CourierWebhook({ providerId }: { providerId: string }) {
+  const ask = useConfirm();
   const [status, setStatus] = useState<Status | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,7 +47,16 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
   }, [load]);
 
   const mint = async () => {
-    if (status?.configured && !confirm('الرابط الحالي سيتوقف فوراً. تابع؟')) return;
+    if (
+      status?.configured &&
+      !(await ask({
+        title: 'رابط جديد؟',
+        body: 'الرابط الحالي سيتوقف فوراً، وعليك إرسال الجديد لشركة الشحن.',
+        confirmLabel: 'ولّد رابطاً جديداً',
+      }))
+    ) {
+      return;
+    }
     setBusy(true);
     setError(null);
     try {

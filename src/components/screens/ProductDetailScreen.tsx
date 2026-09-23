@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { useConfirm } from '@/components/ui/Confirm';
 import { Button } from '@/components/ui/Button';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { Badge } from '@/components/ui/Badge';
@@ -32,6 +33,8 @@ export function ProductDetailScreen() {
   const productId = params?.id as string;
   const { currentUser } = useApp();
   const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('products.edit');
+
+  const ask = useConfirm();
 
   const [product, setProduct] = useState<any>(null);
   const [currencyCode, setCurrencyCode] = useState('USD');
@@ -99,7 +102,7 @@ export function ProductDetailScreen() {
   };
 
   const deleteImage = async (imageId: string) => {
-    if (!confirm('حذف هذه الصورة نهائياً؟')) return;
+    if (!(await ask({ title: 'حذف هذه الصورة نهائياً؟', tone: 'danger' }))) return;
     await fetch(`/api/products/${productId}/images/${imageId}`, { method: 'DELETE' });
     loadProduct();
   };
