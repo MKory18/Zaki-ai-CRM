@@ -1,0 +1,3274 @@
+[
+ {
+  "villageId": 730650,
+  "villageName": "أبو راسين",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280751,
+  "villageName": "حي المطار",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 730618,
+  "villageName": "حي المطار",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730654,
+  "villageName": "العامرية",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730655,
+  "villageName": "العرادة",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280755,
+  "villageName": "حي العرضي",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 730659,
+  "villageName": "العريشة",
+  "cityId": 566048,
+  "cityName": "منطقة الشدادي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730614,
+  "villageName": "حي العزيزية",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280750,
+  "villageName": "حي العمال",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 730653,
+  "villageName": "الأسدية",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731213,
+  "villageName": "حي البدو",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 1280796,
+  "villageName": "البريهة",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731450,
+  "villageName": "البيضا",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731541,
+  "villageName": "البريقة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 1280791,
+  "villageName": "البصيرة",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731207,
+  "villageName": "حي الدرعية",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731458,
+  "villageName": "الدوير",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 730652,
+  "villageName": "الدويرة",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731212,
+  "villageName": "حي الفروسية",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730615,
+  "villageName": "حي غويران",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280749,
+  "villageName": "حي الحميدية",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 730666,
+  "villageName": "الحميدية",
+  "cityId": 566048,
+  "cityName": "منطقة الشدادي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731542,
+  "villageName": "الحميدية",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731454,
+  "villageName": "الحميدية",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 730664,
+  "villageName": "الحمادة",
+  "cityId": 566048,
+  "cityName": "منطقة الشدادي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731253,
+  "villageName": "الحمام",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731236,
+  "villageName": "الحمام",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731227,
+  "villageName": "الحمام",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730665,
+  "villageName": "الحمرة",
+  "cityId": 566048,
+  "cityName": "منطقة الشدادي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730611,
+  "villageName": "الحسكة",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 588545,
+  "villageName": "الحسكة",
+  "cityId": 445152,
+  "cityName": "الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280794,
+  "villageName": "الحوايج",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 730660,
+  "villageName": "الهول",
+  "cityId": 566048,
+  "cityName": "منطقة الشدادي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730663,
+  "villageName": "الحرية",
+  "cityId": 566048,
+  "cityName": "منطقة الشدادي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280753,
+  "villageName": "حي الحويقة",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731233,
+  "villageName": "الجرنية",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730628,
+  "villageName": "الجوادية",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730638,
+  "villageName": "الجوادية",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731250,
+  "villageName": "الجزرة",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731240,
+  "villageName": "الجزرة",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 1280747,
+  "villageName": "حي الجورة",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 1280758,
+  "villageName": "حي الجبيلة",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731228,
+  "villageName": "الجبيلة",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730616,
+  "villageName": "حي الكلاسة",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280757,
+  "villageName": "حي الكنامات",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731237,
+  "villageName": "الكرامة",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731252,
+  "villageName": "الكرامة",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731226,
+  "villageName": "الكرامة",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731456,
+  "villageName": "الكرنك",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731239,
+  "villageName": "الكسرة",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731249,
+  "villageName": "الكسرة",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731558,
+  "villageName": "الكوم",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 730620,
+  "villageName": "حي الليلية",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731245,
+  "villageName": "المغلة",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730617,
+  "villageName": "حي المحطة",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731246,
+  "villageName": "المكسر",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730637,
+  "villageName": "المالكية",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730657,
+  "villageName": "المنصورة",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731232,
+  "villageName": "المنصورة",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731455,
+  "villageName": "المنصورة",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731251,
+  "villageName": "المنصورة",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731225,
+  "villageName": "المنصورة",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731158,
+  "villageName": "حي المارتقلا",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731430,
+  "villageName": "حي المساكن",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731206,
+  "villageName": "حي المشلب",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731154,
+  "villageName": "حي المشروع العاشر",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731155,
+  "villageName": "حي المشروع السابع",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731156,
+  "villageName": "حي المشروع الثاني",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731247,
+  "villageName": "المزرعة",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731243,
+  "villageName": "المحمدية",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731451,
+  "villageName": "المرشدية",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 730619,
+  "villageName": "حي المشيرفة",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731244,
+  "villageName": "المشيرفة",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730613,
+  "villageName": "حي النشوة",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730630,
+  "villageName": "القحطانية",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730639,
+  "villageName": "القحطانية",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731157,
+  "villageName": "حي القلعة",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731457,
+  "villageName": "القلعة",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731162,
+  "villageName": "حي القنجرة",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731452,
+  "villageName": "القلوع",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731549,
+  "villageName": "القصيبة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731428,
+  "villageName": "حي القصور",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 1280748,
+  "villageName": "حي القصور",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731429,
+  "villageName": "حي الرادار",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731548,
+  "villageName": "الرفيد",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731152,
+  "villageName": "حي الرمل الجنوبي",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731153,
+  "villageName": "حي الرمل الشمالي",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 1280754,
+  "villageName": "حي الرشدية",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731453,
+  "villageName": "الروضة",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731208,
+  "villageName": "حي الرميلة",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730662,
+  "villageName": "السبعة وأربعين",
+  "cityId": 566048,
+  "cityName": "منطقة الشدادي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730622,
+  "villageName": "حي الصباغ",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280795,
+  "villageName": "الصبحة",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731248,
+  "villageName": "السبخة",
+  "cityId": 566098,
+  "cityName": "منطقة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731238,
+  "villageName": "السبخة",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731234,
+  "villageName": "الصفصافة",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731151,
+  "villageName": "حي الصليبة",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 730612,
+  "villageName": "حي الصالحية",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731559,
+  "villageName": "الصمدانية",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 730658,
+  "villageName": "الشدادي",
+  "cityId": 566048,
+  "cityName": "منطقة الشدادي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280792,
+  "villageName": "الشحيل",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 1280798,
+  "villageName": "الصور",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 730661,
+  "villageName": "الصور",
+  "cityId": 566048,
+  "cityName": "منطقة الشدادي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731235,
+  "villageName": "السويدية",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731553,
+  "villageName": "السويسة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731231,
+  "villageName": "الطبقة",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731214,
+  "villageName": "حي التوسعية",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 1280797,
+  "villageName": "الطيانة",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731209,
+  "villageName": "حي الطيار",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731217,
+  "villageName": "حي الطيار",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731216,
+  "villageName": "حي الثكنة",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731432,
+  "villageName": "حي الثورة",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 730629,
+  "villageName": "اليعربية",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731431,
+  "villageName": "حي الزهراء",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741569,
+  "villageName": "حلب",
+  "cityId": 570333,
+  "cityName": "ميزنار",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 730624,
+  "villageName": "عامودا",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731221,
+  "villageName": "عين العروس",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731544,
+  "villageName": "عين التينة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 730641,
+  "villageName": "عين ديوار",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731254,
+  "villageName": "عين عيسى",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731545,
+  "villageName": "عين قنية",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731449,
+  "villageName": "بانياس",
+  "cityId": 566112,
+  "cityName": "منطقة بانياس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731159,
+  "villageName": "حي بسنادا",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731551,
+  "villageName": "بئر عجم",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731552,
+  "villageName": "بريقة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 588445,
+  "villageName": "دمشق",
+  "cityId": 445053,
+  "cityName": "دمشق",
+  "regionId": 2903,
+  "regionName": "دمشق"
+ },
+ {
+  "villageId": 741239,
+  "villageName": "درعا",
+  "cityId": 570150,
+  "cityName": "درعا",
+  "regionId": 3005,
+  "regionName": "درعا"
+ },
+ {
+  "villageId": 730651,
+  "villageName": "الدرباسية",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730625,
+  "villageName": "درباسية",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 1280746,
+  "villageName": "دير الزور",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 1282175,
+  "villageName": "مدينة دير الزور",
+  "cityId": 949546,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 1280793,
+  "villageName": "ذيبان",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731467,
+  "villageName": "الدريكيش",
+  "cityId": 566114,
+  "cityName": "منطقة الدريكيش",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731554,
+  "villageName": "الحميدية الشرقية",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 1280760,
+  "villageName": "حي الحويقة الشرقية",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731229,
+  "villageName": "الجبيلة الشرقية",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731241,
+  "villageName": "المنصورة الشرقية",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731218,
+  "villageName": "حي المشلب الشرقي",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731560,
+  "villageName": "الصمدانية الشرقية",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731262,
+  "villageName": "خربة الشويخ الشرقي",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730674,
+  "villageName": "تل حفيان شرقي",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731550,
+  "villageName": "غدير البستان",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731540,
+  "villageName": "حضر",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 910043,
+  "villageName": "حلب",
+  "cityId": 705991,
+  "cityName": "حلب",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 588539,
+  "villageName": "حماة",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 731223,
+  "villageName": "حمام التركمان",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730632,
+  "villageName": "هيمو",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731215,
+  "villageName": "حي هشام بن عبد الملك",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 741444,
+  "villageName": "حمص",
+  "cityId": 570272,
+  "cityName": "حمص",
+  "regionId": 3303,
+  "regionName": "حمص"
+ },
+ {
+  "villageId": 741236,
+  "villageName": "ادلب",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 741237,
+  "villageName": "ادلب",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 1280752,
+  "villageName": "حي الصناعة",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731433,
+  "villageName": "حي الصناعة",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731210,
+  "villageName": "حي الصناعة",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 1280741,
+  "villageName": "اربد",
+  "cityId": 949533,
+  "cityName": "اربد",
+  "regionId": 4035,
+  "regionName": "اربد"
+ },
+ {
+  "villageId": 1280799,
+  "villageName": "جزرة البوحمد",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 1280802,
+  "villageName": "جزرة البوشامل",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 1280801,
+  "villageName": "جزرة البوشمس",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 1280800,
+  "villageName": "جزرة الميلاج",
+  "cityId": 949550,
+  "cityName": "منطقة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731557,
+  "villageName": "جبا",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731539,
+  "villageName": "جباتا الخشب",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 730633,
+  "villageName": "كركي لكي",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730642,
+  "villageName": "كركي لكي",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731224,
+  "villageName": "كري سبي",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731538,
+  "villageName": "خان أرنبة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731256,
+  "villageName": "خربة البنات",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731257,
+  "villageName": "خربة الديب",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731255,
+  "villageName": "خربة الرز",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731259,
+  "villageName": "خربة الشرك",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731258,
+  "villageName": "خربة الشحود",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731260,
+  "villageName": "خربة الشويخ",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731261,
+  "villageName": "خربة الشويخية",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 910044,
+  "villageName": "اللاذقية",
+  "cityId": 705992,
+  "cityName": "اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731150,
+  "villageName": "اللاذقية",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 742313,
+  "villageName": "مدينة اللاذقية",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 1277801,
+  "villageName": "عمان",
+  "cityId": 947365,
+  "cityName": "عمان",
+  "regionId": 4005,
+  "regionName": "عمان"
+ },
+ {
+  "villageId": 731543,
+  "villageName": "مسعدة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 1246790,
+  "villageName": "المدينة المنورة",
+  "cityId": 36237,
+  "cityName": "المدينة المنورة",
+  "regionId": 1210,
+  "regionName": "المدينة المنورة"
+ },
+ {
+  "villageId": 731547,
+  "villageName": "نبع الصخر",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 730676,
+  "villageName": "تل حفيان شمالي",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731160,
+  "villageName": "حي الصليبة القديمة",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 731436,
+  "villageName": "حي الميناء",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731475,
+  "villageName": "القدموس",
+  "cityId": 566115,
+  "cityName": "منطقة القدموس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 730623,
+  "villageName": "القامشلي",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731537,
+  "villageName": "القنيطرة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 1282048,
+  "villageName": "مدينة القنيطرة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 588544,
+  "villageName": "الرقة",
+  "cityId": 445151,
+  "cityName": "الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731205,
+  "villageName": "الرقة",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 1282043,
+  "villageName": "مدينة الرقة",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730648,
+  "villageName": "رأس العين",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 588536,
+  "villageName": "ريف دمشق",
+  "cityId": 445143,
+  "cityName": "ريف دمشق",
+  "regionId": 2993,
+  "regionName": "ريف دمشق"
+ },
+ {
+  "villageId": 730640,
+  "villageName": "رميلان",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730631,
+  "villageName": "رميلان",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731437,
+  "villageName": "صافيتا",
+  "cityId": 566111,
+  "cityName": "منطقة صافيتا",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731435,
+  "villageName": "حي الكورنيش البحري",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731161,
+  "villageName": "حي الشيخ ضاهر",
+  "cityId": 566090,
+  "cityName": "مدينة اللاذقية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 1280756,
+  "villageName": "حي الشيخ ياسين",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731222,
+  "villageName": "سلوك",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730656,
+  "villageName": "العلو",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730646,
+  "villageName": "تل علو",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730672,
+  "villageName": "تل عرب",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730627,
+  "villageName": "تل براك",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730673,
+  "villageName": "تل حفيان",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730621,
+  "villageName": "حي تل حجر",
+  "cityId": 566044,
+  "cityName": "مدينة الحسكة",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730649,
+  "villageName": "تل حلف",
+  "cityId": 566047,
+  "cityName": "منطقة رأس العين",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730647,
+  "villageName": "تل حلف",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730626,
+  "villageName": "تل حميس",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730670,
+  "villageName": "تل خنزير",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730643,
+  "villageName": "تل كوجر",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730634,
+  "villageName": "تل كوجر",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730636,
+  "villageName": "تل معروف",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730645,
+  "villageName": "تل معروف",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730671,
+  "villageName": "تل مغاص",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730668,
+  "villageName": "تل نصري",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730644,
+  "villageName": "تل شعير",
+  "cityId": 566046,
+  "cityName": "منطقة المالكية",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730635,
+  "villageName": "تل شعير",
+  "cityId": 566045,
+  "cityName": "منطقة القامشلي",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730667,
+  "villageName": "تل تمر",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 730669,
+  "villageName": "تل طويل",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 731556,
+  "villageName": "طرنجة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 910045,
+  "villageName": "طرطوس",
+  "cityId": 705993,
+  "cityName": "طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731427,
+  "villageName": "طرطوس",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742311,
+  "villageName": "مدينة طرطوس",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731220,
+  "villageName": "تل أبيض",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731546,
+  "villageName": "أم باطنة",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731434,
+  "villageName": "حي الجامعة",
+  "cityId": 566110,
+  "cityName": "مدينة طرطوس",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 731211,
+  "villageName": "حي الجامعة",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731555,
+  "villageName": "الحميدية الغربية",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 1280759,
+  "villageName": "حي الحويقة الغربية",
+  "cityId": 949547,
+  "cityName": "مدينة دير الزور",
+  "regionId": 3736,
+  "regionName": "دير الزور"
+ },
+ {
+  "villageId": 731230,
+  "villageName": "الجبيلة الغربية",
+  "cityId": 566096,
+  "cityName": "منطقة تل أبيض",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731242,
+  "villageName": "المنصورة الغربية",
+  "cityId": 566097,
+  "cityName": "منطقة الطبقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731219,
+  "villageName": "حي المشلب الغربي",
+  "cityId": 566095,
+  "cityName": "مدينة الرقة",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 731561,
+  "villageName": "الصمدانية الغربية",
+  "cityId": 566122,
+  "cityName": "مدينة القنيطرة",
+  "regionId": 3004,
+  "regionName": "القنيطرة"
+ },
+ {
+  "villageId": 731263,
+  "villageName": "خربة الشويخ الغربي",
+  "cityId": 566099,
+  "cityName": "منطقة عين عيسى",
+  "regionId": 3001,
+  "regionName": "الرقة"
+ },
+ {
+  "villageId": 730675,
+  "villageName": "تل حفيان غربي",
+  "cityId": 566049,
+  "cityName": "منطقة تل تمر",
+  "regionId": 3002,
+  "regionName": "الحسكة"
+ },
+ {
+  "villageId": 742026,
+  "villageName": "أريحا",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742029,
+  "villageName": "أورم جوز",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742047,
+  "villageName": "أيو",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 910155,
+  "villageName": "احتيملات",
+  "cityId": 683198,
+  "cityName": "احتيملات",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 741632,
+  "villageName": "اسطامو",
+  "cityId": 570386,
+  "cityName": "اسطامو",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 742041,
+  "villageName": "اشتبرق",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 910154,
+  "villageName": "اعزاز",
+  "cityId": 683189,
+  "cityName": "اعزاز",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 742015,
+  "villageName": "افس",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 910153,
+  "villageName": "الباب",
+  "cityId": 683193,
+  "cityName": "الباب",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 742021,
+  "villageName": "البرقوم",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742018,
+  "villageName": "البوابية",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742003,
+  "villageName": "الحامدية",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741631,
+  "villageName": "الحفة",
+  "cityId": 570369,
+  "cityName": "الحفة",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741659,
+  "villageName": "الحميدية",
+  "cityId": 570361,
+  "cityName": "الحميدية",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741630,
+  "villageName": "الحويز",
+  "cityId": 570393,
+  "cityName": "الحويز",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 742049,
+  "villageName": "الخالدية",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 741658,
+  "villageName": "الخريبات",
+  "cityId": 570354,
+  "cityName": "الخريبات",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741629,
+  "villageName": "الخلالة",
+  "cityId": 570381,
+  "cityName": "الخلالة",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 863714,
+  "villageName": "الدانا",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741628,
+  "villageName": "الدروك",
+  "cityId": 570395,
+  "cityName": "الدروك",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741592,
+  "villageName": "الدهبية",
+  "cityId": 570323,
+  "cityName": "الذهبية",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 742030,
+  "villageName": "الرامي",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741657,
+  "villageName": "الروضة",
+  "cityId": 570343,
+  "cityName": "الروضة",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741656,
+  "villageName": "الريحانية",
+  "cityId": 570362,
+  "cityName": "الريحانية",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742022,
+  "villageName": "الزربة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 1090191,
+  "villageName": "السهوى",
+  "cityId": 817675,
+  "cityName": "ريف درعا",
+  "regionId": 3655,
+  "regionName": "ريف درعا"
+ },
+ {
+  "villageId": 741655,
+  "villageName": "السودا",
+  "cityId": 570348,
+  "cityName": "السودا",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741591,
+  "villageName": "الشيخ علي",
+  "cityId": 570331,
+  "cityName": "الشيخ علي",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741627,
+  "villageName": "الشبطلية",
+  "cityId": 570379,
+  "cityName": "الشبطلية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741626,
+  "villageName": "الشلفاطية",
+  "cityId": 570380,
+  "cityName": "الشلفاطية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 742058,
+  "villageName": "الشيحة",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 741654,
+  "villageName": "الشيخ أحمد المصري",
+  "cityId": 570353,
+  "cityName": "الشيخ أحمد المصري",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741653,
+  "villageName": "الصفصافة",
+  "cityId": 570363,
+  "cityName": "الصفصافة",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741625,
+  "villageName": "الصنوبر",
+  "cityId": 570385,
+  "cityName": "الصنوبر",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741624,
+  "villageName": "القرداحة",
+  "cityId": 570367,
+  "cityName": "القرداحة",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741623,
+  "villageName": "القطرية",
+  "cityId": 570384,
+  "cityName": "القطرية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741622,
+  "villageName": "القلوع",
+  "cityId": 570396,
+  "cityName": "القلوع",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741621,
+  "villageName": "القنجرة",
+  "cityId": 570372,
+  "cityName": "القنجرة",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741652,
+  "villageName": "الكريمة تل سنون",
+  "cityId": 570365,
+  "cityName": "الكريمة تل سنون",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742051,
+  "villageName": "المدينة",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 741997,
+  "villageName": "المدينة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 1091959,
+  "villageName": "المدينة الصناعية الشيخ نجار",
+  "cityId": 570321,
+  "cityName": "المدينة الصناعية الشيخ نجار",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741590,
+  "villageName": "المدينة الصناعية الشيخ نجار ",
+  "cityId": 570321,
+  "cityName": "المدينة الصناعية الشيخ نجار",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741620,
+  "villageName": "المروج",
+  "cityId": 570374,
+  "cityName": "المروج",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 742024,
+  "villageName": "المسطومة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742035,
+  "villageName": "المشرفية",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742037,
+  "villageName": "المعلقة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741619,
+  "villageName": "المنزلة",
+  "cityId": 570400,
+  "cityName": "المنزلة",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741651,
+  "villageName": "المنطار",
+  "cityId": 570358,
+  "cityName": "المنطار",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742044,
+  "villageName": "الناحية",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 910152,
+  "villageName": "النقيرين",
+  "cityId": 683203,
+  "cityName": "النقيرين",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 741618,
+  "villageName": "الهنادي",
+  "cityId": 570382,
+  "cityName": "الهنادي",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741650,
+  "villageName": "اوتستراد",
+  "cityId": 570345,
+  "cityName": "اوتستراد",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741595,
+  "villageName": "اوىم الخربه",
+  "cityId": 570329,
+  "cityName": "أورم الخربة",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741594,
+  "villageName": "اورم الصغرى",
+  "cityId": 570330,
+  "cityName": "أورم الصغرى",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741593,
+  "villageName": "اورم الكبرى",
+  "cityId": 570328,
+  "cityName": "أورم الكبرى",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 742001,
+  "villageName": "بابولين",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742008,
+  "villageName": "بابيلا",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741649,
+  "villageName": "بحوزى",
+  "cityId": 570359,
+  "cityName": "بحوزى",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742043,
+  "villageName": "بداما",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741617,
+  "villageName": "برج اسلام",
+  "cityId": 570377,
+  "cityName": "برج اسلام",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 742036,
+  "villageName": "بزيت",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741616,
+  "villageName": "بستان الباشا",
+  "cityId": 570387,
+  "cityName": "بستان الباشا",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741648,
+  "villageName": "بستان النجار",
+  "cityId": 570339,
+  "cityName": "بستان النجار",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741647,
+  "villageName": "بسماقة",
+  "cityId": 570352,
+  "cityName": "بسماقة",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742032,
+  "villageName": "بسنقول",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742002,
+  "villageName": "بسيدا",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742046,
+  "villageName": "بسرين",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 741615,
+  "villageName": "بسيسين",
+  "cityId": 570392,
+  "cityName": "بسيسين",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 1090192,
+  "villageName": "بصرى",
+  "cityId": 817675,
+  "cityName": "ريف درعا",
+  "regionId": 3655,
+  "regionName": "ريف درعا"
+ },
+ {
+  "villageId": 741614,
+  "villageName": "بكسا",
+  "cityId": 570373,
+  "cityName": "بكسا",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741586,
+  "villageName": "بنش",
+  "cityId": 570338,
+  "cityName": "بنش",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741613,
+  "villageName": "بني عيسا",
+  "cityId": 570389,
+  "cityName": "بني عيسا",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741646,
+  "villageName": "بيت الكمونة",
+  "cityId": 570355,
+  "cityName": "بيت الكمونة",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742013,
+  "villageName": "ترنبة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741585,
+  "villageName": "تفتناز",
+  "cityId": 570336,
+  "cityName": "تفتناز",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 910151,
+  "villageName": "تل حاصل",
+  "cityId": 683202,
+  "cityName": "تل حاصل",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 741584,
+  "villageName": "تل حاصل",
+  "cityId": 570324,
+  "cityName": "تل حاصل",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 910150,
+  "villageName": "تل رفعت",
+  "cityId": 683195,
+  "cityName": "تل رفعت",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 741583,
+  "villageName": "تل شغيب",
+  "cityId": 570322,
+  "cityName": "تل شغيب",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 910149,
+  "villageName": "تل عرن",
+  "cityId": 683201,
+  "cityName": "تل عرن ",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 742016,
+  "villageName": "تل كراتين",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742011,
+  "villageName": "تل مريدخ",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742006,
+  "villageName": "تلمنس",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742017,
+  "villageName": "جب كاس",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741612,
+  "villageName": "جبلة",
+  "cityId": 570368,
+  "cityName": "جبلة",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 1090907,
+  "villageName": "جرمانا",
+  "cityId": 817739,
+  "cityName": "جرمانا",
+  "regionId": 3678,
+  "regionName": "جرمانا"
+ },
+ {
+  "villageId": 742012,
+  "villageName": "جوباس",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741611,
+  "villageName": "حرف بنمرة",
+  "cityId": 570398,
+  "cityName": "حرف بنمرة",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741582,
+  "villageName": "حريتان",
+  "cityId": 570320,
+  "cityName": "حريتان",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741645,
+  "villageName": "حريصون",
+  "cityId": 570340,
+  "cityName": "حريصون",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741644,
+  "villageName": "حصين البحر",
+  "cityId": 570349,
+  "cityName": "حصين البحر",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741610,
+  "villageName": "حميميم",
+  "cityId": 570391,
+  "cityName": "حميميم",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741581,
+  "villageName": "حي يزيد بن معاويه",
+  "cityId": 570318,
+  "cityName": "حي يزيد بن معاوية",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 742000,
+  "villageName": "حيش",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742009,
+  "villageName": "خان السبل",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741580,
+  "villageName": "خان العسل",
+  "cityId": 570317,
+  "cityName": "خان العسل",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741579,
+  "villageName": "خان طومان",
+  "cityId": 570326,
+  "cityName": "خان طومان",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741643,
+  "villageName": "خراب العريشة",
+  "cityId": 570342,
+  "cityName": "خراب العريشة",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741642,
+  "villageName": "خربة المعزة",
+  "cityId": 570357,
+  "cityName": "خربة المعزة",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741641,
+  "villageName": "دويرطة",
+  "cityId": 570351,
+  "cityName": "دويرطة",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741609,
+  "villageName": "دير البشل",
+  "cityId": 570397,
+  "cityName": "دير البشل",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741640,
+  "villageName": "دير الحجر",
+  "cityId": 570360,
+  "cityName": "دير الحجر",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 910148,
+  "villageName": "دير حافر",
+  "cityId": 683191,
+  "cityName": "دير حافر",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 1090190,
+  "villageName": "ريف ادلب",
+  "cityId": 817674,
+  "cityName": "ريف ادلب",
+  "regionId": 3654,
+  "regionName": "ريف ادلب"
+ },
+ {
+  "villageId": 1198155,
+  "villageName": "ريف الرقة",
+  "cityId": 878600,
+  "cityName": "ريف الرقة",
+  "regionId": 3818,
+  "regionName": "ريف الرقة"
+ },
+ {
+  "villageId": 956440,
+  "villageName": "ريف القدموس",
+  "cityId": 728656,
+  "cityName": "ريف طرطوس",
+  "regionId": 3580,
+  "regionName": "ريف طرطوس"
+ },
+ {
+  "villageId": 956437,
+  "villageName": "ريف اللاذقية",
+  "cityId": 728655,
+  "cityName": "ريف اللاذقية",
+  "regionId": 3579,
+  "regionName": "ريف اللاذقية"
+ },
+ {
+  "villageId": 956438,
+  "villageName": "ريف جبلة",
+  "cityId": 728655,
+  "cityName": "ريف اللاذقية",
+  "regionId": 3579,
+  "regionName": "ريف اللاذقية"
+ },
+ {
+  "villageId": 910147,
+  "villageName": "ريف حلب",
+  "cityId": 683199,
+  "cityName": "ريف حلب",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 1090188,
+  "villageName": "ريف حماة",
+  "cityId": 817671,
+  "cityName": "ريف حماة",
+  "regionId": 3652,
+  "regionName": "ريف حماة"
+ },
+ {
+  "villageId": 1090189,
+  "villageName": "ريف حمص",
+  "cityId": 817672,
+  "cityName": "ريف حمص",
+  "regionId": 3653,
+  "regionName": "ريف حمص"
+ },
+ {
+  "villageId": 1256500,
+  "villageName": "ريف درعا",
+  "cityId": 817675,
+  "cityName": "ريف درعا",
+  "regionId": 3655,
+  "regionName": "ريف درعا"
+ },
+ {
+  "villageId": 956439,
+  "villageName": "ريف طرطوس",
+  "cityId": 728656,
+  "cityName": "ريف طرطوس",
+  "regionId": 3580,
+  "regionName": "ريف طرطوس"
+ },
+ {
+  "villageId": 741608,
+  "villageName": "زللو",
+  "cityId": 570399,
+  "cityName": "زللو",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741639,
+  "villageName": "زمرين",
+  "cityId": 570347,
+  "cityName": "زمرين",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741638,
+  "villageName": "زهاد الدكيكة",
+  "cityId": 570364,
+  "cityName": "زهاد الدكيكة",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742050,
+  "villageName": "زهرة المدائن",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 742014,
+  "villageName": "سراقب",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741607,
+  "villageName": "سلورين",
+  "cityId": 570390,
+  "cityName": "سلورين",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741578,
+  "villageName": "شلخ",
+  "cityId": 570335,
+  "cityName": "شللخ",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741606,
+  "villageName": "صليب التركمان",
+  "cityId": 570378,
+  "cityName": "صليب التركمان",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741605,
+  "villageName": "صمنديل",
+  "cityId": 570371,
+  "cityName": "صمنديل",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 910156,
+  "villageName": "صوران",
+  "cityId": 683200,
+  "cityName": "صوران",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 742056,
+  "villageName": "صوران",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 741637,
+  "villageName": "ضهر صفرا",
+  "cityId": 570341,
+  "cityName": "ضهر صفرا",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741577,
+  "villageName": "طعوم",
+  "cityId": 570337,
+  "cityName": "طعوم",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 742055,
+  "villageName": "طيبة  الإمام",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 741604,
+  "villageName": "طيرو",
+  "cityId": 570401,
+  "cityName": "طيرو",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741636,
+  "villageName": "عبة",
+  "cityId": 570350,
+  "cityName": "عبة",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 741603,
+  "villageName": "عرب الملك",
+  "cityId": 570394,
+  "cityName": "عرب الملك",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 910157,
+  "villageName": "عفرين",
+  "cityId": 683190,
+  "cityName": "عفرين",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 741635,
+  "villageName": "عنابية",
+  "cityId": 570356,
+  "cityName": "عنابية",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742034,
+  "villageName": "عين الحمرا",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742038,
+  "villageName": "عين السودة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741602,
+  "villageName": "عين العروس",
+  "cityId": 570388,
+  "cityName": "عين العروس",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 742039,
+  "villageName": "عين العصافير",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 910158,
+  "villageName": "فافين",
+  "cityId": 683197,
+  "cityName": "فافين",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 741601,
+  "villageName": "فدرة",
+  "cityId": 570370,
+  "cityName": "فدرة",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741600,
+  "villageName": "فديو",
+  "cityId": 570383,
+  "cityName": "فديو",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 742045,
+  "villageName": "فريكة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742025,
+  "villageName": "فليون",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742052,
+  "villageName": "قمحان",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 742053,
+  "villageName": "قمحانة",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 741599,
+  "villageName": "كرسانة الشامية",
+  "cityId": 570375,
+  "cityName": "كرسانة الشامية",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 741597,
+  "villageName": "كسب",
+  "cityId": 570366,
+  "cityName": "كسب",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ },
+ {
+  "villageId": 742019,
+  "villageName": "كسيبة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 910159,
+  "villageName": "كفر جنة",
+  "cityId": 683194,
+  "cityName": "كفر جنة ",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 742023,
+  "villageName": "كفر جوم",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741576,
+  "villageName": "كفر حلب",
+  "cityId": 570332,
+  "cityName": "كفر حلب",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741575,
+  "villageName": "كفر حمرا",
+  "cityId": 570319,
+  "cityName": "كفر حمرة",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741574,
+  "villageName": "كفر داعل",
+  "cityId": 570325,
+  "cityName": "كفر داعل",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 742027,
+  "villageName": "كفر زيبا",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742031,
+  "villageName": "كفر شلايا",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741573,
+  "villageName": "كفر ناها",
+  "cityId": 570316,
+  "cityName": "كفر ناها",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 742020,
+  "villageName": "كماري",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 910160,
+  "villageName": "كوريس",
+  "cityId": 683204,
+  "cityName": "كوريس",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 910161,
+  "villageName": "مارع",
+  "cityId": 683196,
+  "cityName": "مارع",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 741634,
+  "villageName": "متن الساحل",
+  "cityId": 570346,
+  "cityName": "متن الساحل",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742033,
+  "villageName": "محمبل",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741572,
+  "villageName": "مدينة حلب",
+  "cityId": 570314,
+  "cityName": "مدينة حلب",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741633,
+  "villageName": "مرقية",
+  "cityId": 570344,
+  "cityName": "مرقية",
+  "regionId": 2999,
+  "regionName": "طرطوس"
+ },
+ {
+  "villageId": 742028,
+  "villageName": "معترم",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741571,
+  "villageName": "معرة",
+  "cityId": 570334,
+  "cityName": "معرا",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 742010,
+  "villageName": "معردبسة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742054,
+  "villageName": "معردس",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 742007,
+  "villageName": "معشررين",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742005,
+  "villageName": "معرشمشة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 742048,
+  "villageName": "معرين",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 741570,
+  "villageName": "مغاير خان طومان",
+  "cityId": 570315,
+  "cityName": "مغاير خان طومان",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 1091958,
+  "villageName": "منبج",
+  "cityId": 683192,
+  "cityName": "منبج",
+  "regionId": 3525,
+  "regionName": "ريف حلب"
+ },
+ {
+  "villageId": 742057,
+  "villageName": "مورك",
+  "cityId": 445146,
+  "cityName": "حماة",
+  "regionId": 2996,
+  "regionName": "حماة"
+ },
+ {
+  "villageId": 741999,
+  "villageName": "موقة",
+  "cityId": 570148,
+  "cityName": "ادلب",
+  "regionId": 3285,
+  "regionName": "ادلب"
+ },
+ {
+  "villageId": 741589,
+  "villageName": "ميزنار",
+  "cityId": 570333,
+  "cityName": "ميزنار",
+  "regionId": 2994,
+  "regionName": "حلب"
+ },
+ {
+  "villageId": 741596,
+  "villageName": "وادي قنديل",
+  "cityId": 570376,
+  "cityName": "وادي قنديل",
+  "regionId": 2998,
+  "regionName": "اللاذقية"
+ }
+]

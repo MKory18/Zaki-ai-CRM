@@ -41,7 +41,7 @@ export async function GET(req: Request) {
       db.region.findMany({ where: { countryId, isActive: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
       db.deliveryFee.findMany({
         where: { companyId, countryId, ...(courier ? { deliveryProviderId: courier } : {}) },
-        select: { id: true, deliveryProviderId: true, regionId: true, fee: true, lateThresholdDays: true, returnFee: true, isActive: true },
+        select: { id: true, deliveryProviderId: true, regionId: true, fee: true, lateThresholdDays: true, returnFee: true, isActive: true, courierCityId: true },
       }),
     ]);
 

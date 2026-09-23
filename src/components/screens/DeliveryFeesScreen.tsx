@@ -19,6 +19,8 @@ interface Fee {
   fee: number;
   lateThresholdDays: number;
   returnFee: number;
+  /** The courier's own id for this region; null until we are told it. */
+  courierCityId: number | null;
   isActive: boolean;
 }
 
@@ -171,6 +173,7 @@ export function DeliveryFeesScreen() {
                 <th className="text-right font-medium px-4 py-2">الأجرة</th>
                 <th className="text-right font-medium px-4 py-2">حد التأخير (أيام)</th>
                 <th className="text-right font-medium px-4 py-2">أجرة الإرجاع</th>
+                <th className="text-right font-medium px-4 py-2">رمزها عند الشركة</th>
                 <th className="text-right font-medium px-4 py-2"> </th>
               </tr>
             </thead>
@@ -194,6 +197,25 @@ export function DeliveryFeesScreen() {
                     </td>
                     <td className="px-4 py-2">
                       <input value={d.returnFee} onChange={(e) => set({ returnFee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-9 px-2 rounded-[8px] border border-[#e3e8ef] text-sm" />
+                    </td>
+                    {/* Read-only: their id, not ours to invent. A blank one
+                        means their API will refuse the shipment, and that is
+                        better seen here than when a parcel fails to book. */}
+                    <td className="px-4 py-2" dir="ltr">
+                      {current?.courierCityId ? (
+                        <span className="text-xs text-[#697586]">{current.courierCityId}</span>
+                      ) : (
+                        /* "We do not have their id" — not "they do not serve
+                           it". Those are different claims, and only the
+                           courier can make the second one. */
+                        <span
+                          dir="rtl"
+                          title="لا نملك رمز هذه المحافظة لدى الشركة — بدونه لا تُنشأ الشحنة آلياً. اطلبه منهم أو ارفع قائمة مناطقهم."
+                          className="inline-flex items-center gap-1 rounded-full border border-[#ffe7b8] bg-[#fff6e5] px-2 py-0.5 text-[10px] text-[#c07f2a]"
+                        >
+                          بلا رمز
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-left">
                       <button

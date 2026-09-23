@@ -22,6 +22,15 @@ export interface CourierShipmentRequest {
   customer: { fullName: string; phone: string; address: string; regionName: string | null };
   pieces: number;
   note?: string | null;
+  /**
+   * The courier's OWN id for the destination, when we hold it.
+   *
+   * Agreed once per region and stored on the delivery-fee row. An adapter
+   * that has it addresses the parcel with it; one that does not falls back
+   * to asking the courier to find the region by name, which costs a round
+   * trip and can match the wrong place when several come back.
+   */
+  cityId?: number;
 }
 
 export interface CourierShipmentResult {

@@ -1,0 +1,14 @@
+-- The courier's own id for this region.
+--
+-- Every shipment they accept must carry their cityId, and until now we
+-- looked it up by searching their API for the region's name on each
+-- create: a round trip that needs their password, and a name match that
+-- silently takes the first hit when several come back.
+--
+-- It belongs on delivery_fees because that row already IS the pair
+-- (this courier, this region) — the one that says they serve it and for
+-- how much. A separate table would be a second answer to the same question.
+--
+-- Nullable on purpose: a courier may serve a region without us having
+-- their id yet, and a region they do not serve at all simply never gets one.
+ALTER TABLE "delivery_fees" ADD COLUMN "courier_city_id" INTEGER;

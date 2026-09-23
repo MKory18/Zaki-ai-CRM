@@ -164,7 +164,7 @@ export class LogesTechsAdapter implements CourierAdapter {
     return hit?.id ?? null;
   }
 
-  async createShipment(req: CourierShipmentRequest & { cityId?: number }): Promise<CourierShipmentResult> {
+  async createShipment(req: CourierShipmentRequest): Promise<CourierShipmentResult> {
     const cityId = req.cityId ?? (req.customer.regionName ? await this.findCityId(req.customer.regionName) : null);
     if (!cityId) {
       throw new Error('LOGESTECHS_CITY_UNKNOWN: لم يُعرف رمز المدينة لدى الشركة');

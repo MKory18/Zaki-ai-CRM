@@ -5,6 +5,7 @@ const { db, adapterFor, logAudit } = vi.hoisted(() => ({
     shippingBatch: { findFirst: vi.fn() },
     order: { findMany: vi.fn(), update: vi.fn() },
     orderActivity: { create: vi.fn() },
+    deliveryFee: { findMany: vi.fn() },
   },
   adapterFor: vi.fn(),
   logAudit: vi.fn(),
@@ -44,6 +45,7 @@ beforeEach(() => {
   adapterFor.mockReturnValue({ code: 'LOGESTECHS', automated: true, createShipment });
   createShipment.mockResolvedValue({ trackingNumber: 'BC-777' });
   db.order.update.mockResolvedValue({});
+  db.deliveryFee.findMany.mockResolvedValue([]);
 });
 
 describe('dispatching a batch', () => {
@@ -134,5 +136,43 @@ describe('dispatching a batch', () => {
     db.order.findMany.mockResolvedValue([order()]);
     await dispatchBatch({ ...input, orderIds: ['o1'] });
     expect(db.order.findMany.mock.calls[0][0].where.id).toEqual({ in: ['o1'] });
+  });
+});
+
+
+/**
+ * The courier's own id for the destination.
+ *
+ * Their API will not take a shipment without it. Before this, the adapter
+ * searched their system by the region's Arabic name on every single parcel
+ * — a round trip needing their password, and a match that takes the first
+ * of several hits when a governorate and a district share a name.
+ */
+describe("addressing a parcel with the courier's own city id", () => {
+  it('sends the id agreed for that region', async () => {
+    db.deliveryFee.findMany.mockResolvedValue([{ regionId: 'r1', courierCityId: 566090 }]);
+    db.order.findMany.mockResolvedValue([order({ regionId: 'r1' })]);
+    await dispatchBatch(input);
+    expect(createShipment.mock.calls[0][0].cityId).toBe(566090);
+  });
+
+  it('leaves the adapter to ask when we hold no id for that region', async () => {
+    db.deliveryFee.findMany.mockResolvedValue([{ regionId: 'elsewhere', courierCityId: 566090 }]);
+    db.order.findMany.mockResolvedValue([order({ regionId: 'r1' })]);
+    await dispatchBatch(input);
+    // undefined, not someone else's city: a parcel sent to the wrong
+    // governorate is only discovered when the driver calls.
+    expect(createShipment.mock.calls[0][0].cityId).toBeUndefined();
+  });
+
+  it('reads the ids once for the batch, not once per parcel', async () => {
+    db.deliveryFee.findMany.mockResolvedValue([{ regionId: 'r1', courierCityId: 566090 }]);
+    db.order.findMany.mockResolvedValue([
+      order({ id: 'o1', regionId: 'r1' }),
+      order({ id: 'o2', regionId: 'r1' }),
+      order({ id: 'o3', regionId: 'r1' }),
+    ]);
+    await dispatchBatch(input);
+    expect(db.deliveryFee.findMany).toHaveBeenCalledOnce();
   });
 });

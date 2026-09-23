@@ -86,10 +86,21 @@ export async function dispatchBatch(input: {
       totalAmount: true, currency: true, quantity: true, freeQuantity: true,
       customerNotes: true, deliveryProviderId: true,
       customer: { select: { fullName: true, rawPhone: true, phone: true, address: true } },
+      regionId: true,
       region: { select: { name: true } },
     },
     orderBy: { orderNumber: 'asc' },
   });
+
+  // One read for the whole batch rather than one per parcel.
+  const cityIds = new Map<string, number>(
+    (
+      await db.deliveryFee.findMany({
+        where: { deliveryProviderId: batch.provider?.id, courierCityId: { not: null } },
+        select: { regionId: true, courierCityId: true },
+      })
+    ).map((f) => [f.regionId, f.courierCityId!])
+  );
 
   const outcomes: DispatchOutcome[] = [];
 
@@ -113,6 +124,13 @@ export async function dispatchBatch(input: {
 
     try {
       const result = await adapter.createShipment({
+        // The courier's own id for this region, agreed once and stored on
+        // the fee row. Without it the adapter has to search their API by
+        // name on every single shipment — a round trip that needs their
+        // password, and a name match that quietly takes the first of
+        // several hits. A parcel addressed to the wrong governorate is not
+        // a thing you find out about until the driver calls.
+        cityId: cityIds.get(order.regionId ?? '') ?? undefined,
         orderId: order.id,
         // Our order number, so their statement line can be matched back.
         merchantRef: order.merchantRef || order.orderNumber,
