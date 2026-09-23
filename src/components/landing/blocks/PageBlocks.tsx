@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus } from 'lucide-react';
 import type { LandingSection } from '@/lib/landing-sections';
 import { lookStyles } from '@/lib/block-look';
 import type { Palette } from '@/lib/landing-theme';
@@ -50,6 +50,12 @@ export interface BlockSelection {
   onMove?: (id: string, by: -1 | 1) => void;
   onToggle?: (id: string) => void;
   onRemove?: (id: string) => void;
+  /** Opens this block's fields — the same thing a click does, said plainly. */
+  onEdit?: (id: string) => void;
+  /** A second copy right below. Undefined when this block may exist once. */
+  onDuplicate?: (id: string) => void;
+  /** False for a block the page may only hold one of. */
+  canDuplicate?: (s: LandingSection) => boolean;
 }
 
 export function PageBlocks({
@@ -420,6 +426,20 @@ function Selectable({
           className="absolute end-2 top-2 z-20 flex items-center gap-1 rounded-lg bg-white/95 p-1 shadow-md ring-1 ring-[#e3e8ef]"
           onClick={(e) => e.stopPropagation()}
         >
+          <Handle
+            title="تعديل"
+            onClick={() => selection.onEdit?.(s.id)}
+            icon={<Pencil className="h-3.5 w-3.5" />}
+          />
+          {/* A block the page may only hold one of has nothing to copy TO. */}
+          {selection.canDuplicate?.(s) !== false && (
+            <Handle
+              title="تكرار"
+              onClick={() => selection.onDuplicate?.(s.id)}
+              icon={<CopyPlus className="h-3.5 w-3.5" />}
+            />
+          )}
+          <span className="mx-0.5 h-4 w-px bg-[#e3e8ef]" />
           <Handle
             title="لأعلى"
             disabled={first}

@@ -415,6 +415,33 @@ export function BlockBuilder(props: Props) {
                   if (b) patch(id, { enabled: !b.enabled });
                 },
                 onRemove: (id) => onSections(sections.filter((x) => x.id !== id)),
+                onEdit: (id) => {
+                  setOpenId(id);
+                  requestAnimationFrame(() =>
+                    rowRefs.current[id]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+                  );
+                },
+                canDuplicate: (b) => !SINGLETON.includes(b.type),
+                onDuplicate: (id) => {
+                  const i = sections.findIndex((x) => x.id === id);
+                  if (i < 0) return;
+                  /**
+                   * A copy directly below, carrying everything — content AND
+                   * look. Placing it at the end would mean dragging it back
+                   * past everything, which is the work this saves.
+                   *
+                   * A fresh id, because two blocks sharing one would edit and
+                   * delete as a pair without saying so.
+                   */
+                  const copy = {
+                    ...structuredClone(sections[i]),
+                    id: `${sections[i].type}-${Date.now().toString(36)}`,
+                  } as LandingSection;
+                  const next = [...sections];
+                  next.splice(i + 1, 0, copy);
+                  onSections(next);
+                  setOpenId(copy.id);
+                },
               }}
               ctx={{
                 palette,
