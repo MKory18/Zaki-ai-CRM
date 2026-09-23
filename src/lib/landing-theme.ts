@@ -53,7 +53,8 @@ export type ThemeFont =
   | 'tajawal' | 'cairo' | 'almarai' | 'ibm' | 'rubik' | 'noto'
   | 'changa' | 'reem' | 'lalezar' | 'marhey' | 'amiri' | 'aref'
   | 'readex' | 'alexandria' | 'vazir' | 'mada' | 'messiri' | 'baloo'
-  | 'naskh' | 'scheherazade' | 'kawkab' | 'system';
+  | 'naskh' | 'scheherazade' | 'kawkab'
+  | 'thmanyah' | 'thmanyahtext' | 'thmanyahdisplay' | 'system';
 
 export const DEFAULT_THEME: LandingTheme = {
   accent: '#b8256e',
@@ -72,7 +73,8 @@ export const landingThemeSchema = z.object({
     'tajawal', 'cairo', 'almarai', 'ibm', 'rubik', 'noto',
     'changa', 'reem', 'lalezar', 'marhey', 'amiri', 'aref',
     'readex', 'alexandria', 'vazir', 'mada', 'messiri', 'baloo',
-    'naskh', 'scheherazade', 'kawkab', 'system',
+    'naskh', 'scheherazade', 'kawkab',
+    'thmanyah', 'thmanyahtext', 'thmanyahdisplay', 'system',
   ]),
   corners: z.enum(['soft', 'sharp']),
   // Same-origin paths only. An absolute URL here is a way to make the
@@ -114,6 +116,15 @@ export const FONTS: {
   google?: string;
   /** True when the files live in /public/fonts and BLOCK_CSS declares them. */
   local?: boolean;
+  /**
+   * True for a face this machine may use and this site may not serve.
+   *
+   * Its files sit outside git and are handed over by /api/dev-fonts, which
+   * answers 404 in a production build. The picker says so plainly, because
+   * a font that works while you design and vanishes when you publish is a
+   * trap unless the seller was told.
+   */
+  devOnly?: boolean;
   note: string;
 }[] = [
   { key: 'tajawal', label: 'طجوال', stack: "'Tajawal', system-ui, sans-serif", google: 'Tajawal:wght@200;400;500;700;800', note: 'واضح ومحايد' },
@@ -141,6 +152,10 @@ export const FONTS: {
   // file itself) is one of the few that actually permits us to serve it.
   // public/fonts/kawkab-OFL.txt carries the notice the licence requires.
   { key: 'kawkab', label: 'كوكب', stack: "'Kawkab Mono', ui-monospace, monospace", local: true, note: 'ثابت العرض — تقني' },
+  // ── Licensed for this machine, never published. See /api/dev-fonts. ──
+  { key: 'thmanyah', label: 'ثمانية', stack: "'thmanyah sans', system-ui, sans-serif", devOnly: true, note: 'محلي — للفحص فقط' },
+  { key: 'thmanyahtext', label: 'ثمانية نص', stack: "'thmanyah serif text', Georgia, serif", devOnly: true, note: 'محلي — للفحص فقط' },
+  { key: 'thmanyahdisplay', label: 'ثمانية عريض', stack: "'thmanyah serif display', Georgia, serif", devOnly: true, note: 'محلي — للفحص فقط' },
   { key: 'system', label: 'خط النظام', stack: "system-ui, 'Segoe UI', Tahoma, sans-serif", note: 'الأسرع تحميلاً' },
 ];
 

@@ -17,7 +17,7 @@ import {
   type LandingTheme, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
 } from '@/lib/landing-theme';
 import { PageBlocks } from './PageBlocks';
-import { BLOCK_CSS, fontHref, specimenHref } from './styles';
+import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from './styles';
 
 /**
  * The block builder.
@@ -496,7 +496,7 @@ export function BlockBuilder(props: Props) {
                 will. Without this a chosen font fell back to the system
                 stack HERE and looked like the picker doing nothing. */}
             {fontLink && <link rel="stylesheet" href={fontLink} />}
-            <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS }} />
+            <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
             <PageBlocks
               sections={sections}
               /**

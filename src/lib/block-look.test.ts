@@ -151,11 +151,20 @@ describe('the font library is a single registry', () => {
   it('can load every offered face from exactly one place', () => {
     for (const f of FONTS) {
       if (f.key === 'system') continue; // already on the device
-      const fromGoogle = Boolean(GOOGLE_FAMILY[f.key]);
-      // A face we serve ourselves must NOT also be requested from Google:
-      // two sources for one family is two chances to disagree about which
-      // outlines the page draws.
-      expect(fromGoogle !== Boolean(f.local), `${f.key} must come from exactly one source`).toBe(true);
+      // Google, our own public folder, or the machine-only route — one of
+      // the three and never two. Two sources for one family is two chances
+      // to disagree about which outlines the page draws.
+      const sources = [Boolean(GOOGLE_FAMILY[f.key]), Boolean(f.local), Boolean(f.devOnly)];
+      expect(sources.filter(Boolean).length, `${f.key} must come from exactly one source`).toBe(1);
+    }
+  });
+
+  it('never asks Google for a face we are not allowed to publish', () => {
+    // A devOnly family reaching fontHref would put its name in a stylesheet
+    // URL on the PUBLISHED page — a request that fails, and a licence
+    // problem hiding inside a 404 nobody reads.
+    for (const f of FONTS.filter((x) => x.devOnly)) {
+      expect(GOOGLE_FAMILY[f.key], `${f.key} must never be requested remotely`).toBeUndefined();
     }
   });
 

@@ -11,7 +11,7 @@ import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { parseSections, ensureForm } from '@/lib/landing-sections';
 import { paletteFor, paletteVars, DEFAULT_THEME } from '@/lib/landing-theme';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
-import { BLOCK_CSS, fontHref } from '@/components/landing/blocks/styles';
+import { BLOCK_CSS_WITH_DEV_FONTS, fontHref } from '@/components/landing/blocks/styles';
 import { availableStock } from '@/lib/reservation';
 
 interface Props {
@@ -289,7 +289,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
     return (
       <div dir="rtl" className="lp-root" style={paletteVars(palette) as React.CSSProperties}>
         {href && <link rel="stylesheet" href={href} />}
-        <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS }} />
+        <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
         <LandingTrackingPixels pixels={trackingPixels} viewContent={viewContent} />
         <PageBlocks
           sections={sections}

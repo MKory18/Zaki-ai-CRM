@@ -53,3 +53,12 @@ backups/
 واجهة/
 # scratch files
 tmp*.cjs
+
+# Fonts licensed for this machine only.
+#
+# thmanyah, Boutros and the rest permit use on your own devices and forbid
+# putting the file anywhere a third party can fetch it. This repository is
+# pushed to GitHub, so a font committed here is a font published — which is
+# the exact thing those licences prohibit. They stay out of git, and the
+# route that serves them refuses to exist in a production build.
+/fonts-local/

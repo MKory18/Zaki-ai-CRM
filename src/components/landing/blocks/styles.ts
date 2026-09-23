@@ -1,3 +1,4 @@
+import { FONTS } from '@/lib/landing-theme';
 import { GOOGLE_FAMILY } from '@/lib/block-look';
 /**
  * The one stylesheet a block-built page wears.
@@ -542,3 +543,35 @@ export function fontHref(...fonts: (string | null | undefined)[]): string | null
   if (wanted.length === 0) return null;
   return `https://fonts.googleapis.com/css2?${wanted.map((f) => `family=${f}`).join('&')}&display=swap`;
 }
+
+/**
+ * THE FACES THIS MACHINE MAY USE AND THIS SITE MAY NOT SERVE.
+ *
+ * Declared apart from BLOCK_CSS and folded in only outside production, so a
+ * built page carries no rule pointing at a font it is not allowed to serve.
+ * The route behind these URLs answers 404 in production anyway — this is the
+ * second lock, on the other side of the door.
+ *
+ * Built from the registry rather than written out: a face added there and
+ * forgotten here would look broken for a reason nobody would think to check.
+ */
+const DEV_FONT_CSS = FONTS.filter((f) => f.devOnly)
+  .map((f) => {
+    // 'thmanyah sans' -> thmanyah-sans, the filename stem on disk.
+    const family = f.stack.split(',')[0].replace(/'/g, '').trim();
+    const stem = family.toLowerCase().replace(/\s+/g, '-');
+    return [300, 400, 500, 700, 900]
+      .map(
+        (w) => `@font-face{font-family:'${family}';src:url('/api/dev-fonts/${stem}-${w}.woff2') format('woff2');font-weight:${w};font-style:normal;font-display:swap;}`
+      )
+      .join('\n');
+  })
+  .join('\n');
+
+/**
+ * Everything the page needs to draw itself, plus — on a developer's machine
+ * only — the faces they are evaluating but may not publish.
+ */
+export const BLOCK_CSS_WITH_DEV_FONTS =
+  process.env.NODE_ENV === 'production' ? BLOCK_CSS : `${DEV_FONT_CSS}
+${BLOCK_CSS}`;
