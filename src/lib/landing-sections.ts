@@ -67,14 +67,42 @@ const background = z.object({
  */
 const typography = z.object({
   /** '' = the page's own font. Otherwise one of the theme's four. */
-  font: z.enum(['', 'cairo', 'tajawal', 'almarai', 'system']).default(''),
+  font: z
+    .enum(['', 'cairo', 'tajawal', 'almarai', 'system', 'ibm', 'rubik', 'changa', 'amiri', 'reem', 'lalezar', 'aref'])
+    .default(''),
   /** Relative, never px — so it still fits on a phone. */
   scale: z.enum(['xs', 's', 'm', 'l', 'xl']).default('m'),
   weight: z.enum(['', 'normal', 'medium', 'bold', 'black']).default(''),
   italic: z.boolean().default(false),
-  /** '' = derived from the palette and what is behind it. */
+  /** The body text. '' = derived from the palette and what is behind it. */
   color: z.string().max(9).default(''),
-}).default({ font: '', scale: 'm', weight: '', italic: false, color: '' });
+  /**
+   * Headings, separately.
+   *
+   * One colour for a whole block turned the heading, the price and the
+   * button's words the same shade — which is almost never what anybody
+   * means. A heading is its own decision; '' follows the body colour.
+   */
+  headingColor: z.string().max(9).default(''),
+}).default({ font: '', scale: 'm', weight: '', italic: false, color: '', headingColor: '' });
+
+/**
+ * The order button, which is not text.
+ *
+ * It was taking the block's font colour, so choosing red for a paragraph
+ * turned the words on a green button red too. A button has its own fill,
+ * its own label colour and its own size, and they are asked for here.
+ */
+const button = z.object({
+  /** '' = the theme's accent, which is the safe default. */
+  fill: z.string().max(9).default(''),
+  label: z.string().max(9).default(''),
+  size: z.enum(['s', 'm', 'l']).default('m'),
+  /** Full width on the row it sits in — the usual choice on a phone. */
+  wide: z.boolean().default(false),
+}).default({ fill: '', label: '', size: 'm', wide: false });
+
+export type BlockButton = z.infer<typeof button>;
 
 export type BlockTypography = z.infer<typeof typography>;
 
@@ -84,12 +112,14 @@ const look = z.object({
   space: z.enum(['none', 'tight', 'normal', 'roomy']).default('normal'),
   background,
   text: typography,
+  button,
 }).default({
   width: 'normal',
   align: 'center',
   space: 'normal',
   background: { kind: 'none', from: '', to: '', angle: 160, image: '', overlay: 0.35 },
-  text: { font: '', scale: 'm', weight: '', italic: false, color: '' },
+  text: { font: '', scale: 'm', weight: '', italic: false, color: '', headingColor: '' },
+  button: { fill: '', label: '', size: 'm', wide: false },
 });
 
 export type BlockLook = z.infer<typeof look>;

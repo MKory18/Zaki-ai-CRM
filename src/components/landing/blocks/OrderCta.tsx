@@ -11,7 +11,16 @@ import React from 'react';
  * one tap, the cursor is in the box, and on a phone the keyboard is already
  * up. The anchor href stays as the fallback for a browser with no JS.
  */
-export function OrderCta({ className, children }: { className: string; children: React.ReactNode }) {
+export function OrderCta({
+  className,
+  children,
+  ...rest
+}: {
+  className: string;
+  children: React.ReactNode;
+  /** `data-edit` and friends — the button's words are the seller's to type. */
+  [key: `data-${string}`]: string | undefined;
+}) {
   function go(e: React.MouseEvent<HTMLAnchorElement>) {
     const field = document.getElementById('zf-full_name');
     if (!field) return; // let the href do its job
@@ -22,7 +31,7 @@ export function OrderCta({ className, children }: { className: string; children:
   }
 
   return (
-    <a href="#zf-full_name" onClick={go} className={className}>
+    <a href="#zf-full_name" onClick={go} className={className} {...rest}>
       {children}
     </a>
   );

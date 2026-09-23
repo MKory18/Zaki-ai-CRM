@@ -264,7 +264,12 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
   // chose blocks and filled in text, and this renderer drew them.
   if (sections.length > 0) {
     const palette = paletteFor(safeTheme(lp.theme));
-    const href = fontHref(safeTheme(lp.theme).font ?? DEFAULT_THEME.font);
+    // The theme's font AND every font a block chose — asking for the
+    // theme's alone left a block's pick falling back to the system stack.
+    const href = fontHref(
+      safeTheme(lp.theme).font ?? DEFAULT_THEME.font,
+      ...sections.map((b) => b.look?.text?.font)
+    );
 
     // Real stock, for the one block allowed to mention it. Unknown stays
     // unknown: the block renders nothing rather than inventing a number.

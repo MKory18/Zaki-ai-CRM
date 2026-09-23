@@ -1,4 +1,5 @@
 import type { BlockLook } from './landing-sections';
+import { FONTS } from './landing-theme';
 
 /**
  * ONE INTENTION, THREE SCREEN SIZES — without three designs.
@@ -52,12 +53,19 @@ const WEIGHT: Record<string, string> = {
   black: '800',
 };
 
-const FONT_STACK: Record<string, string> = {
-  cairo: "'Cairo', system-ui, sans-serif",
-  tajawal: "'Tajawal', system-ui, sans-serif",
-  almarai: "'Almarai', system-ui, sans-serif",
-  system: 'system-ui, -apple-system, Segoe UI, sans-serif',
-};
+/**
+ * The families a seller may pick are THE font library, read from the page
+ * theme's registry — not a second list kept here. A block choosing a face
+ * the theme picker has never heard of is how the two drifted apart.
+ */
+const FONT_STACK: Record<string, string> = Object.fromEntries(
+  FONTS.map((f) => [f.key, f.stack])
+);
+
+/** Google's name for each, for the stylesheet the page must load. */
+export const GOOGLE_FAMILY: Record<string, string> = Object.fromEntries(
+  FONTS.filter((f) => f.google).map((f) => [f.key, f.google!])
+);
 
 const ALIGN: Record<BlockLook['align'], string> = {
   start: 'right',
@@ -82,6 +90,15 @@ export interface LookStyles {
   inner: React.CSSProperties;
   /** True when a dark overlay must sit between the image and the text. */
   overlay: number;
+  /**
+   * CSS variables the block stylesheet reads: the heading colour and the
+   * button's fill, label and size.
+   *
+   * Through variables rather than more selectors, because a heading and a
+   * button want DIFFERENT colours from the body text, and one colour for
+   * the whole block turned the words on a green button red.
+   */
+  vars: Record<string, string>;
 }
 
 export function lookStyles(look: BlockLook | undefined): LookStyles {
@@ -131,7 +148,26 @@ export function lookStyles(look: BlockLook | undefined): LookStyles {
   // the overlay exists to make exactly that readable.
   else if (overlay > 0) inner.color = '#ffffff';
 
-  return { outer, inner, overlay };
+  const vars: Record<string, string> = {};
+  // A heading is its own decision; unset, it simply follows the body.
+  const heading = safeColor(t.headingColor);
+  if (heading) vars['--look-heading'] = heading;
+
+  const b = l.button ?? ({} as NonNullable<BlockLook['button']>);
+  const fill = safeColor(b.fill);
+  const labelColor = safeColor(b.label);
+  if (fill) vars['--look-btn-bg'] = fill;
+  if (labelColor) vars['--look-btn-fg'] = labelColor;
+  if (b.size && b.size !== 'm') {
+    vars['--look-btn-pad'] = b.size === 's' ? '10px 22px' : '18px 52px';
+    vars['--look-btn-size'] = b.size === 's' ? '0.9em' : '1.15em';
+  }
+  if (b.wide) {
+    vars['--look-btn-width'] = '100%';
+    vars['--look-btn-display'] = 'block';
+  }
+
+  return { outer, inner, overlay, vars };
 }
 
 /** Which Google font families a page must load, given its blocks' choices. */

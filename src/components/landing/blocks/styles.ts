@@ -1,3 +1,4 @@
+import { GOOGLE_FAMILY } from '@/lib/block-look';
 /**
  * The one stylesheet a block-built page wears.
  *
@@ -399,28 +400,63 @@ export const BLOCK_CSS = `
    (0,1,1), which beat a plain descendant selector, so a chosen font colour
    applied to everything EXCEPT the headings it was chosen for. Matching
    that shape puts this ahead of it without reaching for !important. */
-html [data-look-color] :is(h1, h2, h3, h4, h5, h6, p, span, li, a, strong, em, blockquote, figcaption) {
+html [data-look-color] :is(h1, h2, h3, h4, h5, h6, p, span, li, a, strong, em, blockquote, figcaption):not(.lp-cta):not(.lp-btn) {
   color: inherit;
 }
 [data-look-size] :is(h1, .lp-h1) { font-size: 2.1em; }
 [data-look-size] :is(h2, .lp-h2) { font-size: 1.5em; }
 [data-look-size] :is(h3, .lp-h3) { font-size: 1.2em; }
 [data-look-size] :is(p, span, li, a) { font-size: 1em; }
-[data-look-align] :is(h1, h2, h3, h4, p, .lp-h2, .lp-sub) { text-align: inherit; }
+/* Same problem as the colour: .lp-hero and .lp-h2 set text-align with a
+   class, so a plain descendant rule tied and lost on source order. */
+html [data-look-align] :is(h1, h2, h3, h4, p, div, section, ul, .lp-hero, .lp-h2, .lp-sub, .lp-section) {
+  text-align: inherit;
+}
 [data-look-font] :is(h1, h2, h3, h4, p, span, li, a, button) { font-family: inherit; }
 [data-look-italic] :is(h1, h2, h3, h4, p, span, li, a) { font-style: inherit; }
 [data-look-weight] :is(h1, h2, h3, h4, p, span, li, a) { font-weight: inherit; }
+
+/* A heading, a button and a paragraph are three different decisions. One
+   colour for the whole block turned the words on a green button red, which
+   is never what anybody means.
+
+   Read through each variable's own FALLBACK, not through an attribute
+   selector on the style text: a custom property set by React never appears
+   in the style attribute string, so a [style*=--look-btn] selector matched
+   nothing and every one of these silently did not apply. Unset, each falls
+   back to exactly what the rule above it already said. */
+html .lp-root :is(h1, h2, h3, h4, .lp-h1, .lp-h2) {
+  color: var(--look-heading, inherit);
+}
+html .lp-root :is(.lp-cta, .lp-btn) {
+  background: var(--look-btn-bg, var(--lp-accent));
+  color: var(--look-btn-fg, var(--lp-accent-text));
+  padding: var(--look-btn-pad, 14px 44px);
+  font-size: var(--look-btn-size, 16px);
+  width: var(--look-btn-width, auto);
+  display: var(--look-btn-display, inline-block);
+}
 `;
 
 /** Google Fonts stylesheet for the chosen Arabic family, or null for system. */
-export function fontHref(font: string): string | null {
-  const families: Record<string, string> = {
-    tajawal: 'Tajawal:wght@400;500;700;800;900',
-    cairo: 'Cairo:wght@400;600;700;800;900',
-    almarai: 'Almarai:wght@400;700;800',
-  };
-  const family = families[font];
-  return family ? `https://fonts.googleapis.com/css2?family=${family}&display=swap
-
-` : null;
+/**
+ * The Google stylesheet for every family this page actually uses.
+ *
+ * Takes a LIST, because the theme picks one and each block may pick its
+ * own — asking for the theme's alone left a block's chosen font falling
+ * back to the system stack, which looks like the picker doing nothing.
+ *
+ * The URL was built across newlines, which a browser sends verbatim; one
+ * request, one line.
+ */
+export function fontHref(...fonts: (string | null | undefined)[]): string | null {
+  // The families come from the ONE registry. This was a third copy of the
+  // same list, and it had already fallen behind: two faces the picker
+  // offered were missing here, so choosing either loaded nothing and drew
+  // the fallback — the picker looking broken for no reason in its own code.
+  const wanted = [...new Set(fonts.filter(Boolean) as string[])]
+    .map((f) => GOOGLE_FAMILY[f])
+    .filter(Boolean);
+  if (wanted.length === 0) return null;
+  return `https://fonts.googleapis.com/css2?${wanted.map((f) => `family=${f}`).join('&')}&display=swap`;
 }

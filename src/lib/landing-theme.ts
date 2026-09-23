@@ -29,7 +29,9 @@ export interface LandingTheme {
 }
 
 export type ThemeMood = 'clean' | 'warm' | 'bold' | 'calm';
-export type ThemeFont = 'cairo' | 'tajawal' | 'almarai' | 'system';
+export type ThemeFont =
+  | 'tajawal' | 'cairo' | 'almarai' | 'ibm' | 'rubik' | 'noto'
+  | 'changa' | 'reem' | 'lalezar' | 'marhey' | 'amiri' | 'aref' | 'system';
 
 export const DEFAULT_THEME: LandingTheme = {
   accent: '#b8256e',
@@ -42,7 +44,10 @@ export const DEFAULT_THEME: LandingTheme = {
 export const landingThemeSchema = z.object({
   accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   mood: z.enum(['clean', 'warm', 'bold', 'calm']),
-  font: z.enum(['cairo', 'tajawal', 'almarai', 'system']),
+  font: z.enum([
+    'tajawal', 'cairo', 'almarai', 'ibm', 'rubik', 'noto',
+    'changa', 'reem', 'lalezar', 'marhey', 'amiri', 'aref', 'system',
+  ]),
   corners: z.enum(['soft', 'sharp']),
 });
 
@@ -53,12 +58,41 @@ export const MOODS: { key: ThemeMood; label: string; hint: string }[] = [
   { key: 'calm', label: 'هادئ', hint: 'رمادي فاتح، ألوان مخفّفة' },
 ];
 
-export const FONTS: { key: ThemeFont; label: string; stack: string }[] = [
-  { key: 'tajawal', label: 'طجوال', stack: "'Tajawal', system-ui, sans-serif" },
-  { key: 'cairo', label: 'القاهرة', stack: "'Cairo', system-ui, sans-serif" },
-  { key: 'almarai', label: 'المراعي', stack: "'Almarai', system-ui, sans-serif" },
-  { key: 'system', label: 'خط النظام', stack: "system-ui, 'Segoe UI', Tahoma, sans-serif" },
+/**
+ * THE font library. There is exactly one, and it lives here.
+ *
+ * There were two: four families for the page theme and twelve for a single
+ * block, so the same screen offered a seller a font in one panel that the
+ * other panel could not see. Two lists of the same thing are two lists to
+ * keep in step, and they were already out of step.
+ *
+ * Each row carries everything anybody needs about that face: the Arabic
+ * name the seller reads, the CSS stack, and the Google family string with
+ * its weights — `google` absent means the face is already on the device and
+ * needs no stylesheet.
+ *
+ * The order is the order a seller should meet them: the three workhorses
+ * that suit any page, then the display faces for a headline, then the two
+ * serifs, then the system default.
+ */
+export const FONTS: { key: ThemeFont; label: string; stack: string; google?: string; note: string }[] = [
+  { key: 'tajawal', label: 'طجوال', stack: "'Tajawal', system-ui, sans-serif", google: 'Tajawal:wght@400;500;700;800', note: 'واضح ومحايد' },
+  { key: 'cairo', label: 'القاهرة', stack: "'Cairo', system-ui, sans-serif", google: 'Cairo:wght@400;600;700;800', note: 'الأكثر استخداماً' },
+  { key: 'almarai', label: 'المراعي', stack: "'Almarai', system-ui, sans-serif", google: 'Almarai:wght@400;700;800', note: 'هادئ ومقروء' },
+  { key: 'ibm', label: 'IBM بلكس', stack: "'IBM Plex Sans Arabic', system-ui, sans-serif", google: 'IBM+Plex+Sans+Arabic:wght@400;500;600;700', note: 'رسمي ومرتّب' },
+  { key: 'rubik', label: 'روبيك', stack: "'Rubik', system-ui, sans-serif", google: 'Rubik:wght@400;500;700;800', note: 'ودود وعصري' },
+  { key: 'noto', label: 'نوتو كوفي', stack: "'Noto Kufi Arabic', system-ui, sans-serif", google: 'Noto+Kufi+Arabic:wght@400;600;700;800', note: 'كوفي متّزن' },
+  { key: 'changa', label: 'تشانغا', stack: "'Changa', system-ui, sans-serif", google: 'Changa:wght@400;600;700;800', note: 'عريض للعناوين' },
+  { key: 'reem', label: 'ريم كوفي', stack: "'Reem Kufi', system-ui, sans-serif", google: 'Reem+Kufi:wght@400;600;700', note: 'هندسي أنيق' },
+  { key: 'lalezar', label: 'لاله زار', stack: "'Lalezar', system-ui, cursive", google: 'Lalezar', note: 'صارخ وإعلاني' },
+  { key: 'marhey', label: 'مرحي', stack: "'Marhey', system-ui, cursive", google: 'Marhey:wght@400;600;700', note: 'مرِح وشبابي' },
+  { key: 'amiri', label: 'أميري', stack: "'Amiri', Georgia, serif", google: 'Amiri:wght@400;700', note: 'نسخ كلاسيكي' },
+  { key: 'aref', label: 'عارف رقعة', stack: "'Aref Ruqaa', Georgia, serif", google: 'Aref+Ruqaa:wght@400;700', note: 'رقعة فخم' },
+  { key: 'system', label: 'خط النظام', stack: "system-ui, 'Segoe UI', Tahoma, sans-serif", note: 'الأسرع تحميلاً' },
 ];
+
+/** Every key in the library, for the places that need the list as data. */
+export const FONT_KEYS = FONTS.map((f) => f.key);
 
 // ─────────────────────────────────────────────────────
 // Colour, honestly

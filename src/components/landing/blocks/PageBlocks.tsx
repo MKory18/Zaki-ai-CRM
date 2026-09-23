@@ -105,7 +105,7 @@ export function PageBlocks({
  * inner one holds the width and the gutter, so the text never does.
  */
 function Dressed({ section, children }: { section: LandingSection; children: React.ReactNode }) {
-  const { outer, inner, overlay } = lookStyles(section.look);
+  const { outer, inner, overlay, vars } = lookStyles(section.look);
   const plain =
     !section.look ||
     (Object.keys(outer).length === 2 && !outer.background && !outer.backgroundImage);
@@ -117,7 +117,7 @@ function Dressed({ section, children }: { section: LandingSection; children: Rea
   const t = section.look?.text;
   return (
     <div
-      style={outer}
+      style={{ ...outer, ...vars } as React.CSSProperties}
       /* Each flag turns on the rule that makes this block's own choice beat
          the block stylesheet. Absent when nothing was chosen, so a page
          nobody has styled renders exactly as it always did. */

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { lookStyles, fontsUsed } from './block-look';
+import { GOOGLE_FAMILY } from './block-look';
+import { FONTS, landingThemeSchema, DEFAULT_THEME } from './landing-theme';
 import type { BlockLook } from './landing-sections';
 
 const look = (over: Partial<BlockLook> = {}): BlockLook =>
@@ -119,5 +121,56 @@ describe('fonts a page must load', () => {
         undefined,
       ]).sort()
     ).toEqual(['cairo']);
+  });
+});
+
+/**
+ * ONE LIBRARY, NOT THREE.
+ *
+ * There were three lists of the same Arabic faces — the theme picker's four,
+ * the block picker's twelve, and a fourth hidden inside the stylesheet URL
+ * builder — and they had already drifted: two faces the picker offered had
+ * no entry in the URL builder, so choosing either loaded no stylesheet and
+ * drew the fallback. The picker looked broken because of a list, not a bug.
+ *
+ * These guard the rule rather than the symptom: every offered face must be
+ * loadable, and every loadable face must be offered.
+ */
+describe('the font library is a single registry', () => {
+  it('gives every offered face a stack, a name and a hint', () => {
+    for (const f of FONTS) {
+      expect(f.stack, f.key).toBeTruthy();
+      expect(f.label, f.key).toBeTruthy();
+      expect(f.note, f.key).toBeTruthy();
+    }
+  });
+
+  it('can load a stylesheet for every face except the device ones', () => {
+    for (const f of FONTS) {
+      if (f.key === 'system') continue;
+      expect(GOOGLE_FAMILY[f.key], `${f.key} is offered but cannot be loaded`).toBeTruthy();
+    }
+  });
+
+  it('offers every face it knows how to load', () => {
+    const offered = new Set(FONTS.map((f) => f.key));
+    for (const key of Object.keys(GOOGLE_FAMILY)) {
+      expect(offered.has(key as never), `${key} is loadable but never offered`).toBe(true);
+    }
+  });
+
+  it('turns a block choice into a real CSS stack', () => {
+    for (const f of FONTS) {
+      expect(lookStyles(look({ text: { font: f.key } as never })).inner.fontFamily, f.key).toBe(f.stack);
+    }
+  });
+
+  it('accepts every face as a stored page theme', () => {
+    for (const f of FONTS) {
+      expect(
+        landingThemeSchema.safeParse({ ...DEFAULT_THEME, font: f.key }).success,
+        `${f.key} is offered but a page cannot store it`
+      ).toBe(true);
+    }
   });
 });

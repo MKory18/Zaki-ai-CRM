@@ -17,7 +17,7 @@ import {
   type LandingTheme, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
 } from '@/lib/landing-theme';
 import { PageBlocks } from './PageBlocks';
-import { BLOCK_CSS } from './styles';
+import { BLOCK_CSS, fontHref } from './styles';
 
 /**
  * The block builder.
@@ -54,6 +54,11 @@ export function BlockBuilder(props: Props) {
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   const palette = useMemo(() => paletteFor(theme), [theme]);
+  // The editor loads the WHOLE library, not just the page's own faces: the
+  // font picker draws every name in its own face, and a specimen sheet in
+  // the fallback face is worse than a list of names. The published page
+  // loads only what it actually uses — this cost is the editor's alone.
+  const fontLink = useMemo(() => fontHref(...FONTS.map((f) => f.key)), []);
 
   const patch = (id: string, fields: Record<string, unknown>) =>
     onSections(sections.map((s) => (s.id === id ? ({ ...s, ...fields } as LandingSection) : s)));
@@ -210,19 +215,28 @@ export function BlockBuilder(props: Props) {
           </div>
 
           <label className="mb-1.5 block text-xs font-semibold text-[#364152]">الخط</label>
-          <div className="mb-4 grid grid-cols-2 gap-1.5">
+          {/*
+            A specimen list, not a list of names: every face is drawn in
+            itself, because "لاله زار" tells a seller nothing and the shape
+            of the letters tells them everything. Thirteen of them scroll
+            rather than push the rest of the panel off the screen.
+          */}
+          <div className="mb-4 max-h-56 space-y-1 overflow-y-auto pe-1">
             {FONTS.map((f) => (
               <button
                 key={f.key}
                 type="button"
                 onClick={() => onTheme({ ...theme, font: f.key })}
-                className={`rounded-lg border px-2 py-1.5 text-[11px] transition ${
+                className={`flex w-full items-baseline justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-start transition ${
                   theme.font === f.key
-                    ? 'border-[#b8256e] bg-[#fdf2f7] font-bold text-[#b8256e]'
+                    ? 'border-[#b8256e] bg-[#fdf2f7] text-[#b8256e]'
                     : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e]/40'
                 }`}
               >
-                {f.label}
+                <span className="text-[15px] leading-tight" style={{ fontFamily: f.stack }}>
+                  {f.label}
+                </span>
+                <span className="shrink-0 text-[9px] text-[#9aa4b2]">{f.note}</span>
               </button>
             ))}
           </div>
@@ -422,6 +436,10 @@ export function BlockBuilder(props: Props) {
               transform: 'translateZ(0)',
             }}
           >
+            {/* The preview loads the same families the published page
+                will. Without this a chosen font fell back to the system
+                stack HERE and looked like the picker doing nothing. */}
+            {fontLink && <link rel="stylesheet" href={fontLink} />}
             <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS }} />
             <PageBlocks
               sections={sections}

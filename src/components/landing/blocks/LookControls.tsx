@@ -3,9 +3,9 @@
 import React, { useRef, useState } from 'react';
 import {
   AlignCenter, AlignLeft, AlignRight, Image as ImageIcon, Italic,
-  Loader2, Minus, Palette, Plus, Trash2, Type, Upload,
-} from 'lucide-react';
+  Loader2, Minus, Palette, Plus, Trash2, Type, Upload, MousePointerClick } from 'lucide-react';
 import type { BlockLook } from '@/lib/landing-sections';
+import { FONTS } from '@/lib/landing-theme';
 
 /**
  * HOW THIS BLOCK LOOKS — the same strip for all thirteen.
@@ -34,12 +34,19 @@ const SPACES: { key: BlockLook['space']; label: string }[] = [
   { key: 'roomy', label: 'واسع' },
 ];
 
-const FONTS: { key: string; label: string }[] = [
-  { key: '', label: 'خط الصفحة' },
-  { key: 'cairo', label: 'القاهرة' },
-  { key: 'tajawal', label: 'طَجوال' },
-  { key: 'almarai', label: 'المراعي' },
-  { key: 'system', label: 'خط النظام' },
+// The library is the page theme's, not a copy: see FONTS in landing-theme.
+// An empty key means "whatever the page is set to", which is the right
+// default — a block that names its own face is a block that stops following
+// a theme change, and most blocks should follow.
+const FONT_OPTIONS = [
+  { key: '', label: 'خط الصفحة', stack: 'inherit', note: 'يتبع الثيم' },
+  ...FONTS,
+];
+
+const BTN_SIZES: { key: 's' | 'm' | 'l'; label: string }[] = [
+  { key: 's', label: 'صغير' },
+  { key: 'm', label: 'عادي' },
+  { key: 'l', label: 'كبير' },
 ];
 
 const SCALES: BlockLook['text']['scale'][] = ['xs', 's', 'm', 'l', 'xl'];
@@ -68,11 +75,12 @@ export function LookControls({
    * of the block — it would cover the thing being styled. Most edits are a
    * word or a reorder and never open it at all.
    */
-  const [open, setOpen] = useState<'layout' | 'text' | 'bg' | null>(null);
+  const [open, setOpen] = useState<'layout' | 'text' | 'button' | 'bg' | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bg = look.background;
   const text = look.text;
+  const btn = look.button;
 
   /**
    * Every change reads from a ref, not from the render's closure.
@@ -91,6 +99,8 @@ export function LookControls({
     onChange({ ...latest.current, background: { ...latest.current.background, ...patch } });
   const setText = (patch: Partial<BlockLook['text']>) =>
     onChange({ ...latest.current, text: { ...latest.current.text, ...patch } });
+  const setBtn = (patch: Partial<BlockLook['button']>) =>
+    onChange({ ...latest.current, button: { ...latest.current.button, ...patch } });
 
   /**
    * A block saved before any of this existed has no scale, so indexOf gave
@@ -115,7 +125,7 @@ export function LookControls({
     }
   };
 
-  const tab = (key: 'layout' | 'text' | 'bg', label: string, Icon: typeof AlignCenter) => (
+  const tab = (key: 'layout' | 'text' | 'button' | 'bg', label: string, Icon: typeof AlignCenter) => (
     <button
       onClick={() => setOpen(open === key ? null : key)}
       title={label}
@@ -130,6 +140,7 @@ export function LookControls({
       {/* Three doors, not twenty controls. */}
       {tab('layout', 'التنسيق — الاتساع والمحاذاة والتباعد', AlignCenter)}
       {tab('text', 'الخط والحجم واللون', Type)}
+      {tab('button', 'الزر — لونه وحجمه', MousePointerClick)}
       {tab('bg', 'الخلفية', Palette)}
 
       {/* ── الاتساع والمحاذاة والتباعد ── */}
@@ -175,8 +186,12 @@ export function LookControls({
           onChange={(e) => setText({ font: e.target.value as BlockLook['text']['font'] })}
           className="h-7 rounded-lg border border-[#e3e8ef] bg-white px-2 text-[11px] text-[#364152]"
         >
-          {FONTS.map((f) => (
-            <option key={f.key} value={f.key}>{f.label}</option>
+          {FONT_OPTIONS.map((f) => (
+            // Each name is drawn in its own face, so the list is a specimen
+            // sheet rather than thirteen identical words.
+            <option key={f.key} value={f.key} style={{ fontFamily: f.stack }}>
+              {f.label} — {f.note}
+            </option>
           ))}
         </select>
         <button title="أصغر" onClick={() => step(-1)} disabled={scaleIndex <= 0} className={`${CHIP} ${OFF} disabled:opacity-40`}>
@@ -200,14 +215,42 @@ export function LookControls({
         </button>
       </Row>
 
-      <Row label="لون الخط">
+      <Row label="لون النص">
+        <Swatches value={text.color} onPick={(c) => setText({ color: c })} clearLabel="لون الصفحة" />
+      </Row>
+
+      {/* A heading is its own decision — one colour for the whole block
+          made the headline, the price and the button all the same shade. */}
+      <Row label="لون العناوين">
         <Swatches
-          value={text.color}
-          onPick={(c) => setText({ color: c })}
-          clearLabel="لون الصفحة"
+          value={text.headingColor}
+          onPick={(c) => setText({ headingColor: c })}
+          clearLabel="مثل النص"
         />
       </Row>
 
+      </>
+      )}
+
+      {/* ── الزر ── */}
+      {open === 'button' && (
+      <>
+      <Row label="لون الزر">
+        <Swatches value={btn.fill} onPick={(c) => setBtn({ fill: c })} clearLabel="لون الهوية" />
+      </Row>
+      <Row label="لون كلماته">
+        <Swatches value={btn.label} onPick={(c) => setBtn({ label: c })} clearLabel="تلقائي" />
+      </Row>
+      <Row label="حجم الزر">
+        {BTN_SIZES.map((b) => (
+          <button key={b.key} onClick={() => setBtn({ size: b.key })} className={`${CHIP} ${btn.size === b.key ? ON : OFF}`}>
+            {b.label}
+          </button>
+        ))}
+        <button onClick={() => setBtn({ wide: !btn.wide })} className={`${CHIP} ${btn.wide ? ON : OFF}`}>
+          بعرض الصفحة
+        </button>
+      </Row>
       </>
       )}
 
