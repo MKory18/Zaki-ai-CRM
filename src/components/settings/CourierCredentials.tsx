@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { KeyRound, Loader2, ShieldCheck, ShieldAlert, Trash2, Check } from 'lucide-react';
+import { KeyRound, Loader2, ShieldCheck, ShieldAlert, Trash2, Check, PlugZap, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -47,6 +47,8 @@ const BLANK = {
 
 export function CourierCredentials({ providerId }: { providerId: string }) {
   const [status, setStatus] = useState<Status | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [test, setTest] = useState<{ ok: boolean; message: string } | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...BLANK });
   const [saving, setSaving] = useState(false);
@@ -98,6 +100,22 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
     }
   }
 
+  const runTest = async () => {
+    setTesting(true);
+    setTest(null);
+    try {
+      const d = await apiJson<{ ok: boolean; message: string }>(
+        `/api/delivery-providers/${providerId}/credentials/test`,
+        { method: 'POST' }
+      );
+      setTest(d);
+    } catch (e) {
+      setTest({ ok: false, message: e instanceof Error ? e.message : 'تعذّر الفحص' });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   if (!status) {
     return (
       <p className="flex items-center gap-2 text-xs text-[#697586]">
@@ -130,6 +148,14 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          {/* "Saved" is not "works". A typo sits there looking fine until the
+              first real batch fails with the parcels already packed. */}
+          {status.hasCredentials && (
+            <Button size="sm" variant="outline" onClick={runTest} disabled={testing}>
+              {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlugZap className="h-3.5 w-3.5" />}
+              اختبر الاتصال
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => setOpen(true)} disabled={!status.encryptionAvailable}>
             <KeyRound className="h-3.5 w-3.5" /> {status.hasCredentials ? 'تغيير الحساب' : 'إدخال الحساب'}
           </Button>
@@ -146,6 +172,23 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
           )}
         </div>
       </div>
+
+      {test && (
+        <p
+          className={`flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-[11px] ${
+            test.ok
+              ? 'bg-[#e6f9ee] text-[#00733a] border border-[#c8f2d8]'
+              : 'bg-[#feecee] text-[#b3242e] border border-[#fecdd1]'
+          }`}
+        >
+          {test.ok ? (
+            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          ) : (
+            <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          )}
+          {test.message}
+        </p>
+      )}
 
       {!status.encryptionAvailable && (
         <p className="flex items-start gap-2 rounded-lg border border-[#fed7aa] bg-[#fff7ed] p-2.5 text-[11px] leading-relaxed text-[#c2410c]">
