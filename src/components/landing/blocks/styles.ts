@@ -12,6 +12,34 @@ import { GOOGLE_FAMILY } from '@/lib/block-look';
  * theme derived, which is what makes one colour picker restyle a whole page.
  */
 export const BLOCK_CSS = `
+/* ─────────────────────────────────────────────────────
+   THE FACES WE SERVE OURSELVES.
+
+   Everything else in the library comes from Google, which is one link and
+   no files. These are here because the family is not on Google AND its
+   licence permits us to serve it — a combination that is rarer than it
+   sounds. Most Arabic display fonts, free to download or not, forbid
+   exactly this: putting the file on a server where a visitor's browser can
+   fetch it. The notice each licence requires sits beside the files.
+
+   'swap' so the words are readable while the face arrives; a page that
+   shows nothing for 400ms looks broken on a slow phone.
+   ───────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Kawkab Mono';
+  src: url('/fonts/kawkab-300.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kawkab Mono';
+  src: url('/fonts/kawkab-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 .lp-root {
   font-family: var(--lp-font);
   color: var(--lp-text);

@@ -148,11 +148,23 @@ describe('the font library is a single registry', () => {
     }
   });
 
-  it('can load a stylesheet for every face except the device ones', () => {
+  it('can load every offered face from exactly one place', () => {
     for (const f of FONTS) {
-      if (f.key === 'system') continue;
-      expect(GOOGLE_FAMILY[f.key], `${f.key} is offered but cannot be loaded`).toBeTruthy();
+      if (f.key === 'system') continue; // already on the device
+      const fromGoogle = Boolean(GOOGLE_FAMILY[f.key]);
+      // A face we serve ourselves must NOT also be requested from Google:
+      // two sources for one family is two chances to disagree about which
+      // outlines the page draws.
+      expect(fromGoogle !== Boolean(f.local), `${f.key} must come from exactly one source`).toBe(true);
     }
+  });
+
+  it('serves a local face only when its licence was checked', () => {
+    // Every family here has its notice in public/fonts. Adding a row with
+    // `local: true` means committing a font file, and a font file that may
+    // not be served is a legal problem, not a rendering one — so the list
+    // is written down rather than inferred.
+    expect(FONTS.filter((f) => f.local).map((f) => f.key)).toEqual(['kawkab']);
   });
 
   it('offers every face it knows how to load', () => {

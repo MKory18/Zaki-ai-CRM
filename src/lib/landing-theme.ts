@@ -53,7 +53,7 @@ export type ThemeFont =
   | 'tajawal' | 'cairo' | 'almarai' | 'ibm' | 'rubik' | 'noto'
   | 'changa' | 'reem' | 'lalezar' | 'marhey' | 'amiri' | 'aref'
   | 'readex' | 'alexandria' | 'vazir' | 'mada' | 'messiri' | 'baloo'
-  | 'naskh' | 'scheherazade' | 'system';
+  | 'naskh' | 'scheherazade' | 'kawkab' | 'system';
 
 export const DEFAULT_THEME: LandingTheme = {
   accent: '#b8256e',
@@ -72,7 +72,7 @@ export const landingThemeSchema = z.object({
     'tajawal', 'cairo', 'almarai', 'ibm', 'rubik', 'noto',
     'changa', 'reem', 'lalezar', 'marhey', 'amiri', 'aref',
     'readex', 'alexandria', 'vazir', 'mada', 'messiri', 'baloo',
-    'naskh', 'scheherazade', 'system',
+    'naskh', 'scheherazade', 'kawkab', 'system',
   ]),
   corners: z.enum(['soft', 'sharp']),
   // Same-origin paths only. An absolute URL here is a way to make the
@@ -106,8 +106,17 @@ export const MOODS: { key: ThemeMood; label: string; hint: string }[] = [
  * that suit any page, then the display faces for a headline, then the two
  * serifs, then the system default.
  */
-export const FONTS: { key: ThemeFont; label: string; stack: string; google?: string; note: string }[] = [
-  { key: 'tajawal', label: 'طجوال', stack: "'Tajawal', system-ui, sans-serif", google: 'Tajawal:wght@400;500;700;800', note: 'واضح ومحايد' },
+export const FONTS: {
+  key: ThemeFont;
+  label: string;
+  stack: string;
+  /** Google's family string with weights. Absent when we serve it ourselves. */
+  google?: string;
+  /** True when the files live in /public/fonts and BLOCK_CSS declares them. */
+  local?: boolean;
+  note: string;
+}[] = [
+  { key: 'tajawal', label: 'طجوال', stack: "'Tajawal', system-ui, sans-serif", google: 'Tajawal:wght@200;400;500;700;800', note: 'واضح ومحايد' },
   { key: 'cairo', label: 'القاهرة', stack: "'Cairo', system-ui, sans-serif", google: 'Cairo:wght@400;600;700;800', note: 'الأكثر استخداماً' },
   { key: 'almarai', label: 'المراعي', stack: "'Almarai', system-ui, sans-serif", google: 'Almarai:wght@400;700;800', note: 'هادئ ومقروء' },
   { key: 'ibm', label: 'IBM بلكس', stack: "'IBM Plex Sans Arabic', system-ui, sans-serif", google: 'IBM+Plex+Sans+Arabic:wght@400;500;600;700', note: 'رسمي ومرتّب' },
@@ -127,6 +136,11 @@ export const FONTS: { key: ThemeFont; label: string; stack: string; google?: str
   { key: 'baloo', label: 'بالو بهيجان', stack: "'Baloo Bhaijaan 2', system-ui, cursive", google: 'Baloo+Bhaijaan+2:wght@400;600;700;800', note: 'سميك ومستدير' },
   { key: 'naskh', label: 'نوتو نسخ', stack: "'Noto Naskh Arabic', Georgia, serif", google: 'Noto+Naskh+Arabic:wght@400;500;600;700', note: 'نسخ للقراءة الطويلة' },
   { key: 'scheherazade', label: 'شهرزاد', stack: "'Scheherazade New', Georgia, serif", google: 'Scheherazade+New:wght@400;700', note: 'نسخ تقليدي فخم' },
+  // Served from /public/fonts rather than Google, because it is not on
+  // Google — and because its licence (SIL OFL 1.1, stated inside the font
+  // file itself) is one of the few that actually permits us to serve it.
+  // public/fonts/kawkab-OFL.txt carries the notice the licence requires.
+  { key: 'kawkab', label: 'كوكب', stack: "'Kawkab Mono', ui-monospace, monospace", local: true, note: 'ثابت العرض — تقني' },
   { key: 'system', label: 'خط النظام', stack: "system-ui, 'Segoe UI', Tahoma, sans-serif", note: 'الأسرع تحميلاً' },
 ];
 
