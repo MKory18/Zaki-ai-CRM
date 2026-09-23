@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -26,7 +27,7 @@ async function usageOf(id: string): Promise<CourierUsage> {
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId: currentStore } = await requireContext();
     await requirePermission('settings.edit');
 
     const provider = await db.deliveryProvider.findFirst({ where: { id, companyId } });
@@ -36,8 +37,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       name?: string; phone?: string; email?: string; address?: string;
       notes?: string; isActive?: boolean; storeId?: string | null; code?: string;
       adapterCode?: 'LOGESTECHS' | 'MANUAL' | null;
+      /** Place a courier left over from before stores had their own. */
+      assignToCurrentStore?: boolean;
     };
-    const { name, phone, email, address, notes, isActive, storeId, code, adapterCode } = body;
+    const { name, phone, email, address, notes, isActive, code, adapterCode, assignToCurrentStore } = body;
+
+    // The store is taken from the session, never from the body: a body that
+    // names its own store is a body that can name someone else's.
+    const storeId = assignToCurrentStore ? currentStore : undefined;
+    if (assignToCurrentStore && !currentStore) {
+      return NextResponse.json({ error: 'اختر المتجر أولاً', code: 'STORE_REQUIRED' }, { status: 400 });
+    }
 
     if (name !== undefined && !name.trim()) {
       return NextResponse.json({ error: 'الاسم مطلوب' }, { status: 400 });
@@ -54,14 +64,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (taken) {
         return NextResponse.json({ error: 'الرمز مستعمل لشركة أخرى', code: 'CODE_TAKEN' }, { status: 409 });
       }
-    }
-
-    // Moving a courier to one store does not move its history. Orders,
-    // batches and statements keep pointing at this same row; the store only
-    // decides who may pick it from here on.
-    if (storeId) {
-      const store = await db.store.findFirst({ where: { id: storeId, companyId }, select: { id: true } });
-      if (!store) return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 400 });
     }
 
     const updated = await db.deliveryProvider.update({
@@ -82,7 +84,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(address !== undefined ? { address: address?.trim() || null } : {}),
         ...(notes !== undefined ? { notes: notes?.trim() || null } : {}),
         ...(typeof isActive === 'boolean' ? { isActive } : {}),
-        ...(storeId !== undefined ? { storeId: storeId || null } : {}),
+        // Placing a courier does NOT move its history. Orders, batches and
+        // statements keep pointing at this same row; the store only decides
+        // who may pick it from here on.
+        ...(storeId !== undefined ? { storeId } : {}),
         // Unwiring a courier does NOT erase the stored account — the owner
         // may be switching it off for a week, and re-entering a password
         // they no longer have written down is not a small ask.

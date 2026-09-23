@@ -1,14 +1,16 @@
 /**
  * WHICH COURIERS A STORE MAY SEE AND USE.
  *
- * The owner runs stores that are separate businesses. Each holds its own
- * account with the same courier — its own login, its own company id there,
- * its own statements coming back. A courier row therefore belongs to one
- * store, or to all of them.
+ * The owner's stores are separate businesses. Each holds its own account
+ * with the courier — its own login, its own company id there, its own
+ * statements coming back and its own money. So a courier belongs to ONE
+ * store, and there is deliberately no "shared" option: a shared row is a
+ * single login that two sets of books both draw on, which is the exact
+ * thing that must not be possible.
  *
- * `storeId = null` means every store, which is what every row meant before
- * this existed. Nothing that already works stops working, and no order
- * changes hands.
+ * `storeId = null` therefore means NOT PLACED YET, not "everybody's". It is
+ * unusable, and the settings screen shows it apart so it is fixed rather
+ * than quietly ignored.
  *
  * One function, used by every listing and every guard. Six places built
  * their own `where` before; six copies of a rule is six chances for one of
@@ -18,8 +20,11 @@
 
 /** The `where` fragment for couriers this store may use. */
 export function courierScope(companyId: string, storeId: string | null | undefined) {
-  if (!storeId) return { companyId };
-  return { companyId, OR: [{ storeId }, { storeId: null }] };
+  // No store in context means no courier is usable. Returning the whole
+  // company here is how an unscoped call quietly gets everything, so this
+  // matches nothing at all — visibly, rather than by a sentinel value.
+  if (!storeId) return { companyId, id: { in: [] as string[] } };
+  return { companyId, storeId };
 }
 
 /** True when this courier row may be used by this store. */
@@ -29,8 +34,9 @@ export function courierBelongsToStore(
   storeId: string | null | undefined
 ): boolean {
   if (provider.companyId !== companyId) return false;
-  // Shared couriers serve everyone; a store-owned one serves only its store.
-  if (provider.storeId == null) return true;
+  if (!storeId) return false;
+  // Not placed yet is not "allowed everywhere" — it is allowed nowhere.
+  if (provider.storeId == null) return false;
   return provider.storeId === storeId;
 }
 

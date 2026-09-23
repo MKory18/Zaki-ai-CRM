@@ -10,16 +10,16 @@ import {
 const none: CourierUsage = { orders: 0, batches: 0, statements: 0, fees: 0, attempts: 0 };
 
 describe('which couriers a store may use', () => {
-  it('offers the store its own plus the shared ones', () => {
-    expect(courierScope('c1', 's1')).toEqual({
-      companyId: 'c1',
-      OR: [{ storeId: 's1' }, { storeId: null }],
-    });
+  it('offers the store ONLY its own — there is no shared courier', () => {
+    expect(courierScope('c1', 's1')).toEqual({ companyId: 'c1', storeId: 's1' });
   });
 
-  it('offers everything when no store is chosen — a company-wide view', () => {
-    expect(courierScope('c1', null)).toEqual({ companyId: 'c1' });
-    expect(courierScope('c1', undefined)).toEqual({ companyId: 'c1' });
+  // The dangerous default: a missing store used to mean "the whole company",
+  // so an unscoped call quietly received every store's couriers.
+  it('offers NOTHING when no store is in context', () => {
+    expect(courierScope('c1', null)).toEqual({ companyId: 'c1', id: { in: [] } });
+    expect(courierScope('c1', undefined)).toEqual({ companyId: 'c1', id: { in: [] } });
+    expect(courierScope('c1', '')).toEqual({ companyId: 'c1', id: { in: [] } });
   });
 
   it('never drops the company, whatever the store', () => {
@@ -34,9 +34,11 @@ describe('the guard that holds when the API is called directly', () => {
     expect(courierBelongsToStore({ companyId: 'c1', storeId: 's1' }, 'c1', 's1')).toBe(true);
   });
 
-  it('lets any store use a shared one', () => {
-    expect(courierBelongsToStore({ companyId: 'c1', storeId: null }, 'c1', 's9')).toBe(true);
-    expect(courierBelongsToStore({ companyId: 'c1' }, 'c1', 's9')).toBe(true);
+  // Not placed yet is allowed NOWHERE, not everywhere. A row nobody owns
+  // being usable by everybody is the leak this whole change exists to close.
+  it('refuses one that has not been placed in a store', () => {
+    expect(courierBelongsToStore({ companyId: 'c1', storeId: null }, 'c1', 's9')).toBe(false);
+    expect(courierBelongsToStore({ companyId: 'c1' }, 'c1', 's9')).toBe(false);
   });
 
   // The one that matters: another store's account would create the parcel

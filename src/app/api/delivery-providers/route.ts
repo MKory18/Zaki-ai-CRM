@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
+import { courierScope } from '@/lib/courier-scope';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
@@ -18,11 +20,6 @@ const providerSchema = z.object({
   address: z.string().trim().max(200).optional(),
   notes: z.string().trim().max(500).optional(),
   /**
-   * Which store this courier is for. Omitted means every store — the same
-   * thing every courier meant before stores had their own.
-   */
-  storeId: z.string().uuid().nullish(),
-  /**
    * Which platform this courier runs on. A courier is not a platform:
    * "Basha Delivery" is who ships, "LOGESTECHS" is what they ship on, and
    * two different couriers can run on the same one under separate accounts.
@@ -35,9 +32,12 @@ const providerSchema = z.object({
  *  shipping UI for any employee who handles delivery. */
 export async function GET() {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     const providers = await db.deliveryProvider.findMany({
-      where: { companyId },
+      // This store's couriers only. Each store is its own business with its
+      // own account at the courier; a row shown in two stores is one login
+      // two sets of books would both draw on.
+      where: { OR: [courierScope(companyId, storeId), { companyId, storeId: null }] },
       orderBy: { createdAt: 'desc' },
       // apiBaseUrl is internal config — not exposed broadly
       select: {
@@ -58,18 +58,18 @@ export async function GET() {
 /** POST /api/delivery-providers — create (settings.edit or SUPER_ADMIN/COMPANY_ADMIN) */
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('settings.edit');
     const parsed = providerSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
-    const { name, code, kind, phone, email, address, notes, storeId, adapterCode } = parsed.data;
+    const { name, code, kind, phone, email, address, notes, adapterCode } = parsed.data;
 
-    // A store the caller does not own is not a store they may file under.
-    if (storeId) {
-      const store = await db.store.findFirst({ where: { id: storeId, companyId }, select: { id: true } });
-      if (!store) return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 400 });
+    // The store comes from the session, never from the request body: a body
+    // that names its own store is a body that can name someone else's.
+    if (!storeId) {
+      return NextResponse.json({ error: 'اختر المتجر أولاً', code: 'STORE_REQUIRED' }, { status: 400 });
     }
 
     const clash = await db.deliveryProvider.findFirst({ where: { companyId, code: code.toUpperCase() } });
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
     const provider = await db.deliveryProvider.create({
       data: {
         companyId, name, code: code.toUpperCase(), kind, phone, email, address, notes,
-        storeId: storeId || null,
+        storeId,
         // MANUAL is "no platform", which is the absence of an adapter rather
         // than an adapter named MANUAL — storing the word would make
         // adapterFor look for one that does not exist.

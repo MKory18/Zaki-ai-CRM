@@ -41,7 +41,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   db.shippingBatch.findFirst.mockResolvedValue({
     id: 'b1', batchNumber: 'BATCH-2026-0001',
-    provider: { id: 'p1', code: 'BASHA', apiEnabled: true, companyId: 'c1', storeId: null },
+    provider: { id: 'p1', code: 'BASHA', apiEnabled: true, companyId: 'c1', storeId: 's1' },
   });
   adapterFor.mockReturnValue({ code: 'LOGESTECHS', automated: true, createShipment });
   createShipment.mockResolvedValue({ trackingNumber: 'BC-777' });
@@ -197,10 +197,15 @@ describe("a courier that is not this store's", () => {
     expect(createShipment).not.toHaveBeenCalled();
   });
 
-  it('allows one shared across every store', async () => {
-    db.order.findMany.mockResolvedValue([order()]);
-    await dispatchBatch(input);
-    expect(createShipment).toHaveBeenCalledOnce();
+  // Not placed in a store is usable by NOBODY. A row nobody owns being
+  // usable by everybody is the leak this exists to close.
+  it('refuses one that was never placed in a store', async () => {
+    db.shippingBatch.findFirst.mockResolvedValue({
+      id: 'b1', batchNumber: 'BATCH-2026-0001',
+      provider: { id: 'p1', code: 'BASHA', apiEnabled: true, companyId: 'c1', storeId: null },
+    });
+    await expect(dispatchBatch(input)).rejects.toThrow('COURIER_NOT_IN_STORE');
+    expect(createShipment).not.toHaveBeenCalled();
   });
 
   it("allows the store's own", async () => {

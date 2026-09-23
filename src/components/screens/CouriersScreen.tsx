@@ -38,11 +38,11 @@ interface StoreRow {
 export function CouriersScreen() {
   const [rows, setRows] = useState<Courier[] | null>(null);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT', storeId: '', adapterCode: 'MANUAL' });
+  const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT', adapterCode: 'MANUAL' });
   const [accountFor, setAccountFor] = useState<string | null>(null);
   const [stores, setStores] = useState<StoreRow[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
-  const [edit, setEdit] = useState({ name: '', phone: '', storeId: '' });
+  const [edit, setEdit] = useState({ name: '', phone: '' });
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,11 +77,10 @@ export function CouriersScreen() {
           code: form.code.trim().toUpperCase(),
           kind: form.kind,
           phone: form.phone.trim() || undefined,
-          storeId: form.storeId || null,
           adapterCode: form.adapterCode,
         }),
       });
-      setForm({ name: '', code: '', phone: '', kind: 'COMPANY', storeId: '', adapterCode: 'MANUAL' });
+      setForm({ name: '', code: '', phone: '', kind: 'COMPANY', adapterCode: 'MANUAL' });
       setAdding(false);
       await load();
     } catch (e) {
@@ -107,9 +106,33 @@ export function CouriersScreen() {
     }
   };
 
+  /**
+   * Rows from before couriers had a store. They are usable by nobody, and
+   * they must not vanish quietly — a courier that disappears off a screen
+   * is one somebody re-creates as a duplicate a week later.
+   */
+  const unplaced = rows?.filter((c) => !c.storeId) ?? [];
+
+  const placeHere = async (c: Courier) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiJson(`/api/delivery-providers/${c.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignToCurrentStore: true }),
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر الإسناد');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const startEdit = (c: Courier) => {
     setEditing(c.id);
-    setEdit({ name: c.name, phone: c.phone ?? '', storeId: c.storeId ?? '' });
+    setEdit({ name: c.name, phone: c.phone ?? '' });
     setNote(null);
   };
 
@@ -123,7 +146,6 @@ export function CouriersScreen() {
         body: JSON.stringify({
           name: edit.name.trim(),
           phone: edit.phone.trim(),
-          storeId: edit.storeId || null,
         }),
       });
       setEditing(null);
@@ -221,23 +243,6 @@ export function CouriersScreen() {
             </label>
           )}
 
-          <label className="block">
-            <span className="block text-xs font-medium text-[#364152] mb-1">المتجر</span>
-            <select
-              value={form.storeId}
-              onChange={(e) => setForm({ ...form, storeId: e.target.value })}
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
-            >
-              <option value="">كل المتاجر</option>
-              {stores.map((st) => (
-                <option key={st.id} value={st.id}>{st.name}</option>
-              ))}
-            </select>
-            <span className="block text-[11px] text-[#9aa4b2] mt-1">
-              لكل متجر حسابه الخاص لدى الشركة. اخترْ متجراً حين يكون الحساب له وحده،
-              و«كل المتاجر» حين يتشاركونه.
-            </span>
-          </label>
           <div className="flex gap-2 items-end">
             <button type="submit" disabled={busy} className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm disabled:opacity-60">حفظ</button>
             <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]">إلغاء</button>
@@ -254,6 +259,28 @@ export function CouriersScreen() {
         </p>
       )}
 
+      {unplaced.length > 0 && (
+        <div className="rounded-lg border border-[#ffe7b8] bg-[#fff6e5] p-3 space-y-2">
+          <p className="text-xs font-semibold text-[#c07f2a]">
+            غير مُسنَدة لأي متجر — لا يمكن استعمالها حتى تُسنَد
+          </p>
+          {unplaced.map((c) => (
+            <div key={c.id} className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs text-[#364152]">
+                {c.name} <span dir="ltr" className="text-[#9aa4b2]">({c.code})</span>
+              </span>
+              <button
+                onClick={() => placeHere(c)}
+                disabled={busy}
+                className="rounded-[8px] border border-[#c07f2a]/40 bg-white px-3 py-1 text-[11px] text-[#c07f2a] hover:border-[#c07f2a] disabled:opacity-50"
+              >
+                أسنِدها لهذا المتجر
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[#f8fafc] text-[#697586] text-xs">
@@ -261,14 +288,13 @@ export function CouriersScreen() {
               <th className="text-right font-medium px-4 py-2">الجهة</th>
               <th className="text-right font-medium px-4 py-2">النوع</th>
               <th className="text-right font-medium px-4 py-2">الرمز</th>
-              <th className="text-right font-medium px-4 py-2">المتجر</th>
               <th className="text-right font-medium px-4 py-2">الهاتف</th>
               <th className="text-right font-medium px-4 py-2">الحالة</th>
               <th className="text-right font-medium px-4 py-2"> </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#e3e8ef]">
-            {rows.map((c) => (
+            {rows.filter((c) => c.storeId).map((c) => (
               <tr key={c.id}>
                 <td className="px-4 py-2 flex items-center gap-2 text-[#121926]">
                   {c.kind === 'AGENT' ? (
@@ -303,29 +329,6 @@ export function CouriersScreen() {
                     <span dir="ltr" className="mt-0.5 block text-[10px] text-[#9aa4b2]">
                       {COURIER_PLATFORMS.find((p) => p.code === c.adapterCode)?.name ?? c.adapterCode}
                     </span>
-                  )}
-                </td>
-                <td className="px-4 py-2">
-                  {editing === c.id ? (
-                    <select
-                      value={edit.storeId}
-                      onChange={(e) => setEdit({ ...edit, storeId: e.target.value })}
-                      className="h-8 w-40 rounded-[8px] border border-[#e3e8ef] px-2 text-xs"
-                    >
-                      <option value="">كل المتاجر</option>
-                      {stores.map((st) => (
-                        <option key={st.id} value={st.id}>{st.name}</option>
-                      ))}
-                    </select>
-                  ) : c.store ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[#e3e8ef] bg-[#f8fafc] px-2 py-0.5 text-[11px] text-[#364152]">
-                      <StoreIcon className="h-3 w-3" />
-                      {c.store.name}
-                    </span>
-                  ) : (
-                    /* Shared is the default and the quiet case — it does not
-                       need a badge competing with the ones that are not. */
-                    <span className="text-[11px] text-[#9aa4b2]">كل المتاجر</span>
                   )}
                 </td>
                 <td className="px-4 py-2 text-[#697586]">
@@ -412,10 +415,10 @@ export function CouriersScreen() {
                 </td>
               </tr>
             ))}
-            {rows.map((c) =>
+            {rows.filter((c) => c.storeId).map((c) =>
               accountFor === c.id ? (
                 <tr key={`${c.id}-account`}>
-                  <td colSpan={7} className="bg-[#f8fafc] px-4 py-4 space-y-3">
+                  <td colSpan={6} className="bg-[#f8fafc] px-4 py-4 space-y-3">
                     <CourierCredentials providerId={c.id} />
                     {/* Statuses can arrive two ways; both belong to the
                         account, so both live on the account panel. */}
@@ -424,9 +427,9 @@ export function CouriersScreen() {
                 </tr>
               ) : null
             )}
-            {rows.length === 0 && (
+            {rows.filter((c) => c.storeId).length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شركات شحن ولا مندوبون بعد.</td>
+                <td colSpan={6} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شركات شحن ولا مندوبون بعد.</td>
               </tr>
             )}
           </tbody>
