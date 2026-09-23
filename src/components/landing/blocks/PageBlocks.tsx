@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, Star, ShieldCheck, Truck, Wallet, Phone } from 'lucide-react';
 import type { LandingSection } from '@/lib/landing-sections';
+import { lookStyles } from '@/lib/block-look';
 import type { Palette } from '@/lib/landing-theme';
 import { OfferCards } from './OfferCards';
 import { Countdown } from './Countdown';
@@ -39,9 +40,42 @@ export function PageBlocks({ sections, ctx }: { sections: LandingSection[]; ctx:
       {sections
         .filter((s) => s.enabled)
         .map((s) => (
-          <Block key={s.id} section={s} ctx={ctx} />
+          <Dressed key={s.id} section={s}>
+            <Block section={s} ctx={ctx} />
+          </Dressed>
         ))}
     </>
+  );
+}
+
+/**
+ * The block's own width, spacing, background and type.
+ *
+ * Wrapping rather than threading the look through thirteen components: a
+ * block should keep saying what it says, and this decides how it sits. The
+ * outer layer is full-bleed so a background can reach the screen edges; the
+ * inner one holds the width and the gutter, so the text never does.
+ */
+function Dressed({ section, children }: { section: LandingSection; children: React.ReactNode }) {
+  const { outer, inner, overlay } = lookStyles(section.look);
+  const plain =
+    !section.look ||
+    (Object.keys(outer).length === 2 && !outer.background && !outer.backgroundImage);
+
+  // A block nobody has styled renders exactly as it did before any of this
+  // existed — no extra wrapper, no changed spacing, nothing to regress.
+  if (plain && !section.look) return <>{children}</>;
+
+  return (
+    <div style={outer}>
+      {overlay > 0 && (
+        <div
+          aria-hidden
+          style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${overlay})` }}
+        />
+      )}
+      <div style={inner}>{children}</div>
+    </div>
   );
 }
 

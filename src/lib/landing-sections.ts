@@ -22,7 +22,80 @@ import { z } from 'zod';
 // The blocks
 // ─────────────────────────────────────────────────────
 
-const base = { id: z.string().min(1), enabled: z.boolean().default(true) };
+/**
+ * HOW A BLOCK LOOKS — the same three questions for all thirteen.
+ *
+ * Every block already knows WHAT it says. This is how wide it sits, where
+ * its content lines up, how much air it gets, and what is behind it. Put on
+ * the shared base rather than into each block, so adding a look never means
+ * touching thirteen schemas and remembering all of them.
+ *
+ * Nothing here is a pixel, and nothing here is per-device. A phone, a
+ * tablet and a desktop are not three designs to keep in step by hand — they
+ * are one intention rendered at three widths. "wide" means wide on a laptop
+ * and edge-to-edge on a phone because that is what wide MEANS on a phone.
+ * The renderer does that with clamp(); the seller never sees a breakpoint.
+ */
+const background = z.object({
+  kind: z.enum(['none', 'solid', 'gradient', 'image']).default('none'),
+  /** Solid fill, or the first stop of a gradient. */
+  from: z.string().max(9).default(''),
+  /** The second stop. Gradients only. */
+  to: z.string().max(9).default(''),
+  angle: z.number().int().min(0).max(360).default(160),
+  image: z.string().max(2048).default(''),
+  /**
+   * How much dark is laid over a background image, 0–0.8.
+   *
+   * Not decoration: white text on somebody's photograph is unreadable
+   * exactly as often as the photograph is bright, and that is discovered
+   * by the customer, not by the person who chose the photo.
+   */
+  overlay: z.number().min(0).max(0.8).default(0.35),
+}).default({ kind: 'none', from: '', to: '', angle: 160, image: '', overlay: 0.35 });
+
+/**
+ * The words themselves.
+ *
+ * An empty value means "whatever the page decided" — the theme's font, the
+ * palette's colour, the block's own size. That is deliberate: a page where
+ * every block was set by hand is a page where changing the theme changes
+ * nothing, and the theme is the thing that keeps it looking like one page.
+ *
+ * The font list is the THEME's list, not a second one. A page with two font
+ * systems has two ways to be wrong.
+ */
+const typography = z.object({
+  /** '' = the page's own font. Otherwise one of the theme's four. */
+  font: z.enum(['', 'cairo', 'tajawal', 'almarai', 'system']).default(''),
+  /** Relative, never px — so it still fits on a phone. */
+  scale: z.enum(['xs', 's', 'm', 'l', 'xl']).default('m'),
+  weight: z.enum(['', 'normal', 'medium', 'bold', 'black']).default(''),
+  italic: z.boolean().default(false),
+  /** '' = derived from the palette and what is behind it. */
+  color: z.string().max(9).default(''),
+}).default({ font: '', scale: 'm', weight: '', italic: false, color: '' });
+
+export type BlockTypography = z.infer<typeof typography>;
+
+const look = z.object({
+  width: z.enum(['narrow', 'normal', 'wide', 'full']).default('normal'),
+  align: z.enum(['start', 'center', 'end']).default('center'),
+  space: z.enum(['none', 'tight', 'normal', 'roomy']).default('normal'),
+  background,
+  text: typography,
+}).default({
+  width: 'normal',
+  align: 'center',
+  space: 'normal',
+  background: { kind: 'none', from: '', to: '', angle: 160, image: '', overlay: 0.35 },
+  text: { font: '', scale: 'm', weight: '', italic: false, color: '' },
+});
+
+export type BlockLook = z.infer<typeof look>;
+export type BlockBackground = z.infer<typeof background>;
+
+const base = { id: z.string().min(1), enabled: z.boolean().default(true), look };
 
 /** A thin strip above everything — free delivery, a deadline, a promise. */
 const announcement = z.object({

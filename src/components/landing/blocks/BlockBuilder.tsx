@@ -3,9 +3,10 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   Eye, EyeOff, Trash2, Plus, Upload, Loader2, GripVertical,
-  Monitor, Smartphone, X,
+  Monitor, Smartphone, X, Paintbrush,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { LookControls } from './LookControls';
 import { Input } from '@/components/ui/Input';
 import {
   type LandingSection, type SectionType,
@@ -280,8 +281,35 @@ export function BlockBuilder(props: Props) {
                 </div>
 
                 {openId === s.id && (
-                  <div className="border-t border-[#e3e8ef] bg-[#f8fafc] p-3">
+                  <div className="space-y-2 border-t border-[#e3e8ef] bg-[#f8fafc] p-3">
                     <SectionFields section={s} patch={(f) => patch(s.id, f)} onUpload={props.onUpload} />
+
+                    {/* WHAT it says is above; HOW it looks is here. Folded by
+                        default — most blocks never need it, and a panel open
+                        on all thirteen is a wall nobody reads. */}
+                    <details className="rounded-lg border border-[#e3e8ef] bg-white">
+                      <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-semibold text-[#364152] marker:content-['']">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Paintbrush className="h-3.5 w-3.5 text-[#b8256e]" />
+                          الشكل — الاتساع والمحاذاة والخلفية والخط
+                        </span>
+                      </summary>
+                      <div className="p-2 pt-0">
+                        <LookControls
+                          look={s.look}
+                          onChange={(look) => patch(s.id, { look })}
+                          onUpload={async (file) => {
+                            // The builder's uploader takes a FileList; a
+                            // background is one picture, so wrap it rather
+                            // than growing a second uploader beside it.
+                            const dt = new DataTransfer();
+                            dt.items.add(file);
+                            const urls = await props.onUpload(dt.files);
+                            return urls[0] ?? null;
+                          }}
+                        />
+                      </div>
+                    </details>
                   </div>
                 )}
               </li>
