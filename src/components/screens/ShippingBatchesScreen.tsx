@@ -28,7 +28,11 @@ interface Batch {
   createdAt: string;
   shippedAt: string | null;
   notes: string | null;
-  provider: { id: string; name: string; code: string; kind?: string } | null;
+  provider: {
+    id: string; name: string; code: string; kind?: string;
+    /** Whether they have a server to send to at all. */
+    apiEnabled?: boolean;
+  } | null;
   creator: { id: string; name: string } | null;
   _count: { orders: number };
 }
@@ -337,7 +341,12 @@ export function ShippingBatchesScreen() {
                       call to their server, the other is our own record, and
                       a courier's API being down must not stop a warehouse
                       from closing a batch. */}
-                  {b.status === 'READY' && (
+                  {/* Only for a courier that HAS a server. A manual one was
+                      offered this button too: it called out, every order came
+                      back "skipped — not automated", and nothing happened.
+                      The parcels are real, the waybills are ours to print,
+                      and the barcode is typed in when they hand one over. */}
+                  {b.status === 'READY' && b.provider?.apiEnabled && (
                     <button
                       onClick={() => dispatch(b)}
                       disabled={busy === b.id || b._count.orders === 0}
@@ -346,6 +355,16 @@ export function ShippingBatchesScreen() {
                       {busy === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Barcode className="w-3.5 h-3.5" />}
                       رحّل إلى الشركة واجلب الباركود
                     </button>
+                  )}
+
+                  {b.status === 'READY' && b.provider && !b.provider.apiEnabled && (
+                    <span
+                      title="هذه الشركة غير مربوطة بنظامها — البوليصة تُطبع من عندنا والباركود يُدخَل يدوياً عند استلامه."
+                      className="inline-flex items-center gap-1 rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] px-2.5 py-1.5 text-[11px] text-[#697586]"
+                    >
+                      <Barcode className="h-3.5 w-3.5" />
+                      يدوية — اطبع البوالص
+                    </span>
                   )}
 
                   {b.status === 'READY' && (

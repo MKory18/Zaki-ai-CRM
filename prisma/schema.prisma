@@ -1308,6 +1308,7 @@ model Store {
   telegramSources TelegramSource[]
   shippingBatches ShippingBatch[]
   couriers        DeliveryProvider[]
+  wallets         Wallet[]
 
   @@unique([companyId, slug])
   @@unique([domain])
@@ -1524,6 +1525,10 @@ model Wallet {
   id             String   @id @default(uuid())
   companyId      String
   countryId      String
+  /// Which store's money this is. A store is a separate business here: its
+  /// own cash, its own bank account, its own daily closing. Null only until
+  /// a wallet from before this is placed.
+  storeId        String?  @map("store_id")
   name           String
   currencyCode   String
   /// Balance the wallet started with; every change after it is a movement.
@@ -1533,12 +1538,14 @@ model Wallet {
   updatedAt      DateTime @updatedAt
 
   country   Country            @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  store     Store?             @relation(fields: [storeId], references: [id], onDelete: Restrict)
   movements WalletMovement[]
   closings  DailyClosing[]
   receipts  StatementReceipt[]
 
-  @@unique([companyId, name])
+  @@unique([companyId, storeId, name])
   @@index([companyId, countryId, isActive])
+  @@index([companyId, storeId])
   @@map("wallets")
 }
 
@@ -1584,11 +1591,16 @@ model WalletTransfer {
   amountOut    Decimal  @db.Decimal(14, 3)
   amountIn     Decimal  @db.Decimal(14, 3)
   exchangeRate Decimal  @db.Decimal(14, 6)
+  /// INTERNAL | BETWEEN_STORES | BETWEEN_COUNTRIES — decided from the two
+  /// wallets when it happened, and kept. Deriving it later would let a
+  /// wallet moved to another store rewrite what a past transfer meant.
+  kind         String   @default("INTERNAL")
   note         String
   createdById  String
   createdAt    DateTime @default(now())
 
   @@index([companyId, createdAt])
+  @@index([companyId, kind])
   @@map("wallet_transfers")
 }
 

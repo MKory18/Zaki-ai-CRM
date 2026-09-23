@@ -23,7 +23,9 @@ export async function GET(req: Request) {
       db.shippingBatch.findMany({
         where: { companyId, storeId },
         include: {
-          provider: { select: { id: true, name: true, code: true } },
+          // `apiEnabled` decides whether "رحّل إلى الشركة" means anything
+          // for this batch: a manual courier has no server to send to.
+          provider: { select: { id: true, name: true, code: true, kind: true, apiEnabled: true, adapterCode: true } },
           creator: { select: { id: true, name: true } },
           _count: { select: { orders: true } },
         },
@@ -85,7 +87,7 @@ export async function POST(req: Request) {
         createdById: user.id, // server-derived actor
         notes: notes?.trim() || null,
       },
-      include: { provider: { select: { id: true, name: true, code: true } } },
+      include: { provider: { select: { id: true, name: true, code: true, kind: true, apiEnabled: true, adapterCode: true } } },
     });
 
     await logAudit({
