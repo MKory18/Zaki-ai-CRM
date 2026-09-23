@@ -1,5 +1,5 @@
 import type { BlockLook } from './landing-sections';
-import { FONTS } from './landing-theme';
+import { FONTS, stackFor } from './landing-theme';
 
 /**
  * ONE INTENTION, THREE SCREEN SIZES — without three designs.
@@ -52,15 +52,6 @@ const WEIGHT: Record<string, string> = {
   bold: '700',
   black: '800',
 };
-
-/**
- * The families a seller may pick are THE font library, read from the page
- * theme's registry — not a second list kept here. A block choosing a face
- * the theme picker has never heard of is how the two drifted apart.
- */
-const FONT_STACK: Record<string, string> = Object.fromEntries(
-  FONTS.map((f) => [f.key, f.stack])
-);
 
 /** Google's name for each, for the stylesheet the page must load. */
 export const GOOGLE_FAMILY: Record<string, string> = Object.fromEntries(
@@ -144,7 +135,7 @@ export function lookStyles(look: BlockLook | undefined): LookStyles {
   if (t.scale && t.scale !== 'm') inner.fontSize = SCALE[t.scale];
   if (t.weight) inner.fontWeight = WEIGHT[t.weight];
   if (t.italic) inner.fontStyle = 'italic';
-  if (t.font) inner.fontFamily = FONT_STACK[t.font];
+  if (t.font) inner.fontFamily = stackFor(t.font) || undefined;
   const color = safeColor(t.color);
   if (color) inner.color = color;
   // Text over a photograph is white unless the seller chose otherwise —

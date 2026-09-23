@@ -22,8 +22,13 @@ export interface LandingTheme {
   accent: string;
   /** How the page carries itself. */
   mood: ThemeMood;
-  /** Arabic display font for headings. */
-  font: ThemeFont;
+  /**
+   * The page's typeface: a key from the library, or `u:<slug>` for one the
+   * seller uploaded to this store. Not `ThemeFont` alone — the field has
+   * held both since stores could bring their own, and a type that says
+   * otherwise pushes a cast into every caller.
+   */
+  font: FontValue;
   /** Rounded or square corners throughout. */
   corners: 'soft' | 'sharp';
   /**
@@ -65,24 +70,7 @@ export const DEFAULT_THEME: LandingTheme = {
   pageVeil: 0.82,
 };
 
-/** What a stored theme is allowed to be. Anything else falls back whole. */
-export const landingThemeSchema = z.object({
-  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  mood: z.enum(['clean', 'warm', 'bold', 'calm']),
-  font: z.enum([
-    'tajawal', 'cairo', 'almarai', 'ibm', 'rubik', 'noto',
-    'changa', 'reem', 'lalezar', 'marhey', 'amiri', 'aref',
-    'readex', 'alexandria', 'vazir', 'mada', 'messiri', 'baloo',
-    'naskh', 'scheherazade', 'kawkab',
-    'thmanyah', 'thmanyahtext', 'thmanyahdisplay', 'system',
-  ]),
-  corners: z.enum(['soft', 'sharp']),
-  // Same-origin paths only. An absolute URL here is a way to make the
-  // seller's page fetch from somewhere we do not control, and to leak every
-  // visitor to it; uploads go through the page's own media route.
-  pageImage: z.string().regex(/^(|\/[A-Za-z0-9/_.\-]*)$/).max(300).default(''),
-  pageVeil: z.number().min(0).max(0.95).default(0.82),
-});
+
 
 export const MOODS: { key: ThemeMood; label: string; hint: string }[] = [
   { key: 'clean', label: 'نظيف', hint: 'أبيض واسع، حدود خفيفة' },
@@ -161,6 +149,61 @@ export const FONTS: {
 
 /** Every key in the library, for the places that need the list as data. */
 export const FONT_KEYS = FONTS.map((f) => f.key);
+
+/**
+ * A font a page may ask for: one of the library's keys, or an uploaded
+ * family referenced as `u:<slug>`.
+ *
+ * A hardcoded enum was kept in three places and had already fallen behind
+ * in two of them — eight faces the picker offered could not be saved on a
+ * block at all, because the block's enum had never been updated. One
+ * predicate, and adding a face to FONTS is the whole change.
+ *
+ * An uploaded family resolves through a CSS variable the page declares
+ * rather than through a lookup here, so this stays a pure function with no
+ * idea which store it is rendering — and a font the seller deleted falls
+ * back to the system stack instead of throwing.
+ */
+/** A face this store uploaded, referenced by its slug. */
+export type UploadedFontRef = `u:${string}`;
+
+/** Anything the `font` field may hold. */
+export type FontValue = ThemeFont | UploadedFontRef;
+
+export const UPLOADED_FONT_RE = /^u:[a-z0-9-]{1,40}$/;
+
+export function isFontValue(v: string): boolean {
+  return v === '' || FONT_KEYS.includes(v as ThemeFont) || UPLOADED_FONT_RE.test(v);
+}
+
+/** The CSS stack for any font value, built-in or uploaded. */
+export function stackFor(value: string | undefined | null): string {
+  if (!value) return '';
+  const known = FONTS.find((f) => f.key === value);
+  if (known) return known.stack;
+  if (UPLOADED_FONT_RE.test(value)) return `var(--lp-uf-${value.slice(2)}, system-ui, sans-serif)`;
+  return '';
+}
+
+/** Zod's view of the same rule. */
+export const fontValueSchema = z
+  .string()
+  .max(45)
+  .refine(isFontValue, { message: 'خط غير معروف' });
+
+/** What a stored theme is allowed to be. Anything else falls back whole. */
+export const landingThemeSchema = z.object({
+  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  mood: z.enum(['clean', 'warm', 'bold', 'calm']),
+  font: fontValueSchema,
+  corners: z.enum(['soft', 'sharp']),
+  // Same-origin paths only. An absolute URL here is a way to make the
+  // seller's page fetch from somewhere we do not control, and to leak every
+  // visitor to it; uploads go through the page's own media route.
+  pageImage: z.string().regex(/^(|\/[A-Za-z0-9/_.\-]*)$/).max(300).default(''),
+  pageVeil: z.number().min(0).max(0.95).default(0.82),
+});
+
 
 // ─────────────────────────────────────────────────────
 // Colour, honestly
@@ -296,7 +339,7 @@ export function paletteFor(theme: Partial<LandingTheme> | null | undefined): Pal
   const t = { ...DEFAULT_THEME, ...(theme ?? {}) };
   const accent = isValidHex(t.accent) ? t.accent : DEFAULT_THEME.accent;
   const base = MOOD_BASE[t.mood] ?? MOOD_BASE.clean;
-  const font = FONTS.find((f) => f.key === t.font) ?? FONTS[0];
+  const fontStack = stackFor(t.font) || FONTS[0].stack;
 
   return {
     accent,
@@ -308,7 +351,7 @@ export function paletteFor(theme: Partial<LandingTheme> | null | undefined): Pal
     accentBorder: atLightness(accent, 0.86, 0.45),
     ...base,
     radius: t.corners === 'sharp' ? '4px' : '14px',
-    fontStack: font.stack,
+    fontStack,
     // The veil goes in the SAME background-image, above the photo: one
     // property, no extra element, and nothing for a block to sit under by
     // accident. Both stops are the page's own paper colour, so the veil

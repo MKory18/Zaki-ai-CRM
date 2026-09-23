@@ -14,10 +14,11 @@ import {
   SECTION_LABEL, SECTION_HINT, SINGLETON, newSection,
 } from '@/lib/landing-sections';
 import {
-  type LandingTheme, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
+  type LandingTheme, type FontValue, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
 } from '@/lib/landing-theme';
 import { PageBlocks } from './PageBlocks';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from './styles';
+import { FontUploader, type StoreFontRow } from './FontUploader';
 
 /**
  * The block builder.
@@ -64,6 +65,48 @@ export function BlockBuilder(props: Props) {
   // list of twenty names in the fallback face is worse than no list; every
   // weight of twenty families to draw twenty words is worse than that.
   const specimenLink = useMemo(() => specimenHref(...FONTS.map((f) => f.key)), []);
+
+  // The store's own uploaded faces. Fetched rather than passed in, because
+  // the uploader below can add one without the page being rebuilt — and a
+  // font you just uploaded that does not appear until a reload reads as
+  // an upload that failed.
+  const [storeFonts, setStoreFonts] = useState<StoreFontRow[]>([]);
+  const storeFontCss = useMemo(() => {
+    if (storeFonts.length === 0) return '';
+    const faces = storeFonts
+      .map(
+        (f) =>
+          `@font-face{font-family:${JSON.stringify(f.family)};src:url(${JSON.stringify(f.url)}) format(${JSON.stringify(f.format)});font-weight:${f.weight};font-style:${f.italic ? 'italic' : 'normal'};font-display:swap;}`
+      )
+      .join('\n');
+    // Same variable mapping the published page emits, so `u:<key>` resolves
+    // identically in the preview and in the page it is previewing.
+    const seen = new Set<string>();
+    const vars = storeFonts
+      .filter((f) => !seen.has(f.key) && seen.add(f.key))
+      .map((f) => `--lp-uf-${f.key}: ${JSON.stringify(f.family)}, system-ui, sans-serif;`)
+      .join(' ');
+    return `${faces}
+.lp-root, .zaki-font-panel { ${vars} }`;
+  }, [storeFonts]);
+
+  // One list for the pickers: the library, then whatever this store uploaded.
+  const fontChoices = useMemo(() => {
+    const uploaded = new Map<string, { key: FontValue; label: string; stack: string; note: string }>();
+    for (const f of storeFonts) {
+      if (uploaded.has(f.key)) continue;
+      uploaded.set(f.key, {
+        key: `u:${f.key}` as FontValue,
+        label: f.label,
+        stack: `"${f.family}", system-ui, sans-serif`,
+        note: 'خطّك',
+      });
+    }
+    return [
+      ...FONTS.map((f) => ({ key: f.key as FontValue, label: f.label, stack: f.stack, note: f.note })),
+      ...uploaded.values(),
+    ];
+  }, [storeFonts]);
 
   const patch = (id: string, fields: Record<string, unknown>) =>
     onSections(sections.map((s) => (s.id === id ? ({ ...s, ...fields } as LandingSection) : s)));
@@ -165,6 +208,9 @@ export function BlockBuilder(props: Props) {
           drawn in their own faces and the preview must not be the only
           place a font appears. */}
       {specimenLink && <link rel="stylesheet" href={specimenLink} />}
+      {/* Declared at the top so the PANEL can draw its specimens in them
+          too, not only the preview below. */}
+      {storeFontCss && <style dangerouslySetInnerHTML={{ __html: storeFontCss }} />}
       {/* ─── Controls ─── */}
       <div className="space-y-3">
         {/* Theme */}
@@ -231,7 +277,7 @@ export function BlockBuilder(props: Props) {
             rather than push the rest of the panel off the screen.
           */}
           <div className="mb-4 max-h-56 space-y-1 overflow-y-auto pe-1">
-            {FONTS.map((f) => (
+            {fontChoices.map((f) => (
               <button
                 key={f.key}
                 type="button"
@@ -248,6 +294,13 @@ export function BlockBuilder(props: Props) {
                 <span className="shrink-0 text-[9px] text-[#9aa4b2]">{f.note}</span>
               </button>
             ))}
+          </div>
+
+          {/* The seller's own typefaces, beneath the library — a brand that
+              bought a font should not have to settle for the nearest free
+              one. Uploading is per store, like everything a store owns. */}
+          <div className="mb-4 border-t border-[#f1f3f6] pt-3">
+            <FontUploader onChanged={setStoreFonts} />
           </div>
 
           <label className="mb-1.5 block text-xs font-semibold text-[#364152]">الزوايا</label>

@@ -55,6 +55,7 @@ model Company {
   customerBlocks    CustomerBlock[]
   orderChannels     OrderChannel[]
   stores            Store[]
+  fonts             StoreFont[]
 
   @@map("companies")
 }
@@ -1328,6 +1329,7 @@ model Store {
   telegramSources TelegramSource[]
   shippingBatches ShippingBatch[]
   couriers        DeliveryProvider[]
+  fonts           StoreFont[]
   wallets         Wallet[]
   products        Product[]
   customers       Customer[]
@@ -2032,4 +2034,51 @@ model AttendanceMark {
   @@index([companyId, at])
   @@index([userId, at])
   @@map("attendance_marks")
+}
+
+/// A typeface the seller uploaded, served to their own landing pages.
+///
+/// Per store, like everything else a store owns: a font bought for one
+/// brand is not a font the next brand may set its headlines in, and a
+/// licence is usually granted to a domain.
+///
+/// `notice` is the licence text read out of the file at upload. It is kept
+/// so the panel can show the seller what the designer wrote — most Arabic
+/// type forbids being served from a website, and a seller who uploads one
+/// is usually not defying that, they have simply never seen it, because it
+/// is buried in a binary. Storing it means they are told once, plainly,
+/// rather than never.
+model StoreFont {
+  id         String   @id @default(uuid())
+  companyId  String   @map("company_id")
+  storeId    String   @map("store_id")
+  /// The slug used in CSS and in the picker. One per family per store.
+  key        String
+  /// What the seller calls it, in their own words.
+  label      String
+  /// The family name read from the file — what the browser matches on.
+  family     String
+  weight     Int      @default(400)
+  italic     Boolean  @default(false)
+  storageKey String   @map("storage_key")
+  sizeBytes  Int      @map("size_bytes")
+  format     String   // woff2 | woff | otf | ttf
+  /// Copyright and licence as the designer embedded them. May be empty.
+  notice     String?  @db.Text
+  /// True when the designer's own words suggest serving it is not allowed.
+  /// A hint shown to the seller, never a block.
+  restricted Boolean  @default(false)
+  /// The seller's statement that they hold the right to serve this file.
+  /// Recorded with who and when, because that is the whole point of asking.
+  attestedBy String?  @map("attested_by")
+  attestedAt DateTime? @map("attested_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, storeId, key, weight, italic])
+  @@index([companyId, storeId])
+  @@map("store_fonts")
 }

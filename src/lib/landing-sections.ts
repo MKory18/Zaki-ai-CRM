@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { fontValueSchema } from './landing-theme';
 
 /**
  * LANDING SECTIONS — a page is an ordered list of blocks, not a blob of HTML.
@@ -66,10 +67,16 @@ const background = z.object({
  * systems has two ways to be wrong.
  */
 const typography = z.object({
-  /** '' = the page's own font. Otherwise one of the theme's four. */
-  font: z
-    .enum(['', 'cairo', 'tajawal', 'almarai', 'system', 'ibm', 'rubik', 'changa', 'amiri', 'reem', 'lalezar', 'aref'])
-    .default(''),
+  /**
+   * '' = the page's own font; otherwise a key from the theme's library, or
+   * an uploaded family as `u:<slug>`.
+   *
+   * This was a hardcoded list, and it had fallen eight faces behind the
+   * picker: the seller could choose them and the save would be rejected
+   * with "أقسام الصفحة غير صالحة", which names nothing. One rule now, in
+   * landing-theme, and the list is no longer written down twice.
+   */
+  font: fontValueSchema,
   /** Relative, never px — so it still fits on a phone. */
   scale: z.enum(['xs', 's', 'm', 'l', 'xl']).default('m'),
   weight: z.enum(['', 'normal', 'medium', 'bold', 'black']).default(''),

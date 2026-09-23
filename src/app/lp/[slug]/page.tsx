@@ -10,6 +10,7 @@ import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixe
 import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { parseSections, ensureForm } from '@/lib/landing-sections';
 import { paletteFor, paletteVars, DEFAULT_THEME } from '@/lib/landing-theme';
+import { loadStoreFonts } from '@/lib/fonts/load-store-fonts';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref } from '@/components/landing/blocks/styles';
 import { availableStock } from '@/lib/reservation';
@@ -131,6 +132,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
     sections?: string | null;
     product?: { id: string; name: string; basePrice: number } | null;
     company?: { id: string; currency: string };
+    storeId?: string | null;
     store?: { countryId: string; country: { code: string; currencyCode: string } } | null;
   } | null = null;
 
@@ -153,7 +155,8 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
           sections: true,
           product: { select: { id: true, name: true, basePrice: true } },
           company: { select: { id: true, currency: true } },
-          store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
+          storeId: true,
+        store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
         },
       });
       if (lp) {
@@ -176,6 +179,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
         sections: true,
         company: { select: { id: true, currency: true } },
         product: { select: { id: true, name: true, basePrice: true } },
+        storeId: true,
         store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
       },
     });
@@ -279,6 +283,11 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
       ...sections.map((b) => b.look?.text?.font)
     );
 
+    // The store's own uploaded faces. Its own: a font licensed to one
+    // brand is not a font the next brand may set its headlines in, so this
+    // is filtered by the page's store and never by the company.
+    const storeFonts = await loadStoreFonts(lp.storeId);
+
     // Real stock, for the one block allowed to mention it. Unknown stays
     // unknown: the block renders nothing rather than inventing a number.
     let stock: number | null = null;
@@ -290,6 +299,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
       <div dir="rtl" className="lp-root" style={paletteVars(palette) as React.CSSProperties}>
         {href && <link rel="stylesheet" href={href} />}
         <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
+        {storeFonts.css && <style dangerouslySetInnerHTML={{ __html: storeFonts.css }} />}
         <LandingTrackingPixels pixels={trackingPixels} viewContent={viewContent} />
         <PageBlocks
           sections={sections}
