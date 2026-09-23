@@ -61,6 +61,13 @@ const lpRawOverrideHeaders = [
 // it here keeps the page's own stylesheet and script rules exactly as strict
 // as the catch-all — the two lines added are a font stylesheet and the font
 // files it points at, nothing else.
+//
+// `frame-ancestors 'self'`, not 'none': the dashboard previews this page in
+// an iframe, and 'none' made that impossible — the server answered 200 and
+// the browser refused to paint it (ERR_BLOCKED_BY_RESPONSE), so the preview
+// was a blank box with nothing in any log to explain it. 'self' still
+// refuses every OTHER site, which is what clickjacking protection is for;
+// our own admin framing our own page is not the attack.
 const lpPageHeaders = [
   {
     key: 'Content-Security-Policy',
@@ -71,11 +78,14 @@ const lpPageHeaders = [
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
       "connect-src 'self'",
-      "frame-ancestors 'none'",
+      "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",
     ].join('; '),
   },
+  // The catch-all sends DENY; this page must also allow the same-origin
+  // frame, or the older header wins in browsers that honour both.
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
 ];
 
 const nextConfig: NextConfig = {

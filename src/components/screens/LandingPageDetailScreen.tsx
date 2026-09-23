@@ -398,9 +398,27 @@ export function LandingPageDetailScreen() {
                   <MonitorPlay className="w-5 h-5 text-[#b8256e]" /> معاينة آمنة
                 </h3>
                 {previewToken ? (
+                  /**
+                   * No sandbox here, on purpose — and it is where the
+                   * isolation was doing harm rather than good.
+                   *
+                   * What loads is /lp/<slug>: OUR page, on OUR origin. The
+                   * untrusted thing — HTML the seller uploaded — is already
+                   * sealed one level deeper, in an iframe that page creates
+                   * with sandbox="allow-scripts allow-forms allow-popups".
+                   * A block-built page has no untrusted markup at all: the
+                   * seller picked blocks and typed text, and our renderer
+                   * drew them.
+                   *
+                   * Sandboxing the outer frame without allow-same-origin
+                   * gave it an opaque origin, where reading storage throws
+                   * and hydration dies — so the preview came up blank while
+                   * the same URL opened perfectly in a tab. It protected
+                   * nothing: the part that needed sealing is sealed by the
+                   * page itself, and nesting keeps those restrictions.
+                   */
                   <iframe
                     src={previewToken}
-                    sandbox="allow-scripts allow-forms allow-popups"
                     title="معاينة صفحة الهبوط"
                     className="flex-1 w-full min-h-[480px] rounded-lg border border-[#e3e8ef] bg-white"
                   />
