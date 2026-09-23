@@ -35,15 +35,22 @@ import { logAudit } from '@/lib/audit';
  * on the page they happened on.
  */
 
-/** "عرض المنتج" → "عرض المنتج (نسخة)" → "(نسخة 2)" … */
-function copyName(original: string, taken: Set<string>): string {
-  const base = `${original} (نسخة)`;
-  if (!taken.has(base)) return base.slice(0, 120);
-  for (let n = 2; n < 100; n++) {
-    const tryName = `${original} (نسخة ${n})`;
+/**
+ * "عرض المنتج" → "(نسخة)" → "(نسخة 2)" → "(نسخة 3)" …
+ *
+ * The suffix is stripped from the source first. Copying a copy used to
+ * produce «صفحة (نسخة) (نسخة)», and the one after that would have grown a
+ * third — a name nobody can read at a glance, which is the whole job of a
+ * name in a list.
+ */
+export function copyName(original: string, taken: Set<string>): string {
+  const base = original.replace(/\s*\(نسخة(\s+\d+)?\)\s*$/u, '').trim() || original;
+  const candidate = (n: number) => (n === 1 ? `${base} (نسخة)` : `${base} (نسخة ${n})`);
+  for (let n = 1; n < 100; n++) {
+    const tryName = candidate(n);
     if (!taken.has(tryName)) return tryName.slice(0, 120);
   }
-  return `${original} (${Date.now()})`.slice(0, 120);
+  return `${base} (${Date.now()})`.slice(0, 120);
 }
 
 /** A slug nobody else holds. The copy needs its own address. */

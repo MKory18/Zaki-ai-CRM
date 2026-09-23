@@ -18,7 +18,9 @@ import { copyText } from '@/lib/clipboard';
 export function LandingPagesScreen() {
   const [pages, setPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  /** What just happened, said on the screen — not in a browser alert box. */
   const [apiError, setApiError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ name: '', slug: '', productId: '' });
@@ -72,10 +74,12 @@ export function LandingPagesScreen() {
   const duplicate = async (lp: any) => {
     setBusyId(lp.id);
     try {
+      setApiError(null);
+      setNotice(null);
       const d = await crmApi(`/api/landing-pages/${lp.id}/duplicate`, { method: 'POST' });
       await load();
-      if (d?.message) alert(d.message);
-    } catch (e: any) { alert(e.message); } finally { setBusyId(null); }
+      setNotice(d?.message ?? null);
+    } catch (e: any) { setApiError(e.message); } finally { setBusyId(null); }
   };
 
   const togglePublish = async (lp: any) => {
@@ -131,6 +135,17 @@ export function LandingPagesScreen() {
         {/* List */}
         <Card>
           <CardContent className="p-0">
+            {notice && (
+              <p className="rounded-[8px] border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-[#00733a]">
+                {notice}
+              </p>
+            )}
+            {apiError && (
+              <p className="rounded-[8px] border border-[#fecdd1] bg-[#feecee] px-3 py-2 text-xs text-[#b3242e]">
+                {apiError}
+              </p>
+            )}
+
             {loading ? (
               <div className="p-10 text-center text-[#697586] text-sm">جارٍ التحميل…</div>
             ) : pages.length === 0 ? (
