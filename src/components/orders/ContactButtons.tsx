@@ -24,12 +24,21 @@ export function ContactButtons({
   context,
   countryCode,
   compact,
+  plain,
 }: {
   phone: string | null | undefined;
   context: FillContext;
   /** Digits, e.g. "963" — wa.me needs the number in full international form. */
   countryCode?: string | null;
   compact?: boolean;
+  /**
+   * A number that is not a customer's — a courier's office, a rep.
+   *
+   * The ready-made messages are written about an order ("طلبك {رقم_الطلب}
+   * خرج للتوصيل"), so offering them here would be offering nonsense. Call
+   * and WhatsApp open empty, and SMS is dropped: there is nothing to pick.
+   */
+  plain?: boolean;
 }) {
   const [templates, setTemplates] = useState<MessageTemplate[] | null>(null);
   const [open, setOpen] = useState<'SMS' | 'WHATSAPP' | null>(null);
@@ -71,6 +80,11 @@ export function ContactButtons({
     typeof navigator !== 'undefined' &&
     (navigator.maxTouchPoints > 1 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
 
+  /** WhatsApp with no message behind it — for a number that has no order. */
+  const openPlainWhatsapp = () => {
+    window.open(`https://wa.me/${waNumber(phone!, countryCode)}`, '_blank', 'noopener');
+  };
+
   const send = (t: MessageTemplate) => {
     const text = fillTemplate(t.body, context);
     if (open === 'WHATSAPP') {
@@ -92,28 +106,33 @@ export function ContactButtons({
 
   return (
     <div className="relative inline-flex items-center gap-1" ref={box}>
-      <a href={`tel:${phone}`} title="اتصال" className={btn}>
+      {/* A dialler is handed digits, not a formatted number: "+962 6 000
+          0000" is how a person reads it, and some phones refuse it as a
+          tel: target. The leading + is kept; everything decorative goes. */}
+      <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} title="اتصال" className={btn}>
         <Phone className="w-3.5 h-3.5" />
         {!compact && 'اتصال'}
       </a>
-      <button
-        type="button"
-        disabled={!onPhone}
-        title={
-          onPhone
-            ? 'رسالة نصية'
-            : 'الرسائل النصية تُرسَل من الهاتف — افتح النظام على موبايلك لاستعمالها'
-        }
-        onClick={() => setOpen(open === 'SMS' ? null : 'SMS')}
-        className={`${btn} ${onPhone ? '' : 'opacity-40 cursor-not-allowed'}`}
-      >
-        <MessageSquare className="w-3.5 h-3.5" />
-        {!compact && 'SMS'}
-      </button>
+      {!plain && (
+        <button
+          type="button"
+          disabled={!onPhone}
+          title={
+            onPhone
+              ? 'رسالة نصية'
+              : 'الرسائل النصية تُرسَل من الهاتف — افتح النظام على موبايلك لاستعمالها'
+          }
+          onClick={() => setOpen(open === 'SMS' ? null : 'SMS')}
+          className={`${btn} ${onPhone ? '' : 'opacity-40 cursor-not-allowed'}`}
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          {!compact && 'SMS'}
+        </button>
+      )}
       <button
         type="button"
         title="واتساب"
-        onClick={() => setOpen(open === 'WHATSAPP' ? null : 'WHATSAPP')}
+        onClick={plain ? openPlainWhatsapp : () => setOpen(open === 'WHATSAPP' ? null : 'WHATSAPP')}
         className={btn}
       >
         <MessageCircle className="w-3.5 h-3.5" />

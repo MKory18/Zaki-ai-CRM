@@ -105,6 +105,22 @@ export const LOGESTECHS_STATUS_AR: Record<string, string> = {
   EXPORTED_TO_THIRD_PARTY: 'مصدرة الى طرف ثالث',
 };
 
+/**
+ * First word / the rest, for their example's two-field form.
+ *
+ * Arabic names do not split into "first" and "last" the way the field names
+ * assume — «محمد عبد الله الكسواني» has no surname slot. Taking the first
+ * word and leaving the remainder whole keeps the full name readable on the
+ * label however they choose to join it back up, which is what the driver at
+ * the door actually needs.
+ */
+export function splitName(full: string): { receiverFirstName: string; receiverLastName: string } {
+  const parts = (full || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { receiverFirstName: '', receiverLastName: '' };
+  if (parts.length === 1) return { receiverFirstName: parts[0], receiverLastName: parts[0] };
+  return { receiverFirstName: parts[0], receiverLastName: parts.slice(1).join(' ') };
+}
+
 export class LogesTechsAdapter implements CourierAdapter {
   readonly code = 'LOGESTECHS';
   readonly name = 'LogesTechs';
@@ -168,7 +184,14 @@ export class LogesTechsAdapter implements CourierAdapter {
         senderName: this.config.sender.name,
         senderPhone: this.config.sender.phone,
         ...(this.config.sender.businessName ? { businessSenderName: this.config.sender.businessName } : {}),
+        // Their documentation contradicts itself here: the request-body
+        // TABLE marks `receiverName` required, while the request EXAMPLE on
+        // the next page sends `receiverFirstName` and `receiverLastName`.
+        // We send all three. Whichever their server reads, it finds; the
+        // other two are ignored, as unknown fields are throughout this API.
+        // Guessing one would fail every shipment on the first real use.
         receiverName: req.customer.fullName,
+        ...splitName(req.customer.fullName),
         receiverPhone: req.customer.phone,
         quantity: req.pieces,
         shipmentType: 'COD',

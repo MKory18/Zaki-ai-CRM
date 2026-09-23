@@ -6,6 +6,7 @@ import { Bike, Loader2, Plus, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CourierCredentials } from '@/components/settings/CourierCredentials';
 import { CourierWebhook } from '@/components/settings/CourierWebhook';
+import { ContactButtons } from '@/components/orders/ContactButtons';
 
 /**
  * /settings/couriers — the shipping companies themselves. Their per-region
@@ -160,7 +161,19 @@ export function CouriersScreen() {
                   </span>
                 </td>
                 <td className="px-4 py-2 text-[#697586]" dir="ltr">{c.code}</td>
-                <td className="px-4 py-2 text-[#697586]" dir="ltr">{c.phone ?? '—'}</td>
+                <td className="px-4 py-2 text-[#697586]">
+                  {c.phone ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span dir="ltr">{c.phone}</span>
+                      {/* The same buttons the customer rows use, without the
+                          ready-made messages: those are written about an
+                          order, and a courier's office does not have one. */}
+                      <ContactButtons phone={c.phone} context={{}} compact plain />
+                    </span>
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-2">
                     <button onClick={() => toggle(c)} disabled={busy} className={`text-xs px-3 py-1 rounded-[8px] border ${c.isActive ? 'border-[#e3e8ef] text-[#00a344]' : 'border-[#fecdd1] bg-[#feecee] text-[#fb323f]'}`}>

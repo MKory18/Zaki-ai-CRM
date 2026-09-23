@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LogesTechsAdapter, LOGESTECHS_STATUS } from './logestechs';
+import { LogesTechsAdapter, LOGESTECHS_STATUS, splitName } from './logestechs';
 import { isAutoApplicable } from './types';
 
 /**
@@ -151,5 +151,23 @@ describe('fetchEvents', () => {
     const [event] = await adapter.fetchEvents(['KSA1']);
     expect(event.status).toBeNull();
     expect(event.rawStatus).toBe('ERROR');
+  });
+});
+
+describe('the receiver name their documentation disagrees with itself about', () => {
+  it('splits an Arabic name without inventing a surname', () => {
+    expect(splitName('محمد عبد الله الكسواني')).toEqual({
+      receiverFirstName: 'محمد',
+      receiverLastName: 'عبد الله الكسواني',
+    });
+  });
+
+  it('repeats a single name rather than sending an empty required field', () => {
+    expect(splitName('سارة')).toEqual({ receiverFirstName: 'سارة', receiverLastName: 'سارة' });
+  });
+
+  it('survives extra spacing and an empty name', () => {
+    expect(splitName('  أبو   عمر  ')).toEqual({ receiverFirstName: 'أبو', receiverLastName: 'عمر' });
+    expect(splitName('')).toEqual({ receiverFirstName: '', receiverLastName: '' });
   });
 });
