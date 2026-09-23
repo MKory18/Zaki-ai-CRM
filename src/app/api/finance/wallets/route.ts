@@ -26,19 +26,38 @@ const createSchema = z.object({
   openingBalance: z.number().min(-1_000_000_000).max(1_000_000_000).default(0),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { user, companyId, country } = await requireContext();
+    const { user, companyId, country, storeId } = await requireContext();
     // Settlement records WHICH wallet a courier payment landed in, so it needs
     // the list of wallets — but not the cashbox figures. Only finance.cashbox
     // sees balances.
     const cashbox = can(user, 'finance.cashbox');
     if (!cashbox) await requirePermission('settlement.upload');
 
+    /**
+     * Managing wallets is store work; MOVING money between them is not.
+     *
+     * A transfer between two stores, or two countries, needs to see both
+     * ends — so the transfer screen asks for every wallet in the company
+     * and groups them by country and store. Everywhere else sees only this
+     * store's, because a store here is a separate business with its own
+     * cash, its own bank account and its own daily closing.
+     */
+    const forTransfer = new URL(req.url).searchParams.get('scope') === 'transfer';
+
     const wallets = await db.wallet.findMany({
-      where: { companyId },
+      // This store's money, and anything not yet placed so it can be fixed
+      // rather than quietly disappear.
+      where: {
+        companyId,
+        ...(forTransfer || !storeId ? {} : { OR: [{ storeId }, { storeId: null }] }),
+      },
       orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
-      include: { country: { select: { id: true, name: true, code: true, minorUnit: true } } },
+      include: {
+        country: { select: { id: true, name: true, code: true, minorUnit: true } },
+        store: { select: { id: true, name: true } },
+      },
     });
 
     if (!cashbox) {
@@ -66,6 +85,11 @@ export async function GET() {
         currencyCode: w.currencyCode,
         isActive: w.isActive,
         country: w.country,
+        // Which books this wallet's money belongs to — what makes a transfer
+        // readable as internal, between stores, or between countries.
+        countryId: w.countryId,
+        storeId: w.storeId,
+        store: w.store,
       })),
     });
   } catch (error) {
@@ -75,7 +99,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('finance.cashbox');
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
@@ -89,13 +113,24 @@ export async function POST(req: Request) {
     });
     if (!country) return NextResponse.json({ error: 'البلد غير موجود' }, { status: 404 });
 
-    const clash = await db.wallet.findFirst({ where: { companyId, name: parsed.data.name }, select: { id: true } });
-    if (clash) return NextResponse.json({ error: 'يوجد محفظة بنفس الاسم' }, { status: 409 });
+    // The store comes from the session, never the body: a body that names
+    // its own store is a body that can name someone else's.
+    if (!storeId) {
+      return NextResponse.json({ error: 'اختر المتجر أولاً', code: 'STORE_REQUIRED' }, { status: 400 });
+    }
+
+    // The name is the store's to reuse — every store has a «الصندوق النقدي».
+    const clash = await db.wallet.findFirst({
+      where: { companyId, storeId, name: parsed.data.name },
+      select: { id: true },
+    });
+    if (clash) return NextResponse.json({ error: 'يوجد محفظة بنفس الاسم في هذا المتجر' }, { status: 409 });
 
     const wallet = await db.wallet.create({
       data: {
         companyId,
         countryId: country.id,
+        storeId,
         name: parsed.data.name,
         currencyCode: parsed.data.currencyCode,
         openingBalance: parsed.data.openingBalance,

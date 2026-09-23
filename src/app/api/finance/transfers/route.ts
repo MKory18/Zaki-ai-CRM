@@ -8,9 +8,13 @@ import { logAudit } from '@/lib/audit';
 import { recordMovement } from '@/lib/wallets';
 import { roundMinor } from '@/lib/money';
 import { zodMessage } from '@/lib/zod-message';
+import { readTransfer, transferRefusal, TRANSFER_KIND_LABEL, type TransferSide } from '@/lib/transfer-kind';
 
 /**
- * Wallet-to-wallet transfers, same or different country.
+ * Wallet-to-wallet transfers — internal, between stores, or between
+ * countries. Which of the three it is comes from the two wallets rather
+ * than from a choice, and is recorded so a wallet moved later cannot
+ * rewrite what a past transfer meant. See lib/transfer-kind.
  *
  * The exchange rate is ENTERED BY THE USER and stored with the transfer. It
  * is never recalculated later: the money changed hands at one rate, on one
@@ -26,6 +30,8 @@ const createSchema = z.object({
   /** Required only when the two wallets hold different currencies. */
   exchangeRate: z.number().positive().max(1_000_000).optional(),
   note: z.string().trim().min(3, 'الملاحظة إلزامية').max(300),
+  /** What the screen told the person they were doing, checked server-side. */
+  expectKind: z.enum(['INTERNAL', 'BETWEEN_STORES', 'BETWEEN_COUNTRIES']).optional(),
 });
 
 export async function GET() {
@@ -40,7 +46,10 @@ export async function GET() {
     });
     const walletIds = [...new Set(transfers.flatMap((t) => [t.fromWalletId, t.toWalletId]))];
     const wallets = walletIds.length
-      ? await db.wallet.findMany({ where: { id: { in: walletIds } }, select: { id: true, name: true, currencyCode: true } })
+      ? await db.wallet.findMany({
+          where: { id: { in: walletIds } },
+          select: { id: true, name: true, currencyCode: true, store: { select: { name: true } } },
+        })
       : [];
     const walletOf = new Map(wallets.map((w) => [w.id, w]));
 
@@ -50,6 +59,9 @@ export async function GET() {
         amountOut: Number(t.amountOut),
         amountIn: Number(t.amountIn),
         exchangeRate: Number(t.exchangeRate),
+        // The kind as it was RECORDED, not re-read now: a wallet moved to
+        // another store since must not change what this transfer was.
+        kindLabel: TRANSFER_KIND_LABEL[t.kind as keyof typeof TRANSFER_KIND_LABEL] ?? t.kind,
         from: walletOf.get(t.fromWalletId) ?? null,
         to: walletOf.get(t.toWalletId) ?? null,
       })),
@@ -76,14 +88,44 @@ export async function POST(req: Request) {
     const [from, to] = await Promise.all([
       db.wallet.findFirst({
         where: { id: input.fromWalletId, companyId, isActive: true },
-        include: { country: { select: { minorUnit: true } } },
+        include: {
+          country: { select: { minorUnit: true, name: true } },
+          store: { select: { name: true } },
+        },
       }),
       db.wallet.findFirst({
         where: { id: input.toWalletId, companyId, isActive: true },
-        include: { country: { select: { minorUnit: true } } },
+        include: {
+          country: { select: { minorUnit: true, name: true } },
+          store: { select: { name: true } },
+        },
       }),
     ]);
     if (!from || !to) return NextResponse.json({ error: 'إحدى المحفظتين غير موجودة' }, { status: 404 });
+
+    const side = (w: typeof from): TransferSide => ({
+      id: w.id, name: w.name, currencyCode: w.currencyCode,
+      storeId: w.storeId, countryId: w.countryId,
+      storeName: w.store?.name ?? null, countryName: w.country.name,
+    });
+    const fromSide = side(from);
+    const toSide = side(to);
+
+    const refusal = transferRefusal(fromSide, toSide);
+    if (refusal) return NextResponse.json({ error: refusal, code: 'TRANSFER_REFUSED' }, { status: 400 });
+
+    const reading = readTransfer(fromSide, toSide);
+
+    // The client says which of the three it believes it is doing. If the
+    // server reads it differently, something moved between the screen being
+    // drawn and the button being pressed, and nobody should find out from
+    // the ledger a month later.
+    if (input.expectKind && input.expectKind !== reading.kind) {
+      return NextResponse.json(
+        { error: `تغيّر نوع التحويل — هذا ${reading.label}. راجعه وأعد المحاولة.`, code: 'KIND_CHANGED', kind: reading.kind },
+        { status: 409 }
+      );
+    }
 
     const sameCurrency = from.currencyCode === to.currencyCode;
     if (!sameCurrency && !input.exchangeRate) {
@@ -110,6 +152,7 @@ export async function POST(req: Request) {
           amountIn,
           // Stored as entered; nothing recalculates it later.
           exchangeRate: rate,
+          kind: reading.kind,
           note: input.note,
           createdById: user.id,
         },
@@ -133,10 +176,13 @@ export async function POST(req: Request) {
     await logAudit({
       companyId, userId: user.id, action: 'WALLET_TRANSFER',
       entity: 'WalletTransfer', entityId: transfer.id,
-      newData: { from: from.name, to: to.name, amountOut, amountIn, rate },
+      newData: { kind: reading.kind, from: from.name, to: to.name, amountOut, amountIn, rate },
     });
 
-    return NextResponse.json({ transfer: { ...transfer, amountOut, amountIn, exchangeRate: rate } }, { status: 201 });
+    return NextResponse.json(
+      { transfer: { ...transfer, amountOut, amountIn, exchangeRate: rate }, reading },
+      { status: 201 }
+    );
   } catch (error) {
     return apiErrorResponse(error);
   }
