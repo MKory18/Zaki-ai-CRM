@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { lookStyles, fontsUsed } from './block-look';
-import { GOOGLE_FAMILY } from './block-look';
+import { GOOGLE_FAMILY, isPlainLook } from './block-look';
 import { FONTS, landingThemeSchema, DEFAULT_THEME } from './landing-theme';
 import type { BlockLook } from './landing-sections';
 
@@ -32,8 +32,11 @@ describe('sizes are fluid, never fixed', () => {
     }
   });
 
-  it('keeps a side gutter always — text on the screen edge looks cheap', () => {
-    expect(lookStyles(look({ width: 'full' })).inner.paddingInline).toMatch(/^clamp\(16px/);
+  it('adds no gutter of its own — every block already brings one', () => {
+    // Three stacked gutters put the order form at 271px inside a 375px
+    // phone. The block stylesheet already pads .lp-section, .lp-hero and
+    // .lp-announce; a wrapper gutter on top is the same space charged twice.
+    expect(lookStyles(look({ width: 'full' })).inner.paddingInline).toBeUndefined();
   });
 
   it('sizes text relatively, so it still fits when the screen shrinks', () => {
@@ -172,5 +175,37 @@ describe('the font library is a single registry', () => {
         `${f.key} is offered but a page cannot store it`
       ).toBe(true);
     }
+  });
+});
+
+
+/**
+ * THE WRAPPER ONLY EXISTS FOR A CHOICE.
+ *
+ * `look` used to be absent until somebody styled a block, so "is it there?"
+ * meant "did the seller choose?". Then the schema began filling a default
+ * look into every block and the question stopped meaning anything: every
+ * block on every page got a wrapper, a max-width and a second gutter that
+ * nobody had asked for.
+ */
+describe('a block nobody styled stays untouched', () => {
+  it('treats the schema default as no choice at all', () => {
+    expect(isPlainLook(look())).toBe(true);
+    expect(isPlainLook(undefined)).toBe(true);
+  });
+
+  it('notices each kind of choice on its own', () => {
+    expect(isPlainLook(look({ width: 'wide' }))).toBe(false);
+    expect(isPlainLook(look({ align: 'start' }))).toBe(false);
+    expect(isPlainLook(look({ space: 'roomy' }))).toBe(false);
+    expect(isPlainLook(look({ background: { kind: 'solid', from: '#fff' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { color: '#111' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { headingColor: '#111' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { font: 'cairo' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { scale: 'l' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { italic: true } as never }))).toBe(false);
+    expect(isPlainLook(look({ button: { fill: '#111' } as never }))).toBe(false);
+    expect(isPlainLook(look({ button: { size: 'l' } as never }))).toBe(false);
+    expect(isPlainLook(look({ button: { wide: true } as never }))).toBe(false);
   });
 });

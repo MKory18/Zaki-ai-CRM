@@ -130,9 +130,12 @@ export function lookStyles(look: BlockLook | undefined): LookStyles {
 
   const inner: React.CSSProperties = {
     maxWidth: WIDTH[l.width ?? 'normal'],
-    // The gutter is the phone's, and it never goes away — text touching the
-    // edge of a screen is the single most common way a page looks cheap.
-    paddingInline: 'clamp(16px, 4vw, 24px)',
+    // NO gutter here. Every block already carries its own — .lp-section is
+    // 20px, .lp-hero is 20px, .lp-announce is 16px — and adding one more
+    // around them stacked three gutters on a phone: the order form came out
+    // 271px wide inside a 375px screen, a quarter of the width thrown away,
+    // and the card looked squeezed and off-centre for no reason a seller
+    // could see. One gutter, owned by the block, is enough.
     marginInline: 'auto',
     textAlign: ALIGN[l.align ?? 'center'] as React.CSSProperties['textAlign'],
     position: 'relative',
@@ -178,4 +181,31 @@ export function fontsUsed(looks: (BlockLook | undefined)[]): string[] {
     if (f && f !== 'system') set.add(f);
   }
   return [...set];
+}
+
+
+/**
+ * Has the seller actually chosen anything here?
+ *
+ * The wrapper exists to carry a choice. A page nobody has styled must
+ * render exactly as it did before any of this was built, and the old test
+ * for that — "is there a look object?" — stopped working the moment the
+ * schema started filling one in with defaults for every block. Every block
+ * on every page silently gained a wrapper, and with it a second gutter.
+ *
+ * So the test is against the VALUES, not the presence of the object.
+ */
+export function isPlainLook(look: BlockLook | undefined): boolean {
+  if (!look) return true;
+  const t = look.text;
+  const b = look.button;
+  const bg = look.background;
+  return (
+    (look.width ?? 'normal') === 'normal' &&
+    (look.align ?? 'center') === 'center' &&
+    (look.space ?? 'normal') === 'normal' &&
+    (!bg || bg.kind === 'none') &&
+    (!t || (!t.font && (!t.scale || t.scale === 'm') && !t.weight && !t.italic && !t.color && !t.headingColor)) &&
+    (!b || (!b.fill && !b.label && (!b.size || b.size === 'm') && !b.wide))
+  );
 }

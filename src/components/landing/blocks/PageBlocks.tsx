@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus } from 'lucide-react';
 import type { LandingSection } from '@/lib/landing-sections';
-import { lookStyles } from '@/lib/block-look';
+import { lookStyles, isPlainLook } from '@/lib/block-look';
 import type { Palette } from '@/lib/landing-theme';
 import { OfferCards } from './OfferCards';
 import { Countdown } from './Countdown';
@@ -106,13 +106,15 @@ export function PageBlocks({
  */
 function Dressed({ section, children }: { section: LandingSection; children: React.ReactNode }) {
   const { outer, inner, overlay, vars } = lookStyles(section.look);
-  const plain =
-    !section.look ||
-    (Object.keys(outer).length === 2 && !outer.background && !outer.backgroundImage);
 
   // A block nobody has styled renders exactly as it did before any of this
   // existed — no extra wrapper, no changed spacing, nothing to regress.
-  if (plain && !section.look) return <>{children}</>;
+  //
+  // The test asks what the seller CHOSE, not whether an object is present:
+  // the schema fills a default look into every block, so `!section.look`
+  // was never once true and every block on every page had quietly gained a
+  // wrapper it did not need.
+  if (isPlainLook(section.look)) return <>{children}</>;
 
   const t = section.look?.text;
   return (
@@ -163,7 +165,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
                 </span>
                 <div>
                   <strong data-edit={`items.${i}.title`}>{item.title}</strong>
-                  {item.text && <p>{item.text}</p>}
+                  {item.text && <p data-edit={`items.${i}.text`}>{item.text}</p>}
                 </div>
               </li>
             ))}
@@ -274,9 +276,16 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
     }
 
     case 'footer': {
+      // Each column and each link keeps the index it has IN THE DATA, so a
+      // seller typing into the second visible link writes to the second
+      // link and not to whichever one the filter happened to leave there.
       const columns = s.columns
-        .map((c) => ({ ...c, links: c.links.filter((l) => l.label && l.url) }))
-        .filter((c) => c.title || c.links.length);
+        .map((c, at) => ({
+          col: c,
+          at,
+          links: c.links.map((l, li) => ({ link: l, li })).filter(({ link }) => link.label && link.url),
+        }))
+        .filter(({ col, links }) => col.title || links.length);
       return (
         <footer className="lp-footer">
           {s.logo && (
@@ -286,17 +295,22 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
 
           {columns.length > 0 && (
             <nav className="lp-footer-cols">
-              {columns.map((c, i) => (
-                <div key={i}>
-                  {c.title && <h3>{c.title}</h3>}
+              {columns.map(({ col, at, links }) => (
+                <div key={at}>
+                  {col.title && <h3 data-edit={`columns.${at}.title`}>{col.title}</h3>}
                   <ul>
-                    {c.links.map((l, n) => (
-                      <li key={n}>
+                    {links.map(({ link, li }) => (
+                      <li key={li}>
                         {/* The seller's own links, but the page is public:
                             an external target never gets to reach back
                             through window.opener. */}
-                        <a href={l.url} target="_blank" rel="noopener noreferrer nofollow">
-                          {l.label}
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          data-edit={`columns.${at}.links.${li}.label`}
+                        >
+                          {link.label}
                         </a>
                       </li>
                     ))}
@@ -309,7 +323,9 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
           {s.phone && (
             <a className="lp-footer-phone" href={`tel:${s.phone.replace(/[^\d+]/g, '')}`} dir="ltr">
               <Phone size={14} />
-              {s.phone}
+              {/* The number is its own editable text: the icon beside it is
+                  not, or typing would swallow it. */}
+              <span data-edit="phone">{s.phone}</span>
             </a>
           )}
           <p data-edit="text">{s.text || 'جميع الحقوق محفوظة'}</p>

@@ -26,6 +26,26 @@ export interface LandingTheme {
   font: ThemeFont;
   /** Rounded or square corners throughout. */
   corners: 'soft' | 'sharp';
+  /**
+   * A photograph behind the WHOLE page, not behind one block.
+   *
+   * A block background paints one band; a seller who wants a textured page
+   * had to set the same image on every block and keep them in step. This is
+   * the page's own backdrop, set once.
+   *
+   * '' means the mood's flat paper, which stays the default — a photograph
+   * behind body text is a good way to make a page unreadable, so it is a
+   * choice and never an accident.
+   */
+  pageImage: string;
+  /**
+   * How much of the page colour is laid over that photograph, 0…0.95.
+   *
+   * Without it the text sits straight on the picture and the page cannot be
+   * read. The veil is the page's own paper colour, so a warm page veils warm
+   * and a clean page veils white — it never turns the photo grey.
+   */
+  pageVeil: number;
 }
 
 export type ThemeMood = 'clean' | 'warm' | 'bold' | 'calm';
@@ -38,6 +58,8 @@ export const DEFAULT_THEME: LandingTheme = {
   mood: 'clean',
   font: 'tajawal',
   corners: 'soft',
+  pageImage: '',
+  pageVeil: 0.82,
 };
 
 /** What a stored theme is allowed to be. Anything else falls back whole. */
@@ -49,6 +71,11 @@ export const landingThemeSchema = z.object({
     'changa', 'reem', 'lalezar', 'marhey', 'amiri', 'aref', 'system',
   ]),
   corners: z.enum(['soft', 'sharp']),
+  // Same-origin paths only. An absolute URL here is a way to make the
+  // seller's page fetch from somewhere we do not control, and to leak every
+  // visitor to it; uploads go through the page's own media route.
+  pageImage: z.string().regex(/^(|\/[A-Za-z0-9/_.\-]*)$/).max(300).default(''),
+  pageVeil: z.number().min(0).max(0.95).default(0.82),
 });
 
 export const MOODS: { key: ThemeMood; label: string; hint: string }[] = [
@@ -212,6 +239,8 @@ export interface Palette {
   radius: string;
   fontStack: string;
   headingWeight: number;
+  /** The backdrop layer, ready for `background-image`, or '' for none. */
+  pageBackdrop: string;
 }
 
 const MOOD_BASE: Record<ThemeMood, { pageBg: string; cardBg: string; text: string; muted: string; border: string; headingWeight: number }> = {
@@ -239,7 +268,29 @@ export function paletteFor(theme: Partial<LandingTheme> | null | undefined): Pal
     ...base,
     radius: t.corners === 'sharp' ? '4px' : '14px',
     fontStack: font.stack,
+    // The veil goes in the SAME background-image, above the photo: one
+    // property, no extra element, and nothing for a block to sit under by
+    // accident. Both stops are the page's own paper colour, so the veil
+    // tints toward the page rather than washing it grey.
+    pageBackdrop: backdropFor(t.pageImage, t.pageVeil, base.pageBg),
   };
+}
+
+/**
+ * The page's backdrop as one `background-image` value.
+ *
+ * Refuses anything that is not a same-origin path, the same rule the schema
+ * carries — a value can reach here from an older row that was stored before
+ * the rule existed, and a page is not the place to find that out.
+ */
+function backdropFor(image: string | undefined, veil: number | undefined, paper: string): string {
+  if (!image || !/^\/[A-Za-z0-9/_.\-]*$/.test(image)) return '';
+  const a = Math.min(0.95, Math.max(0, veil ?? 0.82));
+  const rgb = parseHex(paper);
+  const tint = rgb
+    ? `rgba(${rgb.map((v) => Math.round((v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055) * 255)).join(',')},${a})`
+    : `rgba(255,255,255,${a})`;
+  return `linear-gradient(${tint}, ${tint}), url("${image}")`;
 }
 
 /** The palette as CSS custom properties, for a style attribute. */
@@ -258,5 +309,9 @@ export function paletteVars(palette: Palette): Record<string, string> {
     '--lp-radius': palette.radius,
     '--lp-font': palette.fontStack,
     '--lp-heading-weight': String(palette.headingWeight),
+    // `none` rather than omitting the variable: the stylesheet's fallback
+    // then has nothing to guess, and turning the photograph off is one
+    // value changing rather than a rule appearing and disappearing.
+    '--lp-page-image': palette.pageBackdrop || 'none',
   };
 }

@@ -14,10 +14,14 @@ import React from 'react';
 export function OrderCta({
   className,
   children,
+  ref,
   ...rest
 }: {
   className: string;
   children: React.ReactNode;
+  /** The floating one watches the form through this. React 19 takes a ref
+      as an ordinary prop, so there is no forwardRef wrapper to explain. */
+  ref?: React.Ref<HTMLAnchorElement>;
   /** `data-edit` and friends — the button's words are the seller's to type. */
   [key: `data-${string}`]: string | undefined;
 }) {
@@ -31,7 +35,7 @@ export function OrderCta({
   }
 
   return (
-    <a href="#zf-full_name" onClick={go} className={className} {...rest}>
+    <a href="#zf-full_name" onClick={go} className={className} ref={ref} {...rest}>
       {children}
     </a>
   );

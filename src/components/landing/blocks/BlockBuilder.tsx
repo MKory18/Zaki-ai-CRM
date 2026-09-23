@@ -258,6 +258,44 @@ export function BlockBuilder(props: Props) {
               </button>
             ))}
           </div>
+
+          {/*
+            The page's own backdrop. It belongs to the theme and not to a
+            block, because a seller who wants a textured page means the
+            page — setting the same photograph on nine blocks and keeping
+            them in step is not a feature, it is a chore.
+          */}
+          <div className="mt-4 border-t border-[#f1f3f6] pt-3">
+            <ImageField
+              label="خلفية الصفحة كلها"
+              value={theme.pageImage ?? ''}
+              onChange={(v) => onTheme({ ...theme, pageImage: v })}
+              onUpload={props.onUpload}
+            />
+            {theme.pageImage ? (
+              <div className="mt-2">
+                <label className="mb-1 flex items-center justify-between text-[10px] font-semibold text-[#697586]">
+                  <span>تغطية الصورة</span>
+                  <span className="tabular-nums">{Math.round((theme.pageVeil ?? 0.82) * 100)}%</span>
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={0.95}
+                  step={0.05}
+                  value={theme.pageVeil ?? 0.82}
+                  onChange={(e) => onTheme({ ...theme, pageVeil: Number(e.target.value) })}
+                  className="w-full accent-[#b8256e]"
+                />
+                {/* Not decoration. Body text straight on a photograph is
+                    unreadable exactly as often as the photograph is busy,
+                    and the seller is looking at the picture, not the text. */}
+                <p className="mt-1 text-[10px] leading-relaxed text-[#9aa4b2]">
+                  كل ما زادت، صار النص أوضح والصورة أخفت. تحت ٥٠٪ غالباً بتصير القراءة صعبة.
+                </p>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {/* Sections */}
@@ -421,7 +459,20 @@ export function BlockBuilder(props: Props) {
           </div>
         </div>
 
-        <div className="flex flex-1 justify-center overflow-auto bg-[#eef2f6] p-3">
+        {/*
+          The transform lives on the SCROLLER, not on the page inside it.
+          `position: fixed` resolves against the nearest transformed
+          ancestor's box — and when that was the page itself, which is as
+          tall as all its blocks, the floating button sat at the bottom of
+          the whole page instead of floating above what the seller was
+          looking at. It was called "the floating button" and it did not
+          float. The scroller's box IS the visible area, so the button now
+          behaves here exactly as it does on a phone.
+        */}
+        <div
+          className="flex flex-1 justify-center overflow-auto bg-[#eef2f6] p-3"
+          style={{ transform: 'translateZ(0)' }}
+        >
           <div
             ref={setCanvas}
             className="lp-root overflow-hidden rounded-lg border border-[#e3e8ef] shadow-sm"
@@ -430,10 +481,6 @@ export function BlockBuilder(props: Props) {
               ...(paletteVars(palette) as React.CSSProperties),
               width: device === 'mobile' ? 390 : '100%',
               maxWidth: '100%',
-              // Makes this box the containing block for `position: fixed`,
-              // so the sticky button floats inside the preview instead of
-              // over the dashboard the seller is standing in.
-              transform: 'translateZ(0)',
             }}
           >
             {/* The preview loads the same families the published page

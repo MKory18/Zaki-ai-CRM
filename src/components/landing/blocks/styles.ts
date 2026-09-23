@@ -15,10 +15,22 @@ export const BLOCK_CSS = `
 .lp-root {
   font-family: var(--lp-font);
   color: var(--lp-text);
-  background: var(--lp-page);
+  background-color: var(--lp-page);
+  /* The page's own photograph, veiled, behind every block. 'cover' and a
+     centred position so a portrait photo on a wide screen still fills it;
+     'fixed' so the picture stays put while the page scrolls over it, which
+     is the whole reason to put one there. */
+  background-image: var(--lp-page-image, none);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
 }
+/* iOS never honours a fixed attachment properly — it sizes the picture to
+   the viewport and leaves it juddering behind the scroll. A touch screen
+   gets the plain, predictable version instead. */
+@media (hover: none) { .lp-root { background-attachment: scroll; } }
 .lp-root *, .lp-root *::before, .lp-root *::after { box-sizing: border-box; }
 .lp-root p { margin: 0; }
 
@@ -277,6 +289,14 @@ export const BLOCK_CSS = `
 
 /* ── form ── */
 .lp-form-section { max-width: 560px; }
+/* The order form carries its own page gutter and its own vertical rhythm,
+   because it is also dropped straight into a custom-HTML page where nothing
+   else provides them. Inside a block it is not a page section, it is the
+   section's content — and the two sets of padding stacked: on a 375px phone
+   the card came out 271px wide, a quarter of the screen given away, which
+   is what made it look squeezed and off-centre. The section owns the
+   spacing here; the form just fills it. */
+.lp-root #zaki-order-form { padding: 0; }
 
 /* ── trust ── */
 .lp-trust {
@@ -373,6 +393,22 @@ export const BLOCK_CSS = `
 }
 .lp-sticky b { font-weight: 900; font-variant-numeric: tabular-nums; opacity: .92; }
 .lp-sticky:active { transform: translateY(1px); }
+/* Out of the way while the form it points at is on the screen.
+   A button that says "order now" sitting on top of the order the visitor is
+   already filling in is not urgency, it is an obstacle — and on a 375px
+   phone it covered two of the fields. It leaves downwards and comes back
+   the same way, so it reads as one object moving rather than two appearing. */
+.lp-sticky {
+  transition: transform .22s ease, opacity .22s ease;
+}
+.lp-sticky[data-away] {
+  transform: translateY(160%);
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-sticky { transition: none; }
+}
 /* The button sends you to the form; it must not then sit on top of it,
    nor on the last line of the footer. Only when the button is there. */
 .lp-root:has(.lp-sticky) .lp-form-section { padding-bottom: 80px; }
@@ -428,7 +464,7 @@ html [data-look-align] :is(h1, h2, h3, h4, p, div, section, ul, .lp-hero, .lp-h2
 html .lp-root :is(h1, h2, h3, h4, .lp-h1, .lp-h2) {
   color: var(--look-heading, inherit);
 }
-html .lp-root :is(.lp-cta, .lp-btn) {
+html .lp-root :is(.lp-cta, .lp-btn, .lp-sticky) {
   background: var(--look-btn-bg, var(--lp-accent));
   color: var(--look-btn-fg, var(--lp-accent-text));
   padding: var(--look-btn-pad, 14px 44px);
