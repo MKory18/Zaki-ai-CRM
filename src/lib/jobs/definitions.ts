@@ -4,8 +4,8 @@ import type { JobDefinition, JobResult } from './runner';
 import { releaseStaleClaims } from '../confirmation-queue';
 import { accrueForOrder } from '../commission';
 import { blockingClosing } from '../wallets';
-import { adapterFor, isAutoApplicable } from '../couriers';
-import { isValidShippingTransition } from '../shipping-workflow';
+import { adapterFor } from '../couriers';
+import { applyCourierEvent } from '../couriers/apply-event';
 
 /**
  * The scheduled jobs.
@@ -173,31 +173,15 @@ export const syncCourierStatus: JobDefinition = {
         const event = byBarcode.get(order.trackingNumber!);
         if (!event) continue;
 
-        if (!isAutoApplicable(event)) {
-          if (event.status) skipped.push(event.rawStatus);
-          continue;
-        }
-        if (event.status === order.shippingStatus) continue;
-        // Go through the transition machine; never write the column blind.
-        if (!isValidShippingTransition(order.shippingStatus, event.status!)) continue;
-
-        await db.$transaction(async (tx) => {
-          await tx.order.update({
-            where: { id: order.id },
-            data: { shippingStatus: event.status!, version: { increment: 1 } },
-          });
-          await tx.orderActivity.create({
-            data: {
-              companyId: order.companyId,
-              orderId: order.id,
-              userId: null, // the courier's feed, not a person
-              action: 'COURIER_STATUS_SYNCED',
-              newStatus: event.status!,
-              metadata: JSON.stringify({ courier: provider.name, rawStatus: event.rawStatus, note: event.note }),
-            },
-          });
+        // The same gate the webhook goes through — see couriers/apply-event.
+        const outcome = await applyCourierEvent({
+          order,
+          event,
+          courierName: provider.name,
+          source: 'POLL',
         });
-        applied++;
+        if (outcome === 'APPLIED') applied++;
+        else if (outcome === 'NOT_AUTO_APPLICABLE') skipped.push(event.rawStatus);
       }
     }
 

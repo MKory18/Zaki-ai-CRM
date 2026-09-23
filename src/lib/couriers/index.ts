@@ -1,7 +1,9 @@
 import type { CourierAdapter } from './types';
+import type { ShippingStatus } from '@/lib/shipping-workflow';
 import { manualAdapter } from './manual';
 import {
   LogesTechsAdapter,
+  LOGESTECHS_STATUS,
   logesTechsFromEnv,
   logesTechsFromCredentials,
   type LogesTechsCredentials,
@@ -83,6 +85,30 @@ export function adapterFor(provider: ProviderLike | null | undefined): CourierAd
   }
 
   return ADAPTERS.get(key) ?? manualAdapter;
+}
+
+/**
+ * Translate a courier's own status code WITHOUT needing their account.
+ *
+ * `adapterFor` hands back the manual adapter when there are no stored
+ * credentials, and the manual adapter maps nothing — which is right for
+ * CREATING a shipment, and wrong for reading one. Understanding what
+ * "DELIVERED_TO_RECIPIENT" means is a lookup table, not an API call.
+ *
+ * This matters for the webhook: a courier can be pushing us statuses on the
+ * day we set the URL up, weeks before their API login is in our hands. Tying
+ * the vocabulary to the password would silently drop every one of them.
+ */
+export function mapStatusFor(
+  adapterCode: string | null | undefined,
+  rawStatus: string
+): ShippingStatus | null {
+  const key = (adapterCode || '').trim().toUpperCase();
+  if (key === 'LOGESTECHS') {
+    // Unknown code → null, never a near match. A wrong mapping moves money.
+    return LOGESTECHS_STATUS[rawStatus?.trim().toUpperCase()] ?? null;
+  }
+  return null;
 }
 
 export function isAutomated(provider: ProviderLike | null | undefined): boolean {

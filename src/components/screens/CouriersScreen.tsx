@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Bike, Loader2, Plus, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CourierCredentials } from '@/components/settings/CourierCredentials';
+import { CourierWebhook } from '@/components/settings/CourierWebhook';
 
 /**
  * /settings/couriers — the shipping companies themselves. Their per-region
@@ -182,8 +183,11 @@ export function CouriersScreen() {
             {rows.map((c) =>
               accountFor === c.id ? (
                 <tr key={`${c.id}-account`}>
-                  <td colSpan={5} className="bg-[#f8fafc] px-4 py-4">
+                  <td colSpan={5} className="bg-[#f8fafc] px-4 py-4 space-y-3">
                     <CourierCredentials providerId={c.id} />
+                    {/* Statuses can arrive two ways; both belong to the
+                        account, so both live on the account panel. */}
+                    <CourierWebhook providerId={c.id} />
                   </td>
                 </tr>
               ) : null
