@@ -97,12 +97,20 @@ async function loadLpData(landingPageId: string, companyId: string, productId: s
       },
     }),
   ]);
-  const recViews = recs.map((r) => ({
-    id: r.id,
-    name: r.product?.name || '',
-    price: r.product?.basePrice ?? 0,
-    image: r.product?.image || null,
-  }));
+  // A recommendation needs a name and a price to be an offer at all. One
+  // without them still rendered: the success screen said "add it to my
+  // order — 0 USD" over a blank line, which reads as a broken page at the
+  // exact moment the customer has just trusted us with their phone number.
+  // The seller has not finished setting that product up; until they do, it
+  // simply is not shown.
+  const recViews = recs
+    .map((r) => ({
+      id: r.id,
+      name: (r.product?.name || '').trim(),
+      price: r.product?.basePrice ?? 0,
+      image: r.product?.image || null,
+    }))
+    .filter((r) => r.name && r.price > 0);
   return [offers, recViews] as const;
 }
 

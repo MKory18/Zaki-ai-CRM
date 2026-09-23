@@ -17,7 +17,7 @@ import {
   type LandingTheme, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
 } from '@/lib/landing-theme';
 import { PageBlocks } from './PageBlocks';
-import { BLOCK_CSS, fontHref } from './styles';
+import { BLOCK_CSS, fontHref, specimenHref } from './styles';
 
 /**
  * The block builder.
@@ -54,11 +54,16 @@ export function BlockBuilder(props: Props) {
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   const palette = useMemo(() => paletteFor(theme), [theme]);
-  // The editor loads the WHOLE library, not just the page's own faces: the
-  // font picker draws every name in its own face, and a specimen sheet in
-  // the fallback face is worse than a list of names. The published page
-  // loads only what it actually uses — this cost is the editor's alone.
-  const fontLink = useMemo(() => fontHref(...FONTS.map((f) => f.key)), []);
+  // The page's own faces, in full, exactly as the published page asks for
+  // them — a preview whose headings synthesise their bold is not a preview.
+  const fontLink = useMemo(
+    () => fontHref(theme.font, ...sections.map((b) => b.look?.text?.font)),
+    [theme.font, sections]
+  );
+  // And the whole library at one weight, for the picker's specimen list. A
+  // list of twenty names in the fallback face is worse than no list; every
+  // weight of twenty families to draw twenty words is worse than that.
+  const specimenLink = useMemo(() => specimenHref(...FONTS.map((f) => f.key)), []);
 
   const patch = (id: string, fields: Record<string, unknown>) =>
     onSections(sections.map((s) => (s.id === id ? ({ ...s, ...fields } as LandingSection) : s)));
@@ -156,6 +161,10 @@ export function BlockBuilder(props: Props) {
 
   return (
     <div className="grid grid-cols-1 gap-3 p-3 lg:grid-cols-[340px_1fr]" dir="rtl">
+      {/* Loaded for the panel, not for the page: the picker's names are
+          drawn in their own faces and the preview must not be the only
+          place a font appears. */}
+      {specimenLink && <link rel="stylesheet" href={specimenLink} />}
       {/* ─── Controls ─── */}
       <div className="space-y-3">
         {/* Theme */}

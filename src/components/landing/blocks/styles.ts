@@ -485,6 +485,24 @@ html .lp-root :is(.lp-cta, .lp-btn, .lp-sticky) {
  * The URL was built across newlines, which a browser sends verbatim; one
  * request, one line.
  */
+/**
+ * The stylesheet for the font PICKER, which is a different problem.
+ *
+ * The picker draws twenty names each in its own face, and asking for every
+ * weight of twenty families to render twenty words at one weight is most of
+ * a megabyte thrown at a list. Stripping the weight axis leaves the regular
+ * of each — exactly what the list shows — and the page's own faces are
+ * requested separately, in full, by fontHref.
+ */
+export function specimenHref(...fonts: (string | null | undefined)[]): string | null {
+  const wanted = [...new Set(fonts.filter(Boolean) as string[])]
+    .map((f) => GOOGLE_FAMILY[f])
+    .filter(Boolean)
+    .map((f) => f.split(':')[0]);
+  if (wanted.length === 0) return null;
+  return `https://fonts.googleapis.com/css2?${wanted.map((f) => `family=${f}`).join('&')}&display=swap`;
+}
+
 export function fontHref(...fonts: (string | null | undefined)[]): string | null {
   // The families come from the ONE registry. This was a third copy of the
   // same list, and it had already fallen behind: two faces the picker

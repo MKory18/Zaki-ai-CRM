@@ -51,7 +51,9 @@ export interface LandingTheme {
 export type ThemeMood = 'clean' | 'warm' | 'bold' | 'calm';
 export type ThemeFont =
   | 'tajawal' | 'cairo' | 'almarai' | 'ibm' | 'rubik' | 'noto'
-  | 'changa' | 'reem' | 'lalezar' | 'marhey' | 'amiri' | 'aref' | 'system';
+  | 'changa' | 'reem' | 'lalezar' | 'marhey' | 'amiri' | 'aref'
+  | 'readex' | 'alexandria' | 'vazir' | 'mada' | 'messiri' | 'baloo'
+  | 'naskh' | 'scheherazade' | 'system';
 
 export const DEFAULT_THEME: LandingTheme = {
   accent: '#b8256e',
@@ -68,7 +70,9 @@ export const landingThemeSchema = z.object({
   mood: z.enum(['clean', 'warm', 'bold', 'calm']),
   font: z.enum([
     'tajawal', 'cairo', 'almarai', 'ibm', 'rubik', 'noto',
-    'changa', 'reem', 'lalezar', 'marhey', 'amiri', 'aref', 'system',
+    'changa', 'reem', 'lalezar', 'marhey', 'amiri', 'aref',
+    'readex', 'alexandria', 'vazir', 'mada', 'messiri', 'baloo',
+    'naskh', 'scheherazade', 'system',
   ]),
   corners: z.enum(['soft', 'sharp']),
   // Same-origin paths only. An absolute URL here is a way to make the
@@ -115,6 +119,14 @@ export const FONTS: { key: ThemeFont; label: string; stack: string; google?: str
   { key: 'marhey', label: 'مرحي', stack: "'Marhey', system-ui, cursive", google: 'Marhey:wght@400;600;700', note: 'مرِح وشبابي' },
   { key: 'amiri', label: 'أميري', stack: "'Amiri', Georgia, serif", google: 'Amiri:wght@400;700', note: 'نسخ كلاسيكي' },
   { key: 'aref', label: 'عارف رقعة', stack: "'Aref Ruqaa', Georgia, serif", google: 'Aref+Ruqaa:wght@400;700', note: 'رقعة فخم' },
+  { key: 'readex', label: 'ريدكس برو', stack: "'Readex Pro', system-ui, sans-serif", google: 'Readex+Pro:wght@300;400;500;600;700', note: 'حديث ومتوازن' },
+  { key: 'alexandria', label: 'الإسكندرية', stack: "'Alexandria', system-ui, sans-serif", google: 'Alexandria:wght@400;500;700;800', note: 'هندسي نظيف' },
+  { key: 'vazir', label: 'وزير', stack: "'Vazirmatn', system-ui, sans-serif", google: 'Vazirmatn:wght@400;500;700;800', note: 'مقروء على الشاشة' },
+  { key: 'mada', label: 'مدى', stack: "'Mada', system-ui, sans-serif", google: 'Mada:wght@400;500;700;900', note: 'بسيط وواسع' },
+  { key: 'messiri', label: 'المصيري', stack: "'El Messiri', system-ui, sans-serif", google: 'El+Messiri:wght@400;500;600;700', note: 'أنيق للعناوين' },
+  { key: 'baloo', label: 'بالو بهيجان', stack: "'Baloo Bhaijaan 2', system-ui, cursive", google: 'Baloo+Bhaijaan+2:wght@400;600;700;800', note: 'سميك ومستدير' },
+  { key: 'naskh', label: 'نوتو نسخ', stack: "'Noto Naskh Arabic', Georgia, serif", google: 'Noto+Naskh+Arabic:wght@400;500;600;700', note: 'نسخ للقراءة الطويلة' },
+  { key: 'scheherazade', label: 'شهرزاد', stack: "'Scheherazade New', Georgia, serif", google: 'Scheherazade+New:wght@400;700', note: 'نسخ تقليدي فخم' },
   { key: 'system', label: 'خط النظام', stack: "system-ui, 'Segoe UI', Tahoma, sans-serif", note: 'الأسرع تحميلاً' },
 ];
 

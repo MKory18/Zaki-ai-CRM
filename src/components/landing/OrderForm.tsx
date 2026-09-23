@@ -211,6 +211,28 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
       if (res.ok) {
         setAddons((a) => ({ ...a, [recId]: 'added' }));
         if (typeof json?.newTotal === 'number') setTotals({ total: json.newTotal });
+        // The add-on is revenue, and it was not reaching the ad platforms.
+        // Purchase had already fired with the opening total, so an order
+        // that grew from 20 to 32 was reported as 20 — every upsell on the
+        // page invisible to the campaign paying for it, and the ROAS the
+        // seller optimises against quietly wrong.
+        //
+        // A second Purchase for the ADDED amount, not the new total: the
+        // platforms sum the events they receive, so re-sending the whole
+        // total would count the original twice. The button becomes "added"
+        // and cannot be pressed again, so this fires once per add-on.
+        const added = json?.addOn;
+        if (added && typeof added.price === 'number') {
+          const value = added.price * (typeof added.quantity === 'number' ? added.quantity : 1);
+          try {
+            trackEvent('Purchase', {
+              orderId: `${result.orderNumber}:${recId}`,
+              value,
+              currency: typeof json.currency === 'string' ? json.currency : currency,
+              contentName: typeof added.productName === 'string' ? added.productName : undefined,
+            });
+          } catch { /* tracking is non-fatal */ }
+        }
       } else {
         setAddons((a) => {
           const n = { ...a };
@@ -256,13 +278,20 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               everything in it takes the readable ink the theme derived —
               accent text on an accent band would be invisible. On a page
               with no theme the old navy and its old colours stand. */}
+          {/* After the order is placed this band must stop saying "order
+              now" over the price the customer paid BEFORE their add-ons.
+              Standing there advertising the opening price of an order that
+              is already placed reads as though nothing happened — it was
+              the one part of the screen still describing the previous step.
+              It becomes the receipt: what was ordered, and what it costs
+              now, add-ons included. */}
           <div className="bg-[var(--lp-accent,#121926)] px-5 py-5 text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--lp-accent-text,#697586)] opacity-75">
-              اطلب الآن
+              {state === 'success' ? 'طلبك' : 'اطلب الآن'}
             </p>
             <h2 className="mt-1 text-xl font-bold text-[var(--lp-accent-text,#ffffff)]">{productName}</h2>
             <p className="mt-1 text-2xl font-extrabold text-[var(--lp-accent-text,#b8256e)]" dir="ltr">
-              {fmt(offer ? offer.price : basePrice)} {currency}
+              {fmt(state === 'success' && totals ? totals.total : offer ? offer.price : basePrice)} {currency}
             </p>
           </div>
 
@@ -274,8 +303,10 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 رقم الطلب: <span className="font-bold">{result.orderNumber}</span>
               </p>
               {totals && (
-                <p className="mt-1 text-sm font-semibold text-[var(--lp-accent,#b8256e)]" dir="ltr">
-                  الإجمالي الحالي: {fmt(totals.total)} {currency}
+                // The header already carries the number. This says why it
+                // moved, which is the part the customer needs to trust.
+                <p className="mt-1 text-xs font-semibold text-[var(--lp-accent,#b8256e)]">
+                  تم تحديث الإجمالي بعد الإضافة
                 </p>
               )}
               <p className="mt-2 text-xs text-[#697586]">سنتواصل معك قريبًا لتأكيد الطلب.</p>
@@ -300,7 +331,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-[#121926]">{rec.name}</p>
+                            <p className="line-clamp-2 text-sm font-semibold leading-snug text-[#121926]">{rec.name}</p>
                             <p className="text-sm font-bold text-[var(--lp-accent,#b8256e)]" dir="ltr">
                               {fmt(rec.price)} {currency}
                             </p>
