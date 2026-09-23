@@ -15,6 +15,7 @@ import {
 import {
   ArrowRight, Save, Eye, Globe, Code2, Palette, Monitor, Tablet, Smartphone,
   Image as ImageIcon, Package, MousePointerClick, Gift, ListPlus, Type, Upload, Loader2,
+  Maximize2, Minimize2,
 } from 'lucide-react';
 
 /**
@@ -220,6 +221,9 @@ function buildPreviewDoc(html: string, css: string, settings: any, data: Preview
 </head><body>${resolved}</body></html>`;
 }
 
+/** How many lines the gutter must number. Used by the toolbar and the pane. */
+const lineCount = (text: string) => text.split('\n').length;
+
 export function LandingPageEditorScreen() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -230,6 +234,8 @@ export function LandingPageEditorScreen() {
   const [pageError, setPageError] = useState<string | null>(null);
 
   const [html, setHtml] = useState('');
+  /** The code editor taking over the screen, only when asked. */
+  const [full, setFull] = useState(false);
   const [css, setCss] = useState('');
   const [settings, setSettings] = useState<any>({ width: 'full', background: '#ffffff', direction: 'rtl', fontFamily: '' });
 
@@ -638,34 +644,32 @@ data-zaki-z-index="9999"`}</pre>
                   <Palette className="h-3.5 w-3.5" /> CSS
                 </button>
                 <span className="mr-auto text-[10px] text-[#5b6474]">{tab === 'html' ? `${lineCount(html)} سطر` : `${lineCount(css)} سطر`}</span>
+                {/* The editor starts small and grows when asked. A code box
+                    that owns the screen by default hides the preview, which
+                    is the thing you are actually editing against. */}
+                <button
+                  onClick={() => setFull((f) => !f)}
+                  title={full ? 'تصغير المحرر' : 'ملء الشاشة'}
+                  className="cursor-pointer rounded p-1 text-[#697586] hover:text-white"
+                >
+                  {full ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </button>
               </div>
               {tab === 'html' ? (
-                <div className="flex bg-[#121926]" dir="ltr">
-                  <div className="select-none border-l border-[#202939] bg-[#0d1117] px-2 py-3 text-right font-mono text-[11px] leading-5 text-[#5b6474]">
-                    {Array.from({ length: lineCount(html) }, (_, i) => <div key={i}>{i + 1}</div>)}
-                  </div>
-                  <textarea
-                    ref={htmlRef}
-                    value={html}
-                    onChange={(e) => { setHtml(e.target.value); setDirty(true); }}
-                    onKeyDown={(e) => handleTabKey(e, setHtml)}
-                    spellCheck={false}
-                    className="h-72 w-full resize-y bg-[#121926] p-3 font-mono text-[12px] leading-5 text-[#c9d1d9] outline-none"
-                  />
-                </div>
+                <CodePane
+                  textRef={htmlRef}
+                  value={html}
+                  onChange={(v) => { setHtml(v); setDirty(true); }}
+                  onKeyDown={(e) => handleTabKey(e, setHtml)}
+                  full={full}
+                />
               ) : (
-                <div className="flex bg-[#121926]" dir="ltr">
-                  <div className="select-none border-l border-[#202939] bg-[#0d1117] px-2 py-3 text-right font-mono text-[11px] leading-5 text-[#5b6474]">
-                    {Array.from({ length: lineCount(css) }, (_, i) => <div key={i}>{i + 1}</div>)}
-                  </div>
-                  <textarea
-                    value={css}
-                    onChange={(e) => { setCss(e.target.value); setDirty(true); }}
-                    onKeyDown={(e) => handleTabKey(e, setCss)}
-                    spellCheck={false}
-                    className="h-72 w-full resize-y bg-[#121926] p-3 font-mono text-[12px] leading-5 text-[#c9d1d9] outline-none"
-                  />
-                </div>
+                <CodePane
+                  value={css}
+                  onChange={(v) => { setCss(v); setDirty(true); }}
+                  onKeyDown={(e) => handleTabKey(e, setCss)}
+                  full={full}
+                />
               )}
             </div>
 
@@ -785,5 +789,62 @@ data-zaki-z-index="9999"`}</pre>
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * ONE CODE PANE, used for both HTML and CSS.
+ *
+ * There were two copies, identical but for which state they wrote to — and
+ * both carried the same defect: the line numbers were a separate column
+ * that did not scroll with the text, so past the first screenful every
+ * number pointed at the wrong line. That is worse than no numbers.
+ *
+ * It starts SMALL. A code box that owns the page by default hides the live
+ * preview, which is the thing you are editing against. It can be dragged
+ * taller, and made full screen when the file is long enough to deserve it.
+ */
+function CodePane({
+  value,
+  onChange,
+  onKeyDown,
+  full,
+  textRef,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  full: boolean;
+  textRef?: React.RefObject<HTMLTextAreaElement | null>;
+}) {
+  const gutter = React.useRef<HTMLDivElement>(null);
+  const lines = lineCount(value);
+
+  return (
+    <div className="flex bg-[#121926]" dir="ltr">
+      <div
+        ref={gutter}
+        className="select-none overflow-hidden border-l border-[#202939] bg-[#0d1117] px-2 py-3 text-right font-mono text-[11px] leading-5 text-[#5b6474]"
+        style={{ height: full ? 'calc(100vh - 14rem)' : undefined }}
+      >
+        {Array.from({ length: lines }, (_, i) => (
+          <div key={i}>{i + 1}</div>
+        ))}
+      </div>
+      <textarea
+        ref={textRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        // Keep the numbers beside the line they number.
+        onScroll={(e) => {
+          if (gutter.current) gutter.current.scrollTop = e.currentTarget.scrollTop;
+        }}
+        spellCheck={false}
+        className={`w-full resize-y bg-[#121926] p-3 font-mono text-[12px] leading-5 text-[#c9d1d9] outline-none ${
+          full ? 'h-[calc(100vh-14rem)]' : 'h-40'
+        }`}
+      />
+    </div>
   );
 }

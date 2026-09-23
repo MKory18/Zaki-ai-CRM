@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import {
   Globe, Plus, Pencil, Trash2, Copy, Eye, EyeOff, ExternalLink,
+  CopyPlus,
   MousePointerClick, Loader2,
 } from 'lucide-react';
 import { screenApi as crmApi, qs } from '@/lib/screen-api';
@@ -57,6 +58,24 @@ export function LandingPagesScreen() {
     } else {
       window.prompt('انسخ الرابط يدوياً:', publicUrl(lp));
     }
+  };
+
+
+  /**
+   * Copy the page, not its results.
+   *
+   * The server decides what carries over — sections, theme and product do;
+   * the slug, domain, pixel, published state and the original's view and
+   * order counts do not. Deciding it here too would put one rule in two
+   * places, and the copy in this screen is the one that would drift.
+   */
+  const duplicate = async (lp: any) => {
+    setBusyId(lp.id);
+    try {
+      const d = await crmApi(`/api/landing-pages/${lp.id}/duplicate`, { method: 'POST' });
+      await load();
+      if (d?.message) alert(d.message);
+    } catch (e: any) { alert(e.message); } finally { setBusyId(null); }
   };
 
   const togglePublish = async (lp: any) => {
@@ -169,6 +188,14 @@ export function LandingPagesScreen() {
                             <button title="نسخ الرابط" onClick={() => copyUrl(lp)}
                               className="p-1.5 rounded-lg hover:bg-[#eef2f6] text-[#364152]">
                               {copiedId === lp.id ? <MousePointerClick className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                            </button>
+                            {/* A page that converts, wanted again for the next
+                                product. Rebuilding it by hand is how a working
+                                page gets copied wrong. */}
+                            <button title="انسخ الصفحة" disabled={busyId === lp.id}
+                              onClick={() => duplicate(lp)}
+                              className="p-1.5 rounded-lg hover:bg-[#fdf5fa] text-[#364152] hover:text-[#b8256e] disabled:opacity-40">
+                              <CopyPlus className="w-4 h-4" />
                             </button>
                             <button title="حذف" onClick={() => setDeleting(lp)}
                               className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600"><Trash2 className="w-4 h-4" /></button>
