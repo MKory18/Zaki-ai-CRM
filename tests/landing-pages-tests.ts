@@ -47,6 +47,9 @@ async function main() {
   // ─── Setup: find a company + product to work with ───
   const company = await db.company.findFirst({ orderBy: { createdAt: 'asc' } });
   if (!company) throw new Error('No company in DB — run the seed first');
+  // Customers belong to a store now; these scripts use the company's first.
+  const seedStore = await db.store.findFirst({ where: { companyId: company.id } });
+  if (!seedStore) throw new Error('no store to seed into');
   const product = await db.product.findFirst({
     where: { companyId: company.id, status: 'ACTIVE' },
     orderBy: { createdAt: 'asc' },
@@ -124,7 +127,7 @@ async function main() {
     if (product) {
       await db.landingPage.update({ where: { id: lp.id }, data: { isPublished: true } });
       const customer = await db.customer.upsert({
-        where: { companyId_phone: { companyId: company.id, phone: `0155${suffix.slice(-7)}` } },
+        where: { companyId_storeId_phone: { companyId: company.id, storeId: seedStore.id, phone: `0155${suffix.slice(-7)}` } },
         create: {
           companyId: company.id, fullName: 'LP Visitor', phone: `0155${suffix.slice(-7)}`,
           rawPhone: `0155${suffix.slice(-7)}`, address: 'Nasr City', city: 'Cairo',

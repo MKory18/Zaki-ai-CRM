@@ -14,6 +14,9 @@ async function runVerification() {
       data: { name: 'Verification Labs Ltd', currency: 'USD', country: 'Egypt' },
     });
   }
+  // Customers belong to a store now; this script uses the company's first.
+  const seedStore = await db.store.findFirst({ where: { companyId: company.id } });
+  if (!seedStore) throw new Error('no store to seed into');
   console.log('✅ Checkpoint 1: Multi-tenant Company verified:', company.name);
 
   // 2. Step 1: Create Product
@@ -101,7 +104,7 @@ async function runVerification() {
   console.log('✅ Phone Normalization verified: raw', rawPhone, '-> normalized', normPhone);
 
   const customer = await db.customer.upsert({
-    where: { companyId_phone: { companyId: company.id, phone: normPhone } },
+    where: { companyId_storeId_phone: { companyId: company.id, storeId: seedStore.id, phone: normPhone } },
     update: {},
     create: {
       companyId: company.id,

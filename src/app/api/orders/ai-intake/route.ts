@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { findOrCreateCustomer } from '@/lib/customer-identity';
 import { orderRefFields } from '@/lib/order-ref';
 import { resolveRegionId } from '@/lib/regions';
 import { computeCod } from '@/lib/money';
@@ -130,22 +131,16 @@ export async function POST(req: Request) {
         );
       }
 
-      let customer = await db.customer.findUnique({
-        where: { companyId_phone: { companyId, phone: normalizedPhone } },
+      // The same identity rule every other door uses.
+      const customer = await findOrCreateCustomer(db, {
+        companyId,
+        storeId,
+        phone: normalizedPhone,
+        rawPhone: p.phone.trim(),
+        fullName: p.customerName.trim(),
+        address: p.address?.trim() || '',
+        city: p.governorate?.trim() || '',
       });
-
-      if (!customer) {
-        customer = await db.customer.create({
-          data: {
-            companyId,
-            fullName: p.customerName.trim(),
-            phone: normalizedPhone,
-            rawPhone: p.phone.trim(),
-            address: p.address?.trim() || '',
-            city: p.governorate?.trim() || '',
-          },
-        });
-      }
 
       // Tenant-validate — products must belong to THIS company
       const product = await db.product.findFirst({
@@ -327,8 +322,10 @@ export async function POST(req: Request) {
     let existingCustomer = null;
     if (parsed.phone) {
       const normalizedPhone = normalizePhoneNumber(parsed.phone);
-      existingCustomer = await db.customer.findUnique({
-        where: { companyId_phone: { companyId, phone: normalizedPhone } },
+      // This store's customer. Telling an agent "3 previous orders" from
+      // another store's history is a fact about somebody else's shop.
+      existingCustomer = await db.customer.findFirst({
+        where: { companyId, storeId, phone: normalizedPhone },
         select: { fullName: true, totalOrders: true, city: true },
       });
     }

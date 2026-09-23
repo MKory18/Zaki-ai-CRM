@@ -88,10 +88,12 @@ for (const r of data) {
   if (!region) unmatchedRegions.add(regionText);
 
   const phone = String(r[idx.phone] ?? '').replace(/\D/g, '') || `000${ref}`;
-  let customer = await db.customer.findUnique({ where: { companyId_phone: { companyId, phone } } });
+  // Scoped to the store, like every other door — see lib/customer-identity.
+  let customer = await db.customer.findFirst({ where: { companyId, storeId: store.id, phone } });
   if (!customer) {
     customer = await db.customer.create({
       data: {
+        storeId: store.id,
         companyId,
         fullName: String(r[idx.receiver] ?? 'عميل').trim() || 'عميل',
         phone, rawPhone: String(r[idx.phone] ?? ''),

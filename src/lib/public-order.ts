@@ -1,4 +1,5 @@
 import { db } from './db';
+import { findOrCreateCustomer } from './customer-identity';
 import { normalizePhoneNumber } from './phone';
 import { orderRefFields } from './order-ref';
 import { computeCod } from './money';
@@ -163,35 +164,17 @@ export async function createPublicOrder(
     };
   }
 
-  // ─── Customer upsert (same system as manual orders) ───
-  let customer = await db.customer.findUnique({
-    where: { companyId_phone: { companyId, phone: normalizedPhone } },
+  // ─── Customer upsert (the same one every other door uses) ───
+  const customer = await findOrCreateCustomer(db, {
+    companyId,
+    storeId: store.id,
+    phone: normalizedPhone,
+    rawPhone: v.phone,
+    fullName: v.full_name,
+    address: v.address,
+    city: v.city,
+    notes: v.notes || null,
   });
-  if (!customer) {
-    try {
-      customer = await db.customer.create({
-        data: {
-          companyId,
-          fullName: v.full_name,
-          phone: normalizedPhone,
-          rawPhone: v.phone,
-          address: v.address,
-          city: v.city,
-          notes: v.notes || null,
-          totalOrders: 0,
-        },
-      });
-    } catch (e: unknown) {
-      // Two visitors submitting the same number at once: the loser reads the
-      // row the winner created rather than failing the order.
-      if ((e as { code?: string })?.code === 'P2002') {
-        customer = await db.customer.findUnique({
-          where: { companyId_phone: { companyId, phone: normalizedPhone } },
-        });
-      }
-      if (!customer) throw e;
-    }
-  }
 
   // ─── Create the REAL order (same Order model, same defaults) ───
   const unitCost = 0; // public orders have no batch context; finance finalizes later

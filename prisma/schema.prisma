@@ -316,6 +316,11 @@ model Offer {
 model Customer {
   id                 String    @id @default(uuid())
   companyId          String
+  /// Which store serves this person. The stores are separate businesses: the
+  /// same customer may buy from two of them, and each keeps its own record
+  /// and its own history. The BLACKLIST is company-wide by contract — a
+  /// blocked number that can order from the shop next door blocks nothing.
+  storeId            String?   @map("store_id")
   fullName           String
   phone              String    // Normalized digits only for duplicate search
   rawPhone           String    // Display formatted
@@ -335,10 +340,12 @@ model Customer {
   updatedAt          DateTime  @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Restrict)
   orders  Order[]
   whatsappConversations WhatsAppConversation[]
 
-  @@unique([companyId, phone])
+  @@unique([companyId, storeId, phone])
+  @@index([companyId, storeId])
   @@index([companyId, phone])
   @@map("customers")
 }
@@ -1323,6 +1330,7 @@ model Store {
   couriers        DeliveryProvider[]
   wallets         Wallet[]
   products        Product[]
+  customers       Customer[]
 
   @@unique([companyId, slug])
   @@unique([domain])

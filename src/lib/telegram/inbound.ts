@@ -12,6 +12,7 @@
  * so permanent failures are recorded as FAILED instead of thrown.
  */
 import { db } from '../db';
+import { findOrCreateCustomer } from '../customer-identity';
 import { isBlocked } from '../blacklist';
 import { normalizePhoneNumber } from '../phone';
 import { matchProduct, normalizeArabic } from '../order-parser';
@@ -254,35 +255,32 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
   // block stored from "+963…" would not match a local "0…".
   if (await isBlocked(db, companyId, parsed.phone ?? phone)) return review('CUSTOMER_BLOCKED');
 
-  // ── Customer matching / creation (same company only) ──
-  let customer = await db.customer.findUnique({ where: { companyId_phone: { companyId, phone } } });
-  if (!customer) {
-    try {
-      customer = await db.customer.create({
-        data: {
-          companyId,
-          fullName: customerName.slice(0, 80),
-          phone,
-          rawPhone: parsed.phone!.slice(0, 20),
-          address: address.slice(0, 200),
-          city: (parsed.governorate?.trim() || address).slice(0, 60),
-          totalOrders: 0,
-        },
-      });
-    } catch (e: any) {
-      if (e?.code === 'P2002') {
-        customer = await db.customer.findUnique({ where: { companyId_phone: { companyId, phone } } });
-      }
-      if (!customer) return review('INVALID_PHONE');
-    }
-  }
+  // ── Which store this message belongs to ──
+  //
+  // Resolved BEFORE the customer, because a customer belongs to a store.
+  // A source nobody has linked to one has no store, and a message from it
+  // cannot become anybody's customer or anybody's order — it goes to review
+  // rather than landing in whichever store happens to be open.
+  const storeId = message.sourceId
+    ? (await db.telegramSource.findUnique({ where: { id: message.sourceId }, select: { storeId: true } }))?.storeId ?? null
+    : null;
+  if (!storeId) return review('NO_STORE');
+
+  // ── Customer matching / creation (the shared one) ──
+  const customer = await findOrCreateCustomer(db, {
+    companyId,
+    storeId,
+    phone,
+    rawPhone: parsed.phone!.slice(0, 20),
+    fullName: customerName.slice(0, 80),
+    address: address.slice(0, 200),
+    city: (parsed.governorate?.trim() || address).slice(0, 60),
+  });
 
   // ── Order creation via the shared ingestion service (server-set price/status) ──
   const created = await createTelegramOrder({
     companyId,
-    storeId: message.sourceId
-      ? (await db.telegramSource.findUnique({ where: { id: message.sourceId }, select: { storeId: true } }))?.storeId ?? null
-      : null,
+    storeId,
     customer,
     product,
     quantity,

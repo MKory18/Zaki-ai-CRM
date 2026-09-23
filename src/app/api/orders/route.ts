@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { findOrCreateCustomer } from '@/lib/customer-identity';
 import { CORE_STATES, deriveCoreState, getZone, whereForState, type CoreState, type StateSource } from '@/lib/order-state';
 import { orderRefFields } from '@/lib/order-ref';
 import { computeCod } from '@/lib/money';
@@ -316,39 +317,17 @@ export async function POST(req: Request) {
         { status: 409 }
       );
     }
-    let customer = await db.customer.findUnique({
-      where: {
-        companyId_phone: {
-          companyId,
-          phone: normalizedPhone,
-        },
-      },
+    // The same identity rule every other door uses — see customer-identity.
+    const customer = await findOrCreateCustomer(db, {
+      companyId,
+      storeId,
+      phone: normalizedPhone,
+      rawPhone: customerPhone.trim(),
+      fullName: customerName.trim(),
+      altPhone: customerAltPhone?.trim() || null,
+      address: customerAddress?.trim() || '',
+      city: customerCity?.trim() || '',
     });
-
-    if (!customer) {
-      try {
-        customer = await db.customer.create({
-          data: {
-            companyId,
-            fullName: customerName.trim(),
-            phone: normalizedPhone,
-            rawPhone: customerPhone.trim(),
-            altPhone: customerAltPhone?.trim() || null,
-            address: customerAddress?.trim() || '',
-            city: customerCity?.trim() || 'Cairo',
-            totalOrders: 0,
-          },
-        });
-      } catch (e: any) {
-        // Concurrent create with the same phone → reuse the winner
-        if (e?.code === 'P2002') {
-          customer = await db.customer.findUnique({
-            where: { companyId_phone: { companyId, phone: normalizedPhone } },
-          });
-        }
-        if (!customer) throw e;
-      }
-    }
 
     // 2. Every product the order names, in one query — tenant-validated, so
     // an order can never reference another company's product.

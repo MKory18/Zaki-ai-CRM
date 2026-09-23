@@ -10,15 +10,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * asset being protected.
  */
 
-const { db, requireCompanyTenant, can, getPermissionScope } = vi.hoisted(() => ({
+const { db, requireCompanyTenant, requireContext, can, getPermissionScope } = vi.hoisted(() => ({
   db: { customer: { findMany: vi.fn() } },
   requireCompanyTenant: vi.fn(),
+  requireContext: vi.fn(),
   can: vi.fn(),
   getPermissionScope: vi.fn(),
 }));
 
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/auth', () => ({ requireCompanyTenant: (...a: unknown[]) => requireCompanyTenant(...a) }));
+vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/authorization', () => ({
   can: (...a: unknown[]) => can(...a),
   getPermissionScope: (...a: unknown[]) => getPermissionScope(...a),
@@ -30,13 +32,17 @@ import { GET } from './route';
 
 const COMPANY = 'c1';
 const USER = 'u-moderator';
+const STORE = 's1';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireCompanyTenant.mockResolvedValue({
+  const ctx = {
     user: { id: USER, role: 'MODERATOR', status: 'ACTIVE', permissions: [] },
     companyId: COMPANY,
-  });
+    storeId: STORE,
+  };
+  requireCompanyTenant.mockResolvedValue(ctx);
+  requireContext.mockResolvedValue(ctx);
   db.customer.findMany.mockResolvedValue([]);
 });
 

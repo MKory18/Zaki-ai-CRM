@@ -1,6 +1,8 @@
 ﻿import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
+import { findOrCreateCustomer } from '@/lib/customer-identity';
 import { can, getPermissionScope, requirePermission } from '@/lib/authorization';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit, redactCustomerForAudit } from '@/lib/audit';
@@ -51,7 +53,7 @@ const BASIC_CUSTOMER_SELECT = {
 
 export async function GET(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     // Permission-tiered PII: full data for customers.view, limited
     // call-relevant fields for customers.view_basic, 403 for everyone else.
@@ -66,7 +68,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('q')?.trim();
 
-    const whereClause: any = { companyId };
+    // This store's customers. The stores are separate businesses: one
+    // store's complaint about a person is not the other's to read.
+    const whereClause: any = { companyId, ...(storeId ? { storeId } : {}) };
 
     // OWN scope means the customers this person actually brought in: the
     // ones with at least one order they are the moderator of. A customer
@@ -102,7 +106,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('customers.create');
 
     const body = await req.json();
@@ -114,14 +118,10 @@ export async function POST(req: Request) {
 
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    // Duplicate detection based on normalized phone
-    const existing = await db.customer.findUnique({
-      where: {
-        companyId_phone: {
-          companyId,
-          phone: normalizedPhone,
-        },
-      },
+    // Duplicate detection within THIS store — the same person may be a
+    // customer of two of them, each with its own record.
+    const existing = await db.customer.findFirst({
+      where: { companyId, storeId, phone: normalizedPhone },
       include: {
         orders: {
           select: {

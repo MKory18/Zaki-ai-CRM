@@ -15,7 +15,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db, requireContext, requirePermission, logAudit, activeBlock, createNotification } = vi.hoisted(() => ({
   db: {
-    customer: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    customer: { findUnique: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     product: { findMany: vi.fn(), findFirst: vi.fn() },
     offer: { findFirst: vi.fn() },
     store: { findFirst: vi.fn() },
@@ -92,6 +92,7 @@ beforeEach(() => {
   requirePermission.mockResolvedValue({ id: 'u1', companyId: 'c1' });
   activeBlock.mockResolvedValue(null);
   db.customer.findUnique.mockResolvedValue({ id: 'cu1', fullName: 'محمد الحسن', totalOrders: 0 });
+  db.customer.findFirst.mockResolvedValue({ id: 'cu1', fullName: 'محمد الحسن', totalOrders: 0 });
   db.product.findMany.mockImplementation(async ({ where }: any) =>
     [CREAM, DROPS].filter((p) => where.id.in.includes(p.id))
   );
