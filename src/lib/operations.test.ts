@@ -71,7 +71,7 @@ describe('preparation is grouped by product', () => {
 });
 
 describe('shipment blocks', () => {
-  const order = { id: 'o1', companyId: 'c1', customerId: 'cust1', regionId: 'r1', deliveryProviderId: 'dp1' };
+  const order = { id: 'o1', companyId: 'c1', storeId: 's1', customerId: 'cust1', regionId: 'r1', deliveryProviderId: 'dp1' };
 
   it('is clean when nothing is wrong', async () => {
     db.orderItem.findMany.mockResolvedValue([{ productId: 'p1', productName: 'x', quantity: 1, freeQuantity: 0, reservedQty: 1 }]);

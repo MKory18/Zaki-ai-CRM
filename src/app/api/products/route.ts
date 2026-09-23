@@ -3,12 +3,13 @@ import { Prisma } from '@prisma/client';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { requirePermission, getPermissionScope } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     // Canonical gate — products.view, resolved to its effective scope so the
     // list query can filter at the SQL level (no JS filtering).
@@ -17,7 +18,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Forbidden: missing required permission products.view' }, { status: 403 });
     }
 
-    const where: Prisma.ProductWhereInput = { companyId };
+    // This store's catalogue. A store is a separate business here: its own
+    // goods, its own stock, its own shelf. A product from another store
+    // showing up in this list is one somebody could try to sell.
+    const where: Prisma.ProductWhereInput = { companyId, ...(storeId ? { storeId } : {}) };
     // Scope → SQL filters. CATEGORY/SPECIFIC read scopeIds that were
     // tenant-validated when the grant was written. ALL_COMPANY / OWN → no
     // extra filter (OWN is unsupported for products — documented in
@@ -117,7 +121,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('products.create');
 
     const body = await req.json();
@@ -127,14 +131,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Name and SKU are required' }, { status: 400 });
     }
 
-    // Check SKU uniqueness within company
-    const existing = await db.product.findUnique({
-      where: {
-        companyId_sku: {
-          companyId,
-          sku: sku.trim().toUpperCase(),
-        },
-      },
+    // A SKU identifies an article WITHIN A STORE. It was unique across the
+    // company, so two stores could not carry the same article under the
+    // code the supplier prints on the box.
+    const existing = await db.product.findFirst({
+      where: { companyId, storeId, sku: sku.trim().toUpperCase() },
+      select: { id: true },
     });
 
     if (existing) {
@@ -144,6 +146,9 @@ export async function POST(req: Request) {
     const product = await db.product.create({
       data: {
         companyId,
+        // From the session, never the body: a body that names its own store
+        // is a body that can name someone else's.
+        storeId,
         name: name.trim(),
       nameEn: nameEn?.trim() || null,
       descriptionEn: descriptionEn?.trim() || null,

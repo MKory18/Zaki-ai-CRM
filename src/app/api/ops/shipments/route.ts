@@ -70,7 +70,7 @@ export async function GET(req: Request) {
         id: true, orderNumber: true, merchantRef: true, createdAt: true, currency: true,
         shipHoldUntil: true, shipHoldReason: true,
         priceIncludesDelivery: true, deliveryFee: true, regionId: true, deliveryProviderId: true,
-        customerId: true, companyId: true, confirmationStatus: true, shippingStatus: true, shippedAt: true,
+        customerId: true, companyId: true, storeId: true, confirmationStatus: true, shippingStatus: true, shippedAt: true,
         customer: { select: { id: true, fullName: true, phone: true, city: true, totalOrders: true } },
         region: { select: { id: true, name: true } },
         items: { select: { productName: true, quantity: true, freeQuantity: true, unitPrice: true, discountShare: true, reservedQty: true } },
@@ -93,7 +93,7 @@ export async function GET(req: Request) {
 
       const blocks = await shipmentBlocks(
         db,
-        { id: order.id, companyId: order.companyId, customerId: order.customerId, regionId: order.regionId, deliveryProviderId: provider },
+        { id: order.id, companyId: order.companyId, storeId: order.storeId, customerId: order.customerId, regionId: order.regionId, deliveryProviderId: provider },
         { allowNegativeStock: country.allowNegativeStock, batchOrderIds: orders.map((o) => o.id) }
       );
 
@@ -137,7 +137,7 @@ export async function POST(req: Request) {
     const orders = await db.order.findMany({
       where: { id: { in: orderIds }, companyId, storeId },
       select: {
-        id: true, orderNumber: true, companyId: true, customerId: true, regionId: true,
+        id: true, orderNumber: true, companyId: true, storeId: true, customerId: true, regionId: true,
         confirmationStatus: true, shippingStatus: true, shippedAt: true, priceIncludesDelivery: true,
         deliveryProviderId: true, version: true,
         items: { select: { quantity: true, freeQuantity: true, reservedQty: true, unitPrice: true, discountShare: true } },
@@ -155,7 +155,7 @@ export async function POST(req: Request) {
 
       const blocks = await shipmentBlocks(
         db,
-        { id: order.id, companyId: order.companyId, customerId: order.customerId, regionId: order.regionId, deliveryProviderId },
+        { id: order.id, companyId: order.companyId, storeId: order.storeId, customerId: order.customerId, regionId: order.regionId, deliveryProviderId },
         { allowNegativeStock: country.allowNegativeStock, batchOrderIds: orderIds }
       );
       for (const block of blocks) {

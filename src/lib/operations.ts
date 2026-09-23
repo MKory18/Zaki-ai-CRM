@@ -105,7 +105,7 @@ export async function preparationGroups(tx: Tx, scope: { companyId: string; stor
     // Reservations of these very orders are part of "available": they are
     // already earmarked for them, not competing with them.
     const reservedHere = group.lines.reduce((s, l) => s + l.reservedQty, 0);
-    const free = await availableStock(tx, scope.companyId, group.productId);
+    const free = await availableStock(tx, scope.companyId, group.productId, undefined, scope.storeId);
     group.available = free + reservedHere;
     group.shortage = Math.max(0, group.required - group.available);
   }
@@ -141,6 +141,8 @@ export async function shipmentBlocks(
   order: {
     id: string;
     companyId: string;
+    /** Whose stock this order may draw on. */
+    storeId: string | null;
     customerId: string;
     regionId: string | null;
     deliveryProviderId: string | null;
@@ -202,7 +204,9 @@ export async function shipmentBlocks(
   for (const line of lines) {
     const need = line.quantity + line.freeQuantity - line.reservedQty;
     if (need <= 0) continue;
-    const free = await availableStock(tx, order.companyId, line.productId, order.id);
+    // This store's shelf only. Two stores drawing on one pile can each
+    // promise a customer what the other has already taken.
+    const free = await availableStock(tx, order.companyId, line.productId, order.id, order.storeId);
     if (free < need) {
       blocks.push({
         code: 'STOCK_SHORTAGE',
