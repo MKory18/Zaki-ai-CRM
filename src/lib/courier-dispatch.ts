@@ -1,5 +1,6 @@
 import { db } from './db';
 import { adapterFor } from './couriers';
+import { courierBelongsToStore } from './courier-scope';
 import { logAudit } from './audit';
 
 /**
@@ -67,11 +68,24 @@ export async function dispatchBatch(input: {
       id: true,
       batchNumber: true,
       provider: {
-        select: { id: true, code: true, adapterCode: true, apiEnabled: true, apiConfig: true, apiCredentials: true },
+        select: { id: true, code: true, adapterCode: true, apiEnabled: true, apiConfig: true, apiCredentials: true, companyId: true, storeId: true },
       },
     },
   });
   if (!batch) throw new Error('BATCH_NOT_FOUND');
+
+  /**
+   * The courier must be this store's, or one shared by all of them.
+   *
+   * Each store holds its own account with the same courier, so using
+   * another store's row creates the parcel under another store's login —
+   * and the collection, the statement and the money come back against that
+   * account. The screens only offer the right ones; this is the check that
+   * holds when the endpoint is called directly.
+   */
+  if (batch.provider && !courierBelongsToStore(batch.provider, input.companyId, input.storeId)) {
+    throw new Error('COURIER_NOT_IN_STORE');
+  }
 
   const adapter = adapterFor(batch.provider);
 

@@ -804,8 +804,15 @@ model OrderContactAttempt {
 model DeliveryProvider {
   id         String   @id @default(uuid())
   companyId  String
+  /// Which store this courier belongs to. NULL = every store in the company,
+  /// which is what every row meant before stores had their own couriers.
+  /// A separate store is a separate business here: its own account with the
+  /// courier, its own fees, its own statements.
+  storeId    String?  @map("store_id")
   name       String
-  code       String   @unique
+  /// Unique within the company, not across the platform: "BASHA" is a name
+  /// this company uses, not one it takes from everybody else.
+  code       String
   // COMPANY = a shipping company with its own pipeline and statements.
   // AGENT   = a مندوب: immediate delivery, settled by hand, and the only
   //           party an order may be moved away from without a replacement.
@@ -839,6 +846,7 @@ model DeliveryProvider {
   webhookSecretHash    String?   @unique @map("webhook_secret_hash")
   webhookSecretSetAt   DateTime? @map("webhook_secret_set_at")
   webhookLastSeenAt    DateTime? @map("webhook_last_seen_at")
+  store      Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -850,6 +858,8 @@ model DeliveryProvider {
   fees    DeliveryFee[]
 
   @@index([companyId, isActive])
+  @@unique([companyId, code])
+  @@index([companyId, storeId])
   @@map("delivery_providers")
 }
 
@@ -1297,6 +1307,7 @@ model Store {
   landingPages    LandingPage[]
   telegramSources TelegramSource[]
   shippingBatches ShippingBatch[]
+  couriers        DeliveryProvider[]
 
   @@unique([companyId, slug])
   @@unique([domain])

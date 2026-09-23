@@ -99,6 +99,37 @@ export function adapterFor(provider: ProviderLike | null | undefined): CourierAd
  * day we set the URL up, weeks before their API login is in our hands. Tying
  * the vocabulary to the password would silently drop every one of them.
  */
+/**
+ * The platforms a courier can be wired to, for the picker on the settings
+ * screen.
+ *
+ * A courier is not a platform. Basha Delivery ships through LogesTechs;
+ * another courier could ship through the same platform under a different
+ * account, and a third could have no platform at all and be worked by hand.
+ * So the screen asks two questions — who is the courier, and what do they
+ * run on — instead of assuming the name answers both.
+ *
+ * This list is the ONE place that knows what is wired. A new adapter is
+ * added here and appears in the picker; nothing else needs touching.
+ */
+export const COURIER_PLATFORMS = [
+  {
+    code: 'LOGESTECHS',
+    name: 'LogesTechs',
+    /** What the account entry form will ask for, said plainly. */
+    needs: 'بريد وكلمة مرور ورقم شركة لديهم',
+    automated: true,
+  },
+  {
+    code: 'MANUAL',
+    name: 'يدوي — بلا ربط',
+    needs: 'لا شيء: الشحنات تُنشأ والبوالص تُطبع من عندنا',
+    automated: false,
+  },
+] as const;
+
+export type CourierPlatformCode = (typeof COURIER_PLATFORMS)[number]['code'];
+
 export function mapStatusFor(
   adapterCode: string | null | undefined,
   rawStatus: string

@@ -2,11 +2,12 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bike, Loader2, Plus, Truck } from 'lucide-react';
+import { Bike, Check, Loader2, Pencil, Plus, Store as StoreIcon, Trash2, Truck, X } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CourierCredentials } from '@/components/settings/CourierCredentials';
 import { CourierWebhook } from '@/components/settings/CourierWebhook';
 import { ContactButtons } from '@/components/orders/ContactButtons';
+import { COURIER_PLATFORMS } from '@/lib/couriers';
 
 /**
  * /settings/couriers — the shipping companies themselves. Their per-region
@@ -22,13 +23,27 @@ interface Courier {
   phone: string | null;
   email: string | null;
   isActive: boolean;
+  /** null = every store in the company, which is what they all were. */
+  storeId?: string | null;
+  store?: { name: string } | null;
+  /** Which platform it ships on; null = worked by hand. */
+  adapterCode?: string | null;
+}
+
+interface StoreRow {
+  id: string;
+  name: string;
 }
 
 export function CouriersScreen() {
   const [rows, setRows] = useState<Courier[] | null>(null);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT' });
+  const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT', storeId: '', adapterCode: 'MANUAL' });
   const [accountFor, setAccountFor] = useState<string | null>(null);
+  const [stores, setStores] = useState<StoreRow[]>([]);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [edit, setEdit] = useState({ name: '', phone: '', storeId: '' });
+  const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -43,6 +58,10 @@ export function CouriersScreen() {
 
   useEffect(() => {
     void load();
+    // The store list is what makes "whose courier is this?" answerable.
+    apiJson<{ stores?: StoreRow[] }>('/api/geo/stores')
+      .then((d) => setStores(d.stores ?? []))
+      .catch(() => setStores([]));
   }, [load]);
 
   const create = async (e: React.FormEvent) => {
@@ -53,9 +72,16 @@ export function CouriersScreen() {
       await apiJson('/api/delivery-providers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), code: form.code.trim().toUpperCase(), kind: form.kind, phone: form.phone.trim() || undefined }),
+        body: JSON.stringify({
+          name: form.name.trim(),
+          code: form.code.trim().toUpperCase(),
+          kind: form.kind,
+          phone: form.phone.trim() || undefined,
+          storeId: form.storeId || null,
+          adapterCode: form.adapterCode,
+        }),
       });
-      setForm({ name: '', code: '', phone: '', kind: 'COMPANY' });
+      setForm({ name: '', code: '', phone: '', kind: 'COMPANY', storeId: '', adapterCode: 'MANUAL' });
       setAdding(false);
       await load();
     } catch (e) {
@@ -76,6 +102,58 @@ export function CouriersScreen() {
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحديث');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startEdit = (c: Courier) => {
+    setEditing(c.id);
+    setEdit({ name: c.name, phone: c.phone ?? '', storeId: c.storeId ?? '' });
+    setNote(null);
+  };
+
+  const saveEdit = async (id: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiJson(`/api/delivery-providers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: edit.name.trim(),
+          phone: edit.phone.trim(),
+          storeId: edit.storeId || null,
+        }),
+      });
+      setEditing(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Delete asks the server, which decides. Anything with history is
+   * deactivated instead and says what is holding it — the orders and
+   * statements that name it are not ours to rewrite.
+   */
+  const remove = async (c: Courier) => {
+    if (!confirm(`حذف «${c.name}»؟ إن كانت مرتبطة بطلبات أو كشوف فستُعطَّل بدل الحذف، والسجلّات القديمة تبقى كما هي.`)) return;
+    setBusy(true);
+    setError(null);
+    setNote(null);
+    try {
+      const d = await apiJson<{ deleted?: boolean; deactivated?: boolean; message?: string }>(
+        `/api/delivery-providers/${c.id}`,
+        { method: 'DELETE' }
+      );
+      setNote(d.message ?? null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر الحذف');
     } finally {
       setBusy(false);
     }
@@ -122,11 +200,58 @@ export function CouriersScreen() {
               المندوب فوري وتسويته يدوية، وهو الوحيد الذي يمكن سحب الشحنة منه مباشرة.
             </span>
           </label>
+          {/* A courier is not a platform. "باشا" is who ships; LogesTechs is
+              what they ship ON, and another courier could run on the same
+              platform under a different account. An agent has neither. */}
+          {form.kind !== 'AGENT' && (
+            <label className="block">
+              <span className="block text-xs font-medium text-[#364152] mb-1">تعمل على منصّة</span>
+              <select
+                value={form.adapterCode}
+                onChange={(e) => setForm({ ...form, adapterCode: e.target.value })}
+                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+              >
+                {COURIER_PLATFORMS.map((p) => (
+                  <option key={p.code} value={p.code}>{p.name}</option>
+                ))}
+              </select>
+              <span className="block text-[11px] text-[#9aa4b2] mt-1">
+                {COURIER_PLATFORMS.find((p) => p.code === form.adapterCode)?.needs}
+              </span>
+            </label>
+          )}
+
+          <label className="block">
+            <span className="block text-xs font-medium text-[#364152] mb-1">المتجر</span>
+            <select
+              value={form.storeId}
+              onChange={(e) => setForm({ ...form, storeId: e.target.value })}
+              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            >
+              <option value="">كل المتاجر</option>
+              {stores.map((st) => (
+                <option key={st.id} value={st.id}>{st.name}</option>
+              ))}
+            </select>
+            <span className="block text-[11px] text-[#9aa4b2] mt-1">
+              لكل متجر حسابه الخاص لدى الشركة. اخترْ متجراً حين يكون الحساب له وحده،
+              و«كل المتاجر» حين يتشاركونه.
+            </span>
+          </label>
           <div className="flex gap-2 items-end">
             <button type="submit" disabled={busy} className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm disabled:opacity-60">حفظ</button>
             <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]">إلغاء</button>
           </div>
         </form>
+      )}
+
+      {/* What the server decided, in its words: deactivated and why, or
+          really deleted. Guessing on the client would eventually disagree
+          with what actually happened. */}
+      {note && (
+        <p className="rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2 text-xs text-[#364152]">
+          {note}
+        </p>
       )}
 
       <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
@@ -136,8 +261,10 @@ export function CouriersScreen() {
               <th className="text-right font-medium px-4 py-2">الجهة</th>
               <th className="text-right font-medium px-4 py-2">النوع</th>
               <th className="text-right font-medium px-4 py-2">الرمز</th>
+              <th className="text-right font-medium px-4 py-2">المتجر</th>
               <th className="text-right font-medium px-4 py-2">الهاتف</th>
               <th className="text-right font-medium px-4 py-2">الحالة</th>
+              <th className="text-right font-medium px-4 py-2"> </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#e3e8ef]">
@@ -149,7 +276,15 @@ export function CouriersScreen() {
                   ) : (
                     <Truck className="w-4 h-4 text-[#697586]" />
                   )}
-                  {c.name}
+                  {editing === c.id ? (
+                    <input
+                      value={edit.name}
+                      onChange={(e) => setEdit({ ...edit, name: e.target.value })}
+                      className="h-8 w-40 rounded-[8px] border border-[#e3e8ef] px-2 text-sm"
+                    />
+                  ) : (
+                    c.name
+                  )}
                 </td>
                 <td className="px-4 py-2">
                   <span className={`text-[11px] px-2 py-0.5 rounded-full border ${
@@ -160,9 +295,49 @@ export function CouriersScreen() {
                     {c.kind === 'AGENT' ? 'مندوب' : 'شركة شحن'}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-[#697586]" dir="ltr">{c.code}</td>
                 <td className="px-4 py-2 text-[#697586]">
-                  {c.phone ? (
+                  <span dir="ltr" className="block">{c.code}</span>
+                  {/* Which platform it runs on, under its own code — the two
+                      belong together and neither is the other. */}
+                  {c.adapterCode && (
+                    <span dir="ltr" className="mt-0.5 block text-[10px] text-[#9aa4b2]">
+                      {COURIER_PLATFORMS.find((p) => p.code === c.adapterCode)?.name ?? c.adapterCode}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-2">
+                  {editing === c.id ? (
+                    <select
+                      value={edit.storeId}
+                      onChange={(e) => setEdit({ ...edit, storeId: e.target.value })}
+                      className="h-8 w-40 rounded-[8px] border border-[#e3e8ef] px-2 text-xs"
+                    >
+                      <option value="">كل المتاجر</option>
+                      {stores.map((st) => (
+                        <option key={st.id} value={st.id}>{st.name}</option>
+                      ))}
+                    </select>
+                  ) : c.store ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[#e3e8ef] bg-[#f8fafc] px-2 py-0.5 text-[11px] text-[#364152]">
+                      <StoreIcon className="h-3 w-3" />
+                      {c.store.name}
+                    </span>
+                  ) : (
+                    /* Shared is the default and the quiet case — it does not
+                       need a badge competing with the ones that are not. */
+                    <span className="text-[11px] text-[#9aa4b2]">كل المتاجر</span>
+                  )}
+                </td>
+                <td className="px-4 py-2 text-[#697586]">
+                  {editing === c.id ? (
+                    <input
+                      value={edit.phone}
+                      onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
+                      dir="ltr"
+                      placeholder="—"
+                      className="h-8 w-32 rounded-[8px] border border-[#e3e8ef] px-2 text-sm"
+                    />
+                  ) : c.phone ? (
                     <span className="inline-flex items-center gap-2">
                       <span dir="ltr">{c.phone}</span>
                       {/* The same buttons the customer rows use, without the
@@ -191,12 +366,56 @@ export function CouriersScreen() {
                     )}
                   </div>
                 </td>
+                <td className="px-4 py-2">
+                  {/* Edit and delete sit apart from the account panel: one
+                      changes who this courier IS, the other changes how we
+                      talk to them. */}
+                  <div className="flex items-center justify-end gap-1">
+                    {editing === c.id ? (
+                      <>
+                        <button
+                          onClick={() => saveEdit(c.id)}
+                          disabled={busy || !edit.name.trim()}
+                          title="احفظ"
+                          className="cursor-pointer rounded-lg p-1.5 text-[#00a344] hover:bg-[#e6f9ee] disabled:opacity-40"
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setEditing(null)}
+                          title="ألغِ"
+                          className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#f8fafc]"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startEdit(c)}
+                          title="عدّل"
+                          className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#fdf5fa] hover:text-[#b8256e]"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => remove(c)}
+                          disabled={busy}
+                          title="احذف"
+                          className="cursor-pointer rounded-lg p-1.5 text-[#9aa4b2] hover:bg-[#feecee] hover:text-[#fb323f] disabled:opacity-40"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
             {rows.map((c) =>
               accountFor === c.id ? (
                 <tr key={`${c.id}-account`}>
-                  <td colSpan={5} className="bg-[#f8fafc] px-4 py-4 space-y-3">
+                  <td colSpan={7} className="bg-[#f8fafc] px-4 py-4 space-y-3">
                     <CourierCredentials providerId={c.id} />
                     {/* Statuses can arrive two ways; both belong to the
                         account, so both live on the account panel. */}
@@ -207,7 +426,7 @@ export function CouriersScreen() {
             )}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شركات شحن ولا مندوبون بعد.</td>
+                <td colSpan={7} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شركات شحن ولا مندوبون بعد.</td>
               </tr>
             )}
           </tbody>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { courierScope } from '@/lib/courier-scope';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
@@ -31,13 +32,17 @@ const upsertSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    const { companyId, countryId } = await requireContext();
+    const { companyId, countryId, storeId } = await requireContext();
     await requirePermission('settings.view');
 
     const courier = new URL(req.url).searchParams.get('courier');
 
     const [providers, regions, fees] = await Promise.all([
-      db.deliveryProvider.findMany({ where: { companyId, isActive: true }, select: { id: true, name: true, code: true } }),
+      db.deliveryProvider.findMany({
+        // Fees belong to the store's own contract with the courier.
+        where: { ...courierScope(companyId, storeId), isActive: true },
+        select: { id: true, name: true, code: true },
+      }),
       db.region.findMany({ where: { countryId, isActive: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
       db.deliveryFee.findMany({
         where: { companyId, countryId, ...(courier ? { deliveryProviderId: courier } : {}) },

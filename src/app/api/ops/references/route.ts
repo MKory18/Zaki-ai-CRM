@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { courierScope } from '@/lib/courier-scope';
 import { can } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 
@@ -19,14 +20,15 @@ const OPS_PERMISSIONS = [
 
 export async function GET() {
   try {
-    const { user, companyId, countryId } = await requireContext();
+    const { user, companyId, countryId, storeId } = await requireContext();
     if (!OPS_PERMISSIONS.some((p) => can(user, p))) {
       return NextResponse.json({ error: 'Forbidden: missing an operations permission' }, { status: 403 });
     }
 
     const [providers, regions] = await Promise.all([
       db.deliveryProvider.findMany({
-        where: { companyId, isActive: true },
+        // Only this store's couriers, plus the ones shared by all.
+        where: { ...courierScope(companyId, storeId), isActive: true },
         orderBy: { name: 'asc' },
         select: { id: true, name: true, code: true, kind: true },
       }),

@@ -40,7 +40,8 @@ const input = { batchId: 'b1', companyId: 'c1', storeId: 's1', userId: 'u1' };
 beforeEach(() => {
   vi.clearAllMocks();
   db.shippingBatch.findFirst.mockResolvedValue({
-    id: 'b1', batchNumber: 'BATCH-2026-0001', provider: { id: 'p1', code: 'BASHA', apiEnabled: true },
+    id: 'b1', batchNumber: 'BATCH-2026-0001',
+    provider: { id: 'p1', code: 'BASHA', apiEnabled: true, companyId: 'c1', storeId: null },
   });
   adapterFor.mockReturnValue({ code: 'LOGESTECHS', automated: true, createShipment });
   createShipment.mockResolvedValue({ trackingNumber: 'BC-777' });
@@ -174,5 +175,41 @@ describe("addressing a parcel with the courier's own city id", () => {
     ]);
     await dispatchBatch(input);
     expect(db.deliveryFee.findMany).toHaveBeenCalledOnce();
+  });
+});
+
+
+/**
+ * Each store holds its OWN account with the same courier. Creating a parcel
+ * under another store's row means their login, their statement and their
+ * money — discovered when the collection lands in the wrong books.
+ *
+ * The pickers only offer the right couriers. These are the calls that go
+ * round the pickers.
+ */
+describe("a courier that is not this store's", () => {
+  it('refuses a courier owned by another store', async () => {
+    db.shippingBatch.findFirst.mockResolvedValue({
+      id: 'b1', batchNumber: 'BATCH-2026-0001',
+      provider: { id: 'p1', code: 'BASHA', apiEnabled: true, companyId: 'c1', storeId: 'OTHER-STORE' },
+    });
+    await expect(dispatchBatch(input)).rejects.toThrow('COURIER_NOT_IN_STORE');
+    expect(createShipment).not.toHaveBeenCalled();
+  });
+
+  it('allows one shared across every store', async () => {
+    db.order.findMany.mockResolvedValue([order()]);
+    await dispatchBatch(input);
+    expect(createShipment).toHaveBeenCalledOnce();
+  });
+
+  it("allows the store's own", async () => {
+    db.shippingBatch.findFirst.mockResolvedValue({
+      id: 'b1', batchNumber: 'BATCH-2026-0001',
+      provider: { id: 'p1', code: 'BASHA', apiEnabled: true, companyId: 'c1', storeId: 's1' },
+    });
+    db.order.findMany.mockResolvedValue([order()]);
+    await dispatchBatch(input);
+    expect(createShipment).toHaveBeenCalledOnce();
   });
 });
