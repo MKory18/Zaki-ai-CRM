@@ -77,6 +77,9 @@ export function BlockBuilder(props: Props) {
   };
 
   /** Which row is under the cursor right now, for the drop line. */
+  /** Each block's row in the side list, so a click on the page can reach it. */
+  const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
+
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
@@ -192,6 +195,7 @@ export function BlockBuilder(props: Props) {
             {sections.map((s, i) => (
               <li
                 key={s.id}
+                ref={(el) => { rowRefs.current[s.id] = el; }}
                 onDragOver={(e) => {
                   if (dragFrom === null) return;
                   e.preventDefault();
@@ -383,6 +387,35 @@ export function BlockBuilder(props: Props) {
             <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS }} />
             <PageBlocks
               sections={sections}
+              /**
+               * Touch the block on the page to edit it.
+               *
+               * Hunting for a row in a list of eighteen, to change the thing
+               * already under the cursor, is the step this removes. Passed
+               * only here: the published page gets the same renderer with
+               * no selection, so it carries no outlines and no listeners.
+               */
+              selection={{
+                activeId: openId,
+                label: (s) => SECTION_LABEL[s.type],
+                onSelect: (id) => {
+                  setOpenId(id);
+                  // Open its panel AND bring it into view — selecting
+                  // something whose controls are off-screen is half a click.
+                  requestAnimationFrame(() =>
+                    rowRefs.current[id]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+                  );
+                },
+                onMove: (id, by) => {
+                  const i = sections.findIndex((x) => x.id === id);
+                  if (i >= 0) moveTo(i, i + by);
+                },
+                onToggle: (id) => {
+                  const b = sections.find((x) => x.id === id);
+                  if (b) patch(id, { enabled: !b.enabled });
+                },
+                onRemove: (id) => onSections(sections.filter((x) => x.id !== id)),
+              }}
               ctx={{
                 palette,
                 productName: props.product?.name || 'اسم المنتج',

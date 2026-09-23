@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Star, ShieldCheck, Truck, Wallet, Phone } from 'lucide-react';
+import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2 } from 'lucide-react';
 import type { LandingSection } from '@/lib/landing-sections';
 import { lookStyles } from '@/lib/block-look';
 import type { Palette } from '@/lib/landing-theme';
@@ -34,16 +34,56 @@ export interface BlockContext {
   form: React.ReactNode;
 }
 
-export function PageBlocks({ sections, ctx }: { sections: LandingSection[]; ctx: BlockContext }) {
+/**
+ * Picking a block by touching it, rather than hunting for its row.
+ *
+ * Passed ONLY by the builder. The published page never receives it, so the
+ * customer's page carries no outlines, no listeners and no chrome — the
+ * same renderer draws both, which is the whole reason the preview can be
+ * trusted.
+ */
+export interface BlockSelection {
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  /** The block's Arabic name, for the badge on hover. */
+  label: (s: LandingSection) => string;
+  onMove?: (id: string, by: -1 | 1) => void;
+  onToggle?: (id: string) => void;
+  onRemove?: (id: string) => void;
+}
+
+export function PageBlocks({
+  sections,
+  ctx,
+  selection,
+}: {
+  sections: LandingSection[];
+  ctx: BlockContext;
+  selection?: BlockSelection;
+}) {
+  const shown = selection ? sections : sections.filter((s) => s.enabled);
+
   return (
     <>
-      {sections
-        .filter((s) => s.enabled)
-        .map((s) => (
-          <Dressed key={s.id} section={s}>
+      {shown.map((s, i) => {
+        const block = (
+          <Dressed section={s}>
             <Block section={s} ctx={ctx} />
           </Dressed>
-        ))}
+        );
+        if (!selection) return <React.Fragment key={s.id}>{block}</React.Fragment>;
+        return (
+          <Selectable
+            key={s.id}
+            section={s}
+            selection={selection}
+            first={i === 0}
+            last={i === shown.length - 1}
+          >
+            {block}
+          </Selectable>
+        );
+      })}
     </>
   );
 }
@@ -313,5 +353,128 @@ function Urgency({ section: s, ctx }: { section: Extract<LandingSection, { type:
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * The outline, the name and the handles that appear around a block in the
+ * builder — and only there.
+ *
+ * Hover shows what this is; clicking makes it the one being edited. The
+ * handles are the three things wanted at the moment of pointing at
+ * something: move it, hide it, remove it. Everything else stays in the
+ * panel, because a toolbar with nine buttons on it is a toolbar nobody
+ * reads.
+ *
+ * A hidden block still draws here, dimmed — it has to, or "show it again"
+ * means finding a row for something invisible.
+ */
+function Selectable({
+  section: s,
+  selection,
+  first,
+  last,
+  children,
+}: {
+  section: LandingSection;
+  selection: BlockSelection;
+  first: boolean;
+  last: boolean;
+  children: React.ReactNode;
+}) {
+  const active = selection.activeId === s.id;
+  const off = !s.enabled;
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={(e) => {
+        e.stopPropagation();
+        selection.onSelect(s.id);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selection.onSelect(s.id);
+        }
+      }}
+      className={`group relative cursor-pointer outline-none transition-[box-shadow] ${
+        active ? 'z-10 shadow-[inset_0_0_0_2px_#b8256e]' : 'hover:shadow-[inset_0_0_0_2px_#f2c9dd]'
+      }`}
+      style={off ? { opacity: 0.45 } : undefined}
+    >
+      {/* The name, on hover or while selected — placed inside the block so a
+          tall one is still labelled where the cursor is. */}
+      <span
+        className={`pointer-events-none absolute start-2 top-2 z-20 rounded-md px-2 py-0.5 text-[10px] font-semibold text-white transition-opacity ${
+          active ? 'bg-[#b8256e] opacity-100' : 'bg-[#121926]/70 opacity-0 group-hover:opacity-100'
+        }`}
+      >
+        {selection.label(s)}
+        {off && ' — مخفي'}
+      </span>
+
+      {active && (
+        <span
+          className="absolute end-2 top-2 z-20 flex items-center gap-1 rounded-lg bg-white/95 p-1 shadow-md ring-1 ring-[#e3e8ef]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Handle
+            title="لأعلى"
+            disabled={first}
+            onClick={() => selection.onMove?.(s.id, -1)}
+            icon={<ChevronUp className="h-3.5 w-3.5" />}
+          />
+          <Handle
+            title="لأسفل"
+            disabled={last}
+            onClick={() => selection.onMove?.(s.id, 1)}
+            icon={<ChevronDown className="h-3.5 w-3.5" />}
+          />
+          <Handle
+            title={s.enabled ? 'إخفاء' : 'إظهار'}
+            onClick={() => selection.onToggle?.(s.id)}
+            icon={s.enabled ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          />
+          <Handle
+            title="حذف"
+            danger
+            onClick={() => selection.onRemove?.(s.id)}
+            icon={<Trash2 className="h-3.5 w-3.5" />}
+          />
+        </span>
+      )}
+
+      {children}
+    </div>
+  );
+}
+
+function Handle({
+  title,
+  icon,
+  onClick,
+  disabled,
+  danger,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      className={`cursor-pointer rounded p-1 disabled:cursor-default disabled:opacity-30 ${
+        danger ? 'text-[#fb323f] hover:bg-[#feecee]' : 'text-[#364152] hover:bg-[#eef2f6]'
+      }`}
+    >
+      {icon}
+    </button>
   );
 }
