@@ -56,6 +56,8 @@ export interface BlockSelection {
   onDuplicate?: (id: string) => void;
   /** False for a block the page may only hold one of. */
   canDuplicate?: (s: LandingSection) => boolean;
+  /** The look controls, rendered in the same bar as the handles. */
+  toolbar?: (s: LandingSection) => React.ReactNode;
 }
 
 export function PageBlocks({
@@ -422,9 +424,13 @@ function Selectable({
         {off && ' — مخفي'}
       </span>
 
+      {/* ONE bar, on the block. A strip pinned to the top of the editor
+          scrolled away the moment the page did, so styling a block halfway
+          down meant scrolling back up to reach its controls. Here it
+          travels with what it changes and is never not there. */}
       {active && (
         <span
-          className="absolute end-2 top-2 z-20 flex items-center gap-1 rounded-lg bg-white/95 p-1 shadow-md ring-1 ring-[#e3e8ef]"
+          className="absolute end-2 top-2 z-20 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-1 rounded-lg bg-white/95 p-1 shadow-md ring-1 ring-[#e3e8ef] backdrop-blur"
           onClick={(e) => e.stopPropagation()}
         >
           <Handle
@@ -464,6 +470,12 @@ function Selectable({
             onClick={() => selection.onRemove?.(s.id)}
             icon={<Trash2 className="h-3.5 w-3.5" />}
           />
+          {selection.toolbar && (
+            <>
+              <span className="mx-0.5 h-4 w-px bg-[#e3e8ef]" />
+              {selection.toolbar(s)}
+            </>
+          )}
         </span>
       )}
 

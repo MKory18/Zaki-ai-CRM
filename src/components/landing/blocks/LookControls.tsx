@@ -61,6 +61,14 @@ export function LookControls({
   /** Uploads an image and returns its URL — the page's own uploader. */
   onUpload?: (file: File) => Promise<string | null>;
 }) {
+  /**
+   * Folded until asked for.
+   *
+   * Unfolded, this is twenty-odd controls riding on a bar that sits on top
+   * of the block — it would cover the thing being styled. Most edits are a
+   * word or a reorder and never open it at all.
+   */
+  const [open, setOpen] = useState<'layout' | 'text' | 'bg' | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bg = look.background;
@@ -107,9 +115,26 @@ export function LookControls({
     }
   };
 
+  const tab = (key: 'layout' | 'text' | 'bg', label: string, Icon: typeof AlignCenter) => (
+    <button
+      onClick={() => setOpen(open === key ? null : key)}
+      title={label}
+      className={`${CHIP} ${open === key ? ON : OFF}`}
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
+  );
+
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      {/* Three doors, not twenty controls. */}
+      {tab('layout', 'التنسيق — الاتساع والمحاذاة والتباعد', AlignCenter)}
+      {tab('text', 'الخط والحجم واللون', Type)}
+      {tab('bg', 'الخلفية', Palette)}
+
       {/* ── الاتساع والمحاذاة والتباعد ── */}
+      {open === 'layout' && (
+      <>
       <Row label="الاتساع">
         {WIDTHS.map((w) => (
           <button key={w.key} onClick={() => set({ width: w.key })} className={`${CHIP} ${look.width === w.key ? ON : OFF}`}>
@@ -138,7 +163,12 @@ export function LookControls({
         ))}
       </Row>
 
+      </>
+      )}
+
       {/* ── الخط ── */}
+      {open === 'text' && (
+      <>
       <Row label="الخط">
         <select
           value={text.font}
@@ -178,7 +208,12 @@ export function LookControls({
         />
       </Row>
 
+      </>
+      )}
+
       {/* ── الخلفية ── */}
+      {open === 'bg' && (
+      <>
       <Row label="الخلفية">
         {([
           ['none', 'بلا'],
@@ -270,6 +305,8 @@ export function LookControls({
             </span>
           </Row>
         </>
+      )}
+      </>
       )}
     </div>
   );

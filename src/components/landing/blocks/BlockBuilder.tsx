@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Eye, EyeOff, Trash2, Plus, Upload, Loader2, GripVertical,
   Monitor, Smartphone, X, Paintbrush,
@@ -80,8 +80,15 @@ export function BlockBuilder(props: Props) {
   /** Which row is under the cursor right now, for the drop line. */
   /** Each block's row in the side list, so a click on the page can reach it. */
   const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
-  /** The preview surface — where the seller types directly on the page. */
-  const canvasRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * The preview surface, held in STATE rather than a ref.
+   *
+   * A ref's `.current` is read while rendering, and on the first render it
+   * is still null — attaching it does not cause another render, so the hook
+   * below would have run once against nothing and never again. A callback
+   * ref that sets state re-runs it the moment the element exists.
+   */
+  const [canvas, setCanvas] = useState<HTMLDivElement | null>(null);
 
   /** The block whose look the bar above the page is editing. */
   const openBlock = sections.find((b) => b.id === openId) ?? null;
@@ -92,9 +99,13 @@ export function BlockBuilder(props: Props) {
    * Only inside the selected block, and only on the texts the seller
    * writes — a price read from the catalogue is not his to type over.
    */
-  useInlineEdit(canvasRef.current, openId, (id, field, value) =>
-    patch(id, { [field]: value })
+  const commitText = useCallback(
+    (id: string, field: string, value: string) => patch(id, { [field]: value }),
+    // `patch` closes over `sections`, so this must follow them — a stale
+    // one would write the edit onto the list as it was before the last one.
+    [sections] // eslint-disable-line react-hooks/exhaustive-deps
   );
+  useInlineEdit(canvas, openId, commitText);
 
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
@@ -360,44 +371,10 @@ export function BlockBuilder(props: Props) {
             ))}
           </div>
         </div>
-        {/* The look of the SELECTED block, pinned above the page.
-            It used to live in that block's row in the side list — so
-            styling the announcement bar at the very top meant scrolling to
-            the bottom of a list of eighteen and back. Here it is beside
-            what it changes, it never covers the page, and there is no
-            popover position to get wrong. */}
-        {openBlock && (
-          <div className="sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[#e3e8ef] bg-white/95 px-3 py-2 backdrop-blur">
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[#fdf5fa] px-2 py-1 text-[11px] font-bold text-[#b8256e]">
-              <Paintbrush className="h-3.5 w-3.5" />
-              {SECTION_LABEL[openBlock.type]}
-            </span>
-            <LookControls
-              look={openBlock.look}
-              onChange={(look) => patch(openBlock.id, { look })}
-              onUpload={async (file) => {
-                // The builder's uploader takes a FileList; a background is
-                // one picture, so wrap it rather than growing a second
-                // uploader beside it.
-                const dt = new DataTransfer();
-                dt.items.add(file);
-                const urls = await props.onUpload(dt.files);
-                return urls[0] ?? null;
-              }}
-            />
-            <button
-              onClick={() => setOpenId(null)}
-              title="إنهاء التحديد"
-              className="ms-auto cursor-pointer rounded-md p-1 text-[#9aa4b2] hover:text-[#364152]"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
 
         <div className="flex flex-1 justify-center overflow-auto bg-[#eef2f6] p-3">
           <div
-            ref={canvasRef}
+            ref={setCanvas}
             className="lp-root overflow-hidden rounded-lg border border-[#e3e8ef] shadow-sm"
             dir="rtl"
             style={{
@@ -441,6 +418,29 @@ export function BlockBuilder(props: Props) {
                   if (b) patch(id, { enabled: !b.enabled });
                 },
                 onRemove: (id) => onSections(sections.filter((x) => x.id !== id)),
+                /**
+                 * The look controls ride in the block's own bar.
+                 *
+                 * A strip pinned to the top of the editor scrolled out of
+                 * sight the moment the page did — so styling a block
+                 * halfway down meant scrolling back up to reach it. Here it
+                 * is attached to what it changes and cannot go missing.
+                 */
+                toolbar: (b) => (
+                  <LookControls
+                    look={b.look}
+                    onChange={(look) => patch(b.id, { look })}
+                    onUpload={async (file) => {
+                      // The builder's uploader takes a FileList; a
+                      // background is one picture, so wrap it rather than
+                      // growing a second uploader beside it.
+                      const dt = new DataTransfer();
+                      dt.items.add(file);
+                      const urls = await props.onUpload(dt.files);
+                      return urls[0] ?? null;
+                    }}
+                  />
+                ),
                 onEdit: (id) => {
                   setOpenId(id);
                   requestAnimationFrame(() =>
