@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { LookControls } from './LookControls';
+import { useInlineEdit } from './useInlineEdit';
 import { Input } from '@/components/ui/Input';
 import {
   type LandingSection, type SectionType,
@@ -79,6 +80,21 @@ export function BlockBuilder(props: Props) {
   /** Which row is under the cursor right now, for the drop line. */
   /** Each block's row in the side list, so a click on the page can reach it. */
   const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  /** The preview surface — where the seller types directly on the page. */
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  /** The block whose look the bar above the page is editing. */
+  const openBlock = sections.find((b) => b.id === openId) ?? null;
+
+  /**
+   * Typing on the page instead of in the panel beside it.
+   *
+   * Only inside the selected block, and only on the texts the seller
+   * writes — a price read from the catalogue is not his to type over.
+   */
+  useInlineEdit(canvasRef.current, openId, (id, field, value) =>
+    patch(id, { [field]: value })
+  );
 
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
@@ -288,32 +304,6 @@ export function BlockBuilder(props: Props) {
                   <div className="space-y-2 border-t border-[#e3e8ef] bg-[#f8fafc] p-3">
                     <SectionFields section={s} patch={(f) => patch(s.id, f)} onUpload={props.onUpload} />
 
-                    {/* WHAT it says is above; HOW it looks is here. Folded by
-                        default — most blocks never need it, and a panel open
-                        on all thirteen is a wall nobody reads. */}
-                    <details className="rounded-lg border border-[#e3e8ef] bg-white">
-                      <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-semibold text-[#364152] marker:content-['']">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Paintbrush className="h-3.5 w-3.5 text-[#b8256e]" />
-                          الشكل — الاتساع والمحاذاة والخلفية والخط
-                        </span>
-                      </summary>
-                      <div className="p-2 pt-0">
-                        <LookControls
-                          look={s.look}
-                          onChange={(look) => patch(s.id, { look })}
-                          onUpload={async (file) => {
-                            // The builder's uploader takes a FileList; a
-                            // background is one picture, so wrap it rather
-                            // than growing a second uploader beside it.
-                            const dt = new DataTransfer();
-                            dt.items.add(file);
-                            const urls = await props.onUpload(dt.files);
-                            return urls[0] ?? null;
-                          }}
-                        />
-                      </div>
-                    </details>
                   </div>
                 )}
               </li>
@@ -370,8 +360,44 @@ export function BlockBuilder(props: Props) {
             ))}
           </div>
         </div>
+        {/* The look of the SELECTED block, pinned above the page.
+            It used to live in that block's row in the side list — so
+            styling the announcement bar at the very top meant scrolling to
+            the bottom of a list of eighteen and back. Here it is beside
+            what it changes, it never covers the page, and there is no
+            popover position to get wrong. */}
+        {openBlock && (
+          <div className="sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[#e3e8ef] bg-white/95 px-3 py-2 backdrop-blur">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[#fdf5fa] px-2 py-1 text-[11px] font-bold text-[#b8256e]">
+              <Paintbrush className="h-3.5 w-3.5" />
+              {SECTION_LABEL[openBlock.type]}
+            </span>
+            <LookControls
+              look={openBlock.look}
+              onChange={(look) => patch(openBlock.id, { look })}
+              onUpload={async (file) => {
+                // The builder's uploader takes a FileList; a background is
+                // one picture, so wrap it rather than growing a second
+                // uploader beside it.
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                const urls = await props.onUpload(dt.files);
+                return urls[0] ?? null;
+              }}
+            />
+            <button
+              onClick={() => setOpenId(null)}
+              title="إنهاء التحديد"
+              className="ms-auto cursor-pointer rounded-md p-1 text-[#9aa4b2] hover:text-[#364152]"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-1 justify-center overflow-auto bg-[#eef2f6] p-3">
           <div
+            ref={canvasRef}
             className="lp-root overflow-hidden rounded-lg border border-[#e3e8ef] shadow-sm"
             dir="rtl"
             style={{

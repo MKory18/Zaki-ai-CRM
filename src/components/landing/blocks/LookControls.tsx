@@ -84,7 +84,13 @@ export function LookControls({
   const setText = (patch: Partial<BlockLook['text']>) =>
     onChange({ ...latest.current, text: { ...latest.current.text, ...patch } });
 
-  const scaleIndex = SCALES.indexOf(text.scale);
+  /**
+   * A block saved before any of this existed has no scale, so indexOf gave
+   * -1 — which read as "already at the smallest" and left «أصغر» dead while
+   * «أكبر» worked. Absent means normal, not before-the-beginning.
+   */
+  const found = SCALES.indexOf(text.scale);
+  const scaleIndex = found === -1 ? SCALES.indexOf('m') : found;
   const step = (by: number) => {
     const next = SCALES[Math.min(SCALES.length - 1, Math.max(0, scaleIndex + by))];
     if (next) setText({ scale: next });
@@ -102,7 +108,7 @@ export function LookControls({
   };
 
   return (
-    <div className="space-y-2.5 rounded-lg border border-[#e3e8ef] bg-[#fbfcfe] p-2.5">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
       {/* ── الاتساع والمحاذاة والتباعد ── */}
       <Row label="الاتساع">
         {WIDTHS.map((w) => (
@@ -269,10 +275,18 @@ export function LookControls({
   );
 }
 
+/**
+ * One group on a single line, not a labelled row in a stack.
+ *
+ * The stacked version was a wall of seven rows: every block showed every
+ * control at once whether it needed it or not, and finding the one you
+ * wanted meant reading all of them. Side by side, with a hairline between
+ * groups, the whole thing is one glance.
+ */
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="w-16 shrink-0 text-[10px] font-semibold text-[#9aa4b2]">{label}</span>
+    <div className="flex items-center gap-1">
+      <span className="shrink-0 text-[10px] font-semibold text-[#9aa4b2]">{label}</span>
       {children}
     </div>
   );

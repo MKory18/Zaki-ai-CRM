@@ -13,11 +13,11 @@ import { type LandingTheme, DEFAULT_THEME } from '@/lib/landing-theme';
 import {
   type LandingSection, parseSections, ensureForm, starterSections,
 } from '@/lib/landing-sections';
+import { useHistory } from '@/lib/use-history';
 import {
   ArrowRight, Save, Eye, Globe, Code2, Palette, Monitor, Tablet, Smartphone,
   Image as ImageIcon, Package, MousePointerClick, Gift, ListPlus, Type, Upload, Loader2,
-  Maximize2, Minimize2,
-} from 'lucide-react';
+  Maximize2, Minimize2, Undo2, Redo2 } from 'lucide-react';
 
 /**
  * CUSTOM LANDING PAGE EDITOR — Phase 1
@@ -251,7 +251,16 @@ export function LandingPageEditorScreen() {
   // ── The block builder, the other way to author this page ──
   const [mode, setMode] = useState<'BLOCKS' | 'HTML'>('HTML');
   const [theme, setTheme] = useState<LandingTheme>(DEFAULT_THEME);
-  const [sections, setSections] = useState<LandingSection[]>([]);
+  /**
+   * The blocks, with a way back.
+   *
+   * An editor you cannot undo in makes people cautious — you do not try the
+   * bolder colour, you do not delete a block to see how the page reads
+   * without it. Caution costs more than any missing feature.
+   */
+  const history = useHistory<LandingSection[]>([]);
+  const sections = history.value;
+  const setSections = history.set;
 
   const [tab, setTab] = useState<Tab>('html');
   const [device, setDevice] = useState<Device>('desktop');
@@ -292,7 +301,8 @@ export function LandingPageEditorScreen() {
       // returns at least a form, so asking it would hide an empty page
       // behind a single lonely block.
       const stored = parseSections(page.sections);
-      setSections(stored.length ? ensureForm(stored) : starterSections());
+      // Loading is not an edit: it must not become the first undo step.
+      history.reset(stored.length ? ensureForm(stored) : starterSections());
 
       setDirty(false);
       // Phase 2 preview data — this page's own DB records (no secrets)
@@ -320,6 +330,34 @@ export function LandingPageEditorScreen() {
   }, [lpId]);
 
   useEffect(() => { load(); }, [load]);
+
+  /**
+   * Ctrl+Z / Ctrl+Shift+Z, and Ctrl+S to save.
+   *
+   * Ignored while the caret is in a field: Ctrl+Z inside a textarea is the
+   * browser's own undo for that text, and stealing it would make typing
+   * feel broken to get a feature nobody asked to be global.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      const typing =
+        el &&
+        (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+      const key = e.key.toLowerCase();
+      if (key === 's') {
+        e.preventDefault();
+        void saveDraft();
+        return;
+      }
+      if (typing) return;
+      if (key === 'z' && !e.shiftKey) { e.preventDefault(); history.undo(); }
+      else if ((key === 'z' && e.shiftKey) || key === 'y') { e.preventDefault(); history.redo(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   // Live preview: debounced rebuild. The iframe is sandbox="allow-scripts"
   // WITHOUT allow-same-origin — opaque origin: scripts (ours + user markup
@@ -530,6 +568,29 @@ export function LandingPageEditorScreen() {
                 </button>
               ))}
             </div>
+            {/* A way back, beside the way forward. Only in the block
+                designer: the HTML editor is a textarea, and the browser
+                already gives a textarea its own undo. */}
+            {mode === 'BLOCKS' && (
+              <div className="flex rounded-lg border border-[#e3e8ef] p-0.5">
+                <button
+                  onClick={history.undo}
+                  disabled={!history.canUndo}
+                  title="تراجع — Ctrl+Z"
+                  className="cursor-pointer rounded-md p-1.5 text-[#697586] hover:text-[#b8256e] disabled:cursor-default disabled:opacity-30"
+                >
+                  <Undo2 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={history.redo}
+                  disabled={!history.canRedo}
+                  title="إعادة — Ctrl+Shift+Z"
+                  className="cursor-pointer rounded-md p-1.5 text-[#697586] hover:text-[#b8256e] disabled:cursor-default disabled:opacity-30"
+                >
+                  <Redo2 className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             {saveMsg && <span className={`text-xs ${saveMsg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{saveMsg.text}</span>}
             <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} حفظ

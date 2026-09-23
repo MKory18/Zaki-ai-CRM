@@ -128,7 +128,7 @@ function Dressed({ section, children }: { section: LandingSection; children: Rea
 function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext }) {
   switch (s.type) {
     case 'announcement':
-      return s.text ? <div className="lp-announce">{s.text}</div> : null;
+      return s.text ? <div className="lp-announce" data-edit="text">{s.text}</div> : null;
 
     case 'hero':
       return <Hero section={s} ctx={ctx} />;
@@ -230,8 +230,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
     case 'form':
       return (
         <section className="lp-section lp-form-section">
-          {s.title && <h2 className="lp-h2">{s.title}</h2>}
-          {s.subtitle && <p className="lp-sub">{s.subtitle}</p>}
+          {s.title && <h2 className="lp-h2" data-edit="title">{s.title}</h2>}
+          {s.subtitle && <p className="lp-sub" data-edit="subtitle">{s.subtitle}</p>}
           {ctx.form}
         </section>
       );
@@ -295,7 +295,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
               {s.phone}
             </a>
           )}
-          <p>{s.text || 'جميع الحقوق محفوظة'}</p>
+          <p data-edit="text">{s.text || 'جميع الحقوق محفوظة'}</p>
         </footer>
       );
     }
@@ -317,7 +317,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
 function Section({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <section className="lp-section">
-      {title && <h2 className="lp-h2">{title}</h2>}
+      {title && <h2 className="lp-h2" data-edit="title">{title}</h2>}
       {children}
     </section>
   );
@@ -331,14 +331,14 @@ function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'h
         // eslint-disable-next-line @next/next/no-img-element
         <img src={s.image} alt={headline} className="lp-hero-img" />
       )}
-      <h1 className="lp-h1">{headline}</h1>
-      {s.subheadline && <p className="lp-hero-sub">{s.subheadline}</p>}
+      <h1 className="lp-h1" data-edit="headline">{headline}</h1>
+      {s.subheadline && <p className="lp-hero-sub" data-edit="subheadline">{s.subheadline}</p>}
       {s.showPrice && ctx.price > 0 && (
         <p className="lp-price" dir="ltr">
           {ctx.price.toLocaleString('en-US')} <span>{ctx.currency}</span>
         </p>
       )}
-      <OrderCta className="lp-cta">{s.ctaText || 'اطلب الآن'}</OrderCta>
+      <OrderCta className="lp-cta" data-edit="ctaText">{s.ctaText || 'اطلب الآن'}</OrderCta>
     </header>
   );
 }
@@ -395,6 +395,7 @@ function Selectable({
     <div
       role="button"
       tabIndex={0}
+      data-block-id={s.id}
       onClick={(e) => {
         e.stopPropagation();
         selection.onSelect(s.id);
