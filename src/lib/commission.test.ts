@@ -64,7 +64,7 @@ describe('commissionAmount', () => {
 
 describe('accrueForOrder', () => {
   const delivered = {
-    id: 'o1', shippingStatus: 'DELIVERED', deliveredAt: new Date('2026-06-10'), currency: 'JOD',
+    id: 'o1', storeId: 's1', shippingStatus: 'DELIVERED', deliveredAt: new Date('2026-06-10'), currency: 'JOD',
     totalAmount: 100, deliveryFee: 0, priceIncludesDelivery: false,
     moderatorId: 'u1', claimedById: 'u1', confirmedById: null,
     moderator: { id: 'u1', role: 'MODERATOR' }, confirmer: null,
@@ -147,5 +147,39 @@ describe('reverseForOrder', () => {
     db.commissionEntry.findMany.mockResolvedValue([{ id: 'e1', companyId: 'c1', orderId: 'o1', userId: 'u1', role: 'M', ruleId: null, amount: 5, currencyCode: 'JOD', periodMonth: '2026-06' }]);
     db.commissionEntry.findUnique.mockResolvedValue({ id: 'already' });
     expect(await reverseForOrder(db as never, { companyId: 'c1', orderId: 'o1', reason: 'x' })).toBe(0);
+  });
+});
+
+
+/**
+ * A commission rule is a store's agreement with its own people.
+ *
+ * The rules were company-wide, so one store's arrangement paid out on
+ * another store's deliveries — money leaving the wrong books, and nobody
+ * notices until the month closes.
+ */
+describe("a rule pays only on its own store's deliveries", () => {
+  const delivered = {
+    id: 'o1', storeId: 's1', shippingStatus: 'DELIVERED', deliveredAt: new Date('2026-06-10'),
+    currency: 'JOD', totalAmount: 100, deliveryFee: 0, priceIncludesDelivery: false,
+    moderatorId: 'u1', claimedById: 'u1', confirmedById: null,
+    moderator: { id: 'u1', role: 'MODERATOR' }, confirmer: null,
+  };
+
+  it("asks only for the order's store", async () => {
+    db.order.findFirst.mockResolvedValue(delivered);
+    db.commissionRule.findMany.mockResolvedValue([]);
+    await accrueForOrder(db as never, { companyId: 'c1', orderId: 'o1', minorUnit: 3 });
+    expect(db.commissionRule.findMany).toHaveBeenCalledWith({
+      where: { companyId: 'c1', storeId: 's1', isActive: true },
+    });
+  });
+
+  it('accrues nothing when this store has no rule of its own', async () => {
+    db.order.findFirst.mockResolvedValue(delivered);
+    db.commissionRule.findMany.mockResolvedValue([]); // another store's rules do not reach here
+    const result = await accrueForOrder(db as never, { companyId: 'c1', orderId: 'o1', minorUnit: 3 });
+    expect(result.created).toBe(0);
+    expect(db.commissionEntry.create).not.toHaveBeenCalled();
   });
 });

@@ -1774,6 +1774,9 @@ model SettlementMatch {
 model CommissionRule {
   id              String    @id @default(uuid())
   companyId       String
+  /// Which store's agreement this is. The stores are separate businesses:
+  /// what one pays its agents for a sale is not the other's to inherit.
+  storeId         String?   @map("store_id")
   name            String
   /// Who it applies to: a role name, or one specific user.
   appliesToRole   String?
@@ -1792,6 +1795,7 @@ model CommissionRule {
 
   entries CommissionEntry[]
 
+  @@index([companyId, storeId])
   @@index([companyId, isActive, effectiveFrom])
   @@map("commission_rules")
 }

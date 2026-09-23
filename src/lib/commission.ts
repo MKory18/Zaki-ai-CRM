@@ -81,7 +81,7 @@ export async function accrueForOrder(
   const order = await tx.order.findFirst({
     where: { id: params.orderId, companyId: params.companyId },
     select: {
-      id: true, shippingStatus: true, deliveredAt: true, currency: true,
+      id: true, storeId: true, shippingStatus: true, deliveredAt: true, currency: true,
       totalAmount: true, deliveryFee: true, priceIncludesDelivery: true,
       moderatorId: true, claimedById: true, confirmedById: true,
       moderator: { select: { id: true, role: true } },
@@ -99,8 +99,17 @@ export async function accrueForOrder(
   const at = order.deliveredAt ?? new Date();
   const period = periodOf(at);
 
+  /**
+   * This STORE's agreement, never the company's.
+   *
+   * The rules used to be company-wide, so one store's arrangement with its
+   * agents paid out on another store's deliveries — money leaving the wrong
+   * books, and nobody notices until the month closes. A rule with no store
+   * has not been placed yet and pays nothing: allowing it everywhere is the
+   * same leak in a different shape.
+   */
   const rules = (await tx.commissionRule.findMany({
-    where: { companyId: params.companyId, isActive: true },
+    where: { companyId: params.companyId, storeId: order.storeId, isActive: true },
   })) as unknown as RuleLike[];
 
   // Commission is earned on the sale, not on the courier's fee. `totalAmount`

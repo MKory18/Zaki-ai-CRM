@@ -36,11 +36,13 @@ const endSchema = z.object({
 
 export async function GET() {
   try {
-    const { companyId } = await requireContext();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('settings.view');
 
     const rules = await db.commissionRule.findMany({
-      where: { companyId },
+      // This store's agreement. One store's arrangement with its agents is
+      // not the other's to read, let alone to be paid under.
+      where: { companyId, storeId },
       orderBy: [{ isActive: 'desc' }, { effectiveFrom: 'desc' }],
     });
     const userIds = rules.map((r) => r.appliesToUserId).filter(Boolean) as string[];
@@ -63,7 +65,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('settings.edit');
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
@@ -78,6 +80,8 @@ export async function POST(req: Request) {
     const rule = await db.commissionRule.create({
       data: {
         companyId,
+        // From the session, never the body.
+        storeId,
         name: input.name,
         appliesToRole: input.appliesToUserId ? null : input.appliesToRole ?? null,
         appliesToUserId: input.appliesToUserId ?? null,
@@ -103,7 +107,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('settings.edit');
 
     const parsed = endSchema.safeParse(await req.json().catch(() => null));
@@ -111,7 +115,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
-    const rule = await db.commissionRule.findFirst({ where: { id: parsed.data.ruleId, companyId } });
+    const rule = await db.commissionRule.findFirst({ where: { id: parsed.data.ruleId, companyId, storeId } });
     if (!rule) return NextResponse.json({ error: 'القاعدة غير موجودة' }, { status: 404 });
 
     const ended = await db.commissionRule.update({

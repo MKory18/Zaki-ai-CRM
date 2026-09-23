@@ -40,14 +40,16 @@ function dayOf(value: string) {
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireContext();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('finance.cashbox');
 
     const dateParam = new URL(req.url).searchParams.get('date') ?? new Date().toISOString().slice(0, 10);
     const date = dayOf(dateParam);
 
     const wallets = await db.wallet.findMany({
-      where: { companyId, isActive: true },
+      // This store's wallets only. A closing that counted another store's
+      // cash would be wrong for both of them, and neither screen would say so.
+      where: { companyId, storeId, isActive: true },
       include: { country: { select: { minorUnit: true } } },
       orderBy: { name: 'asc' },
     });
@@ -86,7 +88,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('finance.cashbox');
 
     const parsed = recordSchema.safeParse(await req.json().catch(() => null));
@@ -97,7 +99,8 @@ export async function POST(req: Request) {
     const date = dayOf(parsed.data.date);
 
     const wallet = await db.wallet.findFirst({
-      where: { id: walletId, companyId, isActive: true },
+      // Closing a wallet is closing a store's till — not one next door's.
+      where: { id: walletId, companyId, storeId, isActive: true },
       include: { country: { select: { minorUnit: true } } },
     });
     if (!wallet) return NextResponse.json({ error: 'المحفظة غير موجودة' }, { status: 404 });
@@ -160,7 +163,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('finance.cashbox');
 
     const parsed = approveSchema.safeParse(await req.json().catch(() => null));
@@ -169,7 +172,9 @@ export async function PATCH(req: Request) {
     }
 
     const closing = await db.dailyClosing.findFirst({
-      where: { id: parsed.data.closingId, companyId },
+      // Approving is the same boundary as creating: a closing belongs to
+      // the store whose wallet it counts.
+      where: { id: parsed.data.closingId, companyId, wallet: { storeId } },
       include: { wallet: { select: { id: true, name: true } } },
     });
     if (!closing) return NextResponse.json({ error: 'الإغلاق غير موجود' }, { status: 404 });
