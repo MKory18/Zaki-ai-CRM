@@ -114,8 +114,20 @@ function Dressed({ section, children }: { section: LandingSection; children: Rea
   // existed — no extra wrapper, no changed spacing, nothing to regress.
   if (plain && !section.look) return <>{children}</>;
 
+  const t = section.look?.text;
   return (
-    <div style={outer}>
+    <div
+      style={outer}
+      /* Each flag turns on the rule that makes this block's own choice beat
+         the block stylesheet. Absent when nothing was chosen, so a page
+         nobody has styled renders exactly as it always did. */
+      data-look-color={inner.color ? '' : undefined}
+      data-look-size={t?.scale && t.scale !== 'm' ? '' : undefined}
+      data-look-align={section.look?.align && section.look.align !== 'center' ? '' : undefined}
+      data-look-font={t?.font ? '' : undefined}
+      data-look-italic={t?.italic ? '' : undefined}
+      data-look-weight={t?.weight ? '' : undefined}
+    >
       {overlay > 0 && (
         <div
           aria-hidden
@@ -136,18 +148,21 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
       return <Hero section={s} ctx={ctx} />;
 
     case 'benefits': {
-      const items = s.items.filter((i) => i.title || i.text);
+      // The original index travels with the item: filtering first and
+      // using the position in the FILTERED list would write a typed edit
+      // onto a different benefit.
+      const items = s.items.map((item, at) => ({ item, at })).filter(({ item }) => item.title || item.text);
       if (!items.length) return null;
       return (
         <Section title={s.title}>
           <ul className="lp-benefits">
-            {items.map((item, i) => (
+            {items.map(({ item, at: i }) => (
               <li key={i}>
                 <span className="lp-benefit-mark" aria-hidden>
                   <Check size={15} strokeWidth={3} />
                 </span>
                 <div>
-                  <strong>{item.title}</strong>
+                  <strong data-edit={`items.${i}.title`}>{item.title}</strong>
                   {item.text && <p>{item.text}</p>}
                 </div>
               </li>
@@ -195,20 +210,20 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
       );
 
     case 'reviews': {
-      const items = s.items.filter((r) => r.text.trim());
+      const items = s.items.map((r, at) => ({ r, at })).filter(({ r }) => r.text.trim());
       if (!items.length) return null;
       return (
         <Section title={s.title}>
           <div className="lp-reviews">
-            {items.map((r, i) => (
+            {items.map(({ r, at: i }) => (
               <figure key={i}>
                 <div className="lp-stars" aria-label={`${r.stars} من 5`}>
                   {Array.from({ length: 5 }, (_, n) => (
                     <Star key={n} size={13} fill={n < r.stars ? 'currentColor' : 'none'} strokeWidth={1.5} />
                   ))}
                 </div>
-                <blockquote>{r.text}</blockquote>
-                {r.name && <figcaption>{r.name}</figcaption>}
+                <blockquote data-edit={`items.${i}.text`}>{r.text}</blockquote>
+                {r.name && <figcaption data-edit={`items.${i}.name`}>{r.name}</figcaption>}
               </figure>
             ))}
           </div>
@@ -239,18 +254,18 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
       );
 
     case 'trust': {
-      const items = s.items.filter((i) => i.title);
+      const items = s.items.map((item, at) => ({ item, at })).filter(({ item }) => item.title);
       if (!items.length) return null;
       const icons = [ShieldCheck, Truck, Wallet];
       return (
         <div className="lp-trust">
-          {items.map((item, i) => {
+          {items.map(({ item, at: i }) => {
             const Icon = icons[i % icons.length];
             return (
               <div key={i}>
                 <Icon size={18} />
-                <strong>{item.title}</strong>
-                {item.text && <span>{item.text}</span>}
+                <strong data-edit={`items.${i}.title`}>{item.title}</strong>
+                {item.text && <span data-edit={`items.${i}.text`}>{item.text}</span>}
               </div>
             );
           })}
@@ -430,7 +445,10 @@ function Selectable({
           travels with what it changes and is never not there. */}
       {active && (
         <span
-          className="absolute end-2 top-2 z-20 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-1 rounded-lg bg-white/95 p-1 shadow-md ring-1 ring-[#e3e8ef] backdrop-blur"
+          /* BELOW the block, not on it. On it, a short block was covered
+             entirely by its own controls and the words could not be read
+             while they were being styled. */
+          className="absolute end-2 top-full z-30 mt-1 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-1 rounded-lg bg-white p-1 shadow-lg ring-1 ring-[#e3e8ef]"
           onClick={(e) => e.stopPropagation()}
         >
           <Handle

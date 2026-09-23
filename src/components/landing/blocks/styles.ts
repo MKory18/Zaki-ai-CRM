@@ -383,6 +383,33 @@ export const BLOCK_CSS = `
   .lp-reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lp-offers { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
 }
+/* ─────────────────────────────────────────────────────
+   WHAT A BLOCK'S OWN LOOK OVERRIDES.
+
+   The block styles above set an absolute font-size on every heading and
+   centre them, so a size or a colour put on the wrapper lost every time:
+   the seller pressed أكبر, nothing moved, and there was no way to tell
+   whether the control was broken or the value was wrong.
+
+   These say: when the seller HAS chosen, that choice wins inside this
+   block. em rather than px, so the wrapper's own scale still multiplies
+   through and a phone still gets a phone-sized heading.
+   ───────────────────────────────────────────────────── */
+/* The dashboard ships a rule on html[lang=ar] h1,h2,… — specificity
+   (0,1,1), which beat a plain descendant selector, so a chosen font colour
+   applied to everything EXCEPT the headings it was chosen for. Matching
+   that shape puts this ahead of it without reaching for !important. */
+html [data-look-color] :is(h1, h2, h3, h4, h5, h6, p, span, li, a, strong, em, blockquote, figcaption) {
+  color: inherit;
+}
+[data-look-size] :is(h1, .lp-h1) { font-size: 2.1em; }
+[data-look-size] :is(h2, .lp-h2) { font-size: 1.5em; }
+[data-look-size] :is(h3, .lp-h3) { font-size: 1.2em; }
+[data-look-size] :is(p, span, li, a) { font-size: 1em; }
+[data-look-align] :is(h1, h2, h3, h4, p, .lp-h2, .lp-sub) { text-align: inherit; }
+[data-look-font] :is(h1, h2, h3, h4, p, span, li, a, button) { font-family: inherit; }
+[data-look-italic] :is(h1, h2, h3, h4, p, span, li, a) { font-style: inherit; }
+[data-look-weight] :is(h1, h2, h3, h4, p, span, li, a) { font-weight: inherit; }
 `;
 
 /** Google Fonts stylesheet for the chosen Arabic family, or null for system. */
@@ -393,5 +420,7 @@ export function fontHref(font: string): string | null {
     almarai: 'Almarai:wght@400;700;800',
   };
   const family = families[font];
-  return family ? `https://fonts.googleapis.com/css2?family=${family}&display=swap` : null;
+  return family ? `https://fonts.googleapis.com/css2?family=${family}&display=swap
+
+` : null;
 }

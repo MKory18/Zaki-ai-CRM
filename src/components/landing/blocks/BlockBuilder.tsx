@@ -99,8 +99,43 @@ export function BlockBuilder(props: Props) {
    * Only inside the selected block, and only on the texts the seller
    * writes — a price read from the catalogue is not his to type over.
    */
+  /**
+   * Writes a typed value back, by PATH.
+   *
+   * Most texts are a field — "headline". The ones inside a list are not:
+   * the third benefit's title is `items.2.title`, and naming only the
+   * field would have left every repeated text uneditable, which is most of
+   * the words on a real page.
+   *
+   * Immutably, one level at a time, so React sees the change.
+   */
   const commitText = useCallback(
-    (id: string, field: string, value: string) => patch(id, { [field]: value }),
+    (id: string, path: string, value: string) => {
+      const keys = path.split('.');
+      if (keys.length === 1) return patch(id, { [path]: value });
+
+      const block = sections.find((b) => b.id === id) as Record<string, unknown> | undefined;
+      if (!block) return;
+
+      const write = (node: unknown, depth: number): unknown => {
+        const key = keys[depth];
+        const last = depth === keys.length - 1;
+        if (Array.isArray(node)) {
+          const i = Number(key);
+          if (!Number.isInteger(i) || i < 0 || i >= node.length) return node;
+          const copy = [...node];
+          copy[i] = last ? value : write(copy[i], depth + 1);
+          return copy;
+        }
+        if (node && typeof node === 'object') {
+          const o = node as Record<string, unknown>;
+          return { ...o, [key]: last ? value : write(o[key], depth + 1) };
+        }
+        return node;
+      };
+
+      patch(id, { [keys[0]]: write(block[keys[0]], 1) });
+    },
     // `patch` closes over `sections`, so this must follow them — a stale
     // one would write the edit onto the list as it was before the last one.
     [sections] // eslint-disable-line react-hooks/exhaustive-deps
@@ -401,14 +436,11 @@ export function BlockBuilder(props: Props) {
               selection={{
                 activeId: openId,
                 label: (s) => SECTION_LABEL[s.type],
-                onSelect: (id) => {
-                  setOpenId(id);
-                  // Open its panel AND bring it into view — selecting
-                  // something whose controls are off-screen is half a click.
-                  requestAnimationFrame(() =>
-                    rowRefs.current[id]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-                  );
-                },
+                // Just select it. This used to also scroll the side list to
+                // that block's row — and since the controls moved onto the
+                // block, all that scroll did was yank the page away from the
+                // thing just clicked.
+                onSelect: setOpenId,
                 onMove: (id, by) => {
                   const i = sections.findIndex((x) => x.id === id);
                   if (i >= 0) moveTo(i, i + by);
