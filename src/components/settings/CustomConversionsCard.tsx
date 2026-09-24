@@ -220,6 +220,17 @@ export function CustomConversionsCard() {
   }
 
   const ready = !!form.trigger && form.name.trim().length >= 2 && form.eventName.trim().length >= 3;
+  const mine = conversions.filter((c) => c.pixel.id === pixelId);
+  /**
+   * Open by default until the first conversion exists.
+   *
+   * The three moments are the whole feature. Behind a button, a seller
+   * reads the paragraph, sees one button that says "add", and never finds
+   * out what they would be choosing between — which is what happened.
+   * Once there IS a conversion the list is the answer to "what is set up",
+   * and the form folds away behind the button where it belongs.
+   */
+  const showForm = adding || mine.length === 0;
   const labelOf = (t: string) => options?.triggers.find((x) => x.value === t)?.label ?? t;
 
   return (
@@ -329,11 +340,9 @@ export function CustomConversionsCard() {
           </div>
 
           {/* ── What is defined, and whether it is actually working ── */}
-          {conversions.filter((c) => c.pixel.id === pixelId).length > 0 && (
+          {mine.length > 0 && (
             <div className="mb-3 space-y-2">
-              {conversions
-                .filter((c) => c.pixel.id === pixelId)
-                .map((c) => (
+              {mine.map((c) => (
                   <div key={c.id} className="rounded-lg border border-[#e3e8ef] p-2.5">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -396,7 +405,7 @@ export function CustomConversionsCard() {
           )}
 
           {/* ── Add one ── */}
-          {!adding ? (
+          {!showForm ? (
             <Button size="sm" variant="outline" onClick={() => setAdding(true)} className="w-full gap-1.5">
               <Plus className="h-3.5 w-3.5 text-[#b8256e]" />
               أضف تحويلاً
@@ -472,9 +481,11 @@ export function CustomConversionsCard() {
                       {busy === 'create' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                       أضف
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setAdding(false)}>
-                      إلغاء
-                    </Button>
+                    {mine.length > 0 && (
+                      <Button size="sm" variant="outline" onClick={() => setAdding(false)}>
+                        إلغاء
+                      </Button>
+                    )}
                   </div>
                 </>
               )}
