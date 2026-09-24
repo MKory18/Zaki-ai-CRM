@@ -4,7 +4,7 @@ import { requireContext } from '@/lib/geo-context';
 import { ruleFor } from '@/lib/phone-rules';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
-import { transitStatus } from '@/lib/delivery-fees';
+import { transitStatus } from '@/lib/transit';
 import { normalizePhoneNumber } from '@/lib/phone';
 
 /**

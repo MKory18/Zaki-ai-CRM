@@ -1,5 +1,6 @@
 'use client';
 
+import { lateLabel } from '@/lib/transit';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Bike, Clock, HandCoins, Loader2, Search, Truck } from 'lucide-react';
 import { ContactButtons } from '@/components/orders/ContactButtons';
@@ -297,6 +298,9 @@ export function TrackingScreen() {
                   <td className={`px-3 py-2 tabular-nums ${o.late ? 'text-[#fb323f] font-semibold' : 'text-[#364152]'}`}>
                     {o.daysInTransit ?? '—'}
                     {o.lateThresholdDays > 0 && <span className="text-[11px] text-[#9aa4b2]"> / {o.lateThresholdDays}</span>}
+                    {o.late && o.daysInTransit !== null && (
+                      <span className="block text-[11px] font-medium">{lateLabel(o.daysInTransit)}</span>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-xs">
                     <span className={`tabular-nums ${(o._count?.deliveryAttempts ?? 0) > 1 ? 'text-[#fb323f] font-semibold' : 'text-[#697586]'}`}>

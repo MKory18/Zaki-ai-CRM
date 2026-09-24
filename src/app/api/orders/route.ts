@@ -84,9 +84,16 @@ export async function GET(req: Request) {
       if (to) whereClause.createdAt.lte = new Date(`${to}T23:59:59.999Z`);
     }
 
-    // Orders still open after N days. "Late" means nothing has closed them —
-    // a delivered order from last year is not late, it is finished — so the
-    // closed states are excluded rather than the date alone being tested.
+    // Orders still open N days AFTER SHIPPING. "Late" means nothing has
+    // closed them — a delivered order from last year is not late, it is
+    // finished — so the closed states are excluded rather than the date
+    // alone being tested.
+    //
+    // Measured from shippedAt, never createdAt. From creation, an order that
+    // waited a week to be confirmed and shipped yesterday showed as eight
+    // days late — the courier blamed for the confirmation queue. An order
+    // that has not shipped cannot be late in transit, and `lte` on a null
+    // shippedAt excludes it without a separate test.
     if (lateDays) {
       const days = Number(lateDays);
       if (!Number.isFinite(days) || days < 1 || days > 365) {
@@ -95,7 +102,7 @@ export async function GET(req: Request) {
       const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       whereClause.AND = [
         ...(whereClause.AND ?? []),
-        { createdAt: { lte: cutoff } },
+        { shippedAt: { lte: cutoff } },
         { shippingStatus: { notIn: ['DELIVERED', 'PARTIALLY_DELIVERED', 'RETURNED', 'CANCELLED'] } },
         { confirmationStatus: { notIn: ['CANCELLED', 'REJECTED'] } },
       ];

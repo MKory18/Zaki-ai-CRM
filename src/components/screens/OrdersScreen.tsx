@@ -359,11 +359,11 @@ export function OrdersScreen() {
               size="sm"
               variant={lateOnly ? undefined : 'outline'}
               onClick={() => setLateOnly((v) => !v)}
-              title="طلبات مضى عليها 10 أيام أو أكثر ولم تُغلق بعد"
+              title="شُحنت منذ 10 أيام أو أكثر ولم تُسلَّم بعد — من تاريخ الشحن"
               className="shrink-0"
             >
               <Clock className="w-3.5 h-3.5" />
-              متأخرة 10 أيام+
+              متأخرة 10 أيام+ من الشحن
             </Button>
             {activeFilters > 0 && (
               <Button size="sm" variant="outline" onClick={resetFilters} className="shrink-0 text-[#fb323f]">

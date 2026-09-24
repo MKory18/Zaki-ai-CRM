@@ -4,7 +4,8 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import QRCode from 'qrcode';
-import { code128Bars, verifyLabelBatch } from '@/lib/labels';
+import { verifyLabelBatch } from '@/lib/labels';
+import { renderLabelSheet, type LabelView } from '@/lib/label-sheet';
 
 /**
  * GET /api/ops/labels/print?t=<batch token>[&format=csv]
@@ -17,25 +18,6 @@ import { code128Bars, verifyLabelBatch } from '@/lib/labels';
  * ops.labels, and every order in the token is re-checked against the
  * session's company and store before it is rendered.
  */
-
-function esc(value: string) {
-  return value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-}
-
-/** Code 128 barcode as an inline SVG (module width 1, height in mm). */
-function barcodeSvg(value: string, widthMm: number, heightMm: number) {
-  const bars = code128Bars(value);
-  const total = bars.reduce((a, b) => a + b, 0);
-  let x = 0;
-  let dark = true;
-  const rects: string[] = [];
-  for (const w of bars) {
-    if (dark) rects.push(`<rect x="${x}" y="0" width="${w}" height="10" fill="#000"/>`);
-    x += w;
-    dark = !dark;
-  }
-  return `<svg viewBox="0 0 ${total} 10" preserveAspectRatio="none" width="${widthMm}mm" height="${heightMm}mm">${rects.join('')}</svg>`;
-}
 
 /**
  * QR of OUR order reference, inline. Generated here, so no image host and
@@ -100,74 +82,27 @@ export async function GET(req: Request) {
       });
     }
 
-    const labels = (
-      await Promise.all(
-        orders.map(async (o) => {
-          const ref = o.merchantRef ?? o.orderNumber;
-          const courierCode = o.trackingNumber || ref;
+    const labels: LabelView[] = await Promise.all(
+      orders.map(async (o) => {
+        const ref = o.merchantRef ?? o.orderNumber;
+        return {
+          courier: o.deliveryProvider?.name ?? 'شركة الشحن',
+          ref,
           // The courier's barcode AND a QR of our own reference, per contract.
-          const qr = await qrSvg(ref, Math.max(18, Math.round(batch.width / 4)));
-          return `
-      <section class="label">
-        <div class="head">
-          <strong>${esc(o.deliveryProvider?.name ?? 'شركة الشحن')}</strong>
-          <span dir="ltr">${esc(ref)}</span>
-        </div>
-        <div class="who">
-          <p class="name">${esc(o.customer.fullName)}</p>
-          <p dir="ltr">${esc(o.customer.rawPhone || o.customer.phone)}</p>
-          <p>${esc(o.region?.name ?? o.customer.city)} — ${esc(o.customer.address)}</p>
-        </div>
-        <ul class="items">
-          ${o.items.map((i) => `<li>${esc(i.productName)} × ${i.quantity + i.freeQuantity}</li>`).join('')}
-        </ul>
-        <div class="cod"><span>المبلغ عند الاستلام</span><strong dir="ltr">${o.totalAmount} ${esc(o.currency)}</strong></div>
-        <div class="codes">
-          <figure class="barcode">${barcodeSvg(courierCode, batch.width - 32, 14)}<figcaption dir="ltr">${esc(courierCode)}</figcaption></figure>
-          <figure class="qr">${qr}<figcaption dir="ltr">${esc(ref)}</figcaption></figure>
-        </div>
-      </section>`;
-        })
-      )
-    ).join('');
+          courierCode: o.trackingNumber || ref,
+          name: o.customer.fullName,
+          phone: o.customer.rawPhone || o.customer.phone,
+          place: `${o.region?.name ?? o.customer.city} — ${o.customer.address}`,
+          items: o.items.map((i) => `${i.productName} × ${i.quantity + i.freeQuantity}`),
+          cod: `${o.totalAmount} ${o.currency}`,
+          qrSvg: await qrSvg(ref, Math.max(18, Math.round(batch.width / 4))),
+        };
+      })
+    );
 
     await db.order.updateMany({ where: { id: { in: orders.map((o) => o.id) } }, data: { labelPrintedAt: new Date() } });
 
-    // How many labels the chosen paper holds, and therefore where the page
-    // breaks. A sheet that fits none of them still gets one per page rather
-    // than clipping it.
-    const pageW = batch.sheetWidth ?? batch.width;
-    const pageH = batch.sheetHeight ?? batch.height;
-    const across = Math.max(1, Math.floor(pageW / batch.width));
-    const down = Math.max(1, Math.floor(pageH / batch.height));
-    const perPage = Math.max(1, across * down);
-
-    const html = `<!DOCTYPE html>
-<html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>بوالص الشحن</title>
-<style>
-  @page { size: ${pageW}mm ${pageH}mm; margin: 0; }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: Tahoma, Arial, sans-serif; color: #121926;
-         display: flex; flex-wrap: wrap; align-content: flex-start; width: ${pageW}mm; }
-  /* On a thermal roll the page IS the label. On office paper as many fit as
-     fit, and only the last one on a sheet breaks the page — a run of thirty
-     orders used to eat thirty sheets for a quarter of their area each. */
-  .label { width: ${batch.width}mm; height: ${batch.height}mm; padding: 4mm;
-           display: flex; flex-direction: column; gap: 2mm; border: 1px dashed #ccc; }
-  .label:nth-child(${perPage}n) { page-break-after: always; }
-  .head { display: flex; justify-content: space-between; align-items: center; font-size: 10pt; border-bottom: 1px solid #000; padding-bottom: 1mm; }
-  .who .name { font-size: 12pt; font-weight: bold; margin: 0 0 1mm; }
-  .who p { margin: 0; font-size: 9pt; }
-  .items { margin: 0; padding: 0 4mm 0 0; font-size: 8pt; }
-  .cod { margin-top: auto; display: flex; justify-content: space-between; font-size: 11pt; border-top: 1px solid #000; padding-top: 1mm; }
-  .codes { display: flex; gap: 2mm; align-items: flex-end; justify-content: space-between; }
-  .codes .barcode { flex: 1; }
-  figure { margin: 0; text-align: center; }
-  figcaption { font-size: 7pt; letter-spacing: 1px; }
-  @media print { .label { border-bottom: none; } }
-</style></head>
-<body onload="window.print()">${labels}</body></html>`;
-
+    const html = renderLabelSheet(labels, batch);
     return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   } catch (error) {
     return apiErrorResponse(error);

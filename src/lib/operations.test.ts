@@ -13,7 +13,8 @@ const { db } = vi.hoisted(() => ({
 vi.mock('./db', () => ({ db }));
 
 import { preparationGroups, shipmentBlocks, redactCustomerForWarehouse } from './operations';
-import { resolveDeliveryFee, codForOrder, transitStatus } from './delivery-fees';
+import { resolveDeliveryFee, codForOrder } from './delivery-fees';
+import { transitStatus } from './transit';
 
 const scope = { companyId: 'c1', storeId: 's1' };
 

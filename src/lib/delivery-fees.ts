@@ -71,10 +71,3 @@ export function codForOrder(params: {
     minorUnit: params.minorUnit,
   });
 }
-
-/** Days a shipment has been in transit, and whether that passes the region's threshold. */
-export function transitStatus(shippedAt: Date | string | null, lateThresholdDays: number, now = new Date()) {
-  if (!shippedAt) return { days: null as number | null, late: false };
-  const days = Math.floor((now.getTime() - new Date(shippedAt).getTime()) / (24 * 60 * 60 * 1000));
-  return { days, late: lateThresholdDays > 0 && days > lateThresholdDays };
-}
