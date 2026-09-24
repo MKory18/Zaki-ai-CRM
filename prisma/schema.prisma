@@ -57,6 +57,7 @@ model Company {
   stores            Store[]
   fonts             StoreFont[]
   campaigns         Campaign[]
+  adAccounts        AdAccount[]
 
   @@map("companies")
 }
@@ -1346,6 +1347,7 @@ model Store {
   couriers        DeliveryProvider[]
   fonts           StoreFont[]
   campaigns       Campaign[]
+  adAccounts      AdAccount[]
   wallets         Wallet[]
   products        Product[]
   customers       Customer[]
@@ -2131,8 +2133,19 @@ model Campaign {
   status      String    @default("ACTIVE") // ACTIVE | PAUSED | ENDED
   startDate   DateTime  @map("start_date")
   endDate     DateTime? @map("end_date")
-  /// What the seller says they spent, in the store's own currency.
+  /// What was spent. Typed by the seller, or pulled from the ad account
+  /// when one is linked — `spendSource` says which, so nobody wonders why
+  /// a number they typed changed overnight.
   spend       Decimal   @default(0) @db.Decimal(14, 2)
+  /// MANUAL | SYNCED
+  spendSource String    @default("MANUAL") @map("spend_source")
+  /// The ad account this campaign's spend comes from, when it is synced.
+  adAccountId String?   @map("ad_account_id")
+  /// The campaign's id ON THE PLATFORM. Matching by name would break the
+  /// first time somebody renamed a campaign in Ads Manager, which is a
+  /// thing people do constantly.
+  externalId  String?   @map("external_id")
+  lastSyncAt  DateTime? @map("last_sync_at")
   notes       String?   @db.Text
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
@@ -2141,9 +2154,55 @@ model Campaign {
   company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
   landingPage LandingPage? @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
+  adAccount   AdAccount?   @relation(fields: [adAccountId], references: [id], onDelete: SetNull)
   orders      Order[]
 
   @@unique([companyId, storeId, code])
   @@index([companyId, storeId, status])
   @@map("campaigns")
+}
+
+/// A connected advertising account — the place the spend numbers come from.
+///
+/// Per store, like everything a store owns. An ad account belongs to one
+/// brand, its token is scoped to that account, and a spend figure pulled
+/// into the wrong shop is worse than no figure at all.
+///
+/// The TOKEN is write-only. It is encrypted before it is stored, never
+/// returned by any endpoint, and never written to an audit entry — the same
+/// rule the courier logins and the AI key follow. Only a hint comes back,
+/// so a seller can tell which token is in there.
+model AdAccount {
+  id          String    @id @default(uuid())
+  companyId   String    @map("company_id")
+  storeId     String    @map("store_id")
+  /// META for now. TIKTOK and SNAPCHAT speak different APIs, not different
+  /// rows — this names which adapter reads it.
+  platform    String    @default("META")
+  /// The account as the platform names it: act_1234567890 on Meta.
+  accountId   String    @map("account_id")
+  /// What the platform calls it, read back at connection time. A seller with
+  /// four ad accounts cannot tell act_ numbers apart.
+  accountName String?   @map("account_name")
+  /// The access token, encrypted. Never leaves the server.
+  tokenEncrypted String @map("token_encrypted") @db.Text
+  /// Last four characters, so the seller knows which token this is.
+  tokenHint   String?   @map("token_hint")
+  /// CONNECTED | ERROR — a token that stopped working says so here rather
+  /// than failing silently every night.
+  status      String    @default("CONNECTED")
+  /// Why it stopped, in the platform's own words, for the screen to show.
+  lastError   String?   @map("last_error") @db.Text
+  lastSyncAt  DateTime? @map("last_sync_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  createdById String?   @map("created_by_id")
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+
+  @@unique([companyId, storeId, platform, accountId])
+  @@index([companyId, storeId])
+  @@map("ad_accounts")
 }

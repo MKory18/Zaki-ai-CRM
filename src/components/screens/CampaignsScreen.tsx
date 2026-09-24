@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Megaphone, Plus, Link2, Check, Loader2, Pencil, Trash2, X, TrendingUp, TrendingDown,
+  RefreshCw, Plug,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
@@ -36,8 +37,13 @@ interface Funnel {
   brought: number; confirmed: number; rejected: number; delivered: number; returned: number;
   confirmationRate: number | null; deliveryRate: number | null;
 }
+interface AdAccount { id: string; accountId: string; accountName: string | null; status: string }
 interface Campaign {
   id: string; name: string; platform: string; code: string; status: string;
+  spendSource: 'MANUAL' | 'SYNCED';
+  adAccount: { id: string; accountName: string | null; accountId: string; status: string } | null;
+  externalId: string | null;
+  lastSyncAt: string | null;
   startDate: string; endDate: string | null; notes: string | null;
   landingPage: { id: string; name: string; slug: string } | null;
   link: string; ranInWindow: boolean; funnel: Funnel; money: Money;
@@ -46,6 +52,7 @@ interface Payload {
   campaigns: Campaign[];
   totals: Money & { brought: number; delivered: number };
   currency: string;
+  adAccounts: AdAccount[];
   definitions: Record<string, string>;
 }
 
@@ -69,7 +76,38 @@ export function CampaignsScreen() {
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [pages, setPages] = useState<{ id: string; name: string }[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [linking, setLinking] = useState<Campaign | null>(null);
   const confirm = useConfirm();
+
+  /**
+   * Pull what was spent, for every campaign linked to an ad account.
+   *
+   * Only linked ones. A campaign whose spend the seller typed keeps its
+   * typed number — a figure a person entered changing overnight, with no
+   * explanation, is worse than a figure that was never automatic.
+   */
+  async function sync() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch('/api/growth/campaigns/sync', { method: 'POST' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'تعذر السحب');
+      await load();
+      const failed = (json.accounts || []).filter((a: { error: string | null }) => a.error);
+      setSyncMsg(
+        failed.length
+          ? failed.map((a: { account: string; error: string }) => `${a.account}: ${a.error}`).join(' · ')
+          : json.message || `حُدِّثت ${json.updated} حملة.`
+      );
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : 'تعذر السحب');
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -143,11 +181,21 @@ export function CampaignsScreen() {
               </button>
             ))}
           </div>
+          {(data?.adAccounts?.length ?? 0) > 0 && (
+            <Button size="sm" variant="outline" onClick={sync} disabled={syncing}>
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              اسحب الإنفاق
+            </Button>
+          )}
           <Button size="sm" onClick={() => setCreating(true)}>
             <Plus className="h-4 w-4" /> حملة جديدة
           </Button>
         </div>
       </div>
+
+      {syncMsg && (
+        <p className="rounded-lg bg-[#f8fafc] px-3 py-2 text-[11px] text-[#364152]">{syncMsg}</p>
+      )}
 
       {/* The shop's whole picture, so nobody adds the column up by hand. */}
       {totals && (
@@ -182,6 +230,7 @@ export function CampaignsScreen() {
               onCopy={() => copy(c.link, c.id)}
               onEdit={() => setEditing(c)}
               onRemove={() => remove(c)}
+              onLink={(data?.adAccounts?.length ?? 0) > 0 ? () => setLinking(c) : undefined}
             />
           ))}
         </div>
@@ -193,6 +242,15 @@ export function CampaignsScreen() {
           محسوبة في شاشة الأرباح. و«الإيراد» هو المحصَّل فعلاً حيث نعرفه وإجمالي الطلب حيث لا نعرفه،
           نفس التعريف في كل الشاشات.
         </p>
+      )}
+
+      {linking && data && (
+        <LinkDialog
+          campaign={linking}
+          accounts={data.adAccounts}
+          onClose={() => setLinking(null)}
+          onSaved={async () => { setLinking(null); await load(); }}
+        />
       )}
 
       {(creating || editing) && (
@@ -229,10 +287,10 @@ function Stat({ label, value, tone, hint }: { label: string; value: string; tone
 }
 
 function Row({
-  c, currency, copied, onCopy, onEdit, onRemove,
+  c, currency, copied, onCopy, onEdit, onRemove, onLink,
 }: {
   c: Campaign; currency: string; copied: boolean;
-  onCopy: () => void; onEdit: () => void; onRemove: () => void;
+  onCopy: () => void; onEdit: () => void; onRemove: () => void; onLink?: () => void;
 }) {
   const tone = roasTone(c.money.roas);
   return (
@@ -260,6 +318,20 @@ function Row({
         </div>
 
         <div className="flex items-center gap-1">
+          {onLink && (
+            <button
+              onClick={onLink}
+              title={c.adAccount ? 'غيّر الربط بميتا' : 'اربطها بحملة في ميتا'}
+              className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition ${
+                c.spendSource === 'SYNCED'
+                  ? 'border-[#c9e8d5] bg-[#f0fdf4] text-[#00994d]'
+                  : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]'
+              }`}
+            >
+              <Plug className="h-3 w-3" />
+              {c.spendSource === 'SYNCED' ? 'تلقائي' : 'اربط'}
+            </button>
+          )}
           <button
             onClick={onCopy}
             title="انسخ رابط الإعلان"
@@ -278,7 +350,11 @@ function Row({
       </div>
 
       <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-[#f1f3f6] pt-2.5 sm:grid-cols-6">
-        <Cell label="أُنفق" value={`${fmt(c.money.spend)}`} unit={currency} />
+        <Cell
+          label={c.spendSource === 'SYNCED' ? 'أُنفق · من ميتا' : 'أُنفق · يدوي'}
+          value={`${fmt(c.money.spend)}`}
+          unit={currency}
+        />
         <Cell label="عاد" value={`${fmt(c.money.revenue)}`} unit={currency} />
         <Cell label="الفرق" value={`${fmt(c.money.net)}`} unit={currency} tone={c.money.net >= 0 ? 'good' : 'bad'} />
         <Cell
@@ -499,6 +575,150 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       <label className="mb-1 block text-[11px] font-semibold text-[#364152]">{label}</label>
       {children}
       {hint && <p className="mt-0.5 text-[9px] text-[#9aa4b2]">{hint}</p>}
+    </div>
+  );
+}
+
+
+/**
+ * SAYING WHICH OF OURS IS WHICH OF THEIRS.
+ *
+ * Done once, by hand, and by id forever after. Matching by NAME would break
+ * the first time somebody renamed a campaign in Ads Manager — which people
+ * do constantly — and it would break silently: the spend would simply stop
+ * attaching to anything, and the campaign would read as free.
+ */
+function LinkDialog({
+  campaign, accounts, onClose, onSaved,
+}: {
+  campaign: Campaign;
+  accounts: AdAccount[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [accountId, setAccountId] = useState(campaign.adAccount?.id ?? accounts[0]?.id ?? '');
+  const [remote, setRemote] = useState<{ id: string; name: string; status: string }[] | null>(null);
+  const [chosen, setChosen] = useState(campaign.externalId ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!accountId) return;
+    setRemote(null);
+    setError(null);
+    void fetch(`/api/settings/ad-accounts/${accountId}`)
+      .then(async (r) => {
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'تعذر جلب الحملات');
+        setRemote(j.campaigns || []);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'تعذر جلب الحملات'));
+  }, [accountId]);
+
+  async function save(unlink = false) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/growth/campaigns/${campaign.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          unlink ? { adAccountId: null, externalId: null } : { adAccountId: accountId, externalId: chosen }
+        ),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || 'تعذر الحفظ');
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div
+        dir="rtl"
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-4 sm:rounded-2xl"
+      >
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-[#121926]">اربط «{campaign.name}» بحملة في ميتا</h2>
+          <button onClick={onClose} className="rounded p-1 text-[#697586] hover:bg-[#f8fafc]">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mb-3 text-[11px] leading-relaxed text-[#697586]">
+          بعدها يأتي الإنفاق تلقائياً. الربط بالمعرّف لا بالاسم — فتغيير اسم الحملة في ميتا
+          لن يقطعه.
+        </p>
+
+        {accounts.length > 1 && (
+          <div className="mb-3">
+            <label className="mb-1 block text-[11px] font-semibold text-[#364152]">الحساب الإعلاني</label>
+            <select value={accountId} onChange={(e) => { setAccountId(e.target.value); setChosen(''); }} className={INPUT}>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.accountName ?? a.accountId}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {error && <p className="mb-2 rounded bg-rose-50 p-2 text-[11px] text-rose-700">{error}</p>}
+
+        {remote === null && !error ? (
+          <div className="flex h-24 items-center justify-center text-[#697586]">
+            <Loader2 className="h-4 w-4 animate-spin" />
+          </div>
+        ) : remote && remote.length === 0 ? (
+          <p className="rounded-lg bg-[#f8fafc] p-3 text-[11px] text-[#697586]">
+            لا حملات في هذا الحساب.
+          </p>
+        ) : (
+          <div className="max-h-64 space-y-1 overflow-y-auto">
+            {(remote ?? []).map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setChosen(r.id)}
+                className={`flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-start transition ${
+                  chosen === r.id ? 'border-[#b8256e] bg-[#fdf2f7]' : 'border-[#e3e8ef] hover:border-[#b8256e]/40'
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-semibold text-[#364152]">{r.name}</span>
+                  <span className="block font-mono text-[9px] text-[#9aa4b2]" dir="ltr">{r.id}</span>
+                </span>
+                <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold ${
+                  r.status === 'ACTIVE' ? 'bg-[#e6f9ee] text-[#00994d]' : 'bg-[#f1f3f6] text-[#697586]'
+                }`}>
+                  {r.status === 'ACTIVE' ? 'تعمل' : 'متوقفة'}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-4 flex gap-2">
+          <Button onClick={() => save(false)} disabled={busy || !chosen} className="flex-1">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            اربط
+          </Button>
+          {campaign.spendSource === 'SYNCED' && (
+            <Button variant="outline" onClick={() => save(true)} disabled={busy}>
+              فكّ الربط
+            </Button>
+          )}
+          <Button variant="outline" onClick={onClose}>إلغاء</Button>
+        </div>
+
+        {campaign.spendSource === 'SYNCED' && (
+          <p className="mt-2 text-[10px] leading-relaxed text-[#9aa4b2]">
+            فكّ الربط يعيد الإنفاق للإدخال اليدوي، ولا يمسح الرقم المسحوب — هو مصروف حقيقي حدث.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

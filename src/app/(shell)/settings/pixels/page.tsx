@@ -1,7 +1,22 @@
 import { guardRoute } from '@/lib/page-guard';
 import { TrackingPixelsSection } from '@/components/settings/TrackingPixelsSection';
+import { AdAccountsCard } from '@/components/settings/AdAccountsCard';
 
 export default async function Page() {
   await guardRoute('/settings/pixels');
-  return <TrackingPixelsSection />;
+  return (
+    <div className="space-y-4">
+      <TrackingPixelsSection />
+      {/*
+        Beside the pixels, not on a screen of its own.
+
+        A pixel reports what happened on the page and an ad account reports
+        what the advert cost — two halves of the same question, and a seller
+        setting up their advertising is thinking about both in the same five
+        minutes. Splitting them across two screens means finding the second
+        one later, which mostly means not finding it.
+      */}
+      <AdAccountsCard />
+    </div>
+  );
 }

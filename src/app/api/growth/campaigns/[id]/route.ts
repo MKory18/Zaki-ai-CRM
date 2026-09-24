@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/audit';
 import { inStore } from '@/lib/store-filter';
 import { campaignInputSchema, datesMakeSense } from '@/lib/campaigns';
 import { zodMessage } from '@/lib/zod-message';
+import { z } from 'zod';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -33,7 +34,45 @@ export async function PATCH(req: Request, ctx: Ctx) {
     });
     if (!existing) return NextResponse.json({ error: 'الحملة غير موجودة' }, { status: 404 });
 
-    const parsed = campaignInputSchema.omit({ code: true }).partial().safeParse(await req.json().catch(() => null));
+    const body = await req.json().catch(() => null);
+
+    // Linking to a remote campaign is its own edit, handled before the rest:
+    // it is the only field whose value must be checked against an account
+    // this store actually owns.
+    if (body && 'adAccountId' in body) {
+      const link = z
+        .object({
+          adAccountId: z.string().uuid().nullable(),
+          externalId: z.string().trim().max(64).nullable().optional(),
+        })
+        .safeParse(body);
+      if (!link.success) return NextResponse.json({ error: 'بيانات الربط غير صالحة' }, { status: 400 });
+
+      if (link.data.adAccountId) {
+        const account = await db.adAccount.findFirst({
+          where: { id: link.data.adAccountId, ...inStore(companyId, storeId) },
+          select: { id: true },
+        });
+        // An account of another store would attach this campaign's spend to
+        // somebody else's money.
+        if (!account) return NextResponse.json({ error: 'الحساب الإعلاني غير موجود' }, { status: 400 });
+      }
+
+      const linked = Boolean(link.data.adAccountId && link.data.externalId);
+      await db.campaign.update({
+        where: { id: existing.id },
+        data: {
+          adAccountId: link.data.adAccountId,
+          externalId: link.data.externalId ?? null,
+          // Unlinking returns the spend to the seller's hands; it does not
+          // erase what was pulled, which was real money.
+          spendSource: linked ? 'SYNCED' : 'MANUAL',
+        },
+      });
+      return NextResponse.json({ success: true, linked });
+    }
+
+    const parsed = campaignInputSchema.omit({ code: true }).partial().safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }

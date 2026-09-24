@@ -47,7 +47,10 @@ export async function GET(req: Request) {
       db.campaign.findMany({
         where: inStore(companyId, storeId),
         orderBy: [{ status: 'asc' }, { startDate: 'desc' }],
-        include: { landingPage: { select: { id: true, name: true, slug: true } } },
+        include: {
+          landingPage: { select: { id: true, name: true, slug: true } },
+          adAccount: { select: { id: true, accountName: true, accountId: true, status: true } },
+        },
       }),
       campaignPerformance({ companyId, storeId: storeId ?? '', start, end }),
     ]);
@@ -67,6 +70,13 @@ export async function GET(req: Request) {
         platform: c.platform,
         code: c.code,
         status: c.status,
+        // Where the spend came from, said out loud. A number a person typed
+        // and a number a machine pulled deserve to be told apart — not
+        // least so nobody wonders why one of them changed overnight.
+        spendSource: c.spendSource,
+        adAccount: c.adAccount,
+        externalId: c.externalId,
+        lastSyncAt: c.lastSyncAt?.toISOString() ?? null,
         startDate: c.startDate.toISOString(),
         endDate: c.endDate?.toISOString() ?? null,
         notes: c.notes,
@@ -114,6 +124,11 @@ export async function GET(req: Request) {
         delivered: totals.delivered,
       },
       currency: country.currencyCode,
+      // So the screen can offer to link a campaign without a second request.
+      adAccounts: await db.adAccount.findMany({
+        where: inStore(companyId, storeId),
+        select: { id: true, accountId: true, accountName: true, status: true },
+      }),
       window: { start: start?.toISOString() ?? null, end: end?.toISOString() ?? null },
       definitions: {
         revenue: 'المحصَّل فعلاً حيث نعرفه، وإجمالي الطلب حيث لا نعرفه — نفس تعريف شاشة الأرباح',
