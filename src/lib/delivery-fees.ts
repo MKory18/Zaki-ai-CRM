@@ -54,6 +54,8 @@ export interface OrderLineLike {
  */
 export function codForOrder(params: {
   lines: OrderLineLike[];
+  /** The order's accepted add-ons (OrderAddOn). Omitting them drops their money from the COD. */
+  addOns?: Array<{ quantity: number; price: number | { toString(): string } }>;
   deliveryFee: number;
   priceIncludesDelivery: boolean;
   minorUnit: number;
@@ -69,5 +71,6 @@ export function codForOrder(params: {
     deliveryFee: params.deliveryFee,
     priceIncludesDelivery: params.priceIncludesDelivery,
     minorUnit: params.minorUnit,
+    addOns: (params.addOns ?? []).map((a) => ({ quantity: a.quantity, unitPrice: Number(a.price) })),
   });
 }

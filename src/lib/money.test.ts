@@ -79,3 +79,46 @@ describe('allocateDiscount', () => {
     expect(r.lineTotals).toEqual([24, 8]);
   });
 });
+
+describe('computeCod — add-ons', () => {
+  const base = { lines: [{ quantity: 1, unitPrice: 20 }], deliveryFee: 3, minorUnit: 2 };
+
+  it('collects them', () => {
+    expect(computeCod({ ...base, addOns: [{ quantity: 1, unitPrice: 12 }] }).cod).toBe(35);
+  });
+
+  it('counts them as revenue', () => {
+    expect(computeCod({ ...base, addOns: [{ quantity: 1, unitPrice: 12 }] }).revenue).toBe(32);
+  });
+
+  it('keeps them out of the subtotal — sellingPrice and the discount ceiling are the order’s own lines', () => {
+    const m = computeCod({ ...base, addOns: [{ quantity: 1, unitPrice: 12 }] });
+    expect(m.subtotal).toBe(20);
+    expect(m.addOns).toBe(12);
+  });
+
+  it('does not spread the order’s discount over them', () => {
+    // The discount was agreed before the add-on existed.
+    const m = computeCod({ ...base, discount: 5, addOns: [{ quantity: 1, unitPrice: 12 }] });
+    expect(m.discountShares).toEqual([5]);
+    expect(m.lineTotals).toEqual([15]);
+    expect(m.cod).toBe(20 - 5 + 12 + 3);
+  });
+
+  it('rounds to the currency, three decimals for a dinar', () => {
+    const m = computeCod({ lines: [{ quantity: 1, unitPrice: 10 }], minorUnit: 3, addOns: [{ quantity: 3, unitPrice: 1.3335 }] });
+    expect(m.addOns).toBe(4.001);
+    expect(m.cod).toBe(14.001);
+  });
+
+  it('ignores a negative quantity or price rather than subtracting it', () => {
+    const m = computeCod({ ...base, addOns: [{ quantity: -1, unitPrice: 12 }, { quantity: 1, unitPrice: -5 }] });
+    expect(m.addOns).toBe(0);
+    expect(m.cod).toBe(23);
+  });
+
+  it('is zero when there are none, so every existing caller is unchanged', () => {
+    expect(computeCod(base).addOns).toBe(0);
+    expect(computeCod(base).cod).toBe(23);
+  });
+});

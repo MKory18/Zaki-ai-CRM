@@ -26,6 +26,22 @@ export interface CodInput {
   priceIncludesDelivery?: boolean;
   /** Decimal places of the country's currency (JOD 3, SYP 2, ...). */
   minorUnit: number;
+  /**
+   * Products the customer added after ordering — the upsell on the thank-you
+   * page (OrderAddOn). They are money the courier must collect.
+   *
+   * Kept apart from `lines` on purpose, for two reasons. The order's discount
+   * was agreed on the original order, before any add-on existed, so it is
+   * not spread over them; and `subtotal` stays the price of the order's own
+   * lines, which is what `sellingPrice` records and what a discount may not
+   * exceed. An add-on changes what is collected, not what was discounted.
+   *
+   * Before this existed, the add-on raised the order's total when it was
+   * accepted, and the next recompute — creating the shipment — rebuilt the
+   * total from the lines alone and wrote it back. The courier collected the
+   * order without the add-on.
+   */
+  addOns?: MoneyLine[];
 }
 
 export interface CodBreakdown {
@@ -37,6 +53,8 @@ export interface CodBreakdown {
   cod: number;
   /** What the business earns from the sale (fee deducted when included). */
   revenue: number;
+  /** The add-ons' value, included in cod and revenue, never discounted. */
+  addOns: number;
   /** Discount share per line, same order as the input lines. */
   discountShares: number[];
   /** quantity * unitPrice - discountShare per line. */
@@ -85,13 +103,20 @@ export function computeCod(input: CodInput): CodBreakdown {
   const discountShares = allocateDiscount(lines, input.discount ?? 0, minorUnit);
   const discount = roundMinor(discountShares.reduce((a, b) => a + b, 0), minorUnit);
   const lineTotals = values.map((v, i) => roundMinor(v - discountShares[i], minorUnit));
-  const net = roundMinor(subtotal - discount, minorUnit);
+  const addOns = roundMinor(
+    (input.addOns ?? []).reduce(
+      (sum, a) => sum + roundMinor(Math.max(0, a.quantity) * Math.max(0, a.unitPrice), minorUnit),
+      0
+    ),
+    minorUnit
+  );
+  const net = roundMinor(subtotal - discount + addOns, minorUnit);
 
   const includesDelivery = input.priceIncludesDelivery === true;
   const cod = includesDelivery ? net : roundMinor(net + deliveryFee, minorUnit);
   const revenue = includesDelivery ? roundMinor(net - deliveryFee, minorUnit) : net;
 
-  return { subtotal, discount, deliveryFee, cod, revenue, discountShares, lineTotals };
+  return { subtotal, discount, deliveryFee, cod, revenue, addOns, discountShares, lineTotals };
 }
 
 /** Format for display with the currency's minor unit (tabular Arabic UI). */

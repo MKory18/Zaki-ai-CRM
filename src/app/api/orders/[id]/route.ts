@@ -673,6 +673,13 @@ export async function PATCH(
       // here read `sellingPrice * quantity`, multiplying a price that is
       // already the line's total by the quantity again, and added the
       // delivery fee even on a store whose prices include it.
+      // The add-ons the customer accepted stay part of what is collected.
+      // Editing a line rebuilt the total from the lines alone, which quietly
+      // dropped them — the same loss shipment creation had.
+      const acceptedAddOns = await db.orderAddOn.findMany({
+        where: { orderId: id, companyId },
+        select: { quantity: true, price: true },
+      });
       const money = computeCod({
         lines: nextLines.map((l) => ({
           quantity: l.quantity,
@@ -682,6 +689,7 @@ export async function PATCH(
         deliveryFee: nextShipping,
         priceIncludesDelivery: existing.priceIncludesDelivery === true,
         minorUnit: country.minorUnit,
+        addOns: acceptedAddOns.map((a) => ({ quantity: a.quantity, unitPrice: Number(a.price) })),
       });
 
       if (nextDiscount > money.subtotal) {

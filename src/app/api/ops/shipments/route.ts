@@ -74,6 +74,7 @@ export async function GET(req: Request) {
         customer: { select: { id: true, fullName: true, phone: true, city: true, totalOrders: true } },
         region: { select: { id: true, name: true } },
         items: { select: { productName: true, quantity: true, freeQuantity: true, unitPrice: true, discountShare: true, reservedQty: true } },
+        addOns: { select: { quantity: true, price: true } },
       },
     });
 
@@ -86,6 +87,7 @@ export async function GET(req: Request) {
 
       const money = codForOrder({
         lines: order.items,
+        addOns: order.addOns,
         deliveryFee: fee.fee,
         priceIncludesDelivery: order.priceIncludesDelivery,
         minorUnit: country.minorUnit,
@@ -141,6 +143,10 @@ export async function POST(req: Request) {
         confirmationStatus: true, shippingStatus: true, shippedAt: true, priceIncludesDelivery: true,
         deliveryProviderId: true, version: true,
         items: { select: { quantity: true, freeQuantity: true, reservedQty: true, unitPrice: true, discountShare: true } },
+        // The upsell the customer accepted. Without it, the snapshot below
+        // rebuilt the total from the lines alone and the add-on was never
+        // collected.
+        addOns: { select: { quantity: true, price: true } },
       },
     });
 
@@ -210,6 +216,7 @@ export async function POST(req: Request) {
         });
         const money = codForOrder({
           lines: order.items,
+          addOns: order.addOns,
           deliveryFee: fee.fee,
           priceIncludesDelivery: order.priceIncludesDelivery,
           minorUnit: country.minorUnit,
