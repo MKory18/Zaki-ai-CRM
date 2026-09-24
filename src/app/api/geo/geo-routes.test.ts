@@ -56,7 +56,7 @@ beforeEach(() => {
   requireCompanyTenant.mockResolvedValue({ user: admin, companyId: COMPANY });
   requirePermission.mockResolvedValue(admin);
   can.mockReturnValue(false);
-  db.userStoreAccess.count.mockResolvedValue(0);
+  db.userStoreAccess.findMany.mockResolvedValue([]); // no narrowing: every store of the country
 });
 
 describe('no hard delete for countries and stores', () => {

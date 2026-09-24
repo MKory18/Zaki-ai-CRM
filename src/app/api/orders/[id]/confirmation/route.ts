@@ -324,20 +324,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       await queueConversions(companyId, 'order.confirmed', id);
     }
 
-    // Notify company managers on terminal confirmation outcomes — after commit, non-fatal
+    // A confirmation outcome goes to this store's confirmation supervisors
+    // and to the moderator who entered the order (their commission rides on
+    // it), never to the agent who just decided it. After commit; never
+    // throws.
     if (target && (target === 'CONFIRMED' || target === 'REJECTED' || target === 'CANCELLED')) {
-      try {
-        await createNotification({
-          companyId,
-          userId: null,
-          title: target === 'CONFIRMED' ? 'تأكيد طلب' : target === 'REJECTED' ? 'رفض طلب' : 'إلغاء طلب',
-          message: `الطلب #${order.orderNumber} أصبح بالحالة ${target} بواسطة ${user.name}.`,
-          type: 'SYSTEM_ALERT',
-          link: '/orders',
-        });
-      } catch (e) {
-        console.error('Confirmation notification failed (non-fatal):', e);
-      }
+      await createNotification({
+        companyId,
+        storeId: order.storeId ?? storeId,
+        audience: { permission: 'confirmation.supervise', userIds: [order.moderatorId] },
+        actorId: user.id,
+        title: target === 'CONFIRMED' ? 'تأكيد طلب' : target === 'REJECTED' ? 'رفض طلب' : 'إلغاء طلب',
+        message: `الطلب #${order.orderNumber} أصبح بالحالة ${target} بواسطة ${user.name}.`,
+        type: 'SYSTEM_ALERT',
+        link: '/orders',
+      });
     }
 
     return NextResponse.json({ success: true, order: fresh });

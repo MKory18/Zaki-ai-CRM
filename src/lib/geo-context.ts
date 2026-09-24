@@ -112,29 +112,115 @@ export async function listAccessibleCountries(user: SessionUser, companyId: stri
   return countries.map(({ _count, ...c }) => ({ ...c, activeStores: _count.stores }));
 }
 
+/**
+ * THE STORE-ENTRY RULE, with the facts already loaded.
+ *
+ * Pure on purpose. The pickers ask it for one user and every store of a
+ * country; the notification fan-out asks it for every employee and one
+ * store, from a worker process that has no session and no cookie. Both
+ * must get the same answer, so there is one copy of the rule and each
+ * caller only decides how to load the facts.
+ */
+export interface StoreReachFacts {
+  /** SUPER_ADMIN or geo.manage — see seesAllCountries(). */
+  seesAll: boolean;
+  /** The store's country is active and belongs to the company. */
+  countryOpen: boolean;
+  /** The user has a UserCountryAccess row for that country. */
+  countryAssigned: boolean;
+  /** The user's UserStoreAccess rows inside that country (none = all of them). */
+  storesInCountry: readonly string[];
+}
+
+export function reachesStore(facts: StoreReachFacts, storeId: string): boolean {
+  if (!facts.countryOpen) return false;
+  if (facts.seesAll) return true;
+  if (!facts.countryAssigned) return false;
+  return facts.storesInCountry.length === 0 || facts.storesInCountry.includes(storeId);
+}
+
 /** Stores of one accessible country the user may enter (null = country not accessible). */
 export async function listAccessibleStores(user: SessionUser, companyId: string, countryId: string) {
+  const seesAll = seesAllCountries(user);
+  // The access filter inside the query answers countryOpen AND
+  // countryAssigned at once: a country that comes back is both.
   const country = await db.country.findFirst({
-    where: seesAllCountries(user)
+    where: seesAll
       ? { id: countryId, companyId, isActive: true }
       : { id: countryId, companyId, isActive: true, access: { some: { userId: user.id } } },
     select: { id: true },
   });
   if (!country) return null;
 
-  const narrowed = seesAllCountries(user)
-    ? 0
-    : await db.userStoreAccess.count({ where: { userId: user.id, store: { countryId } } });
+  const storesInCountry = seesAll
+    ? []
+    : (
+        await db.userStoreAccess.findMany({
+          where: { userId: user.id, store: { countryId } },
+          select: { storeId: true },
+        })
+      ).map((a) => a.storeId);
 
-  return db.store.findMany({
-    where: {
-      companyId,
-      countryId,
-      ...(narrowed > 0 ? { access: { some: { userId: user.id } } } : {}),
-    },
+  const stores = await db.store.findMany({
+    where: { companyId, countryId },
     orderBy: { name: 'asc' },
     select: { id: true, name: true, slug: true, logo: true, status: true, type: true },
   });
+  const facts: StoreReachFacts = { seesAll, countryOpen: true, countryAssigned: true, storesInCountry };
+  return stores.filter((s) => reachesStore(facts, s.id));
+}
+
+/**
+ * Which of these users may enter this store — the same rule as the
+ * pickers, for many users at once and without a session.
+ *
+ * Three queries whatever the number of users: the store, the country
+ * assignments, the store narrowings. The users must carry their grants
+ * (seesAllCountries asks can() about geo.manage).
+ */
+export async function usersReachingStore(
+  users: readonly SessionUser[],
+  companyId: string,
+  storeId: string
+): Promise<Set<string>> {
+  const reached = new Set<string>();
+  if (users.length === 0) return reached;
+
+  const store = await db.store.findFirst({
+    where: { id: storeId, companyId },
+    select: { id: true, countryId: true, country: { select: { isActive: true, companyId: true } } },
+  });
+  if (!store) return reached;
+  const countryOpen = !!store.country?.isActive && store.country.companyId === companyId;
+
+  const narrowable = users.filter((u) => !seesAllCountries(u)).map((u) => u.id);
+  const [assigned, narrowings] = narrowable.length
+    ? await Promise.all([
+        db.userCountryAccess.findMany({
+          where: { userId: { in: narrowable }, countryId: store.countryId },
+          select: { userId: true },
+        }),
+        db.userStoreAccess.findMany({
+          where: { userId: { in: narrowable }, store: { countryId: store.countryId } },
+          select: { userId: true, storeId: true },
+        }),
+      ])
+    : [[], []];
+
+  const assignedIds = new Set(assigned.map((a) => a.userId));
+  const storesOf = new Map<string, string[]>();
+  for (const n of narrowings) storesOf.set(n.userId, [...(storesOf.get(n.userId) ?? []), n.storeId]);
+
+  for (const u of users) {
+    const facts: StoreReachFacts = {
+      seesAll: seesAllCountries(u),
+      countryOpen,
+      countryAssigned: assignedIds.has(u.id),
+      storesInCountry: storesOf.get(u.id) ?? [],
+    };
+    if (reachesStore(facts, storeId)) reached.add(u.id);
+  }
+  return reached;
 }
 
 /**

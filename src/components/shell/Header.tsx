@@ -100,8 +100,8 @@ export function Header({
             A number only; the server decides which, or none. */}
         <ConfirmationCounter />
 
-        {/* Work is announced here. Thirteen places in the system create
-            notifications and nothing showed them until now. */}
+        {/* Work is announced here: this person's own notifications for the
+            selected store. The server decides who is told what. */}
         <NotificationBell />
 
         <div className="text-left leading-tight hidden sm:block">

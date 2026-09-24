@@ -149,8 +149,54 @@ export interface DbUserLike {
   roleId?: string | null;
 }
 
+/** The two tables the computation reads, as the rows it needs. */
+export interface RoleGrantRow {
+  permission: string;
+  scope: string;
+  scopeIds: unknown;
+}
+export interface UserOverrideRow {
+  permission: string;
+  effect: string;
+  scope: string | null;
+  scopeIds: unknown;
+}
+
+/**
+ * Where computeEffectiveGrants reads its rows.
+ *
+ * The default is the database, one user at a time — what a request needs.
+ * Deciding WHO should hear about something means evaluating every employee
+ * of a company at once, and 2 queries per employee is a notification that
+ * costs more than the order it announces. A caller that has already loaded
+ * the rows for many users passes them in here; the RULES below stay the
+ * one copy, whichever way the rows arrive.
+ */
+export interface GrantSource {
+  /** Role rows: by roleId, or the system template named like the legacy role. */
+  roleRows(user: DbUserLike): Promise<RoleGrantRow[]>;
+  /** This user's ALLOW / DENY overrides. */
+  overrideRows(userId: string): Promise<UserOverrideRow[]>;
+}
+
+export const dbGrantSource: GrantSource = {
+  roleRows: (user) =>
+    db.rolePermission.findMany({
+      where: user.roleId ? { roleId: user.roleId } : { role: { companyId: null, name: user.role } },
+      select: { permission: true, scope: true, scopeIds: true },
+    }),
+  overrideRows: (userId) =>
+    db.userPermission.findMany({
+      where: { userId },
+      select: { permission: true, effect: true, scope: true, scopeIds: true },
+    }),
+};
+
 /** Compute effective grants for a user. 2 indexed queries max. */
-export async function computeEffectiveGrants(user: DbUserLike): Promise<EffectiveGrants> {
+export async function computeEffectiveGrants(
+  user: DbUserLike,
+  source: GrantSource = dbGrantSource
+): Promise<EffectiveGrants> {
   // 1. SUPER_ADMIN → full access (centralized bypass)
   if (user.role === 'SUPER_ADMIN') return { fullAccess: true, grants: {} };
 
@@ -160,10 +206,7 @@ export async function computeEffectiveGrants(user: DbUserLike): Promise<Effectiv
   //    template named like their legacy role string, so role edits in the
   //    permissions screen reach every user. The in-code legacy map is used
   //    only when no such template exists.
-  const rows = await db.rolePermission.findMany({
-    where: user.roleId ? { roleId: user.roleId } : { role: { companyId: null, name: user.role } },
-    select: { permission: true, scope: true, scopeIds: true },
-  });
+  const rows = await source.roleRows(user);
   if (user.roleId || rows.length > 0) {
     for (const r of rows) {
       grants[r.permission] = { scope: r.scope as Scope, scopeIds: (r.scopeIds as unknown[]) ?? null };
@@ -187,10 +230,7 @@ export async function computeEffectiveGrants(user: DbUserLike): Promise<Effectiv
   }
 
   // 3. User overrides — DENY wins, ALLOW wins over role absence/scope
-  const overrides = await db.userPermission.findMany({
-    where: { userId: user.id },
-    select: { permission: true, effect: true, scope: true, scopeIds: true },
-  });
+  const overrides = await source.overrideRows(user.id);
   for (const o of overrides) {
     if (o.effect === 'DENY') {
       delete grants[o.permission];
