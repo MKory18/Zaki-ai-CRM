@@ -39,15 +39,24 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
     setFavicon(store.favicon ?? null);
   }, [store]);
 
-  const changed = name.trim() !== store.name || phone.trim() !== (store.supportPhone ?? '');
+  const nameChanged = name.trim() !== store.name;
+  const phoneChanged = phone.trim() !== (store.supportPhone ?? '');
+  const changed = nameChanged || phoneChanged;
 
   async function save() {
     setSaving(true);
     setMsg(null);
     try {
+      // Only what was edited. Re-sending an untouched phone meant a value
+      // saved before this field was validated — a legacy one the new rule
+      // refuses — failed every rename, with an error pointing at a field the
+      // seller never opened.
+      const body: Record<string, unknown> = {};
+      if (nameChanged) body.name = name.trim();
+      if (phoneChanged) body.supportPhone = phone.trim() || null;
       await apiJson(`/api/geo/stores/${store.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ name: name.trim(), supportPhone: phone.trim() || null }),
+        body: JSON.stringify(body),
       });
       setMsg({ ok: true, text: 'تم الحفظ' });
       onSaved?.();
@@ -87,7 +96,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
             onChange={(e) => setPhone(e.target.value)}
             dir="ltr"
             inputMode="tel"
-            maxLength={40}
+            maxLength={24}
             placeholder="0999 000 000"
             className="mt-1 block h-10 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-3 text-left text-sm focus:border-[#b8256e] focus:outline-none"
           />

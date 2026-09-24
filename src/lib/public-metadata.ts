@@ -20,11 +20,24 @@ export interface StoreIdentity {
 
 /**
  * "What — Store", skipping whatever is missing — and any part another part
- * already says (a tagline that starts with the store's own name).
+ * already opens with (a tagline that starts with the store's own name).
+ *
+ * A part is dropped only when another OPENS with it and then breaks into a
+ * tagline (a dash, a pipe, a colon) — not for merely containing it. A product
+ * whose name sits inside the store's («صحة» sold by «متجر صحة», «كريم» by
+ * «كريم الليل») is the page's whole subject, and dropping it left the tab and
+ * every shared link naming the store alone.
  */
+const TAGLINE_AFTER = /^\s*[—–\-|:،]/;
+
+function saidBy(part: string, other: string): boolean {
+  if (other.length <= part.length || !other.startsWith(part)) return false;
+  return TAGLINE_AFTER.test(other.slice(part.length));
+}
+
 export function publicTitle(...parts: (string | null | undefined)[]): string {
   const kept = parts.map((p) => p?.trim()).filter((p): p is string => !!p);
-  return kept.filter((p, i) => !kept.some((q, j) => j !== i && q.length > p.length && q.includes(p))).join(' — ');
+  return kept.filter((p, i) => !kept.some((q, j) => j !== i && saidBy(p, q))).join(' — ');
 }
 
 export function storeIcons(store: StoreIdentity | null | undefined): Metadata['icons'] {

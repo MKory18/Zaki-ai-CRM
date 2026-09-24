@@ -57,7 +57,6 @@ export async function GET(req: Request, ctx: Ctx) {
   if (previewToken) {
     const tok = await verifyPreviewToken(previewToken);
     if (tok) {
-      previewing = true;
       lp = await db.landingPage.findFirst({
         where: { id: tok.lpId, slug },
         select: {
@@ -68,6 +67,11 @@ export async function GET(req: Request, ctx: Ctx) {
           recommendations: { where: { isActive: true, product: { status: 'ACTIVE' } }, orderBy: { sortOrder: 'asc' }, select: { id: true, product: { select: { name: true, basePrice: true, image: true } } } },
         },
       });
+      // Only a page the token actually opened is being previewed. A token
+      // whose page is gone (or renamed out of this slug) falls through to the
+      // published page below, and that page's images must be public links —
+      // flagging it as a preview would hand a shopper private, no-store ones.
+      previewing = !!lp;
     }
     // Invalid/expired token → fall through to the published-only path
   }

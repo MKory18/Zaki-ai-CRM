@@ -64,6 +64,9 @@ export async function GET(req: Request, ctx: Ctx) {
       // public one may stop being public (a page unpublished), so a day.
       'Cache-Control': preview ? 'private, no-store' : 'public, max-age=86400',
       'X-Content-Type-Options': 'nosniff',
+      // The policy that reaches the browser is next.config's
+      // PUBLIC_MEDIA_HEADERS — Next drops a route's same-named header in
+      // favour of the config's. Repeated here so the two cannot drift.
       'Content-Security-Policy': "default-src 'none'; sandbox",
     },
   });

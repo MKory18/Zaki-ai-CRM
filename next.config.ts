@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next';
-import { RAW_HTML_HEADERS, SELLING_PAGE_HEADERS } from './src/lib/csp';
+import { PUBLIC_MEDIA_HEADERS, RAW_HTML_HEADERS, SELLING_PAGE_HEADERS } from './src/lib/csp';
 
 // HSTS is only sent in production so local dev over http stays clean.
 const isProduction = process.env.NODE_ENV === 'production';
@@ -80,6 +80,7 @@ const nextConfig: NextConfig = {
       { source: '/lp/:slug', headers: SELLING_PAGE_HEADERS },
       { source: '/s/:path*', headers: SELLING_PAGE_HEADERS },
       { source: '/lp/:slug/raw', headers: RAW_HTML_HEADERS },
+      { source: '/api/public/media/:path*', headers: PUBLIC_MEDIA_HEADERS },
       { source: '/growth/landing-pages/:id/editor', headers: lpEditorHeaders },
     ];
   },

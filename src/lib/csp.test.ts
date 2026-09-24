@@ -65,6 +65,33 @@ describe('the uploaded HTML of a landing page', () => {
   });
 });
 
+describe("a shopper's stored image", () => {
+  it('is inert, by the header that actually reaches the browser', async () => {
+    // Same trap as the raw HTML above: the route sent `default-src 'none';
+    // sandbox` and the browser was handed the dashboard's catch-all instead.
+    const rules = await nextConfig.headers!();
+    const media = rules.find((r) => r.source === '/api/public/media/:path*');
+    expect(media, 'no rule for the public media route').toBeDefined();
+    const csp = media!.headers.find((h) => h.key === 'Content-Security-Policy')!.value;
+    expect(directive(csp, 'default-src')).toBe("default-src 'none'");
+    expect(csp).toContain('sandbox');
+    expect(csp).not.toContain('allow-same-origin');
+    expect(media!.headers).toContainEqual({ key: 'X-Content-Type-Options', value: 'nosniff' });
+  });
+
+  it('is declared after the catch-all, or the catch-all would win', async () => {
+    const rules = await nextConfig.headers!();
+    const all = rules.findIndex((r) => r.source === '/:path*');
+    const media = rules.findIndex((r) => r.source === '/api/public/media/:path*');
+    expect(all).toBeLessThan(media);
+  });
+
+  it('says the same thing in the route it is served from', () => {
+    const route = fs.readFileSync('src/app/api/public/media/[...parts]/route.ts', 'utf8');
+    expect(route).toContain("default-src 'none'; sandbox");
+  });
+});
+
 describe('the dashboard registers no pixel', () => {
   it.each(['src/app/(system)/layout.tsx', 'src/components/public/PublicLayout.tsx'])(
     '%s starts the engine empty — pixels come from the selling page being rendered',

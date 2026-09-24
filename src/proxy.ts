@@ -21,7 +21,14 @@ const COOKIE_NAME = 'salesflow_session';
 // Public by design: the login flow, landing pages, and storefronts. Each
 // carries its own guards — a storefront serves only an ENABLED one, and a
 // landing page only a PUBLISHED one.
-const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/lp', '/s'];
+//
+// /fonts is the app's own font folder. The faces under it are declared by
+// BLOCK_CSS on every public block page, so a shopper — who has no session —
+// must be able to fetch them. Their extension (.woff2) is not in the
+// matcher's static-asset list, so without this the request reached the
+// session check and every public page was served a 302 to /login instead of
+// its font.
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/lp', '/s', '/fonts'];
 
 /**
  * Edge pass: session presence and account state only.

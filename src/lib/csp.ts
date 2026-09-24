@@ -91,3 +91,23 @@ export const RAW_HTML_HEADERS: { key: string; value: string }[] = [
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   { key: 'Referrer-Policy', value: 'no-referrer' },
 ];
+
+/**
+ * A STORED FILE SERVED TO THE PUBLIC (/api/public/media/…).
+ *
+ * The bytes are a seller's upload. Served at our own origin, so a file that
+ * turns out not to be the image its type claims must still be inert: nothing
+ * it contains may load, and `sandbox` (no allow-same-origin) denies it this
+ * origin if it is ever opened in a tab rather than drawn in an <img>.
+ *
+ * Sent from next.config for the same reason as the raw HTML above — the
+ * route's own header is dropped in favour of the catch-all's, so the route
+ * sent this and the browser received the dashboard's policy instead.
+ */
+export const PUBLIC_MEDIA_HEADERS: { key: string; value: string }[] = [
+  { key: 'Content-Security-Policy', value: "default-src 'none'; sandbox" },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  // A shopper's page on a seller's own domain draws these images, so the
+  // catch-all's DENY cannot apply; nothing may frame them cross-site either.
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+];

@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { GET } from './[file]/route';
 import { FONTS } from '@/lib/landing-theme';
 import { GOOGLE_FAMILY } from '@/lib/block-look';
@@ -91,9 +93,13 @@ describe('the registry keeps these faces off the published page', () => {
 describe('every machine-local face has the files its rule asks for', () => {
   const WEIGHTS = [300, 400, 500, 700, 900];
 
-  it('finds each weight on disk under the name the CSS will request', async () => {
-    const { existsSync } = await import('node:fs');
-    const { join } = await import('node:path');
+  // The files are licensed to the machine they sit on, so /fonts-local is
+  // git-ignored and simply absent on a build server or a fresh clone. There
+  // the name check has nothing to check — it is not a failure. Every guard
+  // above (the ones that keep these faces off a published page) still runs.
+  const ifPresent = existsSync(join(process.cwd(), 'fonts-local')) ? it : it.skip;
+
+  ifPresent('finds each weight on disk under the name the CSS will request', async () => {
     for (const f of FONTS.filter((x) => x.devOnly)) {
       const family = f.stack.split(',')[0].replace(/'/g, '').trim();
       const stem = family.toLowerCase().replace(/\s+/g, '-');
@@ -104,7 +110,7 @@ describe('every machine-local face has the files its rule asks for', () => {
     }
   });
 
-  it('serves each of them', async () => {
+  ifPresent('serves each of them', async () => {
     for (const f of FONTS.filter((x) => x.devOnly)) {
       const family = f.stack.split(',')[0].replace(/'/g, '').trim();
       const stem = family.toLowerCase().replace(/\s+/g, '-');

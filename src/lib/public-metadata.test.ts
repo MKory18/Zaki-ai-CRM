@@ -30,6 +30,13 @@ describe('the title', () => {
     expect(publicTitle('صحة بلس', 'منتجات العناية')).toBe('صحة بلس — منتجات العناية');
   });
 
+  it('keeps a product whose name merely sits inside the store’s', () => {
+    // «صحة» is the whole subject of the page; it was dropped for being a
+    // substring of «متجر صحة», leaving the tab naming the store alone.
+    expect(publicTitle('صحة', 'متجر صحة')).toBe('صحة — متجر صحة');
+    expect(publicTitle('كريم', 'كريم الليل')).toBe('كريم — كريم الليل');
+  });
+
   it('is read from the page /lp/<slug> renders: published, the oldest holding the slug', async () => {
     db.landingPage.findFirst.mockResolvedValue(null);
     expect((await landingPageMetadata('gone')).title).toBe('غير متاح');
