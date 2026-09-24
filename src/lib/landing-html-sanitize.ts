@@ -45,8 +45,16 @@ export function sanitizeLandingHtml(html: string): string {
   // meta refresh / meta with http-equiv
   out = out.replace(/<meta\b[^>]*http-equiv\b[^>]*>/gi, '');
 
-  // 3) Strip ALL inline event handlers (on*)
-  out = out.replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  // 3) Strip ALL inline event handlers (on*).
+  //    An attribute starts after ANY separator an HTML parser accepts, not
+  //    only whitespace: `<svg/onload=…>` and `<img src="x"onerror=…>` are
+  //    both real handlers, and matching `\son…` alone let them through.
+  //    Repeated until nothing changes, so removing one handler cannot splice
+  //    two fragments into a new one.
+  for (let before = ''; before !== out; ) {
+    before = out;
+    out = out.replace(/([\s/"'])on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '$1');
+  }
 
   // 4) Neutralize dangerous URL schemes in any attribute
   //    (javascript:, vbscript:, data:text/html — incl. encoded variants)

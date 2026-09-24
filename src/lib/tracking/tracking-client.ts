@@ -51,6 +51,18 @@ export class TrackingEngine {
   private readonly consent: TrackingConsentGate;
   private readonly fired = new Set<string>();
   private readonly initializedPixels = new Set<string>();
+  /**
+   * Events asked for before the page's PageView went out.
+   *
+   * A page announces what it is showing (ViewContent) from an effect that
+   * runs BEFORE the one that starts the engine — so every ViewContent used
+   * to reach a platform whose script was not initialised yet, was dropped
+   * by the adapter, and was marked as fired so it never came back. They
+   * wait here and go out right after PageView, in the order a platform
+   * expects them.
+   */
+  private started = false;
+  private readonly pending: { event: TrackingEventName; payload: TrackingPayload }[] = [];
 
   constructor({ pixels, page, adapters, consent }: TrackingEngineOptions) {
     this.pixels = pixels;
@@ -81,24 +93,38 @@ export class TrackingEngine {
     this.page = page;
   }
 
-  /** Load each platform script once per pixel, then fire PageView once. */
+  /** Load a pixel's platform script, once. */
+  private ensureInit(pixel: TrackingPixelView): void {
+    if (this.initializedPixels.has(pixel.id)) return;
+    this.initializedPixels.add(pixel.id);
+    try {
+      this.adapters[pixel.platform].init(pixel.pixelId);
+    } catch {
+      /* script loading is non-fatal */
+    }
+  }
+
+  /** Load each platform script once per pixel, fire PageView once, then what was waiting. */
   initAll(): void {
     for (const pixel of this.getActivePixels()) {
       if (!this.consent(pixel.platform, pixel.scope)) continue;
-      if (!this.initializedPixels.has(pixel.id)) {
-        this.initializedPixels.add(pixel.id);
-        try {
-          this.adapters[pixel.platform].init(pixel.pixelId);
-        } catch {
-          /* script loading is non-fatal */
-        }
-      }
-      this.track('PageView', {}, pixel);
+      this.ensureInit(pixel);
+      this.dispatch('PageView', {}, pixel);
     }
+    this.started = true;
+    for (const { event, payload } of this.pending.splice(0)) this.track(event, payload);
   }
 
   /** Dispatch an event to every active pixel, with per-pixel dedupe. */
   track(event: TrackingEventName, payload: TrackingPayload, target?: TrackingPixelView): void {
+    if (!this.started) {
+      this.pending.push({ event, payload });
+      return;
+    }
+    this.dispatch(event, payload, target);
+  }
+
+  private dispatch(event: TrackingEventName, payload: TrackingPayload, target?: TrackingPixelView): void {
     const pixels = target ? this.getActivePixels().filter((p) => p.id === target.id) : this.getActivePixels();
     if (pixels.length === 0) return;
     const safe = sanitizeTrackingPayload(payload);
@@ -106,9 +132,17 @@ export class TrackingEngine {
     if (event === 'ViewContent' && !Array.isArray(safe.content_ids)) return;
     for (const pixel of pixels) {
       if (!this.consent(pixel.platform, pixel.scope)) continue;
-      const key = trackingEventKey(pixel.platform, pixel.pixelId, event, safe.order_id as string | undefined);
+      // Purchase is once per order; ViewContent once per PRODUCT, so moving
+      // from one product page to the next is a second view, not a repeat.
+      const scope = event === 'ViewContent'
+        ? (safe.content_ids as string[])[0]
+        : (safe.order_id as string | undefined);
+      const key = trackingEventKey(pixel.platform, pixel.pixelId, event, scope);
       if (this.fired.has(key)) continue; // dedupe — never double-fire
       this.fired.add(key);
+      // A pixel registered after the page started (a later navigation) is
+      // loaded on its first event rather than never.
+      this.ensureInit(pixel);
       try {
         // Adapters receive the SANITIZED payload — PII/tampered fields can
         // never reach a platform even if an adapter forgets to sanitize.

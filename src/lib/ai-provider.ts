@@ -1,6 +1,7 @@
 import { db } from './db';
 import { sanitizePromptOverrides, resolvePrompt, HOUSE_JOB } from './ai-prompts';
 import { decryptSecret, encryptSecret, encryptionAvailable, secretHint } from './secrets';
+import { updateCompanySettings } from './company-settings';
 
 /**
  * WHICH AI, AND WITH WHOSE KEY.
@@ -139,45 +140,38 @@ export async function saveAiSettings(
   companyId: string,
   input: { provider: AiProvider; model: string; prompts?: Record<string, string>; apiKey?: string | null }
 ): Promise<AiSettings> {
-  const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
-  const all = (() => {
-    try {
-      return company?.settings ? JSON.parse(company.settings) : {};
-    } catch {
-      return {};
+  // Refused before anything is touched: a key stored in the clear is worse
+  // than no AI at all.
+  if (input.apiKey && !encryptionAvailable()) throw new Error('ENCRYPTION_KEY_MISSING');
+
+  // Only the `ai` key, under a row lock: a template save running at the
+  // same moment used to write back the key this save had just removed.
+  await updateCompanySettings<StoredAi>(companyId, 'ai', (stored) => {
+    const current: StoredAi = stored ?? {};
+
+    const next: StoredAi = {
+      provider: input.provider,
+      model: input.model.trim() || providerInfo(input.provider).defaultModel,
+      // Sanitised on the way in: unknown jobs are dropped, and an override
+      // equal to the default is not stored at all.
+      prompts: input.prompts !== undefined ? sanitizePromptOverrides(input.prompts) : current.prompts,
+      // The editor was shown the legacy house prompt as `prompts.house`, so
+      // what it sends back is the whole truth — keeping the legacy key would
+      // bring a prompt the seller just cleared back to life.
+      ...(input.prompts === undefined && current.prompt ? { prompt: current.prompt } : {}),
+      apiKeyEncrypted: current.apiKeyEncrypted,
+      keyHint: current.keyHint,
+    };
+
+    if (input.apiKey === null) {
+      // Explicitly cleared.
+      delete next.apiKeyEncrypted;
+      delete next.keyHint;
+    } else if (input.apiKey) {
+      next.apiKeyEncrypted = encryptSecret(input.apiKey.trim());
+      next.keyHint = secretHint(input.apiKey.trim()) ?? undefined;
     }
-  })();
-  const current: StoredAi = all.ai ?? {};
-
-  const next: StoredAi = {
-    provider: input.provider,
-    model: input.model.trim() || providerInfo(input.provider).defaultModel,
-    // Sanitised on the way in: unknown jobs are dropped, and an override
-    // equal to the default is not stored at all.
-    prompts: input.prompts !== undefined ? sanitizePromptOverrides(input.prompts) : current.prompts,
-    // The editor was shown the legacy house prompt as `prompts.house`, so
-    // what it sends back is the whole truth — keeping the legacy key would
-    // bring a prompt the seller just cleared back to life.
-    ...(input.prompts === undefined && current.prompt ? { prompt: current.prompt } : {}),
-    apiKeyEncrypted: current.apiKeyEncrypted,
-    keyHint: current.keyHint,
-  };
-
-  if (input.apiKey === null) {
-    // Explicitly cleared.
-    delete next.apiKeyEncrypted;
-    delete next.keyHint;
-  } else if (input.apiKey) {
-    if (!encryptionAvailable()) {
-      throw new Error('ENCRYPTION_KEY_MISSING');
-    }
-    next.apiKeyEncrypted = encryptSecret(input.apiKey.trim());
-    next.keyHint = secretHint(input.apiKey.trim()) ?? undefined;
-  }
-
-  await db.company.update({
-    where: { id: companyId },
-    data: { settings: JSON.stringify({ ...all, ai: next }) },
+    return next;
   });
   return aiSettings(companyId);
 }

@@ -44,7 +44,7 @@ const PLATFORMS: {
   { key: 'META', label: 'Meta', placeholder: '123456789012345', mark: <span className="text-[13px] font-bold text-white">f</span>, markBg: '#1877f2' },
   { key: 'TIKTOK', label: 'TikTok', placeholder: 'C4ABCD1234567890', mark: <span className="text-[13px] font-bold text-white">♪</span>, markBg: '#000000' },
   { key: 'SNAPCHAT', label: 'Snapchat', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', mark: <span className="text-[13px]">👻</span>, markBg: '#fffc00' },
-  { key: 'GOOGLE', label: 'Google', placeholder: 'G-XXXXXXXXXX أو AW-123456789', mark: <span className="text-[13px] font-bold text-[#4285f4]">G</span>, markBg: '#ffffff' },
+  { key: 'GOOGLE', label: 'Google', placeholder: 'G-XXXXXXXXXX أو AW-123456789/التسمية', mark: <span className="text-[13px] font-bold text-[#4285f4]">G</span>, markBg: '#ffffff' },
 ];
 
 export function TrackingPixelsSection() {

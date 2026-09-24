@@ -606,11 +606,26 @@ export function LandingPageEditorScreen() {
             <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} حفظ
             </Button>
-            {lp.isPublished && (
-              <a href={`/lp/${lp.slug}`} target="_blank" rel="noopener noreferrer">
-                <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /> معاينة</Button>
-              </a>
-            )}
+            {/* A preview, not a visit: opened with the signed preview token, so
+                it loads no pixel and counts no view — the published address
+                reported the seller's own check to their ad account. The tab
+                is opened inside the click so no popup blocker stops it. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                const win = window.open('about:blank', '_blank');
+                if (win) win.opener = null;
+                try {
+                  const data = await crmApi(`/api/landing-pages/${lpId}/preview-token`, { method: 'POST' });
+                  if (win) win.location.href = data.previewPath;
+                } catch {
+                  win?.close();
+                }
+              }}
+            >
+              <Eye className="h-4 w-4" /> معاينة
+            </Button>
             <Button variant={lp.isPublished ? 'outline' : 'success'} size="sm" onClick={togglePublish} disabled={publishing}>
               {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
               {lp.isPublished ? 'إلغاء النشر' : 'نشر'}
@@ -895,6 +910,8 @@ data-zaki-z-index="9999"`}</pre>
               </p>
               <a
                 href="/settings/tracking"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#b8256e] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#b8256e]/90"
               >
                 إدارة البكسلات من الإعدادات ←

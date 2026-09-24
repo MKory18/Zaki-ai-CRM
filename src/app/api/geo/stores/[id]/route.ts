@@ -36,7 +36,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (!raw) {
         data.domain = null;
       } else {
-        const check = validateDomain(raw);
+        const check = validateDomain(raw, req.headers.get('host'));
         if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
         const [otherStore, page] = await Promise.all([
           db.store.findFirst({ where: { domain: check.domain, id: { not: id } }, select: { id: true } }),

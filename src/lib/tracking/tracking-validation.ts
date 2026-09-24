@@ -46,18 +46,33 @@ export function validateSnapchatPixelId(raw: string | null | undefined): string 
 }
 
 /**
- * Google tag IDs: a GA4 measurement id (G-XXXXXXXXXX) or a Google Ads tag
- * (AW-123456789). Normalised to upper case. A GTM container (GTM-XXXX) is
- * refused on purpose: a container runs whatever code is published into it,
- * which is exactly what this system never lets a setting do.
+ * Google tag IDs: a GA4 measurement id (G-XXXXXXXXXX), or a Google Ads tag
+ * with its conversion label (AW-123456789/AbC-dEfGhI). Without the label an
+ * Ads tag can build audiences but never records a conversion — which is the
+ * reason anybody adds one — so the label is accepted and used for the
+ * purchase. The prefix is normalised to upper case; the label is not, it is
+ * case-sensitive. A GTM container (GTM-XXXX) is refused on purpose: a
+ * container runs whatever code is published into it, which is exactly what
+ * this system never lets a setting do.
  */
-const GOOGLE_TAG_ID_RE = /^(G-[A-Z0-9]{6,14}|AW-\d{6,14})$/;
+const GA4_ID_RE = /^G-[A-Z0-9]{6,14}$/;
+const ADS_ID_RE = /^AW-\d{6,14}$/;
+const ADS_LABEL_RE = /^[A-Za-z0-9_-]{4,40}$/;
 
 export function validateGoogleTagId(raw: string | null | undefined): string | null {
   if (typeof raw !== 'string') return null;
-  const v = raw.trim().toUpperCase();
-  if (!v || v.length > MAX_TRACKING_PIXEL_ID_LENGTH) return null;
-  return GOOGLE_TAG_ID_RE.test(v) ? v : null;
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.length > MAX_TRACKING_PIXEL_ID_LENGTH) return null;
+  const [head, label, ...rest] = trimmed.split('/');
+  if (rest.length) return null;
+  const tag = head.toUpperCase();
+  if (label === undefined) return GA4_ID_RE.test(tag) || ADS_ID_RE.test(tag) ? tag : null;
+  return ADS_ID_RE.test(tag) && ADS_LABEL_RE.test(label) ? `${tag}/${label}` : null;
+}
+
+/** The tag a Google id loads and configures — without any conversion label. */
+export function googleTagOf(id: string): string {
+  return id.split('/')[0];
 }
 
 /** Platform-dispatching validator — the single entry point. */
@@ -89,7 +104,7 @@ export function pixelIdHint(platform: string): string {
     case 'SNAPCHAT':
       return 'Snapchat Pixel ID غير صالح (يجب أن يكون بصيغة UUID)';
     case 'GOOGLE':
-      return 'معرّف Google غير صالح — G-XXXXXXXXXX لـ Analytics أو AW-123456789 لـ Google Ads';
+      return 'معرّف Google غير صالح — G-XXXXXXXXXX لـ Analytics، أو AW-123456789/التسمية لإعلانات Google (التسمية من صفحة التحويل في Google Ads)';
     default:
       return 'منصة غير مدعومة';
   }

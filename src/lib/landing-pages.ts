@@ -85,16 +85,8 @@ export const LANDING_PAGE_MAX_QTY = 99;
  * iframe, so the uploaded (untrusted) HTML can never touch or read it.
  */
 
-/**
- * CSP for the raw public HTML response.
- * The `sandbox` directive (no allow-same-origin) forces the document into an
- * opaque origin EVEN IF the URL is opened in a top-level tab — so uploaded
- * HTML can never read the CRM session cookie, localStorage or JWT, inside the
- * dashboard iframe or outside it. Scripts still run (allow-scripts) so custom
- * landing pages keep rendering.
- */
-export const RAW_HTML_CSP =
-  "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data: https:; connect-src 'self'; form-action 'self'; frame-ancestors 'self'; sandbox allow-scripts allow-forms allow-popups allow-modals";
+/** CSP for the raw public HTML response — defined in csp.ts, sent by next.config. */
+export { RAW_HTML_CSP } from './csp';
 
 /** Conversion rate (percentage) — orders / views. */
 export function conversionRate(views: number, orders: number): number {

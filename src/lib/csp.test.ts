@@ -52,6 +52,19 @@ describe('which paths get which policy', () => {
   });
 });
 
+describe('the uploaded HTML of a landing page', () => {
+  it("is sandboxed by the header that actually reaches the browser — the config's", async () => {
+    // Next writes the config's headers first and drops a route's same-named
+    // one, so a sandbox sent only by the route never arrived.
+    const rules = await nextConfig.headers!();
+    const raw = rules.find((r) => r.source === '/lp/:slug/raw')!;
+    const csp = raw.headers.find((h) => h.key === 'Content-Security-Policy')!.value;
+    const sandbox = directive(csp, 'sandbox');
+    expect(sandbox).toContain('sandbox allow-scripts');
+    expect(sandbox).not.toContain('allow-same-origin');
+  });
+});
+
 describe('the dashboard registers no pixel', () => {
   it('the root layout starts the engine empty — pixels come from the selling page being rendered', () => {
     const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');

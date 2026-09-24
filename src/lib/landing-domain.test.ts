@@ -59,6 +59,27 @@ describe('claiming a domain', () => {
     expect(validateDomain('other.com').ok).toBe(true);
   });
 
+  it('refuses the host the dashboard answered on, even with APP_DOMAIN unset', () => {
+    // APP_DOMAIN is optional and was unset in the documented deploy, which
+    // left the dashboard's own hostname free to claim.
+    const saved = { d: process.env.APP_DOMAIN, u: process.env.NEXT_PUBLIC_APP_URL, a: process.env.APP_URL };
+    delete process.env.APP_DOMAIN;
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    delete process.env.APP_URL;
+    try {
+      expect(validateDomain('crm.example.com', 'crm.example.com:443').ok).toBe(false);
+      expect(validateDomain('shop.crm.example.com', 'CRM.example.com').ok).toBe(false);
+      expect(validateDomain('shop.example.com', 'crm.example.com').ok).toBe(true);
+      process.env.NEXT_PUBLIC_APP_URL = 'https://app.zaki.io/';
+      expect(validateDomain('app.zaki.io').ok).toBe(false);
+    } finally {
+      process.env.APP_DOMAIN = saved.d ?? '';
+      if (saved.d === undefined) delete process.env.APP_DOMAIN;
+      if (saved.u === undefined) delete process.env.NEXT_PUBLIC_APP_URL; else process.env.NEXT_PUBLIC_APP_URL = saved.u;
+      if (saved.a === undefined) delete process.env.APP_URL; else process.env.APP_URL = saved.a;
+    }
+  });
+
   it('refuses what is not a routable hostname', () => {
     for (const bad of ['', 'no-dot', 'localhost', '10.0.0.1', '-bad.com', 'a..b.com', 'x'.repeat(300)]) {
       expect(validateDomain(bad).ok, bad).toBe(false);

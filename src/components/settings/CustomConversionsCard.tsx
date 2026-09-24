@@ -188,7 +188,7 @@ export function CustomConversionsCard() {
     if (!pixel) return;
     const ok = await confirm({
       title: `فصل واجهة التحويلات عن «${pixel.name}»؟`,
-      body: 'التحويلات المعرَّفة تبقى كما هي، لكنها تتوقف عن الإرسال حتى تضيف رمزاً جديداً.',
+      body: 'التحويلات المعرَّفة والـ Dataset يبقون كما هم، لكن الإرسال يتوقف حتى تضيف رمزاً جديداً.',
       confirmLabel: 'افصل',
       cancelLabel: 'إلغاء',
       tone: 'danger',

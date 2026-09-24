@@ -132,7 +132,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
         data.domain = null;
         data.domainVerifiedAt = null;
       } else {
-        const check = validateDomain(raw);
+        const check = validateDomain(raw, req.headers.get('host'));
         if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
         // Unique across companies, so a clash is somebody else's claim and
         // saying which company holds it would leak who our customers are.

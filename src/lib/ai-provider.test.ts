@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db } = vi.hoisted(() => ({
-  db: { company: { findUnique: vi.fn(), update: vi.fn() } },
+  db: { company: { findUnique: vi.fn(), update: vi.fn() }, $transaction: vi.fn() },
 }));
 vi.mock('./db', () => ({ db }));
 
@@ -31,6 +31,13 @@ beforeEach(() => {
   delete process.env.OPENROUTER_API_KEY;
   db.company.findUnique.mockResolvedValue({ settings: null });
   db.company.update.mockResolvedValue({});
+  // The locked read-modify-write reads the same row the reader does.
+  db.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
+    fn({
+      $queryRaw: async () => [{ settings: ((await db.company.findUnique()) as { settings: string | null } | null)?.settings ?? null }],
+      company: { update: db.company.update },
+    })
+  );
 });
 
 afterEach(() => {

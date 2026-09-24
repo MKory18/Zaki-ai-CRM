@@ -90,7 +90,17 @@ export function forgetHost(host: string | null | undefined): void {
  * app's own host — claiming that would put a seller's page where the
  * dashboard lives, for everyone.
  */
-export function validateDomain(input: string): { ok: true; domain: string } | { ok: false; error: string } {
+export function validateDomain(
+  input: string,
+  /**
+   * The host this request reached us on — the dashboard's own. Checked on
+   * every save, because APP_DOMAIN is optional and was unset in the
+   * documented deploy: a seller could type the dashboard's hostname as
+   * their page's domain, and the proxy then served their page in place of
+   * the dashboard, for everyone.
+   */
+  requestHost?: string | null
+): { ok: true; domain: string } | { ok: false; error: string } {
   const bare = input.trim().toLowerCase().replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
 
   if (!bare) return { ok: false, error: 'النطاق مطلوب' };
@@ -102,10 +112,25 @@ export function validateDomain(input: string): { ok: true; domain: string } | { 
     return { ok: false, error: 'هذا ليس نطاقاً يمكن توجيهه' };
   }
 
-  const appHost = normalizeHost(process.env.APP_DOMAIN);
-  if (appHost && (bare === appHost || bare.endsWith(`.${appHost}`))) {
+  const own = [
+    normalizeHost(process.env.APP_DOMAIN),
+    normalizeHost(requestHost),
+    hostOfUrl(process.env.NEXT_PUBLIC_APP_URL),
+    hostOfUrl(process.env.APP_URL),
+  ].filter((h): h is string => !!h);
+  if (own.some((h) => bare === h || bare.endsWith(`.${h}`))) {
     return { ok: false, error: 'لا يمكن استخدام نطاق النظام نفسه' };
   }
 
   return { ok: true, domain: bare };
+}
+
+/** The host of a configured URL, or null. */
+function hostOfUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    return normalizeHost(new URL(url).host);
+  } catch {
+    return null;
+  }
 }

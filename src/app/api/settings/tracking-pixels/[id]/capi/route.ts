@@ -61,7 +61,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!parsed.success) {
       const datasetIssue = parsed.error.issues.some((i) => i.path[0] === 'datasetId');
       return NextResponse.json(
-        { error: datasetIssue ? 'Dataset ID غير صالح — أرقام فقط' : 'الرمز غير صالح' },
+        { error: datasetIssue ? 'Dataset ID غير صالح — أرقام فقط، من 10 إلى 20 خانة' : 'الرمز غير صالح' },
         { status: 400 }
       );
     }
@@ -77,7 +77,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       // and their history of what was already sent stays readable.
       await db.trackingPixel.update({
         where: { id },
-        data: { capiToken: null, capiTokenHint: null, capiTestCode: null, capiDatasetId: null },
+        // The dataset stays: it is where this pixel's events go, not a
+        // secret, and reconnecting should not mean typing it again.
+        data: { capiToken: null, capiTokenHint: null, capiTestCode: null },
       });
       await logAudit({
         companyId,

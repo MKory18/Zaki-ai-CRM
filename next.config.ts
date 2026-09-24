@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next';
-import { SELLING_PAGE_HEADERS } from './src/lib/csp';
+import { RAW_HTML_HEADERS, SELLING_PAGE_HEADERS } from './src/lib/csp';
 
 // HSTS is only sent in production so local dev over http stays clean.
 const isProduction = process.env.NODE_ENV === 'production';
@@ -30,29 +30,10 @@ const securityHeaders = [
     : []),
 ];
 
-// The public landing-page HTML (/lp/:slug/raw) is rendered ONLY inside a
-// sandboxed opaque-origin iframe (same-origin parent, no credentials/cookies
-// are sent into the sandbox). Framing same-origin is safe here, so the
-// catch-all X-Frame-Options DENY / frame-ancestors 'none' are overridden
-// with SAMEORIGIN / 'self'. The route handler additionally sends its own
-// stricter per-response CSP.
-const lpRawOverrideHeaders = [
-  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "font-src 'self' data: https:",
-      "connect-src 'self'",
-      "frame-ancestors 'self'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join('; '),
-  },
-];
+// The uploaded HTML of a landing page (/lp/:slug/raw) gets its sandboxing
+// policy from HERE, not from its route: Next writes these headers first and
+// drops a route's same-named header, so the sandbox the route sent never
+// reached a browser. Defined in src/lib/csp.ts.
 
 // Selling pages — a landing page and a storefront — have their own policy,
 // defined once in src/lib/csp.ts because the proxy sends the same one for a
@@ -96,7 +77,7 @@ const nextConfig: NextConfig = {
       // After the catch-all so each overrides the CSP for its own route.
       { source: '/lp/:slug', headers: SELLING_PAGE_HEADERS },
       { source: '/s/:path*', headers: SELLING_PAGE_HEADERS },
-      { source: '/lp/:slug/raw', headers: lpRawOverrideHeaders },
+      { source: '/lp/:slug/raw', headers: RAW_HTML_HEADERS },
       { source: '/growth/landing-pages/:id/editor', headers: lpEditorHeaders },
     ];
   },

@@ -29,8 +29,8 @@ async function main() {
 
   console.log('\n=== 2. SINGLE SOURCE — old MetaPixel is gone ===');
   ok('MetaPixel.tsx deleted', !fs.existsSync('src/components/landing/MetaPixel.tsx'));
-  ok('lp page no longer uses MetaPixel', !src('src/app/lp/[slug]/page.tsx').includes('MetaPixel'));
-  ok('lp page uses LandingTrackingPixels', src('src/app/lp/[slug]/page.tsx').includes('LandingTrackingPixels'));
+  ok('lp page no longer uses MetaPixel', !src('src/components/landing/LandingPageView.tsx').includes('MetaPixel'));
+  ok('lp page uses LandingTrackingPixels', src('src/components/landing/LandingPageView.tsx').includes('LandingTrackingPixels'));
   ok('no duplicate fbq PageView path remains in landing components',
     !src('src/components/landing/OrderForm.tsx').includes('window.fbq') &&
     !src('src/components/landing/LandingFormBridge.tsx').includes('window.fbq'));
@@ -45,9 +45,10 @@ async function main() {
 
   console.log('\n=== 4. GLOBAL INJECTION ===');
   ok('GlobalTrackingProvider mounted in root layout', src('src/app/layout.tsx').includes('GlobalTrackingProvider'));
-  ok('layout resolves pixels server-side', src('src/app/layout.tsx').includes('getSiteTrackingPixels'));
+  ok('layout starts the engine empty — selling pages register their own pixels', src('src/app/layout.tsx').includes('<GlobalTrackingProvider pixels={[]}>'));
+  ok('landing pages resolve their pixels server-side', src('src/components/landing/LandingPageView.tsx').includes('getTrackingPixelsForPage'));
   ok('landing page resolves pixels server-side (scope LANDING_PAGES)',
-    src('src/app/lp/[slug]/page.tsx').includes("getTrackingPixelsForPage(lp.company.id, 'LANDING_PAGES')"));
+    src('src/components/landing/LandingPageView.tsx').includes("getTrackingPixelsForPage(companyId, 'LANDING_PAGES')"));
 
   console.log('\n=== 5. PLATFORM ADAPTERS (hard-coded loaders) ===');
   const platforms = src('src/lib/tracking/tracking-platforms.ts');
@@ -74,7 +75,8 @@ async function main() {
   ok('bridge dedupes InitiateCheckout per session', bridge.includes('checkoutFiredRef.current'));
   ok('bridge never reads price from message data', !/\bd\.(price|totalAmount|currency)\b/.test(bridge));
   const route = src('src/app/api/public/landing-pages/[slug]/orders/route.ts');
-  ok('orders API returns server-authoritative total', route.includes('total: Number(order.totalAmount)'));
+  // The total is computed where the order is — the shared public-order path both doors use.
+  ok('orders API returns server-authoritative total', src('src/lib/public-order.ts').includes('total: Number(order.totalAmount)'));
   ok('payload sanitizer blocks PII keys', /full_name|'phone'|'address'|'notes'/.test(src('src/lib/tracking/tracking-types.ts')) && src('src/lib/tracking/tracking-types.ts').includes('PII_KEYS'));
 
   console.log('\n=== 8. SETTINGS API SECURITY ===');

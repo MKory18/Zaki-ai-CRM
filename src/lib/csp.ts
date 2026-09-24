@@ -68,3 +68,26 @@ export const SELLING_PAGE_HEADERS: { key: string; value: string }[] = [
   // preview frame, or the older header wins in browsers that honour both.
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
 ];
+
+/**
+ * THE UPLOADED HTML OF A LANDING PAGE (/lp/<slug>/raw).
+ *
+ * `sandbox` without allow-same-origin puts the document in an opaque origin
+ * EVEN WHEN THE URL IS OPENED IN A TAB — so uploaded HTML can never reach
+ * the session cookie, storage, or a credentialed call to our API.
+ *
+ * It lives here, and is sent from next.config, because that is the header
+ * that reaches the browser: Next writes the config's headers first and a
+ * route handler's same-named header is then dropped. The route sent this
+ * policy and the browser never received it — it received the config's,
+ * which had no sandbox.
+ */
+export const RAW_HTML_CSP =
+  "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data: https:; connect-src 'self'; form-action 'self'; frame-ancestors 'self'; sandbox allow-scripts allow-forms allow-popups allow-modals";
+
+export const RAW_HTML_HEADERS: { key: string; value: string }[] = [
+  { key: 'Content-Security-Policy', value: RAW_HTML_CSP },
+  // Framed by our own landing page only.
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'Referrer-Policy', value: 'no-referrer' },
+];

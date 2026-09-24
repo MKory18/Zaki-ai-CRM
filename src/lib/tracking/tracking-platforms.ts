@@ -21,6 +21,7 @@ import {
   TrackingPayload,
   TrackingPlatform,
 } from './tracking-types';
+import { googleTagOf } from './tracking-validation';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -231,7 +232,7 @@ export function googleParams(payload: TrackingPayload, tagId: string): Record<st
   const ids = p.content_ids as string[] | undefined;
   // send_to pins the event to THIS tag: with two tags on a page, an event
   // without it goes to both and every conversion is counted twice.
-  const out: Record<string, unknown> = { send_to: tagId };
+  const out: Record<string, unknown> = { send_to: googleTagOf(tagId) };
   if (ids?.length) {
     out.items = ids.map((id) => ({ item_id: id, ...(p.content_name ? { item_name: p.content_name } : {}) }));
   }
@@ -247,6 +248,7 @@ const googleAdapter: TrackingAdapter = {
   platform: 'GOOGLE',
   init(tagId) {
     const w = window as any;
+    const tag = googleTagOf(tagId);
     if (!w.gtag) {
       w.dataLayer = w.dataLayer || [];
       // The official stub: gtag pushes its `arguments` object, which is what
@@ -256,11 +258,11 @@ const googleAdapter: TrackingAdapter = {
         w.dataLayer.push(arguments);
       };
       w.gtag('js', new Date());
-      loadScript(`${GTAG_SCRIPT_SRC}?id=${encodeURIComponent(tagId)}`);
+      loadScript(`${GTAG_SCRIPT_SRC}?id=${encodeURIComponent(tag)}`);
     }
     // The engine fires PageView itself, once per page load — letting the tag
     // send its own as well would count every visit twice.
-    w.gtag('config', tagId, { send_page_view: false });
+    w.gtag('config', tag, { send_page_view: false });
   },
   track(event, payload, tagId) {
     const name = GOOGLE_EVENTS[event];
@@ -269,6 +271,11 @@ const googleAdapter: TrackingAdapter = {
     if (!w.gtag) return;
     try {
       w.gtag('event', name, googleParams(payload, tagId));
+      // An Ads tag with a conversion label records the purchase as the
+      // conversion itself — the one event Google Ads optimises on.
+      if (event === 'Purchase' && tagId.includes('/')) {
+        w.gtag('event', 'conversion', { ...googleParams(payload, tagId), send_to: tagId });
+      }
     } catch {
       /* tracking is non-fatal */
     }

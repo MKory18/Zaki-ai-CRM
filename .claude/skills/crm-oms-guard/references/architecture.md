@@ -91,7 +91,7 @@ Rules:
 لوحة الأداء               /growth/performance
 الحملات                  /growth/campaigns
 مركز الذكاء               /growth/intelligence
-المتاجر المفردة           /growth/single-product-stores
+متجر Single Product       /growth/single-product-stores
 صفحات الهبوط              /growth/landing-pages
 صندوق الواتساب            /growth/whatsapp/inbox
 طلبات تلجرام              /growth/telegram/orders
@@ -109,7 +109,7 @@ Rules:
 أجور التوصيل              /settings/delivery-fees
 العمولات                  /settings/commission
 شركات الشحن               /settings/couriers
-البكسلات والتتبع          /settings/pixels
+بكسل التتبع والحملات       /settings/tracking
 إعدادات واتساب            /settings/whatsapp
 إعدادات تلجرام            /settings/telegram
 إعدادات النظام            /settings/system

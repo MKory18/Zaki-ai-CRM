@@ -82,28 +82,38 @@ const PII_KEYS = new Set([
  * Sanitize a payload: drop PII-ish keys, non-primitive values and anything
  * oversized. Used by adapters so even a future caller mistake cannot leak
  * name/phone/address/notes into an ad platform.
+ *
+ * IDEMPOTENT: it reads its own output as well as the camelCase input. The
+ * engine sanitizes once and every adapter sanitizes again, and reading only
+ * `contentIds`/`orderId` meant the second pass threw the products and the
+ * order number away — no content ids on any ViewContent, no transaction id
+ * on any Purchase, on every platform.
  */
-export function sanitizeTrackingPayload(payload: TrackingPayload): Record<string, unknown> {
+export function sanitizeTrackingPayload(payload: TrackingPayload | Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (!payload || typeof payload !== 'object') return out;
+  const p = payload as Record<string, unknown>;
+  const contentIds = p.contentIds ?? p.content_ids;
+  const contentName = p.contentName ?? p.content_name;
+  const orderId = p.orderId ?? p.order_id;
 
-  if (Array.isArray(payload.contentIds)) {
-    const ids = payload.contentIds
+  if (Array.isArray(contentIds)) {
+    const ids = contentIds
       .filter((v): v is string => typeof v === 'string' && v.length > 0 && v.length <= 64)
       .slice(0, 10);
     if (ids.length > 0) out.content_ids = ids;
   }
-  if (typeof payload.contentName === 'string' && payload.contentName.trim()) {
-    out.content_name = payload.contentName.trim().slice(0, 120);
+  if (typeof contentName === 'string' && contentName.trim()) {
+    out.content_name = contentName.trim().slice(0, 120);
   }
-  if (typeof payload.value === 'number' && Number.isFinite(payload.value) && payload.value >= 0) {
-    out.value = Math.round(payload.value * 100) / 100;
+  if (typeof p.value === 'number' && Number.isFinite(p.value) && p.value >= 0) {
+    out.value = Math.round(p.value * 100) / 100;
   }
-  if (typeof payload.currency === 'string' && /^[A-Za-z]{3}$/.test(payload.currency)) {
-    out.currency = payload.currency.toUpperCase();
+  if (typeof p.currency === 'string' && /^[A-Za-z]{3}$/.test(p.currency)) {
+    out.currency = p.currency.toUpperCase();
   }
-  if (typeof payload.orderId === 'string' && payload.orderId.length <= 64) {
-    out.order_id = payload.orderId;
+  if (typeof orderId === 'string' && orderId.length <= 64) {
+    out.order_id = orderId;
   }
   // Defense-in-depth: nothing PII-like survives, no matter the input shape.
   for (const key of Object.keys(out)) {

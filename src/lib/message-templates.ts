@@ -1,3 +1,4 @@
+import { updateCompanySettings } from './company-settings';
 import { db } from './db';
 
 /**
@@ -137,17 +138,8 @@ export async function saveTemplates(
   companyId: string,
   templates: MessageTemplate[]
 ): Promise<MessageTemplate[]> {
-  const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
-  const all = (() => {
-    try {
-      return company?.settings ? JSON.parse(company.settings) : {};
-    } catch {
-      return {};
-    }
-  })();
-  await db.company.update({
-    where: { id: companyId },
-    data: { settings: JSON.stringify({ ...all, messageTemplates: templates }) },
-  });
+  // Only this key, under a row lock — never the whole document from a read
+  // that another save may already have overtaken.
+  await updateCompanySettings<MessageTemplate[]>(companyId, 'messageTemplates', () => templates);
   return templates;
 }
