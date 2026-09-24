@@ -908,6 +908,18 @@ data-zaki-z-index="9999"`}</pre>
  * It starts SMALL. A code box that owns the page by default hides the live
  * preview, which is the thing you are editing against. It can be dragged
  * taller, and made full screen when the file is long enough to deserve it.
+ *
+ * "Starts small" had one hole in it, and it was the numbers. The gutter
+ * had no height of its own, so it drew every line at full size and the
+ * flex row took ITS height: a four-hundred-line page made the pane eight
+ * thousand pixels tall inside a seven-hundred-pixel window, and the
+ * textarea sat at its correct 160px in the corner of it. Dragging the
+ * textarea taller did not help either — only the textarea moved, and the
+ * numbers stayed where they were.
+ *
+ * So the HEIGHT belongs to the pane, and both columns fill it. One box to
+ * drag, one height to be wrong about, and the numbers cannot come adrift
+ * from the lines they number.
  */
 function CodePane({
   value,
@@ -926,11 +938,18 @@ function CodePane({
   const lines = lineCount(value);
 
   return (
-    <div className="flex bg-[#121926]" dir="ltr">
+    <div
+      dir="ltr"
+      // The pane is the thing that resizes, and `overflow-hidden` is what
+      // makes a div resizable at all. Full screen turns the handle off:
+      // dragging something that is already the height of the window only
+      // produces a box taller than the window.
+      className={`flex overflow-hidden bg-[#121926] ${full ? '' : 'resize-y'}`}
+      style={full ? { height: 'calc(100vh - 14rem)' } : { height: '10rem', minHeight: '6rem' }}
+    >
       <div
         ref={gutter}
-        className="select-none overflow-hidden border-l border-[#202939] bg-[#0d1117] px-2 py-3 text-right font-mono text-[11px] leading-5 text-[#5b6474]"
-        style={{ height: full ? 'calc(100vh - 14rem)' : undefined }}
+        className="h-full shrink-0 select-none overflow-hidden border-l border-[#202939] bg-[#0d1117] px-2 py-3 text-right font-mono text-[11px] leading-5 text-[#5b6474]"
       >
         {Array.from({ length: lines }, (_, i) => (
           <div key={i}>{i + 1}</div>
@@ -946,9 +965,9 @@ function CodePane({
           if (gutter.current) gutter.current.scrollTop = e.currentTarget.scrollTop;
         }}
         spellCheck={false}
-        className={`w-full resize-y bg-[#121926] p-3 font-mono text-[12px] leading-5 text-[#c9d1d9] outline-none ${
-          full ? 'h-[calc(100vh-14rem)]' : 'h-40'
-        }`}
+        // No handle of its own: two resize handles on one box is two
+        // heights that disagree, which is how the numbers came adrift.
+        className="h-full w-full resize-none bg-[#121926] p-3 font-mono text-[12px] leading-5 text-[#c9d1d9] outline-none" 
       />
     </div>
   );
