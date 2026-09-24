@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { inStore } from '@/lib/store-filter';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -32,9 +33,16 @@ const reverseSchema = z.object({
   reason: z.string().trim().min(5, 'سبب القيد العكسي إلزامي').max(300),
 });
 
-async function walletOf(id: string, companyId: string) {
+/**
+ * The wallet, if it is this store's.
+ *
+ * The store is a parameter and not an ambient value: every caller already
+ * has one from requireContext, and a helper that quietly read a wider scope
+ * would undo the filter at the one place all three handlers go through.
+ */
+async function walletOf(id: string, companyId: string, storeId: string | null) {
   return db.wallet.findFirst({
-    where: { id, companyId },
+    where: { id, ...inStore(companyId, storeId) },
     include: { country: { select: { minorUnit: true } } },
   });
 }
@@ -42,10 +50,10 @@ async function walletOf(id: string, companyId: string) {
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { companyId } = await requireContext();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('finance.cashbox');
 
-    const wallet = await walletOf(id, companyId);
+    const wallet = await walletOf(id, companyId, storeId);
     if (!wallet) return NextResponse.json({ error: 'المحفظة غير موجودة' }, { status: 404 });
 
     const take = Math.min(Number(new URL(req.url).searchParams.get('limit') ?? 100), 300);
@@ -80,10 +88,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('finance.cashbox');
 
-    const wallet = await walletOf(id, companyId);
+    const wallet = await walletOf(id, companyId, storeId);
     if (!wallet) return NextResponse.json({ error: 'المحفظة غير موجودة' }, { status: 404 });
     if (!wallet.isActive) return NextResponse.json({ error: 'المحفظة موقوفة' }, { status: 409 });
 
@@ -121,10 +129,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('finance.cashbox');
 
-    const wallet = await walletOf(id, companyId);
+    const wallet = await walletOf(id, companyId, storeId);
     if (!wallet) return NextResponse.json({ error: 'المحفظة غير موجودة' }, { status: 404 });
 
     const parsed = reverseSchema.safeParse(await req.json().catch(() => null));

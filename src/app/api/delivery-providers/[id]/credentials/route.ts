@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { courierScope } from '@/lib/courier-scope';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -42,9 +43,16 @@ const credentialsSchema = z.object({
   parcelTypeId: z.coerce.number().int().optional(),
 });
 
-async function loadProvider(id: string, companyId: string) {
+/**
+ * The courier, if it belongs to this store.
+ *
+ * This one holds an API login. Every other courier route already scopes
+ * through courierScope; this did not, so a store could read the shape of
+ * another store's integration — and write over it.
+ */
+async function loadProvider(id: string, companyId: string, storeId: string | null) {
   return db.deliveryProvider.findFirst({
-    where: { id, companyId },
+    where: { id, ...courierScope(companyId, storeId) },
     select: {
       id: true,
       name: true,
@@ -61,11 +69,11 @@ async function loadProvider(id: string, companyId: string) {
 /** What a screen may know: that an account exists, not what it is. */
 export async function GET(_req: Request, ctx: Ctx) {
   try {
-    const { companyId } = await requireContext();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('settings.view');
     const { id } = await ctx.params;
 
-    const provider = await loadProvider(id, companyId);
+    const provider = await loadProvider(id, companyId, storeId);
     if (!provider) return NextResponse.json({ error: 'شركة الشحن غير موجودة' }, { status: 404 });
 
     const stored = decryptJson<LogesTechsCredentials>(provider.apiCredentials);
@@ -101,11 +109,11 @@ export async function GET(_req: Request, ctx: Ctx) {
 
 export async function PUT(req: Request, ctx: Ctx) {
   try {
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('settings.manage');
     const { id } = await ctx.params;
 
-    const provider = await loadProvider(id, companyId);
+    const provider = await loadProvider(id, companyId, storeId);
     if (!provider) return NextResponse.json({ error: 'شركة الشحن غير موجودة' }, { status: 404 });
 
     if (!encryptionAvailable()) {
@@ -166,11 +174,11 @@ export async function PUT(req: Request, ctx: Ctx) {
 /** Forget the account. The courier falls back to manual on the next parcel. */
 export async function DELETE(_req: Request, ctx: Ctx) {
   try {
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('settings.manage');
     const { id } = await ctx.params;
 
-    const provider = await loadProvider(id, companyId);
+    const provider = await loadProvider(id, companyId, storeId);
     if (!provider) return NextResponse.json({ error: 'شركة الشحن غير موجودة' }, { status: 404 });
 
     await db.deliveryProvider.update({

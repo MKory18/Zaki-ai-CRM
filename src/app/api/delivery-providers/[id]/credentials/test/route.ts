@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { courierScope } from '@/lib/courier-scope';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -24,12 +25,12 @@ import { logesTechsFromCredentials, type LogesTechsCredentials } from '@/lib/cou
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('settings.manage');
     const { id } = await params;
 
     const provider = await db.deliveryProvider.findFirst({
-      where: { id, companyId },
+      where: { id, ...courierScope(companyId, storeId) },
       select: { id: true, name: true, adapterCode: true, code: true, apiCredentials: true },
     });
     if (!provider) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });

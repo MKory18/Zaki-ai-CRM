@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { inStore } from '@/lib/store-filter';
+import { requireContext } from '@/lib/geo-context';
 import { saveProductImage, validateImageFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
 import { authorize } from '@/lib/authorization';
@@ -14,10 +15,15 @@ const MAX_TOTAL_BYTES = 25 * 1024 * 1024; // 25MB summed across all files
 const UPLOAD_RATE_LIMIT = 20;
 const UPLOAD_RATE_WINDOW_MS = 5 * 60 * 1000;
 
-async function getOwnedProduct(companyId: string, productId: string) {
-  const product = await db.product.findUnique({ where: { id: productId } });
-  if (!product || product.companyId !== companyId) return null;
-  return product;
+/**
+ * The product, if it is this store's.
+ *
+ * The store is a parameter: a helper that read it from somewhere ambient
+ * would be the one place all the handlers pass through, and the one place
+ * a wider scope would go unnoticed.
+ */
+async function getOwnedProduct(companyId: string, storeId: string | null, productId: string) {
+  return db.product.findFirst({ where: { id: productId, ...inStore(companyId, storeId) } });
 }
 
 /**
@@ -27,7 +33,7 @@ async function getOwnedProduct(companyId: string, productId: string) {
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: productId } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     // Rate limit uploads per user (20 / 5 minutes)
     const rl = rateLimit(`uploads:${user.id}`, UPLOAD_RATE_LIMIT, UPLOAD_RATE_WINDOW_MS);
@@ -39,7 +45,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     // Load the product first so image-upload authority is scope-evaluated
-    const product = await getOwnedProduct(companyId, productId);
+    const product = await getOwnedProduct(companyId, storeId, productId);
     if (!product) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
     }
@@ -147,10 +153,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: productId } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     // Load the product first so image-upload authority is scope-evaluated
-    const product = await getOwnedProduct(companyId, productId);
+    const product = await getOwnedProduct(companyId, storeId, productId);
     if (!product) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
     }

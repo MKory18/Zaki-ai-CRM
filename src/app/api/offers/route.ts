@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { inStore } from '@/lib/store-filter';
+import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { offerInputSchema, clearOtherDefaults } from '@/lib/offers';
@@ -19,13 +20,18 @@ import { zodMessage } from '@/lib/zod-message';
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('offers.view');
 
     const productId = new URL(req.url).searchParams.get('productId')?.trim() || undefined;
 
     const offers = await db.offer.findMany({
-      where: { companyId, ...(productId ? { productId } : {}) },
+      // An offer has no store of its own — it hangs off a product, and the
+      // product has one. Scoping through the relation rather than adding a
+      // column: a copy of the store id on the offer is a second place for
+      // it to be wrong, and they would disagree the first time a product
+      // moved.
+      where: { companyId, product: { storeId: storeId ?? '' }, ...(productId ? { productId } : {}) },
       include: {
         product: {
           select: { id: true, name: true, sku: true, basePrice: true, image: true },
@@ -45,7 +51,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('offers.manage');
 
     const parsed = offerInputSchema.extend({ productId: z.string().min(10).max(64) })
@@ -59,7 +65,9 @@ export async function POST(req: Request) {
     const input = parsed.data;
 
     // Tenant-validate the referenced product before writing anything.
-    const product = await db.product.findFirst({ where: { id: input.productId, companyId } });
+    // Not found rather than refused: a product of another store is simply
+    // not one this caller can name.
+    const product = await db.product.findFirst({ where: { id: input.productId, ...inStore(companyId, storeId) } });
     if (!product) {
       return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
     }
