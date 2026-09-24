@@ -6,6 +6,8 @@ import { carryQuery } from '@/lib/query-string';
 import Link from 'next/link';
 import { getStorefront, storefrontProducts } from '@/lib/storefront';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
+import type { Metadata } from 'next';
+import { publicTitle, storeIcons } from '@/lib/public-metadata';
 
 /**
  * A store's front door — no login, no session, no cookies.
@@ -23,6 +25,13 @@ export const dynamic = 'force-dynamic';
 interface Props {
   params: Promise<{ store: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export async function generateMetadata({ params }: Pick<Props, 'params'>): Promise<Metadata> {
+  const { store: slug } = await params;
+  const store = /^[a-z0-9-]{2,60}$/.test(slug) ? await getStorefront(slug) : null;
+  if (!store) return {};
+  return { title: publicTitle(store.name, store.tagline), icons: storeIcons(store) };
 }
 
 export default async function StorefrontHome({ params, searchParams }: Props) {

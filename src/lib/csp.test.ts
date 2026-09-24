@@ -66,9 +66,16 @@ describe('the uploaded HTML of a landing page', () => {
 });
 
 describe('the dashboard registers no pixel', () => {
-  it('the root layout starts the engine empty — pixels come from the selling page being rendered', () => {
-    const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
-    expect(layout).toContain('<GlobalTrackingProvider pixels={[]}>');
-    expect(layout).not.toMatch(/getSiteTrackingPixels|getTrackingPixelsForPage/);
+  it.each(['src/app/(system)/layout.tsx', 'src/components/public/PublicLayout.tsx'])(
+    '%s starts the engine empty — pixels come from the selling page being rendered',
+    (file) => {
+      const layout = fs.readFileSync(file, 'utf8');
+      expect(layout).toContain('<GlobalTrackingProvider pixels={[]}>');
+      expect(layout).not.toMatch(/getSiteTrackingPixels|getTrackingPixelsForPage/);
+    }
+  );
+
+  it('the root layout starts no engine at all', () => {
+    expect(fs.readFileSync('src/app/layout.tsx', 'utf8')).not.toMatch(/GlobalTrackingProvider|TrackingPixels/);
   });
 });

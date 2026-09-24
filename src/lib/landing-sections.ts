@@ -285,6 +285,12 @@ const footer = z.object({
   ...base,
   type: z.literal('footer'),
   text: richTextSchema(200).default(''),
+  /**
+   * LEGACY — no longer edited. The footer shows the STORE's logo and support
+   * phone (its identity, set once in «البلدان والمتاجر»). A value saved here
+   * before that is shown only while the store has none of its own, so no
+   * live page lost its number when the field moved.
+   */
   phone: z.string().max(40).default(''),
   logo: z.string().max(2048).default(''),
   /** Columns of links — policies, about, contact. */

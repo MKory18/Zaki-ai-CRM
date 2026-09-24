@@ -116,7 +116,12 @@ const PAGE_SELECT = {
   product: { select: { id: true, name: true, basePrice: true } },
   company: { select: { id: true } },
   storeId: true,
-  store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
+  store: {
+    select: {
+      countryId: true, name: true, logo: true, favicon: true, supportPhone: true,
+      country: { select: { code: true, currencyCode: true } },
+    },
+  },
 } as const;
 
 export type LandingPageTarget = (
@@ -274,7 +279,13 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
         <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
         {storeFonts.css && <style dangerouslySetInnerHTML={{ __html: storeFonts.css }} />}
         <LandingTrackingPixels pixels={trackingPixels} viewContent={viewContent} />
-        <PageBlocks sections={sections} ctx={{ palette, productName, price, currency, stock, offers, form: orderForm }} />
+        <PageBlocks
+          sections={sections}
+          ctx={{
+            palette, productName, price, currency, stock, offers, form: orderForm,
+            store: lp.store ? { name: lp.store.name, logo: lp.store.logo, phone: lp.store.supportPhone } : null,
+          }}
+        />
       </div>
     );
   }

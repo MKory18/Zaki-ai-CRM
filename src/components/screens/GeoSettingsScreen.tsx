@@ -6,6 +6,7 @@ import { apiJson } from '@/lib/api-client';
 import { currencyLabel } from '@/lib/currencies';
 import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from '@/components/ui/CurrencyPicker';
 import { StorefrontSettings } from '@/components/settings/StorefrontSettings';
+import { StoreIdentityCard } from '@/components/settings/StoreIdentityCard';
 import { STORE_TYPE_LABEL, storeTypeLabel } from '@/lib/store-types';
 
 /**
@@ -247,7 +248,7 @@ export function GeoSettingsScreen() {
                       : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]'
                   }`}
                 >
-                  الواجهة والشعار
+                  الهوية والواجهة
                 </button>
                 <button
                   onClick={() => patchStore(s.id, { status: s.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' })}
@@ -266,7 +267,8 @@ export function GeoSettingsScreen() {
                   storefront's theme, phone, domain — and now its logo —
                   could not be reached from anywhere. */}
               {storefrontFor === s.id && (
-                <li className="bg-[#f8fafc] p-4">
+                <li className="space-y-3 bg-[#f8fafc] p-4">
+                  <StoreIdentityCard store={s as never} onSaved={load} />
                   <StorefrontSettings store={s as never} onSaved={load} />
                 </li>
               )}

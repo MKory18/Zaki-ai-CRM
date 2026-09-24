@@ -41,6 +41,8 @@ interface Props {
   /** Uploads images and returns their URLs. */
   onUpload: (files: FileList) => Promise<string[]>;
   product: { name: string; price: number } | null;
+  /** The page's store identity, as the published footer shows it. */
+  store?: { name: string; logo: string | null; phone: string | null } | null;
   currency: string;
   offers: { id: string; name: string; quantity: number; freeQuantity: number; price: number; compareAtPrice?: number | null; isDefault?: boolean }[];
 }
@@ -821,6 +823,7 @@ export function BlockBuilder(props: Props) {
                 offers: props.offers,
                 form: <FormPlaceholder />,
                 building: true,
+                store: props.store ?? null,
               }}
             />
           </div>
@@ -1070,9 +1073,16 @@ function SectionFields({
     case 'footer':
       return (
         <div className="space-y-2.5">
-          <ImageField label="الشعار" value={s.logo} onChange={(v) => patch({ logo: v })} onUpload={onUpload} />
+          {/* The logo and the phone are the store's, set once — not a
+              copy per page that drifts from the waybill and the shop. */}
+          <p className="rounded-lg bg-[#f8fafc] p-2 text-[10.5px] leading-relaxed text-[#697586]">
+            الشعار ورقم التواصل من <b>هوية المتجر</b> — تُعدَّل مرة واحدة من{' '}
+            <a href="/settings/geo" target="_blank" rel="noopener noreferrer" className="font-bold text-[#b8256e] hover:underline">
+              «البلدان والمتاجر»
+            </a>{' '}
+            وتظهر في كل صفحات المتجر.
+          </p>
           <Field label="نص التذييل" value={s.text} onChange={(v) => patch({ text: v })} placeholder="جميع الحقوق محفوظة" />
-          <Field label="رقم للتواصل" value={s.phone} onChange={(v) => patch({ phone: v })} />
 
           <div>
             <label className="mb-1 block text-[10px] font-semibold text-[#697586]">أعمدة الروابط</label>

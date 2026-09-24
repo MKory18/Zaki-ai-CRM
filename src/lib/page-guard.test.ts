@@ -41,7 +41,7 @@ import { ALL_ROUTES } from './route-registry';
 import { attachGrants } from './authorization';
 import { signSelection } from './geo-context';
 
-const APP = path.join(process.cwd(), 'src', 'app', '(shell)');
+const APP = path.join(process.cwd(), 'src', 'app', '(system)', '(shell)');
 
 function pageFileFor(routePath: string) {
   return path.join(APP, routePath, 'page.tsx');

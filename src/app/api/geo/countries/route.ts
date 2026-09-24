@@ -26,7 +26,7 @@ export async function GET() {
         stores: {
           orderBy: { name: 'asc' },
           select: {
-            id: true, name: true, slug: true, logo: true, status: true, type: true, priceIncludesDelivery: true,
+            id: true, name: true, slug: true, logo: true, favicon: true, status: true, type: true, priceIncludesDelivery: true,
             // The storefront's own settings, so the panel edits what is
             // stored rather than a copy it fetched separately.
             storefrontEnabled: true, theme: true, tagline: true, landingPageId: true,

@@ -41,6 +41,11 @@ export interface BlockContext {
    * click and edit.
    */
   building?: boolean;
+  /**
+   * The store the page belongs to — its identity, which the footer shows:
+   * one logo and one phone per store, set in the store's settings.
+   */
+  store?: { name: string; logo: string | null; phone: string | null } | null;
 }
 
 /**
@@ -357,11 +362,15 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
           links: c.links.map((l, li) => ({ link: l, li })).filter(({ link }) => link.label && link.url),
         }))
         .filter(({ col, links }) => col.title || links.length);
+      // The store's identity; a value the block saved before it moved is
+      // kept only while the store has none (see the footer schema).
+      const logo = ctx.store?.logo || s.logo;
+      const phone = ctx.store?.phone || s.phone;
       return (
         <footer className="lp-footer">
-          {s.logo && (
+          {logo && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={s.logo} alt="" className="lp-footer-logo" />
+            <img src={logo} alt={ctx.store?.name ?? ''} className="lp-footer-logo" />
           )}
 
           {columns.length > 0 && (
@@ -391,12 +400,10 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
             </nav>
           )}
 
-          {s.phone && (
-            <a className="lp-footer-phone" href={`tel:${s.phone.replace(/[^\d+]/g, '')}`} dir="ltr">
+          {phone && (
+            <a className="lp-footer-phone" href={`tel:${phone.replace(/[^\d+]/g, '')}`} dir="ltr">
               <Phone size={14} />
-              {/* The number is its own editable text: the icon beside it is
-                  not, or typing would swallow it. */}
-              <span data-edit="phone">{s.phone}</span>
+              <span>{phone}</span>
             </a>
           )}
           <p data-edit="text" {...rich(s.text || 'جميع الحقوق محفوظة')} />

@@ -9,6 +9,8 @@ import { OfferCards } from '@/components/landing/blocks/OfferCards';
 import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
 import OrderForm from '@/components/landing/OrderForm';
 import { ruleFor } from '@/lib/phone-rules';
+import type { Metadata } from 'next';
+import { publicTitle, storeIcons } from '@/lib/public-metadata';
 
 /**
  * A product, in a store, orderable.
@@ -23,6 +25,15 @@ export const dynamic = 'force-dynamic';
 interface Props {
   params: Promise<{ store: string; sku: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export async function generateMetadata({ params }: Pick<Props, 'params'>): Promise<Metadata> {
+  const { store: slug, sku } = await params;
+  if (!/^[a-z0-9-]{2,60}$/.test(slug) || !/^[A-Za-z0-9._-]{1,64}$/.test(sku)) return {};
+  const store = await getStorefront(slug);
+  if (!store) return {};
+  const product = await storefrontProduct(store.companyId, store.id, sku);
+  return { title: publicTitle(product?.name, store.name), icons: storeIcons(store) };
 }
 
 export default async function StorefrontProductPage({ params, searchParams }: Props) {

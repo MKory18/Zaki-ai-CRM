@@ -1,0 +1,150 @@
+'use client';
+
+import React, { useRef, useState } from 'react';
+import { ImagePlus, Loader2, Trash2 } from 'lucide-react';
+import { useConfirm } from '@/components/ui/Confirm';
+
+/**
+ * THE STORE'S LOGO AND FAVICON — one place to set each, used everywhere.
+ *
+ * The storefront header, the landing pages' footer, the store picker and
+ * the waybill show Store.logo; the browser tab of the store's pages shows
+ * Store.favicon. Both live in the store's settings rather than in a theme or
+ * on a page, because they are the store's, and a second copy anywhere else
+ * is a second place for them to be out of date.
+ */
+
+type Kind = 'logo' | 'favicon';
+
+const COPY: Record<Kind, {
+  title: string; hint: string; upload: string; failed: string;
+  confirmTitle: string; confirmBody: string; removeTitle: string; removeFailed: string;
+}> = {
+  logo: {
+    title: 'شعار المتجر',
+    hint: 'يظهر في واجهة المتجر، وفي تذييل صفحاته، وعلى البوالص. صورة مربّعة بخلفية فاتحة تُقرأ أوضح على الطابعة الحرارية.',
+    upload: 'رفع شعار',
+    failed: 'تعذر رفع الشعار',
+    confirmTitle: 'إزالة الشعار؟',
+    confirmBody: 'يختفي من واجهة المتجر ومن البوالص، ويبقى اسم المتجر وحده.',
+    removeTitle: 'إزالة الشعار',
+    removeFailed: 'تعذر إزالة الشعار',
+  },
+  favicon: {
+    title: 'أيقونة المتصفح',
+    hint: 'تظهر في تبويب المتصفح لصفحات المتجر وصفحات الهبوط. صورة مربّعة بسيطة؛ بدونها يظهر الشعار.',
+    upload: 'رفع أيقونة',
+    failed: 'تعذر رفع الأيقونة',
+    confirmTitle: 'إزالة الأيقونة؟',
+    confirmBody: 'يعود تبويب المتصفح لعرض الشعار.',
+    removeTitle: 'إزالة الأيقونة',
+    removeFailed: 'تعذر إزالة الأيقونة',
+  },
+};
+
+export function StoreBrandField({
+  storeId,
+  kind,
+  value,
+  onChange,
+}: {
+  storeId: string;
+  kind: Kind;
+  value: string | null | undefined;
+  onChange: (value: string | null) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const confirm = useConfirm();
+  const copy = COPY[kind];
+  const endpoint = `/api/geo/stores/${storeId}/${kind}`;
+
+  async function upload(file: File) {
+    setBusy(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch(endpoint, { method: 'POST', body: form, credentials: 'same-origin' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || copy.failed);
+      onChange(data[kind]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : copy.failed);
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = '';
+    }
+  }
+
+  async function remove() {
+    const ok = await confirm({ title: copy.confirmTitle, body: copy.confirmBody, confirmLabel: 'أزل', tone: 'danger' });
+    if (!ok) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(endpoint, { method: 'DELETE', credentials: 'same-origin' });
+      if (!res.ok) throw new Error(copy.removeFailed);
+      onChange(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : copy.removeFailed);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className={`flex shrink-0 items-center justify-center overflow-hidden border border-[#e3e8ef] bg-white ${
+          kind === 'favicon' ? 'h-10 w-10 rounded-lg' : 'h-14 w-14 rounded-xl'
+        }`}
+      >
+        {value ? (
+          <img src={value} alt="" className="h-full w-full object-contain" />
+        ) : (
+          <ImagePlus className="h-5 w-5 text-[#9aa4b2]" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-[#121926]">{copy.title}</p>
+        <p className="text-[10.5px] leading-relaxed text-[#697586]">{copy.hint}</p>
+        {error && <p className="mt-0.5 text-[11px] text-[#fb323f]">{error}</p>}
+      </div>
+      <input
+        ref={input}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        aria-label={copy.upload}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void upload(f);
+        }}
+      />
+      <div className="flex shrink-0 gap-1.5">
+        <button
+          type="button"
+          onClick={() => input.current?.click()}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#e3e8ef] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#364152] hover:border-[#b8256e] disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+          {value ? 'تغيير' : copy.upload}
+        </button>
+        {value && (
+          <button
+            type="button"
+            onClick={() => void remove()}
+            disabled={busy}
+            title={copy.removeTitle}
+            className="rounded-lg p-1.5 text-[#697586] hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

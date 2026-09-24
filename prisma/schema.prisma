@@ -1456,6 +1456,9 @@ model Store {
   name      String
   slug      String
   logo      String?
+  /// The icon in the browser tab of the store's public pages. Set beside the
+  /// logo, in the store's settings; the logo stands in when there is none.
+  favicon   String?
   status    String   @default("ACTIVE") // ACTIVE | PAUSED
   type      String   @default("MULTI_PRODUCT") // MULTI_PRODUCT | SINGLE_PRODUCT
   /// Whether the advertised price already contains the delivery fee.

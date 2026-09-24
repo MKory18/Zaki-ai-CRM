@@ -100,3 +100,15 @@ describe('a preview of a draft', () => {
     expect(text).not.toContain('?p=tok');
   });
 });
+
+describe('the store the page belongs to', () => {
+  it('reaches the blocks, so the footer shows the store’s identity', async () => {
+    db.landingPage.findFirst.mockResolvedValue({
+      ...page,
+      store: { countryId: 'k1', name: 'صحة', logo: '/api/public/store-logo/s/l.webp', favicon: null, supportPhone: '0999', country: { code: 'SY', currencyCode: 'SYP' } },
+    });
+    const text = renderedProps(await LandingPageView({ target: { slug: 'offer' } })).join('\n');
+    expect(text).toContain('"phone":"0999"');
+    expect(text).toContain('"logo":"/api/public/store-logo/s/l.webp"');
+  });
+});

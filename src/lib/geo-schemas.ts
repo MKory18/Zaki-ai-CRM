@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { landingThemeSchema } from './landing-theme';
+import { toLatinDigits } from './latin-digits';
 
 /** Request schemas for /api/geo/* — shared so create and update stay identical. */
 
@@ -85,7 +86,13 @@ export const storeUpdateSchema = z
     theme: landingThemeSchema.nullable(),
     tagline: z.string().trim().max(120).nullable(),
     about: z.string().trim().max(2000).nullable(),
-    supportPhone: z.string().trim().max(40).nullable(),
+    // Printed on the waybill and dialled from the storefront: a phone number,
+    // with the digits an Arabic keyboard types read as 0-9.
+    supportPhone: z
+      .string()
+      .transform((v) => toLatinDigits(v).trim() || null)
+      .refine((v) => v === null || /^\+?[\d\s()-]{6,24}$/.test(v), 'رقم هاتف الدعم غير صالح — أرقام فقط، ويمكن أن يبدأ بـ +')
+      .nullable(),
     domain: z.string().trim().max(253).nullable(),
   })
   .partial()

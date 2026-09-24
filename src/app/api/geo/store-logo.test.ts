@@ -26,6 +26,7 @@ vi.mock('@/lib/storage', async (orig) => ({
 }));
 
 import { POST, DELETE } from '@/app/api/geo/stores/[id]/logo/route';
+import { POST as POST_FAVICON, DELETE as DELETE_FAVICON } from '@/app/api/geo/stores/[id]/favicon/route';
 import { GET } from '@/app/api/public/store-logo/[storeId]/[file]/route';
 
 const STORE = '55555555-5555-4555-8555-555555555555';
@@ -118,5 +119,35 @@ describe('serving it publicly', () => {
     }
     expect((await pub('not-a-uuid', FILE)).status).toBe(404);
     expect(db.store.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe('the favicon — the icon in the tab of the store\u2019s pages', () => {
+  it('is uploaded the same way, small, and written as the public link', async () => {
+    const res = await POST_FAVICON(upload(new File([PNG], 'icon.png', { type: 'image/png' })), params);
+    expect(res.status).toBe(200);
+    expect(saveProductImage).toHaveBeenCalledWith(expect.objectContaining({ productId: STORE, maxDimension: 256 }));
+    expect(db.store.update).toHaveBeenCalledWith({ where: { id: STORE }, data: { favicon: current } });
+    expect(await res.json()).toEqual({ favicon: current });
+  });
+
+  it('never touches the logo, and the logo upload never touches it', async () => {
+    await POST_FAVICON(upload(new File([PNG], 'icon.png', { type: 'image/png' })), params);
+    await POST(upload(new File([PNG], 'logo.png', { type: 'image/png' })), params);
+    expect(db.store.update.mock.calls.map((c) => Object.keys(c[0].data))).toEqual([['favicon'], ['logo']]);
+  });
+
+  it('needs the same permission, and is removed on its own', async () => {
+    requirePermission.mockRejectedValue(new Error('Forbidden: missing required permission geo.manage'));
+    expect((await POST_FAVICON(upload(new File([PNG], 'icon.png', { type: 'image/png' })), params)).status).toBe(403);
+    requirePermission.mockResolvedValue(undefined);
+    await DELETE_FAVICON(new Request('http://localhost/x', { method: 'DELETE' }), params);
+    expect(db.store.update).toHaveBeenCalledWith({ where: { id: STORE }, data: { favicon: null } });
+  });
+
+  it('is served publicly while it is the current one — and a replaced one is not', async () => {
+    db.store.findFirst.mockResolvedValue({ id: STORE, companyId: 'c1', logo: null, favicon: current });
+    expect((await pub(STORE, FILE)).status).toBe(200);
+    expect((await pub(STORE, OLD)).status).toBe(404);
   });
 });

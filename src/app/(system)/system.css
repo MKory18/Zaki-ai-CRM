@@ -1,0 +1,99 @@
+/*
+ * THE SYSTEM'S LOOK — the dashboard's, and nothing else's.
+ *
+ * These rules used to sit in the one stylesheet every page loaded, so a
+ * landing page and a storefront rendered under the dashboard's colours: its
+ * grey page background, its heading colour (which beat the page's own
+ * theme), its fonts. This file is imported by the system's layout only, so
+ * they reach the system's pages and nothing else. They stay on body and the
+ * headings, as before: a dialog portalled into <body> is still the system's.
+ *
+ * The system's colours are --sys-* variables. A store's are --lp-* (see
+ * src/lib/landing-theme.ts), and neither family may appear in the other's
+ * files — a system theme change must never reach a shop.
+ */
+
+:root {
+  --sys-background: #f8fafc;
+  --sys-foreground: #364152;
+  --sys-card: #ffffff;
+  --sys-heading: #121926;
+  --sys-primary: #b8256e;
+  --sys-primary-foreground: #ffffff;
+  --sys-muted-foreground: #697586;
+  --sys-accent: #fdf5fa;
+  --sys-destructive: #fb323f;
+  --sys-success: #00c853;
+  --sys-warning: #ffab00;
+  --sys-info: #13b5fe;
+  --sys-border: #e3e8ef;
+  --sys-ring: #b8256e;
+  --sys-radius: 0.5rem;
+  --sys-scrollbar: #cdd5df;
+  --sys-scrollbar-hover: #9aa4b2;
+  --sys-sidebar-scrollbar: #202939;
+  --sys-sidebar-scrollbar-hover: #364152;
+}
+
+body {
+  background-color: var(--sys-background);
+  color: var(--sys-foreground);
+  font-family: var(--font-public-sans), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Headings and key values use the darker primary text tone */
+h1, h2, h3, h4, h5, h6, strong {
+  color: var(--sys-heading);
+  font-weight: 600;
+}
+
+/* Arabic native typography: proper font, line-height and letter spacing */
+html[lang="ar"] body {
+  font-family: var(--font-arabic), "Cairo", "Tajawal", "Segoe UI", sans-serif;
+  line-height: 1.8;
+  letter-spacing: 0;
+}
+html[lang="ar"] h1,
+html[lang="ar"] h2,
+html[lang="ar"] h3,
+html[lang="ar"] h4,
+html[lang="ar"] h5,
+html[lang="ar"] h6,
+html[lang="ar"] strong {
+  color: var(--sys-heading);
+}
+html[lang="ar"] table,
+html[lang="ar"] th,
+html[lang="ar"] td {
+  line-height: 1.7;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sys-scrollbar);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sys-scrollbar-hover);
+}
+
+/* Sidebar dark scrollbar */
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: var(--sys-sidebar-scrollbar);
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--sys-sidebar-scrollbar-hover);
+}
+
+/* RTL Helpers */
+[dir="rtl"] {
+  text-align: right;
+}

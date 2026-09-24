@@ -647,6 +647,7 @@ export function LandingPageEditorScreen() {
             onSections={(s) => { setSections(s); setDirty(true); }}
             onUpload={uploadFiles}
             product={lp.product ? { name: lp.product.name, price: lp.product.basePrice } : null}
+            store={lp.store ? { name: lp.store.name, logo: lp.store.logo ?? null, phone: lp.store.supportPhone ?? null } : null}
             currency={previewData?.currency || 'USD'}
             offers={previewData?.offers || []}
           />

@@ -5,7 +5,6 @@ import { Store as StoreIcon, Loader2, ExternalLink, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
-import { StoreLogoField } from './StoreLogoField';
 import {
   type LandingTheme, DEFAULT_THEME, MOODS, FONTS, isValidHex,
 } from '@/lib/landing-theme';
@@ -29,9 +28,7 @@ interface StoreRow {
   theme?: string | null;
   tagline?: string | null;
   about?: string | null;
-  supportPhone?: string | null;
   domain?: string | null;
-  logo?: string | null;
   landingPageId?: string | null;
 }
 
@@ -55,11 +52,9 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
   const [enabled, setEnabled] = useState(!!store.storefrontEnabled);
   const [type, setType] = useState(store.type);
   const [theme, setTheme] = useState<LandingTheme>(parseTheme(store.theme));
-  const [logo, setLogo] = useState<string | null>(store.logo ?? null);
   const [form, setForm] = useState({
     tagline: store.tagline ?? '',
     about: store.about ?? '',
-    supportPhone: store.supportPhone ?? '',
     domain: store.domain ?? '',
   });
   const [saving, setSaving] = useState(false);
@@ -72,7 +67,6 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
     setForm({
       tagline: store.tagline ?? '',
       about: store.about ?? '',
-      supportPhone: store.supportPhone ?? '',
       domain: store.domain ?? '',
     });
   }, [store]);
@@ -91,7 +85,6 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           theme,
           tagline: form.tagline.trim() || null,
           about: form.about.trim() || null,
-          supportPhone: form.supportPhone.trim() || null,
           domain: form.domain.trim(),
         }),
       });
@@ -130,17 +123,6 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
         )}
       </div>
 
-      {/* Saved on upload, not with the form: a file is not a field to
-          remember to press save for. */}
-      <StoreLogoField
-        storeId={store.id}
-        logo={logo}
-        onChange={(next) => {
-          setLogo(next);
-          onSaved?.();
-        }}
-      />
-
       <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#364152]">
         <input
           type="checkbox"
@@ -163,12 +145,6 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           <option value="MULTI_PRODUCT">متعدد المنتجات — صفحة رئيسية بالمنتجات</option>
           <option value="SINGLE_PRODUCT">{STORE_TYPE_LABEL.SINGLE_PRODUCT} — واجهته صفحة هبوط تختارها</option>
         </Select>
-        <Input
-          label="هاتف التواصل"
-          dir="ltr"
-          value={form.supportPhone}
-          onChange={(e) => setForm({ ...form, supportPhone: e.target.value })}
-        />
         <Input
           label="سطر تعريفي"
           placeholder="منتجات العناية الأصلية"

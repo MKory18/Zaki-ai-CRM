@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { db } from './db';
 import { DEFAULT_THEME, type LandingTheme } from './landing-theme';
 import { publicizeMedia } from './public-media';
@@ -44,6 +45,7 @@ export interface Storefront {
   name: string;
   slug: string;
   logo: string | null;
+  favicon: string | null;
   tagline: string | null;
   about: string | null;
   supportPhone: string | null;
@@ -75,14 +77,15 @@ export function storeTheme(raw: string | null | undefined): LandingTheme {
  * A paused store and a store whose owner never turned the storefront on both
  * read as absent: a shop that is not open should not be browsable.
  */
-export async function getStorefront(slug: string): Promise<Storefront | null> {
+// Cached per request: the page and its metadata both read the store.
+export const getStorefront = cache(async function getStorefront(slug: string): Promise<Storefront | null> {
   const store = await db.store.findFirst({
     where: { slug, storefrontEnabled: true, status: 'ACTIVE' },
     // Slugs are unique across companies from now on; for any pair that
     // predates that, the older store keeps its address — deterministically.
     orderBy: { createdAt: 'asc' },
     select: {
-      id: true, name: true, slug: true, logo: true, tagline: true, about: true,
+      id: true, name: true, slug: true, logo: true, favicon: true, tagline: true, about: true,
       supportPhone: true, domain: true, type: true, theme: true,
       companyId: true, countryId: true, landingPageId: true,
       country: { select: { code: true, currencyCode: true } },
@@ -95,6 +98,7 @@ export async function getStorefront(slug: string): Promise<Storefront | null> {
     name: store.name,
     slug: store.slug,
     logo: store.logo,
+    favicon: store.favicon,
     tagline: store.tagline,
     about: store.about,
     supportPhone: store.supportPhone,
@@ -107,7 +111,7 @@ export async function getStorefront(slug: string): Promise<Storefront | null> {
     companyId: store.companyId,
     landingPageId: store.type === 'SINGLE_PRODUCT' ? store.landingPageId : null,
   };
-}
+});
 
 /**
  * What this store has for sale.
@@ -168,7 +172,7 @@ export async function storefrontProducts(
  * company and is already URL-safe — a second "slug" column would be one
  * more name for the same thing, and one more place for them to disagree.
  */
-export async function storefrontProduct(
+export const storefrontProduct = cache(async function storefrontProduct(
   companyId: string,
   storeId: string,
   sku: string
@@ -208,4 +212,4 @@ export async function storefrontProduct(
     fromPrice: perUnit.length ? Math.min(...perUnit) : p.basePrice,
     gallery,
   };
-}
+});

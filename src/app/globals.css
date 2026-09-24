@@ -1,93 +1,14 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --background: #f8fafc;
-    --foreground: #364152;
-    --card: #ffffff;
-    --card-foreground: #121926;
-    --primary: #b8256e;
-    --primary-foreground: #ffffff;
-    --secondary: #f8fafc;
-    --secondary-foreground: #364152;
-    --muted: #f8fafc;
-    --muted-foreground: #697586;
-    --accent: #fdf5fa;
-    --accent-foreground: #b8256e;
-    --destructive: #fb323f;
-    --destructive-foreground: #ffffff;
-    --success: #00c853;
-    --warning: #ffab00;
-    --info: #13b5fe;
-    --border: #e3e8ef;
-    --input: #e3e8ef;
-    --ring: #b8256e;
-    --radius: 0.5rem;
-  }
-}
+/*
+ * What EVERY page loads: the utility classes, and nothing that styles a
+ * page by itself. The dashboard's own look is src/app/(system)/system.css;
+ * a landing page's and a storefront's is their theme (--lp-*). A rule here
+ * that set a colour or a font would reach a seller's shop — which is how
+ * the dashboard's heading colour came to beat a page's own theme.
+ */
 
-body {
-  background-color: #f8fafc;
-  color: #364152;
-  font-family: var(--font-public-sans), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Headings and key values use the darker primary text tone */
-h1, h2, h3, h4, h5, h6, strong {
-  color: #121926;
-  font-weight: 600;
-}
-
-/* Arabic native typography: proper font, line-height and letter spacing */
-html[lang="ar"] body {
-  font-family: var(--font-arabic), "Cairo", "Tajawal", "Segoe UI", sans-serif;
-  line-height: 1.8;
-  letter-spacing: 0;
-}
-html[lang="ar"] h1,
-html[lang="ar"] h2,
-html[lang="ar"] h3,
-html[lang="ar"] h4,
-html[lang="ar"] h5,
-html[lang="ar"] h6,
-html[lang="ar"] strong {
-  color: #121926;
-}
-html[lang="ar"] table,
-html[lang="ar"] th,
-html[lang="ar"] td {
-  line-height: 1.7;
-}
-
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #cdd5df;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #9aa4b2;
-}
-
-/* Sidebar dark scrollbar */
-.sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #202939;
-}
-.sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: #364152;
-}
-
-/* RTL Helpers */
-[dir="rtl"] {
-  text-align: right;
-}
+/* RTL: reversed spacing for the space-x utilities */
 [dir="rtl"] .space-x-reverse > :not([hidden]) ~ :not([hidden]) {
   --tw-space-x-reverse: 1;
 }

@@ -84,6 +84,8 @@ interface SaveOptions {
   mimeType: string;
   originalName?: string;
   optimize?: boolean;
+  /** The longest side after optimizing (default 1200). */
+  maxDimension?: number;
 }
 
 /**
@@ -114,7 +116,7 @@ export async function saveProductImage(opts: SaveOptions): Promise<StoredImage> 
       const sharpModule = await import('sharp').then((m) => m.default ?? m);
       outputBuffer = await sharpModule(buffer)
         .rotate() // respect EXIF orientation
-        .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+        .resize(opts.maxDimension ?? 1200, opts.maxDimension ?? 1200, { fit: 'inside', withoutEnlargement: true })
         .webp({ quality: 82 })
         .toBuffer();
       outputMime = 'image/webp';

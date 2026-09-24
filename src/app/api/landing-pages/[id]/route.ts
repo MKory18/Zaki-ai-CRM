@@ -33,7 +33,8 @@ export async function GET(_req: Request, ctx: Ctx) {
         // page does, or it is a preview of a page that does not exist — and
         // that is the country's currency, not the company's. The page is
         // read through the selected store, so it always has one.
-        store: { select: { country: { select: { currencyCode: true } } } },
+        // And the store's identity, which the footer block shows.
+        store: { select: { name: true, logo: true, supportPhone: true, country: { select: { currencyCode: true } } } },
       },
     });
     if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });

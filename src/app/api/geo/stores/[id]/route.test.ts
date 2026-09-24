@@ -104,3 +104,22 @@ describe('the front page follows the type', () => {
     expect(db.store.update.mock.calls[0][0].data).toMatchObject({ type: 'MULTI_PRODUCT', landingPageId: null });
   });
 });
+
+describe('the support phone', () => {
+  it('is stored with the digits an Arabic keyboard types read as 0-9', async () => {
+    expect((await patch({ supportPhone: '٠٧٩ ١٢٣ ٤٥٦٧' })).status).toBe(200);
+    expect(db.store.update.mock.calls[0][0].data.supportPhone).toBe('079 123 4567');
+  });
+
+  it('is cleared by an empty value', async () => {
+    await patch({ supportPhone: '   ' });
+    expect(db.store.update.mock.calls[0][0].data.supportPhone).toBeNull();
+  });
+
+  it('refuses what is not a phone number — it is printed on every waybill', async () => {
+    for (const bad of ['call me', '<b>1</b>', '12']) {
+      expect((await patch({ supportPhone: bad })).status, bad).toBe(400);
+    }
+    expect(db.store.update).not.toHaveBeenCalled();
+  });
+});
