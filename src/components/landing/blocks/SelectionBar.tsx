@@ -48,7 +48,7 @@ const OFF = 'text-[#e3e8ef] hover:bg-white/10 hover:text-white';
 const ON = 'bg-white text-[#121926]';
 
 export function SelectionBar({ root, fonts, onChange }: SelectionBarProps) {
-  const [at, setAt] = useState<{ top: number; left: number } | null>(null);
+  const [at, setAt] = useState<{ top: number; left: number; height: number; below: boolean } | null>(null);
   const [active, setActive] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState<'color' | 'size' | 'font' | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -83,7 +83,20 @@ export function SelectionBar({ root, fonts, onChange }: SelectionBarProps) {
       setAt(null);
       return;
     }
-    setAt({ top: rect.top + window.scrollY, left: rect.left + rect.width / 2 + window.scrollX });
+    // Viewport coordinates, with NO scroll added: the bar is `position:
+    // fixed`, which is already relative to the viewport. Adding the scroll
+    // offset put it one page-length too low — invisible the moment the
+    // seller scrolled down to the block they were editing, which is every
+    // block but the first. The toolbar appeared to work on a headline at
+    // the top of the page and to do nothing anywhere else.
+    // A selection close to the top of the window has nowhere to put a
+    // toolbar above it. 96px is the bar at its tallest, with a colour row open.
+    setAt({
+      top: rect.top,
+      left: rect.left + rect.width / 2,
+      height: rect.height,
+      below: rect.top < 96,
+    });
 
     // What is already on, so the buttons read as toggles rather than as
     // switches that only go one way.
@@ -187,8 +200,13 @@ export function SelectionBar({ root, fonts, onChange }: SelectionBarProps) {
       // elsewhere, and a toolbar that destroys what it acts on is a toolbar
       // whose every button does nothing.
       onMouseDown={(e) => e.preventDefault()}
-      className="fixed z-[70] -translate-x-1/2 -translate-y-full rounded-xl bg-[#121926] p-1 shadow-xl"
-      style={{ top: at.top - 10, left: at.left }}
+      className={`fixed z-[70] -translate-x-1/2 rounded-xl bg-[#121926] p-1 shadow-xl ${
+        // Above the words normally; below them when there is no room above,
+        // because a toolbar off the top of the screen is a toolbar the
+        // seller concludes is broken.
+        at.below ? '' : '-translate-y-full'
+      }`}
+      style={{ top: at.below ? at.top + at.height + 10 : at.top - 10, left: at.left }}
     >
       <div className="flex items-center gap-0.5">
         <button title="عريض" onMouseDown={(e) => { e.preventDefault(); tag('b'); }} className={`${CHIP} ${active.b ? ON : OFF}`}>
