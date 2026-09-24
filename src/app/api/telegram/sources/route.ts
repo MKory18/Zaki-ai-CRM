@@ -22,6 +22,8 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { messages: { where: { processingStatus: 'PROCESSED' } } } },
+        // Each chat feeds ONE store; the list spans the company, so it says which.
+        store: { select: { name: true } },
       },
     });
 
@@ -46,6 +48,7 @@ export async function GET() {
         isActive: s.isActive,
         ordersCount: s._count.messages,
         lastMessageAt: lastBySource.get(s.id) ?? s.lastMessageAt,
+        storeName: s.store?.name ?? null,
         createdAt: s.createdAt,
       })),
     });

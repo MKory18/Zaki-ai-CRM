@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Globe, Loader2, Plus, Store } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { storeTypeLabel } from '@/lib/store-types';
+import { CURRENCIES, minorUnitFor } from '@/lib/currencies';
 
 /**
  * Two explicit steps: country, then store. The server decides what is
@@ -37,7 +38,6 @@ interface ContextResponse {
   skipCountryPicker: boolean;
 }
 
-const CURRENCY_MINOR: Record<string, number> = { JOD: 3, IQD: 3, KWD: 3, BHD: 3, OMR: 3 };
 
 export function EntryPicker() {
   const router = useRouter();
@@ -280,8 +280,11 @@ function AddCountryForm({ open, onOpen, onDone }: { open: boolean; onOpen: () =>
           code: form.code.trim().toUpperCase(),
           name: form.name.trim(),
           currencyCode: currency,
-          // Minor unit follows the currency; editable later in /settings/geo.
-          minorUnit: CURRENCY_MINOR[currency] ?? 2,
+          // The currency's official decimals, from the one list the country
+          // panel uses too — this form kept its own short table, and a Libyan
+          // or Tunisian country came out with two decimals instead of three.
+          // Correctable in «البلدان والمتاجر» until the first order.
+          minorUnit: minorUnitFor(currency) ?? 2,
         }),
       });
       onDone();
@@ -298,7 +301,20 @@ function AddCountryForm({ open, onOpen, onDone }: { open: boolean; onOpen: () =>
       <Field label="اسم البلد" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="سوريا" />
       <div className="grid grid-cols-2 gap-3">
         <Field label="الرمز (ISO)" value={form.code} onChange={(v) => setForm({ ...form, code: v })} placeholder="SY" dir="ltr" />
-        <Field label="العملة" value={form.currencyCode} onChange={(v) => setForm({ ...form, currencyCode: v })} placeholder="SYP" dir="ltr" />
+        <label className="block text-xs font-medium text-[#364152]">
+          العملة
+          <select
+            required
+            value={form.currencyCode}
+            onChange={(e) => setForm({ ...form, currencyCode: e.target.value })}
+            className="mt-1 block h-10 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-2 text-sm"
+          >
+            <option value="">— اختر —</option>
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.ar} ({c.code})</option>
+            ))}
+          </select>
+        </label>
       </div>
       <button
         type="submit"

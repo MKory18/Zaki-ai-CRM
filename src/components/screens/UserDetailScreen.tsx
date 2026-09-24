@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { UserGeoAccessSection, UserPhoneField } from '@/components/screens/users/UserAccessSections';
 import { format } from 'date-fns';
 import {
   User as UserIcon,
@@ -185,7 +186,7 @@ export function UserDetailScreen() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-5 text-xs">
               <div className="rounded-xl bg-[#f8fafc] px-3 py-2.5">
                 <p className="text-[10px] text-[#9ca3af] flex items-center gap-1"><ShieldCheck className="w-3 h-3" />{ar ? 'الرتبة' : 'Role'}</p>
                 <p className="font-bold text-[#121926]">{user.role}</p>
@@ -200,6 +201,7 @@ export function UserDetailScreen() {
                 <p className="text-[10px] text-[#9ca3af]">{ar ? 'تاريخ التسجيل' : 'Created'}</p>
                 <p className="font-bold text-[#121926]">{format(new Date(user.createdAt), 'yyyy-MM-dd')}</p>
               </div>
+              {userId && <UserPhoneField userId={userId} initial={user.phone ?? null} canEdit={userCan(currentUser, 'users.edit')} />}
             </div>
           </CardContent>
         </Card>
@@ -255,6 +257,11 @@ export function UserDetailScreen() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Where this person may work — the access API had no screen before this. */}
+        {userId && userCan(currentUser, 'geo.manage') && (
+          <UserGeoAccessSection userId={userId} canEdit={userCan(currentUser, 'geo.manage')} />
+        )}
 
         {/* Effective permissions + user overrides (Phase 5) — gated server-side by users.view/users.edit */}
         {userCan(currentUser, 'users.view') && userId && (

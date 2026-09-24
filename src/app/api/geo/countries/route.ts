@@ -26,14 +26,15 @@ export async function GET() {
         stores: {
           orderBy: { name: 'asc' },
           select: {
-            id: true, name: true, slug: true, logo: true, status: true, type: true,
+            id: true, name: true, slug: true, logo: true, status: true, type: true, priceIncludesDelivery: true,
             // The storefront's own settings, so the panel edits what is
             // stored rather than a copy it fetched separately.
             storefrontEnabled: true, theme: true, tagline: true, landingPageId: true,
             about: true, supportPhone: true, domain: true,
           },
         },
-        _count: { select: { regions: true } },
+        // Orders decide whether the currency may still change (see PATCH).
+        _count: { select: { regions: true, orders: true } },
       },
     });
     return NextResponse.json({ countries });

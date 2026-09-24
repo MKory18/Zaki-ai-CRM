@@ -3,28 +3,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { Button } from '@/components/ui/Button';
-import { Input, Select } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
+import { Select } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { useApp } from '@/context/AppContext';
 import {
-  Send, Settings, Plus, RefreshCw, CheckCircle2, XCircle,
-  AlertCircle, Trash2, Power, MessageSquare, ShoppingBag, RotateCcw, FlaskConical,
+  Send, Settings, RefreshCw, CheckCircle2, XCircle,
+  AlertCircle, MessageSquare, ShoppingBag, RotateCcw,
 } from 'lucide-react';
-
-interface TelegramSource {
-  id: string;
-  chatId: string;
-  chatType: string;
-  chatTitle: string | null;
-  topicId: number | null;
-  topicName: string | null;
-  isActive: boolean;
-  ordersCount: number;
-  lastMessageAt: string | null;
-}
 
 interface TelegramMsg {
   id: string;
@@ -73,18 +59,11 @@ const REVIEW_REASONS: Record<string, string> = {
 
 export function TelegramOrdersScreen() {
   const { currentUser } = useApp();
-  const ask = useConfirm();
-  const tell = useTell();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<any>(null);
-  const [sources, setSources] = useState<TelegramSource[]>([]);
   const [messages, setMessages] = useState<TelegramMsg[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
-  const [addOpen, setAddOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ chatId: '', chatTitle: '', topicId: '', topicName: '' });
-  const [formError, setFormError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('telegram.manage');
@@ -93,13 +72,11 @@ export function TelegramOrdersScreen() {
   const loadAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [st, src, msgs] = await Promise.all([
+      const [st, msgs] = await Promise.all([
         crmApi('/api/telegram/status'),
-        crmApi('/api/telegram/sources'),
         crmApi('/api/telegram/messages' + (statusFilter ? `?status=${statusFilter}` : '')),
       ]);
       setStatus(st);
-      setSources(src.sources || []);
       setMessages(msgs.messages || []);
       setError(null);
     } catch (e: any) {
@@ -120,78 +97,6 @@ export function TelegramOrdersScreen() {
       </>
     );
   }
-
-  const addSource = async () => {
-    setFormError(null);
-    setSaving(true);
-    try {
-      await crmApi('/api/telegram/sources', {
-        method: 'POST',
-        body: JSON.stringify({
-          chatId: form.chatId.trim(),
-          chatType: 'supergroup',
-          chatTitle: form.chatTitle.trim() || null,
-          topicId: form.topicId.trim() ? Number(form.topicId.trim()) : null,
-          topicName: form.topicName.trim() || null,
-          isActive: true,
-        }),
-      });
-      setAddOpen(false);
-      setForm({ chatId: '', chatTitle: '', topicId: '', topicName: '' });
-      await loadAll(true);
-    } catch (e: any) {
-      setFormError(e?.message || 'تعذر إضافة المصدر');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const toggleSource = async (s: TelegramSource) => {
-    setBusyId(s.id);
-    try {
-      await crmApi(`/api/telegram/sources/${s.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: !s.isActive }) });
-      await loadAll(true);
-    } catch (e: any) {
-      setError(e?.message || 'تعذر التحديث');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const deleteSource = async (s: TelegramSource) => {
-    const ok = await ask({
-      title: `حذف الربط مع «${s.chatTitle || s.chatId}»؟`,
-      body: 'الطلبات السابقة تبقى كما هي.',
-      tone: 'danger',
-    });
-    if (!ok) return;
-    setBusyId(s.id);
-    try {
-      await crmApi(`/api/telegram/sources/${s.id}`, { method: 'DELETE' });
-      await loadAll(true);
-    } catch (e: any) {
-      setError(e?.message || 'تعذر الحذف');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const testSource = async (s: TelegramSource) => {
-    setBusyId(s.id);
-    try {
-      const r: any = await crmApi(`/api/telegram/sources/${s.id}/test`, { method: 'POST' });
-      void tell({
-        title: 'نتيجة اختبار المجموعة',
-        body: r.lastMessage
-        ? `آخر رسالة: ${new Date(r.lastMessage.createdAt).toLocaleString('ar')} — الحالة: ${STATUS_LABELS[r.lastMessage.processingStatus] || r.lastMessage.processingStatus}`
-        : 'لا توجد رسائل مستلمة من هذه المجموعة بعد',
-      });
-    } catch (e: any) {
-      setError(e?.message || 'تعذر الاختبار');
-    } finally {
-      setBusyId(null);
-    }
-  };
 
   const retryMessage = async (m: TelegramMsg) => {
     setBusyId(m.id);
@@ -223,9 +128,6 @@ export function TelegramOrdersScreen() {
             <Link href="/settings/telegram">
               <Button variant="outline" size="sm"><Settings className="w-4 h-4 ml-1" /> الإعدادات</Button>
             </Link>
-            {canManage && (
-              <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 ml-1" /> إضافة مصدر</Button>
-            )}
             <Button variant="ghost" size="sm" onClick={() => loadAll()}><RefreshCw className="w-4 h-4" /></Button>
           </div>
         </div>
@@ -251,7 +153,9 @@ export function TelegramOrdersScreen() {
               الويبهوك: {status?.telegramWebhookSet ? <span className="text-emerald-600 font-semibold">مسجل</span> : <span className="text-rose-600 font-semibold">غير مسجل</span>}
             </div>
             <div className="text-xs text-[#697586]">المصادر المرتبطة: <span className="font-semibold text-[#121926]">{status?.sourcesCount ?? 0}</span></div>
-            <Link href="/settings/telegram" className="text-xs text-[#b8256e] hover:underline mr-auto">تفاصيل الاتصال ←</Link>
+            {/* Adding, switching and removing groups is configuration — it
+                lives on the settings screen, beside the bot it depends on. */}
+            <Link href="/settings/telegram" className="text-xs text-[#b8256e] hover:underline mr-auto">الاتصال والمجموعات المرتبطة ←</Link>
           </CardContent>
         </Card>
 
@@ -274,55 +178,6 @@ export function TelegramOrdersScreen() {
             </Card>
           ))}
         </div>
-
-        {/* Sources */}
-        <Card>
-          <CardHeader title="المجموعات والمواضيع المرتبطة" className="border-b-0 pb-0 px-6 pt-4" />
-          <CardContent className="p-0 mt-3">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase">
-                  <tr>
-                    <th className="px-4 py-3 text-right">المجموعة</th>
-                    <th className="px-4 py-3 text-right">النوع</th>
-                    <th className="px-4 py-3 text-right">الحالة</th>
-                    <th className="px-4 py-3 text-right">الطلبات</th>
-                    <th className="px-4 py-3 text-right">آخر رسالة</th>
-                    <th className="px-4 py-3 text-left">إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
-                  {sources.length === 0 ? (
-                    <tr><td colSpan={6} className="py-8 text-center text-[#9ca3af]">{loading ? 'جارٍ التحميل...' : 'لا توجد بيانات'}</td></tr>
-                  ) : sources.map((s) => (
-                    <tr key={s.id} className="hover:bg-[#f8fafc]">
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-[#121926]">{s.chatTitle || 'بدون عنوان'}</p>
-                        <p className="text-[10px] text-[#697586] font-mono" dir="ltr">{s.chatId}{s.topicId ? ` • topic ${s.topicId}` : ''}</p>
-                        {s.topicName && <p className="text-[10px] text-[#697586]">الموضوع: {s.topicName}</p>}
-                      </td>
-                      <td className="px-4 py-3 text-[#697586]">{s.chatType === 'supergroup' ? 'مجموعة فائقة' : s.chatType === 'group' ? 'مجموعة' : 'قناة'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${s.isActive ? 'bg-[#e6f9ee] text-[#00a651]' : 'bg-[#f1f5f9] text-[#697586]'}`}>
-                          {s.isActive ? 'مفعل' : 'معطل'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-[#121926]">{s.ordersCount}</td>
-                      <td className="px-4 py-3 text-[#697586]">{s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar') : '—'}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 justify-end">
-                          <button disabled={busyId === s.id} onClick={() => testSource(s)} title="اختبار" className="p-1.5 rounded hover:bg-[#f1f5f9] text-[#697586]"><FlaskConical className="w-4 h-4" /></button>
-                          <button disabled={busyId === s.id} onClick={() => toggleSource(s)} title={s.isActive ? 'تعطيل' : 'تفعيل'} className="p-1.5 rounded hover:bg-[#f1f5f9] text-[#697586]"><Power className="w-4 h-4" /></button>
-                          <button disabled={busyId === s.id} onClick={() => deleteSource(s)} title="حذف" className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Recent messages */}
         <Card>
@@ -392,37 +247,6 @@ export function TelegramOrdersScreen() {
           </CardContent>
         </Card>
 
-        {/* Add Source modal */}
-        <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="إضافة مصدر تيليجرام">
-          <div className="space-y-4" dir="rtl">
-            <div>
-              <label className="text-xs font-semibold text-[#121926] block mb-1">Chat ID *</label>
-              <Input value={form.chatId} onChange={(e) => setForm({ ...form, chatId: e.target.value })} placeholder="-1001234567890" dir="ltr" className="text-left font-mono" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-[#121926] block mb-1">اسم المجموعة</label>
-              <Input value={form.chatTitle} onChange={(e) => setForm({ ...form, chatTitle: e.target.value })} placeholder="مجموعة طلبات المتجر" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-[#121926] block mb-1">Topic ID (اختياري)</label>
-                <Input value={form.topicId} onChange={(e) => setForm({ ...form, topicId: e.target.value })} placeholder="اتركه فارغًا لربط المجموعة كاملة" dir="ltr" className="text-left font-mono" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-[#121926] block mb-1">اسم الموضوع</label>
-                <Input value={form.topicName} onChange={(e) => setForm({ ...form, topicName: e.target.value })} />
-              </div>
-            </div>
-            {formError && <p className="text-xs text-rose-600">{formError}</p>}
-            <p className="text-[10px] text-[#697586] leading-relaxed">
-              تأكد من إضافة البوت إلى المجموعة ومن تفعيل Privacy Mode المناسب. اترك Topic ID فارغًا لربط المجموعة بالكامل.
-            </p>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setAddOpen(false)}>إلغاء</Button>
-              <Button size="sm" disabled={!form.chatId.trim() || saving} onClick={addSource}>{saving ? 'جارٍ الحفظ...' : 'إضافة'}</Button>
-            </div>
-          </div>
-        </Modal>
       </div>
     </>
   );

@@ -21,6 +21,7 @@ interface StoreRow {
   status: string;
   type: string;
   logo?: string | null;
+  priceIncludesDelivery?: boolean;
 }
 interface CountryRow {
   id: string;
@@ -36,7 +37,7 @@ interface CountryRow {
   allowNegativeStock: boolean;
   isActive: boolean;
   stores: StoreRow[];
-  _count: { regions: number };
+  _count: { regions: number; orders?: number };
 }
 
 const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -158,6 +159,12 @@ export function GeoSettingsScreen() {
 
           {openCountry === c.id && (
             <div className="p-4 grid gap-3 md:grid-cols-2 border-b border-[#e3e8ef] bg-[#f8fafc]">
+              <CurrencyField
+                code={c.currencyCode}
+                minorUnit={c.minorUnit}
+                orders={c._count.orders ?? 0}
+                onSave={(currencyCode, minorUnit) => patchCountry(c.id, { currencyCode, minorUnit })}
+              />
               <TimeField label="بداية الدوام" value={c.workHoursStart} onSave={(v) => patchCountry(c.id, { workHoursStart: v })} />
               <TimeField label="نهاية الدوام" value={c.workHoursEnd} onSave={(v) => patchCountry(c.id, { workHoursEnd: v })} />
               <div className="md:col-span-2">
@@ -219,6 +226,17 @@ export function GeoSettingsScreen() {
                   <p className="text-xs text-[#697586]" dir="ltr">
                     /{s.slug} · {storeTypeLabel(s.type)}
                   </p>
+                  {/* Read on every direct order of this store (an offer can
+                      still override it), and until now it had no control at
+                      all — every store priced as price + delivery. */}
+                  <label className="mt-1 flex items-center gap-1.5 text-[11px] text-[#364152]">
+                    <input
+                      type="checkbox"
+                      checked={!!s.priceIncludesDelivery}
+                      onChange={(e) => patchStore(s.id, { priceIncludesDelivery: e.target.checked })}
+                    />
+                    السعر المُعلن يشمل التوصيل
+                  </label>
                 </div>
                 <button
                   onClick={() => setStorefrontFor((cur) => (cur === s.id ? null : s.id))}
@@ -621,5 +639,69 @@ function TimeField({ label, value, onSave }: { label: string; value: string; onS
         className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]"
       />
     </label>
+  );
+}
+
+/**
+ * The country's currency and its decimals — correctable until the first
+ * order. Picking a currency fills in its official decimals, as creating a
+ * country does. After an order exists both are shown and locked: every
+ * order, fee and statement is written in them.
+ */
+function CurrencyField({
+  code, minorUnit, orders, onSave,
+}: {
+  code: string;
+  minorUnit: number;
+  orders: number;
+  onSave: (code: string, minorUnit: number) => void;
+}) {
+  const [draft, setDraft] = useState({ code, minorUnit });
+  useEffect(() => setDraft({ code, minorUnit }), [code, minorUnit]);
+  const changed = draft.code !== code || draft.minorUnit !== minorUnit;
+
+  if (orders > 0) {
+    return (
+      <div className="md:col-span-2 rounded-[8px] border border-[#e3e8ef] bg-white px-3 py-2 text-xs text-[#364152]">
+        العملة: <b>{currencyLabel(code)}</b> · {minorUnit} خانات عشرية
+        <span className="ms-2 text-[10px] text-[#9aa4b2]">لا تتغيّر بعد أول طلب — على هذا البلد {orders} طلباً مسجّلاً بها.</span>
+      </div>
+    );
+  }
+  return (
+    <div className="md:col-span-2 flex flex-wrap items-end gap-2">
+      <label className="min-w-[200px] flex-1 text-xs font-medium text-[#364152]">
+        العملة
+        <select
+          value={draft.code}
+          onChange={(e) => setDraft({ code: e.target.value, minorUnit: minorUnitFor(e.target.value) ?? draft.minorUnit })}
+          className="mt-1 block h-9 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-2 text-sm"
+        >
+          {!CURRENCIES.some((x) => x.code === code) && <option value={code}>{code}</option>}
+          {CURRENCIES.map((x) => (
+            <option key={x.code} value={x.code}>{x.ar} ({x.code})</option>
+          ))}
+        </select>
+      </label>
+      <label className="w-28 text-xs font-medium text-[#364152]">
+        الخانات العشرية
+        <select
+          value={draft.minorUnit}
+          onChange={(e) => setDraft({ ...draft, minorUnit: Number(e.target.value) })}
+          className="mt-1 block h-9 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-2 text-sm"
+        >
+          {[0, 1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </label>
+      <button
+        type="button"
+        disabled={!changed}
+        onClick={() => onSave(draft.code, draft.minorUnit)}
+        className="h-9 rounded-[8px] bg-[#b8256e] px-3 text-xs font-bold text-white disabled:opacity-40"
+      >
+        حفظ العملة
+      </button>
+      <p className="w-full text-[10px] text-[#9aa4b2]">تُصحَّح حتى أول طلب في هذا البلد، ثم تُقفل.</p>
+    </div>
   );
 }

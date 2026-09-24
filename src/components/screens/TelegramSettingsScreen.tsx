@@ -8,6 +8,7 @@ import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { Send, RefreshCw, CheckCircle2, XCircle, Copy } from 'lucide-react';
 import { copyText } from '@/lib/clipboard';
+import { TelegramSourcesCard } from '@/components/settings/TelegramSourcesCard';
 
 export function TelegramSettingsScreen() {
   const { currentUser } = useApp();
@@ -130,11 +131,13 @@ export function TelegramSettingsScreen() {
           </Card>
         )}
 
+        <TelegramSourcesCard canManage={!!canManage} />
+
         <Card>
           <CardHeader title="ملاحظات مهمة" />
           <CardContent className="text-xs text-[#697586] leading-relaxed space-y-2">
             <p>• يجب أن يكون البوت عضوًا في المجموعة لاستقبال الرسائل، وقد يتطلب تعطيل Privacy Mode أو منحه صلاحية قراءة الرسائل حسب نوع المجموعة.</p>
-            <p>• في المجموعات ذات المواضيع (Topics/Forum) يستقبل البوت رسائل المواضيع تلقائيًا؛ يمكنك ربط موضوع محدد من صفحة التكامل عند الحاجة.</p>
+            <p>• في المجموعات ذات المواضيع (Topics/Forum) يستقبل البوت رسائل المواضيع تلقائيًا؛ يمكنك ربط موضوع محدد من «المجموعات والمواضيع المرتبطة» أعلاه.</p>
             <p>• لا تشارك مفتاح البوت أو سر الويبهوك مع أي شخص. لا تُعرض هذه القيم في هذه الصفحة مطلقًا.</p>
           </CardContent>
         </Card>

@@ -77,6 +77,8 @@ export const storeUpdateSchema = z
     logo: z.string().url().max(500).nullable(),
     status: z.enum(STORE_STATUSES),
     type: z.enum(STORE_TYPES),
+    /** Whether an advertised price already includes delivery — read on every direct order. */
+    priceIncludesDelivery: z.boolean(),
     // ─── The store's public face ───
     // '' clears a field; the storefront then simply shows one thing less.
     storefrontEnabled: z.boolean(),

@@ -58,7 +58,6 @@ export function UsersScreen() {
   const [createOpen, setCreateOpen] = useState(false);
   const confirm = useConfirm();
   const [manageUser, setManageUser] = useState<any>(null);
-  const [selectedRole, setSelectedRole] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   // Critical-action confirmation (suspend/disable/role change)
@@ -98,7 +97,6 @@ export function UsersScreen() {
 
   const openManage = (u: any) => {
     setManageUser(u);
-    setSelectedRole(u.role);
     setModalError(null);
     setPendingAction(null);
   };
@@ -251,12 +249,12 @@ export function UsersScreen() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => (window.location.href = `/users/${u.id}`)}
+                            onClick={() => (window.location.href = `/admin/users/${u.id}`)}
                             className="text-[11px]"
-                            title="صلاحيات الموظف"
+                            title="الدور والصلاحيات والوصول"
                           >
                             <KeyRound className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
-                            الصلاحيات
+                            صفحة الموظف
                           </Button>
                         </div>
                       </td>
@@ -301,7 +299,7 @@ export function UsersScreen() {
             confirmLabel: 'خصّص صلاحياته',
             cancelLabel: 'لاحقاً',
           });
-          if (open) window.location.href = `/users/${created.id}`;
+          if (open) window.location.href = `/admin/users/${created.id}`;
         }}
       />
 
@@ -318,45 +316,17 @@ export function UsersScreen() {
               <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">{modalError}</div>
             )}
 
-            {/* Assign role */}
-            <div className="border border-[#e3e8ef] rounded-xl p-4 space-y-3 bg-[#f8fafc]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">تعيين / تغيير الدور</h4>
-              <div className="flex items-end space-x-2 rtl:space-x-reverse">
-                <Select
-                  label="الدور الجديد"
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  className="flex-1 text-xs"
-                >
-                  {ASSIGNABLE_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {ROLE_LABELS[r]} ({r})
-                    </option>
-                  ))}
-                </Select>
-                <Button
-                  onClick={() =>
-                    requestAction(
-                      'assignRole',
-                      'تغيير الرتبة؟',
-                      'سيتم تسجيل تغيير الرتبة في سجل التدقيق وسيؤثر فوراً على صلاحيات هذا الموظف.',
-                      { role: selectedRole }
-                    )
-                  }
-                  loading={actionLoading}
-                  disabled={selectedRole === manageUser.role}
-                  className="bg-[#fb323f] hover:bg-[#fb323f]/85"
-                >
-                  <ShieldCheck className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
-                  تعيين
-                </Button>
-              </div>
-              {manageUser.role !== selectedRole && selectedRole !== 'PENDING_USER' && (
-                <p className="text-[11px] text-[#c07f2a] bg-amber-50 border border-[#f4dcb8] rounded-lg p-2">
-                  سيتم تسجيل تغيير الدور في سجل التدقيق: {ROLE_LABELS[manageUser.role]} → {ROLE_LABELS[selectedRole]}
-                </p>
-              )}
-            </div>
+            {/* The role is changed in ONE place — the employee's page, where the
+                permissions it carries and the stores it reaches are shown with
+                it. A second editor here set the role's name and left its
+                permissions on the old role. */}
+            <a
+              href={`/admin/users/${manageUser.id}`}
+              className="flex items-center justify-between rounded-xl border border-[#e3e8ef] bg-[#f8fafc] p-3 text-xs font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+            >
+              <span>الدور الحالي: {ROLE_LABELS[manageUser.role] || manageUser.role}</span>
+              <span>تغيير الدور والصلاحيات والوصول ←</span>
+            </a>
 
             {/* Status actions */}
             <div className="border border-[#e3e8ef] rounded-xl p-4 space-y-3 bg-[#f8fafc]">
@@ -432,18 +402,6 @@ export function UsersScreen() {
       >
         <div className="space-y-4">
           <p className="text-sm text-[#364152] leading-relaxed">{pendingAction?.msg}</p>
-          {pendingAction?.action === 'assignRole' && (
-            <div className="text-xs bg-amber-50 border border-[#f4dcb8] rounded-xl p-3 space-y-1">
-              <p>
-                <span className="text-[#697586]">الرتبة الحالية:</span>{' '}
-                <span className="font-bold">{ROLE_LABELS[manageUser?.role] || manageUser?.role}</span>
-              </p>
-              <p>
-                <span className="text-[#697586]">الرتبة الجديدة:</span>{' '}
-                <span className="font-bold text-[#fb323f]">{ROLE_LABELS[pendingAction.extra?.role] || pendingAction.extra?.role}</span>
-              </p>
-            </div>
-          )}
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setPendingAction(null)}>
               إلغاء

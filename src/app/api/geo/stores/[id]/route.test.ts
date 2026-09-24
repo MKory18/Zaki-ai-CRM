@@ -73,6 +73,18 @@ describe('opening from the panel', () => {
   });
 });
 
+describe('the store pricing policy', () => {
+  it('«the price includes delivery» can finally be set — every direct order reads it', async () => {
+    const res = await patch({ priceIncludesDelivery: true });
+    expect(res.status).toBe(200);
+    expect(db.store.update.mock.calls[0][0].data).toMatchObject({ priceIncludesDelivery: true });
+  });
+
+  it('and nothing but a true/false', async () => {
+    expect((await patch({ priceIncludesDelivery: 'yes' })).status).toBe(400);
+  });
+});
+
 describe('the front page follows the type', () => {
   it('a store turned into a many-products store lets go of its front page', async () => {
     before.type = 'SINGLE_PRODUCT';

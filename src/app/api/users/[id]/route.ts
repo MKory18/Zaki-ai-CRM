@@ -18,7 +18,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const { id } = await params;
     const admin = await requirePermission('users.edit');
-    const { action, role, status, roleId } = await req.json();
+    const body = await req.json();
+    const { action, role, status, roleId } = body;
 
     const target = await db.user.findUnique({
       where: { id },
@@ -114,6 +115,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           return NextResponse.json({ error: conferral.error }, { status: conferral.status });
         }
         updateData.role = role;
+        // Grants resolve by roleId when one is set, so changing only the
+        // string left the badge saying one role and the permissions being
+        // another's. Point roleId at the role of that name — the company's
+        // own first, then the system one — or clear it so the string rules.
+        const named = await db.role.findFirst({
+          where: {
+            name: role as string,
+            // Never another company's role: without a company, the system one only.
+            OR: admin.companyId ? [{ companyId: admin.companyId }, { companyId: null }] : [{ companyId: null }],
+          },
+          orderBy: { companyId: 'asc' },
+          select: { id: true },
+        });
+        updateData.roleId = named?.id ?? null;
+        updateData.permissionsVersion = { increment: 1 };
       }
       // Adopting a platform-level (companyId: null) account is allowed ONLY for
       // a PENDING account by a company admin (onboarding). Never for ACTIVE
@@ -162,6 +178,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       });
       // Returned once over the authenticated response only
       return NextResponse.json({ success: true, temporaryPassword: tempPassword });
+    } else if (action === 'updateContact') {
+      // The employee's phone, on their own page. It could be set only when
+      // the account was created, with no way to correct it afterwards.
+      const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+      if (phone && !/^\+?[\d\s()-]{6,24}$/.test(phone)) {
+        return NextResponse.json({ error: 'رقم الهاتف غير صالح — أرقام فقط، ويمكن أن يبدأ بـ +' }, { status: 400 });
+      }
+      updateData.phone = phone || null;
+      auditAction = 'USER_CONTACT_UPDATED';
     } else if (action === 'delete') {
       if (target.id === admin.id) {
         return NextResponse.json({ error: 'لا يمكنك حذف حسابك الشخصي' }, { status: 400 });
@@ -209,12 +234,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         email: target.email,
         role: target.role,
         status: target.status,
+        ...(action === 'updateContact' ? { phone: target.phone } : {}),
       },
       newData: {
         user: updated.name,
         email: updated.email,
         role: updated.role,
         status: updated.status,
+        ...(action === 'updateContact' ? { phone: updateData.phone } : {}),
         changedBy: admin.name,
         changedAt: new Date().toISOString(),
       },
