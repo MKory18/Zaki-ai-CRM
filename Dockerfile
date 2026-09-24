@@ -71,6 +71,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # is available for migrations. Copied AFTER standalone on purpose.
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
+# The scheduler worker runs from source with tsx (see docker-entrypoint.sh).
+# Without these three the image could serve pages but never run a job:
+# nothing released held orders, synced couriers, delivered webhooks or sent
+# a conversion to Meta, and the jobs screen could only ever show them late.
+COPY --from=builder --chown=nextjs:nodejs /app/src ./src
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
+
 # Writable uploads directory for local product image storage
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
 
