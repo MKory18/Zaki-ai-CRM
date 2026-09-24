@@ -465,8 +465,17 @@ export const BLOCK_CSS = `
 /* The dashboard ships a rule on html[lang=ar] h1,h2,… — specificity
    (0,1,1), which beat a plain descendant selector, so a chosen font colour
    applied to everything EXCEPT the headings it was chosen for. Matching
-   that shape puts this ahead of it without reaching for !important. */
-html [data-look-color] :is(h1, h2, h3, h4, h5, h6, p, span, li, a, strong, em, blockquote, figcaption):not(.lp-cta):not(.lp-btn) {
+   that shape puts this ahead of it without reaching for !important.
+
+   HEADINGS ARE NOT IN THIS LIST, on purpose. They are owned entirely by
+   the --look-heading rule below, which falls back to 'inherit' and so
+   produces exactly this result when no heading colour was chosen.
+
+   They used to be in both. This selector is (0,3,2) and that one is
+   (0,2,1) — ':is()' takes its most specific argument, and '.lp-h1' is only
+   a class — so this won, forced 'inherit', and a heading colour set beside
+   a body colour silently did nothing. One rule per question. */
+html [data-look-color] :is(p, span, li, a, strong, em, blockquote, figcaption):not(.lp-cta):not(.lp-btn) {
   color: inherit;
 }
 [data-look-size] :is(h1, .lp-h1) { font-size: 2.1em; }

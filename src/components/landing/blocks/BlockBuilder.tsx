@@ -11,7 +11,7 @@ import { useInlineEdit } from './useInlineEdit';
 import { Input } from '@/components/ui/Input';
 import {
   type LandingSection, type SectionType,
-  SECTION_LABEL, SECTION_HINT, SINGLETON, newSection, PAGE_TEMPLATES, sectionsFromTemplate,
+  SECTION_LABEL, SECTION_HINT, SINGLETON, newSection,
 } from '@/lib/landing-sections';
 import {
   type LandingTheme, type FontValue, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
@@ -20,6 +20,7 @@ import { PageBlocks } from './PageBlocks';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from './styles';
 import { FontUploader, type StoreFontRow } from './FontUploader';
 import { SelectionBar } from './SelectionBar';
+import { PAGE_TEMPLATES, buildTemplate } from '@/lib/page-templates';
 import { useConfirm } from '@/components/ui/Confirm';
 import { sanitizeRich } from '@/lib/rich-text';
 
@@ -440,7 +441,7 @@ export function BlockBuilder(props: Props) {
           </button>
 
           {pickingTemplate && (
-            <div className="mb-3 space-y-1.5 rounded-lg bg-[#f8fafc] p-2">
+            <div className="mb-3 max-h-80 space-y-1.5 overflow-y-auto rounded-lg bg-[#f8fafc] p-2">
               <p className="text-[10px] leading-relaxed text-[#697586]">
                 القالب يستبدل أقسام الصفحة الحالية. النصوص والصور التي كتبتها ستُفقد.
               </p>
@@ -449,26 +450,39 @@ export function BlockBuilder(props: Props) {
                   key={t.key}
                   type="button"
                   onClick={async () => {
+                    const built = buildTemplate(t.key);
                     const ok = await confirm({
                       title: `استبدال الصفحة بـ«${t.label}»؟`,
                       body:
                         sections.length > 0
-                          ? `سيُحذف ${sections.length} قسماً بما فيها من نصوص وصور، ويحل محلها ${t.blocks.length} قسماً جديداً.`
+                          ? `سيُحذف ${sections.length} قسماً بما فيها من نصوص وصور، ويحل محلها ${built.sections.length} قسماً جديداً بلون وخط القالب.`
                           : undefined,
                       confirmLabel: 'استبدل',
                       cancelLabel: 'إلغاء',
                       tone: 'danger',
                     });
                     if (!ok) return;
-                    onSections(sectionsFromTemplate(t.key));
+                    // The theme as well as the blocks: a template that only
+                    // changed the order would be the same page five times,
+                    // which is the version of this feature nobody uses.
+                    onTheme(built.theme);
+                    onSections(built.sections);
                     setPickingTemplate(false);
                     setOpenId(null);
                   }}
-                  className="w-full rounded-lg border border-[#e3e8ef] bg-white px-2.5 py-2 text-start transition hover:border-[#b8256e] hover:bg-[#fdf2f7]"
+                  className="flex w-full items-start gap-2 rounded-lg border border-[#e3e8ef] bg-white px-2.5 py-2 text-start transition hover:border-[#b8256e] hover:bg-[#fdf2f7]"
                 >
-                  <span className="block text-xs font-semibold text-[#364152]">{t.label}</span>
-                  <span className="block text-[9.5px] leading-relaxed text-[#9aa4b2]">{t.hint}</span>
-                  <span className="mt-0.5 block text-[9px] text-[#c9d2e0]">{t.blocks.length} أقسام</span>
+                  {/* Its own colour, so fifteen rows are scannable without
+                      reading fifteen names. */}
+                  <span
+                    className="mt-0.5 h-7 w-1.5 shrink-0 rounded-full"
+                    style={{ background: t.swatch }}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-[#364152]">{t.label}</span>
+                    <span className="block text-[9.5px] leading-relaxed text-[#9aa4b2]">{t.hint}</span>
+                    <span className="mt-0.5 block text-[9px] text-[#c9d2e0]">{t.bricks.length} أقسام</span>
+                  </span>
                 </button>
               ))}
             </div>
