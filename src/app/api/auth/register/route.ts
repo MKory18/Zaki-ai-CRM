@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { PASSWORD_MAX, checkPassword } from '@/lib/password-rules';
 import { db } from '@/lib/db';
 import { hashPassword, createSessionToken, sessionCookieOptions, COOKIE_NAME } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
@@ -13,12 +14,7 @@ const registerSchema = z
       .min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل')
       .max(80, 'الاسم طويل جداً'),
     email: z.string().trim().toLowerCase().email('صيغة البريد الإلكتروني غير صحيحة'),
-    password: z
-      .string()
-      .min(8, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل')
-      .regex(/[A-Z]/, 'يجب أن تحتوي على حرف كبير واحد على الأقل')
-      .regex(/[a-z]/, 'يجب أن تحتوي على حرف صغير واحد على الأقل')
-      .regex(/[0-9]/, 'يجب أن تحتوي على رقم واحد على الأقل'),
+    password: z.string().max(PASSWORD_MAX).superRefine(checkPassword),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {

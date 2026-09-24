@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { z } from 'zod';
+import { PASSWORD_MAX, checkPassword } from '@/lib/password-rules';
 import { db } from '@/lib/db';
 import { hashPassword, resolveSingleCompanyId } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
@@ -16,12 +17,7 @@ import { zodMessage } from '@/lib/zod-message';
 const createUserSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80),
   email: z.string().trim().toLowerCase().email('صيغة البريد الإلكتروني غير صحيحة'),
-  password: z
-    .string()
-    .min(8, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل')
-    .regex(/[A-Z]/, 'يجب أن تحتوي على حرف كبير')
-    .regex(/[a-z]/, 'يجب أن تحتوي على حرف صغير')
-    .regex(/[0-9]/, 'يجب أن تحتوي على رقم'),
+  password: z.string().max(PASSWORD_MAX).superRefine(checkPassword),
   role: z.enum(ASSIGNABLE_ROLES as [UserRole, ...UserRole[]]).default('MODERATOR'),
   roleId: z.string().uuid().optional(),
   phone: z.string().trim().max(25).optional(),

@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
-import { Globe, Store as StoreIcon } from 'lucide-react';
+import { Check, Circle, Globe, Store as StoreIcon } from 'lucide-react';
+import { PASSWORD_RULES, passwordProblems } from '@/lib/password-rules';
 import { ROLE_LABELS as CANONICAL_LABELS } from '@/types/auth';
 
 /**
@@ -37,7 +38,8 @@ export function CreateUserModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  /** The account just created — the screen offers to open its permissions. */
+  onCreated: (user: { id: string; name: string } | null) => void;
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -109,7 +111,7 @@ export function CreateUserModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'تعذر إنشاء الحساب');
-      onCreated();
+      onCreated(data.user ?? null);
       onClose();
     } catch (e: any) {
       setError(e.message);
@@ -128,7 +130,9 @@ export function CreateUserModal({
   const missing = [
     name.trim().length < 3 ? 'الاسم (٣ أحرف على الأقل)' : null,
     email.trim() === '' ? 'البريد الإلكتروني' : null,
-    password.length < 8 ? 'كلمة المرور (٨ أحرف على الأقل)' : null,
+    passwordProblems(password).length > 0
+      ? `كلمة المرور (${passwordProblems(password).map((r) => r.ar).join('، ')})`
+      : null,
     roleId === '' ? 'الدور' : null,
   ].filter(Boolean) as string[];
   const ready = missing.length === 0;
@@ -152,14 +156,32 @@ export function CreateUserModal({
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@company.com"
           />
-          <Input
-            label="كلمة المرور"
-            type="password"
-            dir="ltr"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            helperText="8 أحرف على الأقل، وفيها حرف كبير وحرف صغير ورقم"
-          />
+          <div>
+            <Input
+              label="كلمة المرور"
+              type="password"
+              dir="ltr"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {/* The server's own rules, each ticking as it is met. The form
+                used to check only the length, so it said ready for a
+                password the server then refused. */}
+            <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+              {PASSWORD_RULES.map((rule) => {
+                const met = rule.test(password);
+                return (
+                  <li
+                    key={rule.key}
+                    className={`flex items-center gap-1 text-[11px] ${met ? 'text-[#00994d]' : 'text-[#9aa4b2]'}`}
+                  >
+                    {met ? <Check className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5" />}
+                    {rule.ar}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
           <Input label="الهاتف (اختياري)" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} />
           <Select
             label="الدور"
@@ -241,16 +263,25 @@ export function CreateUserModal({
           )}
         </div>
 
-        {error && <p className="text-xs text-[#fb323f]">{error}</p>}
 
         {/* Stuck to the bottom of the scrolling area: the form is long
             enough that the button used to sit below the fold, and a save
             you have to hunt for reads as a save that is not there. */}
         <div className="sticky bottom-0 -mx-6 -mb-6 mt-2 flex flex-wrap items-center justify-end gap-2 border-t border-[#e3e8ef] bg-white px-6 py-3">
-          {!ready && (
-            <span className="me-auto text-[11px] text-[#c07f2a]">
-              ناقص: {missing.join('، ')}
+          {/* The server's answer sits beside the button that asked. It used
+              to render at the end of the scrolling body, under the list of
+              stores — pressing "create" and seeing nothing happen is how
+              «ما بنشء موظف» was reported. */}
+          {error ? (
+            <span role="alert" className="me-auto text-[11px] font-medium text-[#fb323f]">
+              {error}
             </span>
+          ) : (
+            !ready && (
+              <span className="me-auto text-[11px] text-[#c07f2a]">
+                ناقص: {missing.join('، ')}
+              </span>
+            )
           )}
           <Button variant="outline" onClick={onClose}>إلغاء</Button>
           <Button onClick={submit} loading={saving} disabled={!ready}>إنشاء الحساب</Button>

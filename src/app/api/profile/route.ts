@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { z } from 'zod';
+import { PASSWORD_MAX, checkPassword } from '@/lib/password-rules';
 import { db } from '@/lib/db';
 import { requireAuth, hashPassword, verifyPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
@@ -10,12 +11,7 @@ const profileSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80).optional(),
   avatar: z.string().trim().url('رابط الصورة غير صالح').max(500).or(z.literal('')).optional(),
   currentPassword: z.string().optional(),
-  newPassword: z
-    .string()
-    .min(8, 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل')
-    .regex(/[A-Z]/, 'يجب أن تحتوي على حرف كبير واحد على الأقل')
-    .regex(/[a-z]/, 'يجب أن تحتوي على حرف صغير واحد على الأقل')
-    .regex(/[0-9]/, 'يجب أن تحتوي على رقم واحد على الأقل')
+  newPassword: z.string().max(PASSWORD_MAX).superRefine(checkPassword)
     .optional(),
 });
 

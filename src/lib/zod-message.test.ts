@@ -71,3 +71,20 @@ describe('when it does not recognise the field', () => {
     expect(zodMessage({ issues: [] } as never)).toBe('بيانات غير صالحة');
   });
 });
+
+describe("a schema author’s own Arabic sentence", () => {
+  it('is kept for a failed pattern, instead of «غير صالح»', () => {
+    // «رمز العملة ثلاثة أحرف (ISO)» already says what to do; replacing it
+    // with «رمز العملة غير صالح» threw away the only helpful part.
+    const schema = z.object({ currencyCode: z.string().regex(/^[A-Z]{3}$/, 'رمز العملة ثلاثة أحرف (ISO)') });
+    const parsed = schema.safeParse({ currencyCode: 'دينار' });
+    expect(zodMessage(parsed.error!)).toContain('رمز العملة ثلاثة أحرف (ISO)');
+  });
+
+  it("still says «غير صالح» when the only message is zod’s own English", () => {
+    const schema = z.object({ email: z.string().email() });
+    const parsed = schema.safeParse({ email: 'nope' });
+    expect(zodMessage(parsed.error!)).toBe('البريد الإلكتروني غير صالح');
+  });
+});
+

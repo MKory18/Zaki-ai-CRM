@@ -100,6 +100,14 @@ function label(path: PropertyKey[]): string | null {
   return FIELDS[key] ?? null;
 }
 
+const ARABIC = /[\u0600-\u06FF]/;
+
+/** "الحقل: الرسالة" — unless the message already names the field. */
+function withField(named: string | null, message: string): string {
+  if (!named || message.includes(named)) return message;
+  return `${named}: ${message}`;
+}
+
 /**
  * One readable Arabic sentence for the first thing that is wrong.
  *
@@ -144,9 +152,13 @@ export function zodMessage(error: ZodError): string {
 
     case 'invalid_format':
     case 'invalid_value':
+      // A regex that fails with the author's own Arabic sentence — «رمز
+      // العملة ثلاثة أحرف (ISO)», «يجب أن تحتوي على رقم» — already says what
+      // to do. Replacing it with «غير صالح» threw away the only helpful part.
+      if (ARABIC.test(issue.message)) return withField(named, issue.message);
       return named ? `${named} غير صالح` : issue.message;
 
     default:
-      return named ? `${named}: ${issue.message}` : issue.message;
+      return withField(named, issue.message);
   }
 }

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { CreateUserModal } from './users/CreateUserModal';
+import { useConfirm } from '@/components/ui/Confirm';
 import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '@/types/auth';
 import {
   Users,
@@ -55,6 +56,7 @@ export function UsersScreen() {
 
   // Create + manage modals
   const [createOpen, setCreateOpen] = useState(false);
+  const confirm = useConfirm();
   const [manageUser, setManageUser] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -287,7 +289,20 @@ export function UsersScreen() {
       <CreateUserModal
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={() => loadUsers(1)}
+        onCreated={async (created) => {
+          await loadUsers(1);
+          if (!created) return;
+          // The role gives the defaults; anything particular to this person
+          // is set in the permissions editor that already exists — offered
+          // here rather than rebuilt inside the creation form.
+          const open = await confirm({
+            title: `أُنشئ حساب «${created.name}»`,
+            body: 'صلاحياته الآن هي صلاحيات دوره. تخصيصها لهذا الموظف تحديداً؟',
+            confirmLabel: 'خصّص صلاحياته',
+            cancelLabel: 'لاحقاً',
+          });
+          if (open) window.location.href = `/users/${created.id}`;
+        }}
       />
 
       {/* Manage User Modal */}

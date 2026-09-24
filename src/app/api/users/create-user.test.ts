@@ -116,6 +116,19 @@ describe('an employee is created with the places he works', () => {
     expect(db.user.create).not.toHaveBeenCalled();
   });
 
+  it('refuses a long password the old form accepted, and names what it lacks', async () => {
+    // "abcdefgh": eight characters, so the form said ready — and the server
+    // refused it with «كلمة المرور غير صالح», naming nothing. The refusal now
+    // says exactly what is missing, and nothing is created.
+    const res = await post({ ...sound, password: 'abcdefgh' });
+    expect(res.status).toBe(400);
+    const { error } = await res.json();
+    expect(error).toContain('حرف كبير');
+    expect(error).toContain('رقم');
+    expect(error).not.toContain('غير صالح');
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
   it('never lets a non-super-admin create a SUPER_ADMIN', async () => {
     const res = await post({ ...sound, role: 'SUPER_ADMIN' });
     expect(res.status).toBe(403);
