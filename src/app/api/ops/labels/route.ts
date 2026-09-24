@@ -6,6 +6,7 @@ import { can, requirePermission } from '@/lib/authorization';
 import { redactCustomerForWarehouse } from '@/lib/operations';
 import { apiErrorResponse } from '@/lib/api-error';
 import { signLabelBatch } from '@/lib/labels';
+import { printRefusal } from '@/lib/waybill';
 import { zodMessage } from '@/lib/zod-message';
 
 /**
@@ -19,7 +20,9 @@ import { zodMessage } from '@/lib/zod-message';
  */
 
 const tokenSchema = z.object({
-  orderIds: z.array(z.string().uuid()).min(1).max(200),
+  // Either the chosen orders, or a whole shipping batch by id.
+  orderIds: z.array(z.string().uuid()).min(1).max(200).optional(),
+  batchId: z.string().uuid().optional(),
   width: z.number().int().min(40).max(300).default(100),
   height: z.number().int().min(40).max(300).default(150),
   // The paper. Omitted means the page is the label — a thermal roll.
@@ -82,24 +85,56 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
+    const { orderIds, batchId } = parsed.data;
+    if (!orderIds?.length && !batchId) {
+      return NextResponse.json({ error: 'اختر طلبات أو دفعة شحن' }, { status: 400 });
+    }
+    if (!storeId) return NextResponse.json({ error: 'اختر متجراً أولاً' }, { status: 400 });
 
-    // Only ids that really belong to this store may enter the token.
-    const owned = await db.order.findMany({
-      where: { id: { in: parsed.data.orderIds }, companyId, storeId },
-      select: { id: true },
+    // Only orders that really belong to this store — and that may be
+    // printed — enter the token. The ones that may not are named back, so
+    // the screen can say which and why instead of printing fewer labels
+    // than were ticked without a word.
+    const rows = await db.order.findMany({
+      where: batchId ? { shippingBatchId: batchId, companyId, storeId } : { id: { in: orderIds }, companyId, storeId },
+      select: { id: true, orderNumber: true, confirmationStatus: true, shippingStatus: true, deliveryProviderId: true },
     });
-    if (owned.length === 0) return NextResponse.json({ error: 'لا توجد طلبات صالحة' }, { status: 404 });
+    if (rows.length === 0) return NextResponse.json({ error: 'لا توجد طلبات صالحة' }, { status: 404 });
 
+    const refused: { orderNumber: string; reason: string }[] = [];
+    const printable = rows.filter((o) => {
+      const reason = printRefusal(o);
+      if (reason) refused.push({ orderNumber: o.orderNumber, reason });
+      return !reason;
+    });
+    if (printable.length === 0) {
+      return NextResponse.json(
+        { error: 'لا يُطبع إلا طلب مؤكَّد له شركة شحن', code: 'NOTHING_PRINTABLE', refused },
+        { status: 409 }
+      );
+    }
+
+    const allowed = new Set(printable.map((o) => o.id));
     const token = await signLabelBatch({
       storeId,
-      orderIds: owned.map((o) => o.id),
+      // A batch token names the batch; a selection keeps the order it was
+      // chosen in, which is the order it prints in.
+      orderIds: batchId ? [] : (orderIds ?? []).filter((id) => allowed.has(id)),
+      batchId,
       width: parsed.data.width,
       height: parsed.data.height,
       sheetWidth: parsed.data.sheetWidth,
       sheetHeight: parsed.data.sheetHeight,
     });
 
-    return NextResponse.json({ token, count: owned.length, printPath: `/api/ops/labels/print?t=${token}` });
+    const printPath = `/api/ops/labels/print?t=${token}`;
+    return NextResponse.json({
+      token,
+      count: printable.length,
+      printPath,
+      pdfPath: `${printPath}&mode=pdf`,
+      refused,
+    });
   } catch (error) {
     return apiErrorResponse(error);
   }

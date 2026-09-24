@@ -19,6 +19,7 @@ interface StoreRow {
   slug: string;
   status: string;
   type: string;
+  logo?: string | null;
 }
 interface CountryRow {
   id: string;
@@ -58,6 +59,13 @@ export function GeoSettingsScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // ?store=<id> — the storefronts screen's "settings" link opens that
+  // store's panel directly instead of dropping the owner at the top.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get('store');
+    if (wanted) setStorefrontFor(wanted);
+  }, []);
 
   const patchCountry = async (id: string, data: Record<string, unknown>) => {
     setError(null);
@@ -196,9 +204,14 @@ export function GeoSettingsScreen() {
 
           <ul className="divide-y divide-[#e3e8ef]">
             {c.stores.map((s) => (
-              <li key={s.id} className="flex items-center gap-3 p-4">
-                <span className="w-8 h-8 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center">
-                  <Store className="w-4 h-4 text-[#697586]" />
+              <React.Fragment key={s.id}>
+              <li className="flex items-center gap-3 p-4">
+                <span className="w-8 h-8 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center overflow-hidden">
+                  {s.logo ? (
+                    <img src={s.logo} alt="" className="h-full w-full object-contain" />
+                  ) : (
+                    <Store className="w-4 h-4 text-[#697586]" />
+                  )}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[#121926]">{s.name}</p>
@@ -206,6 +219,16 @@ export function GeoSettingsScreen() {
                     /{s.slug} · {s.type === 'SINGLE_PRODUCT' ? 'single product' : 'multi product'}
                   </p>
                 </div>
+                <button
+                  onClick={() => setStorefrontFor((cur) => (cur === s.id ? null : s.id))}
+                  className={`text-xs px-3 py-1.5 rounded-[8px] border ${
+                    storefrontFor === s.id
+                      ? 'border-[#b8256e] text-[#b8256e] bg-[#fdf2f8]'
+                      : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]'
+                  }`}
+                >
+                  الواجهة والشعار
+                </button>
                 <button
                   onClick={() => patchStore(s.id, { status: s.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' })}
                   className={`text-xs px-3 py-1.5 rounded-[8px] border ${
@@ -217,14 +240,18 @@ export function GeoSettingsScreen() {
                   {s.status === 'ACTIVE' ? 'إيقاف مؤقت' : 'تفعيل'}
                 </button>
               </li>
-            ))}
-            {c.stores.map((s) =>
-              storefrontFor === s.id ? (
-                <li key={`${s.id}-storefront`} className="bg-[#f8fafc] p-4">
+              {/* Directly under its own store. It used to render after the
+                  LAST store of the country, and nothing ever opened it: the
+                  state existed, the button that set it did not, so the
+                  storefront's theme, phone, domain — and now its logo —
+                  could not be reached from anywhere. */}
+              {storefrontFor === s.id && (
+                <li className="bg-[#f8fafc] p-4">
                   <StorefrontSettings store={s as never} onSaved={load} />
                 </li>
-              ) : null
-            )}
+              )}
+              </React.Fragment>
+            ))}
             <li className="p-3">
               {adding === c.id ? (
                 <AddStore

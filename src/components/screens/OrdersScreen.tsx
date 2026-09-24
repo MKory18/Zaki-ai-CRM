@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { DateRange } from '@/components/ui/DateRange';
 import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
+import { describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
+import { useTell } from '@/components/ui/Confirm';
+import { userCan } from '@/lib/can';
 import { useRegions } from '@/hooks/useRegions';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
@@ -239,22 +242,32 @@ export function OrdersScreen() {
    *  The size used to be hard-coded here, so the same order came out
    *  thermal-sized from this screen and A4-sized from the labels screen. */
   const labelSize = useLabelSize();
+  const tell = useTell();
   const [printing, setPrinting] = useState(false);
-  const handlePrintLabels = async () => {
+  const canPrint = userCan(currentUser, 'ops.labels');
+  /**
+   * Only confirmed orders with a courier get a waybill — printing seals an
+   * order. The ones that were ticked and cannot be printed are named, not
+   * silently left out of the stack of paper.
+   */
+  const handlePrintLabels = async (mode: 'print' | 'pdf' = 'print') => {
     if (selected.size === 0) return;
     setPrinting(true);
     setError(null);
     try {
-      const res = await apiFetch('/api/ops/labels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderIds: [...selected], ...labelSize.dims }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.errorAr || data.error || 'تعذر تجهيز البوالص');
-      window.open(data.printPath, '_blank');
-    } catch (e: any) {
-      setError(e?.message || 'تعذر تجهيز البوالص');
+      const out = await openWaybills({ orderIds: [...selected], ...labelSize.dims }, mode);
+      if (out.refused.length) {
+        void tell({
+          title: `جُهِّزت ${out.count} بوليصة، ولم تُجهَّز ${out.refused.length}`,
+          body: `لا يُطبع إلا طلب مؤكَّد له شركة شحن:\n${describeRefused(out.refused)}`,
+        });
+      }
+    } catch (e) {
+      if (e instanceof WaybillError && e.refused.length) {
+        void tell({ title: e.message, body: describeRefused(e.refused), tone: 'danger' });
+      } else {
+        setError(e instanceof Error ? e.message : 'تعذر تجهيز البوالص');
+      }
     } finally {
       setPrinting(false);
     }
@@ -437,10 +450,26 @@ export function OrdersScreen() {
             {/* The paper sits beside the button that uses it, so nobody
                 prints thirty labels before discovering the size. */}
             <LabelSizePicker compact className="ms-auto flex items-center" />
-            <Button size="sm" variant="outline" onClick={handlePrintLabels} loading={printing}>
-              <Printer className="w-3.5 h-3.5" />
-              طباعة البوالص
-            </Button>
+            {/* Shown only to whoever may print: the server refuses anyone
+                else, and a button that always answers 403 is a broken one. */}
+            {canPrint && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => void handlePrintLabels('print')} loading={printing}>
+                  <Printer className="w-3.5 h-3.5" />
+                  طباعة البوالص
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handlePrintLabels('pdf')}
+                  disabled={printing}
+                  title="نفس البوالص كملف PDF — الحفظ لا يعلّم الطلبات مطبوعة"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  PDF
+                </Button>
+              </>
+            )}
             <Button size="sm" variant="outline" onClick={handleExportSelected}>
               <Download className="w-3.5 h-3.5" />
               تصدير المحدَّد

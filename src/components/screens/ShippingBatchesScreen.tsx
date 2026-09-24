@@ -2,10 +2,12 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock, Download, Plus } from 'lucide-react';
-import { apiJson, apiFetch } from '@/lib/api-client';
+import { apiJson } from '@/lib/api-client';
 import type { DispatchSummary } from '@/lib/courier-dispatch';
 import { arDateShort } from '@/lib/format';
 import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
+import { describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
+import { useTell } from '@/components/ui/Confirm';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 
 /**
@@ -48,6 +50,7 @@ export function ShippingBatchesScreen() {
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<'all' | 'READY' | 'SHIPPED' | 'CLOSED'>('all');
   const [busy, setBusy] = useState<string | null>(null);
+  const tell = useTell();
   const [result, setResult] = useState<{ batchId: string; summary: DispatchSummary } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const labelSize = useLabelSize();
@@ -153,28 +156,25 @@ export function ShippingBatchesScreen() {
    * instead of paper. The CSV used to live on a separate labels screen; it
    * moved here with the printing rather than being lost with it.
    */
-  async function printBatch(batch: Batch, format?: 'csv') {
+  async function printBatch(batch: Batch, mode: 'print' | 'pdf' | 'csv' = 'print') {
     setBusy(batch.id);
     setError(null);
     try {
-      const detail = await apiJson<{ batch: { orders: { id: string }[] } }>(
-        `/api/shipping-batches/${batch.id}`
-      );
-      const orderIds = (detail.batch?.orders ?? []).map((o) => o.id);
-      if (orderIds.length === 0) {
-        setError('لا طلبات في هذه الدفعة');
-        return;
+      // The batch by id: its token no longer carries a list of order ids,
+      // so a batch past two hundred orders prints like any other.
+      const out = await openWaybills({ batchId: batch.id, ...labelSize.dims }, mode);
+      if (out.refused.length) {
+        void tell({
+          title: `جُهِّزت ${out.count} بوليصة، ولم تُجهَّز ${out.refused.length}`,
+          body: `لا يُطبع إلا طلب مؤكَّد له شركة شحن:\n${describeRefused(out.refused)}`,
+        });
       }
-      const res = await apiFetch('/api/ops/labels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderIds, ...labelSize.dims }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.errorAr || data.error || 'تعذر تجهيز البوالص');
-      window.open(format === 'csv' ? `${data.printPath}&format=csv` : data.printPath, '_blank');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الطباعة');
+      if (e instanceof WaybillError && e.refused.length) {
+        void tell({ title: e.message, body: describeRefused(e.refused), tone: 'danger' });
+      } else {
+        setError(e instanceof Error ? e.message : 'تعذر الطباعة');
+      }
     } finally {
       setBusy(null);
     }
@@ -324,6 +324,16 @@ export function ShippingBatchesScreen() {
                   >
                     {busy === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
                     طباعة بوالص الدفعة
+                  </button>
+
+                  <button
+                    onClick={() => printBatch(b, 'pdf')}
+                    disabled={busy === b.id || b._count.orders === 0}
+                    title="نفس البوالص كملف PDF — الحفظ لا يعلّم الطلبات مطبوعة"
+                    className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-[#697586] hover:text-[#b8256e] inline-flex items-center gap-1.5 disabled:opacity-40"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    PDF
                   </button>
 
                   <button

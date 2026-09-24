@@ -18,7 +18,18 @@ function secret(): Uint8Array {
 
 export interface LabelBatch {
   storeId: string;
+  /**
+   * The orders, in the order they were chosen — the order they print in.
+   * Empty when the token names a shipping batch instead.
+   */
   orderIds: string[];
+  /**
+   * A whole shipping batch, by id. A batch keeps collecting orders for its
+   * courier all day and could not be printed past two hundred; naming the
+   * batch keeps the token small whatever its size, and puts no list of
+   * order ids in a URL.
+   */
+  batchId?: string;
   /** Millimetres; the operator may pick a custom size. */
   width: number;
   height: number;
@@ -40,10 +51,12 @@ export async function verifyLabelBatch(token: string): Promise<LabelBatch | null
     const { payload } = await jwtVerify(token, secret());
     if (payload.kind !== 'label_batch') return null;
     const orderIds = Array.isArray(payload.orderIds) ? (payload.orderIds as string[]) : [];
-    if (typeof payload.storeId !== 'string' || orderIds.length === 0) return null;
+    const batchId = typeof payload.batchId === 'string' ? payload.batchId : undefined;
+    if (typeof payload.storeId !== 'string' || (orderIds.length === 0 && !batchId)) return null;
     return {
       storeId: payload.storeId,
       orderIds,
+      batchId,
       width: typeof payload.width === 'number' ? payload.width : 100,
       height: typeof payload.height === 'number' ? payload.height : 150,
       sheetWidth: typeof payload.sheetWidth === 'number' ? payload.sheetWidth : undefined,
@@ -79,7 +92,10 @@ export const LABEL_SIZES: readonly LabelSize[] = [
   // On office paper the waybill is not the page: several share a sheet, or
   // a run of thirty orders eats thirty sheets for a quarter of their area.
   { key: 'a6', label: 'A6 على ورقة A4 (4 لكل ورقة)', width: 105, height: 148, sheet: { width: 210, height: 297 } },
-  { key: 'a5', label: 'A5 على ورقة A4 (2 لكل ورقة)', width: 148, height: 210, sheet: { width: 210, height: 297 } },
+  // Landscape: two A5 fill an A4 only lying on their side, 210 × 148. The
+  // portrait version this used to be put ONE on each sheet while its label
+  // promised two.
+  { key: 'a5', label: 'A5 على ورقة A4 (2 لكل ورقة)', width: 210, height: 148, sheet: { width: 210, height: 297 } },
   { key: 'a4', label: 'A4 كاملة (بوليصة لكل ورقة)', width: 210, height: 297, sheet: { width: 210, height: 297 } },
 ];
 
@@ -98,12 +114,28 @@ const CODE128_PATTERNS = [
   '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
   '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
   '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
-  '114131', '311141', '411131', '211412', '211214', '211232', '233111',
+  '114131', '311141', '411131', '211412', '211214', '211232',
+  // STOP. Seven elements, not six: 2-3-3-1-1-1 and then the 2-module
+  // termination bar. It used to end at '233111', so every courier barcode
+  // this system printed finished on a space instead of a bar - out of spec,
+  // and read only by scanners lenient enough to forgive it.
+  '2331112',
 ];
+
+/**
+ * What a Code 128B barcode of `value` actually encodes.
+ *
+ * Code set B holds printable ASCII only, and the barcode is capped at forty
+ * characters. The caption under it prints THIS, so the digits a person reads
+ * are the digits the scanner reads.
+ */
+export function encodableCode128(value: string): string {
+  return String(value ?? '').replace(/[^\x20-\x7E]/g, '').slice(0, 40) || '0';
+}
 
 /** Bar widths for a Code 128B barcode of `value` (module = 1 unit). */
 export function code128Bars(value: string): number[] {
-  const clean = value.replace(/[^\x20-\x7E]/g, '').slice(0, 40) || '0';
+  const clean = encodableCode128(value);
   const codes = [104]; // Start B
   let checksum = 104;
   [...clean].forEach((ch, i) => {

@@ -5,6 +5,7 @@ import { Store as StoreIcon, Loader2, ExternalLink, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
+import { StoreLogoField } from './StoreLogoField';
 import {
   type LandingTheme, DEFAULT_THEME, MOODS, FONTS, isValidHex,
 } from '@/lib/landing-theme';
@@ -29,6 +30,7 @@ interface StoreRow {
   about?: string | null;
   supportPhone?: string | null;
   domain?: string | null;
+  logo?: string | null;
 }
 
 const SWATCHES = [
@@ -51,6 +53,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
   const [enabled, setEnabled] = useState(!!store.storefrontEnabled);
   const [type, setType] = useState(store.type);
   const [theme, setTheme] = useState<LandingTheme>(parseTheme(store.theme));
+  const [logo, setLogo] = useState<string | null>(store.logo ?? null);
   const [form, setForm] = useState({
     tagline: store.tagline ?? '',
     about: store.about ?? '',
@@ -124,6 +127,17 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           </a>
         )}
       </div>
+
+      {/* Saved on upload, not with the form: a file is not a field to
+          remember to press save for. */}
+      <StoreLogoField
+        storeId={store.id}
+        logo={logo}
+        onChange={(next) => {
+          setLogo(next);
+          onSaved?.();
+        }}
+      />
 
       <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#364152]">
         <input

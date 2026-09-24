@@ -253,7 +253,7 @@ function Card({
         {/* Settings live where they always did. A second editor for the same
             fields is a second place for them to disagree. */}
         <a
-          href="/settings/geo"
+          href={`/settings/geo?store=${shop.id}`}
           className="flex items-center gap-1 rounded-lg border border-[#e3e8ef] px-2 py-1 text-[10px] font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
         >
           <Settings2 className="h-3 w-3" /> الإعدادات
