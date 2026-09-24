@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
+import { inStore } from '@/lib/store-filter';
 
 /**
  * GET /api/inventory/movements — the stock ledger.
@@ -13,10 +14,16 @@ import { apiErrorResponse } from '@/lib/api-error';
  *
  * Movements are never edited: a wrong one is corrected by another movement
  * in the other direction, the same rule the wallet ledger follows.
+ *
+ * Scoped to the caller's store. It was not, and the column was there and
+ * filled the whole time — the query simply said `{ companyId }`. On this
+ * database that meant a clerk at المبارك ستور, which has five movements,
+ * was shown all one hundred and thirty-five. A missing tenant filter never
+ * throws; it returns more rows, which reads as working software.
  */
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireContext();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('inventory.view');
 
     const q = new URL(req.url).searchParams;
@@ -27,7 +34,7 @@ export async function GET(req: Request) {
     const before = q.get('before');
 
     const where = {
-      companyId,
+      ...inStore(companyId, storeId),
       ...(productId ? { productId } : {}),
       ...(type && type !== 'all' ? { type } : {}),
       ...(before ? { createdAt: { lt: new Date(before) } } : {}),
@@ -62,7 +69,10 @@ export async function GET(req: Request) {
     // Types present in this company, so the filter offers only real ones.
     const types = await db.inventoryMovement.groupBy({
       by: ['type'],
-      where: { companyId },
+      // The tallies under the list are the same ledger; counting the
+      // company here would have put another store's numbers on the screen
+      // even with the list itself correct.
+      where: inStore(companyId, storeId),
       _count: { type: true },
     });
 

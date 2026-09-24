@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * remaining two shut against the wrong product.
  */
 
-const { db, requireCompanyTenant, requirePermission, logAudit, receiveStock, drawDownStock, onHandTotal } =
+const { db, requireContext, requirePermission, logAudit, receiveStock, drawDownStock, onHandTotal } =
   vi.hoisted(() => ({
     db: {
       product: { findFirst: vi.fn() },
@@ -19,7 +19,7 @@ const { db, requireCompanyTenant, requirePermission, logAudit, receiveStock, dra
       inventoryMovement: { create: vi.fn() },
       $transaction: vi.fn(),
     },
-    requireCompanyTenant: vi.fn(),
+    requireContext: vi.fn(),
     requirePermission: vi.fn(),
     logAudit: vi.fn(),
     receiveStock: vi.fn(),
@@ -28,7 +28,7 @@ const { db, requireCompanyTenant, requirePermission, logAudit, receiveStock, dra
   }));
 
 vi.mock('@/lib/db', () => ({ db }));
-vi.mock('@/lib/auth', () => ({ requireCompanyTenant: (...a: unknown[]) => requireCompanyTenant(...a) }));
+vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
 vi.mock('@/lib/receiving', () => ({
@@ -50,7 +50,9 @@ const PRODUCT_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireCompanyTenant.mockResolvedValue({ user: { id: 'u1' }, companyId: 'c1' });
+  // A caller always stands in a store now — requireContext refuses to
+  // return without one, which is why the route can rely on it.
+  requireContext.mockResolvedValue({ user: { id: 'u1' }, companyId: 'c1', storeId: 's1' });
   requirePermission.mockResolvedValue({});
   db.$transaction.mockImplementation(async (fn: any) => fn(db));
   db.inventoryMovement.create.mockImplementation(async ({ data }: any) => data);
@@ -132,5 +134,60 @@ describe('a stock count', () => {
   it('counts a product of another company as missing', async () => {
     db.product.findFirst.mockResolvedValue(null);
     expect((await post({ action: 'recount', productId: PRODUCT_ID, countedQuantity: 1, reason: 'جرد' })).status).toBe(404);
+  });
+});
+
+/**
+ * AND THE DOOR NOBODY HAD SHUT.
+ *
+ * Stock is per store, the column said so, and the queries said `{ companyId }`.
+ * A clerk at a store with five movements was shown all one hundred and
+ * thirty-five. Nothing threw; a missing tenant filter returns MORE rows,
+ * which reads as working software.
+ */
+describe('stock belongs to a store', () => {
+  it('names the caller’s store when looking a product up', async () => {
+    db.product.findFirst.mockResolvedValue(null);
+    await POST(
+      new Request('http://x/api/inventory', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'receive', productId: 'product-in-my-store', quantity: 5, unitCost: 2 }),
+      })
+    );
+    const where = db.product.findFirst.mock.calls.at(-1)?.[0]?.where;
+    expect(where).toMatchObject({ companyId: 'c1', storeId: 's1' });
+  });
+
+  it('cannot reach a product of another store', async () => {
+    // The product exists; it is simply not one this caller can name, so the
+    // lookup returns nothing and the route answers "not found" rather than
+    // moving somebody else's stock.
+    db.product.findFirst.mockResolvedValue(null);
+    const res = await POST(
+      new Request('http://x/api/inventory', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'receive', productId: 'other-store-product', quantity: 5, unitCost: 2 }),
+      })
+    );
+    expect(res.status).toBe(404);
+    expect(db.inventoryMovement.create).not.toHaveBeenCalled();
+  });
+
+  it('matches nothing at all when no store is selected', async () => {
+    requireContext.mockResolvedValueOnce({ user: { id: 'u1' }, companyId: 'c1', storeId: null });
+    db.product.findFirst.mockResolvedValue(null);
+    await POST(
+      new Request('http://x/api/inventory', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'receive', productId: 'product-in-my-store', quantity: 5, unitCost: 2 }),
+      })
+    );
+    const where = db.product.findFirst.mock.calls.at(-1)?.[0]?.where;
+    // An impossible clause, not a company-wide one.
+    expect(where.id).toEqual({ in: [] });
+    expect(where.storeId).toBeUndefined();
   });
 });

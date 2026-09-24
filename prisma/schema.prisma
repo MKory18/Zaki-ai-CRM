@@ -282,6 +282,8 @@ model InventoryMovement {
 
   @@index([companyId, productId])
   @@index([batchId])
+  // The ledger is read per store, newest first.
+  @@index([companyId, storeId, createdAt(sort: Desc)])
   @@map("inventory_movements")
 }
 
