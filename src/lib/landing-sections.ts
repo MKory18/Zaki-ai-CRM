@@ -310,6 +310,69 @@ export const landingSectionsSchema = z.array(landingSectionSchema).max(40);
 // Names, for the editor
 // ─────────────────────────────────────────────────────
 
+
+/**
+ * PAGES THAT ALREADY WORK, AS A STARTING POINT.
+ *
+ * A blank builder is a worse problem than a badly designed one: a seller
+ * who does not know which blocks a page needs picks three, publishes, and
+ * wonders why it does not sell. These are the shapes that do sell, named
+ * by the job rather than by the blocks in them — nobody wakes up wanting
+ * "hero, offers, benefits, form", they want a page for one product.
+ *
+ * Every template is the same blocks the seller could have chosen by hand,
+ * in an order that has a reason, so there is nothing here to maintain
+ * separately from the blocks themselves.
+ */
+export interface PageTemplate {
+  key: string;
+  label: string;
+  hint: string;
+  blocks: SectionType[];
+}
+
+export const PAGE_TEMPLATES: PageTemplate[] = [
+  {
+    key: 'classic',
+    label: 'صفحة منتج كاملة',
+    hint: 'الأكثر استخداماً — عرض، مميزات، ضمانات، وآراء',
+    blocks: ['announcement', 'hero', 'offers', 'benefits', 'form', 'trust', 'reviews', 'faq', 'footer'],
+  },
+  {
+    key: 'short',
+    label: 'صفحة قصيرة سريعة',
+    hint: 'للإعلانات المدفوعة — من الصورة إلى الطلب بأقل خطوات',
+    blocks: ['hero', 'benefits', 'form', 'trust', 'sticky'],
+  },
+  {
+    key: 'urgent',
+    label: 'عرض محدود',
+    hint: 'عدّاد ونُدرة — للحملات ذات المدّة',
+    blocks: ['announcement', 'hero', 'urgency', 'offers', 'form', 'trust', 'footer'],
+  },
+  {
+    key: 'trust',
+    label: 'منتج يحتاج إقناعاً',
+    hint: 'شرح وصور وآراء قبل الطلب — للمنتج الغالي أو الجديد',
+    blocks: ['hero', 'text', 'gallery', 'benefits', 'reviews', 'faq', 'offers', 'form', 'trust', 'footer'],
+  },
+  {
+    key: 'blank',
+    label: 'ابدأ فارغاً',
+    hint: 'الواجهة والنموذج فقط — ابنِ الباقي بنفسك',
+    blocks: ['hero', 'form'],
+  },
+];
+
+/** The blocks of a template, as fresh sections with fresh ids. */
+export function sectionsFromTemplate(key: string): LandingSection[] {
+  const t = PAGE_TEMPLATES.find((x) => x.key === key);
+  // An unknown key gets the starter rather than an empty page: a page with
+  // no form cannot take an order, and that is not a state to leave anyone in.
+  const blocks: SectionType[] = t ? t.blocks : ['hero', 'form'];
+  return blocks.map(newSection);
+}
+
 export const SECTION_LABEL: Record<SectionType, string> = {
   announcement: 'شريط إعلان',
   hero: 'الواجهة',

@@ -2,8 +2,8 @@
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Eye, EyeOff, Trash2, Plus, Upload, Loader2, GripVertical,
-  Monitor, Smartphone, X, Paintbrush,
+  Eye, EyeOff, Trash2, Plus, Minus, Upload, Loader2, GripVertical,
+  Monitor, Smartphone, X, Paintbrush, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { LookControls } from './LookControls';
@@ -11,7 +11,7 @@ import { useInlineEdit } from './useInlineEdit';
 import { Input } from '@/components/ui/Input';
 import {
   type LandingSection, type SectionType,
-  SECTION_LABEL, SECTION_HINT, SINGLETON, newSection,
+  SECTION_LABEL, SECTION_HINT, SINGLETON, newSection, PAGE_TEMPLATES, sectionsFromTemplate,
 } from '@/lib/landing-sections';
 import {
   type LandingTheme, type FontValue, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
@@ -20,6 +20,7 @@ import { PageBlocks } from './PageBlocks';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from './styles';
 import { FontUploader, type StoreFontRow } from './FontUploader';
 import { SelectionBar } from './SelectionBar';
+import { useConfirm } from '@/components/ui/Confirm';
 import { sanitizeRich } from '@/lib/rich-text';
 
 /**
@@ -55,6 +56,29 @@ export function BlockBuilder(props: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
+
+  /**
+   * A look copied off one block, waiting to be put on another.
+   *
+   * Kept in memory and not saved: it is a clipboard, and a clipboard that
+   * survives a reload is a clipboard nobody remembers filling.
+   */
+  const [copiedLook, setCopiedLook] = useState<LandingSection['look'] | null>(null);
+
+  /**
+   * How large the page is drawn, NOT how large it is.
+   *
+   * A seller checking their spacing wants to see the whole page at once;
+   * one reading their own small print wants it bigger. Neither is a change
+   * to the page, so this is a transform on the canvas and touches nothing
+   * that gets saved.
+   */
+  const [zoom, setZoom] = useState(1);
+
+  /** Whether the template list is open. Never saved — it is a menu. */
+  const [pickingTemplate, setPickingTemplate] = useState(false);
+
+  const confirm = useConfirm();
 
   const palette = useMemo(() => paletteFor(theme), [theme]);
   // The page's own faces, in full, exactly as the published page asks for
@@ -392,6 +416,64 @@ export function BlockBuilder(props: Props) {
             <span className="text-[10px] text-[#9aa4b2]">{sections.length}</span>
           </div>
 
+          {/*
+            A blank builder is a worse problem than a badly designed page:
+            a seller who does not know which blocks a page needs picks
+            three, publishes, and wonders why it does not sell.
+
+            Offered as a BUTTON and not as an empty state. The first
+            version showed these only when the page had no blocks — and a
+            page never has none, because it always keeps its form and a new
+            page is created from the starter set. A panel that can never
+            appear is worse than no panel: it looks finished.
+
+            Replacing a page is destructive, so it asks first, and says how
+            much it is about to throw away.
+          */}
+          <button
+            type="button"
+            onClick={() => setPickingTemplate((v) => !v)}
+            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#c9d2e0] px-2 py-1.5 text-[11px] font-semibold text-[#697586] transition hover:border-[#b8256e] hover:text-[#b8256e]"
+          >
+            <LayoutTemplate className="h-3.5 w-3.5" />
+            {pickingTemplate ? 'إغلاق القوالب' : 'ابدأ من قالب جاهز'}
+          </button>
+
+          {pickingTemplate && (
+            <div className="mb-3 space-y-1.5 rounded-lg bg-[#f8fafc] p-2">
+              <p className="text-[10px] leading-relaxed text-[#697586]">
+                القالب يستبدل أقسام الصفحة الحالية. النصوص والصور التي كتبتها ستُفقد.
+              </p>
+              {PAGE_TEMPLATES.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: `استبدال الصفحة بـ«${t.label}»؟`,
+                      body:
+                        sections.length > 0
+                          ? `سيُحذف ${sections.length} قسماً بما فيها من نصوص وصور، ويحل محلها ${t.blocks.length} قسماً جديداً.`
+                          : undefined,
+                      confirmLabel: 'استبدل',
+                      cancelLabel: 'إلغاء',
+                      tone: 'danger',
+                    });
+                    if (!ok) return;
+                    onSections(sectionsFromTemplate(t.key));
+                    setPickingTemplate(false);
+                    setOpenId(null);
+                  }}
+                  className="w-full rounded-lg border border-[#e3e8ef] bg-white px-2.5 py-2 text-start transition hover:border-[#b8256e] hover:bg-[#fdf2f7]"
+                >
+                  <span className="block text-xs font-semibold text-[#364152]">{t.label}</span>
+                  <span className="block text-[9.5px] leading-relaxed text-[#9aa4b2]">{t.hint}</span>
+                  <span className="mt-0.5 block text-[9px] text-[#c9d2e0]">{t.blocks.length} أقسام</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           <ul className="space-y-1.5">
             {sections.map((s, i) => (
               <li
@@ -531,6 +613,37 @@ export function BlockBuilder(props: Props) {
         <div className="flex items-center justify-between border-b border-[#e3e8ef] px-3 py-2">
           <span className="text-xs font-semibold text-[#364152]">معاينة مباشرة</span>
           <div className="flex items-center gap-1">
+            {/* How large the page is DRAWN, not how large it is. Checking
+                the spacing of a long page means seeing the whole of it;
+                reading your own small print means the opposite. Neither is
+                a change to the page. */}
+            <button
+              type="button"
+              title="تصغير المعاينة"
+              disabled={zoom <= 0.5}
+              onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
+              className="cursor-pointer rounded p-1.5 text-[#697586] hover:bg-[#f8fafc] disabled:opacity-40"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              title="حجم طبيعي"
+              onClick={() => setZoom(1)}
+              className="min-w-[2.75rem] cursor-pointer rounded px-1 py-1 text-[11px] font-semibold tabular-nums text-[#697586] hover:bg-[#f8fafc]"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              type="button"
+              title="تكبير المعاينة"
+              disabled={zoom >= 1.5}
+              onClick={() => setZoom((z) => Math.min(1.5, Math.round((z + 0.1) * 10) / 10))}
+              className="cursor-pointer rounded p-1.5 text-[#697586] hover:bg-[#f8fafc] disabled:opacity-40"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+            <span className="mx-1 h-4 w-px bg-[#e3e8ef]" />
             {([['desktop', Monitor], ['mobile', Smartphone]] as const).map(([d, Icon]) => (
               <button
                 key={d}
@@ -568,6 +681,10 @@ export function BlockBuilder(props: Props) {
               ...(paletteVars(palette) as React.CSSProperties),
               width: device === 'mobile' ? 390 : '100%',
               maxWidth: '100%',
+              // `zoom` and not `transform: scale`: scale leaves the element
+              // claiming its old size, so the scroller keeps the space a
+              // shrunk page no longer uses and clips a magnified one.
+              zoom,
             }}
           >
             {/* The preview loads the same families the published page
@@ -631,6 +748,21 @@ export function BlockBuilder(props: Props) {
                     rowRefs.current[id]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
                   );
                 },
+                /**
+                 * Copy a look, paste it onto the next block.
+                 *
+                 * Matching two blocks by hand is eight controls set twice
+                 * and a third block that never quite matches. This is the
+                 * same look object, so they cannot drift.
+                 */
+                onCopyLook: (id) => {
+                  const b = sections.find((x) => x.id === id);
+                  if (b) setCopiedLook(b.look);
+                },
+                onPasteLook: (id) => {
+                  if (copiedLook) patch(id, { look: copiedLook });
+                },
+                hasCopiedLook: Boolean(copiedLook),
                 canDuplicate: (b) => !SINGLETON.includes(b.type),
                 onDuplicate: (id) => {
                   const i = sections.findIndex((x) => x.id === id);

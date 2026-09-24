@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus } from 'lucide-react';
+import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus, Palette as PaletteIcon, Paintbrush } from 'lucide-react';
 import type { LandingSection } from '@/lib/landing-sections';
 import { lookStyles, isPlainLook } from '@/lib/block-look';
 import { sanitizeRich, isRich } from '@/lib/rich-text';
@@ -55,6 +55,12 @@ export interface BlockSelection {
   onEdit?: (id: string) => void;
   /** A second copy right below. Undefined when this block may exist once. */
   onDuplicate?: (id: string) => void;
+  /** Take this block's look, to put on another. */
+  onCopyLook?: (id: string) => void;
+  /** Put the copied look on this one. */
+  onPasteLook?: (id: string) => void;
+  /** Whether anything has been copied yet — the paste button says so. */
+  hasCopiedLook?: boolean;
   /** False for a block the page may only hold one of. */
   canDuplicate?: (s: LandingSection) => boolean;
   /** The look controls, rendered in the same bar as the handles. */
@@ -497,6 +503,20 @@ function Selectable({
               title="تكرار"
               onClick={() => selection.onDuplicate?.(s.id)}
               icon={<CopyPlus className="h-3.5 w-3.5" />}
+            />
+          )}
+          {/* Matching two blocks by hand is eight controls set twice, and a
+              third block that never quite matches. */}
+          <Handle
+            title="انسخ التنسيق"
+            onClick={() => selection.onCopyLook?.(s.id)}
+            icon={<PaletteIcon className="h-3.5 w-3.5" />}
+          />
+          {selection.hasCopiedLook && (
+            <Handle
+              title="الصق التنسيق"
+              onClick={() => selection.onPasteLook?.(s.id)}
+              icon={<Paintbrush className="h-3.5 w-3.5" />}
             />
           )}
           <span className="mx-0.5 h-4 w-px bg-[#e3e8ef]" />
