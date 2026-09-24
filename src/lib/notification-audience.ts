@@ -46,6 +46,12 @@ export interface Audience {
   userIds?: readonly (string | null | undefined)[];
   /** Everyone who holds this permission (as can() decides it). */
   permission?: string;
+  /**
+   * Everyone whose role is one of these. Only for rules that are themselves
+   * written by role — change-request deciders — so who is told matches who
+   * may act.
+   */
+  roles?: readonly string[];
 }
 
 export interface AudienceQuery {
@@ -86,7 +92,8 @@ function batchGrantSource(overrides: Map<string, UserOverrideRow[]>): GrantSourc
 export async function resolveAudience(q: AudienceQuery): Promise<SessionUser[]> {
   const named = [...new Set((q.audience.userIds ?? []).filter((id): id is string => !!id))];
   const permission = q.audience.permission;
-  if (!permission && named.length === 0) return [];
+  const roles = q.audience.roles ?? [];
+  if (!permission && roles.length === 0 && named.length === 0) return [];
 
   // With a permission every ACTIVE employee is a candidate — whether they
   // hold it is the engine's question, not a role-name list's.
@@ -94,7 +101,7 @@ export async function resolveAudience(q: AudienceQuery): Promise<SessionUser[]> 
     where: {
       companyId: q.companyId,
       status: 'ACTIVE',
-      ...(permission ? {} : { id: { in: named } }),
+      ...(permission || roles.length ? {} : { id: { in: named } }),
     },
     select: { id: true, name: true, email: true, role: true, roleId: true, status: true, companyId: true },
   });
@@ -125,7 +132,9 @@ export async function resolveAudience(q: AudienceQuery): Promise<SessionUser[]> 
   );
 
   const namedSet = new Set(named);
-  const wanted = users.filter((u) => namedSet.has(u.id) || (!!permission && can(u, permission)));
+  const wanted = users.filter(
+    (u) => namedSet.has(u.id) || (!!permission && can(u, permission)) || roles.includes(u.role)
+  );
   if (!q.storeId || wanted.length === 0) return wanted;
 
   const reach = await usersReachingStore(wanted, q.companyId, q.storeId);

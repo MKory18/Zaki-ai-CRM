@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { notify } from '@/lib/notify';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -12,7 +13,6 @@ import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
-import { createNotification } from '@/lib/notification';
 import { authorize, can } from '@/lib/authorization';
 import { orderSeal, sealedFieldsIn, sealMessage } from '@/lib/order-seal';
 import { expandApproved, mayApply, strayFields } from '@/lib/change-request-apply';
@@ -1007,10 +1007,16 @@ export async function PATCH(
     // on it. Not to whoever just pressed the button. After commit; never
     // throws.
     if (status && status !== previousStatus && (TERMINAL_STATUSES as readonly string[]).includes(status)) {
-      await createNotification({
+      notify({
         companyId,
         storeId: existing.storeId ?? storeId,
-        audience: { permission: 'confirmation.supervise', userIds: [existing.moderatorId] },
+        // The moderator the order belonged to AND the one it belongs to now:
+        // one edit can move the order and decide it, and the commission
+        // follows the new owner while the old one saw it until a moment ago.
+        audience: {
+          permission: 'confirmation.supervise',
+          userIds: [existing.moderatorId, updatedOrder?.moderatorId],
+        },
         actorId: user.id,
         title: status === 'CONFIRMED' ? 'تأكيد طلب' : status === 'REJECTED' ? 'رفض طلب' : 'إلغاء طلب',
         message: `الطلب #${existing.orderNumber} أصبح بالحالة ${status} بواسطة ${user.name}.`,

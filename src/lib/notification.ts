@@ -59,11 +59,19 @@ export async function createNotification({
   message,
   type = 'SYSTEM_ALERT',
   link,
+  recipients: given,
 }: {
   companyId: string;
   /** The store the news is about; null = company-wide (no store filter). */
   storeId?: string | null;
   audience: Audience;
+  /**
+   * The audience already resolved, when the caller tells many people about
+   * many things in one store: a job announcing two hundred postponed orders
+   * resolves the store's supervisors ONCE instead of two hundred times.
+   * When given, `audience` is not resolved again.
+   */
+  recipients?: readonly SessionUser[];
   /** Who caused it — left out of the audience. */
   actorId?: string | null;
   title: string;
@@ -73,7 +81,9 @@ export async function createNotification({
   link?: string | readonly string[];
 }): Promise<number> {
   try {
-    const recipients = await resolveAudience({ companyId, storeId, audience, actorId });
+    const recipients = given
+      ? [...new Map(given.filter((u) => u.id !== actorId).map((u) => [u.id, u])).values()]
+      : await resolveAudience({ companyId, storeId, audience, actorId });
     if (recipients.length === 0) return 0;
 
     const links = link == null ? [] : typeof link === 'string' ? [link] : link;

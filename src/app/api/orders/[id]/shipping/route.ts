@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { notify } from '@/lib/notify';
 import { db } from '@/lib/db';
 import { SEALED_BATCH_STATUSES } from '@/lib/order-seal';
 import { requireContext } from '@/lib/geo-context';
@@ -12,7 +13,6 @@ import {
 } from '@/lib/shipping-workflow';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
-import { createNotification } from '@/lib/notification';
 import { can, authorize } from '@/lib/authorization';
 import { assertCancellable, assertReadyToShip, type StateSource } from '@/lib/order-state';
 import { orderLinesForGuard } from '@/lib/reservation';
@@ -399,7 +399,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // of this store, sent to the screen that lists it. After commit; never
     // throws.
     if (newShippingStatus === 'FAILED_DELIVERY' && newShippingStatus !== from) {
-      await createNotification({
+      notify({
         companyId,
         storeId: order.storeId ?? storeId,
         audience: { permission: 'ops.track' },

@@ -10,7 +10,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * per order-and-date, per store-and-day, per wallet-and-day.
  */
 
-const { db, createNotification } = vi.hoisted(() => ({
+const { db, createNotification, resolveAudience } = vi.hoisted(() => ({
+  resolveAudience: vi.fn(),
   db: {
     store: { findMany: vi.fn() },
     order: { findMany: vi.fn() },
@@ -23,6 +24,7 @@ const { db, createNotification } = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/notification', () => ({ createNotification: (...a: unknown[]) => createNotification(...a) }));
+vi.mock('@/lib/notification-audience', () => ({ resolveAudience: (...a: unknown[]) => resolveAudience(...a) }));
 vi.mock('@/lib/wallets', () => ({ blockingClosing: vi.fn(async () => null) }));
 
 import { closingReminder, staleReturns, surfacePostponed } from './definitions';
@@ -38,6 +40,12 @@ beforeEach(() => {
   db.store.findMany.mockResolvedValue([store('A'), store('B')]);
   db.notification.findFirst.mockResolvedValue(null);
   createNotification.mockResolvedValue(2);
+  // Named people come back as themselves; a permission as the store's supervisor.
+  resolveAudience.mockImplementation(async ({ audience }: any) =>
+    audience.permission
+      ? [{ id: 'sup-1' }]
+      : (audience.userIds ?? []).filter(Boolean).map((id: string) => ({ id }))
+  );
 });
 
 describe('surface-postponed', () => {
@@ -55,11 +63,25 @@ describe('surface-postponed', () => {
     expect(createNotification.mock.calls[0][0]).toMatchObject({
       companyId: 'c1',
       storeId: 'A',
-      audience: { permission: 'confirmation.supervise', userIds: ['agent-1'] },
       type: 'POSTPONED_DUE',
       link: '/confirmation/postponed',
     });
+    expect(createNotification.mock.calls[0][0].recipients.map((u: any) => u.id).sort()).toEqual(['agent-1', 'sup-1']);
     expect(result.processed).toBe(1);
+  });
+
+  it('resolves each store\'s audience ONCE, not once per order', async () => {
+    db.order.findMany.mockImplementation(async ({ where }: any) =>
+      where.storeId === 'A'
+        ? Array.from({ length: 30 }, (_, i) => ({
+            id: `o${i}`, orderNumber: `ORD-${i}`, postponedUntil: new Date('2026-09-25T00:00:00Z'), claimedById: `agent-${i % 3}`,
+          }))
+        : []
+    );
+    await surfacePostponed.run({ now } as any);
+    expect(createNotification).toHaveBeenCalledTimes(30);
+    // One lookup of the holders and one of the supervisors for store A.
+    expect(resolveAudience).toHaveBeenCalledTimes(2);
   });
 
   it('does not repeat an order already announced for the same date', async () => {
@@ -68,12 +90,15 @@ describe('surface-postponed', () => {
     expect(createNotification).not.toHaveBeenCalled();
   });
 
-  it('keys "already announced" on the order AND the date, in this store or a legacy row', async () => {
+  it('keys "already announced" on the order AND the date, in this store, and only on a PERSONAL row', async () => {
     await surfacePostponed.run({ now } as any);
     const where = db.notification.findFirst.mock.calls[0][0].where;
     expect(where.message).toContain('ORD-1');
     expect(where.message).toContain('2026-09-25');
-    expect(where.OR).toEqual([{ storeId: 'A' }, { storeId: null }]);
+    expect(where.storeId).toBe('A');
+    // A pre-stage-17 shared row is history the holding agent cannot see;
+    // counting it would mean she is never told.
+    expect(where.userId).toEqual({ not: null });
   });
 
   it('does not count an order as announced when nobody could be told', async () => {
@@ -111,35 +136,48 @@ describe('stale-returns', () => {
 });
 
 describe('closing-reminder', () => {
+  const wallets = [
+    { id: 'w1', name: 'نقد', companyId: 'c1', storeId: 'A' },
+    { id: 'w2', name: 'نقد: فرع', companyId: 'c1', storeId: 'A' },
+    { id: 'w3', name: 'حساب الشركة', companyId: 'c1', storeId: null },
+  ];
   beforeEach(() => {
-    db.wallet.findMany.mockResolvedValue([
-      { id: 'w1', name: 'صندوق عمّان', companyId: 'c1', storeId: 'A' },
-      { id: 'w2', name: 'صندوق إربد', companyId: 'c1', storeId: 'B' },
-      { id: 'w3', name: 'حساب الشركة', companyId: 'c1', storeId: null },
-    ]);
+    // Honours the job's own filter, so what it asks for is what it gets.
+    db.wallet.findMany.mockImplementation(async ({ where }: any) =>
+      wallets.filter((w) => (where?.storeId?.not === null ? w.storeId !== null : true))
+    );
     db.dailyClosing.findUnique.mockResolvedValue(null);
   });
 
-  it('tells finance.cashbox holders about EVERY unclosed wallet, each in its own store', async () => {
+  it('tells finance.cashbox holders about every unclosed wallet that belongs to a store', async () => {
     await closingReminder.run({ now } as any);
-    expect(createNotification.mock.calls.map((c) => c[0].storeId)).toEqual(['A', 'B', null]);
+    expect(createNotification.mock.calls.map((c) => c[0].storeId)).toEqual(['A', 'A']);
     for (const [arg] of createNotification.mock.calls) {
-      expect(arg).toMatchObject({ audience: { permission: 'finance.cashbox' }, type: 'CLOSING_DUE', link: '/finance/closing' });
+      expect(arg).toMatchObject({ audience: { permission: 'finance.cashbox' }, type: 'CLOSING_DUE' });
     }
   });
 
-  it('asks "already reminded?" per wallet and per day', async () => {
+  it('does not remind about a wallet with no store — nobody could act on it, and it reached every country', async () => {
     await closingReminder.run({ now } as any);
-    const where = db.notification.findFirst.mock.calls[1][0].where;
-    expect(where).toMatchObject({ companyId: 'c1', storeId: 'B', type: 'CLOSING_DUE', message: { startsWith: 'صندوق إربد:' } });
+    expect(db.wallet.findMany.mock.calls[0][0].where).toMatchObject({ storeId: { not: null } });
+    expect(createNotification.mock.calls.some((c) => c[0].message.includes('حساب الشركة'))).toBe(false);
   });
 
-  it('a wallet already reminded today does not silence the others', async () => {
+  it('asks "already reminded?" by the wallet\'s id, per day', async () => {
+    await closingReminder.run({ now } as any);
+    const where = db.notification.findFirst.mock.calls[1][0].where;
+    expect(where).toMatchObject({ companyId: 'c1', storeId: 'A', type: 'CLOSING_DUE', link: '/finance/closing?wallet=w2' });
+    expect(where.createdAt.gte.toISOString()).toBe('2026-09-24T00:00:00.000Z');
+  });
+
+  it('a wallet already reminded does not silence one whose name begins the same way', async () => {
+    // Keyed on the name, «نقد» matched the message of «نقد: فرع».
     db.notification.findFirst.mockImplementation(async ({ where }: any) =>
-      where.message.startsWith === 'صندوق عمّان:' ? { id: 'n' } : null
+      where.link === '/finance/closing?wallet=w2' ? { id: 'n' } : null
     );
     await closingReminder.run({ now } as any);
-    expect(createNotification.mock.calls.map((c) => c[0].storeId)).toEqual(['B', null]);
+    expect(createNotification).toHaveBeenCalledTimes(1);
+    expect(createNotification.mock.calls[0][0].link).toBe('/finance/closing?wallet=w1');
   });
 
   it('an approved closing is not reminded', async () => {

@@ -73,7 +73,12 @@ export function NotificationBell() {
 
   const loadCount = useCallback(async () => {
     try {
-      const res = await apiJson<{ unreadCount: number }>('/api/notifications?countOnly=1');
+      // Plain fetch for the poll: apiJson answers a missing store by sending
+      // the whole tab to the store picker, which a background poll must never
+      // do. (The route now answers 0 in that case anyway.)
+      const r = await fetch('/api/notifications?countOnly=1', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      const res = (await r.json()) as { unreadCount: number };
       setUnread(res.unreadCount ?? 0);
     } catch {
       // A failed poll is not worth a message; the next one will do.

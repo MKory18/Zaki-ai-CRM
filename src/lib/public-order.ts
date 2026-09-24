@@ -1,5 +1,4 @@
 import { db } from './db';
-import { createNotification } from './notification';
 import { findOrCreateCustomer } from './customer-identity';
 import { normalizePhoneNumber } from './phone';
 import { orderRefFields } from './order-ref';
@@ -9,6 +8,7 @@ import { NEUTRAL_REFUSAL, isBlocked } from './blacklist';
 import { rateLimit } from './rate-limit';
 import { signAddonToken } from './landing-pages';
 import { emitAppEvent } from './apps/events';
+import { notify } from './notify';
 import { queueConversions } from './conversions/emit';
 import {
   buildPublicOrderSchema,
@@ -306,7 +306,7 @@ export async function createPublicOrder(
   // function that makes it: this store's confirmation supervisors, one row
   // each. A visitor is not an employee, so there is no actor to leave out.
   // Never throws — the order is saved whatever happens here.
-  await createNotification({
+  notify({
     companyId,
     storeId: store.id,
     audience: { permission: 'confirmation.supervise' },

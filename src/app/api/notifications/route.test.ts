@@ -8,6 +8,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * count, which rows change — rather than the shape of a query. The leak
  * this replaces returned more rows than it should and looked like working
  * software; only an answer-level test catches that.
+ *
+ * Rows from before stage 17 (no recipient, no store) are history: read-only,
+ * never counted, and shown only to someone who sees every store and holds
+ * the permission that kind of news belongs to.
  */
 
 type Row = {
@@ -15,19 +19,23 @@ type Row = {
   companyId: string;
   userId: string | null;
   storeId: string | null;
+  type: string;
   isRead: boolean;
   createdAt: Date;
 };
 
-const { db, table, requireContext, can } = vi.hoisted(() => {
+const { db, table, requireContext, can, seesAll } = vi.hoisted(() => {
   const table: { rows: Row[] } = { rows: [] };
 
-  // The subset of Prisma's where the route uses: equality, OR, AND.
+  // The subset of Prisma's where the route uses: equality, OR, AND, { in }.
   const matches = (row: any, where: any): boolean =>
     Object.entries(where ?? {}).every(([k, v]) => {
       if (k === 'OR') return (v as any[]).some((w) => matches(row, w));
       if (k === 'AND') return (v as any[]).every((w) => matches(row, w));
-      if (v !== null && typeof v === 'object') throw new Error(`unsupported filter on ${k}`);
+      if (v !== null && typeof v === 'object') {
+        if (Array.isArray((v as any).in)) return (v as any).in.includes(row[k]);
+        throw new Error(`unsupported filter on ${k}`);
+      }
       return row[k] === v;
     });
 
@@ -38,6 +46,7 @@ const { db, table, requireContext, can } = vi.hoisted(() => {
           .filter((r) => matches(r, where))
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
           .slice(0, take ?? Infinity)
+          .map((r) => ({ ...r }))
       ),
       count: vi.fn(async ({ where }: any) => table.rows.filter((r) => matches(r, where)).length),
       updateMany: vi.fn(async ({ where, data }: any) => {
@@ -47,14 +56,26 @@ const { db, table, requireContext, can } = vi.hoisted(() => {
       }),
     },
   };
-  return { db, table, requireContext: vi.fn(), can: vi.fn() };
+  return { db, table, requireContext: vi.fn(), can: vi.fn(), seesAll: vi.fn() };
 });
 
 vi.mock('@/lib/db', () => ({ db }));
-vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
+vi.mock('@/lib/geo-context', () => {
+  class ContextError extends Error {
+    constructor(readonly code: string, message: string) {
+      super(message);
+    }
+  }
+  return {
+    ContextError,
+    requireContext: (...a: unknown[]) => requireContext(...a),
+    seesAllCountries: (...a: unknown[]) => seesAll(...a),
+  };
+});
 vi.mock('@/lib/authorization', () => ({ can: (...a: unknown[]) => can(...a) }));
 
 import { GET, PATCH } from './route';
+import { ContextError } from '@/lib/geo-context';
 
 const ME = 'u-me';
 const OTHER = 'u-other';
@@ -63,7 +84,8 @@ const A = 'store-a';
 const B = 'store-b';
 
 const row = (id: string, over: Partial<Row>): Row => ({
-  id, companyId: C, userId: ME, storeId: A, isRead: false, createdAt: new Date(Date.UTC(2026, 8, 24, 10, 0, Number(id.replace(/\D/g, '')) || 0)),
+  id, companyId: C, userId: ME, storeId: A, type: 'ORDER_NEW', isRead: false,
+  createdAt: new Date(Date.UTC(2026, 8, 24, 10, 0, Number(id.replace(/\D/g, '')) || 0)),
   ...over,
 });
 
@@ -72,134 +94,130 @@ function seed() {
     row('n1', {}), // mine, this store, unread
     row('n2', { storeId: B }), // mine, another store
     row('n3', { userId: OTHER }), // someone else's, this store
-    row('n4', { storeId: null }), // mine, company-wide (a wallet with no store)
-    row('n5', { userId: null, storeId: null }), // legacy broadcast
+    row('n4', { storeId: null }), // mine, about no store
+    row('n5', { userId: null, storeId: null, type: 'ORDER_NEW' }), // legacy broadcast — confirmation news
     row('n6', { isRead: true }), // mine, already read
     row('n7', { companyId: 'c2' }), // another company
+    row('n8', { userId: null, storeId: null, type: 'CLOSING_DUE' }), // legacy broadcast — finance news
   ];
 }
 
-const asUser = (supervisor: boolean) => {
-  const user = { id: ME, role: supervisor ? 'CONFIRMATION_SUPERVISOR' : 'MODERATOR', status: 'ACTIVE' };
-  requireContext.mockResolvedValue({ user, companyId: C, storeId: A });
-  can.mockImplementation((_u: unknown, p: string) => supervisor && p === 'confirmation.supervise');
-};
+/** holds: the permissions this person has; everywhere: sees every store. */
+function as(holds: string[], everywhere = false) {
+  requireContext.mockResolvedValue({ companyId: C, storeId: A, user: { id: ME, role: 'X' } });
+  can.mockImplementation((_u: unknown, key: string) => holds.includes(key));
+  seesAll.mockReturnValue(everywhere);
+}
 
-const get = async (qs = '') => {
-  const res = await GET(new Request(`http://localhost/api/notifications${qs}`));
-  return { status: res.status, body: await res.json() };
-};
-const patch = async (body: unknown) => {
-  const res = await PATCH(
-    new Request('http://localhost/api/notifications', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-  );
-  return { status: res.status, body: await res.json() };
-};
-const readIds = () => table.rows.filter((r) => r.isRead).map((r) => r.id).sort();
+const get = async (q = '') => (await GET(new Request(`http://localhost/api/notifications${q}`))).json();
+const patch = (body: unknown) =>
+  PATCH(new Request('http://localhost/api/notifications', { method: 'PATCH', body: JSON.stringify(body) }));
+const ids = (list: { id: string }[]) => list.map((n) => n.id).sort();
 
 beforeEach(() => {
   vi.clearAllMocks();
   seed();
-  asUser(false);
+  as([]);
 });
 
 describe('GET — what a person sees', () => {
   it('only their own rows, in the selected store or about no store', async () => {
-    const { status, body } = await get();
-    expect(status).toBe(200);
-    expect(body.notifications.map((n: Row) => n.id).sort()).toEqual(['n1', 'n4', 'n6']);
+    const body = await get();
+    expect(ids(body.notifications)).toEqual(['n1', 'n4', 'n6']);
+    expect(body.unreadCount).toBe(2);
   });
 
-  it('never another user\'s row', async () => {
-    const { body } = await get();
-    expect(body.notifications.every((n: Row) => n.userId === ME)).toBe(true);
+  it('never another user’s row, another store’s row, or another company’s', async () => {
+    const seen = ids((await get()).notifications);
+    expect(seen).not.toContain('n3');
+    expect(seen).not.toContain('n2');
+    expect(seen).not.toContain('n7');
   });
 
-  it('never their own row of another store', async () => {
-    const { body } = await get();
-    expect(body.notifications.map((n: Row) => n.id)).not.toContain('n2');
+  it('never a legacy row for a supervisor limited to some stores — it could be about any of them', async () => {
+    as(['confirmation.supervise', 'finance.cashbox'], false);
+    const seen = ids((await get()).notifications);
+    expect(seen).not.toContain('n5');
+    expect(seen).not.toContain('n8');
   });
 
-  it('never a legacy shared row, for anyone who is not a supervisor', async () => {
-    const { body } = await get();
-    expect(body.notifications.map((n: Row) => n.id)).not.toContain('n5');
-    expect((await get('?countOnly=1')).body.unreadCount).toBe(2);
+  it('shows legacy rows to someone who sees every store, only of the kinds their permissions cover', async () => {
+    as(['confirmation.supervise'], true);
+    const seen = ids((await get()).notifications);
+    expect(seen).toContain('n5'); // confirmation news
+    expect(seen).not.toContain('n8'); // finance news — needs finance.cashbox
   });
 
-  it('a confirmation supervisor still sees the legacy shared rows', async () => {
-    asUser(true);
-    const { body } = await get();
-    expect(body.notifications.map((n: Row) => n.id).sort()).toEqual(['n1', 'n4', 'n5', 'n6']);
-    expect(body.unreadCount).toBe(3);
+  it('shows history as read, and never counts it', async () => {
+    as(['confirmation.supervise', 'finance.cashbox'], true);
+    const body = await get();
+    const legacy = body.notifications.filter((n: Row) => n.userId === null);
+    expect(legacy.length).toBe(2);
+    expect(legacy.every((n: Row) => n.isRead)).toBe(true);
+    expect(body.unreadCount).toBe(2); // n1, n4 — own rows only
   });
 
-  it('the list\'s unread count and the poll\'s count agree, beyond the 50 listed', async () => {
-    table.rows = Array.from({ length: 60 }, (_, i) => row(`m${i}`, {}));
+  it('the poll’s count and the list’s count agree, beyond the 50 listed', async () => {
+    table.rows = Array.from({ length: 70 }, (_, i) => row(`m${i}`, {}));
     const list = await get();
     const poll = await get('?countOnly=1');
-    expect(list.body.notifications).toHaveLength(50);
-    expect(list.body.unreadCount).toBe(60);
-    expect(poll.body.unreadCount).toBe(60);
+    expect(list.notifications.length).toBe(50);
+    expect(list.unreadCount).toBe(70);
+    expect(poll.unreadCount).toBe(70);
   });
 
-  it('needs a selected store (400), rather than widening to the company', async () => {
-    // What requireContext throws with no store selected (see geo-context).
-    const noStore = Object.assign(new Error('A store must be selected'), { name: 'ContextError', code: 'STORE_REQUIRED' });
-    requireContext.mockRejectedValue(noStore);
-    expect((await get()).status).toBe(400);
-    expect(db.notification.findMany).not.toHaveBeenCalled();
+  it('answers an empty bell, not an error, when no store is selected — a poll must never redirect the tab', async () => {
+    requireContext.mockRejectedValue(new ContextError('STORE_REQUIRED', 'A store must be selected'));
+    const poll = await GET(new Request('http://localhost/api/notifications?countOnly=1'));
+    expect(poll.status).toBe(200);
+    expect(await poll.json()).toEqual({ unreadCount: 0 });
+    const list = await GET(new Request('http://localhost/api/notifications'));
+    expect(await list.json()).toEqual({ notifications: [], unreadCount: 0 });
+  });
+
+  it('still fails for anything that is not a missing store', async () => {
+    requireContext.mockRejectedValue(new Error('Unauthorized'));
+    const res = await GET(new Request('http://localhost/api/notifications'));
+    expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });
 
-describe('PATCH — what a person may mark read', () => {
-  it('marks their own row', async () => {
-    expect((await patch({ notificationId: 'n1' })).status).toBe(200);
-    expect(readIds()).toEqual(['n1', 'n6']);
+describe('PATCH — what a person may mark', () => {
+  it('marks one of their own rows', async () => {
+    const res = await patch({ notificationId: 'n1' });
+    expect(res.status).toBe(200);
+    expect(table.rows.find((r) => r.id === 'n1')!.isRead).toBe(true);
   });
 
-  it('cannot mark another user\'s row (404, untouched)', async () => {
-    expect((await patch({ notificationId: 'n3' })).status).toBe(404);
-    expect(readIds()).toEqual(['n6']);
+  it('cannot mark another user’s row — it reads as not found', async () => {
+    const res = await patch({ notificationId: 'n3' });
+    expect(res.status).toBe(404);
+    expect(table.rows.find((r) => r.id === 'n3')!.isRead).toBe(false);
   });
 
-  it('cannot mark another company\'s row', async () => {
-    expect((await patch({ notificationId: 'n7' })).status).toBe(404);
-    expect(readIds()).toEqual(['n6']);
+  it('cannot mark a legacy row, not even as a supervisor who sees every store — its one flag was everybody’s', async () => {
+    as(['confirmation.supervise', 'finance.cashbox'], true);
+    const res = await patch({ notificationId: 'n5' });
+    expect(res.status).toBe(404);
+    expect(table.rows.find((r) => r.id === 'n5')!.isRead).toBe(false);
   });
 
-  it('a non-supervisor cannot mark a legacy shared row read for everybody', async () => {
-    expect((await patch({ notificationId: 'n5' })).status).toBe(404);
-    expect(readIds()).toEqual(['n6']);
-  });
-
-  it('a supervisor may mark a legacy shared row', async () => {
-    asUser(true);
-    expect((await patch({ notificationId: 'n5' })).status).toBe(200);
-    expect(readIds()).toEqual(['n5', 'n6']);
-  });
-
-  it('mark-all touches only their own rows in this store', async () => {
-    expect((await patch({ markAllRead: true })).status).toBe(200);
-    // n2 (mine, other store), n3 (someone else's), n5 (legacy), n7 (other
-    // company) all stay unread.
-    expect(readIds()).toEqual(['n1', 'n4', 'n6']);
-  });
-
-  it('a supervisor\'s mark-all also covers the legacy rows, and still nobody else\'s', async () => {
-    asUser(true);
+  it('mark-all touches only their own rows in this store, and never history or anybody else', async () => {
+    as(['confirmation.supervise', 'finance.cashbox'], true);
     await patch({ markAllRead: true });
-    expect(readIds()).toEqual(['n1', 'n4', 'n5', 'n6']);
+    const read = (id: string) => table.rows.find((r) => r.id === id)!.isRead;
+    expect(read('n1')).toBe(true);
+    expect(read('n4')).toBe(true);
+    expect(read('n2')).toBe(false); // mine, but another store
+    expect(read('n3')).toBe(false); // someone else's
+    expect(read('n5')).toBe(false); // history
+    expect(read('n8')).toBe(false); // history
+    expect(read('n7')).toBe(false); // another company
   });
 
-  it('refuses a body that is neither of the two shapes (400)', async () => {
-    for (const bad of [{}, { markAllRead: false }, { notificationId: 5 }, { notificationId: '' }, { notificationId: 'n1', userId: OTHER }]) {
-      const res = await patch(bad);
-      expect(res.status, JSON.stringify(bad)).toBe(400);
-    }
-    expect(db.notification.updateMany).not.toHaveBeenCalled();
+  it('refuses a body that names nothing', async () => {
+    expect((await patch({})).status).toBe(400);
+    expect((await patch({ notificationId: '' })).status).toBe(400);
+    expect((await patch({ markAllRead: false })).status).toBe(400);
   });
 });

@@ -56,12 +56,16 @@ export interface RoutingVerdict {
   reason?: string;
 }
 
+/**
+ * The roles that may decide a change request whatever their permissions.
+ * Exported so the people TOLD about a request are the people who may
+ * decide it — the notification audience reads this same list.
+ */
+export const SUPERVISOR_ROLES = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER', 'CONFIRMATION_SUPERVISOR'] as const;
+
 /** A supervisor by authority, not by job title. */
 function isSupervisor(user: SessionUser): boolean {
-  return (
-    can(user, 'control.change_requests') ||
-    ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER', 'CONFIRMATION_SUPERVISOR'].includes(user.role)
-  );
+  return can(user, 'control.change_requests') || (SUPERVISOR_ROLES as readonly string[]).includes(user.role);
 }
 
 export function mayDecide(user: SessionUser, order: RoutingSource): RoutingVerdict {

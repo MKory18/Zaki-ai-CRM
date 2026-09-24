@@ -284,3 +284,51 @@ describe('createNotification — one row per recipient', () => {
     spy.mockRestore();
   });
 });
+
+describe('resolveAudience — roles, for rules written by role', () => {
+  it('includes everyone whose role is listed, in the store, without the permission', async () => {
+    // Change-request deciders include roles mayDecide lets through by name;
+    // who is TOLD must be who may DECIDE.
+    const got = await resolveAudience({ companyId: C, storeId: A, audience: { roles: ['MANAGER'] } });
+    expect(got.map((u) => u.id)).toEqual(['mgr']);
+  });
+
+  it('unions roles with the permission and named people, once each', async () => {
+    const got = await resolveAudience({
+      companyId: C,
+      storeId: A,
+      audience: { permission: 'ops.returns', roles: ['MANAGER'], userIds: ['mod'] },
+    });
+    expect(got.map((u) => u.id).sort()).toEqual(['allowed', 'mgr', 'mod', 'wh'].sort());
+  });
+
+  it('still leaves out an inactive user and the actor', async () => {
+    const got = await resolveAudience({
+      companyId: C, storeId: A, actorId: 'sup', audience: { roles: ['CONFIRMATION_SUPERVISOR'] },
+    });
+    expect(got.map((u) => u.id)).not.toContain('gone');
+    expect(got.map((u) => u.id)).not.toContain('sup');
+  });
+});
+
+describe('createNotification — recipients already resolved', () => {
+  it('writes to exactly those people, once each, without resolving again', async () => {
+    const people = [{ id: 'sup' }, { id: 'agent' }, { id: 'sup' }] as any[];
+    const count = await createNotification({
+      companyId: C, storeId: A, audience: {}, recipients: people,
+      title: 't', message: 'm', type: 'POSTPONED_DUE', link: '/confirmation/postponed',
+    });
+    expect(count).toBe(2);
+    expect(db.user.findMany).not.toHaveBeenCalled();
+    expect(state.written.map((r) => r.userId).sort()).toEqual(['agent', 'sup']);
+    expect(state.written.every((r) => r.storeId === A)).toBe(true);
+  });
+
+  it('still leaves out the actor', async () => {
+    await createNotification({
+      companyId: C, storeId: A, audience: {}, actorId: 'sup', recipients: [{ id: 'sup' }, { id: 'agent' }] as any[],
+      title: 't', message: 'm',
+    });
+    expect(state.written.map((r) => r.userId)).toEqual(['agent']);
+  });
+});

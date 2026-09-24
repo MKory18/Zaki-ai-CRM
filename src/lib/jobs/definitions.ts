@@ -8,6 +8,7 @@ import { blockingClosing } from '../wallets';
 import { adapterFor } from '../couriers';
 import { applyCourierEvent } from '../couriers/apply-event';
 import { createNotification } from '../notification';
+import { resolveAudience } from '../notification-audience';
 
 /**
  * The scheduled jobs.
@@ -231,23 +232,47 @@ export const surfacePostponed: JobDefinition = {
         take: 200,
       });
 
+      if (due.length === 0) continue;
+
+      // Everyone this store's announcements go to, resolved ONCE for the
+      // store — supervisors, and every agent holding one of these orders —
+      // rather than the full audience lookup again for each of up to two
+      // hundred orders.
+      const people = await resolveAudience({
+        companyId: store.companyId,
+        storeId: store.id,
+        audience: { userIds: due.map((o) => o.claimedById) },
+      });
+      const supervisors = await resolveAudience({
+        companyId: store.companyId,
+        storeId: store.id,
+        audience: { permission: 'confirmation.supervise' },
+      });
+      const byId = new Map(people.map((u) => [u.id, u]));
+
       for (const order of due) {
         const message = `الطلب ${order.orderNumber} مؤجَّل حتى ${order.postponedUntil?.toISOString().slice(0, 10)}`;
+        // Only a PERSONAL row counts as "already told". A row from before
+        // stage 17 is history nobody but a supervisor can see, and counting
+        // it would leave the agent holding the order never told at all.
         const already = await db.notification.findFirst({
           where: {
             companyId: store.companyId,
             type: 'POSTPONED_DUE',
             message,
-            OR: [{ storeId: store.id }, { storeId: null }],
+            userId: { not: null },
+            storeId: store.id,
           },
           select: { id: true },
         });
         if (already) continue;
 
+        const holder = order.claimedById ? byId.get(order.claimedById) : undefined;
         const told = await createNotification({
           companyId: store.companyId,
           storeId: store.id,
-          audience: { permission: 'confirmation.supervise', userIds: [order.claimedById] },
+          audience: {},
+          recipients: holder ? [...supervisors, holder] : supervisors,
           title: 'طلب مؤجَّل حان موعده',
           message,
           type: 'POSTPONED_DUE',
@@ -333,8 +358,12 @@ export const closingReminder: JobDefinition = {
     const day = new Date(`${now.toISOString().slice(0, 10)}T00:00:00.000Z`);
     let pending = 0;
 
+    // Only wallets that belong to a store. The closing screen lists the
+    // wallets of the store you are in, so a reminder about a wallet with no
+    // store is one nobody can act on — and it reached every cash-holder in
+    // the company, in every country.
     const wallets = await db.wallet.findMany({
-      where: { isActive: true },
+      where: { isActive: true, storeId: { not: null } },
       select: { id: true, name: true, companyId: true, storeId: true },
     });
 
@@ -348,15 +377,16 @@ export const closingReminder: JobDefinition = {
       const blocker = await blockingClosing(db, wallet.id, day);
       pending++;
 
-      // Once per WALLET per day. The check used to be per company, so only
-      // the first unclosed wallet was ever announced. A wallet's name is
-      // unique within its store, and every message starts with it.
+      // Once per WALLET per day, keyed on the wallet's id carried in the
+      // link. Keying on the name failed twice over: «نقد» matched the
+      // message of «نقد: فرع», and two wallets may share a name.
+      const link = `/finance/closing?wallet=${wallet.id}`;
       const already = await db.notification.findFirst({
         where: {
           companyId: wallet.companyId,
           storeId: wallet.storeId,
           type: 'CLOSING_DUE',
-          message: { startsWith: `${wallet.name}:` },
+          link,
           createdAt: { gte: day },
         },
         select: { id: true },
@@ -364,8 +394,7 @@ export const closingReminder: JobDefinition = {
       if (already) continue;
 
       // To whoever counts the cash (finance.cashbox, the closing screen's
-      // own gate) and can enter the wallet's store. A wallet with no store
-      // is company-wide news.
+      // own gate) and can enter the wallet's store.
       await createNotification({
         companyId: wallet.companyId,
         storeId: wallet.storeId,
@@ -375,7 +404,7 @@ export const closingReminder: JobDefinition = {
           ? `${wallet.name}: إغلاق سابق بفرق غير مفسَّر يمنع إغلاق اليوم`
           : `${wallet.name}: لم يُسجَّل جرد اليوم بعد`,
         type: 'CLOSING_DUE',
-        link: '/finance/closing',
+        link,
       });
     }
 

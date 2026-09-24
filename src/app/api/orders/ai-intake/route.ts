@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { notify } from '@/lib/notify';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -10,7 +11,6 @@ import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/li
 import { normalizePhoneNumber } from '@/lib/phone';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
-import { createNotification } from '@/lib/notification';
 import { apiError } from '@/lib/api-error';
 import { requirePermission } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
@@ -249,7 +249,7 @@ export async function POST(req: Request) {
 
       // Same audience as every other new order: this store's confirmation
       // supervisors, without the person who pasted it. Never throws.
-      await createNotification({
+      notify({
         companyId,
         storeId,
         audience: { permission: 'confirmation.supervise' },

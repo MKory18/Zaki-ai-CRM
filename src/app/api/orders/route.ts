@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from 'next/server';
+import { notify } from '@/lib/notify';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -12,7 +13,6 @@ import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { applyQueueFilter } from '@/lib/rbac';
-import { createNotification } from '@/lib/notification';
 import { apiError } from '@/lib/api-error';
 import { requirePermission, getPermissionScope } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
@@ -565,7 +565,7 @@ export async function POST(req: Request) {
     // confirmation supervisors of THIS store, not the whole company, and
     // not the person who just typed it. After commit; createNotification
     // never throws.
-    await createNotification({
+    notify({
       companyId,
       storeId,
       audience: { permission: 'confirmation.supervise' },

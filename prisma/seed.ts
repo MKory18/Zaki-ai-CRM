@@ -638,7 +638,8 @@ async function main() {
   await prisma.notification.createMany({
     data: [
       { companyId: company.id, userId: modSara!.id, title: 'طلب جديد', message: 'لديك طلب جديد بحاجة إلى متابعة.', type: 'ORDER_NEW', link: '/orders' },
-      { companyId: company.id, title: 'تنبيه مخزون', message: 'مقشر الكرات من المبارك — 500 قطعة متوفرة.', type: 'LOW_STOCK', isRead: true, link: '/inventory' },
+      // No shared row: every notification has a recipient now (stage 17).
+      // The old stock notice had none, and nothing at runtime writes LOW_STOCK.
     ],
   });
 

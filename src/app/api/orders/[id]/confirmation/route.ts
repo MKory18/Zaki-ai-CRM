@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { notify } from '@/lib/notify';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
@@ -8,7 +9,6 @@ import {
 } from '@/lib/confirmation-workflow';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
-import { createNotification } from '@/lib/notification';
 import { can, authorize } from '@/lib/authorization';
 import { assertCancellable, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines, reserveOrderLines } from '@/lib/reservation';
@@ -329,7 +329,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // it), never to the agent who just decided it. After commit; never
     // throws.
     if (target && (target === 'CONFIRMED' || target === 'REJECTED' || target === 'CANCELLED')) {
-      await createNotification({
+      notify({
         companyId,
         storeId: order.storeId ?? storeId,
         audience: { permission: 'confirmation.supervise', userIds: [order.moderatorId] },

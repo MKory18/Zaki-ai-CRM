@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { afterResponse } from '@/lib/notify';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -9,7 +10,7 @@ import { addBusinessMinutes } from '@/lib/business-calendar';
 import { zodMessage } from '@/lib/zod-message';
 import { CHANGEABLE_FIELDS, withFrom } from '@/lib/change-request-fields';
 import { createNotification } from '@/lib/notification';
-import { deciderFor } from '@/lib/change-request-routing';
+import { deciderFor, SUPERVISOR_ROLES } from '@/lib/change-request-routing';
 
 /**
  * Change requests on an order (contract PART 2 / invariant 7).
@@ -153,13 +154,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       message: `${user.name ?? 'موظف'}: ${parsed.data.reason}`,
       link: ['/control/change-requests', '/confirmation/mine', '/orders'],
     };
-    const told =
-      decider.kind === 'HOLDING_AGENT'
-        ? await createNotification({ ...notice, audience: { userIds: [decider.userId] } })
-        : 0;
-    if (!told) {
-      await createNotification({ ...notice, audience: { permission: 'control.change_requests' } });
-    }
+    afterResponse(async () => {
+      const told =
+        decider.kind === 'HOLDING_AGENT'
+          ? await createNotification({ ...notice, audience: { userIds: [decider.userId] } })
+          : 0;
+      if (!told) {
+        // Everyone who may decide it — the same set mayDecide lets through,
+        // the permission AND the supervising roles, so nobody who can answer
+        // a request is left unaware of it.
+        await createNotification({
+          ...notice,
+          audience: { permission: 'control.change_requests', roles: SUPERVISOR_ROLES },
+        });
+      }
+    });
 
     await logAudit({
       companyId,

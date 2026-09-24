@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireContext } from '@/lib/geo-context';
+import { ContextError, requireContext, seesAllCountries } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
 import type { SessionUser } from '@/types/auth';
 
@@ -20,45 +20,95 @@ import type { SessionUser } from '@/types/auth';
  * pressing "mark all read" marked the company's news read for everybody.
  *
  * Now a row is yours if it is addressed to you and is about the store you
- * have selected, or about no store. Rows written before stage 17 have no
- * recipient and no store; they were meant for managers ("null for all
- * managers/admins"), so only confirmation.supervise holders still see —
- * and may mark — them. Nobody else ever did need them, and deleting them
- * would lose the only record of what was announced.
+ * have selected, or about no store.
+ *
+ * ROWS FROM BEFORE STAGE 17 are history, and are treated as history. They
+ * have no recipient and no store, and a single read flag every reader
+ * shared. So they are never counted, never marked, and shown already read;
+ * and only to someone who can see every store AND holds the permission
+ * that kind of news belongs to — a store-limited supervisor must not read
+ * another store's closing problems just because the old row carried no
+ * store. Deleting them would lose the only record of what was announced.
  */
 
-/** The one definition of "notifications this person may see and mark". */
-function visibleTo(user: SessionUser, companyId: string, storeId: string): Prisma.NotificationWhereInput {
-  const mine: Prisma.NotificationWhereInput = { userId: user.id, OR: [{ storeId }, { storeId: null }] };
-  const legacy: Prisma.NotificationWhereInput = { userId: null, storeId: null };
-  return {
-    companyId,
-    OR: can(user, 'confirmation.supervise') ? [mine, legacy] : [mine],
-  };
+/** Rows addressed to this person, about the selected store or about none. The only rows anyone may count or mark. */
+function mineIn(user: SessionUser, companyId: string, storeId: string): Prisma.NotificationWhereInput {
+  return { companyId, userId: user.id, OR: [{ storeId }, { storeId: null }] };
+}
+
+/**
+ * Which pre-stage-17 shared rows this person may still read, by type.
+ *
+ * The permission is the one the same news is sent by today, so the old row
+ * and its modern counterpart reach the same kind of person.
+ */
+const LEGACY_TYPE_PERMISSION: Record<string, string> = {
+  ORDER_NEW: 'confirmation.supervise',
+  SYSTEM_ALERT: 'confirmation.supervise',
+  POSTPONED_DUE: 'confirmation.supervise',
+  FOLLOW_UP: 'confirmation.supervise',
+  HIGH_REJECTION: 'confirmation.supervise',
+  PERFORMANCE: 'confirmation.supervise',
+  CLOSING_DUE: 'finance.cashbox',
+  RETURNS_NOT_RECEIVED: 'ops.returns',
+  LOW_STOCK: 'inventory.adjust',
+};
+
+function legacyFor(user: SessionUser, companyId: string): Prisma.NotificationWhereInput | null {
+  // A shared row carries no store, so it could be about any of them.
+  if (!seesAllCountries(user)) return null;
+  const types = Object.entries(LEGACY_TYPE_PERMISSION)
+    .filter(([, permission]) => can(user, permission))
+    .map(([type]) => type);
+  return types.length ? { companyId, userId: null, storeId: null, type: { in: types } } : null;
+}
+
+/**
+ * The context, or null when no store is selected.
+ *
+ * The bell polls in the background. A missing store — cleared in another
+ * tab through the shared cookie — is "nothing to show", not an error: the
+ * client answers that error by sending the whole tab to the store picker,
+ * which a poll must never do.
+ */
+async function contextOrNull() {
+  try {
+    return await requireContext();
+  } catch (e) {
+    if (e instanceof ContextError) return null;
+    throw e;
+  }
 }
 
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId, user } = await requireContext();
-    const where = visibleTo(user, companyId, storeId);
-
-    // Lightweight polling mode: ?countOnly=1 returns only the unread count
-    // (single COUNT query, no rows fetched).
+    const ctx = await contextOrNull();
     const { searchParams } = new URL(req.url);
-    if (searchParams.get('countOnly') === '1') {
-      const unreadCount = await db.notification.count({ where: { ...where, isRead: false } });
-      return NextResponse.json({ unreadCount });
-    }
+    const countOnly = searchParams.get('countOnly') === '1';
+    if (!ctx) return NextResponse.json(countOnly ? { unreadCount: 0 } : { notifications: [], unreadCount: 0 });
 
-    // The count is its own query, the same one the poll runs: counting the
-    // 50 rows listed gave a smaller number than the badge whenever there
-    // were more, and opening the panel overwrote the badge with it.
+    const { companyId, storeId, user } = ctx;
+    const mine = mineIn(user, companyId, storeId);
+
+    // The unread count is always the person's OWN rows, the same query for
+    // the poll and the panel — counting the 50 listed rows gave a smaller
+    // number than the badge, and opening the panel overwrote it.
+    const unread = () => db.notification.count({ where: { ...mine, isRead: false } });
+    if (countOnly) return NextResponse.json({ unreadCount: await unread() });
+
+    const legacy = legacyFor(user, companyId);
     const [notifications, unreadCount] = await Promise.all([
-      db.notification.findMany({ where, orderBy: { createdAt: 'desc' }, take: 50 }),
-      db.notification.count({ where: { ...where, isRead: false } }),
+      db.notification.findMany({
+        where: legacy ? { OR: [mine, legacy] } : mine,
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      unread(),
     ]);
 
-    return NextResponse.json({ notifications, unreadCount });
+    // History reads as read: its one shared flag was never this person's.
+    const shown = notifications.map((n) => (n.userId === null ? { ...n, isRead: true } : n));
+    return NextResponse.json({ notifications: shown, unreadCount });
   } catch (error) {
     return apiErrorResponse(error);
   }
@@ -76,7 +126,9 @@ export async function PATCH(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: 'طلب غير صالح: حدّد إشعاراً واحداً أو «تعليم الكل كمقروء»' }, { status: 400 });
     }
-    const where = visibleTo(user, companyId, storeId);
+    // Only the person's own rows: history is read-only, and marking a shared
+    // row read marked it read for everybody — the bug this stage removes.
+    const where = mineIn(user, companyId, storeId);
 
     if ('markAllRead' in parsed.data) {
       await db.notification.updateMany({ where: { ...where, isRead: false }, data: { isRead: true } });

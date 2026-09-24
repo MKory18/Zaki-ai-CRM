@@ -11,11 +11,11 @@
  * companyId — only the extracted quantity/notes, already validated.
  */
 import { db } from '../db';
+import { notify } from '../notify';
 import { logAudit } from '../audit';
 import { resolveRegionId } from '@/lib/regions';
 import { orderRefFields } from '../order-ref';
 import { computeCod } from '../money';
-import { createNotification } from '../notification';
 
 export interface CreateTelegramOrderInput {
   companyId: string;
@@ -267,7 +267,7 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
 
     // This store's confirmation supervisors; nobody acted, so nobody is
     // left out. createNotification never throws.
-    await createNotification({
+    notify({
       companyId,
       storeId: store.id,
       audience: { permission: 'confirmation.supervise' },
