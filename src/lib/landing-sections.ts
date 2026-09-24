@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { richTextSchema } from './rich-text';
 import { fontValueSchema } from './landing-theme';
 
 /**
@@ -138,7 +139,7 @@ const base = { id: z.string().min(1), enabled: z.boolean().default(true), look }
 const announcement = z.object({
   ...base,
   type: z.literal('announcement'),
-  text: z.string().max(140).default(''),
+  text: richTextSchema(140).default(''),
 });
 
 /** The first screen: image, headline, price, and the button that scrolls to the form. */
@@ -146,8 +147,8 @@ const hero = z.object({
   ...base,
   type: z.literal('hero'),
   image: z.string().max(2048).default(''),
-  headline: z.string().max(120).default(''),
-  subheadline: z.string().max(240).default(''),
+  headline: richTextSchema(120).default(''),
+  subheadline: richTextSchema(240).default(''),
   /** Show the product's price from the catalogue under the headline. */
   showPrice: z.boolean().default(true),
   ctaText: z.string().max(40).default('اطلب الآن'),
@@ -157,10 +158,10 @@ const hero = z.object({
 const benefits = z.object({
   ...base,
   type: z.literal('benefits'),
-  title: z.string().max(120).default(''),
+  title: richTextSchema(120).default(''),
   items: z.array(z.object({
-    title: z.string().max(80).default(''),
-    text: z.string().max(200).default(''),
+    title: richTextSchema(80).default(''),
+    text: richTextSchema(200).default(''),
   })).max(8).default([]),
 });
 
@@ -168,7 +169,7 @@ const benefits = z.object({
 const gallery = z.object({
   ...base,
   type: z.literal('gallery'),
-  title: z.string().max(120).default(''),
+  title: richTextSchema(120).default(''),
   images: z.array(z.string().max(2048)).max(12).default([]),
 });
 
@@ -176,7 +177,7 @@ const gallery = z.object({
 const text = z.object({
   ...base,
   type: z.literal('text'),
-  title: z.string().max(120).default(''),
+  title: richTextSchema(120).default(''),
   body: z.string().max(4000).default(''),
 });
 
@@ -188,17 +189,17 @@ const text = z.object({
 const offers = z.object({
   ...base,
   type: z.literal('offers'),
-  title: z.string().max(120).default('اختر العرض المناسب'),
+  title: richTextSchema(120).default('اختر العرض المناسب'),
 });
 
 /** What other buyers said. Plain names, no invented verification badge. */
 const reviews = z.object({
   ...base,
   type: z.literal('reviews'),
-  title: z.string().max(120).default('آراء المشترين'),
+  title: richTextSchema(120).default('آراء المشترين'),
   items: z.array(z.object({
-    name: z.string().max(60).default(''),
-    text: z.string().max(400).default(''),
+    name: richTextSchema(60).default(''),
+    text: richTextSchema(400).default(''),
     stars: z.number().int().min(1).max(5).default(5),
   })).max(12).default([]),
 });
@@ -207,7 +208,7 @@ const reviews = z.object({
 const faq = z.object({
   ...base,
   type: z.literal('faq'),
-  title: z.string().max(120).default('أسئلة شائعة'),
+  title: richTextSchema(120).default('أسئلة شائعة'),
   items: z.array(z.object({
     q: z.string().max(200).default(''),
     a: z.string().max(800).default(''),
@@ -223,7 +224,7 @@ const faq = z.object({
 const urgency = z.object({
   ...base,
   type: z.literal('urgency'),
-  text: z.string().max(140).default(''),
+  text: richTextSchema(140).default(''),
   /** 0 = no countdown. */
   minutes: z.number().int().min(0).max(1440).default(0),
   /** Show the real remaining stock when it is genuinely low. */
@@ -234,8 +235,8 @@ const urgency = z.object({
 const form = z.object({
   ...base,
   type: z.literal('form'),
-  title: z.string().max(120).default('أكمل الطلب'),
-  subtitle: z.string().max(240).default('ادفع عند الاستلام — لا حاجة لبطاقة'),
+  title: richTextSchema(120).default('أكمل الطلب'),
+  subtitle: richTextSchema(240).default('ادفع عند الاستلام — لا حاجة لبطاقة'),
 });
 
 /** The three reassurances under the button. */
@@ -243,8 +244,8 @@ const trust = z.object({
   ...base,
   type: z.literal('trust'),
   items: z.array(z.object({
-    title: z.string().max(40).default(''),
-    text: z.string().max(80).default(''),
+    title: richTextSchema(40).default(''),
+    text: richTextSchema(80).default(''),
   })).max(4).default([]),
 });
 
@@ -267,7 +268,7 @@ const externalUrl = z
 const footer = z.object({
   ...base,
   type: z.literal('footer'),
-  text: z.string().max(200).default(''),
+  text: richTextSchema(200).default(''),
   phone: z.string().max(40).default(''),
   logo: z.string().max(2048).default(''),
   /** Columns of links — policies, about, contact. */

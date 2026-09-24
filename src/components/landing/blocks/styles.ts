@@ -1,3 +1,4 @@
+import { richTextCss } from '@/lib/rich-text';
 import { FONTS } from '@/lib/landing-theme';
 import { GOOGLE_FAMILY } from '@/lib/block-look';
 /**
@@ -572,6 +573,17 @@ const DEV_FONT_CSS = FONTS.filter((f) => f.devOnly)
  * Everything the page needs to draw itself, plus — on a developer's machine
  * only — the faces they are evaluating but may not publish.
  */
+/**
+ * The rules a formatted selection resolves through, generated from the same
+ * lists the toolbar offers — a swatch added there cannot be a swatch the
+ * page has no rule for.
+ */
+const RICH_CSS = richTextCss();
+
 export const BLOCK_CSS_WITH_DEV_FONTS =
-  process.env.NODE_ENV === 'production' ? BLOCK_CSS : `${DEV_FONT_CSS}
-${BLOCK_CSS}`;
+  process.env.NODE_ENV === 'production'
+    ? `${BLOCK_CSS}
+${RICH_CSS}`
+    : `${DEV_FONT_CSS}
+${BLOCK_CSS}
+${RICH_CSS}`;

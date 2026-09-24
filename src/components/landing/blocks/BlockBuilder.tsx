@@ -19,6 +19,8 @@ import {
 import { PageBlocks } from './PageBlocks';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from './styles';
 import { FontUploader, type StoreFontRow } from './FontUploader';
+import { SelectionBar } from './SelectionBar';
+import { sanitizeRich } from '@/lib/rich-text';
 
 /**
  * The block builder.
@@ -195,6 +197,26 @@ export function BlockBuilder(props: Props) {
   );
   useInlineEdit(canvas, openId, commitText);
 
+  /**
+   * Reading a field back after the toolbar has changed its markup.
+   *
+   * The toolbar edits the DOM directly — that is what a selection toolbar
+   * is — so React has no idea anything happened, and this commits the
+   * field's current markup by the same path a blur takes.
+   *
+   * It is HANDED the element. Looking it up here meant asking which field
+   * was selected just after the toolbar had cleared the selection, and the
+   * answer was "none": bold happened to survive because the node still had
+   * focus, and a colour applied after a re-render was committed nowhere.
+   */
+  const commitSelection = useCallback(
+    (node: HTMLElement) => {
+      const field = node.dataset.edit;
+      if (field && openId) commitText(openId, field, sanitizeRich(node.innerHTML));
+    },
+    [openId, commitText]
+  );
+
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
@@ -208,6 +230,9 @@ export function BlockBuilder(props: Props) {
           drawn in their own faces and the preview must not be the only
           place a font appears. */}
       {specimenLink && <link rel="stylesheet" href={specimenLink} />}
+      {/* Above the words the seller just highlighted, not docked in a
+          panel they would have to look away to find. */}
+      <SelectionBar root={canvas} fonts={fontChoices} onChange={commitSelection} />
       {/* Declared at the top so the PANEL can draw its specimens in them
           too, not only the preview below. */}
       {storeFontCss && <style dangerouslySetInnerHTML={{ __html: storeFontCss }} />}

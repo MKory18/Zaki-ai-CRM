@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { sanitizeRich } from '@/lib/rich-text';
 
 /**
  * TYPING ON THE PAGE ITSELF.
@@ -42,16 +43,24 @@ export function useInlineEdit(
 
     for (const node of nodes) {
       const field = node.dataset.edit!;
-      node.contentEditable = 'plaintext-only';
+      // 'true', not 'plaintext-only': the selection toolbar wraps words in
+      // marks, and plaintext-only strips every one of them the moment the
+      // browser normalises the field. What can be typed is unchanged — what
+      // may be STORED is decided by sanitizeRich on the way out, not by the
+      // browser on the way in.
+      node.contentEditable = 'true';
       node.spellcheck = false;
       node.style.outline = 'none';
       node.style.cursor = 'text';
       node.title = 'اكتب هنا';
 
-      const before = node.textContent ?? '';
+      const before = sanitizeRich(node.innerHTML);
 
       const onBlur = () => {
-        const now = (node.textContent ?? '').replace(/\s+/g, ' ').trim();
+        // Sanitised here as well as on the server: what the browser leaves
+        // in a contenteditable after a paste is nobody's idea of clean, and
+        // the editor should not hold a value the page would refuse.
+        const now = sanitizeRich(node.innerHTML).replace(/\s+/g, ' ').trim();
         if (now !== before.trim()) commit(activeId, field, now);
       };
       // Enter commits rather than inserting a line into a headline; Escape
@@ -62,7 +71,7 @@ export function useInlineEdit(
           node.blur();
         } else if (e.key === 'Escape') {
           e.preventDefault();
-          node.textContent = before;
+          node.innerHTML = before;
           node.blur();
         }
         // A keystroke inside the text is not a shortcut for the page.

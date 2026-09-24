@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus } from 'lucide-react';
 import type { LandingSection } from '@/lib/landing-sections';
 import { lookStyles, isPlainLook } from '@/lib/block-look';
+import { sanitizeRich, isRich } from '@/lib/rich-text';
 import type { Palette } from '@/lib/landing-theme';
 import { OfferCards } from './OfferCards';
 import { Countdown } from './Countdown';
@@ -104,6 +105,24 @@ export function PageBlocks({
  * outer layer is full-bleed so a background can reach the screen edges; the
  * inner one holds the width and the gutter, so the text never does.
  */
+/**
+ * A seller's text, drawn with whatever marks they put on part of it.
+ *
+ * Returns props to spread rather than wrapping in an element, so every call
+ * site keeps the tag it already had — a headline stays an `h1` and not an
+ * `h1` with a `span` inside it that the block stylesheet does not expect.
+ *
+ * Plain text takes the plain path and never touches innerHTML: the vast
+ * majority of values are plain, and the safest branch should be the one
+ * most of them travel down.
+ */
+function rich(value: string | null | undefined) {
+  const v = value ?? '';
+  return isRich(v)
+    ? { dangerouslySetInnerHTML: { __html: sanitizeRich(v) } }
+    : { children: v };
+}
+
 function Dressed({ section, children }: { section: LandingSection; children: React.ReactNode }) {
   const { outer, inner, overlay, vars } = lookStyles(section.look);
 
@@ -144,7 +163,7 @@ function Dressed({ section, children }: { section: LandingSection; children: Rea
 function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext }) {
   switch (s.type) {
     case 'announcement':
-      return s.text ? <div className="lp-announce" data-edit="text">{s.text}</div> : null;
+      return s.text ? <div className="lp-announce" data-edit="text" {...rich(s.text)} /> : null;
 
     case 'hero':
       return <Hero section={s} ctx={ctx} />;
@@ -164,8 +183,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
                   <Check size={15} strokeWidth={3} />
                 </span>
                 <div>
-                  <strong data-edit={`items.${i}.title`}>{item.title}</strong>
-                  {item.text && <p data-edit={`items.${i}.text`}>{item.text}</p>}
+                  <strong data-edit={`items.${i}.title`} {...rich(item.title)} />
+                  {item.text && <p data-edit={`items.${i}.text`} {...rich(item.text)} />}
                 </div>
               </li>
             ))}
@@ -224,8 +243,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
                     <Star key={n} size={13} fill={n < r.stars ? 'currentColor' : 'none'} strokeWidth={1.5} />
                   ))}
                 </div>
-                <blockquote data-edit={`items.${i}.text`}>{r.text}</blockquote>
-                {r.name && <figcaption data-edit={`items.${i}.name`}>{r.name}</figcaption>}
+                <blockquote data-edit={`items.${i}.text`} {...rich(r.text)} />
+                {r.name && <figcaption data-edit={`items.${i}.name`} {...rich(r.name)} />}
               </figure>
             ))}
           </div>
@@ -249,8 +268,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
     case 'form':
       return (
         <section className="lp-section lp-form-section">
-          {s.title && <h2 className="lp-h2" data-edit="title">{s.title}</h2>}
-          {s.subtitle && <p className="lp-sub" data-edit="subtitle">{s.subtitle}</p>}
+          {s.title && <h2 className="lp-h2" data-edit="title" {...rich(s.title)} />}
+          {s.subtitle && <p className="lp-sub" data-edit="subtitle" {...rich(s.subtitle)} />}
           {ctx.form}
         </section>
       );
@@ -266,8 +285,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
             return (
               <div key={i}>
                 <Icon size={18} />
-                <strong data-edit={`items.${i}.title`}>{item.title}</strong>
-                {item.text && <span data-edit={`items.${i}.text`}>{item.text}</span>}
+                <strong data-edit={`items.${i}.title`} {...rich(item.title)} />
+                {item.text && <span data-edit={`items.${i}.text`} {...rich(item.text)} />}
               </div>
             );
           })}
@@ -297,7 +316,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
             <nav className="lp-footer-cols">
               {columns.map(({ col, at, links }) => (
                 <div key={at}>
-                  {col.title && <h3 data-edit={`columns.${at}.title`}>{col.title}</h3>}
+                  {col.title && <h3 data-edit={`columns.${at}.title`} {...rich(col.title)} />}
                   <ul>
                     {links.map(({ link, li }) => (
                       <li key={li}>
@@ -328,7 +347,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
               <span data-edit="phone">{s.phone}</span>
             </a>
           )}
-          <p data-edit="text">{s.text || 'جميع الحقوق محفوظة'}</p>
+          <p data-edit="text" {...rich(s.text || 'جميع الحقوق محفوظة')} />
         </footer>
       );
     }
@@ -350,7 +369,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
 function Section({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <section className="lp-section">
-      {title && <h2 className="lp-h2" data-edit="title">{title}</h2>}
+      {title && <h2 className="lp-h2" data-edit="title" {...rich(title)} />}
       {children}
     </section>
   );
@@ -364,8 +383,8 @@ function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'h
         // eslint-disable-next-line @next/next/no-img-element
         <img src={s.image} alt={headline} className="lp-hero-img" />
       )}
-      <h1 className="lp-h1" data-edit="headline">{headline}</h1>
-      {s.subheadline && <p className="lp-hero-sub" data-edit="subheadline">{s.subheadline}</p>}
+      <h1 className="lp-h1" data-edit="headline" {...rich(headline)} />
+      {s.subheadline && <p className="lp-hero-sub" data-edit="subheadline" {...rich(s.subheadline)} />}
       {s.showPrice && ctx.price > 0 && (
         <p className="lp-price" dir="ltr">
           {ctx.price.toLocaleString('en-US')} <span>{ctx.currency}</span>
