@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db } = vi.hoisted(() => ({
-  db: { landingPage: { findFirst: vi.fn() }, store: { findFirst: vi.fn() } },
+  db: { landingPage: { findFirst: vi.fn(), findMany: vi.fn() }, store: { findFirst: vi.fn() } },
 }));
 vi.mock('./db', () => ({ db }));
 
-import { normalizeHost, validateDomain, pathForHost, forgetHost, dashboardHosts } from './landing-domain';
+import { normalizeHost, validateDomain, pathForHost, forgetHost, dashboardHosts, hostSite, inHostScope } from './landing-domain';
 
 /**
  * A hostname the seller owns, pointed here, serving one landing page.
@@ -21,7 +21,8 @@ const host = 'shop.example.com';
 beforeEach(() => {
   vi.clearAllMocks();
   forgetHost(host);
-  db.landingPage.findFirst.mockResolvedValue({ slug: 'winter-offer' });
+  db.landingPage.findFirst.mockResolvedValue({ id: 'lp-own', slug: 'winter-offer', createdAt: new Date(2026, 8, 1) });
+  db.landingPage.findMany.mockResolvedValue([]);
   db.store.findFirst.mockResolvedValue(null);
 });
 afterEach(() => { delete process.env.APP_DOMAIN; });
@@ -173,5 +174,60 @@ describe('resolving a host to a page', () => {
   it('never queries for a local host', async () => {
     await pathForHost('localhost:3000');
     expect(db.landingPage.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe('what the host of a seller may serve', () => {
+  // The public space (/lp, /s) is shared by every company. A seller's host
+  // answered for all of it: shop-a.com/lp/<any company's page> rendered that
+  // page under seller A's domain. A host now serves its own paths only.
+  it('the host of a page: that page, and nothing else', async () => {
+    const site = (await hostSite(host))!;
+    expect(inHostScope(site, '/lp/winter-offer')).toBe(true);
+    expect(inHostScope(site, '/lp/winter-offer/raw')).toBe(true);
+    expect(inHostScope(site, '/lp/winter-offer-2')).toBe(false);
+    expect(inHostScope(site, '/lp/another-company')).toBe(false);
+    expect(inHostScope(site, '/s/any-store')).toBe(false);
+  });
+
+  it('the host of a store: the store and its own published pages', async () => {
+    db.landingPage.findFirst.mockResolvedValue(null);
+    db.store.findFirst.mockResolvedValue({ slug: 'sehha-plus', landingPages: [{ id: 'lp-front', slug: 'front', createdAt: new Date(2026, 8, 1) }] });
+    const site = (await hostSite('shop4.example.com'))!;
+    expect(site.path).toBe('/s/sehha-plus');
+    expect(inHostScope(site, '/s/sehha-plus/p/SKU1')).toBe(true);
+    expect(inHostScope(site, '/lp/front/raw')).toBe(true);
+    expect(inHostScope(site, '/s/sehha')).toBe(false);
+    expect(inHostScope(site, '/lp/not-ours')).toBe(false);
+    expect(db.store.findFirst.mock.calls[0][0].select.landingPages.where).toEqual({ isPublished: true });
+    forgetHost('shop4.example.com');
+  });
+
+  it('leaves out a legacy slug an older page of another company holds — that path shows the other page', async () => {
+    db.landingPage.findFirst.mockResolvedValue(null);
+    db.store.findFirst.mockResolvedValue({
+      slug: 'sehha-plus',
+      landingPages: [
+        { id: 'lp-a', slug: 'offer', createdAt: new Date(2026, 8, 10) },
+        { id: 'lp-b', slug: 'own-only', createdAt: new Date(2026, 8, 10) },
+      ],
+    });
+    db.landingPage.findMany.mockResolvedValue([{ slug: 'offer', createdAt: new Date(2026, 7, 1) }]);
+    const site = (await hostSite('shop5.example.com'))!;
+    expect(inHostScope(site, '/lp/offer')).toBe(false);
+    expect(inHostScope(site, '/lp/own-only')).toBe(true);
+    forgetHost('shop5.example.com');
+  });
+
+  it('does not serve the host of a page another older page shadows at all', async () => {
+    db.landingPage.findMany.mockResolvedValue([{ slug: 'winter-offer', createdAt: new Date(2026, 7, 1) }]);
+    expect(await hostSite('shop6.example.com')).toBeNull();
+    forgetHost('shop6.example.com');
+  });
+
+  it('a newer page with the same slug does not shadow the older one', async () => {
+    db.landingPage.findMany.mockResolvedValue([{ slug: 'winter-offer', createdAt: new Date(2026, 9, 1) }]);
+    expect((await hostSite('shop7.example.com'))?.path).toBe('/lp/winter-offer');
+    forgetHost('shop7.example.com');
   });
 });

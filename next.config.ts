@@ -25,9 +25,11 @@ const securityHeaders = [
       "form-action 'self'",
     ].join('; '),
   },
-  ...(isProduction
-    ? [{ key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' }]
-    : []),
+  // No includeSubDomains: this header also reaches sellers' own domains —
+  // every script, image and order post a page on shop.com loads from this
+  // app carries it — and there it would pin every subdomain of the seller's
+  // domain (their mail, their other sites) to HTTPS for a year.
+  ...(isProduction ? [{ key: 'Strict-Transport-Security', value: 'max-age=31536000' }] : []),
 ];
 
 // The uploaded HTML of a landing page (/lp/:slug/raw) gets its sandboxing

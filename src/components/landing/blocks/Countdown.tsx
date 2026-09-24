@@ -9,15 +9,45 @@ import React, { useEffect, useState } from 'react';
  * deadline, and when it reaches zero it says so rather than looping — a timer
  * that restarts forever teaches the visitor that the deadline is theatre, and
  * they are right.
+ *
+ * That promise used to be broken by the timer itself: it started from the
+ * full minutes on every mount, so a reload gave a fresh deadline. The
+ * deadline is now kept in this browser, per page and block. A visitor who
+ * comes back a day after it ran out is on a new visit and gets a new one.
  */
-export function Countdown({ minutes }: { minutes: number }) {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function deadlineFor(key: string, minutes: number): number {
+  const now = Date.now();
+  try {
+    const stored = Number(window.localStorage.getItem(key));
+    if (Number.isFinite(stored) && stored > 0 && now < stored + DAY_MS) return stored;
+  } catch {
+    // Storage blocked (private mode): the timer still counts — for this view.
+  }
+  const fresh = now + minutes * 60_000;
+  try {
+    window.localStorage.setItem(key, String(fresh));
+  } catch {
+    /* see above */
+  }
+  return fresh;
+}
+
+export function Countdown({ minutes, id, persist = true }: { minutes: number; id: string; persist?: boolean }) {
   const [left, setLeft] = useState(minutes * 60);
 
   useEffect(() => {
-    setLeft(minutes * 60);
-    const t = setInterval(() => setLeft((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    // The builder's canvas is the seller editing, not a visitor: keeping its
+    // deadline would show "over" in the editor for a day after one run.
+    const deadline = persist
+      ? deadlineFor(`lp-countdown:${window.location.pathname}:${id}:${minutes}`, minutes)
+      : Date.now() + minutes * 60_000;
+    const tick = () => setLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+    tick();
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [minutes]);
+  }, [minutes, id, persist]);
 
   if (left <= 0) return <p className="lp-countdown-over">انتهى وقت العرض</p>;
 

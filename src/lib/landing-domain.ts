@@ -14,9 +14,19 @@ import { db } from './db';
  * price of not asking the database sixty times a second.
  */
 
-/** Where a hostname points, as a path to rewrite to. */
+/**
+ * What a seller's hostname serves: the path its root rewrites to, and every
+ * public path that belongs to it. A host is one seller's; the rest of the
+ * public space — every other company's /lp and /s pages — is not served on
+ * it (see proxy.ts).
+ */
+export interface HostSite {
+  path: string;
+  scope: string[];
+}
+
 interface Hit {
-  path: string | null;
+  site: HostSite | null;
   at: number;
 }
 
@@ -45,27 +55,42 @@ export function normalizeHost(host: string | null | undefined): string | null {
  * collision means somebody reached the database directly — and answering
  * with the more specific of the two is the safer way to be wrong.
  */
-export async function pathForHost(host: string | null | undefined): Promise<string | null> {
+export async function hostSite(host: string | null | undefined): Promise<HostSite | null> {
   const bare = normalizeHost(host);
   if (!bare) return null;
 
   const hit = cache.get(bare);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.path;
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.site;
 
-  let path: string | null = null;
+  let site: HostSite | null = null;
   try {
     const page = await db.landingPage.findFirst({
       where: { domain: bare, isPublished: true },
-      select: { slug: true },
+      select: { id: true, slug: true, createdAt: true },
     });
     if (page) {
-      path = `/lp/${page.slug}`;
+      // A page whose slug an older page also holds is not what /lp/<slug>
+      // renders — serving the host would show the OTHER page under it.
+      const shadowed = await shadowedSlugs([page]);
+      site = shadowed.has(page.slug) ? null : { path: `/lp/${page.slug}`, scope: [`/lp/${page.slug}`] };
     } else {
       const store = await db.store.findFirst({
         where: { domain: bare, storefrontEnabled: true, status: 'ACTIVE' },
-        select: { slug: true },
+        // The store's own published pages belong to its host too — a Single
+        // Product front in uploaded HTML loads /lp/<slug>/raw into its frame.
+        select: {
+          slug: true,
+          landingPages: { where: { isPublished: true }, select: { id: true, slug: true, createdAt: true } },
+        },
       });
-      if (store) path = `/s/${store.slug}`;
+      if (store) {
+        const pages = store.landingPages ?? [];
+        const shadowed = await shadowedSlugs(pages);
+        site = {
+          path: `/s/${store.slug}`,
+          scope: [`/s/${store.slug}`, ...pages.filter((p) => !shadowed.has(p.slug)).map((p) => `/lp/${p.slug}`)],
+        };
+      }
     }
   } catch {
     // A database that is briefly unreachable must not take the whole app
@@ -73,8 +98,39 @@ export async function pathForHost(host: string | null | undefined): Promise<stri
     return null;
   }
 
-  cache.set(bare, { path, at: Date.now() });
-  return path;
+  cache.set(bare, { site, at: Date.now() });
+  return site;
+}
+
+/**
+ * The slugs of these pages that /lp/<slug> resolves to ANOTHER page.
+ *
+ * Slugs are one space for every company, but pages from before that rule
+ * can share one, and /lp/<slug> renders the oldest published page holding
+ * it. A host's scope is checked by path, so a shadowed slug in it would let
+ * the seller's domain show another company's page.
+ */
+async function shadowedSlugs(pages: { id: string; slug: string; createdAt: Date }[]): Promise<Set<string>> {
+  if (pages.length === 0) return new Set();
+  const others = await db.landingPage.findMany({
+    where: { slug: { in: pages.map((p) => p.slug) }, isPublished: true, id: { notIn: pages.map((p) => p.id) } },
+    select: { slug: true, createdAt: true },
+  });
+  const shadowed = new Set<string>();
+  for (const page of pages) {
+    if (others.some((o) => o.slug === page.slug && o.createdAt <= page.createdAt)) shadowed.add(page.slug);
+  }
+  return shadowed;
+}
+
+/** The path a hostname's root rewrites to, or null. */
+export async function pathForHost(host: string | null | undefined): Promise<string | null> {
+  return (await hostSite(host))?.path ?? null;
+}
+
+/** Whether a public path is one of this host's own. */
+export function inHostScope(site: HostSite, pathname: string): boolean {
+  return site.scope.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
 
 /** Forget a host, so a domain just saved or removed takes effect at once. */

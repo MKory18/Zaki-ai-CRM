@@ -1,5 +1,6 @@
 import { db } from './db';
 import { DEFAULT_THEME, type LandingTheme } from './landing-theme';
+import { publicizeMedia } from './public-media';
 
 /**
  * A STORE, SEEN FROM THE OUTSIDE.
@@ -139,7 +140,8 @@ export async function storefrontProducts(
     },
   });
 
-  return products.map((p) => {
+  // Shown to shoppers, who have no session: public image links.
+  return publicizeMedia(products).map((p) => {
     const perUnit = p.offers
       .map((o) => {
         const units = o.quantity + o.freeQuantity;
@@ -194,14 +196,14 @@ export async function storefrontProduct(
     })
     .filter((n) => n > 0);
 
-  const gallery = p.images.map((i) => i.url);
+  const gallery = publicizeMedia(p.images.map((i) => i.url));
 
   return {
     id: p.id,
     sku: p.sku,
     name: p.name,
     description: p.description,
-    image: gallery[0] ?? p.image,
+    image: gallery[0] ?? publicizeMedia(p.image),
     basePrice: p.basePrice,
     fromPrice: perUnit.length ? Math.min(...perUnit) : p.basePrice,
     gallery,

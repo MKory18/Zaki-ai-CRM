@@ -9,6 +9,7 @@ import {
   applyLandingVariables,
 } from '@/lib/landing-html-sanitize';
 import { resolveDynamicPlaceholders } from '@/lib/landing-dynamic';
+import { toPublicMedia } from '@/lib/public-media';
 
 interface Ctx {
   params: Promise<{ slug: string }>;
@@ -52,9 +53,11 @@ export async function GET(req: Request, ctx: Ctx) {
   const previewToken = searchParams.get('p');
 
   let lp = null;
+  let previewing = false;
   if (previewToken) {
     const tok = await verifyPreviewToken(previewToken);
     if (tok) {
+      previewing = true;
       lp = await db.landingPage.findFirst({
         where: { id: tok.lpId, slug },
         select: {
@@ -156,6 +159,11 @@ ${settings.width === 'contained' && settings.maxWidth ? `.zaki-page-wrap{max-wid
       html = injection + html;
     }
   }
+
+  // The frame has an opaque origin and sends no cookies, so a stored image
+  // linked privately — in the seller's HTML, their CSS, or a product photo
+  // placed by a marker — is public here or it is broken.
+  html = toPublicMedia(html, { via: lp.id, previewToken: previewing ? previewToken ?? undefined : undefined });
 
   return new NextResponse(html, {
     headers: {

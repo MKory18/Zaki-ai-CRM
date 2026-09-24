@@ -22,7 +22,12 @@ vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/audit', () => ({ logAudit: vi.fn() }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: async () => ({ user: { id: 'u1' }, companyId: 'c1', storeId: 's1' }) }));
 vi.mock('@/lib/authorization', () => ({ requirePermission: async () => undefined }));
-vi.mock('@/lib/landing-domain', () => ({ validateDomain: (d: string) => ({ ok: true, domain: d }), forgetHost: vi.fn(), dashboardHosts: () => [] }));
+const { forgetHost } = vi.hoisted(() => ({ forgetHost: vi.fn() }));
+vi.mock('@/lib/landing-domain', () => ({
+  validateDomain: (d: string) => ({ ok: true, domain: d }),
+  forgetHost: (h: string | null) => forgetHost(h),
+  dashboardHosts: () => [],
+}));
 
 import { PATCH, DELETE } from './route';
 
@@ -107,5 +112,43 @@ describe('a page\'s domain', () => {
     expect(db.landingPage.update).not.toHaveBeenCalled();
     // Renamed in the same save, it is free.
     expect((await patch({ slug: 'p-new', domain: 'page.example.com' })).status).toBe(200);
+  });
+});
+
+describe('what a seller host serves', () => {
+  // A host remembers its pages for a minute. A new slug, a publish change or
+  // a deleted page must reach it at once, or the store's domain keeps
+  // answering with the old paths.
+  const withStoreDomain = () =>
+    db.store.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      'landingPageId' in where ? null : where.id === 's1' ? { domain: 'shop.example.com' } : null
+    );
+
+  it('is forgotten when the slug changes: the page\u2019s own domain and its store\u2019s', async () => {
+    withStoreDomain();
+    db.landingPage.update.mockResolvedValue({ id: 'lp1', slug: 'p-new', isPublished: true });
+    db.landingPage.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      where.id === 'lp1' ? { id: 'lp1', companyId: 'c1', storeId: 's1', domain: 'page.example.com', slug: 'p', isPublished: true } : null
+    );
+    expect((await patch({ slug: 'p-new' })).status).toBe(200);
+    expect(forgetHost).toHaveBeenCalledWith('page.example.com');
+    expect(forgetHost).toHaveBeenCalledWith('shop.example.com');
+  });
+
+  it('is forgotten when a page is deleted', async () => {
+    withStoreDomain();
+    front = null;
+    await DELETE(new Request('http://localhost/x', { method: 'DELETE' }), ctx);
+    expect(forgetHost).toHaveBeenCalledWith('shop.example.com');
+  });
+
+  it('is left alone by a change that moves no path (a new name)', async () => {
+    withStoreDomain();
+    db.landingPage.update.mockResolvedValue({ id: 'lp1', slug: 'p', isPublished: undefined });
+    db.landingPage.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      where.id === 'lp1' ? { id: 'lp1', companyId: 'c1', storeId: 's1', domain: null, slug: 'p', isPublished: undefined } : null
+    );
+    await patch({ name: 'اسم' });
+    expect(forgetHost).not.toHaveBeenCalled();
   });
 });

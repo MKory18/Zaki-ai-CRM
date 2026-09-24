@@ -1,4 +1,5 @@
 import { sellingCurrency, SELLING_STORE_SELECT } from '@/lib/selling-currency';
+import { publicizeMedia } from '@/lib/public-media';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
@@ -57,7 +58,8 @@ export async function GET(_req: Request, ctx: Ctx) {
               name: lp.product?.name || null,
               nameEn: lp.product?.nameEn || null,
               price: lp.product?.basePrice ?? 0,
-              image: lp.product?.image || null,
+              // Read by visitors on the seller's site, who have no session.
+              image: lp.product?.image ? publicizeMedia(lp.product.image, { via: lp.id }) : null,
             }
           : null,
       },

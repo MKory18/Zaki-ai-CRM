@@ -180,6 +180,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
     try {
       const updated = await db.landingPage.update({ where: { id: lp.id }, data });
+      // What a seller's host serves is remembered for a minute (landing-
+      // domain.ts): its own page by slug, and a store's host every published
+      // page of the store. A new slug or a publish change must count at once.
+      if (updated.slug !== lp.slug || updated.isPublished !== lp.isPublished) await forgetPageHosts(lp);
       await logAudit({
         companyId,
         userId: user.id,
@@ -209,6 +213,14 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 }
 
+/** Forget the hosts that serve this page: its own domain and its store's. */
+async function forgetPageHosts(lp: { domain: string | null; storeId: string | null }) {
+  forgetHost(lp.domain);
+  if (!lp.storeId) return;
+  const store = await db.store.findFirst({ where: { id: lp.storeId }, select: { domain: true } });
+  forgetHost(store?.domain);
+}
+
 export async function DELETE(_req: Request, ctx: Ctx) {
   try {
     const { user, companyId, storeId } = await requireContext();
@@ -232,6 +244,7 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     }
 
     await db.landingPage.delete({ where: { id: lp.id } });
+    await forgetPageHosts(lp);
     await logAudit({
       companyId,
       userId: user.id,

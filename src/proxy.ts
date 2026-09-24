@@ -1,7 +1,7 @@
 import { SELLING_PAGE_HEADERS } from '@/lib/csp';
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { pathForHost } from '@/lib/landing-domain';
+import { hostSite, inHostScope } from '@/lib/landing-domain';
 
 let cachedJwtSecret: Uint8Array | null = null;
 function getJwtSecret(): Uint8Array {
@@ -106,12 +106,22 @@ export async function proxy(req: Request) {
   //
   // A storefront has real paths under it (a product page), so the rewrite
   // carries the rest of the path along — only the root is replaced.
-  if (!pathname.startsWith('/api/') && !pathname.startsWith('/lp/') &&
-      !pathname.startsWith('/s/') && !pathname.startsWith('/_next/')) {
-    const base = await pathForHost(req.headers.get('host'));
-    if (base) {
+  // The app's own public files (/fonts/…: the self-hosted faces a page may
+  // use) are the same on every host; rewriting them under the page's path
+  // made them 404 on a seller's domain.
+  if (!pathname.startsWith('/api/') && !pathname.startsWith('/_next/') && !pathname.startsWith('/fonts/')) {
+    const site = await hostSite(req.headers.get('host'));
+    if (site) {
+      // The public paths themselves (/lp/…, /s/…) pass through untouched —
+      // but only this host's own. The public space is shared by every
+      // company, and a seller's domain answered for all of it: shop-a.com/
+      // lp/<any company's page> rendered that page under seller A's name.
+      if (pathname.startsWith('/lp/') || pathname.startsWith('/s/')) {
+        if (!inHostScope(site, pathname)) return new NextResponse('Not found', { status: 404 });
+        return NextResponse.next();
+      }
       const target = new URL(req.url);
-      target.pathname = pathname === '/' ? base : `${base}${pathname}`;
+      target.pathname = pathname === '/' ? site.path : `${site.path}${pathname}`;
       // The page underneath is a selling page, but next.config's header
       // rules matched THIS path ("/", "/p/…"), which is the dashboard's —
       // the shut policy that refuses the page's fonts, its pixels and the

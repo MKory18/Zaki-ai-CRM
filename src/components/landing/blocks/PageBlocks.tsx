@@ -456,7 +456,7 @@ function Urgency({ section: s, ctx }: { section: Extract<LandingSection, { type:
   return (
     <div className="lp-urgency">
       {s.text && <p>{s.text}</p>}
-      {s.minutes > 0 && <Countdown minutes={s.minutes} />}
+      {s.minutes > 0 && <Countdown minutes={s.minutes} id={s.id} persist={!ctx.building} />}
       {lowStock !== null && (
         <p className="lp-stock">
           بقي <strong>{lowStock}</strong> فقط في المخزون

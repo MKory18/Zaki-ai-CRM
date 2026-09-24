@@ -19,6 +19,7 @@ import { availableStock } from '@/lib/reservation';
 import { deviceClassOf, recordLandingView } from '@/lib/landing-views';
 import { resolveCampaign } from '@/lib/campaigns-server';
 import { afterResponse } from '@/lib/notify';
+import { publicizeMedia } from '@/lib/public-media';
 
 /**
  * A LANDING PAGE, RENDERED — THE ONE RENDERER.
@@ -155,7 +156,15 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   if (!lp || (!previewing && !lp.isPublished)) notFound();
   const companyId = lp.company!.id;
 
-  const [offers, recommendations] = await loadLpData(lp.id, companyId, lp.product?.id ?? null);
+  const [offers, recs] = await loadLpData(lp.id, companyId, lp.product?.id ?? null);
+  const previewToken = 'slug' in target && previewing ? target.previewToken : undefined;
+  // A visitor has no session: every stored image this page shows goes out
+  // through the public media route, naming this page (public-media.ts). A
+  // preview is the signed-in seller in the dashboard's frame — the private
+  // links work for them, and do not expire under a lazy-loaded image the way
+  // a ten-minute token would.
+  const forVisitors = <T,>(value: T): T => (previewing ? value : publicizeMedia(value, { via: lp.id }));
+  const recommendations = forVisitors(recs);
 
   if (!previewing) {
     // A visit: counted once in the page's lifetime total and once in its
@@ -186,7 +195,6 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
       ).map((r) => r.name)
     : [];
 
-  const previewToken = 'slug' in target && previewing ? target.previewToken : undefined;
   const rawSrc = `/lp/${encodeURIComponent(lp.slug)}/raw${previewToken ? `?p=${encodeURIComponent(previewToken)}` : ''}`;
   const productName = lp.product?.name || lp.name;
   const price = lp.product?.basePrice ?? 0;
@@ -214,7 +222,7 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
 
   // A block page may carry its own `offers` block. Then THAT is the picker
   // and the form must not draw a second one.
-  const sections = lp.builderMode === 'BLOCKS' ? ensureForm(parseSections(lp.sections)) : [];
+  const sections = lp.builderMode === 'BLOCKS' ? forVisitors(ensureForm(parseSections(lp.sections))) : [];
   const pageHasOffersBlock = sections.some((s) => s.type === 'offers' && s.enabled);
   // What the customer reads after ordering — the seller's words when the page
   // has a thank-you block, ours when it does not.
@@ -246,7 +254,7 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   // Nothing on it is untrusted, because nothing on it was written as
   // markup — the seller chose blocks and filled in text.
   if (sections.length > 0) {
-    const theme = safeTheme(lp.theme);
+    const theme = forVisitors(safeTheme(lp.theme));
     const palette = paletteFor(theme);
     // The theme's font AND every font a block chose.
     const href = fontHref(theme.font ?? DEFAULT_THEME.font, ...sections.map((b) => b.look?.text?.font));
