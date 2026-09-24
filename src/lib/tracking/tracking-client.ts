@@ -34,6 +34,7 @@ export interface EngineAdapters {
   META: TrackingAdapter;
   TIKTOK: TrackingAdapter;
   SNAPCHAT: TrackingAdapter;
+  GOOGLE: TrackingAdapter;
 }
 
 export interface TrackingEngineOptions {

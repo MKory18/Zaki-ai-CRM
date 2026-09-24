@@ -110,7 +110,7 @@ export async function POST(req: Request) {
     if (error instanceof AiNotConfigured) {
       return NextResponse.json(
         {
-          error: 'لم يُضبط الذكاء الاصطناعي بعد — اختر المزوّد وأدخل المفتاح من إعدادات النظام.',
+          error: 'لم يُضبط الذكاء الاصطناعي بعد — اختر المزوّد وأدخل المفتاح من إعدادات الذكاء الاصطناعي.',
           code: 'AI_NOT_CONFIGURED',
         },
         { status: 409 }

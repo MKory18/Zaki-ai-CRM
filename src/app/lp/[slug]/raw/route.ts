@@ -1,3 +1,4 @@
+import { sellingCurrency, SELLING_STORE_SELECT } from '@/lib/selling-currency';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { clampStoredHtml, RAW_HTML_CSP, verifyPreviewToken } from '@/lib/landing-pages';
@@ -58,7 +59,7 @@ export async function GET(req: Request, ctx: Ctx) {
         where: { id: tok.lpId, slug },
         select: {
           id: true, name: true, slug: true, htmlContent: true, cssContent: true, pageSettings: true,
-          company: { select: { currency: true } },
+          store: SELLING_STORE_SELECT,
           productId: true, companyId: true,
           product: { select: { name: true, nameEn: true, image: true, description: true, basePrice: true } },
           recommendations: { where: { isActive: true, product: { status: 'ACTIVE' } }, orderBy: { sortOrder: 'asc' }, select: { id: true, product: { select: { name: true, basePrice: true, image: true } } } },
@@ -72,7 +73,7 @@ export async function GET(req: Request, ctx: Ctx) {
       where: { slug, isPublished: true },
       select: {
         id: true, name: true, slug: true, htmlContent: true, cssContent: true, pageSettings: true,
-        company: { select: { currency: true } },
+        store: SELLING_STORE_SELECT,
         productId: true, companyId: true,
         product: { select: { name: true, nameEn: true, image: true, description: true, basePrice: true } },
         recommendations: { where: { isActive: true, product: { status: 'ACTIVE' } }, orderBy: { sortOrder: 'asc' }, select: { id: true, product: { select: { name: true, basePrice: true, image: true } } } },
@@ -118,7 +119,7 @@ ${settings.width === 'contained' && settings.maxWidth ? `.zaki-page-wrap{max-wid
   // Values (product/offers/recommendations) come exclusively from the DB —
   // the custom HTML can only place markers, never set prices/ids. The
   // interaction script is hard-coded server output (see landing-dynamic.ts).
-  const currency = lp.company?.currency || 'USD';
+  const currency = await sellingCurrency(lp.store, lp.companyId);
 
   // The offers come from the PRODUCT, like everywhere else. This page used to
   // read a per-page copy of the same tiers; there is only one copy now, so a

@@ -24,7 +24,7 @@ interface Call {
 }
 
 function fakeAdapters(log: Call[]) {
-  const make = (platform: 'META' | 'TIKTOK' | 'SNAPCHAT'): TrackingAdapter => ({
+  const make = (platform: 'META' | 'TIKTOK' | 'SNAPCHAT' | 'GOOGLE'): TrackingAdapter => ({
     platform,
     init(pixelId: string) {
       log.push({ platform, pixelId, event: '__init__', init: true });
@@ -33,7 +33,7 @@ function fakeAdapters(log: Call[]) {
       log.push({ platform, pixelId, event, payload });
     },
   });
-  return { META: make('META'), TIKTOK: make('TIKTOK'), SNAPCHAT: make('SNAPCHAT') };
+  return { META: make('META'), TIKTOK: make('TIKTOK'), SNAPCHAT: make('SNAPCHAT'), GOOGLE: make('GOOGLE') };
 }
 
 describe('TrackingEngine', () => {

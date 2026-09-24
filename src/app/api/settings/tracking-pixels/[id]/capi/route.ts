@@ -5,7 +5,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
-import { encryptSecret, encryptionAvailable, secretHint } from '@/lib/secrets';
+import { decryptSecret, encryptSecret, encryptionAvailable, secretHint } from '@/lib/secrets';
 import { maskPixelId } from '@/lib/tracking/tracking-types';
 import { verifyPixelToken, explainCapiError } from '@/lib/conversions/meta-capi';
 
@@ -36,6 +36,11 @@ const schema = z.object({
    * events arriving and no conversions ever recorded.
    */
   testCode: z.string().trim().max(40).optional(),
+  /**
+   * The Meta dataset the server events go to, when it is not the pixel
+   * itself. Digits, like a pixel id; empty string goes back to the pixel.
+   */
+  datasetId: z.union([z.literal(''), z.string().trim().regex(/^\d{10,20}$/, 'Dataset ID أرقام فقط')]).optional(),
   /** true removes the token and turns this pixel back into a browser-only one. */
   remove: z.boolean().optional(),
 });
@@ -48,22 +53,31 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const pixel = await db.trackingPixel.findFirst({
       where: { id, companyId },
-      select: { id: true, platform: true, name: true, pixelId: true },
+      select: { id: true, platform: true, name: true, pixelId: true, capiToken: true, capiDatasetId: true },
     });
     if (!pixel) return NextResponse.json({ error: 'البكسل غير موجود' }, { status: 404 });
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: 'الرمز غير صالح' }, { status: 400 });
+      const datasetIssue = parsed.error.issues.some((i) => i.path[0] === 'datasetId');
+      return NextResponse.json(
+        { error: datasetIssue ? 'Dataset ID غير صالح — أرقام فقط' : 'الرمز غير صالح' },
+        { status: 400 }
+      );
     }
     const { token, testCode, remove } = parsed.data;
+    /** undefined = untouched; null = back to the pixel's own id. */
+    const datasetId = parsed.data.datasetId === undefined ? undefined : parsed.data.datasetId || null;
+    if (datasetId && pixel.platform !== 'META') {
+      return NextResponse.json({ error: 'Dataset ID خاص بميتا' }, { status: 400 });
+    }
 
     if (remove) {
       // The conversions themselves survive. They simply stop being sent,
       // and their history of what was already sent stays readable.
       await db.trackingPixel.update({
         where: { id },
-        data: { capiToken: null, capiTokenHint: null, capiTestCode: null },
+        data: { capiToken: null, capiTokenHint: null, capiTestCode: null, capiDatasetId: null },
       });
       await logAudit({
         companyId,
@@ -76,13 +90,46 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ success: true, removed: true });
     }
 
-    // The test code alone, without touching the token.
+    // The test code or the dataset alone, without a new token.
     if (token === undefined) {
-      if (testCode === undefined) {
+      if (testCode === undefined && datasetId === undefined) {
         return NextResponse.json({ error: 'لا شيء لتغييره' }, { status: 400 });
       }
-      await db.trackingPixel.update({ where: { id }, data: { capiTestCode: testCode || null } });
-      return NextResponse.json({ success: true, testCode: testCode || null });
+      if (datasetId !== undefined && datasetId !== pixel.capiDatasetId && pixel.capiToken) {
+        // A connected pixel pointed at another dataset is tried with the
+        // token it already has, before anything is saved: a dataset the
+        // token cannot open fails inside the worker days later, unseen.
+        let stored: string;
+        try {
+          stored = decryptSecret(pixel.capiToken);
+        } catch {
+          return NextResponse.json({ error: 'تعذر قراءة الرمز المحفوظ — أعد ربطه' }, { status: 400 });
+        }
+        try {
+          await verifyPixelToken(datasetId ?? pixel.pixelId, stored);
+        } catch (e) {
+          return NextResponse.json({ error: explainCapiError(e) }, { status: 400 });
+        }
+      }
+      await db.trackingPixel.update({
+        where: { id },
+        data: {
+          ...(testCode !== undefined ? { capiTestCode: testCode || null } : {}),
+          ...(datasetId !== undefined ? { capiDatasetId: datasetId } : {}),
+        },
+      });
+      if (datasetId !== undefined && datasetId !== pixel.capiDatasetId) {
+        await logAudit({
+          companyId,
+          userId: user.id,
+          action: 'TRACKING_PIXEL_CAPI_DATASET',
+          entity: 'TrackingPixel',
+          entityId: id,
+          previousData: { datasetId: pixel.capiDatasetId },
+          newData: { name: pixel.name, datasetId, by: user.name },
+        });
+      }
+      return NextResponse.json({ success: true, testCode: testCode ?? undefined, datasetId: datasetId ?? undefined });
     }
 
     if (pixel.platform !== 'META') {
@@ -104,10 +151,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       );
     }
 
-    // Try it before trusting it.
+    // Try it before trusting it — against the dataset the events will go to.
+    const target = (datasetId !== undefined ? datasetId : pixel.capiDatasetId) ?? pixel.pixelId;
     let name: string;
     try {
-      ({ name } = await verifyPixelToken(pixel.pixelId, token));
+      ({ name } = await verifyPixelToken(target, token));
     } catch (e) {
       return NextResponse.json({ error: explainCapiError(e) }, { status: 400 });
     }
@@ -118,6 +166,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         capiToken: encryptSecret(token),
         capiTokenHint: secretHint(token),
         ...(testCode !== undefined ? { capiTestCode: testCode || null } : {}),
+        ...(datasetId !== undefined ? { capiDatasetId: datasetId } : {}),
       },
     });
 

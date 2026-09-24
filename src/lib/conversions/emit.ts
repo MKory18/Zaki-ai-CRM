@@ -136,14 +136,14 @@ export async function deliverConversion(deliveryId: string): Promise<boolean> {
       conversion: {
         select: {
           eventName: true, trigger: true, valueSource: true,
-          pixel: { select: { pixelId: true, capiToken: true, capiTestCode: true, platform: true } },
+          pixel: { select: { pixelId: true, capiDatasetId: true, capiToken: true, capiTestCode: true, platform: true } },
         },
       },
       order: {
         select: {
           id: true, orderNumber: true, totalAmount: true, collectedAmount: true,
           currency: true, createdAt: true, confirmedAt: true, deliveredAt: true,
-          productId: true, landingPageId: true,
+          productId: true, landingPageId: true, landingPage: { select: { slug: true } },
           customer: { select: { id: true, fullName: true, phone: true, rawPhone: true, city: true, country: true } },
         },
       },
@@ -227,13 +227,17 @@ export async function deliverConversion(deliveryId: string): Promise<boolean> {
     user_data: userData,
     custom_data: custom,
   };
-  if (order.landingPageId) {
+  // The page the order came from. Public pages resolve by SLUG — this used
+  // to send the page's id, a URL that answers 404, on every event.
+  if (order.landingPage?.slug) {
     const base = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
-    if (base) event.event_source_url = `${base.replace(/\/+$/, '')}/lp/${order.landingPageId}`;
+    if (base) event.event_source_url = `${base.replace(/\/+$/, '')}/lp/${encodeURIComponent(order.landingPage.slug)}`;
   }
 
   try {
-    await sendEvents(pixel.pixelId, token, [event], pixel.capiTestCode);
+    // The dataset, when the seller named one; otherwise the pixel, which for a
+    // web pixel is the same number.
+    await sendEvents(pixel.capiDatasetId || pixel.pixelId, token, [event], pixel.capiTestCode);
     await db.conversionDelivery.update({
       where: { id: delivery.id },
       data: {

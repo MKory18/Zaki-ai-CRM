@@ -94,7 +94,7 @@ export function AskAi() {
           {info.provider} · <span dir="ltr">{info.model}</span>
         </span>
         <Link
-          href="/settings/system"
+          href="/settings/ai"
           className="ms-auto inline-flex items-center gap-1 text-[11px] text-[#697586] hover:text-[#b8256e]"
         >
           <Settings2 className="w-3.5 h-3.5" />
@@ -106,8 +106,8 @@ export function AskAi() {
         {!info.ready && (
           <p className="text-xs text-[#c07f2a] bg-amber-50 border border-amber-200 rounded-lg p-2.5">
             لم يُضبط مفتاح الذكاء بعد. اختر المزوّد وأدخل المفتاح من{' '}
-            <Link href="/settings/system" className="underline font-semibold">
-              إعدادات النظام
+            <Link href="/settings/ai" className="underline font-semibold">
+              إعدادات الذكاء الاصطناعي
             </Link>{' '}
             — هذه الشاشة جاهزة وتعمل فور إدخاله.
           </p>

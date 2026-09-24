@@ -32,6 +32,7 @@ interface Pixel {
   pixelId: string;
   capiTokenHint: string | null;
   capiTestCode: string | null;
+  capiDatasetId: string | null;
 }
 
 interface Conversion {
@@ -58,6 +59,8 @@ export function CustomConversionsCard() {
   const [token, setToken] = useState('');
   /** null = untouched, so the server's value shows through without an effect to copy it. */
   const [testCodeEdit, setTestCode] = useState<string | null>(null);
+  /** null = untouched, so the stored dataset shows through. */
+  const [datasetEdit, setDataset] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [adding, setAdding] = useState(false);
@@ -91,6 +94,7 @@ export function CustomConversionsCard() {
   const connected = !!pixel?.capiTokenHint;
 
   const testCode = testCodeEdit ?? pixel?.capiTestCode ?? '';
+  const dataset = datasetEdit ?? pixel?.capiDatasetId ?? '';
 
   /** Choosing a moment fills in a sensible event name, which most sellers keep. */
   function pickTrigger(value: string) {
@@ -114,13 +118,14 @@ export function CustomConversionsCard() {
       const res = await fetch(`/api/settings/tracking-pixels/${pixel.id}/capi`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token.trim() }),
+        body: JSON.stringify({ token: token.trim(), ...(dataset.trim() ? { datasetId: dataset.trim() } : {}) }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'تعذر الحفظ');
       // Cleared immediately: a token left in a field is a token on a screen
       // somebody else can walk past.
       setToken('');
+      setDataset(null);
       await load();
       setMsg({ ok: true, text: `تم الربط بـ «${json.metaName}».` });
     } catch (e) {
@@ -147,6 +152,33 @@ export function CustomConversionsCard() {
           ? 'وضع الاختبار مفعّل — الأحداث تظهر في Test Events ولا تُحتسب تحويلات. امسح الرمز حين تنتهي.'
           : 'أُوقف وضع الاختبار. الأحداث تُحتسب الآن.',
       });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function saveDataset() {
+    if (!pixel) return;
+    setBusy('dataset');
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/settings/tracking-pixels/${pixel.id}/capi`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ datasetId: dataset.trim() }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'تعذر الحفظ');
+      setDataset(null);
+      await load();
+      setMsg({
+        ok: true,
+        text: dataset.trim()
+          ? `الأحداث تذهب الآن إلى الـ Dataset ${dataset.trim()}.`
+          : 'الأحداث تذهب إلى البكسل نفسه.',
+      });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر الحفظ' });
     } finally {
       setBusy(null);
     }
@@ -258,7 +290,7 @@ export function CustomConversionsCard() {
           {pixels.length > 1 && (
             <select
               value={pixelId}
-              onChange={(e) => { setPixelId(e.target.value); setTestCode(null); }}
+              onChange={(e) => { setPixelId(e.target.value); setTestCode(null); setDataset(null); }}
               className={`${INPUT} mb-2`}
             >
               {pixels.map((p) => (
@@ -306,6 +338,31 @@ export function CustomConversionsCard() {
                     و<b>لا تُحتسب تحويلات</b> — فامسحه حين تنتهي، وإلا رأيت أحداثاً تصل بلا تحويلات أبداً.
                   </p>
                 </div>
+                <div className="mt-2">
+                  <label className="mb-1 block text-[11px] font-semibold text-[#364152]">Dataset ID (اختياري)</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={dataset}
+                      onChange={(e) => setDataset(e.target.value.replace(/\D/g, ''))}
+                      placeholder={pixel?.pixelId}
+                      className={INPUT}
+                      dir="ltr"
+                      inputMode="numeric"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={saveDataset}
+                      disabled={busy === 'dataset' || dataset === (pixel?.capiDatasetId ?? '')}
+                    >
+                      حفظ
+                    </Button>
+                  </div>
+                  <p className="mt-1 text-[10px] leading-relaxed text-[#9aa4b2]">
+                    فارغ = الأحداث تذهب إلى البكسل نفسه، وهو نفس رقم الـ Dataset في بكسل الويب. عبّئه فقط إن
+                    أنشأت في Events Manager مجموعة بيانات منفصلة لأحداث الخادم.
+                  </p>
+                </div>
               </>
             ) : (
               <>
@@ -326,6 +383,15 @@ export function CustomConversionsCard() {
                   يُشفَّر قبل الحفظ ولا يُعرَض بعدها أبداً، ولا يُكتب في سجل التدقيق. نتحقق منه مع ميتا
                   قبل حفظه — الخلل هنا لا يظهر إلا بعد أيام داخل عامل لا يراقبه أحد.
                 </p>
+                <label className="mb-1 mt-2 block text-[11px] font-semibold text-[#364152]">Dataset ID (اختياري)</label>
+                <input
+                  value={dataset}
+                  onChange={(e) => setDataset(e.target.value.replace(/\D/g, ''))}
+                  placeholder={`فارغ = ${pixel?.pixelId ?? 'رقم البكسل'}`}
+                  className={INPUT}
+                  dir="ltr"
+                  inputMode="numeric"
+                />
                 <Button
                   size="sm"
                   className="mt-2"

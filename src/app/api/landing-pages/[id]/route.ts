@@ -6,7 +6,6 @@ import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { validateSlug, clampStoredHtml, conversionRate } from '@/lib/landing-pages';
-import { validatePixelId } from '@/lib/landing-tracking';
 import { validateDomain, forgetHost } from '@/lib/landing-domain';
 import { zodMessage } from '@/lib/zod-message';
 
@@ -32,8 +31,8 @@ export async function GET(_req: Request, ctx: Ctx) {
         creator: { select: { id: true, name: true } },
         // The editor's preview must price in the SAME currency the published
         // page does, or it is a preview of a page that does not exist — and
-        // that is the country's currency, not the company's.
-        company: { select: { currency: true } },
+        // that is the country's currency, not the company's. The page is
+        // read through the selected store, so it always has one.
         store: { select: { country: { select: { currencyCode: true } } } },
       },
     });
@@ -62,8 +61,6 @@ export async function PATCH(req: Request, ctx: Ctx) {
       slug: z.string().trim().toLowerCase().max(60).optional(),
       productId: z.string().min(10).max(64).optional().nullable(),
       isPublished: z.boolean().optional(),
-      metaPixelId: z.string().trim().max(20).optional().nullable(),
-      metaPixelEnabled: z.boolean().optional(),
       // '' clears the domain; the page goes back to /lp/<slug> only.
       domain: z.string().trim().max(253).optional().nullable(),
     });
@@ -83,8 +80,6 @@ export async function PATCH(req: Request, ctx: Ctx) {
       parsed.data.name !== undefined ||
       parsed.data.slug !== undefined ||
       parsed.data.productId !== undefined ||
-      parsed.data.metaPixelId !== undefined ||
-      parsed.data.metaPixelEnabled !== undefined ||
       parsed.data.domain !== undefined;
     if (needsEdit) await requirePermission('landing_pages.edit');
 
@@ -130,26 +125,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
       forgetHost(typeof data.domain === 'string' ? data.domain : null);
     }
 
-    // ── Meta Pixel configuration (configuration, never code) ──
-    if (parsed.data.metaPixelId !== undefined || parsed.data.metaPixelEnabled !== undefined) {
-      const nextId = parsed.data.metaPixelId !== undefined ? parsed.data.metaPixelId : lp.metaPixelId;
-      const nextEnabled = parsed.data.metaPixelEnabled !== undefined ? parsed.data.metaPixelEnabled : lp.metaPixelEnabled;
-      const cleanId = validatePixelId(nextId ?? null);
-      if (nextEnabled && !cleanId) {
-        return NextResponse.json(
-          { error: 'Meta Pixel ID غير صالح (أرقام فقط، 15-16 خانة)' },
-          { status: 400 }
-        );
-      }
-      if (parsed.data.metaPixelId !== undefined) {
-        // Store the validated digits only — or null when empty (cleanest disable)
-        data.metaPixelId = nextId && cleanId ? cleanId : null;
-      }
-      if (parsed.data.metaPixelEnabled !== undefined) {
-        // Enabling with no valid id is refused above; disabling always allowed
-        data.metaPixelEnabled = nextEnabled && Boolean(cleanId);
-      }
-    }
+    // A page no longer carries its own pixel. The two columns that held one
+    // are still in the table (migrations only add) but nothing reads them:
+    // every pixel lives in tracking_pixels, managed on /settings/tracking,
+    // with "landing pages only" as its scope when that is what is wanted.
 
     try {
       const updated = await db.landingPage.update({ where: { id: lp.id }, data });

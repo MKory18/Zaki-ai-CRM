@@ -1,87 +1,51 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
-import { logAudit, redactSensitiveValues } from '@/lib/audit';
+import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
 
 /**
- * Settings JSON validation (PATCH).
+ * GET/PATCH /api/settings — the company's own name, and nothing else.
  *
- * Known top-level keys get strict types; unknown keys are allowed only
- * as primitives (string/number/boolean) so legacy integrations keep
- * working. Whole document is capped at 8KB serialized / depth 4 /
- * keys <= 32 chars to prevent storing arbitrary oversized blobs.
+ * This endpoint used to read and write the whole Company.settings JSON. It
+ * returned it to anybody holding settings.view — the encrypted AI key and
+ * its hint included — and it REPLACED it on save, so the system screen's
+ * three fields wiped the AI key, its prompts and the message templates
+ * every time somebody pressed save. The pixel screen, going the other way,
+ * sent the whole blob back and was refused once anything nested lived in
+ * it.
+ *
+ * Every key in that JSON now has an owner that reads and writes only its
+ * own key: the AI settings (/api/settings/ai) and the message templates
+ * (/api/settings/messages). What was left here — an org currency and
+ * country that duplicated the Country model, a default fee and a default
+ * commission nothing read, a model nothing used, preferences no page ever
+ * loaded — is gone. The company name is the one field that is genuinely the
+ * company's, and it has no other editor.
  */
-const MAX_SETTINGS_BYTES = 8 * 1024; // 8KB serialized
-const MAX_DEPTH = 4;
 
-const crmSchema = z
+const patchSchema = z
   .object({
-    defaultCurrency: z.string().max(8).optional(),
-    pipelineStages: z.array(z.string()).max(12).optional(),
-    dealPrefix: z.string().max(8).optional(),
+    name: z.string().trim().min(2, 'اسم الشركة قصير جداً').max(120, 'اسم الشركة طويل جداً'),
   })
-  .passthrough();
-
-const settingsSchema = z
-  .object({
-    defaultShippingCost: z.number().optional(),
-    currencySymbol: z.string().max(10).optional(),
-    timezone: z.string().max(64).optional(),
-    crm: crmSchema.optional(),
-  })
-  // Unknown keys are allowed but only as primitive values
-  .catchall(z.union([z.string(), z.number(), z.boolean()]))
-  .superRefine((val, ctx) => {
-    const serialized = JSON.stringify(val);
-    if (Buffer.byteLength(serialized, 'utf8') > MAX_SETTINGS_BYTES) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'حجم الإعدادات يتجاوز الحد المسموح' });
-    }
-    for (const key of Object.keys(val)) {
-      if (key.length > 32) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'اسم المفتاح طويل جداً' });
-        break;
-      }
-    }
-    // Depth check (path segments); known nested objects count as depth 2
-    const checkDepth = (obj: unknown, depth: number): boolean => {
-      if (depth > MAX_DEPTH) return false;
-      if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-        return Object.values(obj).every((v) => checkDepth(v, depth + 1));
-      }
-      return true;
-    };
-    if (!checkDepth(val, 1)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'تداخل الإعدادات عميق جداً' });
-    }
-  });
+  .strict();
 
 export async function GET() {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { companyId } = await requireCompanyTenant();
     await requirePermission('settings.view');
 
     const company = await db.company.findUnique({
       where: { id: companyId },
+      select: { id: true, name: true },
     });
+    if (!company) return NextResponse.json({ error: 'الشركة غير موجودة' }, { status: 404 });
 
-    if (!company) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      company: {
-        id: company.id,
-        name: company.name,
-        currency: company.currency,
-        country: company.country,
-        settings: company.settings ? JSON.parse(company.settings) : {},
-      },
-    });
-  } catch (error: any) {
+    return NextResponse.json({ company });
+  } catch (error) {
     return apiErrorResponse(error);
   }
 }
@@ -91,29 +55,16 @@ export async function PATCH(req: Request) {
     const { user, companyId } = await requireCompanyTenant();
     await requirePermission('settings.edit');
 
-    const body = await req.json();
-    const { name, currency, country, settings } = body;
-
-    let validatedSettings: unknown;
-    if (settings !== undefined) {
-      const parsed = settingsSchema.safeParse(settings);
-      if (!parsed.success) {
-        return NextResponse.json(
-          { error: `إعدادات غير صالحة: ${zodMessage(parsed.error)}` },
-          { status: 400 }
-        );
-      }
-      validatedSettings = parsed.data;
+    const parsed = patchSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
+    const before = await db.company.findUnique({ where: { id: companyId }, select: { name: true } });
     const updated = await db.company.update({
       where: { id: companyId },
-      data: {
-        ...(name ? { name: name.trim() } : {}),
-        ...(currency ? { currency: currency.trim() } : {}),
-        ...(country ? { country: country.trim() } : {}),
-        ...(validatedSettings !== undefined ? { settings: JSON.stringify(validatedSettings) } : {}),
-      },
+      data: { name: parsed.data.name },
+      select: { id: true, name: true },
     });
 
     await logAudit({
@@ -122,17 +73,12 @@ export async function PATCH(req: Request) {
       action: 'SETTINGS_UPDATED',
       entity: 'Company',
       entityId: companyId,
-      // Audit redaction: values under password/secret/token/key-like
-      // keys are replaced with '[REDACTED]' before persistence. The
-      // settings JSON string is parsed first so nested keys are covered.
-      newData: redactSensitiveValues({
-        ...updated,
-        settings: updated.settings ? JSON.parse(updated.settings) : null,
-      }),
+      previousData: { name: before?.name ?? null },
+      newData: { name: updated.name },
     });
 
     return NextResponse.json({ success: true, company: updated });
-  } catch (error: any) {
+  } catch (error) {
     return apiErrorResponse(error);
   }
 }

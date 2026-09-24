@@ -1,3 +1,5 @@
+import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixels';
+import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { getStorefront, storefrontProduct } from '@/lib/storefront';
@@ -67,8 +69,22 @@ export default async function StorefrontProductPage({ params }: Props) {
   // nowhere to go back to.
   const back = store.type === 'SINGLE_PRODUCT' ? undefined : { href: `/s/${store.slug}`, label: 'كل المنتجات' };
 
+  // A storefront page is a selling page: the store's company's pixels, the
+  // ones not limited to landing pages.
+  const pixels = await getTrackingPixelsForPage(store.companyId, 'PUBLIC');
+
   return (
     <StorefrontShell store={store} back={back}>
+      <LandingTrackingPixels
+        page="PUBLIC"
+        pixels={pixels}
+        viewContent={{
+          contentIds: [product.id],
+          contentName: product.name,
+          value: product.basePrice,
+          currency: store.currencyCode,
+        }}
+      />
       <article className="sf-product">
         <div className="sf-product-top">
           <div className="sf-gallery">

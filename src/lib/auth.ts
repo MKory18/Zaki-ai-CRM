@@ -95,7 +95,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       where: { id: decoded.userId },
       include: {
         company: {
-          select: { id: true, name: true, currency: true },
+          select: { id: true, name: true },
         },
       },
     });

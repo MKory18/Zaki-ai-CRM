@@ -132,7 +132,7 @@ export const NAV: NavGroup[] = [
       r('/settings/commission', 'العمولات', 'Percent', ['settings.view']),
       r('/settings/couriers', 'شركات الشحن', 'Truck', ['settings.view']),
       r('/settings/channels', 'قنوات الطلبات', 'Radio', ['settings.view']),
-      r('/settings/pixels', 'البكسلات والتتبع', 'Radar', ['settings.view']),
+      r('/settings/tracking', 'بكسل التتبع والحملات', 'Radar', ['settings.view']),
       // Its own entry, not a card at the bottom of system settings: the
       // words the system says to the model are a thing a seller edits,
       // and they cannot edit what they cannot find.

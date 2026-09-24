@@ -1,57 +1,43 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { TrackingPixelsSection } from '@/components/settings/TrackingPixelsSection';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 /**
- * Tracking settings tabs — functional tab behavior + data preservation.
- * The pixels/settings APIs are mocked at fetch level (no API changes).
+ * The tracking panel: every platform on one panel, Google a real one, and
+ * the scope of each pixel visible and changeable.
+ *
+ * The three tabs this replaced are asserted GONE — the settings copy of the
+ * landing-page numbers, the custom-script box that never ran, the webhook
+ * card, the purchase settings and the Google boxes nothing read — because
+ * the failure worth catching is one of them coming back.
  */
+
+const { can } = vi.hoisted(() => ({ can: { edit: true } }));
+vi.mock('@/context/AppContext', () => ({ useApp: () => ({ currentUser: { id: 'u1' } }) }));
+vi.mock('@/lib/can', () => ({ userCan: (_u: unknown, key: string) => key === 'settings.edit' && can.edit }));
+
+import { TrackingPixelsSection } from '@/components/settings/TrackingPixelsSection';
 
 const pixelsFixture = [
   { id: 'p1', platform: 'META', name: 'Main', pixelId: '123456789012345', enabled: true, scope: 'GLOBAL', createdAt: '' },
   { id: 'p2', platform: 'META', name: 'Second', pixelId: '222222222222222', enabled: false, scope: 'LANDING_PAGES', createdAt: '' },
-  { id: 'p3', platform: 'TIKTOK', name: 'TT', pixelId: 'TIKTOK123456', enabled: true, scope: 'GLOBAL', createdAt: '' },
-  { id: 'p4', platform: 'SNAPCHAT', name: 'Snap', pixelId: '110ec58a-a0f2-4ac4-8393-c866d813b8d1', enabled: true, scope: 'GLOBAL', createdAt: '' },
+  { id: 'p3', platform: 'TIKTOK', name: 'TT', pixelId: 'TIKTOK123456', enabled: true, scope: 'PUBLIC', createdAt: '' },
+  { id: 'p4', platform: 'GOOGLE', name: 'GA', pixelId: 'G-ABC1234567', enabled: true, scope: 'GLOBAL', createdAt: '' },
 ];
 
-function mockFetchOk() {
+let calls: { url: string; init?: RequestInit }[] = [];
+
+function mockFetch() {
+  calls = [];
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (input: string) => {
+    vi.fn(async (input: string, init?: RequestInit) => {
       const url = String(input);
-      if (url.includes('/api/settings/tracking-pixels')) {
+      calls.push({ url, init });
+      if (url === '/api/settings/tracking-pixels' && (!init || !init.method || init.method === 'GET')) {
         return { ok: true, status: 200, json: async () => ({ pixels: pixelsFixture }) };
       }
-      if (url.endsWith('/api/settings')) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({
-            company: {
-              settings: {
-                deliveryRate: 0.8,
-                codConversionType: 'Purchase',
-                googleTrackingIds: 'AW-12345678',
-                googleAnalytics: 'G-TEST123',
-                customHeadScript: '<!-- custom -->',
-              },
-            },
-          }),
-        };
-      }
-      if (url.includes('/api/landing-pages')) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({
-            landingPages: [
-              { id: 'l1', name: 'LP One', isPublished: true, viewsCount: 100, ordersCount: 12, conversionRate: 12 },
-            ],
-          }),
-        };
-      }
-      return { ok: false, status: 404, json: async () => ({}) };
+      return { ok: true, status: 200, json: async () => ({ success: true }) };
     })
   );
 }
@@ -59,83 +45,94 @@ function mockFetchOk() {
 beforeEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  mockFetchOk();
+  can.edit = true;
+  mockFetch();
 });
 
-function tabBtn(key: string) {
-  return screen.getByTestId(`tab-${key}`);
-}
+const rows = () => screen.queryAllByTestId('pixel-row');
 
-describe('Tracking settings tabs', () => {
-  it('defaults to tracking-pixels content', async () => {
+describe('one panel, four platforms', () => {
+  it('shows Meta first, with both of its pixels', async () => {
     render(<TrackingPixelsSection />);
-    expect(tabBtn('tracking-pixels').getAttribute('aria-selected')).toBe('true');
-    expect(await screen.findByTestId('platform-META')).toBeTruthy();
-    expect(screen.getAllByText(/أضف رقم التتبع/).length).toBeGreaterThan(0);
-    expect(screen.getByText('Google tracking IDs')).toBeTruthy();
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    expect(screen.getByText('123456789012345')).toBeTruthy();
+    expect(screen.getByText('222222222222222')).toBeTruthy();
   });
 
-  it('clicking analytics tab changes the panel content (live analytics)', async () => {
+  it('offers Google as a platform of its own, with its tag listed', async () => {
     render(<TrackingPixelsSection />);
-    fireEvent.click(tabBtn('analytics-pixels'));
-    expect(tabBtn('analytics-pixels').getAttribute('aria-selected')).toBe('true');
-    expect(tabBtn('tracking-pixels').getAttribute('aria-selected')).toBe('false');
-    expect(await screen.findByText('أداء صفحات الهبوط')).toBeTruthy();
-    expect(await screen.findByText('LP One')).toBeTruthy();
-    expect(screen.queryByText(/أضف رقم التتبع/)).toBeNull();
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    fireEvent.click(screen.getByTestId('platform-GOOGLE'));
+    expect(rows()).toHaveLength(1);
+    expect(screen.getByText('G-ABC1234567')).toBeTruthy();
   });
 
-  it('clicking custom scripts tab shows its content', async () => {
-    render(<TrackingPixelsSection />);
-    fireEvent.click(tabBtn('custom-scripts-pixels'));
-    expect(tabBtn('custom-scripts-pixels').getAttribute('aria-selected')).toBe('true');
-    expect(await screen.findByText('التكاملات الخارجية الموجودة')).toBeTruthy();
-    expect(await screen.findByDisplayValue('<!-- custom -->')).toBeTruthy();
-  });
-
-  it('switching back to tracking-pixels keeps data (no data loss between tabs)', async () => {
-    render(<TrackingPixelsSection />);
-    await screen.findByTestId('platform-META');
-    fireEvent.click(tabBtn('custom-scripts-pixels'));
-    await screen.findByText('التكاملات الخارجية الموجودة');
-    fireEvent.click(tabBtn('analytics-pixels'));
-    expect(await screen.findByText('LP One')).toBeTruthy(); // analytics data still served
-    fireEvent.click(tabBtn('tracking-pixels'));
-    // state preserved/reloaded: pixels + settings prefs are intact
-    expect(await screen.findByText('123456789012345')).toBeTruthy();
-    expect(await screen.findByText('222222222222222')).toBeTruthy();
-    expect(await screen.findByText('AW-12345678')).toBeTruthy(); // google IDs list
-    expect(await screen.findByDisplayValue('0.8')).toBeTruthy(); // delivery rate
-    expect(screen.getByText('Google tracking IDs')).toBeTruthy();
-  });
-
-  it('multiple pixels are listed and platform switching shows only that platform', async () => {
-    render(<TrackingPixelsSection />);
-    await screen.findByTestId('platform-META');
-    expect(await screen.findByText('123456789012345')).toBeTruthy();
-    expect(await screen.findByText('222222222222222')).toBeTruthy();
-    fireEvent.click(screen.getByTestId('platform-TIKTOK'));
-    expect(await screen.findByText('TIKTOK123456')).toBeTruthy();
-    expect(screen.queryByText('123456789012345')).toBeNull();
-    fireEvent.click(screen.getByTestId('platform-SNAPCHAT'));
-    expect(await screen.findByText('110ec58a-a0f2-4ac4-8393-c866d813b8d1')).toBeTruthy();
-  });
-
-  it('no blank page in any tab (aria-selected updates)', async () => {
-    render(<TrackingPixelsSection />);
-    for (const key of ['analytics-pixels', 'tracking-pixels', 'custom-scripts-pixels', 'tracking-pixels']) {
-      fireEvent.click(tabBtn(key));
-      expect(screen.getByTestId(`tab-${key}`).getAttribute('aria-selected')).toBe('true');
-      expect((document.body.textContent || '').trim().length).toBeGreaterThan(0);
+  it('none of the removed tabs or boxes is on the screen', async () => {
+    const { container } = render(<TrackingPixelsSection />);
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    const text = container.textContent ?? '';
+    for (const gone of ['تحليلات جافا سكريبت', 'وحدات بكسل', 'أداء صفحات الهبوط', 'إعدادات الشراء', 'Google analytics', 'Webhook']) {
+      expect(text).not.toContain(gone);
     }
+    // And it never reads the old settings blob.
+    expect(calls.some((c) => c.url === '/api/settings')).toBe(false);
+  });
+});
+
+describe('scope — where each pixel runs', () => {
+  it('shows each pixel\'s scope, a PUBLIC row reading as "every selling page"', async () => {
+    render(<TrackingPixelsSection />);
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    const selects = screen.getAllByLabelText('أين يعمل') as HTMLSelectElement[];
+    expect(selects[0].value).toBe('GLOBAL');
+    expect(selects[1].value).toBe('LANDING_PAGES');
+    fireEvent.click(screen.getByTestId('platform-TIKTOK'));
+    expect((screen.getAllByLabelText('أين يعمل')[0] as HTMLSelectElement).value).toBe('GLOBAL');
   });
 
-  it('tracking engine untouched — component uses the same APIs only', async () => {
-    const fs = await import('fs');
-    const src = fs.readFileSync('src/components/settings/TrackingPixelsSection.tsx', 'utf8');
-    expect(src).not.toContain('tracking-client');
-    expect(src).not.toContain('tracking-platforms');
-    expect(src).not.toContain('GlobalTrackingProvider');
-    expect(src).toContain('/api/settings/tracking-pixels');
+  it('changing it saves that pixel\'s scope', async () => {
+    render(<TrackingPixelsSection />);
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    fireEvent.change(screen.getAllByLabelText('أين يعمل')[0], { target: { value: 'LANDING_PAGES' } });
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/settings/tracking-pixels/p1')).toBe(true));
+    const patch = calls.find((c) => c.url === '/api/settings/tracking-pixels/p1')!;
+    expect(patch.init?.method).toBe('PATCH');
+    expect(JSON.parse(String(patch.init?.body))).toEqual({ scope: 'LANDING_PAGES' });
+  });
+});
+
+describe('adding', () => {
+  it('refuses a malformed id before it reaches the server', async () => {
+    render(<TrackingPixelsSection />);
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    fireEvent.click(screen.getByTestId('platform-GOOGLE'));
+    fireEvent.change(screen.getByLabelText('رقم بكسل Google'), { target: { value: 'GTM-ABC123' } });
+    fireEvent.submit(screen.getByLabelText('رقم بكسل Google').closest('form')!);
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('G-XXXXXXXXXX'));
+    expect(calls.some((c) => c.init?.method === 'POST')).toBe(false);
+  });
+
+  it('adds a Google tag with the chosen scope', async () => {
+    render(<TrackingPixelsSection />);
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    fireEvent.click(screen.getByTestId('platform-GOOGLE'));
+    fireEvent.change(screen.getByLabelText('رقم بكسل Google'), { target: { value: 'aw-123456789' } });
+    const form = screen.getByLabelText('رقم بكسل Google').closest('form')!;
+    fireEvent.change(form.querySelector('select')!, { target: { value: 'LANDING_PAGES' } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(calls.some((c) => c.init?.method === 'POST')).toBe(true));
+    const body = JSON.parse(String(calls.find((c) => c.init?.method === 'POST')!.init?.body));
+    expect(body).toMatchObject({ platform: 'GOOGLE', pixelId: 'AW-123456789', scope: 'LANDING_PAGES', enabled: true });
+  });
+});
+
+describe('without the edit permission', () => {
+  it('shows the pixels read-only: no add form, no actions, scope not changeable', async () => {
+    can.edit = false;
+    render(<TrackingPixelsSection />);
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    expect(screen.queryByText('أضف')).toBeNull();
+    expect(screen.queryByText('تعطيل')).toBeNull();
+    for (const s of screen.getAllByLabelText('أين يعمل')) expect((s as HTMLSelectElement).disabled).toBe(true);
   });
 });

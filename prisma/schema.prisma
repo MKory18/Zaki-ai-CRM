@@ -71,7 +71,7 @@ model Company {
 model TrackingPixel {
   id        String   @id @default(uuid())
   companyId String
-  platform  String   // META | TIKTOK | SNAPCHAT (allowlisted server-side)
+  platform  String   // META | TIKTOK | SNAPCHAT | GOOGLE (allowlisted server-side)
   name      String
   pixelId   String   // validated per-platform (digits / alphanumeric / uuid)
   enabled   Boolean  @default(true)
@@ -97,6 +97,10 @@ model TrackingPixel {
   /// in Events Manager, then cleared — an event sent with it is visible in
   /// the test panel and NOT counted as a conversion.
   capiTestCode  String?
+  /// The Meta dataset the server events go to, when it is not the pixel
+  /// itself. For a web pixel the two are the same number — which is why this
+  /// is empty for almost everybody and the pixel id is used.
+  capiDatasetId String?
 
   company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   conversions CustomConversion[]

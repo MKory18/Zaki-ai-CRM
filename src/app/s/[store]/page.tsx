@@ -1,3 +1,5 @@
+import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixels';
+import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getStorefront, storefrontProducts } from '@/lib/storefront';
@@ -33,9 +35,11 @@ export default async function StorefrontHome({ params }: Props) {
 
   const money = (n: number) =>
     `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${store.currencyCode}`;
+  const pixels = await getTrackingPixelsForPage(store.companyId, 'PUBLIC');
 
   return (
     <StorefrontShell store={store}>
+      <LandingTrackingPixels page="PUBLIC" pixels={pixels} viewContent={null} />
       <section className="sf-hero">
         <h1>{store.tagline || store.name}</h1>
         {store.about && <p>{store.about}</p>}

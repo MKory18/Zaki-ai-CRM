@@ -1,3 +1,4 @@
+import { sellingCurrency, SELLING_STORE_SELECT } from '@/lib/selling-currency';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
@@ -34,7 +35,9 @@ export async function GET(_req: Request, ctx: Ctx) {
         name: true,
         slug: true,
         productId: true,
-        company: { select: { name: true, currency: true } },
+        companyId: true,
+        company: { select: { name: true } },
+        store: SELLING_STORE_SELECT,
         product: { select: { name: true, nameEn: true, basePrice: true, image: true } },
       },
     });
@@ -44,7 +47,10 @@ export async function GET(_req: Request, ctx: Ctx) {
       {
         name: lp.name,
         slug: lp.slug,
-        company: { name: lp.company.name, currency: lp.company.currency },
+        // `company.currency` keeps its place in the answer so an embed already
+        // pasted on a seller's site keeps reading it — the value is the
+        // country's now, the one the order from this form is booked in.
+        company: { name: lp.company.name, currency: await sellingCurrency(lp.store, lp.companyId) },
         product: lp.productId
           ? {
               name: lp.product?.name || null,

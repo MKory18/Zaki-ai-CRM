@@ -1,3 +1,4 @@
+import { sellingCurrency } from '@/lib/selling-currency';
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
@@ -32,11 +33,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       const { country } = await requireContext();
       currencyCode = country.currencyCode;
     } catch {
-      const company = await db.company.findUnique({
-        where: { id: companyId },
-        select: { currency: true },
-      });
-      currencyCode = company?.currency || 'USD';
+      // No store selected: the company's first country, never the retired
+      // company-level currency.
+      currencyCode = await sellingCurrency(null, companyId);
     }
 
     return NextResponse.json({ product, currencyCode });

@@ -1,3 +1,4 @@
+import { SELLING_PAGE_HEADERS } from '@/lib/csp';
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { pathForHost } from '@/lib/landing-domain';
@@ -111,7 +112,13 @@ export async function proxy(req: Request) {
     if (base) {
       const target = new URL(req.url);
       target.pathname = pathname === '/' ? base : `${base}${pathname}`;
-      return NextResponse.rewrite(target);
+      // The page underneath is a selling page, but next.config's header
+      // rules matched THIS path ("/", "/p/…"), which is the dashboard's —
+      // the shut policy that refuses the page's fonts, its pixels and the
+      // dashboard's own preview frame. Answer with the selling page's.
+      const res = NextResponse.rewrite(target);
+      for (const h of SELLING_PAGE_HEADERS) res.headers.set(h.key, h.value);
+      return res;
     }
   }
 

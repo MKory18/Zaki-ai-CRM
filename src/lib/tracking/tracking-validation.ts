@@ -45,6 +45,21 @@ export function validateSnapchatPixelId(raw: string | null | undefined): string 
   return SNAPCHAT_PIXEL_ID_RE.test(v) ? v : null;
 }
 
+/**
+ * Google tag IDs: a GA4 measurement id (G-XXXXXXXXXX) or a Google Ads tag
+ * (AW-123456789). Normalised to upper case. A GTM container (GTM-XXXX) is
+ * refused on purpose: a container runs whatever code is published into it,
+ * which is exactly what this system never lets a setting do.
+ */
+const GOOGLE_TAG_ID_RE = /^(G-[A-Z0-9]{6,14}|AW-\d{6,14})$/;
+
+export function validateGoogleTagId(raw: string | null | undefined): string | null {
+  if (typeof raw !== 'string') return null;
+  const v = raw.trim().toUpperCase();
+  if (!v || v.length > MAX_TRACKING_PIXEL_ID_LENGTH) return null;
+  return GOOGLE_TAG_ID_RE.test(v) ? v : null;
+}
+
 /** Platform-dispatching validator — the single entry point. */
 export function validateTrackingPixelId(
   platform: string,
@@ -57,6 +72,8 @@ export function validateTrackingPixelId(
       return validateTikTokPixelId(raw);
     case 'SNAPCHAT':
       return validateSnapchatPixelId(raw);
+    case 'GOOGLE':
+      return validateGoogleTagId(raw);
     default:
       return null; // unknown platform → fail closed
   }
@@ -71,6 +88,8 @@ export function pixelIdHint(platform: string): string {
       return 'TikTok Pixel ID غير صالح (حروف وأرقام إنجليزية فقط، 8-32 خانة)';
     case 'SNAPCHAT':
       return 'Snapchat Pixel ID غير صالح (يجب أن يكون بصيغة UUID)';
+    case 'GOOGLE':
+      return 'معرّف Google غير صالح — G-XXXXXXXXXX لـ Analytics أو AW-123456789 لـ Google Ads';
     default:
       return 'منصة غير مدعومة';
   }

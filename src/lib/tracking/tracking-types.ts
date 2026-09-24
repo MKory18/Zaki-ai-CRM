@@ -2,7 +2,7 @@
  * GLOBAL TRACKING — types & pure helpers (client-safe, testable).
  *
  * One central engine dispatches allowlisted events to every enabled,
- * scope-matching pixel of the company (Meta / TikTok / Snapchat).
+ * scope-matching pixel of the company (Meta / TikTok / Snapchat / Google).
  *
  * Security model:
  *  - The ONLY stored configuration value is the Pixel ID, validated
@@ -14,7 +14,7 @@
  *    (no PII) by sanitizeTrackingPayload().
  */
 
-export const TRACKING_PLATFORMS = ['META', 'TIKTOK', 'SNAPCHAT'] as const;
+export const TRACKING_PLATFORMS = ['META', 'TIKTOK', 'SNAPCHAT', 'GOOGLE'] as const;
 export type TrackingPlatform = (typeof TRACKING_PLATFORMS)[number];
 
 export const TRACKING_SCOPES = ['GLOBAL', 'PUBLIC', 'LANDING_PAGES'] as const;
@@ -24,8 +24,33 @@ export type TrackingScope = (typeof TRACKING_SCOPES)[number];
 export const TRACKING_EVENTS = ['PageView', 'ViewContent', 'InitiateCheckout', 'Purchase'] as const;
 export type TrackingEventName = (typeof TRACKING_EVENTS)[number];
 
-/** Page context used for scope resolution (server-side). */
+/**
+ * Page context used for scope resolution (server-side).
+ *
+ * Pixels fire on SELLING pages only: a landing page is LANDING_PAGES, a
+ * storefront page is PUBLIC. The dashboard is neither and loads nothing —
+ * a seller's own clicks in the admin are not visits to report to an ad
+ * account.
+ */
 export type TrackingPageContext = 'PUBLIC' | 'LANDING_PAGES';
+
+/**
+ * What a seller chooses per pixel, in their words.
+ *
+ * The stored scopes are three, but with pixels confined to selling pages
+ * two of them mean the same thing: GLOBAL and PUBLIC both reach every
+ * landing page and every storefront page. The screen offers the two real
+ * choices; a PUBLIC row reads as the first.
+ */
+export const SCOPE_CHOICES: { value: TrackingScope; label: string; hint: string }[] = [
+  { value: 'GLOBAL', label: 'كل صفحات البيع', hint: 'صفحات الهبوط وواجهات المتاجر' },
+  { value: 'LANDING_PAGES', label: 'صفحات الهبوط فقط', hint: 'لا يعمل على واجهات المتاجر' },
+];
+
+/** The choice a stored scope shows as. */
+export function scopeChoice(scope: string): TrackingScope {
+  return scope === 'LANDING_PAGES' ? 'LANDING_PAGES' : 'GLOBAL';
+}
 
 /** Serializable pixel as delivered to the client engine. */
 export interface TrackingPixelView {

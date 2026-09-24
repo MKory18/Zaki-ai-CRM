@@ -153,7 +153,7 @@ describe('making the call', () => {
       provider: 'OPENAI',
       model: 'gpt-4o-mini',
       apiKey: 'sk-test-key',
-      prompt: 'أجب بالعربية دائماً',
+      prompts: { house: 'أجب بالعربية دائماً' },
     });
     withSettings(stored());
     fetchOk({ choices: [{ message: { content: 'ok' } }] });
@@ -164,6 +164,36 @@ describe('making the call', () => {
     expect(body.messages[0].content.indexOf('أجب بالعربية')).toBeLessThan(
       body.messages[0].content.indexOf('حلّل الأرقام')
     );
+  });
+
+  it('still applies a house prompt saved the old way, until the next save', async () => {
+    // Written by the card that sat on the system settings screen, which is
+    // gone. Its value must keep working, and must be what /settings/ai shows.
+    withSettings({ provider: 'OPENAI', model: 'gpt-4o-mini', prompt: 'اختصر', apiKeyEncrypted: undefined });
+    process.env.OPENROUTER_API_KEY = 'sk-env';
+    const shown = await aiSettings('c1');
+    expect(shown.prompt).toBe('اختصر');
+    expect(shown.prompts.house).toBe('اختصر');
+    fetchOk({ choices: [{ message: { content: 'ok' } }] });
+    await aiChat({ companyId: 'c1', system: 'حلّل', user: 'u' });
+    const body = JSON.parse(
+      (globalThis.fetch as never as { mock: { calls: [string, RequestInit][] } }).mock.calls[0][1].body as string
+    );
+    expect(body.messages[0].content.startsWith('اختصر')).toBe(true);
+  });
+
+  it('a house prompt cleared on /settings/ai stays cleared — the old key does not bring it back', async () => {
+    withSettings({ provider: 'OPENAI', model: 'gpt-4o-mini', prompt: 'اختصر' });
+    await saveAiSettings('c1', { provider: 'OPENAI', model: 'gpt-4o-mini', prompts: {} });
+    expect(stored().prompt).toBeUndefined();
+    withSettings(stored());
+    expect((await aiSettings('c1')).prompt).toBe('');
+  });
+
+  it('a save that does not touch the prompts keeps the old house prompt', async () => {
+    withSettings({ provider: 'OPENAI', model: 'gpt-4o-mini', prompt: 'اختصر' });
+    await saveAiSettings('c1', { provider: 'OPENAI', model: 'gpt-4o' });
+    expect(stored().prompt).toBe('اختصر');
   });
 
   it('surfaces a vendor error instead of returning an empty answer', async () => {

@@ -52,7 +52,7 @@ interface Account {
   _count: { campaigns: number };
 }
 
-export function AdAccountsCard() {
+export function AdAccountsCard({ storeName }: { storeName?: string }) {
   const [accounts, setAccounts] = useState<Account[] | null>(null);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [chosen, setChosen] = useState<string>('META');
@@ -149,10 +149,15 @@ export function AdAccountsCard() {
       <div className="mb-1 flex items-center gap-2">
         <Megaphone className="h-4 w-4 text-[#b8256e]" />
         <h2 className="text-sm font-bold text-[#121926]">حسابات الإعلانات</h2>
+        {storeName && (
+          <span className="rounded bg-[#f1f3f6] px-1.5 py-0.5 text-[10px] font-semibold text-[#475467]">
+            متجر {storeName}
+          </span>
+        )}
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-[#697586]">
         اربط حساباتك الإعلانية ليأتي الإنفاق تلقائياً بدل أن تكتبه. كل شيء آخر في شاشة الحملات
-        محسوب من طلباتك أصلاً.
+        محسوب من طلباتك أصلاً. الحساب يُربط بالمتجر المختار من الأعلى — بدّل المتجر لتربط حساب متجر آخر.
       </p>
 
       {accounts === null ? (

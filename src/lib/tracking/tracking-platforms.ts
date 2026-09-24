@@ -11,6 +11,8 @@
  * Snapchat: official Snap Pixel (snaptr) â€” PAGE_VIEW/VIEW_CONTENT/
  *         START_CHECKOUT/PURCHASE.
  * Meta: standard fbevents.js base code (unchanged behavior from Phase 3).
+ * Google: the Google tag (gtag.js) — page_view/view_item/begin_checkout/
+ *         purchase, sent to one tag id each (GA4 G-… or Google Ads AW-…).
  */
 
 import {
@@ -30,6 +32,8 @@ declare global {
     ttq?: any;
     snaptr?: QueueFn;
     TiktokAnalyticsObject?: string;
+    gtag?: QueueFn;
+    dataLayer?: unknown[];
   }
 }
 
@@ -213,8 +217,67 @@ const snapAdapter: TrackingAdapter = {
   },
 };
 
+// ─────────────────────────────── Google ───────────────────────────────
+const GTAG_SCRIPT_SRC = 'https://www.googletagmanager.com/gtag/js';
+const GOOGLE_EVENTS: Record<TrackingEventName, string | null> = {
+  PageView: 'page_view',
+  ViewContent: 'view_item',
+  InitiateCheckout: 'begin_checkout',
+  Purchase: 'purchase',
+};
+
+export function googleParams(payload: TrackingPayload, tagId: string): Record<string, unknown> {
+  const p = sanitizeTrackingPayload(payload);
+  const ids = p.content_ids as string[] | undefined;
+  // send_to pins the event to THIS tag: with two tags on a page, an event
+  // without it goes to both and every conversion is counted twice.
+  const out: Record<string, unknown> = { send_to: tagId };
+  if (ids?.length) {
+    out.items = ids.map((id) => ({ item_id: id, ...(p.content_name ? { item_name: p.content_name } : {}) }));
+  }
+  if (p.value != null) {
+    out.value = p.value;
+    out.currency = p.currency || 'USD';
+  }
+  if (p.order_id) out.transaction_id = p.order_id;
+  return out;
+}
+
+const googleAdapter: TrackingAdapter = {
+  platform: 'GOOGLE',
+  init(tagId) {
+    const w = window as any;
+    if (!w.gtag) {
+      w.dataLayer = w.dataLayer || [];
+      // The official stub: gtag pushes its `arguments` object, which is what
+      // gtag.js expects to find in the queue.
+      w.gtag = function () {
+        // eslint-disable-next-line prefer-rest-params
+        w.dataLayer.push(arguments);
+      };
+      w.gtag('js', new Date());
+      loadScript(`${GTAG_SCRIPT_SRC}?id=${encodeURIComponent(tagId)}`);
+    }
+    // The engine fires PageView itself, once per page load — letting the tag
+    // send its own as well would count every visit twice.
+    w.gtag('config', tagId, { send_page_view: false });
+  },
+  track(event, payload, tagId) {
+    const name = GOOGLE_EVENTS[event];
+    if (!name) return;
+    const w = window as any;
+    if (!w.gtag) return;
+    try {
+      w.gtag('event', name, googleParams(payload, tagId));
+    } catch {
+      /* tracking is non-fatal */
+    }
+  },
+};
+
 export const TRACKING_ADAPTERS: Record<TrackingPlatform, TrackingAdapter> = {
   META: metaAdapter,
   TIKTOK: tiktokAdapter,
   SNAPCHAT: snapAdapter,
+  GOOGLE: googleAdapter,
 };

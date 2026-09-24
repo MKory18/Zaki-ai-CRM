@@ -20,11 +20,10 @@ import { AI_JOBS, MAX_PROMPT } from '@/lib/ai-prompts';
 const schema = z.object({
   provider: z.enum(['OPENROUTER', 'OPENAI', 'ANTHROPIC']),
   model: z.string().trim().max(120),
-  /** The house prompt prepended to every request. */
-  prompt: z.string().trim().max(4000).optional(),
   /**
-   * The company's own wording per AI job. Omitted leaves the stored ones
-   * alone; a job set to its default, or to nothing, stops being an override.
+   * The company's own wording per AI job — the house prompt is the 'house'
+   * job. Omitted leaves the stored ones alone; a job set to its default, or
+   * to nothing, stops being an override.
    */
   prompts: z.record(z.string(), z.string().max(MAX_PROMPT)).optional(),
   /** A new key, or null to clear it. Omitted leaves the stored one alone. */

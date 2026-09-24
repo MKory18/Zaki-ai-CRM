@@ -78,7 +78,7 @@ export function builtInApps(db: RegistryDb): BuiltInApp[] {
       description:
         'يرسل أحداث المشاهدة وبدء الطلب والشراء إلى فيسبوك بالقيم التي يؤكّدها الخادم — لا بالقيم التي يقولها المتصفّح.',
       category: 'MARKETING',
-      settingsPath: '/settings/pixels',
+      settingsPath: '/settings/tracking',
       permission: 'settings.manage',
       configured: async ({ companyId }) =>
         (await db.trackingPixel.count({ where: { companyId, platform: 'META', enabled: true } })) > 0,
@@ -89,7 +89,7 @@ export function builtInApps(db: RegistryDb): BuiltInApp[] {
       summary: 'تتبّع تحويلات تيك توك',
       description: 'نفس أحداث فيسبوك، إلى تيك توك، من نفس المصدر الموثوق.',
       category: 'MARKETING',
-      settingsPath: '/settings/pixels',
+      settingsPath: '/settings/tracking',
       permission: 'settings.manage',
       configured: async ({ companyId }) =>
         (await db.trackingPixel.count({ where: { companyId, platform: 'TIKTOK', enabled: true } })) > 0,
@@ -100,10 +100,21 @@ export function builtInApps(db: RegistryDb): BuiltInApp[] {
       summary: 'تتبّع تحويلات سناب شات',
       description: 'نفس الأحداث، إلى سناب شات.',
       category: 'MARKETING',
-      settingsPath: '/settings/pixels',
+      settingsPath: '/settings/tracking',
       permission: 'settings.manage',
       configured: async ({ companyId }) =>
         (await db.trackingPixel.count({ where: { companyId, platform: 'SNAPCHAT', enabled: true } })) > 0,
+    },
+    {
+      code: 'GOOGLE_TAG',
+      name: 'Google Tag',
+      summary: 'Google Analytics و Google Ads',
+      description: 'نفس الأحداث — المشاهدة وبدء الطلب والشراء — إلى Google Analytics أو إعلانات Google.',
+      category: 'MARKETING',
+      settingsPath: '/settings/tracking',
+      permission: 'settings.manage',
+      configured: async ({ companyId }) =>
+        (await db.trackingPixel.count({ where: { companyId, platform: 'GOOGLE', enabled: true } })) > 0,
     },
     {
       code: 'WHATSAPP',

@@ -1,10 +1,14 @@
-import { guardRoute } from '@/lib/page-guard';
+import { guardRoute, requireShellContext } from '@/lib/page-guard';
 import { TrackingPixelsSection } from '@/components/settings/TrackingPixelsSection';
 import { AdAccountsCard } from '@/components/settings/AdAccountsCard';
 import { CustomConversionsCard } from '@/components/settings/CustomConversionsCard';
 
 export default async function Page() {
-  await guardRoute('/settings/pixels');
+  await guardRoute('/settings/tracking');
+  // Pixels are the company's; ad accounts are the selected store's. The
+  // card says which store, because the header's store picker scoping it
+  // silently is how a seller connects an account to the wrong shop.
+  const { store } = await requireShellContext();
   return (
     <div className="space-y-4">
       <TrackingPixelsSection />
@@ -24,7 +28,7 @@ export default async function Page() {
         minutes. Splitting them across two screens means finding the second
         one later, which mostly means not finding it.
       */}
-      <AdAccountsCard />
+      <AdAccountsCard storeName={store.name} />
     </div>
   );
 }

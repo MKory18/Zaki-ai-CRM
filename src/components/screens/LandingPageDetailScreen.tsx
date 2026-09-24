@@ -173,7 +173,7 @@ export function LandingPageDetailScreen() {
 
   // An offer price with no currency beside it is a number, not a price —
   // and this company sells into more than one country.
-  const currencyCode: string = lp.store?.country?.currencyCode || lp.company?.currency || '';
+  const currencyCode: string = lp.store?.country?.currencyCode || '';
 
   return (
     <>

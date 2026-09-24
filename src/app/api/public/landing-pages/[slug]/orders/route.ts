@@ -85,7 +85,7 @@ export async function POST(req: Request, ctx: Ctx) {
     const lp = await db.landingPage.findFirst({
       where: { slug, isPublished: true },
       include: {
-        company: { select: { id: true, currency: true } },
+        company: { select: { id: true } },
         product: { select: { id: true, basePrice: true, name: true, image: true } },
         store: {
           select: {

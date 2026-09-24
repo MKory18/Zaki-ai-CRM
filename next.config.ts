@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { SELLING_PAGE_HEADERS } from './src/lib/csp';
 
 // HSTS is only sent in production so local dev over http stays clean.
 const isProduction = process.env.NODE_ENV === 'production';
@@ -53,40 +54,13 @@ const lpRawOverrideHeaders = [
   },
 ];
 
-// The public landing page, and only it, may load its Arabic display font
-// from Google Fonts.
-//
-// The dashboard's CSP stays shut: a seller choosing a heading font is no
-// reason to open a third-party style source across the whole admin. Scoping
-// it here keeps the page's own stylesheet and script rules exactly as strict
-// as the catch-all — the two lines added are a font stylesheet and the font
-// files it points at, nothing else.
-//
-// `frame-ancestors 'self'`, not 'none': the dashboard previews this page in
-// an iframe, and 'none' made that impossible — the server answered 200 and
-// the browser refused to paint it (ERR_BLOCKED_BY_RESPONSE), so the preview
-// was a blank box with nothing in any log to explain it. 'self' still
-// refuses every OTHER site, which is what clickjacking protection is for;
-// our own admin framing our own page is not the attack.
-const lpPageHeaders = [
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self'",
-      "frame-ancestors 'self'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join('; '),
-  },
-  // The catch-all sends DENY; this page must also allow the same-origin
-  // frame, or the older header wins in browsers that honour both.
-  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-];
+// Selling pages — a landing page and a storefront — have their own policy,
+// defined once in src/lib/csp.ts because the proxy sends the same one for a
+// seller's own domain. It adds exactly what such a page needs over the
+// catch-all: the Google Fonts the theme offers, the four pixel networks the
+// tracking engine loads, and `frame-ancestors 'self'` so the dashboard can
+// preview the page in an iframe ('none' made the preview a blank box with
+// nothing in any log to explain it). The dashboard keeps the shut CSP above.
 
 // The block designer renders the landing page INSIDE the dashboard, so it
 // needs the same font stylesheet the public page is allowed to load. Without
@@ -120,9 +94,17 @@ const nextConfig: NextConfig = {
     return [
       { source: '/:path*', headers: securityHeaders },
       // After the catch-all so each overrides the CSP for its own route.
-      { source: '/lp/:slug', headers: lpPageHeaders },
+      { source: '/lp/:slug', headers: SELLING_PAGE_HEADERS },
+      { source: '/s/:path*', headers: SELLING_PAGE_HEADERS },
       { source: '/lp/:slug/raw', headers: lpRawOverrideHeaders },
       { source: '/growth/landing-pages/:id/editor', headers: lpEditorHeaders },
+    ];
+  },
+  async redirects() {
+    return [
+      // The tracking screen's old address, kept alive for bookmarks and for
+      // links already pasted into notes and chats.
+      { source: '/settings/pixels', destination: '/settings/tracking', permanent: true },
     ];
   },
   typescript: {

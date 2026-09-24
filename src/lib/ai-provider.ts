@@ -69,7 +69,10 @@ export function providerInfo(id: string): ProviderInfo {
 export interface AiSettings {
   provider: AiProvider;
   model: string;
-  /** The house prompt prepended to every request. Empty means the default. */
+  /**
+   * The house prompt prepended to every request — the one in force. It is
+   * the 'house' entry of `prompts`, read here so no caller has to know.
+   */
   prompt: string;
   /**
    * The company's own wording for each AI job, where they wrote one.
@@ -86,10 +89,24 @@ export interface AiSettings {
 interface StoredAi {
   provider?: string;
   model?: string;
+  /**
+   * LEGACY house prompt. It was written by a card on the system settings
+   * screen while /settings/ai wrote `prompts.house`, and only this one was
+   * read — so the screen built for it edited a prompt nothing used. Now
+   * `prompts.house` is the only one: this is read as its fallback until
+   * the next save through /settings/ai, which drops it.
+   */
   prompt?: string;
   prompts?: Record<string, string>;
   apiKeyEncrypted?: string;
   keyHint?: string;
+}
+
+/** The overrides as the editor should show them: the legacy house prompt folded in. */
+function overridesOf(ai: StoredAi): Record<string, string> {
+  const prompts = sanitizePromptOverrides(ai.prompts);
+  if (!prompts[HOUSE_JOB] && ai.prompt?.trim()) prompts[HOUSE_JOB] = ai.prompt.trim().slice(0, 4000);
+  return prompts;
 }
 
 function readStored(settings: string | null): StoredAi {
@@ -105,11 +122,12 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
   const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
   const ai = readStored(company?.settings ?? null);
   const provider = (AI_PROVIDERS.find((p) => p.id === ai.provider)?.id ?? 'OPENROUTER') as AiProvider;
+  const prompts = overridesOf(ai);
   return {
     provider,
     model: ai.model || providerInfo(provider).defaultModel,
-    prompt: ai.prompt || '',
-    prompts: sanitizePromptOverrides(ai.prompts),
+    prompt: resolvePrompt(HOUSE_JOB, prompts),
+    prompts,
     // The environment key still counts as configured, so an existing deploy
     // keeps working without anybody re-entering anything.
     hasKey: !!ai.apiKeyEncrypted || !!process.env.OPENROUTER_API_KEY,
@@ -119,7 +137,7 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
 
 export async function saveAiSettings(
   companyId: string,
-  input: { provider: AiProvider; model: string; prompt?: string; prompts?: Record<string, string>; apiKey?: string | null }
+  input: { provider: AiProvider; model: string; prompts?: Record<string, string>; apiKey?: string | null }
 ): Promise<AiSettings> {
   const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
   const all = (() => {
@@ -134,10 +152,13 @@ export async function saveAiSettings(
   const next: StoredAi = {
     provider: input.provider,
     model: input.model.trim() || providerInfo(input.provider).defaultModel,
-    prompt: (input.prompt ?? current.prompt ?? '').slice(0, 4000),
     // Sanitised on the way in: unknown jobs are dropped, and an override
     // equal to the default is not stored at all.
     prompts: input.prompts !== undefined ? sanitizePromptOverrides(input.prompts) : current.prompts,
+    // The editor was shown the legacy house prompt as `prompts.house`, so
+    // what it sends back is the whole truth — keeping the legacy key would
+    // bring a prompt the seller just cleared back to life.
+    ...(input.prompts === undefined && current.prompt ? { prompt: current.prompt } : {}),
     apiKeyEncrypted: current.apiKeyEncrypted,
     keyHint: current.keyHint,
   };

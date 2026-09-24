@@ -312,7 +312,7 @@ export function LandingPageEditorScreen() {
           : null,
         offers: [],
         recommendations: [],
-        currency: page.store?.country?.currencyCode || page.company?.currency || 'USD',
+        currency: page.store?.country?.currencyCode || '',
       });
       try {
         const off = await crmApi(`/api/landing-pages/${lpId}/offers`);
@@ -880,10 +880,10 @@ data-zaki-z-index="9999"`}</pre>
             <div className="mt-6 border-t border-[#e3e8ef] pt-4">
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">التتبع والإعلانات</p>
               <p className="text-[10px] leading-relaxed text-[#697586]">
-                تم نقل إدارة أكواد التتبع (Meta / TikTok / Snapchat) إلى نظام مركزي موحّد.
+                أكواد التتبع (Meta / TikTok / Snapchat / Google) تُدار في مكان واحد لكل صفحاتك.
               </p>
               <a
-                href="/settings#tracking"
+                href="/settings/tracking"
                 className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#b8256e] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#b8256e]/90"
               >
                 إدارة البكسلات من الإعدادات ←

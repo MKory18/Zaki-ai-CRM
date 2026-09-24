@@ -1,3 +1,4 @@
+import { sellingCurrency } from '@/lib/selling-currency';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { ruleFor } from '@/lib/phone-rules';
@@ -131,7 +132,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
     theme?: string | null;
     sections?: string | null;
     product?: { id: string; name: string; basePrice: number } | null;
-    company?: { id: string; currency: string };
+    company?: { id: string };
     storeId?: string | null;
     store?: { countryId: string; country: { code: string; currencyCode: string } } | null;
   } | null = null;
@@ -139,6 +140,8 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
   // Active offers + post-order recommendations (server-side, DB prices only)
   let offers: Awaited<ReturnType<typeof fetchOffers>> = [];
   let recommendations: { id: string; name: string; price: number; image: string | null }[] = [];
+  /** The seller looking at their own page from the dashboard — not a visit. */
+  let previewing = false;
 
   if (previewToken) {
     const tok = await verifyPreviewToken(previewToken);
@@ -154,12 +157,13 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
           theme: true,
           sections: true,
           product: { select: { id: true, name: true, basePrice: true } },
-          company: { select: { id: true, currency: true } },
+          company: { select: { id: true } },
           storeId: true,
         store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
         },
       });
       if (lp) {
+        previewing = true;
         [offers, recommendations] = await loadLpData(lp.id, lp.company!.id, lp.product?.id ?? null);
       }
     }
@@ -177,7 +181,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
         builderMode: true,
         theme: true,
         sections: true,
-        company: { select: { id: true, currency: true } },
+        company: { select: { id: true } },
         product: { select: { id: true, name: true, basePrice: true } },
         storeId: true,
         store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
@@ -213,7 +217,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
   // owns it. A Syrian buyer was being shown Jordanian dinars because the
   // company happens to be Jordanian, and the offer prices on the page were
   // never in dinars — they were entered for this store.
-  const currency = lp.store?.country.currencyCode || lp.company?.currency || 'USD';
+  const currency = await sellingCurrency(lp.store, lp.company!.id);
 
   // ── Form visibility rule ──
   //  - Legacy pages (NO data-zaki-* markers at all): trusted OrderForm renders
@@ -230,7 +234,9 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
   // Server-resolved pixels (GLOBAL + PUBLIC + LANDING_PAGES scopes of the
   // page's company), re-validated before any script may load. The uploaded
   // iframe can never fire or influence any of this. No pixels → no-op.
-  const trackingPixels = lp.company?.id
+  // A preview loads none: the seller checking their own page is not a
+  // PageView to report to their ad account.
+  const trackingPixels = lp.company?.id && !previewing
     ? await getTrackingPixelsForPage(lp.company.id, 'LANDING_PAGES')
     : [];
   const viewContent = lp.product
