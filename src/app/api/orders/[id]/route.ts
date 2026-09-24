@@ -13,7 +13,8 @@ import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
-import { authorize, can } from '@/lib/authorization';
+import { authorize, can, getPermissionScope } from '@/lib/authorization';
+import { MAX_REASON, reasonRefusal } from '@/lib/order-edit-reason';
 import { orderSeal, sealedFieldsIn, sealMessage } from '@/lib/order-seal';
 import { expandApproved, mayApply, strayFields } from '@/lib/change-request-apply';
 import { zodMessage } from '@/lib/zod-message';
@@ -74,6 +75,11 @@ const patchSchema = z.object({
   shippingCost: z.coerce.number().finite().min(0).max(1000).optional(),
   productId: z.string().min(10).max(64).optional(),
   expectedVersion: z.number().optional(),
+  // Why this edit was made. Required — and only required — of an edit made
+  // on company-wide authority that moves money, the customer's identity,
+  // the destination or the state; see src/lib/order-edit-reason.ts. It is
+  // written to the audit entry and the order's timeline, never to the order.
+  reason: z.string().trim().max(MAX_REASON).optional(),
   // An approved change request, carried out. When present it is the ONLY
   // field besides expectedVersion: the values come from the approved
   // request on the server, never from this body.
@@ -331,6 +337,7 @@ export async function PATCH(
       confirmationStatus, shippingStatus, expectedVersion,
       customerName, customerPhone, customerAltPhone, customerAddress, regionId,
       sellingPrice, quantity, discountAmount, shippingCost, productId, items, channelId,
+      reason: editReason,
     } = data;
 
     // ── Authorization chain: visibility/assignment (RBAC engine) → canonical
@@ -602,6 +609,30 @@ export async function PATCH(
           { status: 409 }
         );
       }
+    }
+
+    // ── An edit made on company-wide authority says why ──
+    // The change-request door already writes its reason into the audit. This
+    // is the other door — the owner on an order of his own, the super admin
+    // on anybody's — and it recorded who and what, never why. The rule and
+    // its field list live in src/lib/order-edit-reason.ts; the edit screen
+    // asks the same question, so this is the floor, not the prompt.
+    //
+    // It comes AFTER the seal on purpose: an edit the seal will refuse
+    // outright must not first make somebody type out a justification for it.
+    const submittedFields = Object.entries(data)
+      .filter(([, v]) => v !== undefined)
+      .map(([k]) => k);
+    const refusal = reasonRefusal(
+      {
+        companyWideAuthority: getPermissionScope(user, 'orders.edit')?.scope === 'ALL_COMPANY',
+        viaChangeRequest: !!viaRequest,
+        changedFields: submittedFields,
+      },
+      editReason
+    );
+    if (refusal) {
+      return NextResponse.json({ error: refusal, errorAr: refusal, code: 'REASON_REQUIRED' }, { status: 400 });
     }
 
     // ── Order line editing (price / quantity / discount / shipping / product) ──
@@ -942,6 +973,7 @@ export async function PATCH(
               updatedBy: user.name,
               role: user.role,
               trackingCode: trackingCode || null,
+              ...(editReason ? { reason: editReason } : {}),
             }),
           },
         });
@@ -966,7 +998,14 @@ export async function PATCH(
             orderId: id,
             userId: user.id,
             action: 'ORDER_UPDATED',
-            metadata: JSON.stringify({ updatedBy: user.name, role: user.role, fields: changedFields }),
+            metadata: JSON.stringify({
+              updatedBy: user.name,
+              role: user.role,
+              fields: changedFields,
+              // The timeline is what the next person reads on the order
+              // itself; the audit log is where nobody looks until it matters.
+              ...(editReason ? { reason: editReason } : {}),
+            }),
           },
         });
       }
@@ -989,7 +1028,11 @@ export async function PATCH(
             // the seal must say what allowed it.
             changeRequest: { id: viaRequest.id, reason: viaRequest.reason, decision: viaRequest.decisionNote },
           }
-        : updatedOrder,
+        // The other door into somebody else's order. The reason is demanded
+        // above for exactly these edits, so it is here whenever it applies.
+        : editReason
+          ? { ...updatedOrder, editReason }
+          : updatedOrder,
     });
 
     if (viaRequest) {

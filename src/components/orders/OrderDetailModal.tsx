@@ -14,6 +14,7 @@ import { ShippingSection } from '@/components/orders/ShippingSection';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { apiFetch, apiJson } from '@/lib/api-client';
+import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { CustomerHistoryModal } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { OrderStages } from '@/components/orders/OrderStages';
@@ -73,6 +74,9 @@ interface OrderDetailModalProps {
 
 export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters }: OrderDetailModalProps) {
   const { t, locale, isRtl, currentUser } = useApp();
+  // Saves an edit, and asks why when the server says this authority owes a
+  // reason. See src/components/orders/useOrderPatch.ts.
+  const patchOrder = useOrderPatch();
 
   // Two fields the person editing may not have authority over. The server
   // decides; these mirror it so the screen never offers what it will refuse.
@@ -99,11 +103,11 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   const saveChannel = async () => {
     if (!order?.id) return;
     try {
-      await apiJson(`/api/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expectedVersion: order.version, channelId: channelDraft || null }),
-      });
+      const res = await patchOrder(order.id, { expectedVersion: order.version, channelId: channelDraft || null });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.errorAr || data.error || 'تعذر حفظ القناة');
+      }
       setChannelOpen(false);
       await loadOrder(order.id);
       onRefresh();
@@ -251,11 +255,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         setEditError('الكمية يجب أن تكون رقماً صحيحاً ≥ 1');
         return;
       }
-      const res = await apiFetch(`/api/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const res = await patchOrder(order.id, body);
       const data = await res.json().catch(() => ({}));
       if (res.status === 409) {
         setEditError('تم تعديل هذا الطلب بواسطة مستخدم آخر. يرجى تحديث البيانات قبل الحفظ.');
@@ -851,6 +851,7 @@ function OrderRegionField({
   onSaved: () => void | Promise<void>;
 }) {
   const { regions, loading } = useRegions();
+  const patchOrder = useOrderPatch();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState<string>(order.regionId ?? '');
   const [saving, setSaving] = useState(false);
@@ -909,10 +910,11 @@ function OrderRegionField({
               setSaving(true);
               setError(null);
               try {
-                await apiJson(`/api/orders/${order.id}`, {
-                  method: 'PATCH',
-                  body: JSON.stringify({ regionId: value, expectedVersion: order.version }),
-                });
+                const res = await patchOrder(order.id, { regionId: value, expectedVersion: order.version });
+                if (!res.ok) {
+                  const data = await res.json().catch(() => ({}));
+                  throw new Error(data.errorAr || data.error || 'تعذر الحفظ');
+                }
                 setEditing(false);
                 await onSaved();
               } catch (e) {

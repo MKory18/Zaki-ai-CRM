@@ -63,12 +63,16 @@ const existing = {
   discountAmount: 0, shippingCost: 0, confirmedAt: null, lockedById: null, lockExpiresAt: null,
 };
 
-const patch = (body: unknown) =>
+// The actor here is mocked with company-wide edit scope, which owes a reason
+// on any substantive edit (src/lib/order-edit-reason.ts). That rule is not
+// what these tests are about, so the helper supplies one and the phone rule
+// is what is left being measured.
+const patch = (body: Record<string, unknown>) =>
   PATCH(
     new Request('http://localhost/x', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ reason: 'تصحيح رقم بعد مكالمة', ...body }),
     }),
     params
   );
@@ -111,6 +115,14 @@ describe('correcting a phone number cannot write another wrong one', () => {
     const res = await patch({ expectedVersion: 3, customerPhone: '0944555666' });
     expect(res.status).toBe(200);
     expect(db.$transaction).toHaveBeenCalled();
+  });
+
+  it('writes WHY it was corrected into the audit, not just who and what', async () => {
+    // The actor edits on company-wide authority, so the route demanded a
+    // reason (src/lib/order-edit-reason.ts). It has to survive as far as the
+    // audit entry, or the demand bought nothing.
+    await patch({ expectedVersion: 3, customerPhone: '0944555666', reason: 'الزبون أعطى رقماً جديداً' });
+    expect(JSON.stringify(logAudit.mock.calls)).toContain('الزبون أعطى رقماً جديداً');
   });
 
   it('accepts the same number written internationally', async () => {

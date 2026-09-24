@@ -180,9 +180,9 @@ export function LandingPagesScreen() {
                       <th className="px-4 py-3 text-start">المنتج</th>
                       <th className="px-4 py-3 text-start">الحالة</th>
                       <th className="px-4 py-3 text-start">الرابط</th>
-                      <th className="px-4 py-3 text-start">الزيارات</th>
-                      <th className="px-4 py-3 text-start">الطلبات</th>
-                      <th className="px-4 py-3 text-start">التحويل</th>
+                      {/* الزيارات والطلبات والتحويل تُقرأ في «لوحة الأداء»،
+                          حيث تُقارن بالجهاز والحملة والمدى الزمني. رقمان
+                          لنفس الشيء في شاشتين يختلفان يوماً ما. */}
                       <th className="px-4 py-3 text-start">أُنشئت</th>
                       <th className="px-4 py-3 text-start">إجراءات</th>
                     </tr>
@@ -206,9 +206,6 @@ export function LandingPagesScreen() {
                             <span className="text-[#9aa4b2]">/lp/{lp.slug}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">{lp.viewsCount}</td>
-                        <td className="px-4 py-3">{lp.ordersCount}</td>
-                        <td className="px-4 py-3 font-semibold text-[#1a2232]">{lp.conversionRate}%</td>
                         <td className="px-4 py-3 text-[#697586]">{formatDate(lp.createdAt)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">

@@ -38,6 +38,11 @@ vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) })
 vi.mock('@/lib/authorization', () => ({
   authorize: (...a: unknown[]) => authorize(...a),
   can: (...a: unknown[]) => can(...a),
+  // The person carrying out an approved request holds company-wide edit —
+  // which is exactly the authority that owes a reason on a DIRECT edit. The
+  // request's own reason stands in its place here, and the tests below
+  // prove the route asks for nothing extra.
+  getPermissionScope: () => ({ scope: 'ALL_COMPANY' }),
 }));
 vi.mock('@/lib/rbac', () => ({
   assertOrderAccess: async () => ({ allowed: true, order: ORDER }),

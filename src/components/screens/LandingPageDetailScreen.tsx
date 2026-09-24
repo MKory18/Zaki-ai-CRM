@@ -9,7 +9,7 @@ import { Input, Select } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import {
   Globe, Upload, Copy, ExternalLink, ArrowRight, Plus, Trash2, Pencil,
-  Loader2, FileCode, MonitorPlay, Gift,
+  Loader2, FileCode, MonitorPlay, Gift, Gauge,
 } from 'lucide-react';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
@@ -378,20 +378,20 @@ export function LandingPageDetailScreen() {
                     </a>
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-[#f8fafc] rounded-lg p-3">
-                    <p className="text-lg font-bold text-[#1a2232]">{lp.viewsCount}</p>
-                    <p className="text-[11px] text-[#697586]">الزيارات</p>
-                  </div>
-                  <div className="bg-[#f8fafc] rounded-lg p-3">
-                    <p className="text-lg font-bold text-[#1a2232]">{lp.ordersCount}</p>
-                    <p className="text-xs text-[#697586]">الطلبات</p>
-                  </div>
-                  <div className="bg-[#f8fafc] rounded-lg p-3">
-                    <p className="text-lg font-bold text-[#b8256e]">{lp.conversionRate}%</p>
-                    <p className="text-xs text-[#697586]">نسبة التحويل</p>
-                  </div>
-                </div>
+                {/* The numbers are read on the performance screen, where they
+                    sit beside the device, the campaign and a date range. Three
+                    tiles here were the same three numbers with none of that,
+                    and a second place for a number is a second answer. */}
+                <a
+                  href="/growth/performance?tab=landing"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2.5 text-xs text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Gauge className="h-3.5 w-3.5" />
+                    الزيارات والطلبات ونسبة التحويل
+                  </span>
+                  <span className="font-semibold">في لوحة الأداء ←</span>
+                </a>
               </CardContent>
             </Card>
           </div>

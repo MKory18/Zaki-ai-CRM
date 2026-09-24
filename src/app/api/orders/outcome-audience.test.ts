@@ -31,7 +31,11 @@ vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/audit', () => ({ logAudit: vi.fn() }));
 vi.mock('@/lib/notification', () => ({ createNotification: (...a: unknown[]) => createNotification(...a) }));
-vi.mock('@/lib/authorization', () => ({ authorize: () => ({ allowed: true }), can: () => true }));
+vi.mock('@/lib/authorization', () => ({
+  authorize: () => ({ allowed: true }),
+  can: () => true,
+  getPermissionScope: () => ({ scope: 'ALL_COMPANY' }),
+}));
 vi.mock('@/lib/rbac', () => ({
   assertOrderAccess: async () => ({ allowed: true, order: ORDER }),
   orderVisibilityWhere: () => ({}),
@@ -39,12 +43,14 @@ vi.mock('@/lib/rbac', () => ({
 
 import { PATCH } from './[id]/route';
 
-const patch = (body: unknown) =>
+// Company-wide edit scope owes a reason on a substantive edit
+// (src/lib/order-edit-reason.ts); who gets told is what these tests measure.
+const patch = (body: Record<string, unknown>) =>
   PATCH(
     new Request(`http://localhost/api/orders/${ORDER_ID}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ reason: 'قرار المالك بعد مراجعة الطلب', ...body }),
     }),
     { params: Promise.resolve({ id: ORDER_ID }) }
   );

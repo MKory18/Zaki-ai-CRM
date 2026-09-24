@@ -15,7 +15,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * anybody with a terminal still has.
  */
 
-const { db, requireContext, authorize, can, logAudit } = vi.hoisted(() => ({
+const { db, requireContext, authorize, can, getPermissionScope, logAudit } = vi.hoisted(() => ({
   db: {
     order: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     orderChannel: { findFirst: vi.fn() },
@@ -28,6 +28,7 @@ const { db, requireContext, authorize, can, logAudit } = vi.hoisted(() => ({
   requireContext: vi.fn(),
   authorize: vi.fn(),
   can: vi.fn(),
+  getPermissionScope: vi.fn(),
   logAudit: vi.fn(),
 }));
 
@@ -37,6 +38,7 @@ vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) })
 vi.mock('@/lib/authorization', () => ({
   authorize: (...a: unknown[]) => authorize(...a),
   can: (...a: unknown[]) => can(...a),
+  getPermissionScope: (...a: unknown[]) => getPermissionScope(...a),
 }));
 vi.mock('@/lib/rbac', () => ({
   assertOrderAccess: async () => ({ allowed: true, order: ORDER }),
@@ -74,11 +76,19 @@ const patch = (body: unknown) =>
 /** The agent: may edit her own orders, holds neither of the two authorities. */
 function asAgent() {
   can.mockImplementation(() => false);
+  // An agent's orders.edit reaches the orders assigned to her, and no
+  // further — so she is never asked to justify an edit.
+  getPermissionScope.mockImplementation(() => ({ scope: 'ASSIGNED' }));
 }
 /** A manager: holds both. */
 function asManager() {
   can.mockImplementation(() => true);
+  // A manager edits on company-wide authority, which owes a reason.
+  getPermissionScope.mockImplementation(() => ({ scope: 'ALL_COMPANY' }));
 }
+
+/** What a manager must send with a substantive edit; see order-edit-reason.ts. */
+const WHY = { reason: 'تصحيح بعد مكالمة مع العميل' };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -125,13 +135,13 @@ describe('someone who holds the authority', () => {
   beforeEach(asManager);
 
   it('may change the channel', async () => {
-    const res = await patch({ expectedVersion: 3, channelId: CHANNEL_ID });
+    const res = await patch({ expectedVersion: 3, channelId: CHANNEL_ID, ...WHY });
     expect(res.status).not.toBe(403);
     expect(db.orderChannel.findFirst).toHaveBeenCalled();
   });
 
   it('may change the shipping cost', async () => {
-    const res = await patch({ expectedVersion: 3, shippingCost: 7 });
+    const res = await patch({ expectedVersion: 3, shippingCost: 7, ...WHY });
     expect(res.status).not.toBe(403);
   });
 });
@@ -144,7 +154,7 @@ describe('an order whose batch has gone to the courier', () => {
     // somewhere we do not control, so this becomes somebody's decision,
     // not somebody's edit.
     db.shippingBatch.findFirst.mockResolvedValue({ status: 'SHIPPED', batchNumber: 'BATCH-2026-0007' });
-    const res = await patch({ expectedVersion: 3, customerAddress: 'شارع آخر' });
+    const res = await patch({ expectedVersion: 3, customerAddress: 'شارع آخر', ...WHY });
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.code).toBe('ORDER_SEALED');
@@ -160,12 +170,59 @@ describe('an order whose batch has gone to the courier', () => {
 
   it('edits normally while the batch is still open', async () => {
     db.shippingBatch.findFirst.mockResolvedValue({ status: 'READY', batchNumber: 'B' });
-    const res = await patch({ expectedVersion: 3, customerAddress: 'شارع آخر' });
+    const res = await patch({ expectedVersion: 3, customerAddress: 'شارع آخر', ...WHY });
     expect(res.status).not.toBe(409);
   });
 
   it('does not even look for a batch when nothing sealed was asked for', async () => {
     await patch({ expectedVersion: 3, internalNotes: 'x' });
     expect(db.shippingBatch.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * AND THE EDIT THAT HAS TO SAY WHY.
+ *
+ * A manager, an owner or a super admin edits on authority that reaches the
+ * whole company. Until now the audit recorded who changed what and never
+ * why, so a discount raised months ago could not be explained by anybody
+ * still working here. The rule itself is unit-tested in
+ * src/lib/order-edit-reason.test.ts; these are the route's own negatives.
+ */
+describe('an edit on company-wide authority', () => {
+  beforeEach(asManager);
+
+  it('is refused outright when it says nothing', async () => {
+    const res = await patch({ expectedVersion: 3, discountAmount: 40 });
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe('REASON_REQUIRED');
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('is refused when the reason is too short to mean anything', async () => {
+    const res = await patch({ expectedVersion: 3, discountAmount: 40, reason: 'ok' });
+    expect(res.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('goes through once it does', async () => {
+    // That the reason then reaches the audit is asserted in phone-rule.test,
+    // whose harness carries a request all the way to logAudit.
+    const res = await patch({ expectedVersion: 3, discountAmount: 40, ...WHY });
+    expect(res.status).not.toBe(400);
+  });
+
+  it('asks nothing for a note — a reason demanded for everything is read by nobody', async () => {
+    const res = await patch({ expectedVersion: 3, internalNotes: 'اتصل الزبون' });
+    expect(res.status).not.toBe(400);
+  });
+});
+
+describe('an edit within an agent’s own scope', () => {
+  beforeEach(asAgent);
+
+  it('is never interrogated — the desk would stop working', async () => {
+    const res = await patch({ expectedVersion: 3, customerAddress: 'شارع آخر' });
+    expect(res.status).not.toBe(400);
   });
 });
