@@ -113,11 +113,15 @@ export function UserGeoAccessSection({ userId, canEdit }: { userId: string; canE
           <div className="space-y-2">
             {countries.map((c) => {
               const on = picked.countryIds.has(c.id);
+              const allStores = on && !c.stores.some((s) => picked.storeIds.has(s.id));
               return (
                 <div key={c.id} className={`rounded-lg border p-2.5 ${on ? 'border-[#c9e8d5] bg-[#f6fcf8]' : 'border-[#e3e8ef]'}`}>
                   <label className="flex items-center gap-2 text-xs font-bold text-[#121926]">
                     <input type="checkbox" checked={on} disabled={!canEdit} onChange={() => toggleCountry(c)} />
                     {c.name}
+                    {allStores && c.stores.length > 0 && (
+                      <span className="rounded-full bg-[#e6f9ee] px-2 py-0.5 text-[10px] font-semibold text-[#00a651]">كل متاجره</span>
+                    )}
                   </label>
                   {c.stores.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 ps-6">

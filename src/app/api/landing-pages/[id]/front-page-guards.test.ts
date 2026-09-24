@@ -93,4 +93,19 @@ describe('a page\'s domain', () => {
     expect(res.status).toBe(409);
     expect(db.landingPage.update).not.toHaveBeenCalled();
   });
+
+  it('is refused while another page holds the same slug — the host would answer with the older one', async () => {
+    front = null;
+    db.landingPage.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      where.id === 'lp1'
+        ? { id: 'lp1', companyId: 'c1', storeId: 's1', domain: null, slug: 'p' }
+        : where.slug === 'p' ? { id: 'legacy-page' } : null
+    );
+    const res = await patch({ domain: 'page.example.com' });
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toContain('slug');
+    expect(db.landingPage.update).not.toHaveBeenCalled();
+    // Renamed in the same save, it is free.
+    expect((await patch({ slug: 'p-new', domain: 'page.example.com' })).status).toBe(200);
+  });
 });

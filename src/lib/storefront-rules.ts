@@ -17,6 +17,12 @@ import { db } from './db';
 export interface StorefrontFacts {
   type: string;
   status: string;
+  /**
+   * Another store — of any company — holds the same slug. Stores from before
+   * slugs were unique everywhere share 'main'; the address answers with the
+   * oldest open one, so opening either sends one store's visitors to the other.
+   */
+  slugShared: boolean;
   /** ACTIVE products of THIS store with a price — what a catalogue would list. */
   sellableProducts: number;
   /** The Single Product store's front page, when one is picked. */
@@ -26,6 +32,7 @@ export interface StorefrontFacts {
 /** Why this store may not open, or null when it may. */
 export function openRefusal(f: StorefrontFacts): string | null {
   if (f.status !== 'ACTIVE') return 'المتجر نفسه موقوف — فعّله من «البلدان والمتاجر» أولاً';
+  if (f.slugShared) return 'رابط هذا المتجر (slug) مستخدم لمتجر آخر — غيّره من «البلدان والمتاجر» ثم افتح المتجر';
   if (f.type === 'SINGLE_PRODUCT' && f.frontPage) {
     if (!f.frontPage.isPublished) return 'صفحة واجهة المتجر غير منشورة — انشرها أولاً، وإلا فتح الرابط صفحة غير موجودة';
     if (!f.frontPage.productActive) return 'منتج صفحة الواجهة غير فعّال — لا شيء يُباع فيها';
@@ -48,11 +55,20 @@ export function openWarnings(store: { supportPhone: string | null; type?: string
   ];
 }
 
+type StoreAsItWouldBe = {
+  id: string;
+  companyId: string;
+  slug: string;
+  type: string;
+  status: string;
+  landingPageId: string | null;
+};
+
 /** The facts, read from the database, for one store as it would be. */
-export async function storefrontFacts(
-  store: { id: string; companyId: string; type: string; status: string; landingPageId: string | null }
-): Promise<StorefrontFacts> {
-  const [sellableProducts, page] = await Promise.all([
+export async function storefrontFacts(store: StoreAsItWouldBe): Promise<StorefrontFacts> {
+  const [shared, sellableProducts, page] = await Promise.all([
+    // Across companies on purpose: the public address has one namespace.
+    db.store.findFirst({ where: { slug: store.slug, id: { not: store.id } }, select: { id: true } }),
     db.product.count({
       where: { companyId: store.companyId, storeId: store.id, status: 'ACTIVE', basePrice: { gt: 0 } },
     }),
@@ -66,14 +82,13 @@ export async function storefrontFacts(
   return {
     type: store.type,
     status: store.status,
+    slugShared: shared !== null,
     sellableProducts,
     frontPage: page ? { isPublished: page.isPublished, productActive: page.product?.status === 'ACTIVE' } : null,
   };
 }
 
 /** The refusal for opening this store, read fresh. */
-export async function refusalToOpen(
-  store: { id: string; companyId: string; type: string; status: string; landingPageId: string | null }
-): Promise<string | null> {
+export async function refusalToOpen(store: StoreAsItWouldBe): Promise<string | null> {
   return openRefusal(await storefrontFacts(store));
 }

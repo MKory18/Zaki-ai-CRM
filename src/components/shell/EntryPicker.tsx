@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Globe, Loader2, Plus, Store } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { storeTypeLabel } from '@/lib/store-types';
-import { CURRENCIES, minorUnitFor } from '@/lib/currencies';
+import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from '@/components/ui/CurrencyPicker';
 
 /**
  * Two explicit steps: country, then store. The server decides what is
@@ -252,7 +252,8 @@ function Error({ message }: { message: string }) {
 }
 
 function AddCountryForm({ open, onOpen, onDone }: { open: boolean; onOpen: () => void; onDone: () => void }) {
-  const [form, setForm] = useState({ code: '', name: '', currencyCode: '' });
+  const [form, setForm] = useState({ code: '', name: '' });
+  const [currency, setCurrency] = useState<CurrencyChoice>({ code: '', minorUnit: null });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -272,19 +273,16 @@ function AddCountryForm({ open, onOpen, onDone }: { open: boolean; onOpen: () =>
     setBusy(true);
     setError(null);
     try {
-      const currency = form.currencyCode.trim().toUpperCase();
       await apiJson('/api/geo/countries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code: form.code.trim().toUpperCase(),
           name: form.name.trim(),
-          currencyCode: currency,
-          // The currency's official decimals, from the one list the country
-          // panel uses too — this form kept its own short table, and a Libyan
-          // or Tunisian country came out with two decimals instead of three.
-          // Correctable in «البلدان والمتاجر» until the first order.
-          minorUnit: minorUnitFor(currency) ?? 2,
+          currencyCode: currency.code.trim().toUpperCase(),
+          // The same control as «البلدان والمتاجر»: a listed currency brings
+          // its official decimals, any other asks for them — never a silent 2.
+          minorUnit: currency.minorUnit,
         }),
       });
       onDone();
@@ -299,26 +297,11 @@ function AddCountryForm({ open, onOpen, onDone }: { open: boolean; onOpen: () =>
     <form onSubmit={submit} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
       {error && <Error message={error} />}
       <Field label="اسم البلد" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="سوريا" />
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="الرمز (ISO)" value={form.code} onChange={(v) => setForm({ ...form, code: v })} placeholder="SY" dir="ltr" />
-        <label className="block text-xs font-medium text-[#364152]">
-          العملة
-          <select
-            required
-            value={form.currencyCode}
-            onChange={(e) => setForm({ ...form, currencyCode: e.target.value })}
-            className="mt-1 block h-10 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-2 text-sm"
-          >
-            <option value="">— اختر —</option>
-            {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>{c.ar} ({c.code})</option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <Field label="الرمز (ISO)" value={form.code} onChange={(v) => setForm({ ...form, code: v })} placeholder="SY" dir="ltr" />
+      <CurrencyPicker value={currency} onChange={setCurrency} />
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || !currencyChoiceReady(currency)}
         className="w-full py-2 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-60"
       >
         {busy ? 'جارٍ الحفظ…' : 'إضافة البلد'}

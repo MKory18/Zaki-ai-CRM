@@ -74,3 +74,21 @@ export function codForOrder(params: {
     addOns: (params.addOns ?? []).map((a) => ({ quantity: a.quantity, unitPrice: Number(a.price) })),
   });
 }
+
+/**
+ * Whether an order's price already contains delivery — ONE rule for every
+ * door (direct, landing page, storefront, Telegram).
+ *
+ * It is the STORE's pricing policy; an offer may turn it on for its own
+ * bundle. It used to be applied to direct orders only, so a store that
+ * advertises delivery-inclusive prices had its landing-page and Telegram
+ * orders collected as price + fee.
+ */
+export async function priceIncludesDeliveryFor(
+  storeId: string,
+  offerDeliveryIncluded?: boolean | null
+): Promise<boolean> {
+  if (offerDeliveryIncluded === true) return true;
+  const store = await db.store.findFirst({ where: { id: storeId }, select: { priceIncludesDelivery: true } });
+  return store?.priceIncludesDelivery === true;
+}

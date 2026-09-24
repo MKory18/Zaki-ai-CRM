@@ -11,6 +11,7 @@ import { openRefusal, openWarnings, type StorefrontFacts } from './storefront-ru
 const facts = (over: Partial<StorefrontFacts>): StorefrontFacts => ({
   type: 'MULTI_PRODUCT',
   status: 'ACTIVE',
+  slugShared: false,
   sellableProducts: 3,
   frontPage: null,
   ...over,
@@ -56,5 +57,14 @@ describe('any store', () => {
   it('a missing support phone is a warning, not a refusal', () => {
     expect(openWarnings({ supportPhone: null })).toEqual(['لا رقم دعم للزبون']);
     expect(openWarnings({ supportPhone: '0790000000' })).toEqual([]);
+  });
+});
+
+describe('an address another store also holds', () => {
+  it('is refused for either type, however ready the store is', () => {
+    expect(openRefusal(facts({ slugShared: true }))).toContain('slug');
+    expect(
+      openRefusal(facts({ type: 'SINGLE_PRODUCT', slugShared: true, frontPage: { isPublished: true, productActive: true } }))
+    ).toContain('slug');
   });
 });

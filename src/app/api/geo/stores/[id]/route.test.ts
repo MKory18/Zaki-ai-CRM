@@ -55,6 +55,17 @@ describe('opening from the panel', () => {
     expect((await patch({ storefrontEnabled: true })).status).toBe(200);
   });
 
+  it('refuses a store whose slug another store holds — checked for the slug it will have', async () => {
+    db.product.count.mockResolvedValue(2);
+    db.store.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      where.id === ID ? before : where.slug === 'main' ? { id: 'legacy' } : null
+    );
+    before.slug = 'main';
+    expect((await patch({ storefrontEnabled: true })).status).toBe(400);
+    // Renamed in the same save, it opens.
+    expect((await patch({ storefrontEnabled: true, slug: 'my-shop' })).status).toBe(200);
+  });
+
   it('closing and pausing are never refused', async () => {
     before.storefrontEnabled = true;
     expect((await patch({ storefrontEnabled: false })).status).toBe(200);

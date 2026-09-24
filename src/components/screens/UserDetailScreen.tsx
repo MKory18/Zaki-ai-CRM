@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { UserGeoAccessSection, UserPhoneField } from '@/components/screens/users/UserAccessSections';
+import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { format } from 'date-fns';
 import {
   User as UserIcon,
@@ -38,6 +39,9 @@ import {
   Search,
   X,
 } from 'lucide-react';
+
+/** A role picked by name (the fallback list), not by its row id. */
+const BY_NAME = 'name:';
 
 export function UserDetailScreen() {
   const { locale, isRtl, currentUser } = useApp();
@@ -140,7 +144,13 @@ export function UserDetailScreen() {
       const res = await fetch(`/api/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'assignRole', roleId: selectedRoleId }),
+        // A named role (the fallback list) goes by name; the server points
+        // roleId at the company's role of that name and checks what it grants.
+        body: JSON.stringify(
+          selectedRoleId.startsWith(BY_NAME)
+            ? { action: 'assignRole', role: selectedRoleId.slice(BY_NAME.length) }
+            : { action: 'assignRole', roleId: selectedRoleId }
+        ),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -233,7 +243,7 @@ export function UserDetailScreen() {
                   </p>
                 )}
               </div>
-              {canAssignRole && roles.length > 0 && (
+              {canAssignRole && (
                 <>
                   <div className="flex-1 max-w-xs">
                     <Select
@@ -242,10 +252,18 @@ export function UserDetailScreen() {
                       onChange={(e) => setSelectedRoleId(e.target.value)}
                       options={[
                         { value: '', label: ar ? '— اختر دورًا —' : '— Pick a role —' },
-                        ...roles.map((r) => ({
-                          value: r.id,
-                          label: `${r.name}${r.isSystem ? (ar ? ' (نظامي)' : ' (system)') : ''}`,
-                        })),
+                        // The roles list needs roles.view. Without it the
+                        // page still offers the named roles — the list's own
+                        // role editor, which this page replaced.
+                        ...(roles.length > 0
+                          ? roles.map((r) => ({
+                              value: r.id,
+                              label: `${r.name}${r.isSystem ? (ar ? ' (نظامي)' : ' (system)') : ''}`,
+                            }))
+                          : ASSIGNABLE_ROLES.map((name) => ({
+                              value: `${BY_NAME}${name}`,
+                              label: ar ? ROLE_LABELS[name].ar : ROLE_LABELS[name].en,
+                            }))),
                       ]}
                     />
                   </div>

@@ -16,9 +16,14 @@ import {
 import { screenApi as crmApi, qs } from '@/lib/screen-api';
 import { formatDate } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
+import { useApp } from '@/context/AppContext';
+import { userCan } from '@/lib/can';
 
 export function LandingPagesScreen() {
   const tell = useTell();
+  const { currentUser } = useApp();
+  // The performance screen's own gate — a link that opens onto a refusal is noise.
+  const canAnalytics = userCan(currentUser, 'reports.view') || userCan(currentUser, 'analytics.view');
   const [pages, setPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   /** What just happened, said on the screen — not in a browser alert box. */
@@ -135,9 +140,11 @@ export function LandingPagesScreen() {
             </p>
             {/* The numbers in this list are lifetime totals; a period, by
                 device and by campaign, is read on the performance screen. */}
-            <a href="/growth/performance?tab=landing" className="mt-1 inline-block text-xs font-semibold text-[#b8256e] hover:underline">
-              تحليلات الصفحات حسب الفترة والجهاز والحملة ←
-            </a>
+            {canAnalytics && (
+              <a href="/growth/performance?tab=landing" className="mt-1 inline-block text-xs font-semibold text-[#b8256e] hover:underline">
+                تحليلات الصفحات حسب الفترة والجهاز والحملة ←
+              </a>
+            )}
           </div>
           <Button onClick={() => { setForm({ name: '', slug: '', productId: '', template: 'classic' }); setFormError(null); setCreateOpen(true); }}>
             <Plus className="w-4 h-4" /> صفحة جديدة

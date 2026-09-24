@@ -12,6 +12,7 @@
  * Reuses normalizeArabic() from the existing free-text order parser so
  * Arabic normalization stays consistent across the codebase.
  */
+import { toLatinDigits } from '../latin-digits';
 import { normalizeArabic } from '../order-parser';
 
 export interface ParsedTelegramOrder {
@@ -33,13 +34,6 @@ export interface ParsedTelegramOrder {
 }
 
 const MAX_TEXT_LENGTH = 4000;
-
-/** Convert Arabic-Indic digits to ASCII. */
-function toLatinDigits(s: string): string {
-  return s
-    .replace(/[\u0660-\u0669]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30))
-    .replace(/[\u06f0-\u06f9]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x06f0 + 0x30));
-}
 
 /** Find the first plausible phone number in text (Syrian/Egyptian/Gulf friendly). */
 export function extractPhone(text: string): string | null {

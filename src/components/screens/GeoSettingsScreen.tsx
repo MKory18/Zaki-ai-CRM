@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Globe, Loader2, Plus, Store } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
-import { CURRENCIES, currencyLabel, minorUnitFor } from '@/lib/currencies';
+import { currencyLabel } from '@/lib/currencies';
+import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from '@/components/ui/CurrencyPicker';
 import { StorefrontSettings } from '@/components/settings/StorefrontSettings';
 import { STORE_TYPE_LABEL, storeTypeLabel } from '@/lib/store-types';
 
@@ -362,33 +363,13 @@ function Regions({ countryId }: { countryId: string }) {
 }
 
 function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => void }) {
-  const [form, setForm] = useState({ code: '', name: '', currencyCode: '', minorUnit: '' });
-  const [other, setOther] = useState(false);
+  const [form, setForm] = useState({ code: '', name: '' });
+  const [currency, setCurrency] = useState<CurrencyChoice>({ code: '', minorUnit: null });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  /**
-   * Choosing the currency sets its decimals. They were two separate boxes
-   * with the decimals starting at 2, so a JOD country left at the default
-   * rounded every amount it ever touched to the wrong unit.
-   */
-  function pickCurrency(code: string) {
-    if (code === '__other') {
-      setOther(true);
-      setForm({ ...form, currencyCode: '', minorUnit: '' });
-      return;
-    }
-    setOther(false);
-    const minor = minorUnitFor(code);
-    setForm({ ...form, currencyCode: code, minorUnit: minor === null ? '' : String(minor) });
-  }
-
-  // Both are required by the server; the button says so before it does.
-  const ready =
-    form.name.trim().length >= 2 &&
-    /^[A-Za-z]{2}$/.test(form.code.trim()) &&
-    /^[A-Za-z]{3}$/.test(form.currencyCode.trim()) &&
-    form.minorUnit !== '';
+  // All are required by the server; the button says so before it does.
+  const ready = form.name.trim().length >= 2 && /^[A-Za-z]{2}$/.test(form.code.trim()) && currencyChoiceReady(currency);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,8 +383,8 @@ function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => 
         body: JSON.stringify({
           code: form.code.trim().toUpperCase(),
           name: form.name.trim(),
-          currencyCode: form.currencyCode.trim().toUpperCase(),
-          minorUnit: Number(form.minorUnit),
+          currencyCode: currency.code.trim().toUpperCase(),
+          minorUnit: currency.minorUnit,
         }),
       });
       onDone();
@@ -414,76 +395,13 @@ function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => 
     }
   };
 
-  const official = minorUnitFor(form.currencyCode);
-
   return (
     <form onSubmit={submit} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 grid gap-3 md:grid-cols-4">
       {error && <p className="md:col-span-4 text-sm text-[#fb323f]">{error}</p>}
       <Input label="الاسم" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
       <Input label="الرمز (حرفان)" value={form.code} onChange={(v) => setForm({ ...form, code: v })} dir="ltr" />
 
-      <label className="block">
-        <span className="block text-xs font-medium text-[#364152] mb-1">
-          العملة <span className="text-[#fb323f]">*</span>
-        </span>
-        <select
-          required
-          value={other ? '__other' : form.currencyCode}
-          onChange={(e) => pickCurrency(e.target.value)}
-          className={SELECT}
-        >
-          <option value="" disabled>
-            اختر العملة
-          </option>
-          {CURRENCIES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.ar} ({c.code})
-            </option>
-          ))}
-          <option value="__other">عملة أخرى…</option>
-        </select>
-        {other && (
-          <input
-            autoFocus
-            required
-            dir="ltr"
-            maxLength={3}
-            placeholder="ISO — مثل GBP"
-            value={form.currencyCode}
-            onChange={(e) => setForm({ ...form, currencyCode: e.target.value.toUpperCase() })}
-            className={`${SELECT} mt-2`}
-          />
-        )}
-      </label>
-
-      <label className="block">
-        <span className="block text-xs font-medium text-[#364152] mb-1">
-          الخانات العشرية <span className="text-[#fb323f]">*</span>
-        </span>
-        <select
-          required
-          value={form.minorUnit}
-          onChange={(e) => setForm({ ...form, minorUnit: e.target.value })}
-          className={SELECT}
-        >
-          <option value="" disabled>
-            —
-          </option>
-          {[0, 1, 2, 3, 4].map((n) => (
-            <option key={n} value={n}>
-              {n}
-              {official === n ? ' — الرسمي' : ''}
-            </option>
-          ))}
-        </select>
-        {/* Said when it differs, because this number decides how every
-            amount in the country is rounded. */}
-        {official !== null && form.minorUnit !== '' && Number(form.minorUnit) !== official && (
-          <span className="mt-1 block text-[11px] text-[#c07f2a]">
-            الرسمي لـ {form.currencyCode} هو {official} — كل مبلغ في هذا البلد سيُقرَّب على ما تختاره.
-          </span>
-        )}
-      </label>
+      <CurrencyPicker value={currency} onChange={setCurrency} className="md:col-span-2" />
 
       <div className="md:col-span-4 flex gap-2">
         <button
@@ -500,9 +418,6 @@ function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => 
     </form>
   );
 }
-
-const SELECT =
-  'w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]';
 
 function AddStore({
   countryId,
@@ -656,9 +571,9 @@ function CurrencyField({
   orders: number;
   onSave: (code: string, minorUnit: number) => void;
 }) {
-  const [draft, setDraft] = useState({ code, minorUnit });
+  const [draft, setDraft] = useState<CurrencyChoice>({ code, minorUnit });
   useEffect(() => setDraft({ code, minorUnit }), [code, minorUnit]);
-  const changed = draft.code !== code || draft.minorUnit !== minorUnit;
+  const changed = draft.code.trim().toUpperCase() !== code || draft.minorUnit !== minorUnit;
 
   if (orders > 0) {
     return (
@@ -669,35 +584,13 @@ function CurrencyField({
     );
   }
   return (
-    <div className="md:col-span-2 flex flex-wrap items-end gap-2">
-      <label className="min-w-[200px] flex-1 text-xs font-medium text-[#364152]">
-        العملة
-        <select
-          value={draft.code}
-          onChange={(e) => setDraft({ code: e.target.value, minorUnit: minorUnitFor(e.target.value) ?? draft.minorUnit })}
-          className="mt-1 block h-9 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-2 text-sm"
-        >
-          {!CURRENCIES.some((x) => x.code === code) && <option value={code}>{code}</option>}
-          {CURRENCIES.map((x) => (
-            <option key={x.code} value={x.code}>{x.ar} ({x.code})</option>
-          ))}
-        </select>
-      </label>
-      <label className="w-28 text-xs font-medium text-[#364152]">
-        الخانات العشرية
-        <select
-          value={draft.minorUnit}
-          onChange={(e) => setDraft({ ...draft, minorUnit: Number(e.target.value) })}
-          className="mt-1 block h-9 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-2 text-sm"
-        >
-          {[0, 1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
-        </select>
-      </label>
+    <div className="md:col-span-2 flex flex-wrap items-start gap-2">
+      <CurrencyPicker value={draft} onChange={setDraft} className="min-w-[260px] flex-1" />
       <button
         type="button"
-        disabled={!changed}
-        onClick={() => onSave(draft.code, draft.minorUnit)}
-        className="h-9 rounded-[8px] bg-[#b8256e] px-3 text-xs font-bold text-white disabled:opacity-40"
+        disabled={!changed || !currencyChoiceReady(draft)}
+        onClick={() => onSave(draft.code.trim().toUpperCase(), draft.minorUnit as number)}
+        className="mt-5 h-10 rounded-[8px] bg-[#b8256e] px-3 text-xs font-bold text-white disabled:opacity-40"
       >
         حفظ العملة
       </button>

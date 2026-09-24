@@ -29,6 +29,8 @@ const { db, requireContext, assertOrderAccess, can, createNotification } = vi.ho
     user: { findUnique: vi.fn(), findMany: vi.fn() },
     region: { findMany: vi.fn() },
     offer: { findMany: vi.fn() },
+    // The store's pricing policy, asked by every order door.
+    store: { findFirst: vi.fn(async () => ({ priceIncludesDelivery: false })) },
     landingPageRecommendation: { findMany: vi.fn() },
     $transaction: vi.fn(),
   };

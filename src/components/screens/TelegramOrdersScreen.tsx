@@ -125,9 +125,11 @@ export function TelegramOrdersScreen() {
             <p className="text-xs text-[#697586] mt-1">تحويل رسائل مجموعات تيليجرام إلى طلبات تلقائيًا</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/settings/telegram">
-              <Button variant="outline" size="sm"><Settings className="w-4 h-4 ml-1" /> الإعدادات</Button>
-            </Link>
+            {canManage && (
+              <Link href="/settings/telegram">
+                <Button variant="outline" size="sm"><Settings className="w-4 h-4 ml-1" /> الإعدادات</Button>
+              </Link>
+            )}
             <Button variant="ghost" size="sm" onClick={() => loadAll()}><RefreshCw className="w-4 h-4" /></Button>
           </div>
         </div>
@@ -155,7 +157,9 @@ export function TelegramOrdersScreen() {
             <div className="text-xs text-[#697586]">المصادر المرتبطة: <span className="font-semibold text-[#121926]">{status?.sourcesCount ?? 0}</span></div>
             {/* Adding, switching and removing groups is configuration — it
                 lives on the settings screen, beside the bot it depends on. */}
-            <Link href="/settings/telegram" className="text-xs text-[#b8256e] hover:underline mr-auto">الاتصال والمجموعات المرتبطة ←</Link>
+            {canManage && (
+              <Link href="/settings/telegram" className="text-xs text-[#b8256e] hover:underline mr-auto">الاتصال والمجموعات المرتبطة ←</Link>
+            )}
           </CardContent>
         </Card>
 

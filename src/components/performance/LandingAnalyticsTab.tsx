@@ -55,8 +55,9 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
   }
 
   // Views began to be counted by day on the day this shipped. A window that
-  // reaches back further shows its orders but not the views behind them.
-  const partial = !data.countingSince || (from && data.countingSince > from);
+  // reaches back further — or has no start at all — shows its orders but not
+  // the views behind them.
+  const partial = !data.countingSince || !from || data.countingSince > from;
 
   return (
     <div className="space-y-4" dir="rtl">

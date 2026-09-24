@@ -1,3 +1,4 @@
+import { priceIncludesDeliveryFor } from './delivery-fees';
 import { db } from './db';
 import { findOrCreateCustomer } from './customer-identity';
 import { normalizePhoneNumber } from './phone';
@@ -132,10 +133,10 @@ export async function createPublicOrder(
   const productOffers = await db.offer.findMany({
     where: { companyId, productId: product.id, status: 'ACTIVE' },
     orderBy: [{ sortOrder: 'asc' }, { quantity: 'asc' }],
-    select: { id: true, name: true, quantity: true, freeQuantity: true, sellingPrice: true },
+    select: { id: true, name: true, quantity: true, freeQuantity: true, sellingPrice: true, deliveryIncluded: true },
   });
 
-  let offer: { id: string; name: string; quantity: number; freeQuantity: number; price: number } | null = null;
+  let offer: { id: string; name: string; quantity: number; freeQuantity: number; price: number; deliveryIncluded: boolean } | null = null;
   if (v.offerId) {
     const found = productOffers.find((o) => o.id === v.offerId);
     if (!found) {
@@ -204,6 +205,9 @@ export async function createPublicOrder(
   });
   const totalAmount = money.cod;
 
+  // The store's pricing policy — the same rule a direct order follows.
+  const priceIncludesDelivery = await priceIncludesDeliveryFor(store.id, offer?.deliveryIncluded);
+
   // The door, as the order channels name it — so the channel table on the
   // performance screen and the landing-page tab count the same orders. New
   // public orders carried no channel at all, and only the historical ones
@@ -253,6 +257,7 @@ export async function createPublicOrder(
             campaignId: surface.campaignId,
             channelId: channel?.id ?? null,
             deviceClass: surface.deviceClass ?? null,
+            priceIncludesDelivery,
             offerId: offer?.id ?? null,
             customerNotes: v.notes || null,
             internalNotes: null,

@@ -122,7 +122,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
       data.slug = parsed.data.slug;
     }
     if (parsed.data.productId !== undefined) {
-      if (parsed.data.productId) {
+      // Checked when it CHANGES: the editor sends the whole form, and a page
+      // bound before this rule would otherwise be unable to save anything.
+      if (parsed.data.productId && parsed.data.productId !== lp.productId) {
         // THIS store's product. A page in one store selling another store's
         // product booked the order against the wrong shop's stock.
         const product = await db.product.findFirst({ where: { id: parsed.data.productId, companyId, storeId: lp.storeId } });
@@ -145,12 +147,23 @@ export async function PATCH(req: Request, ctx: Ctx) {
         // saying which company holds it would leak who our customers are.
         // Checked against STORES too: the proxy answers a landing page first,
         // so a page claiming a store's host silently took the store over.
-        const [taken, store] = await Promise.all([
+        // And the host answers with /lp/<slug>: a slug another page also
+        // holds (from before slugs were unique everywhere) would show the
+        // older of the two — perhaps another company's — at this domain.
+        const slug = typeof data.slug === 'string' ? data.slug : lp.slug;
+        const [taken, store, sharedSlug] = await Promise.all([
           db.landingPage.findFirst({ where: { domain: check.domain, id: { not: lp.id } }, select: { id: true } }),
           db.store.findFirst({ where: { domain: check.domain }, select: { id: true } }),
+          db.landingPage.findFirst({ where: { slug, id: { not: lp.id } }, select: { id: true } }),
         ]);
         if (taken || store) {
           return NextResponse.json({ error: 'هذا النطاق مستخدم بالفعل' }, { status: 409 });
+        }
+        if (sharedSlug) {
+          return NextResponse.json(
+            { error: 'رابط هذه الصفحة (slug) مستخدم في صفحة أخرى — غيّره أولاً ثم اربط النطاق' },
+            { status: 409 }
+          );
         }
         data.domain = check.domain;
       }

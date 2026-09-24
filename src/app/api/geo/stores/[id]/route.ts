@@ -65,6 +65,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const after = {
       id: before.id,
       companyId,
+      slug: parsed.data.slug ?? before.slug,
       type,
       status: parsed.data.status ?? before.status,
       landingPageId: type === 'SINGLE_PRODUCT' ? before.landingPageId : null,

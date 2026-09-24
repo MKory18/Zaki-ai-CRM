@@ -1,3 +1,4 @@
+import { toLatinDigits } from '@/lib/latin-digits';
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import crypto from 'crypto';
@@ -107,14 +108,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (target.id === admin.id && role !== admin.role) {
           return NextResponse.json({ error: 'لا يمكنك تغيير دورك الشخصي' }, { status: 400 });
         }
-        // Conferral policy for the legacy string: it resolves to the canonical
-        // legacy matrix (granter-must-hold, fail-closed for unknown names).
-        // PENDING_USER confers nothing and stays always allowed.
-        const conferral = await canConferRole(admin, { name: role as string });
-        if (!conferral.ok) {
-          return NextResponse.json({ error: conferral.error }, { status: conferral.status });
-        }
-        updateData.role = role;
         // Grants resolve by roleId when one is set, so changing only the
         // string left the badge saying one role and the permissions being
         // another's. Point roleId at the role of that name — the company's
@@ -128,6 +121,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           orderBy: { companyId: 'asc' },
           select: { id: true },
         });
+        // Conferral policy, checked against what is really granted: the role
+        // row the user will point at — a company may have widened its own
+        // role of this name — or, without one, the legacy matrix (fail-closed
+        // for unknown names; PENDING_USER confers nothing).
+        const conferral = await canConferRole(admin, { id: named?.id ?? null, name: role as string });
+        if (!conferral.ok) {
+          return NextResponse.json({ error: conferral.error }, { status: conferral.status });
+        }
+        updateData.role = role;
         updateData.roleId = named?.id ?? null;
         updateData.permissionsVersion = { increment: 1 };
       }
@@ -181,7 +183,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     } else if (action === 'updateContact') {
       // The employee's phone, on their own page. It could be set only when
       // the account was created, with no way to correct it afterwards.
-      const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+      // Typed on an Arabic keyboard the digits are ٠-٩; stored as 0-9.
+      const phone = typeof body.phone === 'string' ? toLatinDigits(body.phone).trim() : '';
       if (phone && !/^\+?[\d\s()-]{6,24}$/.test(phone)) {
         return NextResponse.json({ error: 'رقم الهاتف غير صالح — أرقام فقط، ويمكن أن يبدأ بـ +' }, { status: 400 });
       }

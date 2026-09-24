@@ -36,6 +36,12 @@ describe('what counts as a visit', () => {
     }
   });
 
+  it('counts a Cubot phone — the maker is not a robot, though its name ends in "bot"', () => {
+    expect(deviceClassOf('Mozilla/5.0 (Linux; Android 12; CUBOT KINGKONG 7) Chrome/120 Mobile Safari/537.36')).toBe('mobile');
+    // A real bot on the same handset string is still a bot.
+    expect(deviceClassOf('CUBOT Android Googlebot/2.1')).toBeNull();
+  });
+
   it('adds one to the day\'s row atomically — two visitors at once both count', async () => {
     db.$executeRaw.mockResolvedValue(1);
     await recordLandingView({ companyId: 'c1', storeId: 's1', landingPageId: 'lp1', campaignId: null, device: 'mobile', at: new Date(2026, 8, 25, 23, 30) });

@@ -8,9 +8,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * grants were another's. And the phone, set at creation, had no editor.
  */
 
-const { db, logAudit } = vi.hoisted(() => ({
+const { db, logAudit, canConferRole } = vi.hoisted(() => ({
   db: { user: { findUnique: vi.fn(), update: vi.fn() }, role: { findFirst: vi.fn() } },
   logAudit: vi.fn(),
+  canConferRole: vi.fn(),
 }));
 
 vi.mock('@/lib/db', () => ({ db }));
@@ -19,7 +20,7 @@ vi.mock('@/lib/auth', () => ({ hashPassword: vi.fn() }));
 vi.mock('@/lib/authorization', () => ({
   requirePermission: async () => ({ id: 'admin', name: 'مدير', role: 'COMPANY_ADMIN', companyId: 'c1' }),
 }));
-vi.mock('@/lib/user-permissions', () => ({ canConferRole: async () => ({ ok: true }) }));
+vi.mock('@/lib/user-permissions', () => ({ canConferRole: (...a: unknown[]) => canConferRole(...a) }));
 
 import { PATCH } from './route';
 
@@ -28,6 +29,7 @@ const patch = (body: unknown) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  canConferRole.mockResolvedValue({ ok: true });
   db.user.findUnique.mockResolvedValue({
     id: 'u2', name: 'سارة', email: 's@x.com', role: 'CONFIRMATION_AGENT', roleId: 'role-agent',
     status: 'ACTIVE', companyId: 'c1', phone: null, assignedBy: null,
@@ -45,6 +47,24 @@ describe('changing the role by name', () => {
     const data = db.user.update.mock.calls[0][0].data;
     expect(data).toMatchObject({ role: 'CONFIRMATION_SUPERVISOR', roleId: 'role-supervisor' });
     expect(data.permissionsVersion).toEqual({ increment: 1 });
+  });
+
+  it('asks the conferral policy about the role row it will point at, not just the name', async () => {
+    db.role.findFirst.mockResolvedValue({ id: 'role-supervisor' });
+    await patch({ action: 'assignRole', role: 'CONFIRMATION_SUPERVISOR' });
+    expect(canConferRole).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'admin' }),
+      { id: 'role-supervisor', name: 'CONFIRMATION_SUPERVISOR' }
+    );
+  });
+
+  it('refuses a role whose grants the admin does not hold — nothing is written', async () => {
+    // The company widened its own role of this name beyond the admin.
+    db.role.findFirst.mockResolvedValue({ id: 'role-widened' });
+    canConferRole.mockResolvedValue({ ok: false, error: 'لا تملك هذه الصلاحيات', status: 403 });
+    const res = await patch({ action: 'assignRole', role: 'CONFIRMATION_SUPERVISOR' });
+    expect(res.status).toBe(403);
+    expect(db.user.update).not.toHaveBeenCalled();
   });
 
   it('looks only in the admin\'s company and the system roles', async () => {
@@ -66,6 +86,12 @@ describe('the phone', () => {
       previousData: expect.objectContaining({ phone: null }),
       newData: expect.objectContaining({ phone: '+962 79 123 4567' }),
     }));
+  });
+
+  it('accepts the digits of an Arabic keyboard, and stores them as 0-9', async () => {
+    const res = await patch({ action: 'updateContact', phone: '٠٧٩١٢٣٤٥٦٧' });
+    expect(res.status).toBe(200);
+    expect(db.user.update.mock.calls[0][0].data).toEqual({ phone: '0791234567' });
   });
 
   it('is cleared by an empty value', async () => {

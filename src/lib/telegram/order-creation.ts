@@ -10,6 +10,8 @@
  * The Telegram caller can NEVER influence price, status, total, or
  * companyId — only the extracted quantity/notes, already validated.
  */
+import { toLatinDigits } from '../latin-digits';
+import { priceIncludesDeliveryFor } from '../delivery-fees';
 import { db } from '../db';
 import { notify } from '../notify';
 import { logAudit } from '../audit';
@@ -53,9 +55,7 @@ const MAX_UNIT_PRICE = 100_000;
  */
 export function parseAdvertisedPrice(priceText: string | undefined | null): number | null {
   if (!priceText || !priceText.trim()) return null;
-  const t = priceText
-    .replace(/[\u0660-\u0669]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30))
-    .replace(/[\u06f0-\u06f9]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x06f0 + 0x30));
+  const t = toLatinDigits(priceText);
   // Negative prices are invalid (reject before the digits match)
   if (/(?:^|\s)[-–—]\s*\d/.test(t)) return null;
   const m = t.match(/\d+(?:[.,]\d{1,2})?/);
@@ -138,6 +138,8 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   try {
     // The delivery fee is keyed on the region, so bind it at intake.
     const resolvedRegionId = await resolveRegionId(db, store.countryId, input.governorate ?? address);
+    // The store's pricing policy — the same rule every other door follows.
+    const priceIncludesDelivery = await priceIncludesDeliveryFor(store.id);
 
     const order = await db.$transaction(async (tx) => {
       let created: any = null;
@@ -156,6 +158,7 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
               quantity,
               sellingPrice: price,
               shippingCost: shipCost,
+              priceIncludesDelivery,
               totalAmount,
               currency: store.country.currencyCode,
               moderatorId: null,

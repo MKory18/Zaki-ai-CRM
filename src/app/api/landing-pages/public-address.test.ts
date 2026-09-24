@@ -72,6 +72,22 @@ describe('the product a page sells', () => {
     expect(db.product.findFirst.mock.calls[0][0].where).toMatchObject({ companyId: 'c1', storeId: 's1' });
     expect(db.landingPage.create).not.toHaveBeenCalled();
   });
+
+  it('is checked on edit when it changes — refused for another store\'s product', async () => {
+    db.landingPage.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      where.id === 'lp1' ? { id: 'lp1', companyId: 'c1', storeId: 's1', slug: 'old', domain: null, productId: 'product-mine-1' } : null
+    );
+    db.product.findFirst.mockResolvedValue(null);
+    const edit = (body: unknown) =>
+      patchPage(new Request('http://localhost/x', { method: 'PATCH', body: JSON.stringify(body) }), { params: Promise.resolve({ id: 'lp1' }) });
+
+    expect((await edit({ productId: 'product-of-store-b' })).status).toBe(404);
+    expect(db.landingPage.update).not.toHaveBeenCalled();
+
+    // The same product sent back with the rest of the form is not a change.
+    expect((await edit({ name: 'اسم', productId: 'product-mine-1' })).status).toBe(200);
+    expect(db.product.findFirst).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('a store slug', () => {

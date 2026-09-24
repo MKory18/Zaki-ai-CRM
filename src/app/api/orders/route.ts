@@ -1,4 +1,5 @@
-﻿import { NextResponse } from 'next/server';
+﻿import { priceIncludesDeliveryFor } from '@/lib/delivery-fees';
+import { NextResponse } from 'next/server';
 import { notify } from '@/lib/notify';
 import { z } from 'zod';
 import { db } from '@/lib/db';
@@ -375,13 +376,8 @@ export async function POST(req: Request) {
     // always priced as price + fee, even on a store that advertises
     // delivery-inclusive prices, and the courier statement then disagreed
     // with the order by exactly the fee.
-    const [offer, store] = await Promise.all([
-      offerId ? db.offer.findFirst({ where: { id: offerId, companyId } }) : Promise.resolve(null),
-      db.store.findFirst({ where: { id: storeId }, select: { priceIncludesDelivery: true } }),
-    ]);
-    const priceIncludesDelivery = offer
-      ? offer.deliveryIncluded === true || store?.priceIncludesDelivery === true
-      : store?.priceIncludesDelivery === true;
+    const offer = offerId ? await db.offer.findFirst({ where: { id: offerId, companyId } }) : null;
+    const priceIncludesDelivery = await priceIncludesDeliveryFor(storeId, offer?.deliveryIncluded);
 
     // ONE COD function, used by every screen and service (contract PART 5).
     // It takes the whole order at once, so a discount spread over several

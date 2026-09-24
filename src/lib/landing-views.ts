@@ -28,7 +28,7 @@ const CRAWLER = /bot|crawl|spider|slurp|facebookexternalhit|facebookcatalog|what
 /** The kind of device a user agent is, or null for a crawler (not a visitor). */
 export function deviceClassOf(userAgent: string | null | undefined): DeviceClass | null {
   const ua = userAgent ?? '';
-  if (!ua || CRAWLER.test(ua)) return null;
+  if (!ua || CRAWLER.test(ua.replace(/cubot/gi, ''))) return null;
   if (/iPad|Tablet|PlayBook|Silk|(Android(?!.*Mobile))/i.test(ua)) return 'tablet';
   if (/Mobi|iPhone|iPod|Android|Windows Phone|Opera Mini/i.test(ua)) return 'mobile';
   return 'desktop';

@@ -42,6 +42,8 @@ const patch = (body: unknown) =>
 
 let store: Record<string, unknown>;
 let page: Record<string, unknown> | null;
+/** A store of any company holding the same slug — none unless a test says so. */
+let sameSlug: Record<string, unknown> | null;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -56,7 +58,10 @@ beforeEach(() => {
     id: PAGE, name: 'صفحة', slug: 'offer', storeId: MINE, productId: 'p1', isPublished: true, domain: null,
     frontOf: null, product: { status: 'ACTIVE', storeId: MINE },
   };
-  db.store.findFirst.mockImplementation(async () => store);
+  sameSlug = null;
+  db.store.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+    'slug' in where ? sameSlug : store
+  );
   db.store.update.mockResolvedValue({});
   // The page by id (binding, and storefrontFacts); any OTHER page by slug is
   // the shared-slug check — none unless a test says so.
@@ -67,6 +72,19 @@ beforeEach(() => {
 });
 
 describe('opening', () => {
+  it('refuses a store whose slug a store of another company also holds', async () => {
+    store.landingPageId = PAGE;
+    sameSlug = { id: 'legacy-main' };
+    const res = await patch({ storeId: MINE, live: true });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('slug');
+    expect(db.store.update).not.toHaveBeenCalled();
+    // Asked across every company, never this store itself.
+    expect(db.store.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { slug: 'mine', id: { not: MINE } } })
+    );
+  });
+
   it('opens a store whose front page is published and sells', async () => {
     store.landingPageId = PAGE;
     const res = await patch({ storeId: MINE, live: true });
