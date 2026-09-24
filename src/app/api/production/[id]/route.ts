@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { inStore } from '@/lib/store-filter';
+import { requireContext } from '@/lib/geo-context';
 import { batchTotal, batchUnitCost } from '@/lib/product-cost';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
@@ -59,7 +60,7 @@ const schema = z.object({
 
 export async function PATCH(req: Request, ctx: Ctx) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('production.manage');
     const { id } = await ctx.params;
 
@@ -72,7 +73,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
 
     const batch = await db.productionBatch.findFirst({
-      where: { id, companyId },
+      where: { id, ...inStore(companyId, storeId) },
       include: { costLines: { orderBy: { sortOrder: 'asc' }, select: { label: true, amount: true } } },
     });
     if (!batch) {

@@ -1,3 +1,6 @@
+import { richTextCss } from '@/lib/rich-text';
+import { FONTS } from '@/lib/landing-theme';
+import { GOOGLE_FAMILY } from '@/lib/block-look';
 /**
  * The one stylesheet a block-built page wears.
  *
@@ -11,13 +14,53 @@
  * theme derived, which is what makes one colour picker restyle a whole page.
  */
 export const BLOCK_CSS = `
+/* ─────────────────────────────────────────────────────
+   THE FACES WE SERVE OURSELVES.
+
+   Everything else in the library comes from Google, which is one link and
+   no files. These are here because the family is not on Google AND its
+   licence permits us to serve it — a combination that is rarer than it
+   sounds. Most Arabic display fonts, free to download or not, forbid
+   exactly this: putting the file on a server where a visitor's browser can
+   fetch it. The notice each licence requires sits beside the files.
+
+   'swap' so the words are readable while the face arrives; a page that
+   shows nothing for 400ms looks broken on a slow phone.
+   ───────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Kawkab Mono';
+  src: url('/fonts/kawkab-300.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kawkab Mono';
+  src: url('/fonts/kawkab-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 .lp-root {
   font-family: var(--lp-font);
   color: var(--lp-text);
-  background: var(--lp-page);
+  background-color: var(--lp-page);
+  /* The page's own photograph, veiled, behind every block. 'cover' and a
+     centred position so a portrait photo on a wide screen still fills it;
+     'fixed' so the picture stays put while the page scrolls over it, which
+     is the whole reason to put one there. */
+  background-image: var(--lp-page-image, none);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
 }
+/* iOS never honours a fixed attachment properly — it sizes the picture to
+   the viewport and leaves it juddering behind the scroll. A touch screen
+   gets the plain, predictable version instead. */
+@media (hover: none) { .lp-root { background-attachment: scroll; } }
 .lp-root *, .lp-root *::before, .lp-root *::after { box-sizing: border-box; }
 .lp-root p { margin: 0; }
 
@@ -276,6 +319,14 @@ export const BLOCK_CSS = `
 
 /* ── form ── */
 .lp-form-section { max-width: 560px; }
+/* The order form carries its own page gutter and its own vertical rhythm,
+   because it is also dropped straight into a custom-HTML page where nothing
+   else provides them. Inside a block it is not a page section, it is the
+   section's content — and the two sets of padding stacked: on a 375px phone
+   the card came out 271px wide, a quarter of the screen given away, which
+   is what made it look squeezed and off-centre. The section owns the
+   spacing here; the form just fills it. */
+.lp-root #zaki-order-form { padding: 0; }
 
 /* ── trust ── */
 .lp-trust {
@@ -372,6 +423,22 @@ export const BLOCK_CSS = `
 }
 .lp-sticky b { font-weight: 900; font-variant-numeric: tabular-nums; opacity: .92; }
 .lp-sticky:active { transform: translateY(1px); }
+/* Out of the way while the form it points at is on the screen.
+   A button that says "order now" sitting on top of the order the visitor is
+   already filling in is not urgency, it is an obstacle — and on a 375px
+   phone it covered two of the fields. It leaves downwards and comes back
+   the same way, so it reads as one object moving rather than two appearing. */
+.lp-sticky {
+  transition: transform .22s ease, opacity .22s ease;
+}
+.lp-sticky[data-away] {
+  transform: translateY(160%);
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-sticky { transition: none; }
+}
 /* The button sends you to the form; it must not then sit on top of it,
    nor on the last line of the footer. Only when the button is there. */
 .lp-root:has(.lp-sticky) .lp-form-section { padding-bottom: 80px; }
@@ -398,29 +465,134 @@ export const BLOCK_CSS = `
 /* The dashboard ships a rule on html[lang=ar] h1,h2,… — specificity
    (0,1,1), which beat a plain descendant selector, so a chosen font colour
    applied to everything EXCEPT the headings it was chosen for. Matching
-   that shape puts this ahead of it without reaching for !important. */
-html [data-look-color] :is(h1, h2, h3, h4, h5, h6, p, span, li, a, strong, em, blockquote, figcaption) {
+   that shape puts this ahead of it without reaching for !important.
+
+   HEADINGS ARE NOT IN THIS LIST, on purpose. They are owned entirely by
+   the --look-heading rule below, which falls back to 'inherit' and so
+   produces exactly this result when no heading colour was chosen.
+
+   They used to be in both. This selector is (0,3,2) and that one is
+   (0,2,1) — ':is()' takes its most specific argument, and '.lp-h1' is only
+   a class — so this won, forced 'inherit', and a heading colour set beside
+   a body colour silently did nothing. One rule per question. */
+html [data-look-color] :is(p, span, li, a, strong, em, blockquote, figcaption):not(.lp-cta):not(.lp-btn) {
   color: inherit;
 }
 [data-look-size] :is(h1, .lp-h1) { font-size: 2.1em; }
 [data-look-size] :is(h2, .lp-h2) { font-size: 1.5em; }
 [data-look-size] :is(h3, .lp-h3) { font-size: 1.2em; }
 [data-look-size] :is(p, span, li, a) { font-size: 1em; }
-[data-look-align] :is(h1, h2, h3, h4, p, .lp-h2, .lp-sub) { text-align: inherit; }
+/* Same problem as the colour: .lp-hero and .lp-h2 set text-align with a
+   class, so a plain descendant rule tied and lost on source order. */
+html [data-look-align] :is(h1, h2, h3, h4, p, div, section, ul, .lp-hero, .lp-h2, .lp-sub, .lp-section) {
+  text-align: inherit;
+}
 [data-look-font] :is(h1, h2, h3, h4, p, span, li, a, button) { font-family: inherit; }
 [data-look-italic] :is(h1, h2, h3, h4, p, span, li, a) { font-style: inherit; }
 [data-look-weight] :is(h1, h2, h3, h4, p, span, li, a) { font-weight: inherit; }
+
+/* A heading, a button and a paragraph are three different decisions. One
+   colour for the whole block turned the words on a green button red, which
+   is never what anybody means.
+
+   Read through each variable's own FALLBACK, not through an attribute
+   selector on the style text: a custom property set by React never appears
+   in the style attribute string, so a [style*=--look-btn] selector matched
+   nothing and every one of these silently did not apply. Unset, each falls
+   back to exactly what the rule above it already said. */
+html .lp-root :is(h1, h2, h3, h4, .lp-h1, .lp-h2) {
+  color: var(--look-heading, inherit);
+}
+html .lp-root :is(.lp-cta, .lp-btn, .lp-sticky) {
+  background: var(--look-btn-bg, var(--lp-accent));
+  color: var(--look-btn-fg, var(--lp-accent-text));
+  padding: var(--look-btn-pad, 14px 44px);
+  font-size: var(--look-btn-size, 16px);
+  width: var(--look-btn-width, auto);
+  display: var(--look-btn-display, inline-block);
+}
 `;
 
 /** Google Fonts stylesheet for the chosen Arabic family, or null for system. */
-export function fontHref(font: string): string | null {
-  const families: Record<string, string> = {
-    tajawal: 'Tajawal:wght@400;500;700;800;900',
-    cairo: 'Cairo:wght@400;600;700;800;900',
-    almarai: 'Almarai:wght@400;700;800',
-  };
-  const family = families[font];
-  return family ? `https://fonts.googleapis.com/css2?family=${family}&display=swap
-
-` : null;
+/**
+ * The Google stylesheet for every family this page actually uses.
+ *
+ * Takes a LIST, because the theme picks one and each block may pick its
+ * own — asking for the theme's alone left a block's chosen font falling
+ * back to the system stack, which looks like the picker doing nothing.
+ *
+ * The URL was built across newlines, which a browser sends verbatim; one
+ * request, one line.
+ */
+/**
+ * The stylesheet for the font PICKER, which is a different problem.
+ *
+ * The picker draws twenty names each in its own face, and asking for every
+ * weight of twenty families to render twenty words at one weight is most of
+ * a megabyte thrown at a list. Stripping the weight axis leaves the regular
+ * of each — exactly what the list shows — and the page's own faces are
+ * requested separately, in full, by fontHref.
+ */
+export function specimenHref(...fonts: (string | null | undefined)[]): string | null {
+  const wanted = [...new Set(fonts.filter(Boolean) as string[])]
+    .map((f) => GOOGLE_FAMILY[f])
+    .filter(Boolean)
+    .map((f) => f.split(':')[0]);
+  if (wanted.length === 0) return null;
+  return `https://fonts.googleapis.com/css2?${wanted.map((f) => `family=${f}`).join('&')}&display=swap`;
 }
+
+export function fontHref(...fonts: (string | null | undefined)[]): string | null {
+  // The families come from the ONE registry. This was a third copy of the
+  // same list, and it had already fallen behind: two faces the picker
+  // offered were missing here, so choosing either loaded nothing and drew
+  // the fallback — the picker looking broken for no reason in its own code.
+  const wanted = [...new Set(fonts.filter(Boolean) as string[])]
+    .map((f) => GOOGLE_FAMILY[f])
+    .filter(Boolean);
+  if (wanted.length === 0) return null;
+  return `https://fonts.googleapis.com/css2?${wanted.map((f) => `family=${f}`).join('&')}&display=swap`;
+}
+
+/**
+ * THE FACES THIS MACHINE MAY USE AND THIS SITE MAY NOT SERVE.
+ *
+ * Declared apart from BLOCK_CSS and folded in only outside production, so a
+ * built page carries no rule pointing at a font it is not allowed to serve.
+ * The route behind these URLs answers 404 in production anyway — this is the
+ * second lock, on the other side of the door.
+ *
+ * Built from the registry rather than written out: a face added there and
+ * forgotten here would look broken for a reason nobody would think to check.
+ */
+const DEV_FONT_CSS = FONTS.filter((f) => f.devOnly)
+  .map((f) => {
+    // 'thmanyah sans' -> thmanyah-sans, the filename stem on disk.
+    const family = f.stack.split(',')[0].replace(/'/g, '').trim();
+    const stem = family.toLowerCase().replace(/\s+/g, '-');
+    return [300, 400, 500, 700, 900]
+      .map(
+        (w) => `@font-face{font-family:'${family}';src:url('/api/dev-fonts/${stem}-${w}.woff2') format('woff2');font-weight:${w};font-style:normal;font-display:swap;}`
+      )
+      .join('\n');
+  })
+  .join('\n');
+
+/**
+ * Everything the page needs to draw itself, plus — on a developer's machine
+ * only — the faces they are evaluating but may not publish.
+ */
+/**
+ * The rules a formatted selection resolves through, generated from the same
+ * lists the toolbar offers — a swatch added there cannot be a swatch the
+ * page has no rule for.
+ */
+const RICH_CSS = richTextCss();
+
+export const BLOCK_CSS_WITH_DEV_FONTS =
+  process.env.NODE_ENV === 'production'
+    ? `${BLOCK_CSS}
+${RICH_CSS}`
+    : `${DEV_FONT_CSS}
+${BLOCK_CSS}
+${RICH_CSS}`;

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { inStore } from '@/lib/store-filter';
 import { requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -18,14 +19,14 @@ import { deriveCoreState, type StateSource } from '@/lib/order-state';
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
 
     if (!can(user, 'customers.view') && !can(user, 'customers.view_basic') && !can(user, 'orders.view')) {
       return NextResponse.json({ error: 'Forbidden: cannot read customer history' }, { status: 403 });
     }
 
     const customer = await db.customer.findFirst({
-      where: { id, companyId },
+      where: { id, ...inStore(companyId, storeId) },
       select: {
         id: true, fullName: true, phone: true, rawPhone: true, city: true,
         totalOrders: true, deliveredOrders: true, cancelledOrders: true,
@@ -36,7 +37,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const exclude = new URL(req.url).searchParams.get('exclude');
     const orders = await db.order.findMany({
-      where: { companyId, customerId: id, ...(exclude ? { id: { not: exclude } } : {}) },
+      // The customer is this store's; their orders must be too. A
+      // customer who bought from two stores has two histories, and neither
+      // store is entitled to the other's.
+      where: { ...inStore(companyId, storeId), customerId: id, ...(exclude ? { id: { not: exclude } } : {}) },
       orderBy: { createdAt: 'desc' },
       take: 30,
       select: {

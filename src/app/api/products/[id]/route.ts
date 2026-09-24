@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { inStore } from '@/lib/store-filter';
 import { deleteStoredFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
 import { can, authorize } from '@/lib/authorization';
@@ -10,7 +10,7 @@ import { requireContext } from '@/lib/geo-context';
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     const product = await db.product.findUnique({
       where: { id },
       include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] } },
@@ -49,12 +49,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     const body = await req.json();
     const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType } = body;
 
-    const existing = await db.product.findUnique({ where: { id } });
+    const existing = await db.product.findFirst({ where: { id, ...inStore(companyId, storeId) } });
     if (!existing || existing.companyId !== companyId) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
     }
@@ -120,7 +120,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     const product = await db.product.findUnique({
       where: { id },

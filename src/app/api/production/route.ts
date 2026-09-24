@@ -1,18 +1,19 @@
 ﻿import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { inStore } from '@/lib/store-filter';
+import { requireContext } from '@/lib/geo-context';
 import { batchTotal, batchUnitCost } from '@/lib/product-cost';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('production.view');
 
     const batches = await db.productionBatch.findMany({
-      where: { companyId },
+      where: inStore(companyId, storeId),
       include: {
         product: {
           select: { id: true, name: true, sku: true },
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('production.manage');
 
     const body = await req.json();
@@ -101,7 +102,7 @@ export async function POST(req: Request) {
     const costPerUnit = batchUnitCost(totalProductionCost, qty);
 
     // Phase S: tenant-validate the referenced product
-    const prodCheck = await db.product.findFirst({ where: { id: productId, companyId } });
+    const prodCheck = await db.product.findFirst({ where: { id: productId, ...inStore(companyId, storeId) } });
     if (!prodCheck) {
       return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
     }

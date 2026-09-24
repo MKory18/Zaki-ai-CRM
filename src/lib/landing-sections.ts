@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { richTextSchema } from './rich-text';
+import { fontValueSchema } from './landing-theme';
 
 /**
  * LANDING SECTIONS — a page is an ordered list of blocks, not a blob of HTML.
@@ -66,15 +68,49 @@ const background = z.object({
  * systems has two ways to be wrong.
  */
 const typography = z.object({
-  /** '' = the page's own font. Otherwise one of the theme's four. */
-  font: z.enum(['', 'cairo', 'tajawal', 'almarai', 'system']).default(''),
+  /**
+   * '' = the page's own font; otherwise a key from the theme's library, or
+   * an uploaded family as `u:<slug>`.
+   *
+   * This was a hardcoded list, and it had fallen eight faces behind the
+   * picker: the seller could choose them and the save would be rejected
+   * with "أقسام الصفحة غير صالحة", which names nothing. One rule now, in
+   * landing-theme, and the list is no longer written down twice.
+   */
+  font: fontValueSchema,
   /** Relative, never px — so it still fits on a phone. */
   scale: z.enum(['xs', 's', 'm', 'l', 'xl']).default('m'),
   weight: z.enum(['', 'normal', 'medium', 'bold', 'black']).default(''),
   italic: z.boolean().default(false),
-  /** '' = derived from the palette and what is behind it. */
+  /** The body text. '' = derived from the palette and what is behind it. */
   color: z.string().max(9).default(''),
-}).default({ font: '', scale: 'm', weight: '', italic: false, color: '' });
+  /**
+   * Headings, separately.
+   *
+   * One colour for a whole block turned the heading, the price and the
+   * button's words the same shade — which is almost never what anybody
+   * means. A heading is its own decision; '' follows the body colour.
+   */
+  headingColor: z.string().max(9).default(''),
+}).default({ font: '', scale: 'm', weight: '', italic: false, color: '', headingColor: '' });
+
+/**
+ * The order button, which is not text.
+ *
+ * It was taking the block's font colour, so choosing red for a paragraph
+ * turned the words on a green button red too. A button has its own fill,
+ * its own label colour and its own size, and they are asked for here.
+ */
+const button = z.object({
+  /** '' = the theme's accent, which is the safe default. */
+  fill: z.string().max(9).default(''),
+  label: z.string().max(9).default(''),
+  size: z.enum(['s', 'm', 'l']).default('m'),
+  /** Full width on the row it sits in — the usual choice on a phone. */
+  wide: z.boolean().default(false),
+}).default({ fill: '', label: '', size: 'm', wide: false });
+
+export type BlockButton = z.infer<typeof button>;
 
 export type BlockTypography = z.infer<typeof typography>;
 
@@ -84,12 +120,14 @@ const look = z.object({
   space: z.enum(['none', 'tight', 'normal', 'roomy']).default('normal'),
   background,
   text: typography,
+  button,
 }).default({
   width: 'normal',
   align: 'center',
   space: 'normal',
   background: { kind: 'none', from: '', to: '', angle: 160, image: '', overlay: 0.35 },
-  text: { font: '', scale: 'm', weight: '', italic: false, color: '' },
+  text: { font: '', scale: 'm', weight: '', italic: false, color: '', headingColor: '' },
+  button: { fill: '', label: '', size: 'm', wide: false },
 });
 
 export type BlockLook = z.infer<typeof look>;
@@ -101,7 +139,7 @@ const base = { id: z.string().min(1), enabled: z.boolean().default(true), look }
 const announcement = z.object({
   ...base,
   type: z.literal('announcement'),
-  text: z.string().max(140).default(''),
+  text: richTextSchema(140).default(''),
 });
 
 /** The first screen: image, headline, price, and the button that scrolls to the form. */
@@ -109,8 +147,8 @@ const hero = z.object({
   ...base,
   type: z.literal('hero'),
   image: z.string().max(2048).default(''),
-  headline: z.string().max(120).default(''),
-  subheadline: z.string().max(240).default(''),
+  headline: richTextSchema(120).default(''),
+  subheadline: richTextSchema(240).default(''),
   /** Show the product's price from the catalogue under the headline. */
   showPrice: z.boolean().default(true),
   ctaText: z.string().max(40).default('اطلب الآن'),
@@ -120,10 +158,10 @@ const hero = z.object({
 const benefits = z.object({
   ...base,
   type: z.literal('benefits'),
-  title: z.string().max(120).default(''),
+  title: richTextSchema(120).default(''),
   items: z.array(z.object({
-    title: z.string().max(80).default(''),
-    text: z.string().max(200).default(''),
+    title: richTextSchema(80).default(''),
+    text: richTextSchema(200).default(''),
   })).max(8).default([]),
 });
 
@@ -131,7 +169,7 @@ const benefits = z.object({
 const gallery = z.object({
   ...base,
   type: z.literal('gallery'),
-  title: z.string().max(120).default(''),
+  title: richTextSchema(120).default(''),
   images: z.array(z.string().max(2048)).max(12).default([]),
 });
 
@@ -139,7 +177,7 @@ const gallery = z.object({
 const text = z.object({
   ...base,
   type: z.literal('text'),
-  title: z.string().max(120).default(''),
+  title: richTextSchema(120).default(''),
   body: z.string().max(4000).default(''),
 });
 
@@ -151,17 +189,17 @@ const text = z.object({
 const offers = z.object({
   ...base,
   type: z.literal('offers'),
-  title: z.string().max(120).default('اختر العرض المناسب'),
+  title: richTextSchema(120).default('اختر العرض المناسب'),
 });
 
 /** What other buyers said. Plain names, no invented verification badge. */
 const reviews = z.object({
   ...base,
   type: z.literal('reviews'),
-  title: z.string().max(120).default('آراء المشترين'),
+  title: richTextSchema(120).default('آراء المشترين'),
   items: z.array(z.object({
-    name: z.string().max(60).default(''),
-    text: z.string().max(400).default(''),
+    name: richTextSchema(60).default(''),
+    text: richTextSchema(400).default(''),
     stars: z.number().int().min(1).max(5).default(5),
   })).max(12).default([]),
 });
@@ -170,7 +208,7 @@ const reviews = z.object({
 const faq = z.object({
   ...base,
   type: z.literal('faq'),
-  title: z.string().max(120).default('أسئلة شائعة'),
+  title: richTextSchema(120).default('أسئلة شائعة'),
   items: z.array(z.object({
     q: z.string().max(200).default(''),
     a: z.string().max(800).default(''),
@@ -186,7 +224,7 @@ const faq = z.object({
 const urgency = z.object({
   ...base,
   type: z.literal('urgency'),
-  text: z.string().max(140).default(''),
+  text: richTextSchema(140).default(''),
   /** 0 = no countdown. */
   minutes: z.number().int().min(0).max(1440).default(0),
   /** Show the real remaining stock when it is genuinely low. */
@@ -197,8 +235,8 @@ const urgency = z.object({
 const form = z.object({
   ...base,
   type: z.literal('form'),
-  title: z.string().max(120).default('أكمل الطلب'),
-  subtitle: z.string().max(240).default('ادفع عند الاستلام — لا حاجة لبطاقة'),
+  title: richTextSchema(120).default('أكمل الطلب'),
+  subtitle: richTextSchema(240).default('ادفع عند الاستلام — لا حاجة لبطاقة'),
 });
 
 /** The three reassurances under the button. */
@@ -206,8 +244,8 @@ const trust = z.object({
   ...base,
   type: z.literal('trust'),
   items: z.array(z.object({
-    title: z.string().max(40).default(''),
-    text: z.string().max(80).default(''),
+    title: richTextSchema(40).default(''),
+    text: richTextSchema(80).default(''),
   })).max(4).default([]),
 });
 
@@ -230,7 +268,7 @@ const externalUrl = z
 const footer = z.object({
   ...base,
   type: z.literal('footer'),
-  text: z.string().max(200).default(''),
+  text: richTextSchema(200).default(''),
   phone: z.string().max(40).default(''),
   logo: z.string().max(2048).default(''),
   /** Columns of links — policies, about, contact. */
@@ -271,6 +309,69 @@ export const landingSectionsSchema = z.array(landingSectionSchema).max(40);
 // ─────────────────────────────────────────────────────
 // Names, for the editor
 // ─────────────────────────────────────────────────────
+
+
+/**
+ * PAGES THAT ALREADY WORK, AS A STARTING POINT.
+ *
+ * A blank builder is a worse problem than a badly designed one: a seller
+ * who does not know which blocks a page needs picks three, publishes, and
+ * wonders why it does not sell. These are the shapes that do sell, named
+ * by the job rather than by the blocks in them — nobody wakes up wanting
+ * "hero, offers, benefits, form", they want a page for one product.
+ *
+ * Every template is the same blocks the seller could have chosen by hand,
+ * in an order that has a reason, so there is nothing here to maintain
+ * separately from the blocks themselves.
+ */
+export interface PageTemplate {
+  key: string;
+  label: string;
+  hint: string;
+  blocks: SectionType[];
+}
+
+export const PAGE_TEMPLATES: PageTemplate[] = [
+  {
+    key: 'classic',
+    label: 'صفحة منتج كاملة',
+    hint: 'الأكثر استخداماً — عرض، مميزات، ضمانات، وآراء',
+    blocks: ['announcement', 'hero', 'offers', 'benefits', 'form', 'trust', 'reviews', 'faq', 'footer'],
+  },
+  {
+    key: 'short',
+    label: 'صفحة قصيرة سريعة',
+    hint: 'للإعلانات المدفوعة — من الصورة إلى الطلب بأقل خطوات',
+    blocks: ['hero', 'benefits', 'form', 'trust', 'sticky'],
+  },
+  {
+    key: 'urgent',
+    label: 'عرض محدود',
+    hint: 'عدّاد ونُدرة — للحملات ذات المدّة',
+    blocks: ['announcement', 'hero', 'urgency', 'offers', 'form', 'trust', 'footer'],
+  },
+  {
+    key: 'trust',
+    label: 'منتج يحتاج إقناعاً',
+    hint: 'شرح وصور وآراء قبل الطلب — للمنتج الغالي أو الجديد',
+    blocks: ['hero', 'text', 'gallery', 'benefits', 'reviews', 'faq', 'offers', 'form', 'trust', 'footer'],
+  },
+  {
+    key: 'blank',
+    label: 'ابدأ فارغاً',
+    hint: 'الواجهة والنموذج فقط — ابنِ الباقي بنفسك',
+    blocks: ['hero', 'form'],
+  },
+];
+
+/** The blocks of a template, as fresh sections with fresh ids. */
+export function sectionsFromTemplate(key: string): LandingSection[] {
+  const t = PAGE_TEMPLATES.find((x) => x.key === key);
+  // An unknown key gets the starter rather than an empty page: a page with
+  // no form cannot take an order, and that is not a state to leave anyone in.
+  const blocks: SectionType[] = t ? t.blocks : ['hero', 'form'];
+  return blocks.map(newSection);
+}
 
 export const SECTION_LABEL: Record<SectionType, string> = {
   announcement: 'شريط إعلان',

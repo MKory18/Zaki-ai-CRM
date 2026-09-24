@@ -22,29 +22,55 @@ export interface LandingTheme {
   accent: string;
   /** How the page carries itself. */
   mood: ThemeMood;
-  /** Arabic display font for headings. */
-  font: ThemeFont;
+  /**
+   * The page's typeface: a key from the library, or `u:<slug>` for one the
+   * seller uploaded to this store. Not `ThemeFont` alone — the field has
+   * held both since stores could bring their own, and a type that says
+   * otherwise pushes a cast into every caller.
+   */
+  font: FontValue;
   /** Rounded or square corners throughout. */
   corners: 'soft' | 'sharp';
+  /**
+   * A photograph behind the WHOLE page, not behind one block.
+   *
+   * A block background paints one band; a seller who wants a textured page
+   * had to set the same image on every block and keep them in step. This is
+   * the page's own backdrop, set once.
+   *
+   * '' means the mood's flat paper, which stays the default — a photograph
+   * behind body text is a good way to make a page unreadable, so it is a
+   * choice and never an accident.
+   */
+  pageImage: string;
+  /**
+   * How much of the page colour is laid over that photograph, 0…0.95.
+   *
+   * Without it the text sits straight on the picture and the page cannot be
+   * read. The veil is the page's own paper colour, so a warm page veils warm
+   * and a clean page veils white — it never turns the photo grey.
+   */
+  pageVeil: number;
 }
 
 export type ThemeMood = 'clean' | 'warm' | 'bold' | 'calm';
-export type ThemeFont = 'cairo' | 'tajawal' | 'almarai' | 'system';
+export type ThemeFont =
+  | 'tajawal' | 'cairo' | 'almarai' | 'ibm' | 'rubik' | 'noto'
+  | 'changa' | 'reem' | 'lalezar' | 'marhey' | 'amiri' | 'aref'
+  | 'readex' | 'alexandria' | 'vazir' | 'mada' | 'messiri' | 'baloo'
+  | 'naskh' | 'scheherazade' | 'kawkab'
+  | 'thmanyah' | 'thmanyahtext' | 'thmanyahdisplay' | 'system';
 
 export const DEFAULT_THEME: LandingTheme = {
   accent: '#b8256e',
   mood: 'clean',
   font: 'tajawal',
   corners: 'soft',
+  pageImage: '',
+  pageVeil: 0.82,
 };
 
-/** What a stored theme is allowed to be. Anything else falls back whole. */
-export const landingThemeSchema = z.object({
-  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  mood: z.enum(['clean', 'warm', 'bold', 'calm']),
-  font: z.enum(['cairo', 'tajawal', 'almarai', 'system']),
-  corners: z.enum(['soft', 'sharp']),
-});
+
 
 export const MOODS: { key: ThemeMood; label: string; hint: string }[] = [
   { key: 'clean', label: 'نظيف', hint: 'أبيض واسع، حدود خفيفة' },
@@ -53,12 +79,131 @@ export const MOODS: { key: ThemeMood; label: string; hint: string }[] = [
   { key: 'calm', label: 'هادئ', hint: 'رمادي فاتح، ألوان مخفّفة' },
 ];
 
-export const FONTS: { key: ThemeFont; label: string; stack: string }[] = [
-  { key: 'tajawal', label: 'طجوال', stack: "'Tajawal', system-ui, sans-serif" },
-  { key: 'cairo', label: 'القاهرة', stack: "'Cairo', system-ui, sans-serif" },
-  { key: 'almarai', label: 'المراعي', stack: "'Almarai', system-ui, sans-serif" },
-  { key: 'system', label: 'خط النظام', stack: "system-ui, 'Segoe UI', Tahoma, sans-serif" },
+/**
+ * THE font library. There is exactly one, and it lives here.
+ *
+ * There were two: four families for the page theme and twelve for a single
+ * block, so the same screen offered a seller a font in one panel that the
+ * other panel could not see. Two lists of the same thing are two lists to
+ * keep in step, and they were already out of step.
+ *
+ * Each row carries everything anybody needs about that face: the Arabic
+ * name the seller reads, the CSS stack, and the Google family string with
+ * its weights — `google` absent means the face is already on the device and
+ * needs no stylesheet.
+ *
+ * The order is the order a seller should meet them: the three workhorses
+ * that suit any page, then the display faces for a headline, then the two
+ * serifs, then the system default.
+ */
+export const FONTS: {
+  key: ThemeFont;
+  label: string;
+  stack: string;
+  /** Google's family string with weights. Absent when we serve it ourselves. */
+  google?: string;
+  /** True when the files live in /public/fonts and BLOCK_CSS declares them. */
+  local?: boolean;
+  /**
+   * True for a face this machine may use and this site may not serve.
+   *
+   * Its files sit outside git and are handed over by /api/dev-fonts, which
+   * answers 404 in a production build. The picker says so plainly, because
+   * a font that works while you design and vanishes when you publish is a
+   * trap unless the seller was told.
+   */
+  devOnly?: boolean;
+  note: string;
+}[] = [
+  { key: 'tajawal', label: 'طجوال', stack: "'Tajawal', system-ui, sans-serif", google: 'Tajawal:wght@200;400;500;700;800', note: 'واضح ومحايد' },
+  { key: 'cairo', label: 'القاهرة', stack: "'Cairo', system-ui, sans-serif", google: 'Cairo:wght@400;600;700;800', note: 'الأكثر استخداماً' },
+  { key: 'almarai', label: 'المراعي', stack: "'Almarai', system-ui, sans-serif", google: 'Almarai:wght@400;700;800', note: 'هادئ ومقروء' },
+  { key: 'ibm', label: 'IBM بلكس', stack: "'IBM Plex Sans Arabic', system-ui, sans-serif", google: 'IBM+Plex+Sans+Arabic:wght@400;500;600;700', note: 'رسمي ومرتّب' },
+  { key: 'rubik', label: 'روبيك', stack: "'Rubik', system-ui, sans-serif", google: 'Rubik:wght@400;500;700;800', note: 'ودود وعصري' },
+  { key: 'noto', label: 'نوتو كوفي', stack: "'Noto Kufi Arabic', system-ui, sans-serif", google: 'Noto+Kufi+Arabic:wght@400;600;700;800', note: 'كوفي متّزن' },
+  { key: 'changa', label: 'تشانغا', stack: "'Changa', system-ui, sans-serif", google: 'Changa:wght@400;600;700;800', note: 'عريض للعناوين' },
+  { key: 'reem', label: 'ريم كوفي', stack: "'Reem Kufi', system-ui, sans-serif", google: 'Reem+Kufi:wght@400;600;700', note: 'هندسي أنيق' },
+  { key: 'lalezar', label: 'لاله زار', stack: "'Lalezar', system-ui, cursive", google: 'Lalezar', note: 'صارخ وإعلاني' },
+  { key: 'marhey', label: 'مرحي', stack: "'Marhey', system-ui, cursive", google: 'Marhey:wght@400;600;700', note: 'مرِح وشبابي' },
+  { key: 'amiri', label: 'أميري', stack: "'Amiri', Georgia, serif", google: 'Amiri:wght@400;700', note: 'نسخ كلاسيكي' },
+  { key: 'aref', label: 'عارف رقعة', stack: "'Aref Ruqaa', Georgia, serif", google: 'Aref+Ruqaa:wght@400;700', note: 'رقعة فخم' },
+  { key: 'readex', label: 'ريدكس برو', stack: "'Readex Pro', system-ui, sans-serif", google: 'Readex+Pro:wght@300;400;500;600;700', note: 'حديث ومتوازن' },
+  { key: 'alexandria', label: 'الإسكندرية', stack: "'Alexandria', system-ui, sans-serif", google: 'Alexandria:wght@400;500;700;800', note: 'هندسي نظيف' },
+  { key: 'vazir', label: 'وزير', stack: "'Vazirmatn', system-ui, sans-serif", google: 'Vazirmatn:wght@400;500;700;800', note: 'مقروء على الشاشة' },
+  { key: 'mada', label: 'مدى', stack: "'Mada', system-ui, sans-serif", google: 'Mada:wght@400;500;700;900', note: 'بسيط وواسع' },
+  { key: 'messiri', label: 'المصيري', stack: "'El Messiri', system-ui, sans-serif", google: 'El+Messiri:wght@400;500;600;700', note: 'أنيق للعناوين' },
+  { key: 'baloo', label: 'بالو بهيجان', stack: "'Baloo Bhaijaan 2', system-ui, cursive", google: 'Baloo+Bhaijaan+2:wght@400;600;700;800', note: 'سميك ومستدير' },
+  { key: 'naskh', label: 'نوتو نسخ', stack: "'Noto Naskh Arabic', Georgia, serif", google: 'Noto+Naskh+Arabic:wght@400;500;600;700', note: 'نسخ للقراءة الطويلة' },
+  { key: 'scheherazade', label: 'شهرزاد', stack: "'Scheherazade New', Georgia, serif", google: 'Scheherazade+New:wght@400;700', note: 'نسخ تقليدي فخم' },
+  // Served from /public/fonts rather than Google, because it is not on
+  // Google — and because its licence (SIL OFL 1.1, stated inside the font
+  // file itself) is one of the few that actually permits us to serve it.
+  // public/fonts/kawkab-OFL.txt carries the notice the licence requires.
+  { key: 'kawkab', label: 'كوكب', stack: "'Kawkab Mono', ui-monospace, monospace", local: true, note: 'ثابت العرض — تقني' },
+  // ── Licensed for this machine, never published. See /api/dev-fonts. ──
+  { key: 'thmanyah', label: 'ثمانية', stack: "'thmanyah sans', system-ui, sans-serif", devOnly: true, note: 'محلي — للفحص فقط' },
+  { key: 'thmanyahtext', label: 'ثمانية نص', stack: "'thmanyah serif text', Georgia, serif", devOnly: true, note: 'محلي — للفحص فقط' },
+  { key: 'thmanyahdisplay', label: 'ثمانية عريض', stack: "'thmanyah serif display', Georgia, serif", devOnly: true, note: 'محلي — للفحص فقط' },
+  { key: 'system', label: 'خط النظام', stack: "system-ui, 'Segoe UI', Tahoma, sans-serif", note: 'الأسرع تحميلاً' },
 ];
+
+/** Every key in the library, for the places that need the list as data. */
+export const FONT_KEYS = FONTS.map((f) => f.key);
+
+/**
+ * A font a page may ask for: one of the library's keys, or an uploaded
+ * family referenced as `u:<slug>`.
+ *
+ * A hardcoded enum was kept in three places and had already fallen behind
+ * in two of them — eight faces the picker offered could not be saved on a
+ * block at all, because the block's enum had never been updated. One
+ * predicate, and adding a face to FONTS is the whole change.
+ *
+ * An uploaded family resolves through a CSS variable the page declares
+ * rather than through a lookup here, so this stays a pure function with no
+ * idea which store it is rendering — and a font the seller deleted falls
+ * back to the system stack instead of throwing.
+ */
+/** A face this store uploaded, referenced by its slug. */
+export type UploadedFontRef = `u:${string}`;
+
+/** Anything the `font` field may hold. */
+export type FontValue = ThemeFont | UploadedFontRef;
+
+export const UPLOADED_FONT_RE = /^u:[a-z0-9-]{1,40}$/;
+
+export function isFontValue(v: string): boolean {
+  return v === '' || FONT_KEYS.includes(v as ThemeFont) || UPLOADED_FONT_RE.test(v);
+}
+
+/** The CSS stack for any font value, built-in or uploaded. */
+export function stackFor(value: string | undefined | null): string {
+  if (!value) return '';
+  const known = FONTS.find((f) => f.key === value);
+  if (known) return known.stack;
+  if (UPLOADED_FONT_RE.test(value)) return `var(--lp-uf-${value.slice(2)}, system-ui, sans-serif)`;
+  return '';
+}
+
+/** Zod's view of the same rule. */
+export const fontValueSchema = z
+  .string()
+  .max(45)
+  .refine(isFontValue, { message: 'خط غير معروف' });
+
+/** What a stored theme is allowed to be. Anything else falls back whole. */
+export const landingThemeSchema = z.object({
+  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  mood: z.enum(['clean', 'warm', 'bold', 'calm']),
+  font: fontValueSchema,
+  corners: z.enum(['soft', 'sharp']),
+  // Same-origin paths only. An absolute URL here is a way to make the
+  // seller's page fetch from somewhere we do not control, and to leak every
+  // visitor to it; uploads go through the page's own media route.
+  pageImage: z.string().regex(/^(|\/[A-Za-z0-9/_.\-]*)$/).max(300).default(''),
+  pageVeil: z.number().min(0).max(0.95).default(0.82),
+});
+
 
 // ─────────────────────────────────────────────────────
 // Colour, honestly
@@ -178,6 +323,8 @@ export interface Palette {
   radius: string;
   fontStack: string;
   headingWeight: number;
+  /** The backdrop layer, ready for `background-image`, or '' for none. */
+  pageBackdrop: string;
 }
 
 const MOOD_BASE: Record<ThemeMood, { pageBg: string; cardBg: string; text: string; muted: string; border: string; headingWeight: number }> = {
@@ -192,7 +339,7 @@ export function paletteFor(theme: Partial<LandingTheme> | null | undefined): Pal
   const t = { ...DEFAULT_THEME, ...(theme ?? {}) };
   const accent = isValidHex(t.accent) ? t.accent : DEFAULT_THEME.accent;
   const base = MOOD_BASE[t.mood] ?? MOOD_BASE.clean;
-  const font = FONTS.find((f) => f.key === t.font) ?? FONTS[0];
+  const fontStack = stackFor(t.font) || FONTS[0].stack;
 
   return {
     accent,
@@ -204,8 +351,30 @@ export function paletteFor(theme: Partial<LandingTheme> | null | undefined): Pal
     accentBorder: atLightness(accent, 0.86, 0.45),
     ...base,
     radius: t.corners === 'sharp' ? '4px' : '14px',
-    fontStack: font.stack,
+    fontStack,
+    // The veil goes in the SAME background-image, above the photo: one
+    // property, no extra element, and nothing for a block to sit under by
+    // accident. Both stops are the page's own paper colour, so the veil
+    // tints toward the page rather than washing it grey.
+    pageBackdrop: backdropFor(t.pageImage, t.pageVeil, base.pageBg),
   };
+}
+
+/**
+ * The page's backdrop as one `background-image` value.
+ *
+ * Refuses anything that is not a same-origin path, the same rule the schema
+ * carries — a value can reach here from an older row that was stored before
+ * the rule existed, and a page is not the place to find that out.
+ */
+function backdropFor(image: string | undefined, veil: number | undefined, paper: string): string {
+  if (!image || !/^\/[A-Za-z0-9/_.\-]*$/.test(image)) return '';
+  const a = Math.min(0.95, Math.max(0, veil ?? 0.82));
+  const rgb = parseHex(paper);
+  const tint = rgb
+    ? `rgba(${rgb.map((v) => Math.round((v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055) * 255)).join(',')},${a})`
+    : `rgba(255,255,255,${a})`;
+  return `linear-gradient(${tint}, ${tint}), url("${image}")`;
 }
 
 /** The palette as CSS custom properties, for a style attribute. */
@@ -224,5 +393,9 @@ export function paletteVars(palette: Palette): Record<string, string> {
     '--lp-radius': palette.radius,
     '--lp-font': palette.fontStack,
     '--lp-heading-weight': String(palette.headingWeight),
+    // `none` rather than omitting the variable: the stylesheet's fallback
+    // then has nothing to guess, and turning the photograph off is one
+    // value changing rather than a rule appearing and disappearing.
+    '--lp-page-image': palette.pageBackdrop || 'none',
   };
 }

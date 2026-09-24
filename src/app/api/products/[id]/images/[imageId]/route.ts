@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { inStore } from '@/lib/store-filter';
+import { requireContext } from '@/lib/geo-context';
 import { deleteStoredFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
 import { authorize } from '@/lib/authorization';
@@ -19,7 +20,7 @@ export async function DELETE(
 ) {
   try {
     const { id: productId, imageId } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
 
     const img = await db.productImage.findUnique({ where: { id: imageId } });
     if (!img || img.productId !== productId || img.companyId !== companyId) {
@@ -27,7 +28,7 @@ export async function DELETE(
     }
 
     // Load the product first so image-upload authority is scope-evaluated
-    const product = await db.product.findUnique({ where: { id: productId } });
+    const product = await db.product.findFirst({ where: { id: productId, ...inStore(companyId, storeId) } });
     if (!product || product.companyId !== companyId) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
     }

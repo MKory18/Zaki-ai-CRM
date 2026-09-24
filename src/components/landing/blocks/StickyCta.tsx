@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { OrderCta } from './OrderCta';
 
 /**
@@ -40,10 +40,42 @@ export function StickyCta({ text, showPrice, offers, basePrice, currency }: Prop
     return () => window.removeEventListener('message', onMessage);
   }, [offers]);
 
+  /**
+   * Step aside while the order form is on the screen.
+   *
+   * The button's whole job is to carry somebody down to the form. Once they
+   * are at the form it has no job left, and it was sitting across two of the
+   * fields on a 375px phone — a button offering to start something the
+   * visitor has already started, in the way of them finishing it.
+   *
+   * An observer rather than a scroll handler: the browser reports the
+   * crossing itself, off the main thread, and there is no position maths
+   * here to get wrong at one zoom level or one screen height.
+   */
+  const ref = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    const form = document.getElementById('zaki-order-form');
+    const el = ref.current;
+    if (!form || !el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        // `data-away` rather than unmounting: the element keeps its place in
+        // the DOM, so it slides out and back instead of blinking.
+        if (entry.isIntersecting) el.setAttribute('data-away', '');
+        else el.removeAttribute('data-away');
+      },
+      // A sliver of the form counts as "here" — waiting for half of it means
+      // the button hangs over the first fields on a small screen.
+      { threshold: 0.01 }
+    );
+    io.observe(form);
+    return () => io.disconnect();
+  }, []);
+
   const price = offers.find((o) => o.id === offerId)?.price ?? (offers.length ? undefined : basePrice);
 
   return (
-    <OrderCta className="lp-sticky">
+    <OrderCta ref={ref} className="lp-sticky">
       <span>{text || 'اطلب الآن'}</span>
       {showPrice && price !== undefined && price > 0 && (
         <b dir="ltr">

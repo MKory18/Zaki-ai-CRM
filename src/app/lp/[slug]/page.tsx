@@ -10,8 +10,9 @@ import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixe
 import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { parseSections, ensureForm } from '@/lib/landing-sections';
 import { paletteFor, paletteVars, DEFAULT_THEME } from '@/lib/landing-theme';
+import { loadStoreFonts } from '@/lib/fonts/load-store-fonts';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
-import { BLOCK_CSS, fontHref } from '@/components/landing/blocks/styles';
+import { BLOCK_CSS_WITH_DEV_FONTS, fontHref } from '@/components/landing/blocks/styles';
 import { availableStock } from '@/lib/reservation';
 
 interface Props {
@@ -97,12 +98,20 @@ async function loadLpData(landingPageId: string, companyId: string, productId: s
       },
     }),
   ]);
-  const recViews = recs.map((r) => ({
-    id: r.id,
-    name: r.product?.name || '',
-    price: r.product?.basePrice ?? 0,
-    image: r.product?.image || null,
-  }));
+  // A recommendation needs a name and a price to be an offer at all. One
+  // without them still rendered: the success screen said "add it to my
+  // order — 0 USD" over a blank line, which reads as a broken page at the
+  // exact moment the customer has just trusted us with their phone number.
+  // The seller has not finished setting that product up; until they do, it
+  // simply is not shown.
+  const recViews = recs
+    .map((r) => ({
+      id: r.id,
+      name: (r.product?.name || '').trim(),
+      price: r.product?.basePrice ?? 0,
+      image: r.product?.image || null,
+    }))
+    .filter((r) => r.name && r.price > 0);
   return [offers, recViews] as const;
 }
 
@@ -123,6 +132,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
     sections?: string | null;
     product?: { id: string; name: string; basePrice: number } | null;
     company?: { id: string; currency: string };
+    storeId?: string | null;
     store?: { countryId: string; country: { code: string; currencyCode: string } } | null;
   } | null = null;
 
@@ -145,7 +155,8 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
           sections: true,
           product: { select: { id: true, name: true, basePrice: true } },
           company: { select: { id: true, currency: true } },
-          store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
+          storeId: true,
+        store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
         },
       });
       if (lp) {
@@ -168,6 +179,7 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
         sections: true,
         company: { select: { id: true, currency: true } },
         product: { select: { id: true, name: true, basePrice: true } },
+        storeId: true,
         store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
       },
     });
@@ -264,7 +276,17 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
   // chose blocks and filled in text, and this renderer drew them.
   if (sections.length > 0) {
     const palette = paletteFor(safeTheme(lp.theme));
-    const href = fontHref(safeTheme(lp.theme).font ?? DEFAULT_THEME.font);
+    // The theme's font AND every font a block chose — asking for the
+    // theme's alone left a block's pick falling back to the system stack.
+    const href = fontHref(
+      safeTheme(lp.theme).font ?? DEFAULT_THEME.font,
+      ...sections.map((b) => b.look?.text?.font)
+    );
+
+    // The store's own uploaded faces. Its own: a font licensed to one
+    // brand is not a font the next brand may set its headlines in, so this
+    // is filtered by the page's store and never by the company.
+    const storeFonts = await loadStoreFonts(lp.storeId);
 
     // Real stock, for the one block allowed to mention it. Unknown stays
     // unknown: the block renders nothing rather than inventing a number.
@@ -276,7 +298,8 @@ export default async function PublicLandingPage({ params, searchParams }: Props)
     return (
       <div dir="rtl" className="lp-root" style={paletteVars(palette) as React.CSSProperties}>
         {href && <link rel="stylesheet" href={href} />}
-        <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS }} />
+        <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
+        {storeFonts.css && <style dangerouslySetInnerHTML={{ __html: storeFonts.css }} />}
         <LandingTrackingPixels pixels={trackingPixels} viewContent={viewContent} />
         <PageBlocks
           sections={sections}

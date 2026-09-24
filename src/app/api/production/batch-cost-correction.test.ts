@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { db, requireCompanyTenant, requirePermission, logAudit } = vi.hoisted(() => ({
+const { db, requireContext, requirePermission, logAudit } = vi.hoisted(() => ({
   db: {
     productionBatch: { findFirst: vi.fn(), update: vi.fn() },
     productionBatchCost: { deleteMany: vi.fn(), createMany: vi.fn() },
     $transaction: vi.fn(),
   },
-  requireCompanyTenant: vi.fn(),
+  requireContext: vi.fn(),
   requirePermission: vi.fn(),
   logAudit: vi.fn(),
 }));
 vi.mock('@/lib/db', () => ({ db }));
-vi.mock('@/lib/auth', () => ({ requireCompanyTenant: (...a: unknown[]) => requireCompanyTenant(...a) }));
+vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
 vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
 
@@ -53,7 +53,9 @@ const patch = (body: unknown) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireCompanyTenant.mockResolvedValue({ user: { id: 'u1' }, companyId: 'c1' });
+  // A caller always stands in a store: requireContext refuses to return
+  // without one, which is what lets the route rely on it.
+  requireContext.mockResolvedValue({ user: { id: 'u1' }, companyId: 'c1', storeId: 's1' });
   requirePermission.mockResolvedValue({ companyId: 'c1' });
   db.productionBatch.findFirst.mockResolvedValue({ ...BATCH });
   db.productionBatch.update.mockImplementation(async (args: never) => (args as { data: unknown }).data);
@@ -149,5 +151,42 @@ describe('what it refuses', () => {
   it('refuses a nameless cost line', async () => {
     const res = await patch({ costLines: [{ label: '  ', amount: 100 }] });
     expect(res.status).toBe(400);
+  });
+});
+
+/**
+ * AND THE STORE, WHICH THE COMPANY CHECK NEVER COVERED.
+ *
+ * The company boundary held everywhere; the store boundary had holes, and a
+ * production batch was one. `{ companyId }` returns MORE rows when the
+ * store is forgotten, so it throws nothing and renders fine — which is the
+ * whole reason these assert the refusal rather than the success.
+ */
+describe('a batch belongs to a store', () => {
+  it('names the caller’s store when looking one up', async () => {
+    db.productionBatch.findFirst.mockResolvedValue(null);
+    await patch({ rawMaterialCost: 100 });
+    const where = db.productionBatch.findFirst.mock.calls.at(-1)![0].where;
+    expect(where).toMatchObject({ companyId: 'c1', storeId: 's1' });
+  });
+
+  it('cannot reach a batch of another store', async () => {
+    // It exists; it is simply not one this caller can name. So the lookup
+    // finds nothing and the route answers "not found" rather than
+    // rewriting another store's costs.
+    db.productionBatch.findFirst.mockResolvedValue(null);
+    const res = await patch({ rawMaterialCost: 100 });
+    expect(res.status).toBe(404);
+    expect(db.productionBatch.update).not.toHaveBeenCalled();
+  });
+
+  it('matches nothing when no store is selected', async () => {
+    requireContext.mockResolvedValueOnce({ user: { id: 'u1' }, companyId: 'c1', storeId: null });
+    db.productionBatch.findFirst.mockResolvedValue(null);
+    await patch({ rawMaterialCost: 100 });
+    const where = db.productionBatch.findFirst.mock.calls.at(-1)![0].where;
+    // An impossible clause, never a company-wide one.
+    expect(where.id).toEqual({ in: [] });
+    expect(where.storeId).toBeUndefined();
   });
 });

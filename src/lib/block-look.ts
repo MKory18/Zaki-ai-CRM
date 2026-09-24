@@ -1,4 +1,5 @@
 import type { BlockLook } from './landing-sections';
+import { FONTS, stackFor } from './landing-theme';
 
 /**
  * ONE INTENTION, THREE SCREEN SIZES — without three designs.
@@ -52,12 +53,10 @@ const WEIGHT: Record<string, string> = {
   black: '800',
 };
 
-const FONT_STACK: Record<string, string> = {
-  cairo: "'Cairo', system-ui, sans-serif",
-  tajawal: "'Tajawal', system-ui, sans-serif",
-  almarai: "'Almarai', system-ui, sans-serif",
-  system: 'system-ui, -apple-system, Segoe UI, sans-serif',
-};
+/** Google's name for each, for the stylesheet the page must load. */
+export const GOOGLE_FAMILY: Record<string, string> = Object.fromEntries(
+  FONTS.filter((f) => f.google).map((f) => [f.key, f.google!])
+);
 
 const ALIGN: Record<BlockLook['align'], string> = {
   start: 'right',
@@ -82,6 +81,15 @@ export interface LookStyles {
   inner: React.CSSProperties;
   /** True when a dark overlay must sit between the image and the text. */
   overlay: number;
+  /**
+   * CSS variables the block stylesheet reads: the heading colour and the
+   * button's fill, label and size.
+   *
+   * Through variables rather than more selectors, because a heading and a
+   * button want DIFFERENT colours from the body text, and one colour for
+   * the whole block turned the words on a green button red.
+   */
+  vars: Record<string, string>;
 }
 
 export function lookStyles(look: BlockLook | undefined): LookStyles {
@@ -113,9 +121,12 @@ export function lookStyles(look: BlockLook | undefined): LookStyles {
 
   const inner: React.CSSProperties = {
     maxWidth: WIDTH[l.width ?? 'normal'],
-    // The gutter is the phone's, and it never goes away — text touching the
-    // edge of a screen is the single most common way a page looks cheap.
-    paddingInline: 'clamp(16px, 4vw, 24px)',
+    // NO gutter here. Every block already carries its own — .lp-section is
+    // 20px, .lp-hero is 20px, .lp-announce is 16px — and adding one more
+    // around them stacked three gutters on a phone: the order form came out
+    // 271px wide inside a 375px screen, a quarter of the width thrown away,
+    // and the card looked squeezed and off-centre for no reason a seller
+    // could see. One gutter, owned by the block, is enough.
     marginInline: 'auto',
     textAlign: ALIGN[l.align ?? 'center'] as React.CSSProperties['textAlign'],
     position: 'relative',
@@ -124,14 +135,33 @@ export function lookStyles(look: BlockLook | undefined): LookStyles {
   if (t.scale && t.scale !== 'm') inner.fontSize = SCALE[t.scale];
   if (t.weight) inner.fontWeight = WEIGHT[t.weight];
   if (t.italic) inner.fontStyle = 'italic';
-  if (t.font) inner.fontFamily = FONT_STACK[t.font];
+  if (t.font) inner.fontFamily = stackFor(t.font) || undefined;
   const color = safeColor(t.color);
   if (color) inner.color = color;
   // Text over a photograph is white unless the seller chose otherwise —
   // the overlay exists to make exactly that readable.
   else if (overlay > 0) inner.color = '#ffffff';
 
-  return { outer, inner, overlay };
+  const vars: Record<string, string> = {};
+  // A heading is its own decision; unset, it simply follows the body.
+  const heading = safeColor(t.headingColor);
+  if (heading) vars['--look-heading'] = heading;
+
+  const b = l.button ?? ({} as NonNullable<BlockLook['button']>);
+  const fill = safeColor(b.fill);
+  const labelColor = safeColor(b.label);
+  if (fill) vars['--look-btn-bg'] = fill;
+  if (labelColor) vars['--look-btn-fg'] = labelColor;
+  if (b.size && b.size !== 'm') {
+    vars['--look-btn-pad'] = b.size === 's' ? '10px 22px' : '18px 52px';
+    vars['--look-btn-size'] = b.size === 's' ? '0.9em' : '1.15em';
+  }
+  if (b.wide) {
+    vars['--look-btn-width'] = '100%';
+    vars['--look-btn-display'] = 'block';
+  }
+
+  return { outer, inner, overlay, vars };
 }
 
 /** Which Google font families a page must load, given its blocks' choices. */
@@ -142,4 +172,31 @@ export function fontsUsed(looks: (BlockLook | undefined)[]): string[] {
     if (f && f !== 'system') set.add(f);
   }
   return [...set];
+}
+
+
+/**
+ * Has the seller actually chosen anything here?
+ *
+ * The wrapper exists to carry a choice. A page nobody has styled must
+ * render exactly as it did before any of this was built, and the old test
+ * for that — "is there a look object?" — stopped working the moment the
+ * schema started filling one in with defaults for every block. Every block
+ * on every page silently gained a wrapper, and with it a second gutter.
+ *
+ * So the test is against the VALUES, not the presence of the object.
+ */
+export function isPlainLook(look: BlockLook | undefined): boolean {
+  if (!look) return true;
+  const t = look.text;
+  const b = look.button;
+  const bg = look.background;
+  return (
+    (look.width ?? 'normal') === 'normal' &&
+    (look.align ?? 'center') === 'center' &&
+    (look.space ?? 'normal') === 'normal' &&
+    (!bg || bg.kind === 'none') &&
+    (!t || (!t.font && (!t.scale || t.scale === 'm') && !t.weight && !t.italic && !t.color && !t.headingColor)) &&
+    (!b || (!b.fill && !b.label && (!b.size || b.size === 'm') && !b.wide))
+  );
 }

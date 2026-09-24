@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { StorefrontsScreen } from '@/components/screens/StorefrontsScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/growth/single-product-stores');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/growth/single-product-stores');
+  return <StorefrontsScreen />;
 }

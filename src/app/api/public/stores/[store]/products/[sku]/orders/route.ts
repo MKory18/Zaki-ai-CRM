@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { getStorefront } from '@/lib/storefront';
 import { createPublicOrder, type SellingSurface } from '@/lib/public-order';
+import { resolveCampaign } from '@/lib/campaigns-server';
 
 /**
  * Public order intake from a storefront.
@@ -96,11 +97,20 @@ export async function POST(req: Request, ctx: Ctx) {
       return NextResponse.json({ error: 'هذا المتجر لا يقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
     }
 
+    // The same resolution as the landing page: a code, checked against this
+    // store's campaigns, never an id from the browser.
+    const campaignId = await resolveCampaign(
+      store.companyId,
+      store.id,
+      (raw as { campaign?: unknown } | null)?.campaign
+    );
+
     const surface: SellingSurface = {
       companyId: store.companyId,
       store: { id: store.id, countryId: store.countryId, country },
       product,
       landingPage: null,
+      campaignId,
       source: 'Store',
       // Per product, not per store: a customer buying a second thing from
       // the same shop minutes later is not a duplicate submission.

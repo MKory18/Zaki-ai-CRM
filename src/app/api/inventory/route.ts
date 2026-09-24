@@ -2,7 +2,8 @@
 import { z } from 'zod';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
+import { inStore } from '@/lib/store-filter';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { drawDownStock, onHandTotal, receiveStock } from '@/lib/receiving';
@@ -10,11 +11,14 @@ import { zodMessage } from '@/lib/zod-message';
 
 export async function GET() {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('inventory.view');
 
+    // This store's goods, and only this store's. Stock is the clearest case
+    // of all: a count that includes another store's warehouse is not a
+    // slightly wrong number, it is a number for a place you cannot ship from.
     const products = await db.product.findMany({
-      where: { companyId },
+      where: inStore(companyId, storeId),
       include: {
         batches: {
           select: {
@@ -30,7 +34,7 @@ export async function GET() {
     });
 
     const movements = await db.inventoryMovement.findMany({
-      where: { companyId },
+      where: inStore(companyId, storeId),
       include: {
         product: { select: { name: true, sku: true } },
         batch: { select: { batchNumber: true } },
@@ -86,7 +90,7 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('inventory.adjust');
 
     const body = await req.json().catch(() => null);
@@ -119,7 +123,9 @@ export async function POST(req: Request) {
     const input = parsed.data;
 
     const product = await db.product.findFirst({
-      where: { id: input.productId, companyId },
+      // Found, or not found. A product of another store is not refused
+      // here — it is simply not a product this caller can name.
+      where: { id: input.productId, ...inStore(companyId, storeId) },
       select: { id: true, name: true, sourceType: true },
     });
     if (!product) {
@@ -186,7 +192,7 @@ export async function POST(req: Request) {
         // lower the average and overstate the profit of everything sold
         // afterwards.
         const existing = await tx.productionBatch.findFirst({
-          where: { companyId, productId: product.id, quantityRemaining: { gt: 0 } },
+          where: { ...inStore(companyId, storeId), productId: product.id, quantityRemaining: { gt: 0 } },
           orderBy: { productionDate: 'desc' },
           select: { costPerUnit: true },
         });

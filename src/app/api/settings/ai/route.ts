@@ -6,6 +6,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { AI_PROVIDERS, aiSettings, saveAiSettings } from '@/lib/ai-provider';
 import { logAudit } from '@/lib/audit';
 import { zodMessage } from '@/lib/zod-message';
+import { AI_JOBS, MAX_PROMPT } from '@/lib/ai-prompts';
 
 /**
  * GET/PUT /api/settings/ai — which AI, which model, whose key.
@@ -21,6 +22,11 @@ const schema = z.object({
   model: z.string().trim().max(120),
   /** The house prompt prepended to every request. */
   prompt: z.string().trim().max(4000).optional(),
+  /**
+   * The company's own wording per AI job. Omitted leaves the stored ones
+   * alone; a job set to its default, or to nothing, stops being an override.
+   */
+  prompts: z.record(z.string(), z.string().max(MAX_PROMPT)).optional(),
   /** A new key, or null to clear it. Omitted leaves the stored one alone. */
   apiKey: z.string().trim().min(8).max(400).nullable().optional(),
 });
@@ -32,6 +38,10 @@ export async function GET() {
     return NextResponse.json({
       settings: await aiSettings(companyId),
       providers: AI_PROVIDERS,
+      // The jobs and their DEFAULTS travel with the settings, because an
+      // editor showing an override without what it replaces is an editor
+      // nobody dares touch.
+      jobs: AI_JOBS,
     });
   } catch (error) {
     return apiErrorResponse(error);

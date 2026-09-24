@@ -2,8 +2,8 @@
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Eye, EyeOff, Trash2, Plus, Upload, Loader2, GripVertical,
-  Monitor, Smartphone, X, Paintbrush,
+  Eye, EyeOff, Trash2, Plus, Minus, Upload, Loader2, GripVertical,
+  Monitor, Smartphone, X, Paintbrush, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { LookControls } from './LookControls';
@@ -14,10 +14,15 @@ import {
   SECTION_LABEL, SECTION_HINT, SINGLETON, newSection,
 } from '@/lib/landing-sections';
 import {
-  type LandingTheme, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
+  type LandingTheme, type FontValue, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
 } from '@/lib/landing-theme';
 import { PageBlocks } from './PageBlocks';
-import { BLOCK_CSS } from './styles';
+import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from './styles';
+import { FontUploader, type StoreFontRow } from './FontUploader';
+import { SelectionBar } from './SelectionBar';
+import { PAGE_TEMPLATES, buildTemplate } from '@/lib/page-templates';
+import { useConfirm } from '@/components/ui/Confirm';
+import { sanitizeRich } from '@/lib/rich-text';
 
 /**
  * The block builder.
@@ -53,7 +58,82 @@ export function BlockBuilder(props: Props) {
   const [adding, setAdding] = useState(false);
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
 
+  /**
+   * A look copied off one block, waiting to be put on another.
+   *
+   * Kept in memory and not saved: it is a clipboard, and a clipboard that
+   * survives a reload is a clipboard nobody remembers filling.
+   */
+  const [copiedLook, setCopiedLook] = useState<LandingSection['look'] | null>(null);
+
+  /**
+   * How large the page is drawn, NOT how large it is.
+   *
+   * A seller checking their spacing wants to see the whole page at once;
+   * one reading their own small print wants it bigger. Neither is a change
+   * to the page, so this is a transform on the canvas and touches nothing
+   * that gets saved.
+   */
+  const [zoom, setZoom] = useState(1);
+
+  /** Whether the template list is open. Never saved — it is a menu. */
+  const [pickingTemplate, setPickingTemplate] = useState(false);
+
+  const confirm = useConfirm();
+
   const palette = useMemo(() => paletteFor(theme), [theme]);
+  // The page's own faces, in full, exactly as the published page asks for
+  // them — a preview whose headings synthesise their bold is not a preview.
+  const fontLink = useMemo(
+    () => fontHref(theme.font, ...sections.map((b) => b.look?.text?.font)),
+    [theme.font, sections]
+  );
+  // And the whole library at one weight, for the picker's specimen list. A
+  // list of twenty names in the fallback face is worse than no list; every
+  // weight of twenty families to draw twenty words is worse than that.
+  const specimenLink = useMemo(() => specimenHref(...FONTS.map((f) => f.key)), []);
+
+  // The store's own uploaded faces. Fetched rather than passed in, because
+  // the uploader below can add one without the page being rebuilt — and a
+  // font you just uploaded that does not appear until a reload reads as
+  // an upload that failed.
+  const [storeFonts, setStoreFonts] = useState<StoreFontRow[]>([]);
+  const storeFontCss = useMemo(() => {
+    if (storeFonts.length === 0) return '';
+    const faces = storeFonts
+      .map(
+        (f) =>
+          `@font-face{font-family:${JSON.stringify(f.family)};src:url(${JSON.stringify(f.url)}) format(${JSON.stringify(f.format)});font-weight:${f.weight};font-style:${f.italic ? 'italic' : 'normal'};font-display:swap;}`
+      )
+      .join('\n');
+    // Same variable mapping the published page emits, so `u:<key>` resolves
+    // identically in the preview and in the page it is previewing.
+    const seen = new Set<string>();
+    const vars = storeFonts
+      .filter((f) => !seen.has(f.key) && seen.add(f.key))
+      .map((f) => `--lp-uf-${f.key}: ${JSON.stringify(f.family)}, system-ui, sans-serif;`)
+      .join(' ');
+    return `${faces}
+.lp-root, .zaki-font-panel { ${vars} }`;
+  }, [storeFonts]);
+
+  // One list for the pickers: the library, then whatever this store uploaded.
+  const fontChoices = useMemo(() => {
+    const uploaded = new Map<string, { key: FontValue; label: string; stack: string; note: string }>();
+    for (const f of storeFonts) {
+      if (uploaded.has(f.key)) continue;
+      uploaded.set(f.key, {
+        key: `u:${f.key}` as FontValue,
+        label: f.label,
+        stack: `"${f.family}", system-ui, sans-serif`,
+        note: 'خطّك',
+      });
+    }
+    return [
+      ...FONTS.map((f) => ({ key: f.key as FontValue, label: f.label, stack: f.stack, note: f.note })),
+      ...uploaded.values(),
+    ];
+  }, [storeFonts]);
 
   const patch = (id: string, fields: Record<string, unknown>) =>
     onSections(sections.map((s) => (s.id === id ? ({ ...s, ...fields } as LandingSection) : s)));
@@ -142,6 +222,26 @@ export function BlockBuilder(props: Props) {
   );
   useInlineEdit(canvas, openId, commitText);
 
+  /**
+   * Reading a field back after the toolbar has changed its markup.
+   *
+   * The toolbar edits the DOM directly — that is what a selection toolbar
+   * is — so React has no idea anything happened, and this commits the
+   * field's current markup by the same path a blur takes.
+   *
+   * It is HANDED the element. Looking it up here meant asking which field
+   * was selected just after the toolbar had cleared the selection, and the
+   * answer was "none": bold happened to survive because the node still had
+   * focus, and a colour applied after a re-render was committed nowhere.
+   */
+  const commitSelection = useCallback(
+    (node: HTMLElement) => {
+      const field = node.dataset.edit;
+      if (field && openId) commitText(openId, field, sanitizeRich(node.innerHTML));
+    },
+    [openId, commitText]
+  );
+
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
@@ -151,8 +251,102 @@ export function BlockBuilder(props: Props) {
 
   return (
     <div className="grid grid-cols-1 gap-3 p-3 lg:grid-cols-[340px_1fr]" dir="rtl">
+      {/* Loaded for the panel, not for the page: the picker's names are
+          drawn in their own faces and the preview must not be the only
+          place a font appears. */}
+      {specimenLink && <link rel="stylesheet" href={specimenLink} />}
+      {/* Above the words the seller just highlighted, not docked in a
+          panel they would have to look away to find. */}
+      <SelectionBar root={canvas} fonts={fontChoices} onChange={commitSelection} />
+      {/* Declared at the top so the PANEL can draw its specimens in them
+          too, not only the preview below. */}
+      {storeFontCss && <style dangerouslySetInnerHTML={{ __html: storeFontCss }} />}
       {/* ─── Controls ─── */}
       <div className="space-y-3">
+        {/*
+          FIRST, not buried.
+
+          It sat at the bottom of the identity panel — 1184px down, past
+          the colour, the mood, the font, the corners, the page background
+          and the font uploader. Which is backwards: you pick a template
+          and THEN adjust what it gave you, so a seller starting a page had
+          to scroll past every decision the template was about to make for
+          them before finding the thing that makes them.
+        */}
+        <div className="rounded-xl border border-[#e3e8ef] bg-white p-3">
+          {/*
+            A blank builder is a worse problem than a badly designed page:
+            a seller who does not know which blocks a page needs picks
+            three, publishes, and wonders why it does not sell.
+
+            Offered as a BUTTON and not as an empty state. The first
+            version showed these only when the page had no blocks — and a
+            page never has none, because it always keeps its form and a new
+            page is created from the starter set. A panel that can never
+            appear is worse than no panel: it looks finished.
+
+            Replacing a page is destructive, so it asks first, and says how
+            much it is about to throw away.
+          */}
+          <button
+            type="button"
+            onClick={() => setPickingTemplate((v) => !v)}
+            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#c9d2e0] px-2 py-1.5 text-[11px] font-semibold text-[#697586] transition hover:border-[#b8256e] hover:text-[#b8256e]"
+          >
+            <LayoutTemplate className="h-3.5 w-3.5" />
+            {pickingTemplate ? 'إغلاق القوالب' : 'ابدأ من قالب جاهز'}
+          </button>
+
+          {pickingTemplate && (
+            <div className="mb-3 max-h-80 space-y-1.5 overflow-y-auto rounded-lg bg-[#f8fafc] p-2">
+              <p className="text-[10px] leading-relaxed text-[#697586]">
+                القالب يستبدل أقسام الصفحة الحالية. النصوص والصور التي كتبتها ستُفقد.
+              </p>
+              {PAGE_TEMPLATES.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={async () => {
+                    const built = buildTemplate(t.key);
+                    const ok = await confirm({
+                      title: `استبدال الصفحة بـ«${t.label}»؟`,
+                      body:
+                        sections.length > 0
+                          ? `سيُحذف ${sections.length} قسماً بما فيها من نصوص وصور، ويحل محلها ${built.sections.length} قسماً جديداً بلون وخط القالب.`
+                          : undefined,
+                      confirmLabel: 'استبدل',
+                      cancelLabel: 'إلغاء',
+                      tone: 'danger',
+                    });
+                    if (!ok) return;
+                    // The theme as well as the blocks: a template that only
+                    // changed the order would be the same page five times,
+                    // which is the version of this feature nobody uses.
+                    onTheme(built.theme);
+                    onSections(built.sections);
+                    setPickingTemplate(false);
+                    setOpenId(null);
+                  }}
+                  className="flex w-full items-start gap-2 rounded-lg border border-[#e3e8ef] bg-white px-2.5 py-2 text-start transition hover:border-[#b8256e] hover:bg-[#fdf2f7]"
+                >
+                  {/* Its own colour, so fifteen rows are scannable without
+                      reading fifteen names. */}
+                  <span
+                    className="mt-0.5 h-7 w-1.5 shrink-0 rounded-full"
+                    style={{ background: t.swatch }}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-[#364152]">{t.label}</span>
+                    <span className="block text-[9.5px] leading-relaxed text-[#9aa4b2]">{t.hint}</span>
+                    <span className="mt-0.5 block text-[9px] text-[#c9d2e0]">{t.bricks.length} أقسام</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+        </div>
+
         {/* Theme */}
         <div className="rounded-xl border border-[#e3e8ef] bg-white p-4">
           <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-[#697586]">الهوية</p>
@@ -210,21 +404,37 @@ export function BlockBuilder(props: Props) {
           </div>
 
           <label className="mb-1.5 block text-xs font-semibold text-[#364152]">الخط</label>
-          <div className="mb-4 grid grid-cols-2 gap-1.5">
-            {FONTS.map((f) => (
+          {/*
+            A specimen list, not a list of names: every face is drawn in
+            itself, because "لاله زار" tells a seller nothing and the shape
+            of the letters tells them everything. Thirteen of them scroll
+            rather than push the rest of the panel off the screen.
+          */}
+          <div className="mb-4 max-h-56 space-y-1 overflow-y-auto pe-1">
+            {fontChoices.map((f) => (
               <button
                 key={f.key}
                 type="button"
                 onClick={() => onTheme({ ...theme, font: f.key })}
-                className={`rounded-lg border px-2 py-1.5 text-[11px] transition ${
+                className={`flex w-full items-baseline justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-start transition ${
                   theme.font === f.key
-                    ? 'border-[#b8256e] bg-[#fdf2f7] font-bold text-[#b8256e]'
+                    ? 'border-[#b8256e] bg-[#fdf2f7] text-[#b8256e]'
                     : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e]/40'
                 }`}
               >
-                {f.label}
+                <span className="text-[15px] leading-tight" style={{ fontFamily: f.stack }}>
+                  {f.label}
+                </span>
+                <span className="shrink-0 text-[9px] text-[#9aa4b2]">{f.note}</span>
               </button>
             ))}
+          </div>
+
+          {/* The seller's own typefaces, beneath the library — a brand that
+              bought a font should not have to settle for the nearest free
+              one. Uploading is per store, like everything a store owns. */}
+          <div className="mb-4 border-t border-[#f1f3f6] pt-3">
+            <FontUploader onChanged={setStoreFonts} />
           </div>
 
           <label className="mb-1.5 block text-xs font-semibold text-[#364152]">الزوايا</label>
@@ -243,6 +453,44 @@ export function BlockBuilder(props: Props) {
                 {label}
               </button>
             ))}
+          </div>
+
+          {/*
+            The page's own backdrop. It belongs to the theme and not to a
+            block, because a seller who wants a textured page means the
+            page — setting the same photograph on nine blocks and keeping
+            them in step is not a feature, it is a chore.
+          */}
+          <div className="mt-4 border-t border-[#f1f3f6] pt-3">
+            <ImageField
+              label="خلفية الصفحة كلها"
+              value={theme.pageImage ?? ''}
+              onChange={(v) => onTheme({ ...theme, pageImage: v })}
+              onUpload={props.onUpload}
+            />
+            {theme.pageImage ? (
+              <div className="mt-2">
+                <label className="mb-1 flex items-center justify-between text-[10px] font-semibold text-[#697586]">
+                  <span>تغطية الصورة</span>
+                  <span className="tabular-nums">{Math.round((theme.pageVeil ?? 0.82) * 100)}%</span>
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={0.95}
+                  step={0.05}
+                  value={theme.pageVeil ?? 0.82}
+                  onChange={(e) => onTheme({ ...theme, pageVeil: Number(e.target.value) })}
+                  className="w-full accent-[#b8256e]"
+                />
+                {/* Not decoration. Body text straight on a photograph is
+                    unreadable exactly as often as the photograph is busy,
+                    and the seller is looking at the picture, not the text. */}
+                <p className="mt-1 text-[10px] leading-relaxed text-[#9aa4b2]">
+                  كل ما زادت، صار النص أوضح والصورة أخفت. تحت ٥٠٪ غالباً بتصير القراءة صعبة.
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -392,6 +640,37 @@ export function BlockBuilder(props: Props) {
         <div className="flex items-center justify-between border-b border-[#e3e8ef] px-3 py-2">
           <span className="text-xs font-semibold text-[#364152]">معاينة مباشرة</span>
           <div className="flex items-center gap-1">
+            {/* How large the page is DRAWN, not how large it is. Checking
+                the spacing of a long page means seeing the whole of it;
+                reading your own small print means the opposite. Neither is
+                a change to the page. */}
+            <button
+              type="button"
+              title="تصغير المعاينة"
+              disabled={zoom <= 0.5}
+              onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
+              className="cursor-pointer rounded p-1.5 text-[#697586] hover:bg-[#f8fafc] disabled:opacity-40"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              title="حجم طبيعي"
+              onClick={() => setZoom(1)}
+              className="min-w-[2.75rem] cursor-pointer rounded px-1 py-1 text-[11px] font-semibold tabular-nums text-[#697586] hover:bg-[#f8fafc]"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              type="button"
+              title="تكبير المعاينة"
+              disabled={zoom >= 1.5}
+              onClick={() => setZoom((z) => Math.min(1.5, Math.round((z + 0.1) * 10) / 10))}
+              className="cursor-pointer rounded p-1.5 text-[#697586] hover:bg-[#f8fafc] disabled:opacity-40"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+            <span className="mx-1 h-4 w-px bg-[#e3e8ef]" />
             {([['desktop', Monitor], ['mobile', Smartphone]] as const).map(([d, Icon]) => (
               <button
                 key={d}
@@ -407,7 +686,20 @@ export function BlockBuilder(props: Props) {
           </div>
         </div>
 
-        <div className="flex flex-1 justify-center overflow-auto bg-[#eef2f6] p-3">
+        {/*
+          The transform lives on the SCROLLER, not on the page inside it.
+          `position: fixed` resolves against the nearest transformed
+          ancestor's box — and when that was the page itself, which is as
+          tall as all its blocks, the floating button sat at the bottom of
+          the whole page instead of floating above what the seller was
+          looking at. It was called "the floating button" and it did not
+          float. The scroller's box IS the visible area, so the button now
+          behaves here exactly as it does on a phone.
+        */}
+        <div
+          className="flex flex-1 justify-center overflow-auto bg-[#eef2f6] p-3"
+          style={{ transform: 'translateZ(0)' }}
+        >
           <div
             ref={setCanvas}
             className="lp-root overflow-hidden rounded-lg border border-[#e3e8ef] shadow-sm"
@@ -416,13 +708,17 @@ export function BlockBuilder(props: Props) {
               ...(paletteVars(palette) as React.CSSProperties),
               width: device === 'mobile' ? 390 : '100%',
               maxWidth: '100%',
-              // Makes this box the containing block for `position: fixed`,
-              // so the sticky button floats inside the preview instead of
-              // over the dashboard the seller is standing in.
-              transform: 'translateZ(0)',
+              // `zoom` and not `transform: scale`: scale leaves the element
+              // claiming its old size, so the scroller keeps the space a
+              // shrunk page no longer uses and clips a magnified one.
+              zoom,
             }}
           >
-            <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS }} />
+            {/* The preview loads the same families the published page
+                will. Without this a chosen font fell back to the system
+                stack HERE and looked like the picker doing nothing. */}
+            {fontLink && <link rel="stylesheet" href={fontLink} />}
+            <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
             <PageBlocks
               sections={sections}
               /**
@@ -479,6 +775,21 @@ export function BlockBuilder(props: Props) {
                     rowRefs.current[id]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
                   );
                 },
+                /**
+                 * Copy a look, paste it onto the next block.
+                 *
+                 * Matching two blocks by hand is eight controls set twice
+                 * and a third block that never quite matches. This is the
+                 * same look object, so they cannot drift.
+                 */
+                onCopyLook: (id) => {
+                  const b = sections.find((x) => x.id === id);
+                  if (b) setCopiedLook(b.look);
+                },
+                onPasteLook: (id) => {
+                  if (copiedLook) patch(id, { look: copiedLook });
+                },
+                hasCopiedLook: Boolean(copiedLook),
                 canDuplicate: (b) => !SINGLETON.includes(b.type),
                 onDuplicate: (id) => {
                   const i = sections.findIndex((x) => x.id === id);

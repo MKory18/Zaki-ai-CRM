@@ -1,7 +1,7 @@
 import { guardRoute } from '@/lib/page-guard';
-import { UnderConstruction } from '@/components/shell/UnderConstruction';
+import { CampaignsScreen } from '@/components/screens/CampaignsScreen';
 
 export default async function Page() {
-  const { route } = await guardRoute('/growth/campaigns');
-  return <UnderConstruction route={route} />;
+  await guardRoute('/growth/campaigns');
+  return <CampaignsScreen />;
 }

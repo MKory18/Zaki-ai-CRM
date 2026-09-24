@@ -1,5 +1,6 @@
 'use client';
 
+import { PAGE_TEMPLATES } from '@/lib/page-templates';
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +24,7 @@ export function LandingPagesScreen() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', slug: '', productId: '' });
+  const [form, setForm] = useState({ name: '', slug: '', productId: '', template: 'classic' });
   const [products, setProducts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -96,7 +97,7 @@ export function LandingPagesScreen() {
     try {
       const data = await crmApi('/api/landing-pages', {
         method: 'POST',
-        body: JSON.stringify({ name: form.name, slug: form.slug.toLowerCase().trim(), productId: form.productId || null }),
+        body: JSON.stringify({ name: form.name, slug: form.slug.toLowerCase().trim(), productId: form.productId || null, template: form.template }),
       });
       setCreateOpen(false);
       window.location.href = `/growth/landing-pages/${data.landingPage.id}`;
@@ -127,7 +128,7 @@ export function LandingPagesScreen() {
               صفحات تسويق عامة تُنشئ طلبات حقيقية داخل CRM تلقائيًا
             </p>
           </div>
-          <Button onClick={() => { setForm({ name: '', slug: '', productId: '' }); setFormError(null); setCreateOpen(true); }}>
+          <Button onClick={() => { setForm({ name: '', slug: '', productId: '', template: 'classic' }); setFormError(null); setCreateOpen(true); }}>
             <Plus className="w-4 h-4" /> صفحة جديدة
           </Button>
         </div>
@@ -229,6 +230,40 @@ export function LandingPagesScreen() {
       {/* Create modal */}
       <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="إنشاء صفحة هبوط جديدة" maxWidth="lg">
         <div className="space-y-4">
+          {/*
+            The shape of the page, chosen FIRST.
+            
+            It lived in the editor, a thousand pixels down the panel, past
+            every decision the template was about to make for you. Here it
+            costs nothing: there is no page yet, so nothing to warn about
+            losing. Pick the shape, then name it.
+          */}
+          <div>
+            <label className="text-xs font-semibold text-[#364152]">شكل الصفحة</label>
+            <p className="mb-2 mt-0.5 text-[11px] text-[#697586]">
+              تبدأ الصفحة بهذا الشكل ولونه وخطه — ويمكنك تغيير كل شيء بعدها.
+            </p>
+            <div className="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto pe-1 sm:grid-cols-2">
+              {PAGE_TEMPLATES.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setForm({ ...form, template: t.key })}
+                  className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 text-start transition ${
+                    form.template === t.key
+                      ? 'border-[#b8256e] bg-[#fdf2f7]'
+                      : 'border-[#e3e8ef] hover:border-[#b8256e]/40'
+                  }`}
+                >
+                  <span className="mt-0.5 h-7 w-1.5 shrink-0 rounded-full" style={{ background: t.swatch }} />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-[#364152]">{t.label}</span>
+                    <span className="block text-[9.5px] leading-relaxed text-[#9aa4b2]">{t.hint}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div>
             <label className="text-xs font-semibold text-[#364152]">اسم الصفحة *</label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: صفحة Tremella" />

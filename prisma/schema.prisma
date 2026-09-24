@@ -55,6 +55,8 @@ model Company {
   customerBlocks    CustomerBlock[]
   orderChannels     OrderChannel[]
   stores            Store[]
+  fonts             StoreFont[]
+  campaigns         Campaign[]
 
   @@map("companies")
 }
@@ -281,6 +283,8 @@ model InventoryMovement {
 
   @@index([companyId, productId])
   @@index([batchId])
+  // The ledger is read per store, newest first.
+  @@index([companyId, storeId, createdAt(sort: Desc)])
   @@map("inventory_movements")
 }
 
@@ -359,6 +363,15 @@ model Order {
   /// kept as it was written, so an order never loses where it said it came
   /// from when a channel is renamed or retired.
   channelId            String?
+  /// The paid campaign that brought this order, when one did.
+  ///
+  /// Separate from `channelId`: a channel is the door (Facebook, WhatsApp,
+  /// walk-in) and a campaign is one specific spend through it. Two Meta
+  /// campaigns running at once are the same channel and different money,
+  /// and telling them apart is the entire point of the screen.
+  // No @map: this table is camelCase throughout, and matching the table
+  // beats matching the newer convention.
+  campaignId           String?
   productId            String
   offerId              String?
   quantity             Int       @default(1)
@@ -488,6 +501,7 @@ model Order {
   store      Store?          @relation(fields: [storeId], references: [id], onDelete: Restrict)
   customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
   channel    OrderChannel?   @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  campaign   Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   offer      Offer?          @relation(fields: [offerId], references: [id], onDelete: SetNull)
   moderator  User?           @relation("ModeratorOrders", fields: [moderatorId], references: [id], onDelete: SetNull)
@@ -544,6 +558,7 @@ model Order {
   @@index([companyId, confirmationStatus])
   @@index([companyId, settlementStatus])
   @@index([companyId, landingPageId])
+  @@index([companyId, storeId, campaignId])
   @@index([lockedById, lockExpiresAt])
   @@index([storeId, createdAt])
   @@index([countryId])
@@ -998,6 +1013,7 @@ model LandingPage {
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   creator User?    @relation("LandingPageCreator", fields: [createdById], references: [id], onDelete: SetNull)
   orders  Order[]
+  campaigns Campaign[]
   recommendations LandingPageRecommendation[]
   addOns  OrderAddOn[]
   // Geo context (Stage 2): orders from this page land in this store.
@@ -1328,6 +1344,8 @@ model Store {
   telegramSources TelegramSource[]
   shippingBatches ShippingBatch[]
   couriers        DeliveryProvider[]
+  fonts           StoreFont[]
+  campaigns       Campaign[]
   wallets         Wallet[]
   products        Product[]
   customers       Customer[]
@@ -2032,4 +2050,100 @@ model AttendanceMark {
   @@index([companyId, at])
   @@index([userId, at])
   @@map("attendance_marks")
+}
+
+/// A typeface the seller uploaded, served to their own landing pages.
+///
+/// Per store, like everything else a store owns: a font bought for one
+/// brand is not a font the next brand may set its headlines in, and a
+/// licence is usually granted to a domain.
+///
+/// `notice` is the licence text read out of the file at upload. It is kept
+/// so the panel can show the seller what the designer wrote — most Arabic
+/// type forbids being served from a website, and a seller who uploads one
+/// is usually not defying that, they have simply never seen it, because it
+/// is buried in a binary. Storing it means they are told once, plainly,
+/// rather than never.
+model StoreFont {
+  id         String   @id @default(uuid())
+  companyId  String   @map("company_id")
+  storeId    String   @map("store_id")
+  /// The slug used in CSS and in the picker. One per family per store.
+  key        String
+  /// What the seller calls it, in their own words.
+  label      String
+  /// The family name read from the file — what the browser matches on.
+  family     String
+  weight     Int      @default(400)
+  italic     Boolean  @default(false)
+  storageKey String   @map("storage_key")
+  sizeBytes  Int      @map("size_bytes")
+  format     String   // woff2 | woff | otf | ttf
+  /// Copyright and licence as the designer embedded them. May be empty.
+  notice     String?  @db.Text
+  /// True when the designer's own words suggest serving it is not allowed.
+  /// A hint shown to the seller, never a block.
+  restricted Boolean  @default(false)
+  /// The seller's statement that they hold the right to serve this file.
+  /// Recorded with who and when, because that is the whole point of asking.
+  attestedBy String?  @map("attested_by")
+  attestedAt DateTime? @map("attested_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, storeId, key, weight, italic])
+  @@index([companyId, storeId])
+  @@map("store_fonts")
+}
+
+
+/// A paid campaign: what was spent, and what came back.
+///
+/// The platforms will not tell us what was spent without an ad account's
+/// API keys, and a seller reading their own ads manager can type a number
+/// in ten seconds. So spend is entered, and everything else is MEASURED —
+/// the orders, the confirmations, the deliveries and the money collected
+/// all come from this system's own records through the same attribution
+/// engine the moderator and channel reports use. One definition of
+/// "revenue" across every screen, or two screens eventually disagree about
+/// one week.
+///
+/// Per store, like everything a store owns. A campaign runs for one shop.
+model Campaign {
+  id          String    @id @default(uuid())
+  companyId   String    @map("company_id")
+  storeId     String    @map("store_id")
+  name        String
+  /// META | TIKTOK | SNAPCHAT | GOOGLE | OTHER — for grouping, not for an API.
+  platform    String    @default("META")
+  /// The short code that appears in the ad's link as ?c=CODE.
+  ///
+  /// Unique per store and never reused: an order carries the campaign it
+  /// was resolved to, and a recycled code would move last month's orders
+  /// onto this month's spend.
+  code        String
+  /// Which page the ad points at. Optional — a campaign may send traffic
+  /// to a storefront, or to a page that was later deleted.
+  landingPageId String? @map("landing_page_id")
+  status      String    @default("ACTIVE") // ACTIVE | PAUSED | ENDED
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime? @map("end_date")
+  /// What the seller says they spent, in the store's own currency.
+  spend       Decimal   @default(0) @db.Decimal(14, 2)
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  createdById String?   @map("created_by_id")
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  landingPage LandingPage? @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
+  orders      Order[]
+
+  @@unique([companyId, storeId, code])
+  @@index([companyId, storeId, status])
+  @@map("campaigns")
 }

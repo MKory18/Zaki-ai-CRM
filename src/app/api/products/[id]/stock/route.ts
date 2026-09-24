@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { inStore } from '@/lib/store-filter';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -16,12 +17,12 @@ import { reservedElsewhere } from '@/lib/reservation';
  */
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const { companyId, country } = await requireContext();
+    const { companyId, storeId, country } = await requireContext();
     await requirePermission('inventory.view');
     const { id } = await ctx.params;
 
     const product = await db.product.findFirst({
-      where: { id, companyId },
+      where: { id, ...inStore(companyId, storeId) },
       select: { id: true, sourceType: true },
     });
     if (!product) return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });

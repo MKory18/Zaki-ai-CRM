@@ -47,7 +47,7 @@ export async function POST() {
     const aiContext = analytics.aiContext;
 
     // Call AI analyzer
-    const analysis = await generateAiBusinessAnalysis(aiContext);
+    const analysis = await generateAiBusinessAnalysis(aiContext, companyId);
 
     // Upsert into AiDailySummary table
     const summary = await db.aiDailySummary.upsert({

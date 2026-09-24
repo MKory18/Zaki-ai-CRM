@@ -53,7 +53,7 @@ interface Scope {
   end?: Date;
 }
 
-type GroupKey = 'moderatorId' | 'channelId';
+type GroupKey = 'moderatorId' | 'channelId' | 'campaignId';
 
 async function attribution(scope: Scope, key: GroupKey): Promise<AttributionRow[]> {
   const { companyId, storeId, start, end } = scope;
@@ -65,7 +65,7 @@ async function attribution(scope: Scope, key: GroupKey): Promise<AttributionRow[
     ...(when ? { createdAt: when } : {}),
   } as Record<string, unknown>;
 
-  const by = [key] as ['moderatorId'] | ['channelId'];
+  const by = [key] as ['moderatorId'] | ['channelId'] | ['campaignId'];
 
   const [brought, confirmed, rejected, delivered, returned, collected, uncollected] = await Promise.all([
     db.order.groupBy({ by, where: base, _count: { _all: true } }),
@@ -97,14 +97,26 @@ async function attribution(scope: Scope, key: GroupKey): Promise<AttributionRow[
             (u) => [u.id, { name: u.name, kind: u.role as string | null }]
           )
         )
-      : new Map(
-          (
-            await db.orderChannel.findMany({
-              where: { id: { in: ids }, companyId },
-              select: { id: true, name: true, kind: true },
-            })
-          ).map((c) => [c.id, { name: c.name, kind: c.kind as string | null }])
-        );
+      : key === 'campaignId'
+        ? new Map(
+            (
+              await db.campaign.findMany({
+                // Scoped to the store as well as the company: a campaign
+                // belongs to one shop, and a name resolved wider than the
+                // rows it labels is a name from somebody else's screen.
+                where: { id: { in: ids }, companyId, storeId },
+                select: { id: true, name: true, platform: true },
+              })
+            ).map((c) => [c.id, { name: c.name, kind: c.platform as string | null }])
+          )
+        : new Map(
+            (
+              await db.orderChannel.findMany({
+                where: { id: { in: ids }, companyId },
+                select: { id: true, name: true, kind: true },
+              })
+            ).map((c) => [c.id, { name: c.name, kind: c.kind as string | null }])
+          );
 
   const count = (rows: typeof brought, id: string) =>
     (rows.find((r) => idOf(r as never) === id) as { _count?: { _all: number } } | undefined)?._count?._all ?? 0;
@@ -148,6 +160,20 @@ async function attribution(scope: Scope, key: GroupKey): Promise<AttributionRow[
 
   // What the business kept, biggest first.
   return rows.sort((a, b) => b.revenue - a.revenue || b.brought - a.brought);
+}
+
+/**
+ * Orders credited to each paid campaign.
+ *
+ * The same engine as the other two, on purpose. A campaign report that
+ * computed its own revenue would be a third definition of the word, and
+ * three definitions is how a seller ends up with three screens disagreeing
+ * about one week. What a campaign adds — spend, and therefore ROAS — is not
+ * here: this counts what happened, and money that left for an ad platform
+ * is not something this system witnessed.
+ */
+export function campaignPerformance(scope: Scope): Promise<AttributionRow[]> {
+  return attribution(scope, 'campaignId');
 }
 
 /** Orders credited to each moderator who entered them. */

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus } from 'lucide-react';
+import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus, Palette as PaletteIcon, Paintbrush } from 'lucide-react';
 import type { LandingSection } from '@/lib/landing-sections';
-import { lookStyles } from '@/lib/block-look';
+import { lookStyles, isPlainLook } from '@/lib/block-look';
+import { sanitizeRich, isRich } from '@/lib/rich-text';
 import type { Palette } from '@/lib/landing-theme';
 import { OfferCards } from './OfferCards';
 import { Countdown } from './Countdown';
@@ -54,6 +55,12 @@ export interface BlockSelection {
   onEdit?: (id: string) => void;
   /** A second copy right below. Undefined when this block may exist once. */
   onDuplicate?: (id: string) => void;
+  /** Take this block's look, to put on another. */
+  onCopyLook?: (id: string) => void;
+  /** Put the copied look on this one. */
+  onPasteLook?: (id: string) => void;
+  /** Whether anything has been copied yet — the paste button says so. */
+  hasCopiedLook?: boolean;
   /** False for a block the page may only hold one of. */
   canDuplicate?: (s: LandingSection) => boolean;
   /** The look controls, rendered in the same bar as the handles. */
@@ -104,20 +111,40 @@ export function PageBlocks({
  * outer layer is full-bleed so a background can reach the screen edges; the
  * inner one holds the width and the gutter, so the text never does.
  */
+/**
+ * A seller's text, drawn with whatever marks they put on part of it.
+ *
+ * Returns props to spread rather than wrapping in an element, so every call
+ * site keeps the tag it already had — a headline stays an `h1` and not an
+ * `h1` with a `span` inside it that the block stylesheet does not expect.
+ *
+ * Plain text takes the plain path and never touches innerHTML: the vast
+ * majority of values are plain, and the safest branch should be the one
+ * most of them travel down.
+ */
+function rich(value: string | null | undefined) {
+  const v = value ?? '';
+  return isRich(v)
+    ? { dangerouslySetInnerHTML: { __html: sanitizeRich(v) } }
+    : { children: v };
+}
+
 function Dressed({ section, children }: { section: LandingSection; children: React.ReactNode }) {
-  const { outer, inner, overlay } = lookStyles(section.look);
-  const plain =
-    !section.look ||
-    (Object.keys(outer).length === 2 && !outer.background && !outer.backgroundImage);
+  const { outer, inner, overlay, vars } = lookStyles(section.look);
 
   // A block nobody has styled renders exactly as it did before any of this
   // existed — no extra wrapper, no changed spacing, nothing to regress.
-  if (plain && !section.look) return <>{children}</>;
+  //
+  // The test asks what the seller CHOSE, not whether an object is present:
+  // the schema fills a default look into every block, so `!section.look`
+  // was never once true and every block on every page had quietly gained a
+  // wrapper it did not need.
+  if (isPlainLook(section.look)) return <>{children}</>;
 
   const t = section.look?.text;
   return (
     <div
-      style={outer}
+      style={{ ...outer, ...vars } as React.CSSProperties}
       /* Each flag turns on the rule that makes this block's own choice beat
          the block stylesheet. Absent when nothing was chosen, so a page
          nobody has styled renders exactly as it always did. */
@@ -142,7 +169,7 @@ function Dressed({ section, children }: { section: LandingSection; children: Rea
 function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext }) {
   switch (s.type) {
     case 'announcement':
-      return s.text ? <div className="lp-announce" data-edit="text">{s.text}</div> : null;
+      return s.text ? <div className="lp-announce" data-edit="text" {...rich(s.text)} /> : null;
 
     case 'hero':
       return <Hero section={s} ctx={ctx} />;
@@ -162,8 +189,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
                   <Check size={15} strokeWidth={3} />
                 </span>
                 <div>
-                  <strong data-edit={`items.${i}.title`}>{item.title}</strong>
-                  {item.text && <p>{item.text}</p>}
+                  <strong data-edit={`items.${i}.title`} {...rich(item.title)} />
+                  {item.text && <p data-edit={`items.${i}.text`} {...rich(item.text)} />}
                 </div>
               </li>
             ))}
@@ -222,8 +249,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
                     <Star key={n} size={13} fill={n < r.stars ? 'currentColor' : 'none'} strokeWidth={1.5} />
                   ))}
                 </div>
-                <blockquote data-edit={`items.${i}.text`}>{r.text}</blockquote>
-                {r.name && <figcaption data-edit={`items.${i}.name`}>{r.name}</figcaption>}
+                <blockquote data-edit={`items.${i}.text`} {...rich(r.text)} />
+                {r.name && <figcaption data-edit={`items.${i}.name`} {...rich(r.name)} />}
               </figure>
             ))}
           </div>
@@ -247,8 +274,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
     case 'form':
       return (
         <section className="lp-section lp-form-section">
-          {s.title && <h2 className="lp-h2" data-edit="title">{s.title}</h2>}
-          {s.subtitle && <p className="lp-sub" data-edit="subtitle">{s.subtitle}</p>}
+          {s.title && <h2 className="lp-h2" data-edit="title" {...rich(s.title)} />}
+          {s.subtitle && <p className="lp-sub" data-edit="subtitle" {...rich(s.subtitle)} />}
           {ctx.form}
         </section>
       );
@@ -264,8 +291,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
             return (
               <div key={i}>
                 <Icon size={18} />
-                <strong data-edit={`items.${i}.title`}>{item.title}</strong>
-                {item.text && <span data-edit={`items.${i}.text`}>{item.text}</span>}
+                <strong data-edit={`items.${i}.title`} {...rich(item.title)} />
+                {item.text && <span data-edit={`items.${i}.text`} {...rich(item.text)} />}
               </div>
             );
           })}
@@ -274,9 +301,16 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
     }
 
     case 'footer': {
+      // Each column and each link keeps the index it has IN THE DATA, so a
+      // seller typing into the second visible link writes to the second
+      // link and not to whichever one the filter happened to leave there.
       const columns = s.columns
-        .map((c) => ({ ...c, links: c.links.filter((l) => l.label && l.url) }))
-        .filter((c) => c.title || c.links.length);
+        .map((c, at) => ({
+          col: c,
+          at,
+          links: c.links.map((l, li) => ({ link: l, li })).filter(({ link }) => link.label && link.url),
+        }))
+        .filter(({ col, links }) => col.title || links.length);
       return (
         <footer className="lp-footer">
           {s.logo && (
@@ -286,17 +320,22 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
 
           {columns.length > 0 && (
             <nav className="lp-footer-cols">
-              {columns.map((c, i) => (
-                <div key={i}>
-                  {c.title && <h3>{c.title}</h3>}
+              {columns.map(({ col, at, links }) => (
+                <div key={at}>
+                  {col.title && <h3 data-edit={`columns.${at}.title`} {...rich(col.title)} />}
                   <ul>
-                    {c.links.map((l, n) => (
-                      <li key={n}>
+                    {links.map(({ link, li }) => (
+                      <li key={li}>
                         {/* The seller's own links, but the page is public:
                             an external target never gets to reach back
                             through window.opener. */}
-                        <a href={l.url} target="_blank" rel="noopener noreferrer nofollow">
-                          {l.label}
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          data-edit={`columns.${at}.links.${li}.label`}
+                        >
+                          {link.label}
                         </a>
                       </li>
                     ))}
@@ -309,10 +348,12 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
           {s.phone && (
             <a className="lp-footer-phone" href={`tel:${s.phone.replace(/[^\d+]/g, '')}`} dir="ltr">
               <Phone size={14} />
-              {s.phone}
+              {/* The number is its own editable text: the icon beside it is
+                  not, or typing would swallow it. */}
+              <span data-edit="phone">{s.phone}</span>
             </a>
           )}
-          <p data-edit="text">{s.text || 'جميع الحقوق محفوظة'}</p>
+          <p data-edit="text" {...rich(s.text || 'جميع الحقوق محفوظة')} />
         </footer>
       );
     }
@@ -334,7 +375,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
 function Section({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <section className="lp-section">
-      {title && <h2 className="lp-h2" data-edit="title">{title}</h2>}
+      {title && <h2 className="lp-h2" data-edit="title" {...rich(title)} />}
       {children}
     </section>
   );
@@ -348,8 +389,8 @@ function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'h
         // eslint-disable-next-line @next/next/no-img-element
         <img src={s.image} alt={headline} className="lp-hero-img" />
       )}
-      <h1 className="lp-h1" data-edit="headline">{headline}</h1>
-      {s.subheadline && <p className="lp-hero-sub" data-edit="subheadline">{s.subheadline}</p>}
+      <h1 className="lp-h1" data-edit="headline" {...rich(headline)} />
+      {s.subheadline && <p className="lp-hero-sub" data-edit="subheadline" {...rich(s.subheadline)} />}
       {s.showPrice && ctx.price > 0 && (
         <p className="lp-price" dir="ltr">
           {ctx.price.toLocaleString('en-US')} <span>{ctx.currency}</span>
@@ -462,6 +503,20 @@ function Selectable({
               title="تكرار"
               onClick={() => selection.onDuplicate?.(s.id)}
               icon={<CopyPlus className="h-3.5 w-3.5" />}
+            />
+          )}
+          {/* Matching two blocks by hand is eight controls set twice, and a
+              third block that never quite matches. */}
+          <Handle
+            title="انسخ التنسيق"
+            onClick={() => selection.onCopyLook?.(s.id)}
+            icon={<PaletteIcon className="h-3.5 w-3.5" />}
+          />
+          {selection.hasCopiedLook && (
+            <Handle
+              title="الصق التنسيق"
+              onClick={() => selection.onPasteLook?.(s.id)}
+              icon={<Paintbrush className="h-3.5 w-3.5" />}
             />
           )}
           <span className="mx-0.5 h-4 w-px bg-[#e3e8ef]" />

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { lookStyles, fontsUsed } from './block-look';
+import { GOOGLE_FAMILY, isPlainLook } from './block-look';
+import { FONTS, landingThemeSchema, DEFAULT_THEME } from './landing-theme';
 import type { BlockLook } from './landing-sections';
 
 const look = (over: Partial<BlockLook> = {}): BlockLook =>
@@ -30,8 +32,11 @@ describe('sizes are fluid, never fixed', () => {
     }
   });
 
-  it('keeps a side gutter always — text on the screen edge looks cheap', () => {
-    expect(lookStyles(look({ width: 'full' })).inner.paddingInline).toMatch(/^clamp\(16px/);
+  it('adds no gutter of its own — every block already brings one', () => {
+    // Three stacked gutters put the order form at 271px inside a 375px
+    // phone. The block stylesheet already pads .lp-section, .lp-hero and
+    // .lp-announce; a wrapper gutter on top is the same space charged twice.
+    expect(lookStyles(look({ width: 'full' })).inner.paddingInline).toBeUndefined();
   });
 
   it('sizes text relatively, so it still fits when the screen shrinks', () => {
@@ -119,5 +124,109 @@ describe('fonts a page must load', () => {
         undefined,
       ]).sort()
     ).toEqual(['cairo']);
+  });
+});
+
+/**
+ * ONE LIBRARY, NOT THREE.
+ *
+ * There were three lists of the same Arabic faces — the theme picker's four,
+ * the block picker's twelve, and a fourth hidden inside the stylesheet URL
+ * builder — and they had already drifted: two faces the picker offered had
+ * no entry in the URL builder, so choosing either loaded no stylesheet and
+ * drew the fallback. The picker looked broken because of a list, not a bug.
+ *
+ * These guard the rule rather than the symptom: every offered face must be
+ * loadable, and every loadable face must be offered.
+ */
+describe('the font library is a single registry', () => {
+  it('gives every offered face a stack, a name and a hint', () => {
+    for (const f of FONTS) {
+      expect(f.stack, f.key).toBeTruthy();
+      expect(f.label, f.key).toBeTruthy();
+      expect(f.note, f.key).toBeTruthy();
+    }
+  });
+
+  it('can load every offered face from exactly one place', () => {
+    for (const f of FONTS) {
+      if (f.key === 'system') continue; // already on the device
+      // Google, our own public folder, or the machine-only route — one of
+      // the three and never two. Two sources for one family is two chances
+      // to disagree about which outlines the page draws.
+      const sources = [Boolean(GOOGLE_FAMILY[f.key]), Boolean(f.local), Boolean(f.devOnly)];
+      expect(sources.filter(Boolean).length, `${f.key} must come from exactly one source`).toBe(1);
+    }
+  });
+
+  it('never asks Google for a face we are not allowed to publish', () => {
+    // A devOnly family reaching fontHref would put its name in a stylesheet
+    // URL on the PUBLISHED page — a request that fails, and a licence
+    // problem hiding inside a 404 nobody reads.
+    for (const f of FONTS.filter((x) => x.devOnly)) {
+      expect(GOOGLE_FAMILY[f.key], `${f.key} must never be requested remotely`).toBeUndefined();
+    }
+  });
+
+  it('serves a local face only when its licence was checked', () => {
+    // Every family here has its notice in public/fonts. Adding a row with
+    // `local: true` means committing a font file, and a font file that may
+    // not be served is a legal problem, not a rendering one — so the list
+    // is written down rather than inferred.
+    expect(FONTS.filter((f) => f.local).map((f) => f.key)).toEqual(['kawkab']);
+  });
+
+  it('offers every face it knows how to load', () => {
+    const offered = new Set(FONTS.map((f) => f.key));
+    for (const key of Object.keys(GOOGLE_FAMILY)) {
+      expect(offered.has(key as never), `${key} is loadable but never offered`).toBe(true);
+    }
+  });
+
+  it('turns a block choice into a real CSS stack', () => {
+    for (const f of FONTS) {
+      expect(lookStyles(look({ text: { font: f.key } as never })).inner.fontFamily, f.key).toBe(f.stack);
+    }
+  });
+
+  it('accepts every face as a stored page theme', () => {
+    for (const f of FONTS) {
+      expect(
+        landingThemeSchema.safeParse({ ...DEFAULT_THEME, font: f.key }).success,
+        `${f.key} is offered but a page cannot store it`
+      ).toBe(true);
+    }
+  });
+});
+
+
+/**
+ * THE WRAPPER ONLY EXISTS FOR A CHOICE.
+ *
+ * `look` used to be absent until somebody styled a block, so "is it there?"
+ * meant "did the seller choose?". Then the schema began filling a default
+ * look into every block and the question stopped meaning anything: every
+ * block on every page got a wrapper, a max-width and a second gutter that
+ * nobody had asked for.
+ */
+describe('a block nobody styled stays untouched', () => {
+  it('treats the schema default as no choice at all', () => {
+    expect(isPlainLook(look())).toBe(true);
+    expect(isPlainLook(undefined)).toBe(true);
+  });
+
+  it('notices each kind of choice on its own', () => {
+    expect(isPlainLook(look({ width: 'wide' }))).toBe(false);
+    expect(isPlainLook(look({ align: 'start' }))).toBe(false);
+    expect(isPlainLook(look({ space: 'roomy' }))).toBe(false);
+    expect(isPlainLook(look({ background: { kind: 'solid', from: '#fff' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { color: '#111' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { headingColor: '#111' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { font: 'cairo' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { scale: 'l' } as never }))).toBe(false);
+    expect(isPlainLook(look({ text: { italic: true } as never }))).toBe(false);
+    expect(isPlainLook(look({ button: { fill: '#111' } as never }))).toBe(false);
+    expect(isPlainLook(look({ button: { size: 'l' } as never }))).toBe(false);
+    expect(isPlainLook(look({ button: { wide: true } as never }))).toBe(false);
   });
 });

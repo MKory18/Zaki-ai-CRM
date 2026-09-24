@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
@@ -22,11 +22,11 @@ interface Ctx {
 
 export async function PATCH(req: Request, ctx: Ctx) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('offers.manage');
     const { id } = await ctx.params;
 
-    const existing = await db.offer.findFirst({ where: { id, companyId } });
+    const existing = await db.offer.findFirst({ where: { id, companyId, product: { storeId: storeId ?? '' } } });
     if (!existing) return NextResponse.json({ error: 'العرض غير موجود' }, { status: 404 });
 
     const parsed = offerInputSchema.partial().safeParse(await req.json().catch(() => null));
@@ -76,11 +76,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
 export async function DELETE(_req: Request, ctx: Ctx) {
   try {
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('offers.manage');
     const { id } = await ctx.params;
 
-    const existing = await db.offer.findFirst({ where: { id, companyId } });
+    const existing = await db.offer.findFirst({ where: { id, companyId, product: { storeId: storeId ?? '' } } });
     if (!existing) return NextResponse.json({ error: 'العرض غير موجود' }, { status: 404 });
 
     // An offer an order was placed on is history, not configuration. Deleting

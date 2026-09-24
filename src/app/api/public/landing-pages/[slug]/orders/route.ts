@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { LANDING_PAGE_SOURCE } from '@/lib/landing-pages';
 import { createPublicOrder, type SellingSurface } from '@/lib/public-order';
+import { resolveCampaign } from '@/lib/campaigns-server';
 
 /**
  * Public order intake from a landing page.
@@ -102,9 +103,19 @@ export async function POST(req: Request, ctx: Ctx) {
       return NextResponse.json({ error: 'هذه الصفحة لا تقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
     }
 
+    // The campaign that brought this visitor, resolved from the code their
+    // link carried. The browser sends a code and never an id: an id taken
+    // from a request would let anyone credit another shop's spend.
+    const campaignId = await resolveCampaign(
+      lp.company.id,
+      lp.store.id,
+      (raw as { campaign?: unknown } | null)?.campaign
+    );
+
     const surface: SellingSurface = {
       companyId: lp.company.id, // server-derived — NEVER from the browser
       store: lp.store,
+      campaignId,
       product: lp.product,
       landingPage: { id: lp.id, name: lp.name, slug: lp.slug },
       source: LANDING_PAGE_SOURCE,
