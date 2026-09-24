@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Globe, Loader2, Plus, Store } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { storeTypeLabel } from '@/lib/store-types';
 
 /**
  * Two explicit steps: country, then store. The server decides what is
@@ -188,7 +189,7 @@ export function EntryPicker() {
                 <span className="block text-sm font-semibold text-[#121926]">{s.name}</span>
                 <span className="block text-xs text-[#697586]">
                   {s.status === 'ACTIVE' ? 'نشط' : 'موقوف'} ·{' '}
-                  {s.type === 'SINGLE_PRODUCT' ? 'منتج واحد' : 'متعدد المنتجات'}
+                  {storeTypeLabel(s.type)}
                 </span>
               </span>
             </button>

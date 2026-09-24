@@ -820,6 +820,7 @@ export function BlockBuilder(props: Props) {
                 stock: 7, // a plausible figure so the block can be judged
                 offers: props.offers,
                 form: <FormPlaceholder />,
+                building: true,
               }}
             />
           </div>
@@ -904,6 +905,42 @@ function SectionFields({
         <div className="space-y-2.5">
           <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
           <GalleryField images={s.images} onChange={(images) => patch({ images })} onUpload={onUpload} />
+        </div>
+      );
+
+    case 'slider':
+      return (
+        <div className="space-y-2.5">
+          <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} placeholder="اختياري" />
+          <GalleryField images={s.images} onChange={(images) => patch({ images: images.slice(0, 10) })} onUpload={onUpload} />
+          <Check label="تتقلّب وحدها" checked={s.autoplay} onChange={(v) => patch({ autoplay: v })} />
+          {s.autoplay && (
+            <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#364152]">
+              ثوانٍ لكل صورة
+              <select
+                value={s.seconds}
+                onChange={(e) => patch({ seconds: Number(e.target.value) })}
+                className="h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+              >
+                {[2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+          )}
+          <p className="text-[10px] leading-relaxed text-[#697586]">
+            حتى ١٠ صور. تتوقف حين يلمسها الزائر، ولا تتقلّب أبداً لمن طلب من جهازه حركة أقل.
+          </p>
+        </div>
+      );
+
+    case 'thankyou':
+      return (
+        <div className="space-y-2.5">
+          <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
+          <Field label="الرسالة" value={s.message} onChange={(v) => patch({ message: v })} area rows={4} />
+          <p className="text-[10px] leading-relaxed text-[#697586]">
+            تظهر مكان النموذج بعد إرسال الطلب. رقم الطلب وعروض ما بعد الطلب تظهر تحتها تلقائياً —
+            لا تكتبها هنا.
+          </p>
         </div>
       );
 

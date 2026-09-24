@@ -12,10 +12,15 @@ import { DEFAULT_THEME, type LandingTheme } from './landing-theme';
  *
  * Two shapes from one model, because `Store.type` already said which:
  *
- *   SINGLE_PRODUCT — the home page IS the product page. A shop selling one
- *                    thing should not make a visitor click "products" to
- *                    find the one thing.
+ *   SINGLE_PRODUCT — the home page IS a landing page: the one the seller
+ *                    picked as the store's front, with every block, template,
+ *                    pixel and upsell it has. No catalogue, no cart. Until a
+ *                    page is picked, it is its one product's page.
  *   MULTI_PRODUCT  — home lists what is for sale, each with its own page.
+ *
+ * Everything is read through THIS store. The catalogue used to be read by
+ * company, so one shop listed — and sold — another shop's products, and the
+ * order landed on the wrong shop's stock.
  *
  * Only ACTIVE products with a price are listed. A product with no price is
  * not a product a customer can buy, and showing it teaches them the shop is
@@ -48,6 +53,8 @@ export interface Storefront {
   countryCode: string;
   countryId: string;
   companyId: string;
+  /** A Single Product store's front page, when one is picked. */
+  landingPageId: string | null;
 }
 
 /** The stored theme, or the house one when it is missing or corrupt. */
@@ -73,7 +80,7 @@ export async function getStorefront(slug: string): Promise<Storefront | null> {
     select: {
       id: true, name: true, slug: true, logo: true, tagline: true, about: true,
       supportPhone: true, domain: true, type: true, theme: true,
-      companyId: true, countryId: true,
+      companyId: true, countryId: true, landingPageId: true,
       country: { select: { code: true, currencyCode: true } },
     },
   });
@@ -94,6 +101,7 @@ export async function getStorefront(slug: string): Promise<Storefront | null> {
     countryCode: store.country.code,
     countryId: store.countryId,
     companyId: store.companyId,
+    landingPageId: store.type === 'SINGLE_PRODUCT' ? store.landingPageId : null,
   };
 }
 
@@ -107,10 +115,11 @@ export async function getStorefront(slug: string): Promise<Storefront | null> {
  */
 export async function storefrontProducts(
   companyId: string,
+  storeId: string,
   limit = 60
 ): Promise<StorefrontProduct[]> {
   const products = await db.product.findMany({
-    where: { companyId, status: 'ACTIVE', basePrice: { gt: 0 } },
+    where: { companyId, storeId, status: 'ACTIVE', basePrice: { gt: 0 } },
     orderBy: { createdAt: 'desc' },
     take: limit,
     select: {
@@ -156,10 +165,11 @@ export async function storefrontProducts(
  */
 export async function storefrontProduct(
   companyId: string,
+  storeId: string,
   sku: string
 ): Promise<(StorefrontProduct & { gallery: string[] }) | null> {
   const p = await db.product.findFirst({
-    where: { companyId, sku: sku.toUpperCase(), status: 'ACTIVE' },
+    where: { companyId, storeId, sku: sku.toUpperCase(), status: 'ACTIVE', basePrice: { gt: 0 } },
     select: {
       id: true, sku: true, name: true, description: true, image: true, basePrice: true,
       offers: {

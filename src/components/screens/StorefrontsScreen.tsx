@@ -1,48 +1,56 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
-  Store, ExternalLink, Link2, Check, Loader2, AlertTriangle, Globe, Settings2, Package,
+  Store, ExternalLink, Link2, Check, Loader2, AlertTriangle, Globe, Settings2, Paintbrush, Plus, Info,
 } from 'lucide-react';
 import { useConfirm } from '@/components/ui/Confirm';
+import { STORE_TYPE_LABEL } from '@/lib/store-types';
 
 /**
- * EVERY SHOP THIS USER RUNS, ON ONE SCREEN.
+ * متجر SINGLE PRODUCT — A STORE WHOSE FRONT IS ONE OF ITS LANDING PAGES.
  *
- * The rest of the system is answered from inside one store, which is
- * correct — a clerk should not be able to read another shop's ledger. But
- * "which of my shops are live, and are they selling?" cannot be asked from
- * inside one of them, and until now the answer was to switch store, look,
- * switch back, and hold the numbers in your head.
+ * The store is the address (its link, its domain); the page is the shop —
+ * every block, template, pixel and upsell the landing page builder has.
+ * No cart, no catalogue. So this screen does three things: picks the page,
+ * opens or closes the store, and says what still stops it selling.
  *
- * What bounds this instead is ACCESS: the same UserStoreAccess rows the
- * store switcher obeys. A user who may enter two shops sees two rows.
+ * The page picker is on every card, open, because it IS the feature: a
+ * seller who has to find it behind a button reads the screen as having no
+ * way to design the store.
  *
- * The blockers are the reason this is more than a list. A shopfront that is
- * switched on but has no products is a link a seller will paste into an ad
- * before discovering it shows empty shelves — so the screen says so here,
- * where it can still be fixed, rather than leaving it to be found by a
- * customer.
+ * Stores that sell many products keep their switch in their own panel
+ * under «البلدان والمتاجر» — the same rule decides both.
  */
+
+interface PageOption {
+  id: string;
+  name: string;
+  slug: string;
+  isPublished: boolean;
+  domain: string | null;
+  product: { name: string } | null;
+}
 
 interface Shop {
   id: string;
   name: string;
   slug: string;
   logo: string | null;
-  type: 'SINGLE_PRODUCT' | 'MULTI_PRODUCT';
   status: string;
   live: boolean;
   tagline: string | null;
-  supportPhone: string | null;
   domain: string | null;
   currency: string;
   path: string;
-  products: number;
-  landingPages: number;
+  current: boolean;
+  frontPage: PageOption | null;
+  pages: PageOption[];
   orders: number;
   revenue: number;
-  blockers: string[];
+  refusal: string | null;
+  warnings: string[];
 }
 
 export function StorefrontsScreen() {
@@ -56,13 +64,32 @@ export function StorefrontsScreen() {
     try {
       const res = await fetch('/api/growth/storefronts');
       const json = await res.json();
-      setShops(json.stores || []);
+      setShops(res.ok ? json.stores || [] : []);
     } catch {
       setShops([]);
     }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  async function send(shop: Shop, body: Record<string, unknown>) {
+    setBusy(shop.id);
+    setError(null);
+    try {
+      const res = await fetch('/api/growth/storefronts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: shop.id, ...body }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'تعذر الحفظ');
+    } catch (e) {
+      setError(`${shop.name}: ${e instanceof Error ? e.message : 'تعذر الحفظ'}`);
+    } finally {
+      await load();
+      setBusy(null);
+    }
+  }
 
   async function toggle(shop: Shop) {
     if (shop.live) {
@@ -75,23 +102,7 @@ export function StorefrontsScreen() {
       });
       if (!ok) return;
     }
-
-    setBusy(shop.id);
-    setError(null);
-    try {
-      const res = await fetch('/api/growth/storefronts', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId: shop.id, live: !shop.live }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'تعذر التغيير');
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التغيير');
-    } finally {
-      setBusy(null);
-    }
+    await send(shop, { live: !shop.live });
   }
 
   async function copyLink(shop: Shop) {
@@ -101,7 +112,7 @@ export function StorefrontsScreen() {
       setCopied(shop.id);
       setTimeout(() => setCopied(null), 1800);
     } catch {
-      /* the link is printed below either way */
+      /* the link is printed on the card either way */
     }
   }
 
@@ -109,16 +120,15 @@ export function StorefrontsScreen() {
     <div className="space-y-4" dir="rtl">
       <div>
         <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-          <Store className="h-5 w-5 text-[#b8256e]" /> المتاجر المفردة
+          <Store className="h-5 w-5 text-[#b8256e]" /> متجر {STORE_TYPE_LABEL.SINGLE_PRODUCT}
         </h1>
-        <p className="mt-0.5 text-xs text-[#697586]">
-          كل متجر وواجهته العامة — أيّها مفتوح، وأيّها يبيع فعلاً.
+        <p className="mt-0.5 text-xs leading-relaxed text-[#697586]">
+          متجر يبيع منتجاً واحداً. واجهته صفحة هبوط من صفحاتك — بكل أقسامها وقوالبها وبكسلاتها وعروض ما
+          بعد الطلب — على رابط المتجر ونطاقه. لا سلة ولا كتالوج.
         </p>
       </div>
 
-      {error && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{error}</p>
-      )}
+      {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700" role="alert">{error}</p>}
 
       {shops === null ? (
         <div className="flex h-40 items-center justify-center text-[#697586]">
@@ -127,19 +137,25 @@ export function StorefrontsScreen() {
       ) : shops.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#c9d2e0] p-8 text-center">
           <Store className="mx-auto h-8 w-8 text-[#c9d2e0]" />
-          <p className="mt-2 text-sm font-semibold text-[#364152]">لا متاجر في هذه الدولة</p>
-          <p className="mt-1 text-xs text-[#697586]">أنشئ متجراً من الإعدادات ثم عد إلى هنا.</p>
+          <p className="mt-2 text-sm font-semibold text-[#364152]">لا متاجر {STORE_TYPE_LABEL.SINGLE_PRODUCT} في هذه الدولة</p>
+          <p className="mt-1 text-xs text-[#697586]">
+            أنشئ متجراً من «البلدان والمتاجر» واختر نوعه {STORE_TYPE_LABEL.SINGLE_PRODUCT}، ثم اختر له صفحته هنا.
+          </p>
+          <Link href="/settings/geo" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#b8256e] hover:underline">
+            <Settings2 className="h-3.5 w-3.5" /> البلدان والمتاجر
+          </Link>
         </div>
       ) : (
-        <div className="grid gap-2 lg:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2">
           {shops.map((s) => (
             <Card
               key={s.id}
               shop={s}
               busy={busy === s.id}
               copied={copied === s.id}
-              onToggle={() => toggle(s)}
-              onCopy={() => copyLink(s)}
+              onToggle={() => void toggle(s)}
+              onCopy={() => void copyLink(s)}
+              onPick={(id) => void send(s, { landingPageId: id })}
             />
           ))}
         </div>
@@ -147,9 +163,8 @@ export function StorefrontsScreen() {
 
       {shops && shops.length > 0 && (
         <p className="text-[10px] leading-relaxed text-[#9aa4b2]">
-          الطلبات والإيراد هنا تحسب ما جاء من واجهة المتجر فقط — لا طلبات صفحات الهبوط ولا الطلبات
-          اليدوية، وإلا بدت واجهةٌ مغلقة وكأنها تبيع. والإيراد هو المحصَّل فعلاً حيث نعرفه، نفس
-          التعريف في شاشة الأرباح.
+          الطلبات والإيراد هنا ما باعه رابط المتجر نفسه — من صفحة واجهته. والإيراد هو المحصَّل فعلاً حيث نعرفه،
+          نفس التعريف في شاشة الأرباح.
         </p>
       )}
     </div>
@@ -157,9 +172,9 @@ export function StorefrontsScreen() {
 }
 
 function Card({
-  shop, busy, copied, onToggle, onCopy,
+  shop, busy, copied, onToggle, onCopy, onPick,
 }: {
-  shop: Shop; busy: boolean; copied: boolean; onToggle: () => void; onCopy: () => void;
+  shop: Shop; busy: boolean; copied: boolean; onToggle: () => void; onCopy: () => void; onPick: (id: string | null) => void;
 }) {
   const url = shop.domain ? `https://${shop.domain}` : shop.path;
   return (
@@ -177,15 +192,12 @@ function Card({
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-[#121926]">{shop.name}</p>
             <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-[#697586]">
-              <span className={`rounded px-1.5 py-0.5 font-semibold ${
-                shop.live ? 'bg-[#e6f9ee] text-[#00994d]' : 'bg-[#f1f3f6] text-[#697586]'
-              }`}>
+              <span className={`rounded px-1.5 py-0.5 font-semibold ${shop.live ? 'bg-[#e6f9ee] text-[#00994d]' : 'bg-[#f1f3f6] text-[#697586]'}`}>
                 {shop.live ? 'مفتوح' : 'مغلق'}
               </span>
-              <span>{shop.type === 'SINGLE_PRODUCT' ? 'منتج واحد' : 'متعدد المنتجات'}</span>
               {shop.domain && (
                 <span className="flex items-center gap-0.5 text-[#0ea5e9]">
-                  <Globe className="h-2.5 w-2.5" /> نطاق خاص
+                  <Globe className="h-2.5 w-2.5" /> {shop.domain}
                 </span>
               )}
             </p>
@@ -193,45 +205,86 @@ function Card({
         </div>
 
         {/* A switch that reads as one: the label says what it IS, not what
-            pressing it would do — a toggle labelled with its own action is
-            the classic way people turn the wrong thing off. */}
+            pressing it would do. */}
         <button
           type="button"
           onClick={onToggle}
           disabled={busy}
-          title={shop.live ? 'أغلق المتجر' : 'افتح المتجر'}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 ${
-            shop.live ? 'bg-[#00994d]' : 'bg-[#c9d2e0]'
-          }`}
+          role="switch"
+          aria-checked={shop.live}
+          aria-label={shop.live ? `متجر ${shop.name} مفتوح` : `متجر ${shop.name} مغلق`}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 ${shop.live ? 'bg-[#00994d]' : 'bg-[#c9d2e0]'}`}
         >
-          <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-              shop.live ? 'start-0.5' : 'start-[1.375rem]'
-            }`}
-          />
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${shop.live ? 'start-0.5' : 'start-[1.375rem]'}`} />
         </button>
       </div>
 
-      {shop.tagline && <p className="mt-2 truncate text-[11px] text-[#697586]">{shop.tagline}</p>}
+      {/* ── The front page: the feature itself, always in view ── */}
+      <div className="mt-3 rounded-lg bg-[#f8fafc] p-2.5">
+        <label className="mb-1 block text-[11px] font-semibold text-[#364152]" htmlFor={`front-${shop.id}`}>
+          صفحة الواجهة
+        </label>
+        {shop.pages.length === 0 ? (
+          <p className="text-[11px] leading-relaxed text-[#697586]">
+            لا صفحات هبوط تبيع منتجاً في هذا المتجر بعد.{' '}
+            {shop.current ? (
+              <Link href="/growth/landing-pages" className="inline-flex items-center gap-0.5 font-semibold text-[#b8256e] hover:underline">
+                <Plus className="h-3 w-3" /> أنشئ صفحة من قالب
+              </Link>
+            ) : (
+              <span>بدّل إلى هذا المتجر من الأعلى لتنشئ صفحته.</span>
+            )}
+          </p>
+        ) : (
+          <select
+            id={`front-${shop.id}`}
+            value={shop.frontPage?.id ?? ''}
+            disabled={busy}
+            onChange={(e) => onPick(e.target.value || null)}
+            className="h-9 w-full rounded-lg border border-[#e3e8ef] bg-white px-2 text-xs text-[#121926]"
+          >
+            <option value="">— لم تُختر بعد —</option>
+            {shop.pages.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+                {p.product ? ` — ${p.product.name}` : ''}
+                {p.isPublished ? '' : ' (غير منشورة)'}
+                {p.domain ? ' (لها نطاق خاص)' : ''}
+              </option>
+            ))}
+          </select>
+        )}
+        {shop.frontPage && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {shop.current ? (
+              <Link
+                href={`/growth/landing-pages/${shop.frontPage.id}/editor`}
+                className="inline-flex items-center gap-1 rounded-lg bg-[#b8256e] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#b8256e]/90"
+              >
+                <Paintbrush className="h-3 w-3" /> صمّم الواجهة
+              </Link>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] text-[#697586]">
+                <Info className="h-3 w-3" /> بدّل إلى هذا المتجر من الأعلى لتصمّم صفحته.
+              </span>
+            )}
+            {!shop.frontPage.isPublished && <span className="text-[10px] font-semibold text-amber-700">الصفحة غير منشورة</span>}
+          </div>
+        )}
+      </div>
 
-      <div className="mt-2.5 grid grid-cols-4 gap-2 border-t border-[#f1f3f6] pt-2.5">
-        <Num label="منتجات" value={shop.products} />
-        <Num label="صفحات هبوط" value={shop.landingPages} />
-        <Num label="طلبات الواجهة" value={shop.orders} />
+      <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-[#f1f3f6] pt-2.5">
+        <Num label="طلبات المتجر" value={shop.orders} />
         <Num label={`إيراد ${shop.currency}`} value={shop.revenue} />
       </div>
 
-      {shop.blockers.length > 0 && (
-        <div className="mt-2 rounded-lg bg-amber-50 p-2">
-          <p className="flex items-center gap-1 text-[10px] font-semibold text-amber-800">
-            <AlertTriangle className="h-3 w-3" /> قبل أن يبيع هذا المتجر
-          </p>
-          <ul className="mt-1 space-y-0.5 ps-4">
-            {shop.blockers.map((b) => (
-              <li key={b} className="list-disc text-[10px] leading-relaxed text-amber-800">{b}</li>
-            ))}
-          </ul>
-        </div>
+      {shop.refusal && !shop.live && (
+        <p className="mt-2 flex items-start gap-1 rounded-lg bg-amber-50 p-2 text-[10px] leading-relaxed text-amber-800">
+          <AlertTriangle className="mt-px h-3 w-3 shrink-0" /> قبل أن يُفتح: {shop.refusal}
+        </p>
+      )}
+      {shop.warnings.length > 0 && (
+        <p className="mt-1.5 text-[10px] text-[#697586]">يُستحسن: {shop.warnings.join('، ')}</p>
       )}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -244,25 +297,20 @@ function Card({
           <ExternalLink className="h-3 w-3" /> افتح المتجر
         </a>
         <button
+          type="button"
           onClick={onCopy}
           className="flex items-center gap-1 rounded-lg border border-[#e3e8ef] px-2 py-1 text-[10px] font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
         >
           {copied ? <Check className="h-3 w-3 text-[#00994d]" /> : <Link2 className="h-3 w-3" />}
           {copied ? 'نُسخ' : 'انسخ الرابط'}
         </button>
-        {/* Settings live where they always did. A second editor for the same
-            fields is a second place for them to disagree. */}
+        {/* Name, domain, logo and support phone live in the store's own panel. */}
         <a
           href={`/settings/geo?store=${shop.id}`}
           className="flex items-center gap-1 rounded-lg border border-[#e3e8ef] px-2 py-1 text-[10px] font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
         >
-          <Settings2 className="h-3 w-3" /> الإعدادات
+          <Settings2 className="h-3 w-3" /> الإعدادات والنطاق
         </a>
-        {shop.products > 0 && (
-          <span className="flex items-center gap-1 text-[10px] text-[#9aa4b2]">
-            <Package className="h-3 w-3" /> {shop.products} منتج
-          </span>
-        )}
       </div>
 
       <p className="mt-1.5 truncate font-mono text-[9px] text-[#9aa4b2]" dir="ltr" title={url}>{url}</p>

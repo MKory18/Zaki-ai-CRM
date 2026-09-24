@@ -185,6 +185,16 @@ export const BLOCK_CSS = `
   border: 1px solid var(--lp-border);
 }
 
+/* ── slider ── */
+.lp-slider { position: relative; overflow: hidden; border-radius: var(--lp-radius); border: 1px solid var(--lp-border); touch-action: pan-y; user-select: none; }
+.lp-slider-track { display: flex; transition: transform 0.45s ease; }
+.lp-slider-slide { flex: 0 0 100%; }
+.lp-slider-slide img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+.lp-slider-dots { position: absolute; inset-inline: 0; bottom: 10px; display: flex; justify-content: center; gap: 6px; }
+.lp-slider-dots button { width: 8px; height: 8px; border-radius: 999px; border: 0; padding: 0; background: rgba(255,255,255,0.6); box-shadow: 0 0 0 1px rgba(0,0,0,0.15); cursor: pointer; transition: width 0.2s; }
+.lp-slider-dots button.on { width: 22px; background: var(--lp-accent); }
+@media (prefers-reduced-motion: reduce) { .lp-slider-track { transition: none; } }
+
 /* ── free text ── */
 .lp-prose p { font-size: 15px; color: var(--lp-text); margin-bottom: 12px; white-space: pre-wrap; }
 .lp-prose p:last-child { margin-bottom: 0; }

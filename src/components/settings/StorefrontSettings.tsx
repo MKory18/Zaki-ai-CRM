@@ -9,6 +9,7 @@ import { StoreLogoField } from './StoreLogoField';
 import {
   type LandingTheme, DEFAULT_THEME, MOODS, FONTS, isValidHex,
 } from '@/lib/landing-theme';
+import { STORE_TYPE_LABEL } from '@/lib/store-types';
 
 /**
  * Turning a store's public face on, and dressing it.
@@ -159,7 +160,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="نوع المتجر" value={type} onChange={(e) => setType(e.target.value as StoreRow['type'])}>
           <option value="MULTI_PRODUCT">متعدد المنتجات — صفحة رئيسية بالمنتجات</option>
-          <option value="SINGLE_PRODUCT">منتج واحد — الرئيسية هي صفحة المنتج</option>
+          <option value="SINGLE_PRODUCT">{STORE_TYPE_LABEL.SINGLE_PRODUCT} — واجهته صفحة هبوط تختارها</option>
         </Select>
         <Input
           label="هاتف التواصل"

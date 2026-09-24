@@ -5,6 +5,7 @@ import { Globe, Loader2, Plus, Store } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CURRENCIES, currencyLabel, minorUnitFor } from '@/lib/currencies';
 import { StorefrontSettings } from '@/components/settings/StorefrontSettings';
+import { STORE_TYPE_LABEL, storeTypeLabel } from '@/lib/store-types';
 
 /**
  * /settings/geo — countries, their stores and their regions in one screen.
@@ -216,7 +217,7 @@ export function GeoSettingsScreen() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[#121926]">{s.name}</p>
                   <p className="text-xs text-[#697586]" dir="ltr">
-                    /{s.slug} · {s.type === 'SINGLE_PRODUCT' ? 'single product' : 'multi product'}
+                    /{s.slug} · {storeTypeLabel(s.type)}
                   </p>
                 </div>
                 <button
@@ -542,7 +543,7 @@ function AddStore({
           className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm"
         >
           <option value="MULTI_PRODUCT">متعدد المنتجات</option>
-          <option value="SINGLE_PRODUCT">منتج واحد</option>
+          <option value="SINGLE_PRODUCT">{STORE_TYPE_LABEL.SINGLE_PRODUCT}</option>
         </select>
       </label>
       <div className="md:col-span-3 flex gap-2">

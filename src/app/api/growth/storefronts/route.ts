@@ -1,114 +1,100 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext, listAccessibleStores } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
-import { z } from 'zod';
+import { forgetHost } from '@/lib/landing-domain';
+import { openRefusal, openWarnings, storefrontFacts, refusalToOpen } from '@/lib/storefront-rules';
 
 /**
- * EVERY SHOPFRONT THIS USER CAN SEE, AND HOW EACH IS DOING.
+ * SINGLE PRODUCT STORES — WHICH ARE LIVE, WHAT THEY SHOW, AND WHAT THEY SELL.
  *
- * Deliberately NOT filtered to the one selected store, which is the only
- * screen in the system that is. Its whole purpose is to answer "which of my
- * shops are live, and are they selling?" — a question you cannot ask from
- * inside one of them. What bounds it instead is ACCESS: the same
- * UserStoreAccess rows the store switcher obeys, so a user who may enter
- * two shops sees two rows here and not the company's five.
+ * A Single Product store is a store whose front is one of its landing pages.
+ * This screen picks that page, opens and closes the store, and says what is
+ * still missing. Everything else about the store — its name, domain, logo,
+ * support phone — is edited in its own panel under «البلدان والمتاجر»; a
+ * second editor for the same fields is a second place for them to disagree.
  *
- * The numbers count orders whose source is the shopfront, not every order
- * the store took. A shop that sells mostly through landing pages and the
- * phone would otherwise look like its shopfront was working.
+ * Deliberately NOT filtered to the selected store: "which of my shops are
+ * live?" cannot be asked from inside one of them. ACCESS bounds it instead —
+ * the same UserStoreAccess rows the store switcher obeys.
+ *
+ * The numbers count what the store's own address sold: orders through its
+ * front page, or through its product page before a front page was picked.
  */
 
-/** What `source` a storefront order carries. Set in the public order route. */
+/** What `source` an order from a storefront product page carries. */
 const STOREFRONT_SOURCE = 'Store';
 
 export async function GET() {
   try {
-    const { user, companyId, countryId } = await requireContext();
+    const { user, companyId, countryId, storeId: currentStoreId } = await requireContext();
     await requirePermission('geo.manage').catch(async () => requirePermission('reports.view'));
 
-    // null means the country itself is not this user's to see, which is
-    // the same answer as "no shops here" for a screen that only lists.
     const accessible = (await listAccessibleStores(user, companyId, countryId)) ?? [];
     const ids = accessible.map((s) => s.id);
     if (ids.length === 0) return NextResponse.json({ stores: [] });
 
-    const [stores, productCounts, orderCounts, revenue, pageCounts] = await Promise.all([
-      db.store.findMany({
-        where: { id: { in: ids }, companyId },
-        select: {
-          id: true, name: true, slug: true, logo: true, type: true, status: true,
-          storefrontEnabled: true, tagline: true, supportPhone: true, domain: true,
-          country: { select: { code: true, currencyCode: true } },
+    const stores = await db.store.findMany({
+      where: { id: { in: ids }, companyId, type: 'SINGLE_PRODUCT' },
+      select: {
+        id: true, name: true, slug: true, logo: true, type: true, status: true, companyId: true,
+        storefrontEnabled: true, tagline: true, supportPhone: true, domain: true, landingPageId: true,
+        country: { select: { currencyCode: true } },
+        landingPages: {
+          where: { productId: { not: null } },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, name: true, slug: true, isPublished: true, domain: true, product: { select: { name: true } } },
         },
-        orderBy: { name: 'asc' },
-      }),
-      db.product.groupBy({
-        by: ['storeId'],
-        where: { companyId, storeId: { in: ids }, status: 'ACTIVE' },
-        _count: { _all: true },
-      }),
-      db.order.groupBy({
-        by: ['storeId'],
-        where: { companyId, storeId: { in: ids }, source: STOREFRONT_SOURCE },
-        _count: { _all: true },
-      }),
-      // The same revenue every other screen means: collected where known.
-      db.order.groupBy({
-        by: ['storeId'],
-        where: {
-          companyId,
-          storeId: { in: ids },
-          source: STOREFRONT_SOURCE,
-          shippingStatus: { in: ['DELIVERED', 'PARTIALLY_DELIVERED'] },
-        },
-        _sum: { collectedAmount: true, totalAmount: true },
-      }),
-      db.landingPage.groupBy({
-        by: ['storeId'],
-        where: { companyId, storeId: { in: ids }, isPublished: true },
-        _count: { _all: true },
-      }),
-    ]);
-
-    const num = (rows: { storeId: string | null; _count?: { _all: number } }[], id: string) =>
-      rows.find((r) => r.storeId === id)?._count?._all ?? 0;
-
-    const list = stores.map((s) => {
-      const money = revenue.find((r) => r.storeId === s.id);
-      return {
-        id: s.id,
-        name: s.name,
-        slug: s.slug,
-        logo: s.logo,
-        type: s.type,
-        status: s.status,
-        live: s.storefrontEnabled,
-        tagline: s.tagline,
-        supportPhone: s.supportPhone,
-        domain: s.domain,
-        currency: s.country.currencyCode,
-        path: `/s/${s.slug}`,
-        products: num(productCounts, s.id),
-        landingPages: num(pageCounts, s.id),
-        orders: num(orderCounts, s.id),
-        revenue: Number(
-          (Number(money?._sum.collectedAmount ?? 0) || Number(money?._sum.totalAmount ?? 0)).toFixed(2)
-        ),
-        // What a seller must still do before this shop can sell anything.
-        // Stated rather than left to be discovered by opening it.
-        blockers: [
-          ...(s.status !== 'ACTIVE' ? ['المتجر نفسه موقوف'] : []),
-          ...(num(productCounts, s.id) === 0 ? ['لا منتجات فعّالة'] : []),
-          ...(s.type === 'SINGLE_PRODUCT' && num(productCounts, s.id) > 1
-            ? ['متجر منتج واحد وفيه أكثر من منتج فعّال']
-            : []),
-          ...(!s.supportPhone ? ['لا رقم دعم للزبون'] : []),
-        ],
-      };
+      },
+      orderBy: { name: 'asc' },
     });
+
+    const list = await Promise.all(
+      stores.map(async (s) => {
+        // What the store's own address sold: its front page's orders, and its
+        // product page's from before a front page was picked.
+        const sold = {
+          companyId,
+          storeId: s.id,
+          OR: [{ source: STOREFRONT_SOURCE }, ...(s.landingPageId ? [{ landingPageId: s.landingPageId }] : [])],
+        };
+        const [facts, orders, money] = await Promise.all([
+          storefrontFacts(s),
+          db.order.count({ where: sold }),
+          // The same revenue every other screen means: collected where known.
+          db.order.aggregate({
+            where: { ...sold, shippingStatus: { in: ['DELIVERED', 'PARTIALLY_DELIVERED'] } },
+            _sum: { collectedAmount: true, totalAmount: true },
+          }),
+        ]);
+        const refusal = openRefusal(facts);
+        const front = s.landingPages.find((p) => p.id === s.landingPageId) ?? null;
+        return {
+          id: s.id,
+          name: s.name,
+          slug: s.slug,
+          logo: s.logo,
+          status: s.status,
+          live: s.storefrontEnabled,
+          tagline: s.tagline,
+          domain: s.domain,
+          currency: s.country.currencyCode,
+          path: `/s/${s.slug}`,
+          /** Pages and the editor are read through the selected store. */
+          current: s.id === currentStoreId,
+          frontPage: front,
+          pages: s.landingPages,
+          orders,
+          revenue: Number((Number(money._sum.collectedAmount ?? 0) || Number(money._sum.totalAmount ?? 0)).toFixed(2)),
+          // What stops it opening, and what would merely make it better.
+          refusal,
+          warnings: openWarnings(s),
+        };
+      })
+    );
 
     return NextResponse.json({ stores: list });
   } catch (e) {
@@ -116,62 +102,108 @@ export async function GET() {
   }
 }
 
+const patchSchema = z.union([
+  z.object({ storeId: z.string().uuid(), live: z.boolean() }).strict(),
+  /** The front page, or null to un-pick it. */
+  z.object({ storeId: z.string().uuid(), landingPageId: z.string().uuid().nullable() }).strict(),
+]);
+
 /**
- * Turn a shopfront on or off.
+ * Open or close a Single Product store, or pick its front page.
  *
- * The one write this screen makes. Everything else about a shop — its
- * theme, its about text, its domain — is edited where it already was, in
- * the store's own settings; a second editor for the same fields is a second
- * place for them to disagree.
+ * Every rule is here, not in the screen: opening goes through the same
+ * refusal the store panel uses, and a front page must be the store's own,
+ * sell a product, and not carry a domain of its own — the store's address
+ * and domain are the page's while it is the front.
  */
 export async function PATCH(req: Request) {
   try {
     const { user, companyId, countryId } = await requireContext();
     await requirePermission('geo.manage');
 
-    const parsed = z
-      .object({ storeId: z.string().uuid(), live: z.boolean() })
-      .safeParse(await req.json().catch(() => null));
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'بيانات غير صالحة' }, { status: 400 });
-    }
-    const { storeId, live } = parsed.data;
+    const parsed = patchSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: 'بيانات غير صالحة' }, { status: 400 });
+    const { storeId } = parsed.data;
 
-    // Access, not the selected store: this screen spans the shops a user may
-    // enter, so the check is the same one the switcher makes.
     const accessible = (await listAccessibleStores(user, companyId, countryId)) ?? [];
     if (!accessible.some((s) => s.id === storeId)) {
       return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
     }
+    const store = await db.store.findFirst({
+      where: { id: storeId, companyId },
+      select: { id: true, companyId: true, name: true, slug: true, type: true, status: true, storefrontEnabled: true, landingPageId: true, domain: true },
+    });
+    if (!store) return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
 
-    if (live) {
-      // Going live with nothing to sell gives a visitor an empty shop, which
-      // is worse than no shop at all.
-      const products = await db.product.count({ where: { companyId, storeId, status: 'ACTIVE' } });
-      if (products === 0) {
+    // ── Open / close ──
+    if ('live' in parsed.data) {
+      const live = parsed.data.live;
+      if (live) {
+        const refusal = await refusalToOpen(store);
+        if (refusal) return NextResponse.json({ error: refusal }, { status: 400 });
+      }
+      await db.store.update({ where: { id: store.id }, data: { storefrontEnabled: live } });
+      forgetHost(store.domain);
+      await logAudit({
+        companyId,
+        userId: user.id,
+        action: live ? 'STOREFRONT_OPENED' : 'STOREFRONT_CLOSED',
+        entity: 'Store',
+        entityId: store.id,
+        newData: { name: store.name, slug: store.slug, live },
+      });
+      return NextResponse.json({ success: true, live });
+    }
+
+    // ── The front page ──
+    if (store.type !== 'SINGLE_PRODUCT') {
+      return NextResponse.json({ error: 'صفحة الواجهة لمتاجر Single Product فقط' }, { status: 400 });
+    }
+    const pageId = parsed.data.landingPageId;
+
+    if (pageId === null) {
+      // Un-picking the page of an OPEN store would leave its address to fall
+      // back to a product page that may not exist — refused while it is live.
+      if (store.storefrontEnabled && (await refusalToOpen({ ...store, landingPageId: null }))) {
+        return NextResponse.json({ error: 'أغلق المتجر أولاً — بلا صفحة واجهة لن يجد الزائر شيئاً' }, { status: 400 });
+      }
+    } else {
+      const page = await db.landingPage.findFirst({
+        where: { id: pageId, companyId },
+        select: { id: true, name: true, storeId: true, productId: true, isPublished: true, domain: true, frontOf: { select: { id: true } } },
+      });
+      if (!page || page.storeId !== store.id) {
+        return NextResponse.json({ error: 'الصفحة ليست من صفحات هذا المتجر' }, { status: 400 });
+      }
+      if (!page.productId) {
+        return NextResponse.json({ error: 'الصفحة لا تبيع منتجاً — اختر لها منتجاً أولاً' }, { status: 400 });
+      }
+      if (page.frontOf && page.frontOf.id !== store.id) {
+        return NextResponse.json({ error: 'هذه الصفحة واجهة متجر آخر' }, { status: 409 });
+      }
+      if (page.domain) {
         return NextResponse.json(
-          { error: 'لا يمكن فتح متجر بلا منتجات فعّالة — الزائر سيجد رفوفاً فارغة' },
+          { error: `للصفحة نطاقها الخاص (${page.domain}) — احذفه منها أولاً؛ نطاق المتجر يصير نطاقها` },
           { status: 400 }
         );
       }
+      if (store.storefrontEnabled && !page.isPublished) {
+        return NextResponse.json({ error: 'المتجر مفتوح والصفحة غير منشورة — انشرها أولاً' }, { status: 400 });
+      }
     }
 
-    const store = await db.store.update({
-      where: { id: storeId },
-      data: { storefrontEnabled: live },
-      select: { id: true, name: true, slug: true },
-    });
-
+    await db.store.update({ where: { id: store.id }, data: { landingPageId: pageId } });
+    forgetHost(store.domain);
     await logAudit({
       companyId,
       userId: user.id,
-      action: live ? 'STOREFRONT_OPENED' : 'STOREFRONT_CLOSED',
+      action: 'STOREFRONT_PAGE_SET',
       entity: 'Store',
       entityId: store.id,
-      newData: { name: store.name, slug: store.slug, live },
+      previousData: { landingPageId: store.landingPageId },
+      newData: { name: store.name, landingPageId: pageId },
     });
-
-    return NextResponse.json({ success: true, live });
+    return NextResponse.json({ success: true, landingPageId: pageId });
   } catch (e) {
     return apiErrorResponse(e);
   }

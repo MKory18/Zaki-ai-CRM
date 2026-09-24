@@ -1155,7 +1155,9 @@ model LandingPage {
   addOns  OrderAddOn[]
   // Geo context (Stage 2): orders from this page land in this store.
   storeId String?
-  store   Store?   @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  store   Store?   @relation("StorePages", fields: [storeId], references: [id], onDelete: Restrict)
+  /// The Single Product store whose front this page is, if any.
+  frontOf Store?   @relation("StoreFrontPage")
 
   @@unique([companyId, slug])
   @@unique([domain])
@@ -1470,6 +1472,12 @@ model Store {
   /// against landing page domains too — the proxy must never find two
   /// answers for one host.
   domain       String?
+  /// A Single Product store's front: one of its own landing pages, which its
+  /// link and its domain render — every block, template, pixel and upsell
+  /// the page has. The store is the address; the page is the shop. Null
+  /// until the seller picks one. A page fronts one store at most.
+  landingPageId String?     @unique
+  landingPage   LandingPage? @relation("StoreFrontPage", fields: [landingPageId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1477,7 +1485,7 @@ model Store {
   country Country           @relation(fields: [countryId], references: [id], onDelete: Restrict)
   orders  Order[]
   access  UserStoreAccess[]
-  landingPages    LandingPage[]
+  landingPages    LandingPage[] @relation("StorePages")
   telegramSources TelegramSource[]
   shippingBatches ShippingBatch[]
   couriers        DeliveryProvider[]

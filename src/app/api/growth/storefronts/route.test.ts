@@ -1,21 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * A SHOPFRONT IS A LINK SOMEBODY WILL PUT IN AN ADVERT.
+ * A SINGLE PRODUCT STORE IS A LINK SOMEBODY WILL PUT IN AN ADVERT.
  *
- * Which makes the two guards here worth their tests. One: a shop with
- * nothing on its shelves must refuse to open, because the cost of finding
- * out later is an ad campaign pointing at empty shelves. Two: this is the
- * one screen that spans stores, so what bounds it is ACCESS — and a store
- * this user may not enter must not be switchable from here by id.
+ * So every guard here is about that link: it may only open when it leads
+ * to something that sells, its front page must be its own and must sell a
+ * product, and a store this user may not enter must not be switchable from
+ * here by id — this is the one screen that spans stores.
  */
 
 const { db, requireContext, requirePermission, listAccessibleStores, logAudit } = vi.hoisted(() => ({
   db: {
-    store: { findMany: vi.fn(), update: vi.fn() },
-    product: { groupBy: vi.fn(), count: vi.fn() },
-    order: { groupBy: vi.fn() },
-    landingPage: { groupBy: vi.fn() },
+    store: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+    product: { count: vi.fn() },
+    order: { count: vi.fn(), aggregate: vi.fn() },
+    landingPage: { findFirst: vi.fn() },
   },
   requireContext: vi.fn(),
   requirePermission: vi.fn(),
@@ -30,119 +29,145 @@ vi.mock('@/lib/geo-context', () => ({
 }));
 vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
+vi.mock('@/lib/landing-domain', () => ({ forgetHost: vi.fn() }));
 
 import { GET, PATCH } from './route';
 
-// Real uuids: the route validates the shape before anything else, and a
-// test that trips on the shape never reaches the guard it was written for.
 const MINE = '11111111-1111-4111-8111-111111111111';
 const THEIRS = '22222222-2222-4222-8222-222222222222';
+const PAGE = '33333333-3333-4333-8333-333333333333';
 
 const patch = (body: unknown) =>
-  PATCH(
-    new Request('http://localhost/api/growth/storefronts', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-  );
+  PATCH(new Request('http://localhost/api/growth/storefronts', { method: 'PATCH', body: JSON.stringify(body) }));
+
+let store: Record<string, unknown>;
+let page: Record<string, unknown> | null;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireContext.mockResolvedValue({ user: { id: 'u1' }, companyId: 'c1', countryId: 'sy' });
-  requirePermission.mockResolvedValue({ companyId: 'c1' });
+  requireContext.mockResolvedValue({ user: { id: 'u1' }, companyId: 'c1', countryId: 'k1', storeId: MINE });
+  requirePermission.mockResolvedValue(undefined);
   listAccessibleStores.mockResolvedValue([{ id: MINE }]);
-  db.store.findMany.mockResolvedValue([]);
-  db.product.groupBy.mockResolvedValue([]);
-  db.order.groupBy.mockResolvedValue([]);
-  db.landingPage.groupBy.mockResolvedValue([]);
-  db.product.count.mockResolvedValue(5);
-  db.store.update.mockResolvedValue({ id: MINE, name: 'متجري', slug: 'mine' });
+  store = {
+    id: MINE, companyId: 'c1', name: 'متجري', slug: 'mine', type: 'SINGLE_PRODUCT', status: 'ACTIVE',
+    storefrontEnabled: false, landingPageId: null, domain: null,
+  };
+  page = { id: PAGE, name: 'صفحة', storeId: MINE, productId: 'p1', isPublished: true, domain: null, frontOf: null, product: { status: 'ACTIVE' } };
+  db.store.findFirst.mockImplementation(async () => store);
+  db.store.update.mockResolvedValue({});
+  // storefrontFacts reads the front page through landingPage.findFirst too.
+  db.landingPage.findFirst.mockImplementation(async () => page);
+  db.product.count.mockResolvedValue(1);
 });
 
-describe('opening a shopfront', () => {
-  it('opens one that has something to sell', async () => {
-    db.product.count.mockResolvedValue(3);
+describe('opening', () => {
+  it('opens a store whose front page is published and sells', async () => {
+    store.landingPageId = PAGE;
     const res = await patch({ storeId: MINE, live: true });
     expect(res.status).toBe(200);
-    expect(db.store.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { storefrontEnabled: true } })
-    );
+    expect(db.store.update).toHaveBeenCalledWith({ where: { id: MINE }, data: { storefrontEnabled: true } });
   });
 
-  it('refuses to open a shop with empty shelves', async () => {
-    // The cost of finding this out later is an advert pointing at nothing.
-    db.product.count.mockResolvedValue(0);
+  it('refuses when the front page is not published — the link would answer 404', async () => {
+    store.landingPageId = PAGE;
+    page!.isPublished = false;
     const res = await patch({ storeId: MINE, live: true });
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/رفوفاً فارغة/);
+    expect((await res.json()).error).toContain('غير منشورة');
     expect(db.store.update).not.toHaveBeenCalled();
   });
 
-  it('closes one without asking what is on the shelves', async () => {
-    // Closing is always allowed. A shop you cannot close is worse than one
-    // you opened too early.
+  it('refuses a store with no front page and more than one product — it would be a catalogue', async () => {
+    db.product.count.mockResolvedValue(3);
+    const res = await patch({ storeId: MINE, live: true });
+    expect(res.status).toBe(400);
+    expect(db.store.update).not.toHaveBeenCalled();
+  });
+
+  it('closes without asking anything', async () => {
+    store.storefrontEnabled = true;
     db.product.count.mockResolvedValue(0);
-    const res = await patch({ storeId: MINE, live: false });
-    expect(res.status).toBe(200);
-    expect(db.product.count).not.toHaveBeenCalled();
+    expect((await patch({ storeId: MINE, live: false })).status).toBe(200);
+  });
+
+  it('refuses a store this user may not enter', async () => {
+    expect((await patch({ storeId: THEIRS, live: true })).status).toBe(404);
+    expect(db.store.update).not.toHaveBeenCalled();
   });
 });
 
-describe('a store this user may not enter', () => {
-  it('cannot be opened by naming its id', async () => {
-    const res = await patch({ storeId: THEIRS, live: true });
-    expect(res.status).toBe(404);
+describe('picking the front page', () => {
+  it('takes one of the store\'s own pages that sells a product', async () => {
+    const res = await patch({ storeId: MINE, landingPageId: PAGE });
+    expect(res.status).toBe(200);
+    expect(db.store.update).toHaveBeenCalledWith({ where: { id: MINE }, data: { landingPageId: PAGE } });
+    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'STOREFRONT_PAGE_SET' }));
+  });
+
+  it('refuses another store\'s page', async () => {
+    page!.storeId = THEIRS;
+    expect((await patch({ storeId: MINE, landingPageId: PAGE })).status).toBe(400);
     expect(db.store.update).not.toHaveBeenCalled();
   });
 
-  it('cannot be closed by naming its id either', async () => {
-    const res = await patch({ storeId: THEIRS, live: false });
-    expect(res.status).toBe(404);
+  it('refuses a page that sells nothing', async () => {
+    page!.productId = null;
+    expect((await patch({ storeId: MINE, landingPageId: PAGE })).status).toBe(400);
+  });
+
+  it('refuses a page with a domain of its own — the store\'s domain is its address', async () => {
+    page!.domain = 'page.example.com';
+    const res = await patch({ storeId: MINE, landingPageId: PAGE });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('page.example.com');
+  });
+
+  it('refuses a page already fronting another store', async () => {
+    page!.frontOf = { id: THEIRS };
+    expect((await patch({ storeId: MINE, landingPageId: PAGE })).status).toBe(409);
+  });
+
+  it('refuses an unpublished page for a store that is open', async () => {
+    store.storefrontEnabled = true;
+    page!.isPublished = false;
+    expect((await patch({ storeId: MINE, landingPageId: PAGE })).status).toBe(400);
+  });
+
+  it('refuses to un-pick the page of an open store that would then show nothing', async () => {
+    store.storefrontEnabled = true;
+    store.landingPageId = PAGE;
+    db.product.count.mockResolvedValue(2);
+    expect((await patch({ storeId: MINE, landingPageId: null })).status).toBe(400);
     expect(db.store.update).not.toHaveBeenCalled();
   });
 
-  it('answers exactly as it would for a store that does not exist', async () => {
-    // Same status, same message: a different answer would confirm that the
-    // other shop is real.
-    const theirs = await patch({ storeId: THEIRS, live: true });
-    const nobody = await patch({ storeId: '00000000-0000-0000-0000-000000000000', live: true });
-    expect(theirs.status).toBe(nobody.status);
-    expect(await theirs.json()).toEqual(await nobody.json());
-  });
-
-  it('refuses an id that is not an id', async () => {
-    expect((await patch({ storeId: 'not-a-uuid', live: true })).status).toBe(400);
-    expect((await patch({ storeId: MINE, live: 'yes' })).status).toBe(400);
+  it('refuses a front page on a store that sells many products', async () => {
+    store.type = 'MULTI_PRODUCT';
+    expect((await patch({ storeId: MINE, landingPageId: PAGE })).status).toBe(400);
   });
 });
 
 describe('the list', () => {
-  it('asks only for the stores this user may enter', async () => {
-    listAccessibleStores.mockResolvedValue([{ id: MINE }, { id: '33333333-3333-4333-8333-333333333333' }]);
-    await GET();
-    for (const call of [db.store.findMany, db.product.groupBy, db.order.groupBy, db.landingPage.groupBy]) {
-      const where = call.mock.calls.at(-1)?.[0]?.where;
-      const ids = where.id?.in ?? where.storeId?.in;
-      expect(ids).toEqual([MINE, '33333333-3333-4333-8333-333333333333']);
-    }
+  beforeEach(() => {
+    db.store.findMany.mockResolvedValue([
+      { ...store, landingPageId: PAGE, logo: null, tagline: null, supportPhone: null, country: { currencyCode: 'SYP' },
+        landingPages: [{ id: PAGE, name: 'صفحة', slug: 'p', isPublished: true, domain: null, product: { name: 'كريم' } }] },
+    ]);
+    db.order.count.mockResolvedValue(4);
+    db.order.aggregate.mockResolvedValue({ _sum: { collectedAmount: 90, totalAmount: 100 } });
   });
 
-  it('returns nothing when the country is not this user’s', async () => {
-    // listAccessibleStores answers null for a country out of reach. That is
-    // the same answer as "no shops here" for a screen that only lists.
-    listAccessibleStores.mockResolvedValue(null);
-    const res = await GET();
-    expect(await res.json()).toEqual({ stores: [] });
-    expect(db.store.findMany).not.toHaveBeenCalled();
+  it('asks only for Single Product stores this user may enter', async () => {
+    await GET();
+    const where = db.store.findMany.mock.calls[0][0].where;
+    expect(where).toMatchObject({ id: { in: [MINE] }, companyId: 'c1', type: 'SINGLE_PRODUCT' });
   });
 
-  it('counts only what came through the shopfront', async () => {
-    // A shop selling mostly through landing pages and the phone would
-    // otherwise look as though its shopfront were working.
-    listAccessibleStores.mockResolvedValue([{ id: MINE }]);
-    await GET();
-    const orderWhere = db.order.groupBy.mock.calls[0][0].where;
-    expect(orderWhere.source).toBe('Store');
+  it('counts what the store\'s own address sold: its front page and its product page', async () => {
+    const body = await (await GET()).json();
+    const where = db.order.count.mock.calls[0][0].where;
+    expect(where.OR).toEqual([{ source: 'Store' }, { landingPageId: PAGE }]);
+    expect(body.stores[0]).toMatchObject({ orders: 4, revenue: 90, frontPage: { id: PAGE }, current: true, refusal: null });
+    expect(body.stores[0].warnings).toContain('لا رقم دعم للزبون');
   });
 });

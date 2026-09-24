@@ -314,10 +314,21 @@ export function LandingPageEditorScreen() {
         recommendations: [],
         currency: page.store?.country?.currencyCode || '',
       });
-      try {
-        const off = await crmApi(`/api/landing-pages/${lpId}/offers`);
-        setPreviewData((pd) => pd ? { ...pd, offers: (off.offers || []).map((o: any) => ({ id: o.id, name: o.name, quantity: o.quantity, freeQuantity: o.freeQuantity, price: o.price, isDefault: o.isDefault })) } : pd);
-      } catch {}
+      // The offers belong to the PRODUCT — the same rows the published page
+      // prices from. This asked a per-page route that no longer exists, the
+      // 404 was swallowed, and the preview never showed an offer while the
+      // published page did.
+      if (page.productId) {
+        try {
+          const off = await crmApi(`/api/offers?productId=${encodeURIComponent(page.productId)}`);
+          setPreviewData((pd) => pd ? {
+            ...pd,
+            offers: (off.offers || [])
+              .filter((o: any) => o.status === 'ACTIVE')
+              .map((o: any) => ({ id: o.id, name: o.name, quantity: o.quantity, freeQuantity: o.freeQuantity, price: o.sellingPrice, isDefault: o.isDefault })),
+          } : pd);
+        } catch {}
+      }
       try {
         const recs = await crmApi(`/api/landing-pages/${lpId}/recommendations`);
         setPreviewData((pd) => pd ? { ...pd, recommendations: (recs.recommendations || []).map((r: any) => ({ id: r.id, name: r.product?.name || '', price: r.product?.basePrice ?? 0, image: r.product?.image || null })) } : pd);

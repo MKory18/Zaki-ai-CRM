@@ -83,6 +83,32 @@ export async function PATCH(req: Request, ctx: Ctx) {
       parsed.data.domain !== undefined;
     if (needsEdit) await requirePermission('landing_pages.edit');
 
+    // A page that is a Single Product store's front answers at the store's
+    // address. What would break that address is refused here, where the
+    // seller is — not discovered by a customer following an ad.
+    const front = await db.store.findFirst({
+      where: { landingPageId: lp.id },
+      select: { name: true, storefrontEnabled: true },
+    });
+    if (front?.storefrontEnabled && parsed.data.isPublished === false) {
+      return NextResponse.json(
+        { error: `هذه الصفحة واجهة متجر «${front.name}» المفتوح — أغلق المتجر أولاً أو اختر له صفحة أخرى` },
+        { status: 409 }
+      );
+    }
+    if (front?.storefrontEnabled && parsed.data.productId === null) {
+      return NextResponse.json(
+        { error: `هذه الصفحة واجهة متجر «${front.name}» — بلا منتج لن يبيع المتجر شيئاً` },
+        { status: 409 }
+      );
+    }
+    if (front && parsed.data.domain) {
+      return NextResponse.json(
+        { error: `هذه الصفحة واجهة متجر «${front.name}» — نطاقها هو نطاق المتجر، ويُضبط من إعدادات المتجر` },
+        { status: 409 }
+      );
+    }
+
     const data: Record<string, unknown> = {};
     if (parsed.data.name !== undefined) data.name = parsed.data.name.trim();
     if (parsed.data.slug !== undefined) {
@@ -110,11 +136,13 @@ export async function PATCH(req: Request, ctx: Ctx) {
         if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
         // Unique across companies, so a clash is somebody else's claim and
         // saying which company holds it would leak who our customers are.
-        const taken = await db.landingPage.findFirst({
-          where: { domain: check.domain, id: { not: lp.id } },
-          select: { id: true },
-        });
-        if (taken) {
+        // Checked against STORES too: the proxy answers a landing page first,
+        // so a page claiming a store's host silently took the store over.
+        const [taken, store] = await Promise.all([
+          db.landingPage.findFirst({ where: { domain: check.domain, id: { not: lp.id } }, select: { id: true } }),
+          db.store.findFirst({ where: { domain: check.domain }, select: { id: true } }),
+        ]);
+        if (taken || store) {
           return NextResponse.json({ error: 'هذا النطاق مستخدم بالفعل' }, { status: 409 });
         }
         data.domain = check.domain;
@@ -169,6 +197,19 @@ export async function DELETE(_req: Request, ctx: Ctx) {
 
     const lp = await loadLandingPage(id, companyId, storeId);
     if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });
+
+    // Deleting an open store's front would leave its address answering 404
+    // to every ad pointing at it.
+    const front = await db.store.findFirst({
+      where: { landingPageId: lp.id, storefrontEnabled: true },
+      select: { name: true },
+    });
+    if (front) {
+      return NextResponse.json(
+        { error: `هذه الصفحة واجهة متجر «${front.name}» المفتوح — أغلق المتجر أولاً أو اختر له صفحة أخرى` },
+        { status: 409 }
+      );
+    }
 
     await db.landingPage.delete({ where: { id: lp.id } });
     await logAudit({

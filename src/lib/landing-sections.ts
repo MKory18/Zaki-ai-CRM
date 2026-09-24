@@ -173,6 +173,22 @@ const gallery = z.object({
   images: z.array(z.string().max(2048)).max(12).default([]),
 });
 
+/**
+ * Photos that turn by themselves — the first screen of a product, one image
+ * at a time. The same uploads as the gallery; the difference is the
+ * movement, and the visitor can always swipe or stop it.
+ */
+const slider = z.object({
+  ...base,
+  type: z.literal('slider'),
+  title: richTextSchema(120).default(''),
+  images: z.array(z.string().max(2048)).max(10).default([]),
+  /** Turn by themselves. Off = only when the visitor swipes. */
+  autoplay: z.boolean().default(true),
+  /** Seconds per slide. */
+  seconds: z.number().int().min(2).max(10).default(4),
+});
+
 /** Long-form description — the one place free text belongs. */
 const text = z.object({
   ...base,
@@ -282,6 +298,21 @@ const footer = z.object({
 });
 
 /**
+ * What the customer reads after ordering, in the seller's words.
+ *
+ * Not a section of the page: it replaces the form once the order is in.
+ * Its position in the list means nothing. The order number and the
+ * post-order offers are shown under it by the form itself — they are the
+ * system's, not text a seller could get wrong.
+ */
+const thankyou = z.object({
+  ...base,
+  type: z.literal('thankyou'),
+  title: z.string().max(80).default('تم تسجيل طلبك بنجاح'),
+  message: z.string().max(400).default('سنتواصل معك قريبًا لتأكيد الطلب.'),
+});
+
+/**
  * A button that follows the visitor down the page and lands them on the form.
  *
  * It is a block like any other so it is toggled the same way, but its
@@ -297,8 +328,8 @@ const sticky = z.object({
 });
 
 export const landingSectionSchema = z.discriminatedUnion('type', [
-  announcement, hero, benefits, gallery, text, offers,
-  reviews, faq, urgency, form, trust, footer, sticky,
+  announcement, hero, slider, benefits, gallery, text, offers,
+  reviews, faq, urgency, form, trust, footer, sticky, thankyou,
 ]);
 
 export type LandingSection = z.infer<typeof landingSectionSchema>;
@@ -311,71 +342,13 @@ export const landingSectionsSchema = z.array(landingSectionSchema).max(40);
 // ─────────────────────────────────────────────────────
 
 
-/**
- * PAGES THAT ALREADY WORK, AS A STARTING POINT.
- *
- * A blank builder is a worse problem than a badly designed one: a seller
- * who does not know which blocks a page needs picks three, publishes, and
- * wonders why it does not sell. These are the shapes that do sell, named
- * by the job rather than by the blocks in them — nobody wakes up wanting
- * "hero, offers, benefits, form", they want a page for one product.
- *
- * Every template is the same blocks the seller could have chosen by hand,
- * in an order that has a reason, so there is nothing here to maintain
- * separately from the blocks themselves.
- */
-export interface PageTemplate {
-  key: string;
-  label: string;
-  hint: string;
-  blocks: SectionType[];
-}
-
-export const PAGE_TEMPLATES: PageTemplate[] = [
-  {
-    key: 'classic',
-    label: 'صفحة منتج كاملة',
-    hint: 'الأكثر استخداماً — عرض، مميزات، ضمانات، وآراء',
-    blocks: ['announcement', 'hero', 'offers', 'benefits', 'form', 'trust', 'reviews', 'faq', 'footer'],
-  },
-  {
-    key: 'short',
-    label: 'صفحة قصيرة سريعة',
-    hint: 'للإعلانات المدفوعة — من الصورة إلى الطلب بأقل خطوات',
-    blocks: ['hero', 'benefits', 'form', 'trust', 'sticky'],
-  },
-  {
-    key: 'urgent',
-    label: 'عرض محدود',
-    hint: 'عدّاد ونُدرة — للحملات ذات المدّة',
-    blocks: ['announcement', 'hero', 'urgency', 'offers', 'form', 'trust', 'footer'],
-  },
-  {
-    key: 'trust',
-    label: 'منتج يحتاج إقناعاً',
-    hint: 'شرح وصور وآراء قبل الطلب — للمنتج الغالي أو الجديد',
-    blocks: ['hero', 'text', 'gallery', 'benefits', 'reviews', 'faq', 'offers', 'form', 'trust', 'footer'],
-  },
-  {
-    key: 'blank',
-    label: 'ابدأ فارغاً',
-    hint: 'الواجهة والنموذج فقط — ابنِ الباقي بنفسك',
-    blocks: ['hero', 'form'],
-  },
-];
-
-/** The blocks of a template, as fresh sections with fresh ids. */
-export function sectionsFromTemplate(key: string): LandingSection[] {
-  const t = PAGE_TEMPLATES.find((x) => x.key === key);
-  // An unknown key gets the starter rather than an empty page: a page with
-  // no form cannot take an order, and that is not a state to leave anyone in.
-  const blocks: SectionType[] = t ? t.blocks : ['hero', 'form'];
-  return blocks.map(newSection);
-}
+// Whole-page templates live in page-templates.ts — the one registry the
+// create dialog and the builder both read.
 
 export const SECTION_LABEL: Record<SectionType, string> = {
   announcement: 'شريط إعلان',
   hero: 'الواجهة',
+  slider: 'سلايدر صور',
   benefits: 'المميزات',
   gallery: 'معرض الصور',
   text: 'نص وشرح',
@@ -387,11 +360,13 @@ export const SECTION_LABEL: Record<SectionType, string> = {
   trust: 'ضمانات',
   footer: 'التذييل',
   sticky: 'زر عائم',
+  thankyou: 'صفحة الشكر',
 };
 
 export const SECTION_HINT: Record<SectionType, string> = {
   announcement: 'سطر واحد فوق الصفحة كلها',
   hero: 'أول ما يراه الزائر: صورة وعنوان وسعر',
+  slider: 'صور تتقلّب وحدها، ويسحبها الزائر بإصبعه',
   benefits: 'لماذا يشتري — أسطر قصيرة لا فقرات',
   gallery: 'صور إضافية للمنتج',
   text: 'شرح مطوّل بخط الصفحة',
@@ -403,10 +378,11 @@ export const SECTION_HINT: Record<SectionType, string> = {
   trust: 'ثلاث طمأنات تحت الزر',
   footer: 'شعار وروابط صفحات وحقوق',
   sticky: 'يلاحق الزائر وينقله لتعبئة البيانات',
+  thankyou: 'ما يقرؤه الزبون بعد إرسال الطلب',
 };
 
 /** Blocks that may appear only once; the editor hides them when present. */
-export const SINGLETON: SectionType[] = ['announcement', 'hero', 'offers', 'form', 'trust', 'footer', 'urgency', 'sticky'];
+export const SINGLETON: SectionType[] = ['announcement', 'hero', 'offers', 'form', 'trust', 'footer', 'urgency', 'sticky', 'thankyou'];
 
 // ─────────────────────────────────────────────────────
 // Reading what is stored
@@ -449,6 +425,7 @@ export function newSection(type: SectionType): LandingSection {
   const seed: Record<SectionType, unknown> = {
     announcement: { text: 'توصيل مجاني لجميع المحافظات' },
     hero: { headline: '', subheadline: '', image: '', showPrice: true, ctaText: 'اطلب الآن' },
+    slider: { title: '', images: [], autoplay: true, seconds: 4 },
     benefits: {
       title: 'لماذا هذا المنتج؟',
       items: [
@@ -481,6 +458,7 @@ export function newSection(type: SectionType): LandingSection {
       ],
     },
     sticky: { text: 'اطلب الآن', showPrice: true },
+    thankyou: { title: 'تم تسجيل طلبك بنجاح', message: 'سنتواصل معك قريبًا لتأكيد الطلب.' },
   };
 
   return landingSectionSchema.parse({ id, type, enabled: true, ...(seed[type] as object) });

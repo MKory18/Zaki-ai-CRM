@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { firstIssue, storeUpdateSchema } from '@/lib/geo-schemas';
 import { validateDomain, forgetHost } from '@/lib/landing-domain';
+import { refusalToOpen } from '@/lib/storefront-rules';
 
 /** PATCH /api/geo/stores/:id (geo.manage). countryId is immutable; no DELETE. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -53,6 +54,30 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // The theme is stored as JSON, like a landing page's.
     if (parsed.data.theme !== undefined) {
       data.theme = parsed.data.theme ? JSON.stringify(parsed.data.theme) : null;
+    }
+
+    // ── The storefront, as it would be after this save ──
+    // A store with many products has no front page: turning a Single Product
+    // store into one lets go of its page.
+    const type = parsed.data.type ?? before.type;
+    if (type !== 'SINGLE_PRODUCT' && before.landingPageId) data.landingPageId = null;
+    const after = {
+      id: before.id,
+      companyId,
+      type,
+      status: parsed.data.status ?? before.status,
+      landingPageId: type === 'SINGLE_PRODUCT' ? before.landingPageId : null,
+    };
+    const live = parsed.data.storefrontEnabled ?? before.storefrontEnabled;
+    // The same rule as the Single Product screen — checked whenever this save
+    // is what makes an open storefront (opened, re-typed, or un-paused).
+    // Closing or pausing is always allowed.
+    const opens =
+      live && after.status === 'ACTIVE' &&
+      (!before.storefrontEnabled || type !== before.type || before.status !== 'ACTIVE');
+    if (opens) {
+      const refusal = await refusalToOpen(after);
+      if (refusal) return NextResponse.json({ error: refusal }, { status: 400 });
     }
 
     const store = await db.store.update({ where: { id }, data });

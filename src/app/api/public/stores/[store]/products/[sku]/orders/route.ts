@@ -83,11 +83,25 @@ export async function POST(req: Request, ctx: Ctx) {
     const store = await getStorefront(slug);
     if (!store) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
 
+    // THIS store's product. Read by company, a shop sold another shop's
+    // product and booked the order against its own stock.
     const product = await db.product.findFirst({
-      where: { companyId: store.companyId, sku: sku.toUpperCase(), status: 'ACTIVE' },
+      where: { companyId: store.companyId, storeId: store.id, sku: sku.toUpperCase(), status: 'ACTIVE', basePrice: { gt: 0 } },
       select: { id: true, name: true, image: true, basePrice: true },
     });
     if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
+
+    // The same rule as the page: a Single Product store with a front page
+    // sells through that page's own form, and one without sells its single
+    // product only. Anything else is a door the screen does not show.
+    if (store.type === 'SINGLE_PRODUCT') {
+      const sellable = await db.product.count({
+        where: { companyId: store.companyId, storeId: store.id, status: 'ACTIVE', basePrice: { gt: 0 } },
+      });
+      if (store.landingPageId || sellable !== 1) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
+      }
+    }
 
     const country = await db.country.findUnique({
       where: { id: store.countryId },

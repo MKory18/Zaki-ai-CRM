@@ -1,6 +1,8 @@
 import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixels';
 import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { notFound, redirect } from 'next/navigation';
+import { LandingPageView } from '@/components/landing/LandingPageView';
+import { carryQuery } from '@/lib/query-string';
 import Link from 'next/link';
 import { getStorefront, storefrontProducts } from '@/lib/storefront';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
@@ -8,30 +10,41 @@ import { StorefrontShell } from '@/components/storefront/StorefrontShell';
 /**
  * A store's front door — no login, no session, no cookies.
  *
- * A shop that sells one thing sends you straight to that thing: making a
- * visitor click "products" to reach the only product is a step that exists
- * for the software's convenience, not theirs. A shop with many lists them.
+ * A Single Product store IS its front page: the landing page the seller
+ * picked, rendered right here at the store's address (and its domain) with
+ * everything the page has. Rendered, not redirected — a redirect lost the
+ * ?c= campaign code, and with it the credit for every sale an ad brought.
+ * Until a page is picked it is its one product's page; it is never a
+ * catalogue. A shop with many products lists them — its own, and only its
+ * own.
  */
 export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ store: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function StorefrontHome({ params }: Props) {
+export default async function StorefrontHome({ params, searchParams }: Props) {
   const { store: slug } = await params;
   if (!/^[a-z0-9-]{2,60}$/.test(slug)) notFound();
 
   const store = await getStorefront(slug);
   if (!store) notFound();
 
-  const products = await storefrontProducts(store.companyId);
-
-  // One product for sale, one page. Redirect rather than render a grid of
-  // one, so the address a customer shares is the product's own.
-  if (store.type === 'SINGLE_PRODUCT' && products.length === 1) {
-    redirect(`/s/${store.slug}/p/${products[0].sku}`);
+  if (store.type === 'SINGLE_PRODUCT') {
+    if (store.landingPageId) {
+      return <LandingPageView target={{ frontPageId: store.landingPageId, storeId: store.id }} />;
+    }
+    // No front page picked yet: the one product's page, with the campaign
+    // code carried along. Anything else is a shop that is not ready — and a
+    // Single Product store never shows a catalogue.
+    const only = await storefrontProducts(store.companyId, store.id, 2);
+    if (only.length === 1) redirect(`/s/${store.slug}/p/${only[0].sku}${carryQuery(await searchParams)}`);
+    notFound();
   }
+
+  const products = await storefrontProducts(store.companyId, store.id);
 
   const money = (n: number) =>
     `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${store.currencyCode}`;

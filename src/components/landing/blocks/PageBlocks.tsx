@@ -9,6 +9,7 @@ import { Countdown } from './Countdown';
 import { FaqList } from './FaqList';
 import { OrderCta } from './OrderCta';
 import { StickyCta } from './StickyCta';
+import { Slider } from './Slider';
 
 /**
  * The public renderer for a block-built page.
@@ -33,6 +34,13 @@ export interface BlockContext {
   offers: { id: string; name: string; quantity: number; freeQuantity: number; price: number; compareAtPrice?: number | null; isDefault?: boolean }[];
   /** Rendered in place of the `form` block. */
   form: React.ReactNode;
+  /**
+   * True inside the builder's preview. Only the thank-you block reads it: it
+   * is not part of the published page (the form turns into it after an
+   * order), but in the builder it must be something the seller can see,
+   * click and edit.
+   */
+  building?: boolean;
 }
 
 /**
@@ -173,6 +181,44 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
 
     case 'hero':
       return <Hero section={s} ctx={ctx} />;
+
+    case 'slider': {
+      const images = s.images.filter(Boolean);
+      if (!images.length) return null;
+      return (
+        <Section title={s.title}>
+          <Slider images={images} autoplay={s.autoplay} seconds={s.seconds} />
+        </Section>
+      );
+    }
+
+    case 'thankyou':
+      // On the published page the form becomes this after an order; there is
+      // nothing to draw in the page itself.
+      if (!ctx.building) return null;
+      return (
+        <section className="lp-section">
+          <div
+            style={{
+              border: '2px dashed var(--lp-accent-border)',
+              borderRadius: 'var(--lp-radius)',
+              padding: '22px 16px',
+              textAlign: 'center',
+              background: 'var(--lp-accent-tint)',
+            }}
+          >
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--lp-muted)' }}>
+              صفحة الشكر — تظهر مكان النموذج بعد إرسال الطلب
+            </p>
+            <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--lp-text)', marginTop: 8 }}>
+              {s.title || 'تم تسجيل طلبك بنجاح'}
+            </p>
+            <p style={{ fontSize: 12.5, color: 'var(--lp-muted)', marginTop: 4, whiteSpace: 'pre-line' }}>
+              {s.message || 'سنتواصل معك قريبًا لتأكيد الطلب.'}
+            </p>
+          </div>
+        </section>
+      );
 
     case 'benefits': {
       // The original index travels with the item: filtering first and

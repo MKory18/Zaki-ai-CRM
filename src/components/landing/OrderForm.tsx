@@ -75,6 +75,12 @@ interface OrderFormProps {
    * keeps every existing page working without being told about this.
    */
   endpoint?: string;
+  /**
+   * What the customer reads once the order is in — the page's thank-you
+   * block, when it has one. The order number and the post-order offers are
+   * shown under it either way: they are the system's, not copy.
+   */
+  thankYou?: { title: string; message: string };
 }
 
 /**
@@ -112,7 +118,7 @@ type FormState = 'idle' | 'loading' | 'success' | 'error';
 
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, endpoint }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, endpoint, thankYou }: OrderFormProps) {
   const orderEndpoint = endpoint || `/api/public/landing-pages/${encodeURIComponent(slug)}/orders`;
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -180,17 +186,28 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
       city: cityValue,
       offerId: selectedOffer,
       notes: String(fd.get('notes') || '').trim(),
-      // honeypot (hidden from humans — bots may fill it)
-      website: String(fd.get('website') || ''),
-      ts: String(Date.now()),
-      // The campaign code from the link this visitor arrived on.
-      //
-      // Read at submit and not at load: a visitor who lands on the ad's
-      // link, wanders to another page and comes back would otherwise lose
-      // the attribution, and the ad would look like it sold nothing. The
-      // server checks the code against this store's campaigns — a wrong or
-      // invented one resolves to nothing and the order is still created,
-      // because a mistyped link in an ad must never cost a sale.
+      // honeypot (hidden from humans — bots may fill it)
+
+      website: String(fd.get('website') || ''),
+
+      ts: String(Date.now()),
+
+      // The campaign code from the link this visitor arrived on.
+
+      //
+
+      // Read at submit and not at load: a visitor who lands on the ad's
+
+      // link, wanders to another page and comes back would otherwise lose
+
+      // the attribution, and the ad would look like it sold nothing. The
+
+      // server checks the code against this store's campaigns — a wrong or
+
+      // invented one resolves to nothing and the order is still created,
+
+      // because a mistyped link in an ad must never cost a sale.
+
       campaign: campaignCode(),
     };
 
@@ -341,7 +358,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
           {state === 'success' ? (
             <div className="px-5 py-8 text-center">
               <p className="text-4xl">✅</p>
-              <p className="mt-3 text-lg font-bold text-[#121926]">تم تسجيل طلبك بنجاح</p>
+              <p className="mt-3 text-lg font-bold text-[#121926]">{thankYou?.title?.trim() || 'تم تسجيل طلبك بنجاح'}</p>
               <p className="mt-2 text-sm text-[#364152]" dir="ltr">
                 رقم الطلب: <span className="font-bold">{result.orderNumber}</span>
               </p>
@@ -352,7 +369,9 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                   تم تحديث الإجمالي بعد الإضافة
                 </p>
               )}
-              <p className="mt-2 text-xs text-[#697586]">سنتواصل معك قريبًا لتأكيد الطلب.</p>
+              <p className="mt-2 whitespace-pre-line text-xs text-[#697586]">
+                {thankYou?.message?.trim() || 'سنتواصل معك قريبًا لتأكيد الطلب.'}
+              </p>
 
               {/* Post-order upsells */}
               {recommendations.length > 0 && (
