@@ -4,6 +4,7 @@ import { SEALED_BATCH_STATUSES } from '@/lib/order-seal';
 import { requireContext } from '@/lib/geo-context';
 import { consumeOrderStock } from '@/lib/stock-consumption';
 import { emitAppEvent, type AppEvent } from '@/lib/apps/events';
+import { queueConversions } from '@/lib/conversions/emit';
 import { assertOrderAccess } from '@/lib/rbac';
 import {
   isValidShippingTransition, canEnterShipping, STATUS_TIMESTAMP,
@@ -347,6 +348,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         currency: order.currency,
         trackingNumber: order.trackingNumber ?? null,
       });
+    }
+
+    // Delivery is the only moment that is a sale. For a cash-on-delivery
+    // shop this is the conversion worth buying, and the one the browser
+    // pixel can never witness because it happened at somebody's door.
+    if (newShippingStatus === 'DELIVERED' && newShippingStatus !== from) {
+      await queueConversions(companyId, 'order.delivered', id);
     }
 
     // ── Logs: OrderStatusLog + OrderActivity + Audit (Section 21) ──

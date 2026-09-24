@@ -78,9 +78,11 @@ describe('POST /api/settings/tracking-pixels', () => {
     db.trackingPixel.create.mockResolvedValue({ id: 'p1', companyId: 'company-1', platform: 'META', name: 'Zaki Main', pixelId: '123456789012345', enabled: true, scope: 'GLOBAL' });
     const res = await POST(jsonReq({ platform: 'META', name: 'Zaki Main', pixelId: '123456789012345', scope: 'GLOBAL', enabled: true }));
     expect(res.status).toBe(200);
-    expect(db.trackingPixel.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ companyId: 'company-1', platform: 'META', pixelId: '123456789012345' }),
-    });
+    expect(db.trackingPixel.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ companyId: 'company-1', platform: 'META', pixelId: '123456789012345' }),
+      })
+    );
     expect(logAudit).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'TRACKING_PIXEL_CREATED' })
     );
@@ -140,9 +142,9 @@ describe('POST /api/settings/tracking-pixels', () => {
     db.trackingPixel.findFirst.mockResolvedValue(null);
     db.trackingPixel.create.mockResolvedValue({ id: 'px' });
     await POST(jsonReq({ platform: 'META', name: 'Test', pixelId: '123456789012345', scope: 'GLOBAL', enabled: true, companyId: 'other-company' }));
-    expect(db.trackingPixel.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ companyId: 'company-1' }),
-    });
+    expect(db.trackingPixel.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ companyId: 'company-1' }) })
+    );
   });
 
   it('returns 409 for a duplicate pixel on the same platform', async () => {
@@ -169,7 +171,9 @@ describe('PATCH /api/settings/tracking-pixels/[id]', () => {
     db.trackingPixel.update.mockResolvedValue({ id: 'p1', enabled: false });
     const res = await PATCH(req({ enabled: false }), { params: Promise.resolve({ id: 'p1' }) });
     expect(res.status).toBe(200);
-    expect(db.trackingPixel.update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { enabled: false } });
+    expect(db.trackingPixel.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'p1' }, data: { enabled: false } })
+    );
     expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'TRACKING_PIXEL_DISABLED' }));
   });
 
@@ -200,10 +204,12 @@ describe('PATCH /api/settings/tracking-pixels/[id]', () => {
     db.trackingPixel.update.mockResolvedValue({ id: 'p1', name: 'BB', scope: 'LANDING_PAGES', pixelId: '222222222222222' });
     const res = await PATCH(req({ name: 'BB', scope: 'LANDING_PAGES', pixelId: '222222222222222' }), { params: Promise.resolve({ id: 'p1' }) });
     expect(res.status).toBe(200);
-    expect(db.trackingPixel.update).toHaveBeenCalledWith({
-      where: { id: 'p1' },
-      data: expect.objectContaining({ name: 'BB', scope: 'LANDING_PAGES', pixelId: '222222222222222' }),
-    });
+    expect(db.trackingPixel.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'p1' },
+        data: expect.objectContaining({ name: 'BB', scope: 'LANDING_PAGES', pixelId: '222222222222222' }),
+      })
+    );
   });
 });
 
@@ -223,5 +229,22 @@ describe('DELETE /api/settings/tracking-pixels/[id]', () => {
     const res = await DELETE(req(), { params: Promise.resolve({ id: 'foreign-pixel' }) });
     expect(res.status).toBe(404);
     expect(db.trackingPixel.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe('the Conversions API token never leaves the server', () => {
+  it('is excluded from every query that returns a pixel', () => {
+    // Not stripped after the fact — never selected. A field that is never
+    // read cannot be accidentally serialised, and this is the assertion
+    // that fails the day somebody returns the whole row again.
+    for (const call of [
+      ...db.trackingPixel.findMany.mock.calls,
+      ...db.trackingPixel.create.mock.calls,
+      ...db.trackingPixel.update.mock.calls,
+    ]) {
+      const select = call[0]?.select;
+      expect(select).toBeTruthy();
+      expect(select.capiToken).toBeUndefined();
+    }
   });
 });

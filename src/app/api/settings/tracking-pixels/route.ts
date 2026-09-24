@@ -5,6 +5,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
+import { PIXEL_PUBLIC_SELECT } from '@/lib/tracking/tracking-config';
 import { maskPixelId, TRACKING_PLATFORMS, TRACKING_SCOPES } from '@/lib/tracking/tracking-types';
 import { pixelIdHint, validateTrackingPixelId } from '@/lib/tracking/tracking-validation';
 import { zodMessage } from '@/lib/zod-message';
@@ -36,7 +37,7 @@ export async function GET() {
     const pixels = await db.trackingPixel.findMany({
       where: { companyId },
       orderBy: [{ platform: 'asc' }, { createdAt: 'asc' }],
-      select: { id: true, platform: true, name: true, pixelId: true, enabled: true, scope: true, createdAt: true },
+      select: PIXEL_PUBLIC_SELECT,
     });
     return NextResponse.json({ pixels });
   } catch (error: any) {
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
 
     const pixel = await db.trackingPixel.create({
       data: { companyId, platform, name, pixelId, scope, enabled },
+      select: PIXEL_PUBLIC_SELECT,
     });
 
     await logAudit({

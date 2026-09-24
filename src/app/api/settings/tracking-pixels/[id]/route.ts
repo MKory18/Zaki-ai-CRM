@@ -8,6 +8,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { maskPixelId, TRACKING_PLATFORMS, TRACKING_SCOPES } from '@/lib/tracking/tracking-types';
 import { pixelIdHint, validateTrackingPixelId } from '@/lib/tracking/tracking-validation';
 import { zodMessage } from '@/lib/zod-message';
+import { PIXEL_PUBLIC_SELECT } from '@/lib/tracking/tracking-config';
 
 /**
  * PATCH  /api/settings/tracking-pixels/[id] — update / enable / disable
@@ -73,6 +74,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(scope !== undefined ? { scope } : {}),
         ...(enabled !== undefined ? { enabled } : {}),
       },
+      // Never the whole row: it carries the encrypted Conversions API token.
+      select: PIXEL_PUBLIC_SELECT,
     });
 
     const toggled = enabled !== undefined && enabled !== pixel.enabled;

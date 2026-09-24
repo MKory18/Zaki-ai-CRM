@@ -13,6 +13,7 @@ import { can, authorize } from '@/lib/authorization';
 import { assertCancellable, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines, reserveOrderLines } from '@/lib/reservation';
 import { emitAppEvent } from '@/lib/apps/events';
+import { queueConversions } from '@/lib/conversions/emit';
 
 /**
  * POST /api/orders/[id]/confirmation — controlled confirmation workflow action.
@@ -315,6 +316,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         total: Number(fresh?.totalAmount ?? 0),
         currency: fresh?.currency ?? null,
       });
+    }
+
+    // A confirmed order is the seller's second choice of conversion moment:
+    // truer than a form submission, and still not money in hand.
+    if (target === 'CONFIRMED') {
+      await queueConversions(companyId, 'order.confirmed', id);
     }
 
     // Notify company managers on terminal confirmation outcomes — after commit, non-fatal

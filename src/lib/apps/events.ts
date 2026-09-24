@@ -47,7 +47,7 @@ export function isAppEvent(v: string): v is AppEvent {
 }
 
 /** Retry schedule in seconds: quick, then patient, then give up. */
-const BACKOFF = [30, 120, 600, 3600, 21600];
+export const BACKOFF = [30, 120, 600, 3600, 21600];
 export const MAX_ATTEMPTS = BACKOFF.length;
 
 /**

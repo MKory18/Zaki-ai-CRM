@@ -8,6 +8,7 @@ import { NEUTRAL_REFUSAL, isBlocked } from './blacklist';
 import { rateLimit } from './rate-limit';
 import { signAddonToken } from './landing-pages';
 import { emitAppEvent } from './apps/events';
+import { queueConversions } from './conversions/emit';
 import {
   buildPublicOrderSchema,
   mapZodFieldErrors,
@@ -330,6 +331,10 @@ export async function createPublicOrder(
     storeId: store.id,
     city: v.city,
   });
+
+  // And tell Meta, if the seller asked for this moment. Same rule as above:
+  // never able to undo the order, and never inline with the write.
+  await queueConversions(companyId, 'order.created', order.id);
 
   // Short-lived add-on capability token for the success screen (upsells).
   // Stateless (no DB), order-scoped, 30-minute TTL.

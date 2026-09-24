@@ -1,12 +1,20 @@
 import { guardRoute } from '@/lib/page-guard';
 import { TrackingPixelsSection } from '@/components/settings/TrackingPixelsSection';
 import { AdAccountsCard } from '@/components/settings/AdAccountsCard';
+import { CustomConversionsCard } from '@/components/settings/CustomConversionsCard';
 
 export default async function Page() {
   await guardRoute('/settings/pixels');
   return (
     <div className="space-y-4">
       <TrackingPixelsSection />
+      {/*
+        Directly under the pixels, because it is the same thought carried
+        one step further: the pixel says what happened on the page, this
+        says what happened afterwards — at the door, days later, where no
+        browser could ever have watched.
+      */}
+      <CustomConversionsCard />
       {/*
         Beside the pixels, not on a screen of its own.
 

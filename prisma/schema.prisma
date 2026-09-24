@@ -58,6 +58,7 @@ model Company {
   fonts             StoreFont[]
   campaigns         Campaign[]
   adAccounts        AdAccount[]
+  customConversions CustomConversion[]
 
   @@map("companies")
 }
@@ -78,12 +79,125 @@ model TrackingPixel {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// THE ONE EXCEPTION to the rule above, and it is deliberate.
+  ///
+  /// The browser half of this pixel still stores nothing but an id, because
+  /// anything a page holds travels through the customer's own browser. The
+  /// Conversions API is the opposite case: it runs on the server, and it
+  /// cannot speak to Meta without a token.
+  ///
+  /// So the token lives here under the same law as the courier logins and
+  /// the ad-account secrets: encrypted at rest, verified against Meta before
+  /// it is stored, never returned by any endpoint, and never written to an
+  /// audit entry. Only the last four characters come back, so a seller can
+  /// tell which token is in there. Null means this pixel is browser-only.
+  capiToken     String?
+  capiTokenHint String?
+  /// Meta's Test Events code. Set while a seller is watching events arrive
+  /// in Events Manager, then cleared — an event sent with it is visible in
+  /// the test panel and NOT counted as a conversion.
+  capiTestCode  String?
+
+  company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversions CustomConversion[]
 
   @@unique([companyId, platform, pixelId])
   @@index([companyId, enabled, scope])
   @@index([companyId, platform, enabled])
   @@map("tracking_pixels")
+}
+
+// ─── CUSTOM CONVERSIONS (server-side, via the Conversions API) ───
+/// WHAT THE SELLER DECIDES, AND WHY IT IS A ROW RATHER THAN A CONSTANT.
+///
+/// The browser pixel fires when a form is submitted. For a cash-on-delivery
+/// shop that is not a sale — it is a person who typed their phone number,
+/// and a large share of those never pay. Optimising on it teaches Meta to
+/// find people who fill forms.
+///
+/// A custom conversion is the seller saying: THIS moment, in MY order
+/// lifecycle, is the one worth buying. They choose the moment, the event
+/// name Meta will see, and which number counts as the value. Nothing here
+/// is inferred, because the right answer differs per product and per shop.
+///
+/// The event name is the seller's own, never one the browser pixel already
+/// sends, so a conversion at delivery cannot be double-counted against a
+/// Purchase at form-submit. That is exactly what Meta's Custom Conversions
+/// are built on top of.
+model CustomConversion {
+  id        String  @id @default(uuid())
+  companyId String  @map("company_id")
+  /// The pixel this is sent to — which also supplies the platform and token.
+  pixelId   String  @map("pixel_id")
+
+  /// What the seller calls it, in their own words.
+  name      String
+  /// What Meta receives. Letters, digits and underscores; validated server-side.
+  eventName String  @map("event_name")
+  /// order.created | order.confirmed | order.delivered — the existing event
+  /// vocabulary, not a second one invented for this table.
+  trigger   String
+  /// ORDER_TOTAL | COLLECTED_AMOUNT | NONE. At delivery the collected amount
+  /// is the true figure: what the customer actually handed over, which is
+  /// not always what was ordered.
+  valueSource String @default("ORDER_TOTAL") @map("value_source")
+  enabled     Boolean @default(true)
+
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company    Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pixel      TrackingPixel        @relation(fields: [pixelId], references: [id], onDelete: Cascade)
+  deliveries ConversionDelivery[]
+
+  @@unique([pixelId, eventName, trigger])
+  @@index([companyId, enabled])
+  @@map("custom_conversions")
+}
+
+/// ONE ROW PER CONVERSION PER ORDER, FOR EVER.
+///
+/// Written when the order reaches the moment, sent by the worker. Never
+/// inline: an order must not fail to save because Meta is slow, and a sale
+/// that happened has happened whatever any advertising platform thinks.
+///
+/// NO PERSONAL DATA IS STORED HERE. The row holds the order id and the
+/// worker re-reads the customer at send time to hash them. A queue that
+/// kept the phone number would be a second copy of the customer database
+/// with none of its protections.
+///
+/// The unique pair is the whole guarantee against double counting: a retry,
+/// a replay, two workers, or a status set to DELIVERED twice all collapse
+/// into the one row that already exists.
+model ConversionDelivery {
+  id           String  @id @default(uuid())
+  companyId    String  @map("company_id")
+  conversionId String  @map("conversion_id")
+  orderId      String  @map("order_id")
+
+  /// Sent to Meta as event_id. Meta deduplicates on it too, so a row that
+  /// somehow sends twice is still counted once on their side.
+  eventId String @map("event_id")
+
+  /// PENDING | SENT | FAILED | SKIPPED
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime? @map("next_attempt_at")
+  lastError     String?   @map("last_error")
+  sentAt        DateTime? @map("sent_at")
+  /// How much of a match we could offer, 0–1. The only way anyone finds out
+  /// that events are arriving and matching nobody.
+  matchQuality  Float?    @map("match_quality")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  conversion CustomConversion @relation(fields: [conversionId], references: [id], onDelete: Cascade)
+  order      Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([conversionId, orderId])
+  @@index([status, nextAttemptAt])
+  @@index([companyId, createdAt])
+  @@map("conversion_deliveries")
 }
 
 model User {
@@ -503,6 +617,7 @@ model Order {
   customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
   channel    OrderChannel?   @relation(fields: [channelId], references: [id], onDelete: SetNull)
   campaign   Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  conversionDeliveries ConversionDelivery[]
   product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   offer      Offer?          @relation(fields: [offerId], references: [id], onDelete: SetNull)
   moderator  User?           @relation("ModeratorOrders", fields: [moderatorId], references: [id], onDelete: SetNull)

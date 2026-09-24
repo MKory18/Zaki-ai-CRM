@@ -22,6 +22,24 @@ import {
 } from './tracking-types';
 import { validateTrackingPixelId } from './tracking-validation';
 
+/**
+ * EVERY COLUMN OF A PIXEL THAT MAY LEAVE THE SERVER.
+ *
+ * Written once, used by every route that returns one. The pixel row now
+ * carries an encrypted Conversions API token, and the way that token gets
+ * leaked is not a mistake in the sending — it is a route that returns the
+ * whole row because it always did, on the day somebody adds a column.
+ *
+ * `capiToken` is absent rather than stripped afterwards: a field that is
+ * never selected cannot be accidentally serialised. `capiTokenHint` is the
+ * last four characters and is safe — it is there so a seller can tell which
+ * token is in there.
+ */
+export const PIXEL_PUBLIC_SELECT = {
+  id: true, platform: true, name: true, pixelId: true, enabled: true,
+  scope: true, createdAt: true, capiTokenHint: true, capiTestCode: true,
+} as const;
+
 function toView(row: {
   id: string;
   platform: string;
