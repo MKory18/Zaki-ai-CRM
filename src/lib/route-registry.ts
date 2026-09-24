@@ -133,6 +133,10 @@ export const NAV: NavGroup[] = [
       r('/settings/couriers', 'شركات الشحن', 'Truck', ['settings.view']),
       r('/settings/channels', 'قنوات الطلبات', 'Radio', ['settings.view']),
       r('/settings/pixels', 'البكسلات والتتبع', 'Radar', ['settings.view']),
+      // Its own entry, not a card at the bottom of system settings: the
+      // words the system says to the model are a thing a seller edits,
+      // and they cannot edit what they cannot find.
+      r('/settings/ai', 'الذكاء الاصطناعي والنصوص', 'Bot', ['settings.view']),
       r('/settings/whatsapp', 'إعدادات واتساب', 'MessageCircle', ['whatsapp.manage']),
       r('/settings/telegram', 'إعدادات تلجرام', 'Send', ['telegram.manage']),
       r('/settings/system', 'إعدادات النظام', 'Settings', ['settings.view']),

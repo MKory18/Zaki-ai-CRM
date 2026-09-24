@@ -1,4 +1,5 @@
-import { aiChat, AiNotConfigured } from './ai-provider';
+import { aiChat, aiSettings, AiNotConfigured } from './ai-provider';
+import { resolvePrompt } from './ai-prompts';
 /**
  * OpenRouter AI Service for SALESFLOW
  * Business Intelligence Assistant & Daily Summary Generator
@@ -35,15 +36,23 @@ export interface AiAnalysisResult {
 }
 
 export async function generateAiBusinessAnalysis(
-  context: AiBusinessContext
+  context: AiBusinessContext,
+  companyId?: string
 ): Promise<AiAnalysisResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
 
-  const systemPrompt = `You are SALESFLOW AI, an expert Chief Financial Officer and E-Commerce Business Intelligence Analyst.
-Analyze the following verified financial and operational numbers.
-CRITICAL MANDATE: NEVER invent numbers. Use only the exact figures provided in the context.
-Provide a clear executive summary, bullet points for key observations, operational risks, and high-impact tactical recommendations.
+  /**
+   * The guidance is the company's to edit; the SCHEMA is not.
+   *
+   * What comes back is parsed, so the shape is a contract with the parser
+   * and not an editorial choice — a seller who deleted it would get a
+   * summary that renders as nothing, with no way to tell why. So they edit
+   * the instructions and the system appends what the machine needs.
+   */
+  const guidance = resolvePrompt('daily_summary', companyId ? (await aiSettings(companyId)).prompts : {});
+  const systemPrompt = `${guidance}
+
 Always format your response as valid JSON matching this schema:
 {
   "summary": "Concise executive overview paragraph",
@@ -160,13 +169,11 @@ export async function askAiAssistant(
   context: AiBusinessContext,
   companyId?: string
 ): Promise<string> {
-  const systemPrompt = `You are the SALESFLOW Executive Business AI Advisor.
-You have real-time access to the company's verified operational and financial database context.
-CRITICAL RULES:
-1. Ground your answers strictly on the provided data.
-2. Distinguish clearly between demand (orders count) and real profit (delivered revenue minus costs).
-3. Be professional, concise, actionable, and executive-ready.
-4. Support both English and Arabic when queried.`;
+  // The prompt is the COMPANY'S now, resolved at call time from settings.
+  // It was written here, which meant the one person who knows whether "be
+  // concise" suits their business, in their dialect, could not change a
+  // word of it. `job` names it; ai-prompts holds the default.
+  const job = 'advisor';
 
   // The vendor, the model and the key are the company's choice now, not a
   // deploy-time constant. A failure falls through to the grounded summary
@@ -176,7 +183,7 @@ CRITICAL RULES:
     try {
       const answer = await aiChat({
         companyId,
-        system: systemPrompt,
+        job,
         user: `Business Metrics Context:
 ${JSON.stringify(context, null, 2)}
 

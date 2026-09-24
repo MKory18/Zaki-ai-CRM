@@ -1,4 +1,5 @@
 import { db } from './db';
+import { sanitizePromptOverrides, resolvePrompt, HOUSE_JOB } from './ai-prompts';
 import { decryptSecret, encryptSecret, encryptionAvailable, secretHint } from './secrets';
 
 /**
@@ -70,6 +71,14 @@ export interface AiSettings {
   model: string;
   /** The house prompt prepended to every request. Empty means the default. */
   prompt: string;
+  /**
+   * The company's own wording for each AI job, where they wrote one.
+   *
+   * Only overrides are stored. A job the seller never touched is absent,
+   * and gets the current default — a default copied into the database is a
+   * default that stops improving the day it is written.
+   */
+  prompts: Record<string, string>;
   hasKey: boolean;
   keyHint: string | null;
 }
@@ -78,6 +87,7 @@ interface StoredAi {
   provider?: string;
   model?: string;
   prompt?: string;
+  prompts?: Record<string, string>;
   apiKeyEncrypted?: string;
   keyHint?: string;
 }
@@ -99,6 +109,7 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
     provider,
     model: ai.model || providerInfo(provider).defaultModel,
     prompt: ai.prompt || '',
+    prompts: sanitizePromptOverrides(ai.prompts),
     // The environment key still counts as configured, so an existing deploy
     // keeps working without anybody re-entering anything.
     hasKey: !!ai.apiKeyEncrypted || !!process.env.OPENROUTER_API_KEY,
@@ -108,7 +119,7 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
 
 export async function saveAiSettings(
   companyId: string,
-  input: { provider: AiProvider; model: string; prompt?: string; apiKey?: string | null }
+  input: { provider: AiProvider; model: string; prompt?: string; prompts?: Record<string, string>; apiKey?: string | null }
 ): Promise<AiSettings> {
   const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
   const all = (() => {
@@ -124,6 +135,9 @@ export async function saveAiSettings(
     provider: input.provider,
     model: input.model.trim() || providerInfo(input.provider).defaultModel,
     prompt: (input.prompt ?? current.prompt ?? '').slice(0, 4000),
+    // Sanitised on the way in: unknown jobs are dropped, and an override
+    // equal to the default is not stored at all.
+    prompts: input.prompts !== undefined ? sanitizePromptOverrides(input.prompts) : current.prompts,
     apiKeyEncrypted: current.apiKeyEncrypted,
     keyHint: current.keyHint,
   };
@@ -163,7 +177,15 @@ async function resolveKey(companyId: string): Promise<string | null> {
 
 export interface ChatRequest {
   companyId: string;
-  system: string;
+  /**
+   * The words for this call. Pass a `job` instead to use the company's own
+   * wording for one of the named jobs — which is what every caller in the
+   * system does, so that editing a prompt in settings actually changes
+   * what the model is told.
+   */
+  system?: string;
+  /** A key from AI_JOBS. Its prompt is resolved per company. */
+  job?: string;
   user: string;
   /** Ask for a JSON object back. Only OpenRouter and OpenAI honour it. */
   json?: boolean;
