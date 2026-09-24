@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Hourglass, PhoneCall } from 'lucide-react';
-import { apiJson } from '@/lib/api-client';
 
 /**
  * A NUMBER IN THE HEADER, FOR THE TWO PEOPLE WHO NEED ONE.
@@ -28,7 +27,12 @@ export function ConfirmationCounter() {
 
   const load = useCallback(async () => {
     try {
-      setCounter(await apiJson<Counter>('/api/confirmation/counter'));
+      // Plain fetch, on purpose. apiJson answers a missing store by sending
+      // the whole tab to the store picker — right for a click, wrong for a
+      // poll that fires on its own every minute and would throw away
+      // whatever the person was typing.
+      const res = await fetch('/api/confirmation/counter', { credentials: 'same-origin' });
+      if (res.ok) setCounter((await res.json()) as Counter);
     } catch {
       // A failed poll is not worth a message; the next one will do.
     }

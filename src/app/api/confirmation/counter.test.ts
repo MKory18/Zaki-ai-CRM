@@ -16,7 +16,16 @@ const { db, requireContext, can } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/db', () => ({ db }));
-vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
+vi.mock('@/lib/geo-context', () => {
+  // The route tells a missing store from a failure with instanceof, so the
+  // mock carries its own ContextError and the test throws that one.
+  class ContextError extends Error {
+    constructor(readonly code: string, message: string) {
+      super(message);
+    }
+  }
+  return { ContextError, requireContext: (...a: unknown[]) => requireContext(...a) };
+});
 vi.mock('@/lib/authorization', () => ({ can: (...a: unknown[]) => can(...a) }));
 
 import { GET } from '@/app/api/confirmation/counter/route';
@@ -97,5 +106,21 @@ describe('everyone else', () => {
     const body = await (await GET()).json();
     expect(body).toEqual({ kind: null, count: 0 });
     expect(db.order.count).not.toHaveBeenCalled();
+  });
+});
+
+describe('a background poll never sends the tab away', () => {
+  it('answers "no counter" when no store is selected, instead of an error the client redirects on', async () => {
+    const { ContextError } = await import('@/lib/geo-context');
+    requireContext.mockRejectedValue(new ContextError('STORE_REQUIRED', 'A store must be selected'));
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ kind: null, count: 0 });
+  });
+
+  it('still fails loudly for anything that is not a missing context', async () => {
+    requireContext.mockRejectedValue(new Error('Unauthorized'));
+    const res = await GET();
+    expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });

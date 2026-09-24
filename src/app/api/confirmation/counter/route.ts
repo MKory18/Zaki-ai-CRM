@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireContext } from '@/lib/geo-context';
+import { ContextError, requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { awaitingConfirmationCount, counterKindFor, waitingCount } from '@/lib/confirmation-queue';
@@ -18,7 +18,18 @@ import { awaitingConfirmationCount, counterKindFor, waitingCount } from '@/lib/c
  */
 export async function GET() {
   try {
-    const { user, companyId, storeId } = await requireContext();
+    // No store chosen — in this tab or, through the shared cookie, in
+    // another — is "no counter", not an error. This route is POLLED in the
+    // background; answering 400 made the client send the whole tab to the
+    // store picker, mid-form, without a click.
+    let context;
+    try {
+      context = await requireContext();
+    } catch (e) {
+      if (e instanceof ContextError) return NextResponse.json({ kind: null, count: 0 });
+      throw e;
+    }
+    const { user, companyId, storeId } = context;
     const scope = { companyId, storeId };
 
     const kind = counterKindFor({
