@@ -265,18 +265,17 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
       },
     });
 
-    try {
-      await createNotification({
-        companyId,
-        userId: null,
-        title: 'طلب جديد من تيليجرام',
-        message: `تم إنشاء طلب جديد #${(order as any).orderNumber} تلقائيًا من تيليجرام.`,
-        type: 'ORDER_NEW',
-        link: '/orders',
-      });
-    } catch {
-      /* non-fatal */
-    }
+    // This store's confirmation supervisors; nobody acted, so nobody is
+    // left out. createNotification never throws.
+    await createNotification({
+      companyId,
+      storeId: store.id,
+      audience: { permission: 'confirmation.supervise' },
+      title: 'طلب جديد من تيليجرام',
+      message: `تم إنشاء طلب جديد #${(order as any).orderNumber} تلقائيًا من تيليجرام.`,
+      type: 'ORDER_NEW',
+      link: ['/confirmation/queue', '/orders'],
+    });
 
     return { ok: true, orderId: order.id, orderNumber: (order as any).orderNumber };
   } catch (e) {

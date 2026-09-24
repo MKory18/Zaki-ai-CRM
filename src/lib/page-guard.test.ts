@@ -23,7 +23,7 @@ const { getCurrentUser, cookies, redirect, forbidden, notFound, db } = vi.hoiste
     store: { findFirst: vi.fn(), findMany: vi.fn() },
     company: { findFirst: vi.fn() },
     country: { findFirst: vi.fn() },
-    userStoreAccess: { count: vi.fn() },
+    userStoreAccess: { findMany: vi.fn() },
   },
 }));
 
@@ -95,7 +95,7 @@ describe('guardRoute', () => {
     cookies.mockResolvedValue({ get: () => ({ value: token }) });
     db.country.findFirst.mockResolvedValue({ id: COUNTRY });
     db.store.findMany.mockResolvedValue([{ id: STORE }]);
-    db.userStoreAccess.count.mockResolvedValue(0);
+    db.userStoreAccess.findMany.mockResolvedValue([]); // no narrowing: every store of the country
     db.store.findFirst.mockResolvedValue({
       id: STORE, name: 'Main', logo: null, status: 'ACTIVE',
       country: { id: COUNTRY, name: 'الأردن', code: 'JO', currencyCode: 'JOD' },

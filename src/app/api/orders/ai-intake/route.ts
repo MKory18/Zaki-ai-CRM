@@ -247,19 +247,18 @@ export async function POST(req: Request) {
         newData: order,
       });
 
-      // Notify company managers — after commit, non-fatal
-      try {
-        await createNotification({
-          companyId,
-          userId: null,
-          title: 'طلب جديد',
-          message: `تم إنشاء طلب جديد #${order.orderNumber} عبر الذكاء الاصطناعي بواسطة ${user.name}.`,
-          type: 'ORDER_NEW',
-          link: '/orders',
-        });
-      } catch (e) {
-        console.error('AI-intake notification failed (non-fatal):', e);
-      }
+      // Same audience as every other new order: this store's confirmation
+      // supervisors, without the person who pasted it. Never throws.
+      await createNotification({
+        companyId,
+        storeId,
+        audience: { permission: 'confirmation.supervise' },
+        actorId: user.id,
+        title: 'طلب جديد',
+        message: `تم إنشاء طلب جديد #${order.orderNumber} عبر الذكاء الاصطناعي بواسطة ${user.name}.`,
+        type: 'ORDER_NEW',
+        link: ['/confirmation/queue', '/orders'],
+      });
 
       return NextResponse.json({ success: true, order });
     }

@@ -7,6 +7,7 @@ import { accrueForOrder } from '../commission';
 import { blockingClosing } from '../wallets';
 import { adapterFor } from '../couriers';
 import { applyCourierEvent } from '../couriers/apply-event';
+import { createNotification } from '../notification';
 
 /**
  * The scheduled jobs.
@@ -199,8 +200,16 @@ export const syncCourierStatus: JobDefinition = {
 
 /**
  * Postponed orders coming due, surfaced before the date rather than after.
- * Idempotent: the notification carries the order id, and one already sent
- * for that order and date is not sent again.
+ *
+ * To the agent holding the order and this store's confirmation supervisors
+ * — the two people the postponed screen shows it to — and linked to that
+ * screen. (The old link, /orders?highlight=…, was read by nothing.)
+ *
+ * Idempotent per order AND date: the message carries both, so an order
+ * postponed again to a new date is announced again, and one already
+ * announced for this date is not. Legacy rows (no store) count too, so the
+ * first run after the per-recipient change does not repeat what was
+ * already said.
  */
 export const surfacePostponed: JobDefinition = {
   name: 'surface-postponed',
@@ -218,29 +227,33 @@ export const surfacePostponed: JobDefinition = {
           confirmationStatus: 'POSTPONED',
           postponedUntil: { not: null, lte: horizon },
         },
-        select: { id: true, orderNumber: true, postponedUntil: true },
+        select: { id: true, orderNumber: true, postponedUntil: true, claimedById: true },
         take: 200,
       });
 
       for (const order of due) {
-        const link = `/orders?highlight=${order.id}`;
+        const message = `الطلب ${order.orderNumber} مؤجَّل حتى ${order.postponedUntil?.toISOString().slice(0, 10)}`;
         const already = await db.notification.findFirst({
-          where: { companyId: store.companyId, type: 'POSTPONED_DUE', link },
+          where: {
+            companyId: store.companyId,
+            type: 'POSTPONED_DUE',
+            message,
+            OR: [{ storeId: store.id }, { storeId: null }],
+          },
           select: { id: true },
         });
         if (already) continue;
 
-        await db.notification.create({
-          data: {
-            companyId: store.companyId,
-            userId: null,
-            title: 'طلب مؤجَّل حان موعده',
-            message: `الطلب ${order.orderNumber} مؤجَّل حتى ${order.postponedUntil?.toISOString().slice(0, 10)}`,
-            type: 'POSTPONED_DUE',
-            link,
-          },
+        const told = await createNotification({
+          companyId: store.companyId,
+          storeId: store.id,
+          audience: { permission: 'confirmation.supervise', userIds: [order.claimedById] },
+          title: 'طلب مؤجَّل حان موعده',
+          message,
+          type: 'POSTPONED_DUE',
+          link: '/confirmation/postponed',
         });
-        notified++;
+        if (told) notified++;
       }
     }
 
@@ -276,23 +289,29 @@ export const staleReturns: JobDefinition = {
       });
       flagged += stale.length;
 
+      // Once per STORE per day, to whoever receives this store's returns.
+      // The check used to be per company, so after the first store nobody
+      // else heard about theirs that day.
       if (stale.length > 0) {
-        const link = '/ops/returns';
         const today = now.toISOString().slice(0, 10);
         const already = await db.notification.findFirst({
-          where: { companyId: store.companyId, type: 'RETURNS_NOT_RECEIVED', createdAt: { gte: new Date(`${today}T00:00:00.000Z`) } },
+          where: {
+            companyId: store.companyId,
+            storeId: store.id,
+            type: 'RETURNS_NOT_RECEIVED',
+            createdAt: { gte: new Date(`${today}T00:00:00.000Z`) },
+          },
           select: { id: true },
         });
         if (!already) {
-          await db.notification.create({
-            data: {
-              companyId: store.companyId,
-              userId: null,
-              title: 'مرتجعات لم تُستلم',
-              message: `${stale.length} مرتجعاً معلناً لم يُستلم فعلياً — أقدمها ${stale[0].orderNumber}`,
-              type: 'RETURNS_NOT_RECEIVED',
-              link,
-            },
+          await createNotification({
+            companyId: store.companyId,
+            storeId: store.id,
+            audience: { permission: 'ops.returns' },
+            title: 'مرتجعات لم تُستلم',
+            message: `${stale.length} مرتجعاً معلناً لم يُستلم فعلياً — أقدمها ${stale[0].orderNumber}`,
+            type: 'RETURNS_NOT_RECEIVED',
+            link: '/ops/returns',
           });
         }
       }
@@ -316,7 +335,7 @@ export const closingReminder: JobDefinition = {
 
     const wallets = await db.wallet.findMany({
       where: { isActive: true },
-      select: { id: true, name: true, companyId: true },
+      select: { id: true, name: true, companyId: true, storeId: true },
     });
 
     for (const wallet of wallets) {
@@ -329,24 +348,34 @@ export const closingReminder: JobDefinition = {
       const blocker = await blockingClosing(db, wallet.id, day);
       pending++;
 
-      const link = '/finance/closing';
+      // Once per WALLET per day. The check used to be per company, so only
+      // the first unclosed wallet was ever announced. A wallet's name is
+      // unique within its store, and every message starts with it.
       const already = await db.notification.findFirst({
-        where: { companyId: wallet.companyId, type: 'CLOSING_DUE', link, createdAt: { gte: day } },
+        where: {
+          companyId: wallet.companyId,
+          storeId: wallet.storeId,
+          type: 'CLOSING_DUE',
+          message: { startsWith: `${wallet.name}:` },
+          createdAt: { gte: day },
+        },
         select: { id: true },
       });
       if (already) continue;
 
-      await db.notification.create({
-        data: {
-          companyId: wallet.companyId,
-          userId: null,
-          title: 'الإغلاق اليومي',
-          message: blocker
-            ? `${wallet.name}: إغلاق سابق بفرق غير مفسَّر يمنع إغلاق اليوم`
-            : `${wallet.name}: لم يُسجَّل جرد اليوم بعد`,
-          type: 'CLOSING_DUE',
-          link,
-        },
+      // To whoever counts the cash (finance.cashbox, the closing screen's
+      // own gate) and can enter the wallet's store. A wallet with no store
+      // is company-wide news.
+      await createNotification({
+        companyId: wallet.companyId,
+        storeId: wallet.storeId,
+        audience: { permission: 'finance.cashbox' },
+        title: 'الإغلاق اليومي',
+        message: blocker
+          ? `${wallet.name}: إغلاق سابق بفرق غير مفسَّر يمنع إغلاق اليوم`
+          : `${wallet.name}: لم يُسجَّل جرد اليوم بعد`,
+        type: 'CLOSING_DUE',
+        link: '/finance/closing',
       });
     }
 

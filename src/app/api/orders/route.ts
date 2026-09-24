@@ -561,19 +561,20 @@ export async function POST(req: Request) {
       newData: order,
     });
 
-    // Notify company managers (userId null → broadcast) — non-fatal, after commit
-    try {
-      await createNotification({
-        companyId,
-        userId: null,
-        title: 'طلب جديد',
-        message: `تم إنشاء طلب جديد #${order.orderNumber} بواسطة ${user.name}.`,
-        type: 'ORDER_NEW',
-        link: '/orders',
-      });
-    } catch (e) {
-      console.error('Order-create notification failed (non-fatal):', e);
-    }
+    // Tell the people who see new orders through to confirmation — the
+    // confirmation supervisors of THIS store, not the whole company, and
+    // not the person who just typed it. After commit; createNotification
+    // never throws.
+    await createNotification({
+      companyId,
+      storeId,
+      audience: { permission: 'confirmation.supervise' },
+      actorId: user.id,
+      title: 'طلب جديد',
+      message: `تم إنشاء طلب جديد #${order.orderNumber} بواسطة ${user.name}.`,
+      type: 'ORDER_NEW',
+      link: ['/confirmation/queue', '/orders'],
+    });
 
     return NextResponse.json({ success: true, order });
   } catch (error) {

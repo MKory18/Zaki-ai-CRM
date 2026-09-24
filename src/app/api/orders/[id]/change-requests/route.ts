@@ -127,38 +127,39 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // It goes to the person the routing rule names: the agent holding the
     // order before confirmation, the supervisors after it. Never to the
     // requester — being told about your own request is noise.
+    //
+    // "Supervisors" is whoever may decide — control.change_requests, in
+    // this store — not a list of role names. The list left out the delivery
+    // manager, who decides these every day, and reached supervisors of
+    // stores the order is not in.
+    //
+    // When the holder IS the requester (or has left, or lost this store),
+    // the first call reaches nobody, and a request nobody hears about is
+    // one nobody answers — she cannot approve her own. So it falls through
+    // to the supervisors, who may always decide.
+    //
+    // The queue is closed to the holding agent (control.change_requests),
+    // so her link is the list her order sits in.
     const decider = deciderFor({
       confirmationStatus: order.confirmationStatus,
       claimedById: (order as { claimedById?: string | null }).claimedById ?? null,
     });
-    const recipients =
+    const notice = {
+      companyId,
+      storeId: order.storeId ?? storeId,
+      actorId: user.id,
+      type: 'SYSTEM_ALERT' as const,
+      title: `طلب تعديل على ${order.orderNumber}`,
+      message: `${user.name ?? 'موظف'}: ${parsed.data.reason}`,
+      link: ['/control/change-requests', '/confirmation/mine', '/orders'],
+    };
+    const told =
       decider.kind === 'HOLDING_AGENT'
-        ? [decider.userId]
-        : (
-            await db.user.findMany({
-              where: {
-                companyId,
-                status: 'ACTIVE',
-                role: { in: ['COMPANY_ADMIN', 'MANAGER', 'CONFIRMATION_SUPERVISOR'] },
-              },
-              select: { id: true },
-            })
-          ).map((u) => u.id);
-
-    await Promise.all(
-      recipients
-        .filter((rid) => rid && rid !== user.id)
-        .map((rid) =>
-          createNotification({
-            companyId,
-            userId: rid,
-            type: 'SYSTEM_ALERT',
-            title: `طلب تعديل على ${order.orderNumber}`,
-            message: `${user.name ?? 'موظف'}: ${parsed.data.reason}`,
-            link: '/control/change-requests',
-          }).catch(() => undefined)
-        )
-    );
+        ? await createNotification({ ...notice, audience: { userIds: [decider.userId] } })
+        : 0;
+    if (!told) {
+      await createNotification({ ...notice, audience: { permission: 'control.change_requests' } });
+    }
 
     await logAudit({
       companyId,

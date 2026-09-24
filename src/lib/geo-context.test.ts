@@ -10,7 +10,7 @@ const { db, requireCompanyTenant, can, jar } = vi.hoisted(() => ({
   db: {
     country: { findFirst: vi.fn(), findMany: vi.fn() },
     store: { findMany: vi.fn() },
-    userStoreAccess: { count: vi.fn() },
+    userStoreAccess: { findMany: vi.fn() },
   },
   requireCompanyTenant: vi.fn(),
   can: vi.fn(),
@@ -28,6 +28,8 @@ vi.mock('next/headers', () => ({
 import {
   ContextError,
   listAccessibleCountries,
+  listAccessibleStores,
+  reachesStore,
   readSelection,
   requireContext,
   resolveEntry,
@@ -53,7 +55,7 @@ beforeEach(() => {
   jar.value = undefined;
   requireCompanyTenant.mockResolvedValue({ user: agent, companyId: COMPANY });
   can.mockReturnValue(false);
-  db.userStoreAccess.count.mockResolvedValue(0);
+  db.userStoreAccess.findMany.mockResolvedValue([]); // no narrowing: every store of the country
 });
 
 describe('requireContext', () => {
@@ -176,5 +178,34 @@ describe('resolveEntry skip rules', () => {
     const entry = await resolveEntry(agent, COMPANY, { countryId: JO, storeId: STORE_SY });
     expect(entry.selection).toEqual({ countryId: JO, storeId: null });
     expect(entry.next).toBe('PICK_STORE');
+  });
+});
+
+describe('the store-entry rule (shared with the notification audience)', () => {
+  const facts = { seesAll: false, countryOpen: true, countryAssigned: true, storesInCountry: [] as string[] };
+
+  it('no narrowing rows in an assigned country = every store of it', () => {
+    expect(reachesStore(facts, STORE_JO)).toBe(true);
+  });
+
+  it('narrowing rows limit the country to those stores', () => {
+    expect(reachesStore({ ...facts, storesInCountry: [STORE_JO] }, STORE_JO)).toBe(true);
+    expect(reachesStore({ ...facts, storesInCountry: ['another-store'] }, STORE_JO)).toBe(false);
+  });
+
+  it('refuses a country the user is not assigned to', () => {
+    expect(reachesStore({ ...facts, countryAssigned: false }, STORE_JO)).toBe(false);
+  });
+
+  it('geo.manage skips assignment and narrowing, but not a closed country', () => {
+    expect(reachesStore({ ...facts, seesAll: true, countryAssigned: false, storesInCountry: ['x'] }, STORE_JO)).toBe(true);
+    expect(reachesStore({ ...facts, seesAll: true, countryOpen: false }, STORE_JO)).toBe(false);
+  });
+
+  it('the picker applies the same narrowing', async () => {
+    db.country.findFirst.mockResolvedValue({ id: JO });
+    db.store.findMany.mockResolvedValue([{ id: STORE_JO }, { id: 'another-store' }]);
+    db.userStoreAccess.findMany.mockResolvedValue([{ storeId: STORE_JO }]);
+    await expect(listAccessibleStores(agent, COMPANY, JO)).resolves.toEqual([{ id: STORE_JO }]);
   });
 });

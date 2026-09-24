@@ -250,6 +250,7 @@ model User {
   whatsappAssignedConversations WhatsAppConversation[] @relation("WhatsAppAssignee")
   countryAccess       UserCountryAccess[]
   storeAccess         UserStoreAccess[]
+  notifications       Notification[]
   customerBlocks        CustomerBlock[] @relation("CustomerBlockedBy")
   customerBlockReleases CustomerBlock[] @relation("CustomerBlockReleasedBy")
 
@@ -739,20 +740,36 @@ model Expense {
   @@map("expenses")
 }
 
+// One row per recipient (stage 17). The read flag belongs to one person,
+// so a row shared by many cannot carry it — the first reader used to mark
+// it read for everybody. Rows with userId null are LEGACY broadcasts,
+// written before the fan-out existed; nothing creates them any more, and
+// only confirmation.supervise holders still see them (they were meant for
+// "managers/admins").
 model Notification {
   id        String   @id @default(uuid())
   companyId String
-  userId    String?  // null for all managers/admins
+  userId    String?  // the recipient; null only on legacy broadcasts
+  // The store the news is about. Null = company-wide news (a wallet with no
+  // store) or a legacy row. The bell shows the selected store's rows only.
+  storeId   String?
   title     String
   message   String
-  type      String   // ORDER_NEW, FOLLOW_UP, LOW_STOCK, HIGH_REJECTION, SYSTEM_ALERT, PERFORMANCE
+  type      String   // ORDER_NEW, SYSTEM_ALERT, POSTPONED_DUE, RETURNS_NOT_RECEIVED, CLOSING_DUE, …
   isRead    Boolean  @default(false)
   link      String?
   createdAt DateTime @default(now())
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // Cascade, not cleanup code in the delete route: a user can be hard-
+  // deleted (PATCH /api/users/:id action=delete) and a notification
+  // addressed to nobody is readable by nobody. The constraint covers every
+  // delete path, including ones not written yet.
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([companyId, userId, isRead])
+  @@index([storeId, type, createdAt])
   @@map("notifications")
 }
 
@@ -1466,6 +1483,7 @@ model Store {
   wallets         Wallet[]
   products        Product[]
   customers       Customer[]
+  notifications   Notification[]
 
   @@unique([companyId, slug])
   @@unique([domain])

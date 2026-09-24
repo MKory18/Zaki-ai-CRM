@@ -1,4 +1,5 @@
 import { db } from './db';
+import { createNotification } from './notification';
 import { findOrCreateCustomer } from './customer-identity';
 import { normalizePhoneNumber } from './phone';
 import { orderRefFields } from './order-ref';
@@ -60,7 +61,7 @@ export interface SellingSurface {
   campaignId: string | null;
   /** Scopes the one-order-per-phone guard to this door. */
   dedupeScope: string;
-  /** Title and message of the manager's notification. */
+  /** Title and message of the new-order notification. */
   notice: { title: string; message: (orderNumber: string) => string };
 }
 
@@ -301,21 +302,19 @@ export async function createPublicOrder(
     return created;
   });
 
-  // Non-fatal manager notification
-  try {
-    await db.notification.create({
-      data: {
-        companyId,
-        userId: null,
-        title: surface.notice.title,
-        message: surface.notice.message(order.orderNumber),
-        type: 'ORDER_NEW',
-        link: '/orders',
-      },
-    });
-  } catch (e) {
-    console.error('Public order notification failed (non-fatal):', e);
-  }
+  // The same announcement every other new order makes, through the one
+  // function that makes it: this store's confirmation supervisors, one row
+  // each. A visitor is not an employee, so there is no actor to leave out.
+  // Never throws — the order is saved whatever happens here.
+  await createNotification({
+    companyId,
+    storeId: store.id,
+    audience: { permission: 'confirmation.supervise' },
+    title: surface.notice.title,
+    message: surface.notice.message(order.orderNumber),
+    type: 'ORDER_NEW',
+    link: ['/confirmation/queue', '/orders'],
+  });
 
   // Tell the installed apps. Never inline with the write: an order that
   // saved has saved, whatever any integration thinks about it.

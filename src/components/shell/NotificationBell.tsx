@@ -5,19 +5,20 @@ import { useRouter } from 'next/navigation';
 import { Bell, Check, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
+import type { NotificationType } from '@/lib/notification';
 
 /**
  * The bell.
  *
- * Thirteen places in the system create notifications and an endpoint has
- * always served them — there was simply nowhere to see them, so twenty-seven
- * of them had piled up unseen: new orders, a low-stock warning, a daily
- * closing coming due. Work was being announced to nobody.
+ * Eleven places in the system create notifications, all through
+ * createNotification, which writes one row per person it concerns. The bell
+ * shows only this person's rows for the store they have selected; who gets
+ * what, and what a click may open, is decided on the server.
  *
  * The unread count is polled with the count-only query (one COUNT, no rows)
  * and the list is fetched only when the panel opens. Polling stops while the
- * tab is hidden: a background tab asking every half minute for a number
- * nobody is looking at is just load.
+ * tab is hidden: a background tab asking every minute for a number nobody
+ * is looking at is just load.
  */
 
 interface Notification {
@@ -30,23 +31,32 @@ interface Notification {
   createdAt: string;
 }
 
-/** The kinds, in words. A badge reading ORDER_NEW tells a person nothing. */
-const TYPE_AR: Record<string, string> = {
+/**
+ * The kinds, in words. A badge reading ORDER_NEW tells a person nothing.
+ * Keyed by the server's own type list, so a kind added there without a
+ * label here does not compile — two of the jobs' kinds shipped showing
+ * their raw English name that way.
+ */
+const TYPE_AR: Record<NotificationType, string> = {
   ORDER_NEW: 'طلب جديد',
   FOLLOW_UP: 'متابعة',
   LOW_STOCK: 'مخزون منخفض',
   HIGH_REJECTION: 'رفض مرتفع',
   CLOSING_DUE: 'إغلاق مستحق',
+  POSTPONED_DUE: 'مؤجَّل حان موعده',
+  RETURNS_NOT_RECEIVED: 'مرتجعات لم تُستلم',
   PERFORMANCE: 'أداء',
   SYSTEM_ALERT: 'تنبيه',
 };
 
-const TONE: Record<string, string> = {
+const TONE: Record<NotificationType, string> = {
   ORDER_NEW: 'bg-[#eef4ff] text-[#2563eb]',
   FOLLOW_UP: 'bg-[#fff7ed] text-[#c2410c]',
   LOW_STOCK: 'bg-[#fefce8] text-[#a16207]',
   HIGH_REJECTION: 'bg-[#feecee] text-[#fb323f]',
   CLOSING_DUE: 'bg-[#f5f3ff] text-[#6d28d9]',
+  POSTPONED_DUE: 'bg-[#fff7ed] text-[#c2410c]',
+  RETURNS_NOT_RECEIVED: 'bg-[#fefce8] text-[#a16207]',
   PERFORMANCE: 'bg-[#ecfdf5] text-[#047857]',
   SYSTEM_ALERT: 'bg-[#f8fafc] text-[#697586]',
 };
@@ -201,8 +211,8 @@ export function NotificationBell() {
                         )}
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${TONE[n.type] ?? TONE.SYSTEM_ALERT}`}>
-                              {TYPE_AR[n.type] ?? n.type}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${TONE[n.type as NotificationType] ?? TONE.SYSTEM_ALERT}`}>
+                              {TYPE_AR[n.type as NotificationType] ?? TYPE_AR.SYSTEM_ALERT}
                             </span>
                             <span className="text-[10px] text-[#9aa4b2]">{arDateShort(n.createdAt)}</span>
                           </span>

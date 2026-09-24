@@ -395,20 +395,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       newData: { shippingStatus: newShippingStatus, action, by: user.name },
     });
 
-    // Notify company managers on failed delivery — after commit, non-fatal
+    // A failed delivery is the tracking desk's to chase: ops.track holders
+    // of this store, sent to the screen that lists it. After commit; never
+    // throws.
     if (newShippingStatus === 'FAILED_DELIVERY' && newShippingStatus !== from) {
-      try {
-        await createNotification({
-          companyId,
-          userId: null,
-          title: 'فشل التوصيل',
-          message: `فشل توصيل الطلب #${order.orderNumber}.`,
-          type: 'SYSTEM_ALERT',
-          link: '/orders',
-        });
-      } catch (e) {
-        console.error('FAILED_DELIVERY notification failed (non-fatal):', e);
-      }
+      await createNotification({
+        companyId,
+        storeId: order.storeId ?? storeId,
+        audience: { permission: 'ops.track' },
+        actorId: user.id,
+        title: 'فشل التوصيل',
+        message: `فشل توصيل الطلب #${order.orderNumber}.`,
+        type: 'SYSTEM_ALERT',
+        link: ['/ops/tracking', '/ops/returns', '/orders'],
+      });
     }
 
     const fresh = await db.order.findUnique({

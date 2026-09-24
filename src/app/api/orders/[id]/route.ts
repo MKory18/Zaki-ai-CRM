@@ -994,20 +994,21 @@ export async function PATCH(
       });
     }
 
-    // Notify company managers on terminal statuses — after commit, non-fatal
+    // A confirmation outcome goes to this store's confirmation supervisors
+    // and to the moderator who entered the order — their commission rides
+    // on it. Not to whoever just pressed the button. After commit; never
+    // throws.
     if (status && status !== previousStatus && (TERMINAL_STATUSES as readonly string[]).includes(status)) {
-      try {
-        await createNotification({
-          companyId,
-          userId: null,
-          title: status === 'CONFIRMED' ? 'تأكيد طلب' : status === 'REJECTED' ? 'رفض طلب' : 'إلغاء طلب',
-          message: `الطلب #${existing.orderNumber} أصبح بالحالة ${status} بواسطة ${user.name}.`,
-          type: 'SYSTEM_ALERT',
-          link: '/orders',
-        });
-      } catch (e) {
-        console.error('Terminal-status notification failed (non-fatal):', e);
-      }
+      await createNotification({
+        companyId,
+        storeId: existing.storeId ?? storeId,
+        audience: { permission: 'confirmation.supervise', userIds: [existing.moderatorId] },
+        actorId: user.id,
+        title: status === 'CONFIRMED' ? 'تأكيد طلب' : status === 'REJECTED' ? 'رفض طلب' : 'إلغاء طلب',
+        message: `الطلب #${existing.orderNumber} أصبح بالحالة ${status} بواسطة ${user.name}.`,
+        type: 'SYSTEM_ALERT',
+        link: '/orders',
+      });
     }
 
     return NextResponse.json({ success: true, order: updatedOrder });
