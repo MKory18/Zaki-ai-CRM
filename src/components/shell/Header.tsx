@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Menu, Repeat, Search, Store } from 'lucide-react';
 import { apiFetch } from '@/lib/api-client';
 import { NotificationBell } from '@/components/shell/NotificationBell';
+import { ConfirmationCounter } from './ConfirmationCounter';
 import { ShiftChip } from '@/components/attendance/ShiftChip';
 import { ROLE_LABELS } from '@/types/auth';
 
@@ -93,6 +94,11 @@ export function Header({
             the name, and never in the path of somebody clicking fast. The
             server decides who sees it — the owner does not clock in. */}
         <ShiftChip />
+
+        {/* How much confirmation work is waiting — the pool for whoever
+            pulls from it, and a moderator's own unconfirmed orders for him.
+            A number only; the server decides which, or none. */}
+        <ConfirmationCounter />
 
         {/* Work is announced here. Thirteen places in the system create
             notifications and nothing showed them until now. */}

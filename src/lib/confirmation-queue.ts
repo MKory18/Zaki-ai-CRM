@@ -123,6 +123,47 @@ export async function waitingCount(tx: Tx, scope: QueueScope) {
   return tx.order.count({ where: claimableWhere(scope) });
 }
 
+/**
+ * How many of ONE moderator's orders are still waiting to be confirmed.
+ *
+ * A moderator brings orders in and then has no way to know what became of
+ * them without asking somebody. This is the answer as a number — and only a
+ * number. The pool itself stays closed to them (confirmation.pull is not
+ * theirs, and the queue route refuses them with 403); what they may know is
+ * how many of their OWN are still open, never which order is whose to call.
+ *
+ * "Waiting" means exactly what it means for the pool — the same open states,
+ * not yet shipping — whether or not an agent has already picked it up. From
+ * the moderator's side an order an agent is on is still not confirmed.
+ */
+export async function awaitingConfirmationCount(tx: Tx, scope: QueueScope, moderatorId: string) {
+  return tx.order.count({
+    where: {
+      ...scope,
+      moderatorId,
+      confirmationStatus: { in: OPEN_CONFIRMATION },
+      shippingStatus: 'NOT_READY',
+    },
+  });
+}
+
+/**
+ * Which counter a person sees, if any.
+ *
+ * One chip in the header for both jobs, and the server chooses its meaning:
+ * somebody who may pull sees the pool they pull from; somebody who brings
+ * orders in sees their own still waiting. A person who does neither sees
+ * nothing — a counter that means nothing to its reader is noise on every
+ * screen.
+ */
+export type CounterKind = 'POOL' | 'MINE';
+
+export function counterKindFor(may: { pull: boolean; create: boolean }): CounterKind | null {
+  if (may.pull) return 'POOL';
+  if (may.create) return 'MINE';
+  return null;
+}
+
 function claimableWhere(scope: QueueScope) {
   return {
     ...scope,
