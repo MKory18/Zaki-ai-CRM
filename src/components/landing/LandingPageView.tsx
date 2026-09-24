@@ -133,7 +133,9 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   let lp = null as Awaited<ReturnType<typeof findPage>>;
 
   async function findPage(where: Record<string, unknown>) {
-    return db.landingPage.findFirst({ where, select: PAGE_SELECT });
+    // Oldest first: a slug shared by two companies from before slugs were
+    // made unique resolves the same way here as in the order route.
+    return db.landingPage.findFirst({ where, select: PAGE_SELECT, orderBy: { createdAt: 'asc' } });
   }
 
   if ('slug' in target) {

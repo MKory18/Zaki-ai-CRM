@@ -44,9 +44,8 @@ export async function GET() {
         storefrontEnabled: true, tagline: true, supportPhone: true, domain: true, landingPageId: true,
         country: { select: { currencyCode: true } },
         landingPages: {
-          where: { productId: { not: null } },
           orderBy: { createdAt: 'desc' },
-          select: { id: true, name: true, slug: true, isPublished: true, domain: true, product: { select: { name: true } } },
+          select: { id: true, name: true, slug: true, isPublished: true, domain: true, productId: true, product: { select: { name: true } } },
         },
       },
       orderBy: { name: 'asc' },
@@ -72,6 +71,12 @@ export async function GET() {
         ]);
         const refusal = openRefusal(facts);
         const front = s.landingPages.find((p) => p.id === s.landingPageId) ?? null;
+        // The pages that can front it — and the current front even if its
+        // product has since been removed, so the picker shows what is really
+        // there instead of "not picked yet".
+        const pages = s.landingPages
+          .filter((p) => p.productId || p.id === s.landingPageId)
+          .map(({ productId: _p, ...page }) => page);
         return {
           id: s.id,
           name: s.name,
@@ -85,8 +90,8 @@ export async function GET() {
           path: `/s/${s.slug}`,
           /** Pages and the editor are read through the selected store. */
           current: s.id === currentStoreId,
-          frontPage: front,
-          pages: s.landingPages,
+          frontPage: front ? (({ productId: _p, ...page }) => page)(front) : null,
+          pages,
           orders,
           revenue: Number((Number(money._sum.collectedAmount ?? 0) || Number(money._sum.totalAmount ?? 0)).toFixed(2)),
           // What stops it opening, and what would merely make it better.
@@ -170,13 +175,35 @@ export async function PATCH(req: Request) {
     } else {
       const page = await db.landingPage.findFirst({
         where: { id: pageId, companyId },
-        select: { id: true, name: true, storeId: true, productId: true, isPublished: true, domain: true, frontOf: { select: { id: true } } },
+        select: {
+          id: true, name: true, slug: true, storeId: true, productId: true, isPublished: true, domain: true,
+          frontOf: { select: { id: true } },
+          product: { select: { storeId: true } },
+        },
       });
       if (!page || page.storeId !== store.id) {
         return NextResponse.json({ error: 'الصفحة ليست من صفحات هذا المتجر' }, { status: 400 });
       }
       if (!page.productId) {
         return NextResponse.json({ error: 'الصفحة لا تبيع منتجاً — اختر لها منتجاً أولاً' }, { status: 400 });
+      }
+      // What it sells must be this store's own: another store's product is
+      // another country's price and another warehouse's stock.
+      if (page.product?.storeId !== store.id) {
+        return NextResponse.json({ error: 'منتج الصفحة ليس من منتجات هذا المتجر' }, { status: 400 });
+      }
+      // The page takes its orders at /api/public/landing-pages/<slug>. A slug
+      // another company's page also holds (from before slugs were unique
+      // everywhere) could send this store's customers there.
+      const shared = await db.landingPage.findFirst({
+        where: { slug: page.slug, id: { not: page.id } },
+        select: { id: true },
+      });
+      if (shared) {
+        return NextResponse.json(
+          { error: 'رابط هذه الصفحة مستخدم في صفحة أخرى — غيّر رابطها (slug) من إعدادات الصفحة ثم اخترها' },
+          { status: 409 }
+        );
       }
       if (page.frontOf && page.frontOf.id !== store.id) {
         return NextResponse.json({ error: 'هذه الصفحة واجهة متجر آخر' }, { status: 409 });
@@ -187,8 +214,11 @@ export async function PATCH(req: Request) {
           { status: 400 }
         );
       }
-      if (store.storefrontEnabled && !page.isPublished) {
-        return NextResponse.json({ error: 'المتجر مفتوح والصفحة غير منشورة — انشرها أولاً' }, { status: 400 });
+      // An open store must stay a working link after the swap — the same
+      // rule as opening it, applied to the store as it would be.
+      if (store.storefrontEnabled) {
+        const refusal = await refusalToOpen({ ...store, landingPageId: page.id });
+        if (refusal) return NextResponse.json({ error: `المتجر مفتوح — ${refusal}` }, { status: 400 });
       }
     }
 

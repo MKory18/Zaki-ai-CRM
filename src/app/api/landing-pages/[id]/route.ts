@@ -6,7 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { validateSlug, clampStoredHtml, conversionRate } from '@/lib/landing-pages';
-import { validateDomain, forgetHost } from '@/lib/landing-domain';
+import { validateDomain, forgetHost, dashboardHosts } from '@/lib/landing-domain';
 import { zodMessage } from '@/lib/zod-message';
 
 interface Ctx {
@@ -114,12 +114,19 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (parsed.data.slug !== undefined) {
       const slugCheck = validateSlug(parsed.data.slug);
       if (!slugCheck.valid) return NextResponse.json({ error: slugCheck.error }, { status: 400 });
+      // One public space for every company — see the create route.
+      if (parsed.data.slug !== lp.slug) {
+        const taken = await db.landingPage.findFirst({ where: { slug: parsed.data.slug, id: { not: lp.id } }, select: { id: true } });
+        if (taken) return NextResponse.json({ error: 'هذا الرابط (slug) مستخدم بالفعل — اختر رابطاً آخر' }, { status: 409 });
+      }
       data.slug = parsed.data.slug;
     }
     if (parsed.data.productId !== undefined) {
       if (parsed.data.productId) {
-        const product = await db.product.findFirst({ where: { id: parsed.data.productId, companyId } });
-        if (!product) return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
+        // THIS store's product. A page in one store selling another store's
+        // product booked the order against the wrong shop's stock.
+        const product = await db.product.findFirst({ where: { id: parsed.data.productId, companyId, storeId: lp.storeId } });
+        if (!product) return NextResponse.json({ error: 'المنتج ليس من منتجات هذا المتجر' }, { status: 404 });
       }
       data.productId = parsed.data.productId;
     }
@@ -132,7 +139,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
         data.domain = null;
         data.domainVerifiedAt = null;
       } else {
-        const check = validateDomain(raw, req.headers.get('host'));
+        const check = validateDomain(raw, dashboardHosts(req));
         if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
         // Unique across companies, so a clash is somebody else's claim and
         // saying which company holds it would leak who our customers are.

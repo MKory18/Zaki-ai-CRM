@@ -77,6 +77,9 @@ export function storeTheme(raw: string | null | undefined): LandingTheme {
 export async function getStorefront(slug: string): Promise<Storefront | null> {
   const store = await db.store.findFirst({
     where: { slug, storefrontEnabled: true, status: 'ACTIVE' },
+    // Slugs are unique across companies from now on; for any pair that
+    // predates that, the older store keeps its address — deterministically.
+    orderBy: { createdAt: 'asc' },
     select: {
       id: true, name: true, slug: true, logo: true, tagline: true, about: true,
       supportPhone: true, domain: true, type: true, theme: true,

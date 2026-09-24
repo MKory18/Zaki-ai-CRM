@@ -463,11 +463,17 @@ export function LandingPageEditorScreen() {
     setPublishing(true);
     setSaveMsg(null);
     try {
-      // save first, then publish — published page must reflect the latest draft
-      await crmApi(`/api/landing-pages/${lpId}/content`, { method: 'PUT', body: contentPayload() });
-      await crmApi(`/api/landing-pages/${lpId}`, { method: 'PATCH', body: JSON.stringify({ isPublished: !lp.isPublished }) });
-      setLp({ ...lp, isPublished: !lp.isPublished });
-      setDirty(false);
+      // Publishing saves first — the published page must be the latest draft.
+      // Unpublishing does NOT: saving a live page puts the draft in front of
+      // customers, and when the unpublish is then refused (a store's front
+      // page while the store is open) the seller has published by accident.
+      const publishing = !lp.isPublished;
+      if (publishing) {
+        await crmApi(`/api/landing-pages/${lpId}/content`, { method: 'PUT', body: contentPayload() });
+      }
+      await crmApi(`/api/landing-pages/${lpId}`, { method: 'PATCH', body: JSON.stringify({ isPublished: publishing }) });
+      setLp({ ...lp, isPublished: publishing });
+      if (publishing) setDirty(false);
       setSaveMsg({ ok: true, text: !lp.isPublished ? 'تم نشر الصفحة' : 'تم إلغاء النشر' });
     } catch (e: any) {
       setSaveMsg({ ok: false, text: e.message || 'تعذر النشر' });

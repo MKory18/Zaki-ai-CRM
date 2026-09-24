@@ -21,7 +21,7 @@ vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
 vi.mock('@/lib/auth', () => ({ requireCompanyTenant: async () => ({ user: { id: 'u1' }, companyId: 'c1' }) }));
 vi.mock('@/lib/authorization', () => ({ requirePermission: async () => undefined }));
-vi.mock('@/lib/landing-domain', () => ({ validateDomain: (d: string) => ({ ok: true, domain: d }), forgetHost: vi.fn() }));
+vi.mock('@/lib/landing-domain', () => ({ validateDomain: (d: string) => ({ ok: true, domain: d }), forgetHost: vi.fn(), dashboardHosts: () => [] }));
 
 import { PATCH } from './route';
 
@@ -61,11 +61,15 @@ describe('opening from the panel', () => {
     expect((await patch({ status: 'PAUSED' })).status).toBe(200);
   });
 
-  it('re-typing an open store checks the new type', async () => {
+  it('re-typing an open store checks the rule for the new type', async () => {
     before.storefrontEnabled = true;
-    db.product.count.mockResolvedValue(3); // fine for many, a catalogue for one
-    const res = await patch({ type: 'SINGLE_PRODUCT' });
+    before.type = 'SINGLE_PRODUCT';
+    before.landingPageId = 'page-1';
+    // As a store of many with no products of its own it would sell nothing.
+    db.product.count.mockResolvedValue(0);
+    const res = await patch({ type: 'MULTI_PRODUCT' });
     expect(res.status).toBe(400);
+    expect(db.store.update).not.toHaveBeenCalled();
   });
 });
 

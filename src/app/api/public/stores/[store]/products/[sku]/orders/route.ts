@@ -92,17 +92,10 @@ export async function POST(req: Request, ctx: Ctx) {
     });
     if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
 
-    // The same rule as the page: a Single Product store with a front page
-    // sells through that page's own form, and one without sells its single
-    // product only. Anything else is a door the screen does not show.
-    if (store.type === 'SINGLE_PRODUCT') {
-      const sellable = await db.product.count({
-        where: { companyId: store.companyId, storeId: store.id, status: 'ACTIVE', basePrice: { gt: 0 } },
-      });
-      if (store.landingPageId || sellable !== 1) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404, headers: CORS });
-      }
-    }
+    // No door is shut by the store's type here. A Single Product store with
+    // a front page sends new visitors to it, but a customer who opened the
+    // product page a minute before the page was picked is mid-order — and
+    // refusing them would lose a sale to an error they cannot read.
 
     const country = await db.country.findUnique({
       where: { id: store.countryId },

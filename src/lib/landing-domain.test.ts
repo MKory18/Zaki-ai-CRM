@@ -5,7 +5,7 @@ const { db } = vi.hoisted(() => ({
 }));
 vi.mock('./db', () => ({ db }));
 
-import { normalizeHost, validateDomain, pathForHost, forgetHost } from './landing-domain';
+import { normalizeHost, validateDomain, pathForHost, forgetHost, dashboardHosts } from './landing-domain';
 
 /**
  * A hostname the seller owns, pointed here, serving one landing page.
@@ -77,6 +77,32 @@ describe('claiming a domain', () => {
       if (saved.d === undefined) delete process.env.APP_DOMAIN;
       if (saved.u === undefined) delete process.env.NEXT_PUBLIC_APP_URL; else process.env.NEXT_PUBLIC_APP_URL = saved.u;
       if (saved.a === undefined) delete process.env.APP_URL; else process.env.APP_URL = saved.a;
+    }
+  });
+
+  it('knows the dashboard by every name a request carries — forwarded host, Origin, Referer', () => {
+    const req = new Request('http://internal:3000/api/landing-pages/x', {
+      method: 'PATCH',
+      headers: {
+        'x-forwarded-host': 'crm.example.com',
+        origin: 'https://panel.example.com',
+        referer: 'https://admin.example.com/growth/landing-pages/x',
+      },
+    });
+    const hosts = dashboardHosts(req);
+    const saved = { d: process.env.APP_DOMAIN, u: process.env.NEXT_PUBLIC_APP_URL, a: process.env.APP_URL };
+    delete process.env.APP_DOMAIN;
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    delete process.env.APP_URL;
+    try {
+      for (const own of ['crm.example.com', 'panel.example.com', 'admin.example.com']) {
+        expect(validateDomain(own, hosts).ok, own).toBe(false);
+      }
+      expect(validateDomain('shop.example.com', hosts).ok).toBe(true);
+    } finally {
+      if (saved.d !== undefined) process.env.APP_DOMAIN = saved.d;
+      if (saved.u !== undefined) process.env.NEXT_PUBLIC_APP_URL = saved.u;
+      if (saved.a !== undefined) process.env.APP_URL = saved.a;
     }
   });
 

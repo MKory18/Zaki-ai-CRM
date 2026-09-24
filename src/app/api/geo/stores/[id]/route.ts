@@ -5,7 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { firstIssue, storeUpdateSchema } from '@/lib/geo-schemas';
-import { validateDomain, forgetHost } from '@/lib/landing-domain';
+import { validateDomain, forgetHost, dashboardHosts } from '@/lib/landing-domain';
 import { refusalToOpen } from '@/lib/storefront-rules';
 
 /** PATCH /api/geo/stores/:id (geo.manage). countryId is immutable; no DELETE. */
@@ -22,7 +22,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!before) return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
 
     if (parsed.data.slug && parsed.data.slug !== before.slug) {
-      const clash = await db.store.findFirst({ where: { companyId, slug: parsed.data.slug }, select: { id: true } });
+      // One public space for every company — see the create route.
+      const clash = await db.store.findFirst({ where: { slug: parsed.data.slug, id: { not: id } }, select: { id: true } });
       if (clash) return NextResponse.json({ error: 'هذا المعرّف مستخدم لمتجر آخر' }, { status: 409 });
     }
 
@@ -36,7 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (!raw) {
         data.domain = null;
       } else {
-        const check = validateDomain(raw, req.headers.get('host'));
+        const check = validateDomain(raw, dashboardHosts(req));
         if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
         const [otherStore, page] = await Promise.all([
           db.store.findFirst({ where: { domain: check.domain, id: { not: id } }, select: { id: true } }),

@@ -77,10 +77,17 @@ export async function POST(req: Request) {
 
     const slugCheck = validateSlug(slug);
     if (!slugCheck.valid) return NextResponse.json({ error: slugCheck.error }, { status: 400 });
+    // The public address /lp/<slug> is ONE space for every company: the
+    // order a page takes is looked up by its slug, so a second company's
+    // page with the same slug could receive the first one's customers.
+    if (await db.landingPage.findFirst({ where: { slug }, select: { id: true } })) {
+      return NextResponse.json({ error: 'هذا الرابط (slug) مستخدم بالفعل — اختر رابطاً آخر' }, { status: 409 });
+    }
 
     if (productId) {
-      const product = await db.product.findFirst({ where: { id: productId, companyId } });
-      if (!product) return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
+      // THIS store's product: a page sells what its own store stocks.
+      const product = await db.product.findFirst({ where: { id: productId, companyId, storeId } });
+      if (!product) return NextResponse.json({ error: 'المنتج ليس من منتجات هذا المتجر' }, { status: 404 });
     }
 
     // An unknown key falls back to something usable rather than failing:
@@ -113,7 +120,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, landingPage: lp }, { status: 201 });
     } catch (e: any) {
       if (e?.code === 'P2002') {
-        return NextResponse.json({ error: 'هذا الرابط (slug) مستخدم بالفعل في شركتك' }, { status: 409 });
+        return NextResponse.json({ error: 'هذا الرابط (slug) مستخدم بالفعل — اختر رابطاً آخر' }, { status: 409 });
       }
       throw e;
     }

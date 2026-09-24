@@ -44,7 +44,9 @@ export async function POST(req: Request) {
     });
     if (!country) return NextResponse.json({ error: 'البلد غير موجود' }, { status: 404 });
 
-    const clash = await db.store.findFirst({ where: { companyId, slug: parsed.data.slug }, select: { id: true } });
+    // /s/<slug> is one public space for every company — a store's address
+    // must not answer with another company's shop.
+    const clash = await db.store.findFirst({ where: { slug: parsed.data.slug }, select: { id: true } });
     if (clash) return NextResponse.json({ error: 'هذا المعرّف مستخدم لمتجر آخر' }, { status: 409 });
 
     const store = await db.store.create({ data: { companyId, ...parsed.data } });

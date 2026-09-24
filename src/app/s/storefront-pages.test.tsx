@@ -70,11 +70,12 @@ describe('a Single Product store without a front page', () => {
     expect(storefrontProducts).toHaveBeenCalledWith('c1', 's1', 2);
   });
 
-  it('is never a catalogue — with two products it is not ready', async () => {
+  it('with several products shows its own list until a front page is picked — it does not go dark', async () => {
     getStorefront.mockResolvedValue(store());
     storefrontProducts.mockResolvedValue([{ sku: 'A' }, { sku: 'B' }]);
-    await expect(home()).rejects.toThrow('NOT_FOUND');
-    await expect(product('A')).rejects.toThrow('NOT_FOUND');
+    await expect(home()).resolves.toBeTruthy();
+    expect(storefrontProducts).toHaveBeenLastCalledWith('c1', 's1');
+    expect(notFound).not.toHaveBeenCalled();
   });
 });
 

@@ -51,7 +51,8 @@ export async function POST(req: Request, ctx: Ctx) {
     const v = parsed.data;
 
     // Tenant isolation: product must belong to the same company
-    const product = await db.product.findFirst({ where: { id: v.productId, companyId } });
+    // An upsell is added to an order of THIS store — it must be this store's product.
+    const product = await db.product.findFirst({ where: { id: v.productId, companyId, storeId } });
     if (!product) return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
 
     try {

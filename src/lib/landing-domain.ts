@@ -93,13 +93,15 @@ export function forgetHost(host: string | null | undefined): void {
 export function validateDomain(
   input: string,
   /**
-   * The host this request reached us on — the dashboard's own. Checked on
-   * every save, because APP_DOMAIN is optional and was unset in the
-   * documented deploy: a seller could type the dashboard's hostname as
+   * The hosts this request knows the dashboard by (see dashboardHosts).
+   * Checked on every save, because APP_DOMAIN is optional and was unset in
+   * the documented deploy: a seller could type the dashboard's hostname as
    * their page's domain, and the proxy then served their page in place of
-   * the dashboard, for everyone.
+   * the dashboard, for everyone. Headers can be forged by a determined
+   * caller, which is why the configured APP_URL / APP_DOMAIN is the real
+   * guard and these are the net under it.
    */
-  requestHost?: string | null
+  requestHosts?: string | null | (string | null | undefined)[]
 ): { ok: true; domain: string } | { ok: false; error: string } {
   const bare = input.trim().toLowerCase().replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
 
@@ -112,11 +114,12 @@ export function validateDomain(
     return { ok: false, error: 'هذا ليس نطاقاً يمكن توجيهه' };
   }
 
+  const asked = Array.isArray(requestHosts) ? requestHosts : [requestHosts];
   const own = [
     normalizeHost(process.env.APP_DOMAIN),
-    normalizeHost(requestHost),
     hostOfUrl(process.env.NEXT_PUBLIC_APP_URL),
     hostOfUrl(process.env.APP_URL),
+    ...asked.map((h) => normalizeHost(h ?? null)),
   ].filter((h): h is string => !!h);
   if (own.some((h) => bare === h || bare.endsWith(`.${h}`))) {
     return { ok: false, error: 'لا يمكن استخدام نطاق النظام نفسه' };
@@ -133,4 +136,16 @@ function hostOfUrl(url: string | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Every host a dashboard request names the dashboard by: the Host it
+ * reached, the host a proxy forwarded, and the host of the page the request
+ * was sent from (Origin, Referer). A domain equal to any of them is the
+ * dashboard's own.
+ */
+export function dashboardHosts(req: Request): string[] {
+  const h = req.headers;
+  return [h.get('host'), h.get('x-forwarded-host'), hostOfUrl(h.get('origin') ?? undefined), hostOfUrl(h.get('referer') ?? undefined)]
+    .filter((x): x is string => !!x);
 }

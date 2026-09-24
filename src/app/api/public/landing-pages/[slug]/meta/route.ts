@@ -30,6 +30,7 @@ export async function GET(_req: Request, ctx: Ctx) {
 
     const lp = await db.landingPage.findFirst({
       where: { slug, isPublished: true },
+      orderBy: { createdAt: 'asc' }, // one resolution for a slug everywhere — the oldest page keeps it
       select: {
         id: true,
         name: true,

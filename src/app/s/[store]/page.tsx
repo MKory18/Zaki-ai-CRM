@@ -14,9 +14,9 @@ import { StorefrontShell } from '@/components/storefront/StorefrontShell';
  * picked, rendered right here at the store's address (and its domain) with
  * everything the page has. Rendered, not redirected — a redirect lost the
  * ?c= campaign code, and with it the credit for every sale an ad brought.
- * Until a page is picked it is its one product's page; it is never a
- * catalogue. A shop with many products lists them — its own, and only its
- * own.
+ * Until a page is picked it behaves as any store: its one product's page,
+ * or its list. A shop with many products lists them — its own, and only
+ * its own.
  */
 export const dynamic = 'force-dynamic';
 
@@ -41,12 +41,12 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
         />
       );
     }
-    // No front page picked yet: the one product's page, with the campaign
-    // code carried along. Anything else is a shop that is not ready — and a
-    // Single Product store never shows a catalogue.
+    // No front page picked yet: with one product, that product's page (the
+    // campaign code carried along); otherwise the store's own products, as
+    // any store shows them, until a front page is picked. A store that was
+    // open before front pages existed must not go dark on the day they did.
     const only = await storefrontProducts(store.companyId, store.id, 2);
     if (only.length === 1) redirect(`/s/${store.slug}/p/${only[0].sku}${carryQuery(await searchParams)}`);
-    notFound();
   }
 
   const products = await storefrontProducts(store.companyId, store.id);

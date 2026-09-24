@@ -55,6 +55,8 @@ interface Shop {
 
 export function StorefrontsScreen() {
   const [shops, setShops] = useState<Shop[] | null>(null);
+  /** A failed load is not "you have no stores" — telling a seller to create one would be wrong. */
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,9 +66,12 @@ export function StorefrontsScreen() {
     try {
       const res = await fetch('/api/growth/storefronts');
       const json = await res.json();
-      setShops(res.ok ? json.stores || [] : []);
+      if (!res.ok) throw new Error();
+      setShops(json.stores || []);
+      setLoadFailed(false);
     } catch {
-      setShops([]);
+      setShops((cur) => cur ?? []);
+      setLoadFailed(true);
     }
   }, []);
 
@@ -130,11 +135,17 @@ export function StorefrontsScreen() {
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700" role="alert">{error}</p>}
 
+      {loadFailed && (
+        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700" role="alert">
+          تعذّر تحميل المتاجر — أعد تحميل الصفحة.
+        </p>
+      )}
+
       {shops === null ? (
         <div className="flex h-40 items-center justify-center text-[#697586]">
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
-      ) : shops.length === 0 ? (
+      ) : shops.length === 0 && !loadFailed ? (
         <div className="rounded-xl border border-dashed border-[#c9d2e0] p-8 text-center">
           <Store className="mx-auto h-8 w-8 text-[#c9d2e0]" />
           <p className="mt-2 text-sm font-semibold text-[#364152]">لا متاجر {STORE_TYPE_LABEL.SINGLE_PRODUCT} في هذه الدولة</p>
@@ -163,8 +174,8 @@ export function StorefrontsScreen() {
 
       {shops && shops.length > 0 && (
         <p className="text-[10px] leading-relaxed text-[#9aa4b2]">
-          الطلبات والإيراد هنا ما باعه رابط المتجر نفسه — من صفحة واجهته. والإيراد هو المحصَّل فعلاً حيث نعرفه،
-          نفس التعريف في شاشة الأرباح.
+          «طلبات الواجهة» كل طلب جاء من صفحة الواجهة الحالية — من رابط المتجر أو من رابط الصفحة نفسها — ومن صفحة
+          منتج المتجر. والإيراد هو المحصَّل فعلاً حيث نعرفه، نفس التعريف في شاشة الأرباح.
         </p>
       )}
     </div>
@@ -248,6 +259,7 @@ function Card({
               <option key={p.id} value={p.id}>
                 {p.name}
                 {p.product ? ` — ${p.product.name}` : ''}
+                {p.product ? '' : ' (بلا منتج)'}
                 {p.isPublished ? '' : ' (غير منشورة)'}
                 {p.domain ? ' (لها نطاق خاص)' : ''}
               </option>
@@ -274,14 +286,22 @@ function Card({
       </div>
 
       <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-[#f1f3f6] pt-2.5">
-        <Num label="طلبات المتجر" value={shop.orders} />
+        <Num label="طلبات الواجهة" value={shop.orders} />
         <Num label={`إيراد ${shop.currency}`} value={shop.revenue} />
       </div>
 
-      {shop.refusal && !shop.live && (
-        <p className="mt-2 flex items-start gap-1 rounded-lg bg-amber-50 p-2 text-[10px] leading-relaxed text-amber-800">
-          <AlertTriangle className="mt-px h-3 w-3 shrink-0" /> قبل أن يُفتح: {shop.refusal}
-        </p>
+      {shop.refusal && (
+        // Open and broken is the case that matters most: an advert is
+        // probably pointing at this link right now.
+        shop.live ? (
+          <p className="mt-2 flex items-start gap-1 rounded-lg bg-rose-50 p-2 text-[10px] font-semibold leading-relaxed text-rose-700" role="alert">
+            <AlertTriangle className="mt-px h-3 w-3 shrink-0" /> المتجر مفتوح لكن رابطه لا يبيع: {shop.refusal}
+          </p>
+        ) : (
+          <p className="mt-2 flex items-start gap-1 rounded-lg bg-amber-50 p-2 text-[10px] leading-relaxed text-amber-800">
+            <AlertTriangle className="mt-px h-3 w-3 shrink-0" /> قبل أن يُفتح: {shop.refusal}
+          </p>
+        )
       )}
       {shop.warnings.length > 0 && (
         <p className="mt-1.5 text-[10px] text-[#697586]">يُستحسن: {shop.warnings.join('، ')}</p>

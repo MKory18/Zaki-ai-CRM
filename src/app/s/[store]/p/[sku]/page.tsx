@@ -3,7 +3,7 @@ import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { notFound, redirect } from 'next/navigation';
 import { carryQuery } from '@/lib/query-string';
 import { db } from '@/lib/db';
-import { getStorefront, storefrontProduct, storefrontProducts } from '@/lib/storefront';
+import { getStorefront, storefrontProduct } from '@/lib/storefront';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
 import { OfferCards } from '@/components/landing/blocks/OfferCards';
 import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
@@ -33,13 +33,9 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
   const store = await getStorefront(slug);
   if (!store) notFound();
 
-  if (store.type === 'SINGLE_PRODUCT') {
-    // A store with a front page has no product pages: the front IS the shop.
-    if (store.landingPageId) redirect(`/s/${store.slug}${carryQuery(await searchParams)}`);
-    // Without one, only its single product has a page — two would be a
-    // catalogue a Single Product store never has.
-    const sellable = await storefrontProducts(store.companyId, store.id, 2);
-    if (sellable.length !== 1 || sellable[0].sku !== sku.toUpperCase()) notFound();
+  // A store with a front page has no product pages: the front IS the shop.
+  if (store.type === 'SINGLE_PRODUCT' && store.landingPageId) {
+    redirect(`/s/${store.slug}${carryQuery(await searchParams)}`);
   }
 
   const product = await storefrontProduct(store.companyId, store.id, sku);

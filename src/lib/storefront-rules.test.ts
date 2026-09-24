@@ -38,10 +38,13 @@ describe('a Single Product store', () => {
     expect(openRefusal(single({ frontPage: { isPublished: true, productActive: false } }))).toContain('غير فعّال');
   });
 
-  it('without a front page, opens only as its one product\'s page', () => {
+  it('without a front page, opens on its own products — and is told to pick a page', () => {
+    // Stores open before front pages existed must not go dark on deploy.
     expect(openRefusal(single({ sellableProducts: 1 }))).toBeNull();
-    expect(openRefusal(single({ sellableProducts: 0 }))).toContain('اختر صفحة هبوط');
-    expect(openRefusal(single({ sellableProducts: 2 }))).toContain('اختر صفحة هبوط');
+    expect(openRefusal(single({ sellableProducts: 3 }))).toBeNull();
+    expect(openRefusal(single({ sellableProducts: 0 }))).toContain('رفوفاً فارغة');
+    expect(openWarnings({ supportPhone: '079', type: 'SINGLE_PRODUCT', landingPageId: null })[0]).toContain('لم تُختر صفحة واجهة');
+    expect(openWarnings({ supportPhone: '079', type: 'SINGLE_PRODUCT', landingPageId: 'lp1' })).toEqual([]);
   });
 });
 

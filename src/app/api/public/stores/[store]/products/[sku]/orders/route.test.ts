@@ -52,22 +52,17 @@ describe('whose product', () => {
 });
 
 describe('a Single Product store', () => {
-  it('with a front page sells only through it — this door is closed', async () => {
+  it('still takes the order of a customer who opened the product page before a front page was picked', async () => {
+    // New visitors are sent to the front page; one mid-order is not refused.
     getStorefront.mockResolvedValue({ id: 's1', slug: 'sehha', name: 'صحة', companyId: 'c1', countryId: 'k1', type: 'SINGLE_PRODUCT', landingPageId: 'lp1' });
-    expect((await post()).status).toBe(404);
-    expect(createPublicOrder).not.toHaveBeenCalled();
-  });
-
-  it('without one, sells its single product', async () => {
-    getStorefront.mockResolvedValue({ id: 's1', slug: 'sehha', name: 'صحة', companyId: 'c1', countryId: 'k1', type: 'SINGLE_PRODUCT', landingPageId: null });
     await post();
     expect(createPublicOrder).toHaveBeenCalled();
   });
 
-  it('without one, and with two products, sells neither', async () => {
+  it('never another store\'s product, whatever its type', async () => {
     getStorefront.mockResolvedValue({ id: 's1', slug: 'sehha', name: 'صحة', companyId: 'c1', countryId: 'k1', type: 'SINGLE_PRODUCT', landingPageId: null });
-    db.product.count.mockResolvedValue(2);
-    expect((await post()).status).toBe(404);
+    db.product.findFirst.mockResolvedValue(null);
+    expect((await post('OTHER')).status).toBe(404);
     expect(createPublicOrder).not.toHaveBeenCalled();
   });
 });

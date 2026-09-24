@@ -26,24 +26,26 @@ export interface StorefrontFacts {
 /** Why this store may not open, or null when it may. */
 export function openRefusal(f: StorefrontFacts): string | null {
   if (f.status !== 'ACTIVE') return 'المتجر نفسه موقوف — فعّله من «البلدان والمتاجر» أولاً';
-  if (f.type === 'SINGLE_PRODUCT') {
-    if (f.frontPage) {
-      if (!f.frontPage.isPublished) return 'صفحة واجهة المتجر غير منشورة — انشرها أولاً، وإلا فتح الرابط صفحة غير موجودة';
-      if (!f.frontPage.productActive) return 'منتج صفحة الواجهة غير فعّال — لا شيء يُباع فيها';
-      return null;
-    }
-    // No page picked yet: the store is its one product's page — so there
-    // must be exactly one.
-    if (f.sellableProducts === 1) return null;
-    return 'اختر صفحة هبوط لتكون واجهة المتجر';
+  if (f.type === 'SINGLE_PRODUCT' && f.frontPage) {
+    if (!f.frontPage.isPublished) return 'صفحة واجهة المتجر غير منشورة — انشرها أولاً، وإلا فتح الرابط صفحة غير موجودة';
+    if (!f.frontPage.productActive) return 'منتج صفحة الواجهة غير فعّال — لا شيء يُباع فيها';
+    return null;
   }
+  // Without a front page a store shows its own products — a Single Product
+  // store too, until one is picked. Stores that were open before front
+  // pages existed keep working; the screen asks for the page as a warning.
   if (f.sellableProducts === 0) return 'لا منتجات فعّالة بسعر في هذا المتجر — الزائر سيجد رفوفاً فارغة';
   return null;
 }
 
 /** What a seller should still fix, though the store can open without it. */
-export function openWarnings(store: { supportPhone: string | null }): string[] {
-  return store.supportPhone ? [] : ['لا رقم دعم للزبون'];
+export function openWarnings(store: { supportPhone: string | null; type?: string; landingPageId?: string | null }): string[] {
+  return [
+    ...(store.type === 'SINGLE_PRODUCT' && !store.landingPageId
+      ? ['لم تُختر صفحة واجهة — حتى تختارها يعرض المتجر منتجاته كقائمة']
+      : []),
+    ...(store.supportPhone ? [] : ['لا رقم دعم للزبون']),
+  ];
 }
 
 /** The facts, read from the database, for one store as it would be. */

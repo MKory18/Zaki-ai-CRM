@@ -32,6 +32,7 @@ interface StoreRow {
   supportPhone?: string | null;
   domain?: string | null;
   logo?: string | null;
+  landingPageId?: string | null;
 }
 
 const SWATCHES = [
@@ -193,6 +194,20 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           className="w-full min-w-0 resize-y rounded-[8px] border border-[#e3e8ef] px-3 py-2 text-sm outline-none focus:border-[#b8256e]"
         />
       </div>
+
+      {/* A Single Product store with a front page LOOKS like that page: its
+          colour, font and words come from the page editor. Said here, where
+          the seller would otherwise change a colour and see nothing move.
+          The logo and the support phone still count — waybills print them. */}
+      {store.type === 'SINGLE_PRODUCT' && store.landingPageId && (
+        <p className="rounded-lg bg-[#f1f5f9] px-3 py-2 text-[11px] leading-relaxed text-[#475467]">
+          واجهة هذا المتجر صفحة هبوط — ألوانها وخطها ونصوصها تُعدَّل من{' '}
+          <a href="/growth/single-product-stores" className="font-semibold text-[#b8256e] hover:underline">
+            متجر Single Product ← صمّم الواجهة
+          </a>
+          . اللون والنصوص هنا لا تظهر عليها؛ الشعار ورقم الدعم يُطبعان على البوالص.
+        </p>
+      )}
 
       {/* The same one-colour theme the landing pages use. */}
       <div>

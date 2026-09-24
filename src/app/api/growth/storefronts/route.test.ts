@@ -52,11 +52,17 @@ beforeEach(() => {
     id: MINE, companyId: 'c1', name: 'متجري', slug: 'mine', type: 'SINGLE_PRODUCT', status: 'ACTIVE',
     storefrontEnabled: false, landingPageId: null, domain: null,
   };
-  page = { id: PAGE, name: 'صفحة', storeId: MINE, productId: 'p1', isPublished: true, domain: null, frontOf: null, product: { status: 'ACTIVE' } };
+  page = {
+    id: PAGE, name: 'صفحة', slug: 'offer', storeId: MINE, productId: 'p1', isPublished: true, domain: null,
+    frontOf: null, product: { status: 'ACTIVE', storeId: MINE },
+  };
   db.store.findFirst.mockImplementation(async () => store);
   db.store.update.mockResolvedValue({});
-  // storefrontFacts reads the front page through landingPage.findFirst too.
-  db.landingPage.findFirst.mockImplementation(async () => page);
+  // The page by id (binding, and storefrontFacts); any OTHER page by slug is
+  // the shared-slug check — none unless a test says so.
+  db.landingPage.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+    'slug' in where ? null : page
+  );
   db.product.count.mockResolvedValue(1);
 });
 
@@ -77,8 +83,13 @@ describe('opening', () => {
     expect(db.store.update).not.toHaveBeenCalled();
   });
 
-  it('refuses a store with no front page and more than one product — it would be a catalogue', async () => {
+  it('opens a store with no front page yet on its own products — the page is asked for as a warning', async () => {
     db.product.count.mockResolvedValue(3);
+    expect((await patch({ storeId: MINE, live: true })).status).toBe(200);
+  });
+
+  it('refuses a store with nothing to sell', async () => {
+    db.product.count.mockResolvedValue(0);
     const res = await patch({ storeId: MINE, live: true });
     expect(res.status).toBe(400);
     expect(db.store.update).not.toHaveBeenCalled();
@@ -136,9 +147,29 @@ describe('picking the front page', () => {
   it('refuses to un-pick the page of an open store that would then show nothing', async () => {
     store.storefrontEnabled = true;
     store.landingPageId = PAGE;
-    db.product.count.mockResolvedValue(2);
+    db.product.count.mockResolvedValue(0);
     expect((await patch({ storeId: MINE, landingPageId: null })).status).toBe(400);
     expect(db.store.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a page selling another store\'s product', async () => {
+    page!.product = { status: 'ACTIVE', storeId: THEIRS };
+    expect((await patch({ storeId: MINE, landingPageId: PAGE })).status).toBe(400);
+    expect(db.store.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a page whose slug another page also holds — its orders are taken by slug', async () => {
+    db.landingPage.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      'slug' in where ? { id: 'other-company-page' } : page
+    );
+    expect((await patch({ storeId: MINE, landingPageId: PAGE })).status).toBe(409);
+    expect(db.store.update).not.toHaveBeenCalled();
+  });
+
+  it('on an open store, refuses a page whose product is switched off', async () => {
+    store.storefrontEnabled = true;
+    page!.product = { status: 'ARCHIVED', storeId: MINE };
+    expect((await patch({ storeId: MINE, landingPageId: PAGE })).status).toBe(400);
   });
 
   it('refuses a front page on a store that sells many products', async () => {
@@ -151,7 +182,7 @@ describe('the list', () => {
   beforeEach(() => {
     db.store.findMany.mockResolvedValue([
       { ...store, landingPageId: PAGE, logo: null, tagline: null, supportPhone: null, country: { currencyCode: 'SYP' },
-        landingPages: [{ id: PAGE, name: 'صفحة', slug: 'p', isPublished: true, domain: null, product: { name: 'كريم' } }] },
+        landingPages: [{ id: PAGE, name: 'صفحة', slug: 'p', isPublished: true, domain: null, productId: 'p1', product: { name: 'كريم' } }] },
     ]);
     db.order.count.mockResolvedValue(4);
     db.order.aggregate.mockResolvedValue({ _sum: { collectedAmount: 90, totalAmount: 100 } });
@@ -168,6 +199,7 @@ describe('the list', () => {
     const where = db.order.count.mock.calls[0][0].where;
     expect(where.OR).toEqual([{ source: 'Store' }, { landingPageId: PAGE }]);
     expect(body.stores[0]).toMatchObject({ orders: 4, revenue: 90, frontPage: { id: PAGE }, current: true, refusal: null });
+    expect(body.stores[0].frontPage).not.toHaveProperty('productId');
     expect(body.stores[0].warnings).toContain('لا رقم دعم للزبون');
   });
 });

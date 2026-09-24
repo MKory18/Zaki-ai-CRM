@@ -85,6 +85,7 @@ export async function POST(req: Request, ctx: Ctx) {
     // depend on the country this page sells into.
     const lp = await db.landingPage.findFirst({
       where: { slug, isPublished: true },
+      orderBy: { createdAt: 'asc' }, // one resolution for a slug everywhere — the oldest page keeps it
       include: {
         company: { select: { id: true } },
         product: { select: { id: true, basePrice: true, name: true, image: true } },
