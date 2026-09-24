@@ -5,8 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { validateSlug, conversionRate } from '@/lib/landing-pages';
-import { DEFAULT_THEME } from '@/lib/landing-theme';
-import { starterSections } from '@/lib/landing-sections';
+import { buildTemplate } from '@/lib/page-templates';
 import { zodMessage } from '@/lib/zod-message';
 
 export async function GET(req: Request) {
@@ -61,12 +60,20 @@ export async function POST(req: Request) {
         .regex(/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/, 'الرابط (slug) غير صالح: أحرف إنجليزية صغيرة وأرقام وشرطات فقط'),
       productId: z.string().min(10).max(64).optional().nullable(),
       htmlContent: z.string().max(2 * 1024 * 1024).optional().nullable(),
+      /**
+       * Which shape of page to start from.
+       *
+       * Asked at CREATION, which is the only moment it is free. Choosing a
+       * template afterwards replaces the page, so it has to warn about
+       * losing work — here there is no work yet to lose.
+       */
+      template: z.string().trim().max(40).optional(),
     });
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
-    const { name, slug, productId, htmlContent } = parsed.data;
+    const { name, slug, productId, htmlContent, template } = parsed.data;
 
     const slugCheck = validateSlug(slug);
     if (!slugCheck.valid) return NextResponse.json({ error: slugCheck.error }, { status: 400 });
@@ -75,6 +82,12 @@ export async function POST(req: Request) {
       const product = await db.product.findFirst({ where: { id: productId, companyId } });
       if (!product) return NextResponse.json({ error: 'المنتج غير موجود في شركتك' }, { status: 404 });
     }
+
+    // An unknown key falls back to something usable rather than failing:
+    // the page is what the seller asked for, the template is a starting
+    // point, and refusing to create the page over it would be the wrong
+    // thing to be strict about.
+    const built = buildTemplate(template || 'classic');
 
     try {
       const lp = await db.landingPage.create({
@@ -89,8 +102,11 @@ export async function POST(req: Request) {
           // in it — an empty canvas is not a starting point, it is a second
           // task. A page created FROM uploaded HTML stays an HTML page.
           builderMode: htmlContent ? 'HTML' : 'BLOCKS',
-          theme: htmlContent ? null : JSON.stringify(DEFAULT_THEME),
-          sections: htmlContent ? null : JSON.stringify(starterSections()),
+          // The template's own colour and typeface as well as its blocks —
+          // a template that only set the order would be the same page
+          // fifteen times.
+          theme: htmlContent ? null : JSON.stringify(built.theme),
+          sections: htmlContent ? null : JSON.stringify(built.sections),
           createdById: user.id,
         },
       });

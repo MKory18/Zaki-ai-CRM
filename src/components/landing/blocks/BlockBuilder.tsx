@@ -263,6 +263,90 @@ export function BlockBuilder(props: Props) {
       {storeFontCss && <style dangerouslySetInnerHTML={{ __html: storeFontCss }} />}
       {/* ─── Controls ─── */}
       <div className="space-y-3">
+        {/*
+          FIRST, not buried.
+
+          It sat at the bottom of the identity panel — 1184px down, past
+          the colour, the mood, the font, the corners, the page background
+          and the font uploader. Which is backwards: you pick a template
+          and THEN adjust what it gave you, so a seller starting a page had
+          to scroll past every decision the template was about to make for
+          them before finding the thing that makes them.
+        */}
+        <div className="rounded-xl border border-[#e3e8ef] bg-white p-3">
+          {/*
+            A blank builder is a worse problem than a badly designed page:
+            a seller who does not know which blocks a page needs picks
+            three, publishes, and wonders why it does not sell.
+
+            Offered as a BUTTON and not as an empty state. The first
+            version showed these only when the page had no blocks — and a
+            page never has none, because it always keeps its form and a new
+            page is created from the starter set. A panel that can never
+            appear is worse than no panel: it looks finished.
+
+            Replacing a page is destructive, so it asks first, and says how
+            much it is about to throw away.
+          */}
+          <button
+            type="button"
+            onClick={() => setPickingTemplate((v) => !v)}
+            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#c9d2e0] px-2 py-1.5 text-[11px] font-semibold text-[#697586] transition hover:border-[#b8256e] hover:text-[#b8256e]"
+          >
+            <LayoutTemplate className="h-3.5 w-3.5" />
+            {pickingTemplate ? 'إغلاق القوالب' : 'ابدأ من قالب جاهز'}
+          </button>
+
+          {pickingTemplate && (
+            <div className="mb-3 max-h-80 space-y-1.5 overflow-y-auto rounded-lg bg-[#f8fafc] p-2">
+              <p className="text-[10px] leading-relaxed text-[#697586]">
+                القالب يستبدل أقسام الصفحة الحالية. النصوص والصور التي كتبتها ستُفقد.
+              </p>
+              {PAGE_TEMPLATES.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={async () => {
+                    const built = buildTemplate(t.key);
+                    const ok = await confirm({
+                      title: `استبدال الصفحة بـ«${t.label}»؟`,
+                      body:
+                        sections.length > 0
+                          ? `سيُحذف ${sections.length} قسماً بما فيها من نصوص وصور، ويحل محلها ${built.sections.length} قسماً جديداً بلون وخط القالب.`
+                          : undefined,
+                      confirmLabel: 'استبدل',
+                      cancelLabel: 'إلغاء',
+                      tone: 'danger',
+                    });
+                    if (!ok) return;
+                    // The theme as well as the blocks: a template that only
+                    // changed the order would be the same page five times,
+                    // which is the version of this feature nobody uses.
+                    onTheme(built.theme);
+                    onSections(built.sections);
+                    setPickingTemplate(false);
+                    setOpenId(null);
+                  }}
+                  className="flex w-full items-start gap-2 rounded-lg border border-[#e3e8ef] bg-white px-2.5 py-2 text-start transition hover:border-[#b8256e] hover:bg-[#fdf2f7]"
+                >
+                  {/* Its own colour, so fifteen rows are scannable without
+                      reading fifteen names. */}
+                  <span
+                    className="mt-0.5 h-7 w-1.5 shrink-0 rounded-full"
+                    style={{ background: t.swatch }}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-[#364152]">{t.label}</span>
+                    <span className="block text-[9.5px] leading-relaxed text-[#9aa4b2]">{t.hint}</span>
+                    <span className="mt-0.5 block text-[9px] text-[#c9d2e0]">{t.bricks.length} أقسام</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+        </div>
+
         {/* Theme */}
         <div className="rounded-xl border border-[#e3e8ef] bg-white p-4">
           <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-[#697586]">الهوية</p>
@@ -416,77 +500,6 @@ export function BlockBuilder(props: Props) {
             <p className="text-[10px] font-bold uppercase tracking-wider text-[#697586]">أقسام الصفحة</p>
             <span className="text-[10px] text-[#9aa4b2]">{sections.length}</span>
           </div>
-
-          {/*
-            A blank builder is a worse problem than a badly designed page:
-            a seller who does not know which blocks a page needs picks
-            three, publishes, and wonders why it does not sell.
-
-            Offered as a BUTTON and not as an empty state. The first
-            version showed these only when the page had no blocks — and a
-            page never has none, because it always keeps its form and a new
-            page is created from the starter set. A panel that can never
-            appear is worse than no panel: it looks finished.
-
-            Replacing a page is destructive, so it asks first, and says how
-            much it is about to throw away.
-          */}
-          <button
-            type="button"
-            onClick={() => setPickingTemplate((v) => !v)}
-            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#c9d2e0] px-2 py-1.5 text-[11px] font-semibold text-[#697586] transition hover:border-[#b8256e] hover:text-[#b8256e]"
-          >
-            <LayoutTemplate className="h-3.5 w-3.5" />
-            {pickingTemplate ? 'إغلاق القوالب' : 'ابدأ من قالب جاهز'}
-          </button>
-
-          {pickingTemplate && (
-            <div className="mb-3 max-h-80 space-y-1.5 overflow-y-auto rounded-lg bg-[#f8fafc] p-2">
-              <p className="text-[10px] leading-relaxed text-[#697586]">
-                القالب يستبدل أقسام الصفحة الحالية. النصوص والصور التي كتبتها ستُفقد.
-              </p>
-              {PAGE_TEMPLATES.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={async () => {
-                    const built = buildTemplate(t.key);
-                    const ok = await confirm({
-                      title: `استبدال الصفحة بـ«${t.label}»؟`,
-                      body:
-                        sections.length > 0
-                          ? `سيُحذف ${sections.length} قسماً بما فيها من نصوص وصور، ويحل محلها ${built.sections.length} قسماً جديداً بلون وخط القالب.`
-                          : undefined,
-                      confirmLabel: 'استبدل',
-                      cancelLabel: 'إلغاء',
-                      tone: 'danger',
-                    });
-                    if (!ok) return;
-                    // The theme as well as the blocks: a template that only
-                    // changed the order would be the same page five times,
-                    // which is the version of this feature nobody uses.
-                    onTheme(built.theme);
-                    onSections(built.sections);
-                    setPickingTemplate(false);
-                    setOpenId(null);
-                  }}
-                  className="flex w-full items-start gap-2 rounded-lg border border-[#e3e8ef] bg-white px-2.5 py-2 text-start transition hover:border-[#b8256e] hover:bg-[#fdf2f7]"
-                >
-                  {/* Its own colour, so fifteen rows are scannable without
-                      reading fifteen names. */}
-                  <span
-                    className="mt-0.5 h-7 w-1.5 shrink-0 rounded-full"
-                    style={{ background: t.swatch }}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-xs font-semibold text-[#364152]">{t.label}</span>
-                    <span className="block text-[9.5px] leading-relaxed text-[#9aa4b2]">{t.hint}</span>
-                    <span className="mt-0.5 block text-[9px] text-[#c9d2e0]">{t.bricks.length} أقسام</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
 
           <ul className="space-y-1.5">
             {sections.map((s, i) => (
