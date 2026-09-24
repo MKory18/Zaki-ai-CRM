@@ -6,8 +6,8 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { inStore } from '@/lib/store-filter';
-import { encryptSecret, encryptionAvailable, secretHint } from '@/lib/secrets';
-import { verifyAccount, normalizeAccountId, explainMetaError } from '@/lib/ads/meta';
+import { encryptionAvailable, secretHint } from '@/lib/secrets';
+import { adapterFor, writeCredentials, AD_PLATFORMS, adPlatformOptions } from '@/lib/ads';
 
 /**
  * CONNECTING AN AD ACCOUNT.
@@ -28,9 +28,16 @@ import { verifyAccount, normalizeAccountId, explainMetaError } from '@/lib/ads/m
  */
 
 const connectSchema = z.object({
-  platform: z.literal('META').default('META'),
-  accountId: z.string().trim().min(5).max(40),
-  token: z.string().trim().min(20).max(500),
+  platform: z.enum(AD_PLATFORMS as [string, ...string[]]).default('META'),
+  accountId: z.string().trim().min(5).max(60),
+  /**
+   * A BAG, not a token. The platforms disagree about how many secrets a
+   * connection needs — Meta takes one long-lived token, Snapchat takes a
+   * client id, a secret and a refresh token because its access tokens die
+   * after half an hour. A `token: string` would have forced the third into
+   * a lie. Which keys are required is the adapter's answer, checked below.
+   */
+  credentials: z.record(z.string(), z.string().trim().min(1).max(600)),
 });
 
 export async function GET() {
@@ -50,7 +57,10 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ accounts });
+    // The screen draws its form from this: which platforms exist, what each
+    // asks for, and where the seller goes to get it. It cannot know that
+    // Snapchat needs three fields, and it should not have to.
+    return NextResponse.json({ accounts, platforms: adPlatformOptions() });
   } catch (e) {
     return apiErrorResponse(e);
   }
@@ -75,11 +85,28 @@ export async function POST(req: Request) {
 
     const parsed = connectSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: 'رقم الحساب أو الرمز غير صالح' }, { status: 400 });
+      return NextResponse.json({ error: 'رقم الحساب أو البيانات غير صالحة' }, { status: 400 });
     }
-    const { platform, accountId, token } = parsed.data;
+    const { platform, accountId, credentials } = parsed.data;
 
-    const normalized = normalizeAccountId(accountId);
+    const adapter = adapterFor(platform);
+    if (!adapter) {
+      return NextResponse.json({ error: 'منصة غير مدعومة' }, { status: 400 });
+    }
+
+    // Every field the adapter asks for, and only those. Keeping an extra key
+    // a caller sent would store a secret nothing reads, which is a secret
+    // nobody remembers to rotate.
+    const creds: Record<string, string> = {};
+    for (const f of adapter.fields) {
+      const v = credentials[f.key];
+      if (!v) {
+        return NextResponse.json({ error: `الحقل «${f.label}» مطلوب` }, { status: 400 });
+      }
+      creds[f.key] = v;
+    }
+
+    const normalized = adapter.normalizeAccountId(accountId);
     if (!normalized) {
       return NextResponse.json({ error: 'رقم الحساب الإعلاني غير صالح' }, { status: 400 });
     }
@@ -87,9 +114,9 @@ export async function POST(req: Request) {
     // Try it before trusting it.
     let account;
     try {
-      account = await verifyAccount(token, normalized);
+      account = await adapter.verifyAccount(creds, normalized);
     } catch (e) {
-      return NextResponse.json({ error: explainMetaError(e) }, { status: 400 });
+      return NextResponse.json({ error: adapter.explainError(e) }, { status: 400 });
     }
 
     const saved = await db.adAccount.upsert({
@@ -102,15 +129,15 @@ export async function POST(req: Request) {
         companyId, storeId, platform,
         accountId: normalized,
         accountName: account.name,
-        tokenEncrypted: encryptSecret(token),
-        tokenHint: secretHint(token),
+        tokenEncrypted: writeCredentials(creds),
+        tokenHint: secretHint(creds[adapter.hintField]),
         status: 'CONNECTED',
         createdById: user.id,
       },
       update: {
         accountName: account.name,
-        tokenEncrypted: encryptSecret(token),
-        tokenHint: secretHint(token),
+        tokenEncrypted: writeCredentials(creds),
+        tokenHint: secretHint(creds[adapter.hintField]),
         status: 'CONNECTED',
         lastError: null,
       },
@@ -133,7 +160,9 @@ export async function POST(req: Request) {
       account: saved,
       // Said plainly, because a disabled account connects fine and then
       // reports nothing, and the seller would blame us.
-      warning: account.active ? null : 'الحساب الإعلاني موقوف لدى ميتا — سيتصل لكنه لن يعطي أرقاماً.',
+      warning: account.active
+        ? null
+        : `الحساب الإعلاني موقوف لدى ${adapter.short} — سيتصل لكنه لن يعطي أرقاماً.`,
       currency: account.currency,
     });
   } catch (e) {

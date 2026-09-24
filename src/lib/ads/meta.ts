@@ -1,3 +1,4 @@
+import type { AdsAdapter } from './types';
 /**
  * READING SPEND OUT OF META ADS.
  *
@@ -235,3 +236,43 @@ export function explainMetaError(e: unknown): string {
   // is still a message the seller can search for.
   return msg;
 }
+
+/**
+ * Meta through the shared interface.
+ *
+ * The functions above stay exported as they were — they are what the tests
+ * exercise, and a wrapper is a thin place to hide a bug. This only reshapes
+ * them into the contract the routes speak, so that adding a platform is a
+ * new file rather than an `if` in six places.
+ */
+export const metaAdapter: AdsAdapter = {
+  platform: 'META',
+  label: 'ميتا — فيسبوك وإنستغرام',
+  short: 'ميتا',
+  fields: [
+    {
+      key: 'token',
+      label: 'رمز الوصول',
+      secret: true,
+      placeholder: 'EAAG...',
+      hint: 'رمز مستخدم النظام لا تنتهي صلاحيته كرموز المستخدم العادية.',
+    },
+  ],
+  hintField: 'token',
+  help: {
+    url: 'https://business.facebook.com/settings/system-users',
+    urlLabel: 'مدير الأعمال — مستخدمو النظام',
+    steps: [
+      'أنشئ مستخدم نظام بدور Admin.',
+      'Assign Assets ← عيّن حسابك الإعلاني عليه بصلاحية Manage campaigns.',
+      'Generate New Token ← اختر تطبيقك وفعّل ads_read وحدها.',
+      'رقم الحساب في مدير الإعلانات أعلى الصفحة، أو في الرابط بعد act=.',
+    ],
+  },
+
+  normalizeAccountId,
+  verifyAccount: (creds, accountId) => verifyAccount(creds.token, accountId),
+  listCampaigns: (creds, accountId) => listCampaigns(creds.token, accountId),
+  fetchSpend: (creds, accountId, since, until) => fetchSpend(creds.token, accountId, since, until),
+  explainError: explainMetaError,
+};

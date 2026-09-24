@@ -5,8 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { inStore } from '@/lib/store-filter';
-import { decryptSecret } from '@/lib/secrets';
-import { listCampaigns, explainMetaError } from '@/lib/ads/meta';
+import { adapterFor, readCredentials } from '@/lib/ads';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -29,20 +28,23 @@ export async function GET(_req: Request, ctx: Ctx) {
 
     const account = await db.adAccount.findFirst({
       where: { id, ...inStore(companyId, storeId) },
-      select: { id: true, accountId: true, tokenEncrypted: true },
+      select: { id: true, platform: true, accountId: true, tokenEncrypted: true },
     });
     if (!account) return NextResponse.json({ error: 'الحساب غير موجود' }, { status: 404 });
 
+    const adapter = adapterFor(account.platform);
+    if (!adapter) return NextResponse.json({ error: 'منصة غير مدعومة' }, { status: 400 });
+
     try {
-      // Decrypted for this one call and never returned. The token exists in
+      // Decrypted for this one call and never returned. The secrets exist in
       // memory for the length of a request and nowhere else.
-      const campaigns = await listCampaigns(decryptSecret(account.tokenEncrypted), account.accountId);
+      const campaigns = await adapter.listCampaigns(readCredentials(account.tokenEncrypted), account.accountId);
       // A token that started failing says so on the screen rather than
       // failing quietly every night.
       await db.adAccount.update({ where: { id: account.id }, data: { status: 'CONNECTED', lastError: null } });
       return NextResponse.json({ campaigns });
     } catch (e) {
-      const message = explainMetaError(e);
+      const message = adapter.explainError(e);
       await db.adAccount.update({
         where: { id: account.id },
         data: { status: 'ERROR', lastError: message.slice(0, 500) },

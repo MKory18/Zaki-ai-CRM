@@ -5,8 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { inStore } from '@/lib/store-filter';
-import { decryptSecret } from '@/lib/secrets';
-import { fetchSpend, metaDate, explainMetaError } from '@/lib/ads/meta';
+import { adapterFor, readCredentials, adDate } from '@/lib/ads';
 
 /**
  * PULLING WHAT WAS SPENT.
@@ -24,13 +23,17 @@ import { fetchSpend, metaDate, explainMetaError } from '@/lib/ads/meta';
  * One account failing does not stop the others. A shop running Meta and
  * TikTok should not lose both because one token expired, so each account is
  * its own try and its own error line in the result.
+ *
+ * No platform is named anywhere below. Each account hands over its adapter
+ * and the loop asks it the same three questions, so a fourth platform needs
+ * nothing here at all.
  */
 
 /** A campaign with no end is still running; ask up to today. */
 function windowFor(c: { startDate: Date; endDate: Date | null }): { since: string; until: string } {
   const today = new Date();
   const end = c.endDate && c.endDate < today ? c.endDate : today;
-  return { since: metaDate(c.startDate), until: metaDate(end) };
+  return { since: adDate(c.startDate), until: adDate(end) };
 }
 
 export async function POST() {
@@ -66,6 +69,16 @@ export async function POST() {
         continue;
       }
 
+      const adapter = adapterFor(account.platform);
+      if (!adapter) {
+        report.push({
+          account: account.accountName ?? account.accountId,
+          updated: 0,
+          error: `منصة غير مدعومة: ${account.platform}`,
+        });
+        continue;
+      }
+
       try {
         // The widest window any of this account's campaigns needs, asked
         // ONCE. A call per campaign would multiply the rate limit by the
@@ -75,12 +88,8 @@ export async function POST() {
           (min, c) => (c.startDate < min ? c.startDate : min),
           account.campaigns[0].startDate
         );
-        const rows = await fetchSpend(
-          decryptSecret(account.tokenEncrypted),
-          account.accountId,
-          metaDate(since),
-          metaDate(new Date())
-        );
+        const creds = readCredentials(account.tokenEncrypted);
+        const rows = await adapter.fetchSpend(creds, account.accountId, adDate(since), adDate(new Date()));
         const byId = new Map(rows.map((r) => [r.campaignId, r]));
 
         let updated = 0;
@@ -92,10 +101,11 @@ export async function POST() {
           // charged with a month of the account's spend.
           const w = windowFor(c);
           const exact =
-            w.since === metaDate(since) && w.until === metaDate(new Date())
+            w.since === adDate(since) && w.until === adDate(new Date())
               ? row
-              : (await fetchSpend(decryptSecret(account.tokenEncrypted), account.accountId, w.since, w.until))
-                  .find((r) => r.campaignId === c.externalId);
+              : (await adapter.fetchSpend(creds, account.accountId, w.since, w.until)).find(
+                  (r) => r.campaignId === c.externalId
+                );
 
           const spend = Number((exact?.spend ?? row.spend).toFixed(2));
           if (Number(c.spend) === spend) continue;
@@ -114,7 +124,7 @@ export async function POST() {
         });
         report.push({ account: account.accountName ?? account.accountId, updated, error: null });
       } catch (e) {
-        const message = explainMetaError(e);
+        const message = adapter.explainError(e);
         await db.adAccount.update({
           where: { id: account.id },
           data: { status: 'ERROR', lastError: message.slice(0, 500) },
