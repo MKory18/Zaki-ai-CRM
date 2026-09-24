@@ -12,7 +12,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *   confirmed/rejected   confirmation.supervise + the order's moderator, not the actor
  *   failed delivery      ops.track, in the order's store
  *   change request       the holding agent before operations, else whoever
- *                        holds control.change_requests; never the requester
+ *                        holds control.change_requests or a supervising role
+ *                        (the same rule the routing decides by); never the
+ *                        requester
  */
 
 const { db, requireContext, assertOrderAccess, can, createNotification } = vi.hoisted(() => {
@@ -66,6 +68,7 @@ import { POST as confirmationPOST } from '@/app/api/orders/[id]/confirmation/rou
 import { POST as shippingPOST } from '@/app/api/orders/[id]/shipping/route';
 import { POST as changeRequestPOST } from '@/app/api/orders/[id]/change-requests/route';
 import { createPublicOrder } from '@/lib/public-order';
+import { SUPERVISOR_ROLES } from '@/lib/change-request-routing';
 
 const actor = { id: 'actor-1', name: 'منفّذ', role: 'CONFIRMATION_AGENT', status: 'ACTIVE' };
 const ctx = {
@@ -166,14 +169,15 @@ describe('a change request', () => {
     });
   });
 
-  it('after confirmation goes to whoever holds control.change_requests in this store — not a role list', async () => {
+  it('after confirmation goes to everyone who may decide it in this store — the permission and the supervising roles', async () => {
     assertOrderAccess.mockResolvedValue({ allowed: true, order: order({ confirmationStatus: 'CONFIRMED' }) });
     await raise();
     expect(createNotification).toHaveBeenCalledTimes(1);
-    expect(createNotification.mock.calls[0][0]).toMatchObject({
-      storeId: 'store-a',
-      audience: { permission: 'control.change_requests' },
-      actorId: 'actor-1',
+    expect(createNotification.mock.calls[0][0]).toMatchObject({ storeId: 'store-a', actorId: 'actor-1' });
+    // Exactly — a supervisor by role decides requests without the permission.
+    expect(createNotification.mock.calls[0][0].audience).toEqual({
+      permission: 'control.change_requests',
+      roles: SUPERVISOR_ROLES,
     });
     expect(db.user.findMany).not.toHaveBeenCalled();
   });
@@ -191,9 +195,10 @@ describe('a change request', () => {
     createNotification.mockResolvedValueOnce(0);
     await raise();
     expect(createNotification).toHaveBeenCalledTimes(2);
-    expect(createNotification.mock.calls[1][0]).toMatchObject({
-      audience: { permission: 'control.change_requests' },
-      actorId: 'actor-1',
+    expect(createNotification.mock.calls[1][0]).toMatchObject({ actorId: 'actor-1' });
+    expect(createNotification.mock.calls[1][0].audience).toEqual({
+      permission: 'control.change_requests',
+      roles: SUPERVISOR_ROLES,
     });
   });
 
