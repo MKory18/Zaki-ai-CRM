@@ -64,7 +64,10 @@ interface OrderFormProps {
    * is selected.
    */
   showOfferPicker?: boolean;
-  /**
+  
+
+
+/**
    * Where the order is posted.
    *
    * A landing page and a storefront are two doors into one shop, and the
@@ -72,6 +75,37 @@ interface OrderFormProps {
    * keeps every existing page working without being told about this.
    */
   endpoint?: string;
+}
+
+/**
+ * The campaign code this visitor arrived with.
+ *
+ * From the URL if it is still there, otherwise from where it was put the
+ * first time it was seen. A visitor reads the page, opens WhatsApp to ask
+ * their husband, comes back — and by then the query string is often gone.
+ * Session storage, not local: the code belongs to this visit, and a sale
+ * next month did not come from last month's ad.
+ */
+const CAMPAIGN_KEY = 'zaki_campaign';
+
+function campaignCode(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get('c');
+    if (fromUrl) {
+      sessionStorage.setItem(CAMPAIGN_KEY, fromUrl);
+      return fromUrl;
+    }
+    return sessionStorage.getItem(CAMPAIGN_KEY) || '';
+  } catch {
+    // Private mode, blocked storage — attribution is worth nothing next to
+    // the order itself.
+    try {
+      return new URLSearchParams(window.location.search).get('c') || '';
+    } catch {
+      return '';
+    }
+  }
 }
 
 type FormState = 'idle' | 'loading' | 'success' | 'error';
@@ -146,9 +180,18 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
       city: cityValue,
       offerId: selectedOffer,
       notes: String(fd.get('notes') || '').trim(),
-      // honeypot (hidden from humans — bots may fill it)
-      website: String(fd.get('website') || ''),
-      ts: String(Date.now()),
+      // honeypot (hidden from humans — bots may fill it)
+      website: String(fd.get('website') || ''),
+      ts: String(Date.now()),
+      // The campaign code from the link this visitor arrived on.
+      //
+      // Read at submit and not at load: a visitor who lands on the ad's
+      // link, wanders to another page and comes back would otherwise lose
+      // the attribution, and the ad would look like it sold nothing. The
+      // server checks the code against this store's campaigns — a wrong or
+      // invented one resolves to nothing and the order is still created,
+      // because a mistyped link in an ad must never cost a sale.
+      campaign: campaignCode(),
     };
 
     setState('loading');

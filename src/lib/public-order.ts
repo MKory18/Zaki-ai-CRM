@@ -48,6 +48,15 @@ export interface SellingSurface {
   landingPage: { id: string; name: string; slug: string } | null;
   /** What the order records as its origin. */
   source: string;
+  /**
+   * The paid campaign that brought this visitor, resolved from the `c=`
+   * code in the link they clicked.
+   *
+   * Resolved by the ROUTE against this store's campaigns, never taken from
+   * the browser as an id: a visitor who could name a campaign id could
+   * credit another shop's spend with their order.
+   */
+  campaignId: string | null;
   /** Scopes the one-order-per-phone guard to this door. */
   dedupeScope: string;
   /** Title and message of the manager's notification. */
@@ -224,6 +233,7 @@ export async function createPublicOrder(
             version: 1,
             source: surface.source,
             landingPageId: surface.landingPage?.id ?? null,
+            campaignId: surface.campaignId,
             offerId: offer?.id ?? null,
             customerNotes: v.notes || null,
             internalNotes: null,
