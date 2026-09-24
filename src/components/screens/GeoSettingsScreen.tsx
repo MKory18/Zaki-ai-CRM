@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Globe, Loader2, Plus, Store } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { CURRENCIES, currencyLabel, minorUnitFor } from '@/lib/currencies';
 import { StorefrontSettings } from '@/components/settings/StorefrontSettings';
 
 /**
@@ -228,6 +229,8 @@ export function GeoSettingsScreen() {
               {adding === c.id ? (
                 <AddStore
                   countryId={c.id}
+                  currencyCode={c.currencyCode}
+                  minorUnit={c.minorUnit}
                   onCancel={() => setAdding(null)}
                   onDone={async () => {
                     setAdding(null);
@@ -313,12 +316,37 @@ function Regions({ countryId }: { countryId: string }) {
 }
 
 function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => void }) {
-  const [form, setForm] = useState({ code: '', name: '', currencyCode: '', minorUnit: '2' });
+  const [form, setForm] = useState({ code: '', name: '', currencyCode: '', minorUnit: '' });
+  const [other, setOther] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  /**
+   * Choosing the currency sets its decimals. They were two separate boxes
+   * with the decimals starting at 2, so a JOD country left at the default
+   * rounded every amount it ever touched to the wrong unit.
+   */
+  function pickCurrency(code: string) {
+    if (code === '__other') {
+      setOther(true);
+      setForm({ ...form, currencyCode: '', minorUnit: '' });
+      return;
+    }
+    setOther(false);
+    const minor = minorUnitFor(code);
+    setForm({ ...form, currencyCode: code, minorUnit: minor === null ? '' : String(minor) });
+  }
+
+  // Both are required by the server; the button says so before it does.
+  const ready =
+    form.name.trim().length >= 2 &&
+    /^[A-Za-z]{2}$/.test(form.code.trim()) &&
+    /^[A-Za-z]{3}$/.test(form.currencyCode.trim()) &&
+    form.minorUnit !== '';
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!ready) return;
     setBusy(true);
     setError(null);
     try {
@@ -340,15 +368,83 @@ function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => 
     }
   };
 
+  const official = minorUnitFor(form.currencyCode);
+
   return (
     <form onSubmit={submit} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 grid gap-3 md:grid-cols-4">
       {error && <p className="md:col-span-4 text-sm text-[#fb323f]">{error}</p>}
       <Input label="الاسم" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
-      <Input label="الرمز" value={form.code} onChange={(v) => setForm({ ...form, code: v })} dir="ltr" />
-      <Input label="العملة" value={form.currencyCode} onChange={(v) => setForm({ ...form, currencyCode: v })} dir="ltr" />
-      <Input label="الخانات العشرية" value={form.minorUnit} onChange={(v) => setForm({ ...form, minorUnit: v })} dir="ltr" />
+      <Input label="الرمز (حرفان)" value={form.code} onChange={(v) => setForm({ ...form, code: v })} dir="ltr" />
+
+      <label className="block">
+        <span className="block text-xs font-medium text-[#364152] mb-1">
+          العملة <span className="text-[#fb323f]">*</span>
+        </span>
+        <select
+          required
+          value={other ? '__other' : form.currencyCode}
+          onChange={(e) => pickCurrency(e.target.value)}
+          className={SELECT}
+        >
+          <option value="" disabled>
+            اختر العملة
+          </option>
+          {CURRENCIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.ar} ({c.code})
+            </option>
+          ))}
+          <option value="__other">عملة أخرى…</option>
+        </select>
+        {other && (
+          <input
+            autoFocus
+            required
+            dir="ltr"
+            maxLength={3}
+            placeholder="ISO — مثل GBP"
+            value={form.currencyCode}
+            onChange={(e) => setForm({ ...form, currencyCode: e.target.value.toUpperCase() })}
+            className={`${SELECT} mt-2`}
+          />
+        )}
+      </label>
+
+      <label className="block">
+        <span className="block text-xs font-medium text-[#364152] mb-1">
+          الخانات العشرية <span className="text-[#fb323f]">*</span>
+        </span>
+        <select
+          required
+          value={form.minorUnit}
+          onChange={(e) => setForm({ ...form, minorUnit: e.target.value })}
+          className={SELECT}
+        >
+          <option value="" disabled>
+            —
+          </option>
+          {[0, 1, 2, 3, 4].map((n) => (
+            <option key={n} value={n}>
+              {n}
+              {official === n ? ' — الرسمي' : ''}
+            </option>
+          ))}
+        </select>
+        {/* Said when it differs, because this number decides how every
+            amount in the country is rounded. */}
+        {official !== null && form.minorUnit !== '' && Number(form.minorUnit) !== official && (
+          <span className="mt-1 block text-[11px] text-[#c07f2a]">
+            الرسمي لـ {form.currencyCode} هو {official} — كل مبلغ في هذا البلد سيُقرَّب على ما تختاره.
+          </span>
+        )}
+      </label>
+
       <div className="md:col-span-4 flex gap-2">
-        <button type="submit" disabled={busy} className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={busy || !ready}
+          className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm disabled:opacity-60"
+        >
           {busy ? 'جارٍ الحفظ…' : 'حفظ'}
         </button>
         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]">
@@ -359,7 +455,22 @@ function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => 
   );
 }
 
-function AddStore({ countryId, onCancel, onDone }: { countryId: string; onCancel: () => void; onDone: () => void }) {
+const SELECT =
+  'w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]';
+
+function AddStore({
+  countryId,
+  currencyCode,
+  minorUnit,
+  onCancel,
+  onDone,
+}: {
+  countryId: string;
+  currencyCode: string;
+  minorUnit: number;
+  onCancel: () => void;
+  onDone: () => void;
+}) {
   const [form, setForm] = useState({ name: '', slug: '', type: 'MULTI_PRODUCT' });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -385,6 +496,15 @@ function AddStore({ countryId, onCancel, onDone }: { countryId: string; onCancel
   return (
     <form onSubmit={submit} className="grid gap-3 md:grid-cols-3 p-3 bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px]">
       {error && <p className="md:col-span-3 text-sm text-[#fb323f]">{error}</p>}
+      {/* What the store takes from its country, said at the moment it is
+          created — not left to be discovered on the first order. The wallet
+          is the one exception, and the line says where that is chosen. */}
+      <p className="md:col-span-3 rounded-lg bg-white border border-[#e3e8ef] px-3 py-2 text-xs text-[#364152]">
+        العملة: <b>{currencyLabel(currencyCode)}</b> · {minorUnit} خانات عشرية — موروثة من البلد ولا تُغيَّر هنا.
+        <span className="block mt-0.5 text-[#697586]">
+          عملة المحفظة تُختار منفصلة عند إنشائها من المال ← المحافظ والحركات.
+        </span>
+      </p>
       <Input label="اسم المتجر" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
       <Input label="المعرّف" value={form.slug} onChange={(v) => setForm({ ...form, slug: v })} dir="ltr" />
       <label className="block">

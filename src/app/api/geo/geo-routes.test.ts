@@ -89,6 +89,24 @@ describe('POST /api/geo/countries', () => {
     expect(res.status).toBe(409);
   });
 
+  it('refuses a country without a currency (400) — nothing is created', async () => {
+    // Acceptance: a country cannot exist without the currency every amount
+    // in it is counted in. Missing, empty and malformed are all refused.
+    const { currencyCode: _omit, ...noCurrency } = body;
+    expect((await countriesRoute.POST(req(noCurrency))).status).toBe(400);
+    expect((await countriesRoute.POST(req({ ...body, currencyCode: '' }))).status).toBe(400);
+    expect((await countriesRoute.POST(req({ ...body, currencyCode: 'دينار' }))).status).toBe(400);
+    expect(db.country.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses a country without its decimal places (400) — there is no silent default', async () => {
+    const { minorUnit: _omit, ...noMinor } = body;
+    expect((await countriesRoute.POST(req(noMinor))).status).toBe(400);
+    expect((await countriesRoute.POST(req({ ...body, minorUnit: 5 }))).status).toBe(400);
+    expect((await countriesRoute.POST(req({ ...body, minorUnit: 1.5 }))).status).toBe(400);
+    expect(db.country.create).not.toHaveBeenCalled();
+  });
+
   it('rejects an invalid timezone and weekend day (400)', async () => {
     expect((await countriesRoute.POST(req({ ...body, timezone: 'Mars/Base' }))).status).toBe(400);
     expect((await countriesRoute.POST(req({ ...body, weekendDays: [7] }))).status).toBe(400);
