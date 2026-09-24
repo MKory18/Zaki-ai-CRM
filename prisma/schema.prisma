@@ -1581,6 +1581,12 @@ model OrderChangeRequest {
   decidedById   String?
   decidedAt     DateTime?
   decisionNote  String?
+  /// When the approved change was carried out on the order, and by whom.
+  /// Null on an approved request means the decision is still waiting to be
+  /// applied — the state the queue shows under «بانتظار التطبيق». Set once:
+  /// an applied request is never applied again.
+  appliedAt     DateTime?
+  appliedById   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

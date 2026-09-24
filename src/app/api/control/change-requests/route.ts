@@ -28,10 +28,20 @@ export async function GET(req: Request) {
     const status = new URL(req.url).searchParams.get('status') ?? 'PENDING';
     const now = new Date();
 
+    // AWAITING_APPLY is not a stored status: it is an approved request whose
+    // change has not been carried out yet — the queue's second list. Named
+    // here so the screen asks for a state rather than assembling a filter.
+    const statusWhere =
+      status === 'all'
+        ? {}
+        : status === 'AWAITING_APPLY'
+          ? { status: 'APPROVED', appliedAt: null }
+          : { status };
+
     const rows = await db.orderChangeRequest.findMany({
       where: {
         companyId,
-        ...(status === 'all' ? {} : { status }),
+        ...statusWhere,
         order: { storeId, ...(mine.order ?? {}) },
       },
       orderBy: [{ status: 'asc' }, { createdAt: 'asc' }],

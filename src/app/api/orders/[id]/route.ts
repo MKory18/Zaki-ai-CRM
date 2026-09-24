@@ -15,6 +15,7 @@ import { apiError } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
 import { authorize, can } from '@/lib/authorization';
 import { orderSeal, sealedFieldsIn, sealMessage } from '@/lib/order-seal';
+import { expandApproved, mayApply, strayFields } from '@/lib/change-request-apply';
 import { zodMessage } from '@/lib/zod-message';
 
 /** Legacy combined status whitelist (mirrors the UI status config) */
@@ -73,6 +74,10 @@ const patchSchema = z.object({
   shippingCost: z.coerce.number().finite().min(0).max(1000).optional(),
   productId: z.string().min(10).max(64).optional(),
   expectedVersion: z.number().optional(),
+  // An approved change request, carried out. When present it is the ONLY
+  // field besides expectedVersion: the values come from the approved
+  // request on the server, never from this body.
+  changeRequestId: z.string().uuid().optional(),
 });
 
 /**
@@ -286,12 +291,47 @@ export async function PATCH(
         { status: 400 }
       );
     }
+    // ── An approved change request, carried out ──
+    //
+    // The browser names the request and nothing else; the edit is rebuilt
+    // here from what was approved. Anything else in the body is refused,
+    // because this authority passes the seal and must not carry a second
+    // change through with it.
+    let data: z.infer<typeof patchSchema> = parsed.data;
+    let viaRequest: { id: string; orderId: string; reason: string; decisionNote: string | null } | null = null;
+    if (parsed.data.changeRequestId) {
+      const stray = strayFields(parsed.data as Record<string, unknown>);
+      if (stray.length > 0) {
+        return NextResponse.json(
+          { error: 'تطبيق طلب التعديل لا يقبل حقولاً أخرى معه', code: 'STRAY_FIELDS', fields: stray },
+          { status: 400 }
+        );
+      }
+      const request = await db.orderChangeRequest.findFirst({
+        where: { id: parsed.data.changeRequestId, companyId },
+        select: { id: true, orderId: true, status: true, appliedAt: true, changes: true, reason: true, decisionNote: true },
+      });
+      if (!request) return NextResponse.json({ error: 'طلب التعديل غير موجود' }, { status: 404 });
+      const expanded = expandApproved(request);
+      if (!expanded.ok) {
+        return NextResponse.json({ error: expanded.error, code: expanded.code }, { status: expanded.status });
+      }
+      const rebuilt = patchSchema.safeParse({ ...expanded.fields, expectedVersion: parsed.data.expectedVersion });
+      if (!rebuilt.success) {
+        // What was approved no longer passes the order's own rules — a phone
+        // that was valid then and is not now, say. Refuse rather than bend.
+        return NextResponse.json({ error: zodMessage(rebuilt.error), code: 'APPROVED_VALUE_INVALID' }, { status: 422 });
+      }
+      data = rebuilt.data;
+      viaRequest = request;
+    }
+
     const {
       status, moderatorId, internalNotes, customerNotes, postponedUntil, trackingCode,
       confirmationStatus, shippingStatus, expectedVersion,
       customerName, customerPhone, customerAltPhone, customerAddress, regionId,
       sellingPrice, quantity, discountAmount, shippingCost, productId, items, channelId,
-    } = parsed.data;
+    } = data;
 
     // ── Authorization chain: visibility/assignment (RBAC engine) → canonical
     // orders.edit permission with scope evaluation (ASSIGNED scope enforces
@@ -303,7 +343,21 @@ export async function PATCH(
     }
     const existing = access.order;
 
-    const editAuth = authorize(user, 'orders.edit', existing);
+    if (viaRequest) {
+      const verdict = mayApply(user, viaRequest, {
+        id: existing.id,
+        confirmationStatus: existing.confirmationStatus,
+        claimedById: existing.claimedById ?? null,
+      });
+      if (!verdict.ok) {
+        return NextResponse.json({ error: verdict.error, code: verdict.code }, { status: verdict.status });
+      }
+    }
+
+    // The approved request IS the authority here — decided by somebody who
+    // could reach the courier, for this order and these fields. Without one,
+    // the ordinary orders.edit scope applies exactly as before.
+    const editAuth = viaRequest ? { allowed: true as const } : authorize(user, 'orders.edit', existing);
     if (!editAuth.allowed) {
       // Secure policy: out-of-scope/other-tenant orders are reported as missing
       if (editAuth.reason === 'NO_TENANT' || editAuth.reason === 'OUT_OF_SCOPE') {
@@ -519,7 +573,10 @@ export async function PATCH(
     // What was a direct edit becomes a change request: somebody who can
     // still reach the courier decides, and says what has to happen if the
     // change is no longer possible. Silence never approves it.
-    const sealedAsked = sealedFieldsIn(parsed.data as Record<string, unknown>);
+    // An approved change request is what the seal asks for, so it passes —
+    // and only it, and only with the fields that were approved (the body
+    // could carry nothing else, see above).
+    const sealedAsked = viaRequest ? [] : sealedFieldsIn(data as Record<string, unknown>);
     if (sealedAsked.length > 0) {
       const batch = await db.shippingBatch.findFirst({
         where: { orders: { some: { id } }, companyId },
@@ -912,12 +969,30 @@ export async function PATCH(
     await logAudit({
       companyId,
       userId: user.id,
-      action: 'ORDER_UPDATED',
+      action: viaRequest ? 'ORDER_UPDATED_BY_CHANGE_REQUEST' : 'ORDER_UPDATED',
       entity: 'Order',
       entityId: id,
       previousData: existing,
-      newData: updatedOrder,
+      newData: viaRequest
+        ? {
+            ...updatedOrder,
+            // Who carried it out is the audit's own userId; WHY is the
+            // request's reason and the decision on it. An edit that passed
+            // the seal must say what allowed it.
+            changeRequest: { id: viaRequest.id, reason: viaRequest.reason, decision: viaRequest.decisionNote },
+          }
+        : updatedOrder,
     });
+
+    if (viaRequest) {
+      // Once. `appliedAt: null` in the filter makes a second, concurrent apply
+      // a no-op here — and the values are absolute ("to 3", not "+1"), so the
+      // order itself ends the same either way.
+      await db.orderChangeRequest.updateMany({
+        where: { id: viaRequest.id, appliedAt: null },
+        data: { appliedAt: new Date(), appliedById: user.id },
+      });
+    }
 
     // Notify company managers on terminal statuses — after commit, non-fatal
     if (status && status !== previousStatus && (TERMINAL_STATUSES as readonly string[]).includes(status)) {
