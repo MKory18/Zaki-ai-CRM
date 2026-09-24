@@ -2,6 +2,7 @@
 
 import { PAGE_TEMPLATES } from '@/lib/page-templates';
 import React, { useEffect, useState } from 'react';
+import { useTell } from '@/components/ui/Confirm';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
@@ -17,6 +18,7 @@ import { formatDate } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
 
 export function LandingPagesScreen() {
+  const tell = useTell();
   const [pages, setPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   /** What just happened, said on the screen — not in a browser alert box. */
@@ -59,7 +61,7 @@ export function LandingPagesScreen() {
       setCopiedId(lp.id);
       setTimeout(() => setCopiedId(null), 1500);
     } else {
-      window.prompt('انسخ الرابط يدوياً:', publicUrl(lp));
+      void tell({ title: 'انسخ الرابط يدوياً', body: 'المتصفح لم يسمح بالنسخ التلقائي.', value: publicUrl(lp) });
     }
   };
 
@@ -88,7 +90,9 @@ export function LandingPagesScreen() {
     try {
       await crmApi(`/api/landing-pages/${lp.id}`, { method: 'PATCH', body: JSON.stringify({ isPublished: !lp.isPublished }) });
       await load();
-    } catch (e: any) { alert(e.message); } finally { setBusyId(null); }
+    } catch (e: any) {
+      void tell({ title: 'تعذر تغيير حالة النشر', body: e.message, tone: 'danger' });
+    } finally { setBusyId(null); }
   };
 
   const createLandingPage = async () => {
@@ -111,7 +115,9 @@ export function LandingPagesScreen() {
       await crmApi(`/api/landing-pages/${deleting.id}`, { method: 'DELETE' });
       setDeleting(null);
       await load();
-    } catch (e: any) { alert(e.message); } finally { setDeleteLoading(false); }
+    } catch (e: any) {
+      void tell({ title: 'تعذر حذف الصفحة', body: e.message, tone: 'danger' });
+    } finally { setDeleteLoading(false); }
   };
 
   return (

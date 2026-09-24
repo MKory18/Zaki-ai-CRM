@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowLeft, Check, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
+import { changeFieldLabel } from '@/lib/change-request-fields';
 
 /**
  * ONE CHANGE REQUEST, DECIDED.
@@ -36,18 +37,6 @@ interface RequestRow {
   order?: { orderNumber: string } | null;
 }
 
-const FIELD_NAMES: Record<string, string> = {
-  customerName: 'اسم العميل',
-  customerPhone: 'هاتف العميل',
-  customerAltPhone: 'الهاتف البديل',
-  customerAddress: 'العنوان',
-  regionId: 'المحافظة',
-  items: 'أصناف الطلب',
-  sellingPrice: 'السعر',
-  quantity: 'الكمية',
-  discountAmount: 'الخصم',
-  shippingCost: 'الشحن والتوصيل',
-};
 
 function show(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';
@@ -120,7 +109,7 @@ export function ChangeRequestReview({
                 fields.map(([field, change]) => (
                   <div key={field} className="p-3">
                     <p className="text-[11px] font-semibold text-[#697586] mb-1">
-                      {FIELD_NAMES[field] ?? field}
+                      {changeFieldLabel(field)}
                     </p>
                     <div className="flex items-center gap-2 text-xs flex-wrap">
                       <span className="text-[#9aa4b2] line-through">{show(change?.from)}</span>

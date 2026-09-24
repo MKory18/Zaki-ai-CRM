@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTell } from '@/components/ui/Confirm';
 import { useParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +15,7 @@ import { screenApi as crmApi } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
 
 export function LandingPageDetailScreen() {
+  const tell = useTell();
   const params = useParams<{ id: string }>();
   const lpId = params?.id ?? null;
   const [lp, setLp] = useState<any>(null);
@@ -123,7 +125,9 @@ export function LandingPageDetailScreen() {
       setRecProductId('');
       await loadRecs();
       await refreshPreview();
-    } catch (e: any) { alert(e.message); } finally { setRecSaving(false); }
+    } catch (e: any) {
+      void tell({ title: 'تعذرت إضافة المنتج المقترح', body: e.message, tone: 'danger' });
+    } finally { setRecSaving(false); }
   };
 
   const deleteRecommendation = async (recId: string) => {
@@ -131,7 +135,9 @@ export function LandingPageDetailScreen() {
       await crmApi(`/api/landing-pages/${lpId}/recommendations/${recId}`, { method: 'DELETE' });
       await loadRecs();
       await refreshPreview();
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) {
+      void tell({ title: 'تعذر حذف المنتج المقترح', body: e.message, tone: 'danger' });
+    }
   };
 
   const publicUrl = typeof window !== 'undefined' && lp ? `${window.location.origin}/lp/${lp.slug}` : '';
@@ -146,7 +152,7 @@ export function LandingPageDetailScreen() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } else {
-      window.prompt('انسخ الرابط يدوياً:', publicUrl);
+      void tell({ title: 'انسخ الرابط يدوياً', body: 'المتصفح لم يسمح بالنسخ التلقائي.', value: publicUrl });
     }
   };
 

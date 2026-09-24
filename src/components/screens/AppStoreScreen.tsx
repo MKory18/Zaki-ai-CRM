@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTell } from '@/components/ui/Confirm';
 import Link from 'next/link';
 import {
   LayoutGrid, Loader2, Check, Settings2, Plus, ShieldCheck, Copy, X, AlertTriangle,
@@ -265,6 +266,7 @@ function RegisterApp({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
+  const tell = useTell();
   const [copied, setCopied] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -300,7 +302,11 @@ function RegisterApp({
                 // Shown once and never again, so a copy that silently
                 // fails loses the secret for good.
                 if (await copyText(secret)) setCopied(true);
-                else window.prompt('انسخ السرّ يدوياً — لن يُعرض مرة أخرى:', secret);
+                else void tell({
+                  title: 'انسخ السرّ يدوياً',
+                  body: 'المتصفح لم يسمح بالنسخ التلقائي، وهذا السرّ لن يُعرض مرة أخرى.',
+                  value: secret,
+                });
               }}
               className="shrink-0 cursor-pointer rounded-lg p-2 text-[#697586] hover:bg-white"
             >

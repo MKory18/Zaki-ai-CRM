@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { useConfirm } from '@/components/ui/Confirm';
+import { useAsk, useConfirm } from '@/components/ui/Confirm';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import {
   AlertTriangle,
@@ -325,6 +325,7 @@ function AnalyticsPixelsTab() {
 
 function TrackingPixelsTab() {
   const ask = useConfirm();
+  const askText = useAsk();
   const [pixels, setPixels] = useState<PixelRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [platform, setPlatform] = useState<Platform>('META');
@@ -451,8 +452,12 @@ function TrackingPixelsTab() {
   };
 
   const rename = async (p: PixelRow) => {
-    const name = window.prompt('اسم رقم التتبع', p.name);
-    if (!name || !name.trim() || name.trim() === p.name) return;
+    const name = await askText({
+      title: 'إعادة تسمية رقم التتبع',
+      confirmLabel: 'احفظ',
+      input: { label: 'الاسم', initial: p.name, required: true, maxLength: 80 },
+    });
+    if (!name || name === p.name) return;
     try {
       const res = await fetch(`/api/settings/tracking-pixels/${p.id}`, {
         method: 'PATCH',

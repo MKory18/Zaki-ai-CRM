@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { useConfirm } from '@/components/ui/Confirm';
+import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -74,6 +74,7 @@ const REVIEW_REASONS: Record<string, string> = {
 export function TelegramOrdersScreen() {
   const { currentUser } = useApp();
   const ask = useConfirm();
+  const tell = useTell();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<any>(null);
@@ -179,9 +180,12 @@ export function TelegramOrdersScreen() {
     setBusyId(s.id);
     try {
       const r: any = await crmApi(`/api/telegram/sources/${s.id}/test`, { method: 'POST' });
-      alert(r.lastMessage
+      void tell({
+        title: 'نتيجة اختبار المجموعة',
+        body: r.lastMessage
         ? `آخر رسالة: ${new Date(r.lastMessage.createdAt).toLocaleString('ar')} — الحالة: ${STATUS_LABELS[r.lastMessage.processingStatus] || r.lastMessage.processingStatus}`
-        : 'لا توجد رسائل مستلمة من هذه المجموعة بعد');
+        : 'لا توجد رسائل مستلمة من هذه المجموعة بعد',
+      });
     } catch (e: any) {
       setError(e?.message || 'تعذر الاختبار');
     } finally {

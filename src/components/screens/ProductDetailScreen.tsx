@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { useConfirm } from '@/components/ui/Confirm';
+import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { Button } from '@/components/ui/Button';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { Badge } from '@/components/ui/Badge';
@@ -35,6 +35,7 @@ export function ProductDetailScreen() {
   const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('products.edit');
 
   const ask = useConfirm();
+  const tell = useTell();
 
   const [product, setProduct] = useState<any>(null);
   const [currencyCode, setCurrencyCode] = useState('USD');
@@ -85,7 +86,7 @@ export function ProductDetailScreen() {
       }
       await loadProduct();
     } catch (err: any) {
-      alert(err.message);
+      void tell({ title: 'تعذر رفع الصورة', body: err.message, tone: 'danger' });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

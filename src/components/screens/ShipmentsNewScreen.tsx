@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useAsk } from '@/components/ui/Confirm';
 import { AlertTriangle, Loader2, PauseCircle, RotateCcw, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
@@ -30,6 +31,7 @@ interface Row {
 }
 
 export function ShipmentsNewScreen() {
+  const ask = useAsk();
   const [providers, setProviders] = useState<{ id: string; name: string }[]>([]);
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
   const [filters, setFilters] = useState({ courier: '', region: '', from: '', to: '' });
@@ -57,6 +59,19 @@ export function ShipmentsNewScreen() {
 
   /** Hold it back from today's shipment, or put it back in the queue. */
   const toggleHold = async (row: Row) => {
+    let reason: string | undefined;
+    if (view !== 'held') {
+      const answer = await ask({
+        title: `تأجيل شحن ${row.orderNumber}؟`,
+        body: 'يبقى الطلب خارج دفعات الشحن حتى تُعيده إلى الطابور.',
+        confirmLabel: 'أجّل',
+        input: { label: 'سبب التأجيل', placeholder: 'اختياري', multiline: true },
+      });
+      // Cancel means cancel. The browser prompt returned null here and the
+      // hold went ahead anyway, only without a reason.
+      if (answer === null) return;
+      reason = answer || undefined;
+    }
     setHolding(row.id);
     setError(null);
     try {
@@ -66,7 +81,7 @@ export function ShipmentsNewScreen() {
         body: JSON.stringify(
           view === 'held'
             ? { orderId: row.id, release: true }
-            : { orderId: row.id, reason: window.prompt('سبب التأجيل (اختياري):') ?? undefined }
+            : { orderId: row.id, reason }
         ),
       });
       await load();

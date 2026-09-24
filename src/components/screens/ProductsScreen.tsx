@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { useConfirm } from '@/components/ui/Confirm';
+import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -30,6 +30,7 @@ export function ProductsScreen() {
   const { t, locale } = useApp();
   const router = useRouter();
   const ask = useConfirm();
+  const tell = useTell();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -114,12 +115,12 @@ export function ProductsScreen() {
       const res = await fetch(`/api/products/${p.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || 'فشل الحذف');
+        void tell({ title: 'تعذر حذف المنتج', body: data.error || 'فشل الحذف', tone: 'danger' });
         return;
       }
       loadProducts();
     } catch (err: any) {
-      alert(err.message);
+      void tell({ title: 'تعذر حذف المنتج', body: err.message, tone: 'danger' });
     }
   };
 

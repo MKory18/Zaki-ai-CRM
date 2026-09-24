@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { addBusinessMinutes } from '@/lib/business-calendar';
 import { zodMessage } from '@/lib/zod-message';
+import { CHANGEABLE_FIELDS, withFrom } from '@/lib/change-request-fields';
 import { createNotification } from '@/lib/notification';
 import { deciderFor } from '@/lib/change-request-routing';
 
@@ -25,10 +26,6 @@ import { deciderFor } from '@/lib/change-request-routing';
 /** Business minutes before a pending request escalates (never auto-approves). */
 export const CHANGE_REQUEST_SLA_MINUTES = 120;
 
-const CHANGEABLE_FIELDS = [
-  'customerName', 'customerPhone', 'customerAltPhone', 'customerAddress', 'customerCity',
-  'quantity', 'productId', 'offerId', 'discountAmount', 'customerNotes',
-] as const;
 
 const createSchema = z.object({
   // partialRecord, NOT record.
@@ -94,13 +91,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       timezone: country.timezone,
     };
 
+    // What each field is changing FROM, read here rather than trusted from
+    // the browser: the person deciding needs "3 instead of 2", and a "from"
+    // the requester typed could say anything.
+    const snapshot = await db.order.findFirst({
+      where: { id, companyId },
+      select: {
+        quantity: true, productId: true, offerId: true, discountAmount: true, customerNotes: true,
+        customer: { select: { fullName: true, phone: true, altPhone: true, address: true, city: true } },
+      },
+    });
+    if (!snapshot) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+
     const created = await db.orderChangeRequest.create({
       data: {
         companyId,
         orderId: id,
         requestedById: user.id,
         requestedRole: user.role,
-        changes: parsed.data.changes,
+        changes: withFrom(snapshot, parsed.data.changes) as object,
         reason: parsed.data.reason,
         blocking: parsed.data.blocking,
         slaDueAt: addBusinessMinutes(new Date(), CHANGE_REQUEST_SLA_MINUTES, cal),
