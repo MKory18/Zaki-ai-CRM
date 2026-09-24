@@ -9,6 +9,8 @@ import { apiJson } from '@/lib/api-client';
 import { DateRange } from '@/components/ui/DateRange';
 import { TeamPerformanceTable } from '@/components/performance/TeamPerformanceTable';
 import { AttributionTable, type AttributionRow } from '@/components/performance/AttributionTable';
+import { LandingAnalyticsTab } from '@/components/performance/LandingAnalyticsTab';
+import { userCan } from '@/lib/can';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -20,8 +22,27 @@ function lastThirtyDays() {
   return { from: iso(from), to: iso(to) };
 }
 
+type Tab = 'team' | 'landing';
+
 export function PerformanceScreen() {
-  const { t } = useApp();
+  const { t, currentUser } = useApp();
+  // Two readings of the same window: who did the work, and what the landing
+  // pages brought. The second is marketing data and needs its own
+  // permission; the tab is simply absent without it (the API refuses too).
+  const canLanding = userCan(currentUser, 'landing_pages.view');
+  const [tab, setTab] = useState<Tab>('team');
+  // Opened from a link (?tab=landing) — read after mount, so the server
+  // render and the first client render agree.
+  useEffect(() => {
+    if (canLanding && new URLSearchParams(window.location.search).get('tab') === 'landing') setTab('landing');
+  }, [canLanding]);
+  const pickTab = (next: Tab) => {
+    setTab(next);
+    const url = new URL(window.location.href);
+    if (next === 'landing') url.searchParams.set('tab', 'landing');
+    else url.searchParams.delete('tab');
+    window.history.replaceState(null, '', url);
+  };
   // ONE date filter for the whole screen. There used to be an English
   // period strip here and no filter at all on the people below it, so the
   // product table and the team table were answering about different spans
@@ -128,6 +149,29 @@ export function PerformanceScreen() {
           </div>
         </div>
 
+        {canLanding && (
+          <div className="flex gap-6 border-b border-[#e3e8ef] text-sm" role="tablist">
+            {([['team', 'المنتجات والفريق والقنوات'], ['landing', 'تحليلات صفحات الهبوط']] as [Tab, string][]).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => pickTab(key)}
+                className={`-mb-px border-b-2 pb-2.5 font-semibold transition-colors ${
+                  tab === key ? 'border-[#b8256e] text-[#b8256e]' : 'border-transparent text-[#697586] hover:text-[#364152]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === 'landing' && canLanding ? (
+          <LandingAnalyticsTab dateQuery={dateQuery} from={range.from} />
+        ) : (
+        <>
         {/* The five headlines, read at a glance before any table. */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <Rank
@@ -298,6 +342,8 @@ export function PerformanceScreen() {
             )}
           </CardContent>
         </Card>
+        </>
+        )}
       </div>
     </>
   );

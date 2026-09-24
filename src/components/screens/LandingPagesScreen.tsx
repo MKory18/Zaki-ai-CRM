@@ -133,6 +133,11 @@ export function LandingPagesScreen() {
             <p className="text-sm text-[#697586] mt-1">
               صفحات تسويق عامة تُنشئ طلبات حقيقية داخل CRM تلقائيًا
             </p>
+            {/* The numbers in this list are lifetime totals; a period, by
+                device and by campaign, is read on the performance screen. */}
+            <a href="/growth/performance?tab=landing" className="mt-1 inline-block text-xs font-semibold text-[#b8256e] hover:underline">
+              تحليلات الصفحات حسب الفترة والجهاز والحملة ←
+            </a>
           </div>
           <Button onClick={() => { setForm({ name: '', slug: '', productId: '', template: 'classic' }); setFormError(null); setCreateOpen(true); }}>
             <Plus className="w-4 h-4" /> صفحة جديدة

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { ShieldCheck, Truck, PhoneCall } from 'lucide-react';
 import { db } from '@/lib/db';
 import { ruleFor } from '@/lib/phone-rules';
@@ -15,6 +16,9 @@ import { loadStoreFonts } from '@/lib/fonts/load-store-fonts';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref } from '@/components/landing/blocks/styles';
 import { availableStock } from '@/lib/reservation';
+import { deviceClassOf, recordLandingView } from '@/lib/landing-views';
+import { resolveCampaign } from '@/lib/campaigns-server';
+import { afterResponse } from '@/lib/notify';
 
 /**
  * A LANDING PAGE, RENDERED — THE ONE RENDERER.
@@ -114,11 +118,15 @@ const PAGE_SELECT = {
   store: { select: { countryId: true, country: { select: { code: true, currencyCode: true } } } },
 } as const;
 
-export type LandingPageTarget =
+export type LandingPageTarget = (
   /** /lp/<slug>, optionally previewed with the dashboard's token. */
   | { slug: string; previewToken?: string }
   /** A Single Product store's front: its picked page, published only. */
-  | { frontPageId: string; storeId: string };
+  | { frontPageId: string; storeId: string }
+) & {
+  /** The ?c= campaign code the visit arrived with, if any. */
+  campaign?: string;
+};
 
 export async function LandingPageView({ target }: { target: LandingPageTarget }) {
   let previewing = false;
@@ -148,8 +156,19 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   const [offers, recommendations] = await loadLpData(lp.id, companyId, lp.product?.id ?? null);
 
   if (!previewing) {
-    // Fire-and-forget view counter (non-fatal, no PII).
-    db.landingPage.update({ where: { id: lp.id }, data: { viewsCount: { increment: 1 } } }).catch(() => {});
+    // A visit: counted once in the page's lifetime total and once in its
+    // day's row (device and campaign), both after the page has gone out. A
+    // link-preview crawler is not a visitor and counts in neither.
+    const device = deviceClassOf((await headers()).get('user-agent'));
+    if (device) {
+      const page = { id: lp.id, storeId: lp.storeId ?? null };
+      const code = target.campaign;
+      afterResponse(async () => {
+        await db.landingPage.update({ where: { id: page.id }, data: { viewsCount: { increment: 1 } } });
+        const campaignId = code && page.storeId ? await resolveCampaign(companyId, page.storeId, code) : null;
+        await recordLandingView({ companyId, storeId: page.storeId, landingPageId: page.id, campaignId, device });
+      });
+    }
   }
 
   // The cities offered and the phone format come from the country this page

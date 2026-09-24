@@ -1,3 +1,4 @@
+import { deviceClassOf } from '@/lib/landing-views';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
@@ -120,6 +121,7 @@ export async function POST(req: Request, ctx: Ctx) {
     );
 
     const surface: SellingSurface = {
+      deviceClass: deviceClassOf(req.headers.get('user-agent')),
       companyId: store.companyId,
       store: { id: store.id, countryId: store.countryId, country },
       product,

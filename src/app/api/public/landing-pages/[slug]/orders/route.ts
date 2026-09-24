@@ -1,3 +1,4 @@
+import { deviceClassOf } from '@/lib/landing-views';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
@@ -113,6 +114,7 @@ export async function POST(req: Request, ctx: Ctx) {
     );
 
     const surface: SellingSurface = {
+      deviceClass: deviceClassOf(req.headers.get('user-agent')),
       companyId: lp.company.id, // server-derived — NEVER from the browser
       store: lp.store,
       campaignId,

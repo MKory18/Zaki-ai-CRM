@@ -21,6 +21,7 @@ const { db, requireContext, assertOrderAccess, can, createNotification } = vi.ho
   const db: any = {
     order: { findFirst: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn() },
     orderChangeRequest: { findFirst: vi.fn(), create: vi.fn() },
+    orderChannel: { findFirst: vi.fn(async () => null) },
     orderNote: { create: vi.fn() },
     orderStatusLog: { create: vi.fn() },
     orderActivity: { create: vi.fn() },
@@ -243,5 +244,40 @@ describe('a new order', () => {
       title: 'طلب جديد من المتجر',
     });
     expect(arg.actorId ?? null).toBeNull();
+  });
+
+  it('records the door as its channel and the kind of device — so the tables on the performance screen agree', async () => {
+    db.region.findMany.mockResolvedValue([{ id: 'r1', name: 'عمان' }]);
+    db.offer.findMany.mockResolvedValue([]);
+    db.orderChannel.findFirst.mockResolvedValue({ id: 'ch-web' });
+    let created: Record<string, unknown> | null = null;
+    // Run the transaction for real this time, to read what the order row gets.
+    const anyModel = () => new Proxy({}, { get: () => vi.fn(async () => ({})) });
+    db.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
+      fn(new Proxy({}, {
+        get: (_t, model) => model === 'order'
+          ? { create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => { created = data; return { id: 'o78', ...data }; }) }
+          : anyModel(),
+      }))
+    );
+
+    const result = await createPublicOrder(
+      {
+        companyId: 'c1',
+        store: { id: 'store-b', countryId: 'jo', country: { code: 'JO', currencyCode: 'JOD', orderPrefix: 'ORD', minorUnit: 3 } },
+        product: { id: 'p1', name: 'منتج', image: null, basePrice: 10 },
+        landingPage: null,
+        source: 'Store',
+        campaignId: null,
+        dedupeScope: `test-device-${Date.now()}`,
+        deviceClass: 'mobile',
+        notice: { title: 'طلب جديد من المتجر', message: (n) => `طلب ${n}` },
+      },
+      { full_name: 'أحمد علي', phone: '0791234568', address: 'شارع المدينة المنورة', city: 'عمان' }
+    );
+
+    expect(result.ok).toBe(true);
+    expect(db.orderChannel.findFirst.mock.calls[0][0].where).toMatchObject({ companyId: 'c1', kind: 'WEBSITE', isActive: true });
+    expect(created).toMatchObject({ channelId: 'ch-web', deviceClass: 'mobile' });
   });
 });

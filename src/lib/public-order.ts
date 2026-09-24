@@ -61,6 +61,11 @@ export interface SellingSurface {
   campaignId: string | null;
   /** Scopes the one-order-per-phone guard to this door. */
   dedupeScope: string;
+  /**
+   * The kind of device the order came from (mobile / tablet / desktop),
+   * classed by the route from the request. Never the raw user agent.
+   */
+  deviceClass?: 'mobile' | 'tablet' | 'desktop' | null;
   /** Title and message of the new-order notification. */
   notice: { title: string; message: (orderNumber: string) => string };
 }
@@ -199,6 +204,16 @@ export async function createPublicOrder(
   });
   const totalAmount = money.cod;
 
+  // The door, as the order channels name it — so the channel table on the
+  // performance screen and the landing-page tab count the same orders. New
+  // public orders carried no channel at all, and only the historical ones
+  // (filled by a one-time backfill) were counted there.
+  const channel = await db.orderChannel.findFirst({
+    where: { companyId, kind: surface.landingPage ? 'LANDING_PAGE' : 'WEBSITE', isActive: true },
+    orderBy: { sortOrder: 'asc' },
+    select: { id: true },
+  });
+
   const order = await db.$transaction(async (tx) => {
     let created: Awaited<ReturnType<typeof tx.order.create>> | null = null;
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -236,6 +251,8 @@ export async function createPublicOrder(
             source: surface.source,
             landingPageId: surface.landingPage?.id ?? null,
             campaignId: surface.campaignId,
+            channelId: channel?.id ?? null,
+            deviceClass: surface.deviceClass ?? null,
             offerId: offer?.id ?? null,
             customerNotes: v.notes || null,
             internalNotes: null,

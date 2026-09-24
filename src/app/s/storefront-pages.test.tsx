@@ -52,7 +52,8 @@ describe('a Single Product store with a front page', () => {
     const el = (await home({ c: 'SUMMER' })) as { type: unknown; props: { target: unknown } };
     expect(redirect).not.toHaveBeenCalled();
     expect(el.type).toBe(LandingPageView);
-    expect(el.props.target).toEqual({ frontPageId: 'lp1', storeId: 's1' });
+    // The campaign code travels into the page, where the view and the order are credited to it.
+    expect(el.props.target).toEqual({ frontPageId: 'lp1', storeId: 's1', campaign: 'SUMMER' });
   });
 
   it('has no product pages — they lead back to the front, the campaign code kept', async () => {

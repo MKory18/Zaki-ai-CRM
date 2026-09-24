@@ -34,7 +34,12 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
 
   if (store.type === 'SINGLE_PRODUCT') {
     if (store.landingPageId) {
-      return <LandingPageView target={{ frontPageId: store.landingPageId, storeId: store.id }} />;
+      const { c } = await searchParams;
+      return (
+        <LandingPageView
+          target={{ frontPageId: store.landingPageId, storeId: store.id, campaign: typeof c === 'string' ? c : undefined }}
+        />
+      );
     }
     // No front page picked yet: the one product's page, with the campaign
     // code carried along. Anything else is a shop that is not ready — and a

@@ -492,6 +492,10 @@ model Order {
   // No @map: this table is camelCase throughout, and matching the table
   // beats matching the newer convention.
   campaignId           String?
+  /// mobile | tablet | desktop — for an order placed on a public page, the
+  /// kind of device it came from. A class, never the raw user agent: a
+  /// landing page promises no personal data. Null for every other door.
+  deviceClass          String?
   productId            String
   offerId              String?
   quantity             Int       @default(1)
@@ -1153,6 +1157,7 @@ model LandingPage {
   campaigns Campaign[]
   recommendations LandingPageRecommendation[]
   addOns  OrderAddOn[]
+  views   LandingPageView[]
   // Geo context (Stage 2): orders from this page land in this store.
   storeId String?
   store   Store?   @relation("StorePages", fields: [storeId], references: [id], onDelete: Restrict)
@@ -2356,4 +2361,34 @@ model AdAccount {
   @@unique([companyId, storeId, platform, accountId])
   @@index([companyId, storeId])
   @@map("ad_accounts")
+}
+
+/// A landing page's views, counted per day, per device and per campaign.
+///
+/// The page's own `viewsCount` is one lifetime number: it cannot answer
+/// "last week", "from phones" or "from this advert", and the performance
+/// screen asks all three for one date window. So each public render adds
+/// one here as well, into its day's row. Counting starts the day this ships
+/// — there is no history to rebuild.
+///
+/// No personal data: a device CLASS and a campaign id, never an IP or a
+/// user agent. Link-preview crawlers are not counted.
+model LandingPageView {
+  id            String   @id @default(uuid())
+  companyId     String
+  storeId       String?
+  landingPageId String
+  day           DateTime @db.Date
+  /// mobile | tablet | desktop
+  device        String
+  /// '' when the visit carried no campaign code. Empty rather than null so
+  /// the day's row is one row, not one per NULL.
+  campaignId    String   @default("")
+  count         Int      @default(0)
+
+  landingPage LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+
+  @@unique([landingPageId, day, device, campaignId])
+  @@index([companyId, storeId, day])
+  @@map("landing_page_views")
 }
