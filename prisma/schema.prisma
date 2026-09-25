@@ -2072,8 +2072,21 @@ model CommissionRule {
   appliesToRole   String?
   appliesToUserId String?
   basis           String // ORDER_DELIVERED (accrual point per contract)
-  type            String // PERCENT | FIXED
+  type            String // PERCENT | FIXED | PER_ORDER
   value           Decimal   @db.Decimal(12, 4)
+  /// WHAT is being counted — see COMMISSION_METRICS in src/lib/commission-rules.ts.
+  /// ORDER_DELIVERED keeps the old behaviour: one accrual per delivered order.
+  metric          String    @default("ORDER_DELIVERED")
+  /// Over WHAT SPAN it is counted: PER_ORDER (as it happens) or DAILY /
+  /// WEEKLY / MONTHLY, which can only be known once the span has closed.
+  period          String    @default("PER_ORDER")
+  /// Bands: [{ from, to, value, label }]. Null = the single `value` above.
+  tiers           Json?
+  /// A target on ONE product rather than on everything sold.
+  productId       String?   @map("product_id")
+  /// Below this many counted orders the rule pays nothing — a delivery rate
+  /// out of three orders is noise, not performance.
+  minOrders       Int?      @map("min_orders")
   /// Minimum sample before delivery-rate tiers may be applied.
   minSampleOrders Int       @default(30)
   effectiveFrom   DateTime
@@ -2087,6 +2100,7 @@ model CommissionRule {
 
   @@index([companyId, storeId])
   @@index([companyId, isActive, effectiveFrom])
+  @@index([companyId, metric, isActive], map: "commission_rules_company_metric_idx")
   @@map("commission_rules")
 }
 
@@ -2096,7 +2110,10 @@ model CommissionRule {
 model CommissionEntry {
   id             String   @id @default(uuid())
   companyId      String
-  orderId        String
+  /// The order that earned it — null for a PERIOD entry, which no single
+  /// order produced ("150 confirmed in a day"). What such an entry was
+  /// earned on is written below: its span, its count and its tier.
+  orderId        String?
   userId         String
   role           String
   ruleId         String?
@@ -2106,12 +2123,18 @@ model CommissionEntry {
   status         String   @default("ACCRUED")
   /// YYYY-MM of the delivery; the period is locked when approved.
   periodMonth    String
+  /// A PERIOD entry: the span it covers, how many orders were counted in it,
+  /// and which band that fell into — so the figure can be traced back.
+  periodStart    DateTime? @map("period_start")
+  periodEnd      DateTime? @map("period_end")
+  counted        Int?
+  tierLabel      String?   @map("tier_label")
   reversalOfId   String?  @unique
   reversalReason String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  order      Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order      Order?           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   rule       CommissionRule?  @relation(fields: [ruleId], references: [id], onDelete: SetNull)
   reversalOf CommissionEntry? @relation("CommissionReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
   reversedBy CommissionEntry? @relation("CommissionReversal")
