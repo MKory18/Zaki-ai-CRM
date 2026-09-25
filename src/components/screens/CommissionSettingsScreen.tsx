@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  METRIC_LABEL_AR, PERIOD_LABEL_AR,
+  COMMISSION_METRICS, COMMISSION_TYPES, METRIC_LABEL_AR, PERIOD_LABEL_AR, TYPE_LABEL_AR, tiersProblem,
   type CommissionMetric, type CommissionPeriod, type CommissionType, type Tier,
 } from '@/lib/commission-rules';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -16,6 +16,15 @@ import { Modal } from '@/components/ui/Modal';
  * in force on its delivery day.
  */
 
+
+
+/** A band as it is being typed: empty strings until it is a number. */
+interface TierDraft {
+  from: string;
+  to: string;
+  value: string;
+  label: string;
+}
 
 /** A rule's single value, said the way its type means it. */
 function valueLabel(type: CommissionType, value: number): string {
@@ -254,30 +263,78 @@ export function CommissionSettingsScreen() {
   );
 }
 
+/**
+ * Writing a rule.
+ *
+ * The three questions in order: WHAT is counted, over WHAT SPAN, and HOW
+ * MUCH it pays. The span follows from the metric — a day's count cannot be
+ * answered by one order, and a per-order rule has no day to add up — so the
+ * screen sets it rather than letting the two disagree and be refused.
+ */
 function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState('');
   const [role, setRole] = useState('MODERATOR');
-  const [type, setType] = useState<'PERCENT' | 'FIXED'>('PERCENT');
+  const [metric, setMetric] = useState<CommissionMetric>('ORDER_DELIVERED');
+  const [period, setPeriod] = useState<CommissionPeriod>('DAILY');
+  const [type, setType] = useState<CommissionType>('PERCENT');
   const [value, setValue] = useState('');
+  const [banded, setBanded] = useState(false);
+  const [tiers, setTiers] = useState<TierDraft[]>([{ from: '0', to: '', value: '', label: '' }]);
+  const [minOrders, setMinOrders] = useState('');
   const [from, setFrom] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const perOrder = metric === 'ORDER_DELIVERED';
+  const isRate = metric === 'DELIVERY_RATE';
+
+  /** The metric decides the span: the two may never disagree. */
+  function pickMetric(next: CommissionMetric) {
+    setMetric(next);
+    if (next === 'ORDER_DELIVERED') setPeriod('PER_ORDER');
+    else if (period === 'PER_ORDER') setPeriod('DAILY');
+    // A rate has no per-order meaning either — it is a span's figure.
+    if (next === 'DELIVERY_RATE' && type === 'PERCENT') setType('PER_ORDER');
+  }
+
+  const parsedTiers = () =>
+    tiers
+      .filter((t) => t.from !== '' && t.value !== '')
+      .map((t) => ({
+        from: Number(t.from),
+        to: t.to === '' ? null : Number(t.to),
+        value: Number(t.value),
+        ...(t.label.trim() ? { label: t.label.trim() } : {}),
+      }));
 
   return (
     <Modal isOpen onClose={onClose} title="قاعدة عمولة جديدة">
       <form
         onSubmit={async (e) => {
           e.preventDefault();
-          setSaving(true);
           setError(null);
+
+          const rows = banded ? parsedTiers() : [];
+          if (banded) {
+            // Checked here too, so the seller is told which band is wrong
+            // before the request — the server refuses it either way.
+            const problem = tiersProblem(rows);
+            if (problem) { setError(problem); return; }
+          }
+
+          setSaving(true);
           try {
             await apiJson('/api/settings/commission', {
               method: 'POST',
               body: JSON.stringify({
                 name: name.trim(),
                 appliesToRole: role,
+                metric,
+                period: perOrder ? 'PER_ORDER' : period,
                 type,
-                value: Number(value),
+                value: banded ? 0 : Number(value),
+                tiers: banded ? rows : null,
+                minOrders: minOrders === '' ? null : Number(minOrders),
                 effectiveFrom: from,
               }),
             });
@@ -297,7 +354,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             onChange={(e) => setName(e.target.value)}
             required
             minLength={2}
-            placeholder="عمولة المسوّقين 2026"
+            placeholder="شرائح التأكيد اليومي 2026"
             className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
           />
         </label>
@@ -317,32 +374,162 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
 
         <div className="grid grid-cols-2 gap-3">
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">النوع</span>
+            <span className="block text-xs font-medium text-[#364152] mb-1">تُحتسب على</span>
             <select
-              value={type}
-              onChange={(e) => setType(e.target.value as 'PERCENT' | 'FIXED')}
+              value={metric}
+              onChange={(e) => pickMetric(e.target.value as CommissionMetric)}
               className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
             >
-              <option value="PERCENT">نسبة مئوية</option>
-              <option value="FIXED">مبلغ ثابت</option>
+              {COMMISSION_METRICS.map((m) => (
+                <option key={m} value={m}>{METRIC_LABEL_AR[m]}</option>
+              ))}
             </select>
           </label>
           <label>
+            <span className="block text-xs font-medium text-[#364152] mb-1">الفترة</span>
+            <select
+              value={perOrder ? 'PER_ORDER' : period}
+              disabled={perOrder}
+              onChange={(e) => setPeriod(e.target.value as CommissionPeriod)}
+              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white disabled:bg-[#f8fafc] disabled:text-[#9aa4b2]"
+            >
+              {(perOrder ? (['PER_ORDER'] as const) : (['DAILY', 'WEEKLY', 'MONTHLY'] as const)).map((p) => (
+                <option key={p} value={p}>{PERIOD_LABEL_AR[p]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <p className="rounded-[8px] bg-[#f8fafc] px-2.5 py-2 text-[11px] leading-relaxed text-[#697586]">
+          {perOrder
+            ? 'تُحتسب مع كل طلب مسلَّم، لحظة تسليمه.'
+            : `تُحتسب بعد انتهاء ${PERIOD_LABEL_AR[period]} — لأن العدد لا يُعرف قبل أن ينتهي.`}
+        </p>
+
+        <label className="flex items-center gap-2 text-sm text-[#364152]">
+          <input type="checkbox" checked={banded} onChange={(e) => setBanded(e.target.checked)} />
+          شرائح حسب العدد
+        </label>
+
+        {!banded ? (
+          <div className="grid grid-cols-2 gap-3">
+            <label>
+              <span className="block text-xs font-medium text-[#364152] mb-1">النوع</span>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as CommissionType)}
+                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+              >
+                {COMMISSION_TYPES.map((t) => (
+                  <option key={t} value={t}>{TYPE_LABEL_AR[t]}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="block text-xs font-medium text-[#364152] mb-1">
+                {type === 'PERCENT' ? 'النسبة %' : 'المبلغ'}
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                required
+                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+                dir="ltr"
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="block">
+              <span className="block text-xs font-medium text-[#364152] mb-1">كيف تدفع الشريحة</span>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as CommissionType)}
+                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+              >
+                {COMMISSION_TYPES.map((t) => (
+                  <option key={t} value={t}>{TYPE_LABEL_AR[t]}</option>
+                ))}
+              </select>
+            </label>
+
+            <div className="rounded-[8px] border border-[#e3e8ef] p-2 space-y-2">
+              <div className="grid grid-cols-[1fr_1fr_1fr_1.2fr_auto] gap-1.5 text-[10px] font-medium text-[#697586]">
+                <span>من {isRate ? '%' : ''}</span>
+                <span>إلى (فارغ = فما فوق)</span>
+                <span>القيمة</span>
+                <span>اسم الشريحة</span>
+                <span> </span>
+              </div>
+              {tiers.map((t, i) => (
+                <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1.2fr_auto] gap-1.5">
+                  {(['from', 'to', 'value'] as const).map((field) => (
+                    <input
+                      key={field}
+                      type="number"
+                      step={field === 'value' ? '0.01' : '1'}
+                      min="0"
+                      max={isRate && field !== 'value' ? 100 : undefined}
+                      value={t[field]}
+                      onChange={(e) =>
+                        setTiers(tiers.map((row, j) => (j === i ? { ...row, [field]: e.target.value } : row)))
+                      }
+                      className="h-9 px-2 rounded-[8px] border border-[#e3e8ef] text-sm"
+                      dir="ltr"
+                    />
+                  ))}
+                  <input
+                    value={t.label}
+                    onChange={(e) => setTiers(tiers.map((row, j) => (j === i ? { ...row, label: e.target.value } : row)))}
+                    placeholder="اختياري"
+                    className="h-9 px-2 rounded-[8px] border border-[#e3e8ef] text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setTiers(tiers.filter((_, j) => j !== i))}
+                    disabled={tiers.length === 1}
+                    title="حذف الشريحة"
+                    className="h-9 w-9 rounded-[8px] text-[#9aa4b2] hover:text-[#fb323f] disabled:opacity-30"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setTiers([...tiers, { from: '', to: '', value: '', label: '' }])}
+                className="text-xs font-medium text-[#b8256e]"
+              >
+                + شريحة
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!perOrder && (
+          <label className="block">
             <span className="block text-xs font-medium text-[#364152] mb-1">
-              {type === 'PERCENT' ? 'النسبة %' : 'المبلغ'}
+              أقل عدد طلبات قبل الاحتساب (اختياري)
             </span>
             <input
               type="number"
-              step="0.01"
               min="0"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              required
+              value={minOrders}
+              onChange={(e) => setMinOrders(e.target.value)}
+              placeholder="مثلاً 30"
               className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
               dir="ltr"
             />
+            <span className="mt-1 block text-[10.5px] text-[#9aa4b2]">
+              {isRate
+                ? 'نسبة تسليم ١٠٠٪ من طلبين ليست أداءً — يُقاس الحد على عدد الطلبات لا على النسبة.'
+                : 'أقل من هذا العدد لا تستحق القاعدة شيئاً.'}
+            </span>
           </label>
-        </div>
+        )}
 
         <label className="block">
           <span className="block text-xs font-medium text-[#364152] mb-1">سارية من</span>
