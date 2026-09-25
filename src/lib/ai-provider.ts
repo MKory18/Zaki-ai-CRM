@@ -1,6 +1,6 @@
 import { sanitizeScopes, type AiScope } from './ai-assistants';
 import { db } from './db';
-import { sanitizePromptOverrides, resolvePrompt, HOUSE_JOB } from './ai-prompts';
+import { sanitizePromptOverrides, resolvePrompt, recordVersions, HOUSE_JOB, type PromptHistory } from './ai-prompts';
 import { decryptSecret, encryptSecret, encryptionAvailable, secretHint } from './secrets';
 import { updateCompanySettings } from './company-settings';
 
@@ -92,6 +92,14 @@ export interface AiSettings {
    * is an assistant nobody decided on.
    */
   intelligenceScopes: AiScope[];
+  /**
+   * The wording each job had before, newest first.
+   *
+   * Kept beside the prompts rather than in an audit table: it is not a
+   * record of who did what — it is the sentence somebody needs back, and
+   * it has to be one click from the box they are staring at.
+   */
+  promptHistory: PromptHistory;
   hasKey: boolean;
   keyHint: string | null;
 }
@@ -110,6 +118,8 @@ interface StoredAi {
   prompts?: Record<string, string>;
   /** See AiSettings.intelligenceScopes. */
   intelligenceScopes?: string[];
+  /** See AiSettings.promptHistory. */
+  promptHistory?: PromptHistory;
   apiKeyEncrypted?: string;
   keyHint?: string;
 }
@@ -145,6 +155,7 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
     // Nothing until the owner ticks a box: an assistant reading the money
     // because nobody turned it off is an assistant nobody decided on.
     intelligenceScopes: sanitizeScopes(ai.intelligenceScopes),
+    promptHistory: ai.promptHistory ?? {},
     hasKey: !!ai.apiKeyEncrypted || !!process.env.OPENROUTER_API_KEY,
     keyHint: ai.keyHint ?? null,
   };
@@ -158,7 +169,9 @@ export async function saveAiSettings(
     prompts?: Record<string, string>;
     intelligenceScopes?: string[];
     apiKey?: string | null;
-  }
+  },
+  /** Whoever pressed save, for the prompt versions. */
+  actor?: { name: string | null; now?: Date }
 ): Promise<AiSettings> {
   // Refused before anything is touched: a key stored in the clear is worse
   // than no AI at all.
@@ -168,13 +181,27 @@ export async function saveAiSettings(
   // same moment used to write back the key this save had just removed.
   await updateCompanySettings<StoredAi>(companyId, 'ai', (stored) => {
     const current: StoredAi = stored ?? {};
+    const nextPrompts =
+      input.prompts !== undefined ? sanitizePromptOverrides(input.prompts) : current.prompts;
 
     const next: StoredAi = {
       provider: input.provider,
       model: input.model.trim() || providerInfo(input.provider).defaultModel,
       // Sanitised on the way in: unknown jobs are dropped, and an override
       // equal to the default is not stored at all.
-      prompts: input.prompts !== undefined ? sanitizePromptOverrides(input.prompts) : current.prompts,
+      prompts: nextPrompts,
+      // The replaced wording, kept before it is overwritten. Inside the
+      // same row lock as the write itself: read it outside and a second
+      // save between the two loses a version.
+      promptHistory:
+        input.prompts === undefined
+          ? current.promptHistory
+          : recordVersions(
+              current.promptHistory,
+              overridesOf(current),
+              nextPrompts ?? {},
+              { at: (actor?.now ?? new Date()).toISOString(), by: actor?.name ?? null }
+            ),
       // Only names this system knows — an unknown one is dropped, never
       // guessed at, so a typo can never widen what an assistant reads.
       intelligenceScopes:

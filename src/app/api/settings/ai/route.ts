@@ -71,7 +71,7 @@ export async function PUT(req: Request) {
     const before = await aiSettings(companyId);
     let saved;
     try {
-      saved = await saveAiSettings(companyId, parsed.data);
+      saved = await saveAiSettings(companyId, parsed.data, { name: user.name ?? null });
     } catch (e) {
       if (e instanceof Error && e.message === 'ENCRYPTION_KEY_MISSING') {
         // Refusing is the safe failure: a key stored in the clear is worse

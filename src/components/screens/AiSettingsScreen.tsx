@@ -4,7 +4,7 @@ import { AssistantsTable } from '@/components/screens/ai/AssistantsTable';
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Bot, Check, ChevronDown, KeyRound, Loader2, Plug, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { MAX_PROMPT, missingSlots, type AiJob } from '@/lib/ai-prompts';
+import { MAX_PROMPT, missingSlots, type AiJob, type PromptVersion } from '@/lib/ai-prompts';
 
 /**
  * THE AI, AND EVERY WORD THE SYSTEM SAYS TO IT.
@@ -34,6 +34,8 @@ interface Settings {
   model: string;
   prompt: string;
   prompts: Record<string, string>;
+  /** What each job's prompt said before, newest first. */
+  promptHistory?: Record<string, PromptVersion[]>;
   hasKey: boolean;
   keyHint: string | null;
 }
@@ -294,6 +296,41 @@ export function AiSettingsScreen() {
                         </button>
                       )}
                     </div>
+
+                    {/* What it said before. A prompt is the one setting where
+                        a good change and a ruinous one look identical in the
+                        box, and the wording that worked is otherwise gone. */}
+                    {(settings.promptHistory?.[job.key]?.length ?? 0) > 0 && (
+                      <details className="mt-2 rounded-lg border border-[#e3e8ef]">
+                        <summary className="cursor-pointer px-2 py-1.5 text-[10px] font-semibold text-[#697586]">
+                          النسخ السابقة ({settings.promptHistory![job.key].length})
+                        </summary>
+                        <ul className="divide-y divide-[#f1f3f6] border-t border-[#f1f3f6]">
+                          {settings.promptHistory![job.key].map((v, n) => (
+                            <li key={n} className="px-2 py-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[9px] text-[#9aa4b2]">
+                                  <span dir="ltr" className="tabular-nums">{v.at.slice(0, 16).replace('T', ' ')}</span>
+                                  {v.by && <span> · {v.by}</span>}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setDrafts({ ...drafts, [job.key]: v.text })}
+                                  className="flex items-center gap-1 text-[10px] font-semibold text-[#b8256e]"
+                                >
+                                  <RotateCcw className="h-3 w-3" /> استرجع
+                                </button>
+                              </div>
+                              {/* Restoring puts it in the box; the save button
+                                  is still the one that commits it. */}
+                              <p className="mt-1 line-clamp-3 whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-[#697586]">
+                                {v.text || 'النص الأصلي (بلا تعديل)'}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
 
                     {/* Not an error — a seller may well want a prompt that
                         ignores the context — but said out loud, because a

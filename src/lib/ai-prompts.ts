@@ -205,3 +205,65 @@ export function missingSlots(job: string, text: string): string[] {
   if (!info) return [];
   return info.slots.filter((s) => !text.includes(s));
 }
+
+/**
+ * WHAT THE PROMPT SAID BEFORE.
+ *
+ * A prompt is the one setting in this system where a good change and a
+ * ruinous one look identical in the form: both are a box full of Arabic.
+ * The seller edits the confirmation assistant at midnight, the answers turn
+ * strange by morning, and the wording that worked is gone — there is no
+ * diff, no commit, nothing to go back to.
+ *
+ * So every save that CHANGES a prompt keeps the text it replaced. Not the
+ * new one: the new one is in the settings already, and what somebody needs
+ * at 9am is the sentence they can no longer remember.
+ *
+ * An empty `text` is a real version and means "the default was in force" —
+ * restoring it clears the override, which is exactly what the editor's
+ * "أعد النص الأصلي" does.
+ */
+export interface PromptVersion {
+  /** The wording being replaced. Empty means the default was in force. */
+  text: string;
+  at: string;
+  /** Who replaced it, by name. Null when it is not known. */
+  by: string | null;
+}
+
+/** Enough to undo a bad week, not enough to make the settings row a log. */
+export const MAX_VERSIONS = 5;
+
+export type PromptHistory = Record<string, PromptVersion[]>;
+
+/**
+ * The history after a save.
+ *
+ * Only jobs whose text actually moved get an entry: pressing save twice
+ * must not fill the list with five copies of the same sentence, or the one
+ * version somebody needs is pushed off the end by their own habit.
+ */
+export function recordVersions(
+  history: PromptHistory | undefined,
+  before: Record<string, string>,
+  after: Record<string, string>,
+  stamp: { at: string; by: string | null }
+): PromptHistory {
+  const out: PromptHistory = { ...(history ?? {}) };
+  const jobs = new Set([...Object.keys(before), ...Object.keys(after)]);
+
+  for (const job of jobs) {
+    const was = (before[job] ?? '').trim();
+    const now = (after[job] ?? '').trim();
+    if (was === now) continue;
+    const kept = [{ text: was, at: stamp.at, by: stamp.by }, ...(out[job] ?? [])];
+    out[job] = kept.slice(0, MAX_VERSIONS);
+  }
+
+  // A job that is no longer in AI_JOBS keeps nothing: its versions could
+  // never be restored into an editor that does not show it.
+  for (const job of Object.keys(out)) {
+    if (!jobInfo(job)) delete out[job];
+  }
+  return out;
+}

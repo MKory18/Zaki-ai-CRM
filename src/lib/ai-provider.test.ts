@@ -48,6 +48,49 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('the wording it replaced', () => {
+  it('a save that changes a prompt keeps the old one, beside the new', async () => {
+    withSettings({ provider: 'OPENAI', model: 'gpt-4o', prompts: { house: 'تكلّم بلهجتنا' } });
+    await saveAiSettings(
+      'c1',
+      { provider: 'OPENAI', model: 'gpt-4o', prompts: { house: 'تكلّم بالفصحى' } },
+      { name: 'زكي' }
+    );
+    const ai = stored();
+    expect(ai.prompts.house).toBe('تكلّم بالفصحى');
+    expect(ai.promptHistory.house[0]).toMatchObject({ text: 'تكلّم بلهجتنا', by: 'زكي' });
+  });
+
+  it('a save that does not send prompts at all leaves the history alone', async () => {
+    withSettings({
+      provider: 'OPENAI',
+      model: 'gpt-4o',
+      prompts: { house: 'نص' },
+      promptHistory: { house: [{ text: 'أقدم', at: '2026-01-01T00:00:00.000Z', by: null }] },
+    });
+    // Changing the model must not look like clearing every prompt.
+    await saveAiSettings('c1', { provider: 'OPENAI', model: 'gpt-4o-mini' });
+    const ai = stored();
+    expect(ai.prompts.house).toBe('نص');
+    expect(ai.promptHistory.house).toHaveLength(1);
+  });
+
+  it('and it comes back out beside the prompts, so the editor can offer it', async () => {
+    withSettings({
+      provider: 'OPENAI',
+      model: 'gpt-4o',
+      promptHistory: { house: [{ text: 'قديم', at: '2026-01-01T00:00:00.000Z', by: 'زكي' }] },
+    });
+    const out = await aiSettings('c1');
+    expect(out.promptHistory.house[0].text).toBe('قديم');
+  });
+
+  it('a company that never edited a prompt has an empty history, not undefined', async () => {
+    db.company.findUnique.mockResolvedValue({ settings: null });
+    expect((await aiSettings('c1')).promptHistory).toEqual({});
+  });
+});
+
 describe('the key', () => {
   it('is encrypted before it is stored — never the plain text', async () => {
     await saveAiSettings('c1', { provider: 'OPENAI', model: 'gpt-4o-mini', apiKey: 'sk-secret-value' });
