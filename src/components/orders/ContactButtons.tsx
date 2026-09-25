@@ -102,7 +102,11 @@ export function ContactButtons({
     compact ? 'h-7 w-7' : 'h-8 px-2 gap-1 text-[11px]'
   }`;
 
-  const shown = (templates ?? []).filter((t) => t.channel === 'BOTH' || t.channel === open);
+  // Turned off means written but not offered — a template kept for next
+  // season must not appear in the picker during this one.
+  const shown = (templates ?? []).filter(
+    (t) => t.active !== false && (t.channel === 'BOTH' || t.channel === open)
+  );
 
   return (
     <div className="relative inline-flex items-center gap-1" ref={box}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { AssistantsTable } from '@/components/screens/ai/AssistantsTable';
+import { MessageTemplatesCard } from '@/components/settings/MessageTemplatesCard';
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Bot, Check, ChevronDown, KeyRound, Loader2, Plug, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -138,7 +139,7 @@ export function AiSettingsScreen() {
         {([
           ['provider', 'المزوّد والمفتاح'],
           ['assistants', 'المساعدون'],
-          ['prompts', 'النصوص'],
+          ['prompts', 'النصوص والقوالب'],
         ] as const).map(([value, label]) => (
           <button
             key={value}
@@ -353,10 +354,21 @@ export function AiSettingsScreen() {
         </div>
       </section>
 
-      <div className="flex items-center gap-2">
+      {/* The words said to a CUSTOMER, on the same tab as the words said to
+          the model — they are the same job of work, and a seller fixing how
+          the shop speaks should not have to remember which of two screens
+          holds which half of it. Its own save button, because these are
+          stored apart and one form saving both would be a form where half
+          of it silently did nothing. */}
+      <section className={`rounded-xl border border-[#e3e8ef] bg-white p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
+        <h2 className="mb-3 text-sm font-bold text-[#121926]">قوالب رسائل الزبائن</h2>
+        <MessageTemplatesCard />
+      </section>
+
+      <div className={`items-center gap-2 ${tab === 'assistants' ? 'hidden' : 'flex'}`}>
         <Button onClick={save} disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          احفظ
+          احفظ الإعدادات والنصوص
         </Button>
         {msg && (
           <span className={`text-xs font-medium ${msg.ok ? 'text-[#00994d]' : 'text-rose-600'}`}>{msg.text}</span>

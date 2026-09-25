@@ -5,7 +5,6 @@ import { Building2, Check, Loader2, Settings } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { MessageTemplatesCard } from '@/components/settings/MessageTemplatesCard';
 
 /**
  * SYSTEM SETTINGS — what belongs to the company as a whole, and only that.
@@ -106,7 +105,6 @@ export function SystemSettingsScreen() {
         </CardContent>
       </Card>
 
-      <MessageTemplatesCard />
     </div>
   );
 }

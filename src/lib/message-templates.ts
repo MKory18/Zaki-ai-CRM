@@ -1,4 +1,5 @@
 import { updateCompanySettings } from './company-settings';
+import { DEFAULT_LANGUAGE, STORE_LANGUAGES } from './store-languages';
 import { db } from './db';
 
 /**
@@ -20,11 +21,79 @@ import { db } from './db';
 
 export type Channel = 'SMS' | 'WHATSAPP';
 
+/**
+ * WHEN a message is sent, not down which wire.
+ *
+ * The list was a flat pile ordered by whenever somebody added one, so an
+ * agent looking for the right sentence during a call read all forty. They
+ * are grouped by the MOMENT instead — the agent knows which moment they are
+ * in, and never knows which of two channels a template was filed under.
+ *
+ * `other` is not a moment. It is where a template that predates this list
+ * lands, so an old one is never silently filed under a situation nobody
+ * chose for it — the seller moves it themselves.
+ */
+export const SITUATIONS = [
+  { key: 'confirmation', ar: 'التأكيد' },
+  { key: 'no_answer', ar: 'لا يرد' },
+  { key: 'postpone', ar: 'التأجيل' },
+  { key: 'shipping', ar: 'الشحن' },
+  { key: 'delay', ar: 'التأخير' },
+  { key: 'return', ar: 'المرتجع' },
+  { key: 'collection', ar: 'التحصيل' },
+  { key: 'other', ar: 'غير مصنّفة' },
+] as const;
+
+export type Situation = (typeof SITUATIONS)[number]['key'];
+
+export const SITUATION_KEYS = SITUATIONS.map((s) => s.key) as Situation[];
+
 export interface MessageTemplate {
   id: string;
   name: string;
   channel: Channel | 'BOTH';
   body: string;
+  /** The moment it belongs to. */
+  situation: Situation;
+  /** A code from STORE_LANGUAGES — never a second list of languages. */
+  lang: string;
+  /**
+   * Off means written but not offered. A template is turned off for a
+   * season or a courier and turned back on; deleting it loses the wording
+   * and whoever wrote it types it again from memory.
+   */
+  active: boolean;
+}
+
+/**
+ * A stored template as this build understands it.
+ *
+ * Templates saved before situations existed have none, and a row missing a
+ * field must not take the tracking screen down — an agent mid-call needs
+ * the list, not a stack trace.
+ */
+export interface RawTemplate {
+  id: string;
+  body: string;
+  name?: string;
+  channel?: string;
+  situation?: string;
+  lang?: string;
+  active?: boolean;
+}
+
+export function normalizeTemplate(raw: RawTemplate): MessageTemplate {
+  const situation = SITUATION_KEYS.includes(raw.situation as Situation) ? (raw.situation as Situation) : 'other';
+  return {
+    id: raw.id,
+    name: raw.name ?? '',
+    channel: raw.channel === 'SMS' || raw.channel === 'WHATSAPP' ? raw.channel : 'BOTH',
+    body: raw.body,
+    situation,
+    lang: STORE_LANGUAGES.some((l) => l.code === raw.lang) ? raw.lang! : DEFAULT_LANGUAGE,
+    // An old template was always offered, so it stays offered.
+    active: raw.active !== false,
+  };
 }
 
 /**
@@ -46,28 +115,76 @@ export const TEMPLATE_VARS = [
 
 export const DEFAULT_TEMPLATES: MessageTemplate[] = [
   {
-    id: 'out-for-delivery',
-    name: 'خرج للتوصيل',
-    channel: 'BOTH',
-    body: 'مرحبا {اسم_الزبون}، طلبك {رقم_الطلب} خرج للتوصيل اليوم مع {شركة_الشحن}. المبلغ المطلوب {المبلغ} {العملة}. رجاءً كن متاحاً على هذا الرقم.',
-  },
-  {
-    id: 'no-answer',
-    name: 'حاولنا ولم نصل',
-    channel: 'BOTH',
-    body: 'مرحبا {اسم_الزبون}، حاول مندوب {شركة_الشحن} الوصول إليك لتسليم طلبك {رقم_الطلب} ولم يوفَّق. رجاءً تواصل معنا لتحديد موعد جديد.',
-  },
-  {
     id: 'confirm-address',
     name: 'تأكيد العنوان',
     channel: 'WHATSAPP',
+    situation: 'confirmation',
+    lang: DEFAULT_LANGUAGE,
+    active: true,
     body: 'مرحبا {اسم_الزبون}، قبل شحن طلبك {رقم_الطلب} نريد تأكيد العنوان في {المحافظة}. هل هو صحيح؟',
+  },
+  {
+    id: 'called-no-answer',
+    name: 'اتصلنا ولم تردّ',
+    channel: 'BOTH',
+    situation: 'no_answer',
+    lang: DEFAULT_LANGUAGE,
+    active: true,
+    body: 'مرحبا {اسم_الزبون}، حاولنا الاتصال بك بخصوص طلبك {رقم_الطلب} من {المتجر} ولم نوفَّق. متى يناسبك أن نعاود؟',
+  },
+  {
+    id: 'postponed',
+    name: 'أجّلنا بطلبك',
+    channel: 'BOTH',
+    situation: 'postpone',
+    lang: DEFAULT_LANGUAGE,
+    active: true,
+    body: 'تمام {اسم_الزبون}، أجّلنا طلبك {رقم_الطلب} كما طلبت، وسنعاود الاتصال في الموعد الذي حدّدته.',
+  },
+  {
+    id: 'out-for-delivery',
+    name: 'خرج للتوصيل',
+    channel: 'BOTH',
+    situation: 'shipping',
+    lang: DEFAULT_LANGUAGE,
+    active: true,
+    body: 'مرحبا {اسم_الزبون}، طلبك {رقم_الطلب} خرج للتوصيل اليوم مع {شركة_الشحن}. المبلغ المطلوب {المبلغ} {العملة}. رجاءً كن متاحاً على هذا الرقم.',
   },
   {
     id: 'tracking',
     name: 'رقم التتبع',
     channel: 'BOTH',
+    situation: 'shipping',
+    lang: DEFAULT_LANGUAGE,
+    active: true,
     body: 'طلبك {رقم_الطلب} مع {شركة_الشحن}، ورقم التتبع {الباركود}. المبلغ {المبلغ} {العملة}.',
+  },
+  {
+    id: 'delayed',
+    name: 'تأخّر عنك',
+    channel: 'BOTH',
+    situation: 'delay',
+    lang: DEFAULT_LANGUAGE,
+    active: true,
+    body: 'نعتذر {اسم_الزبون}، تأخّر طلبك {رقم_الطلب} عن موعده مع {شركة_الشحن}. نتابعه الآن ونُعلمك بالجديد.',
+  },
+  {
+    id: 'delivery-failed',
+    name: 'حاولنا ولم نصل',
+    channel: 'BOTH',
+    situation: 'return',
+    lang: DEFAULT_LANGUAGE,
+    active: true,
+    body: 'مرحبا {اسم_الزبون}، حاول مندوب {شركة_الشحن} الوصول إليك لتسليم طلبك {رقم_الطلب} ولم يوفَّق. رجاءً تواصل معنا لتحديد موعد جديد قبل أن يعود الطلب.',
+  },
+  {
+    id: 'amount-due',
+    name: 'المبلغ المطلوب',
+    channel: 'BOTH',
+    situation: 'collection',
+    lang: DEFAULT_LANGUAGE,
+    active: true,
+    body: 'مرحبا {اسم_الزبون}، المبلغ المطلوب لطلبك {رقم_الطلب} هو {المبلغ} {العملة}، يُدفع للمندوب عند الاستلام.',
   },
 ];
 
@@ -127,7 +244,9 @@ export async function templatesFor(companyId: string): Promise<MessageTemplate[]
   const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
   try {
     const stored = (company?.settings ? JSON.parse(company.settings) : {}).messageTemplates;
-    if (Array.isArray(stored) && stored.length > 0) return stored as MessageTemplate[];
+    // Normalised on the way out, so a template written before situations
+    // existed reads as a template and not as a missing field.
+    if (Array.isArray(stored) && stored.length > 0) return stored.map(normalizeTemplate);
   } catch {
     /* a broken settings blob must not take the tracking screen down */
   }

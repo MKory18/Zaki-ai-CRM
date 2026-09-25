@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { fillTemplate, waNumber, DEFAULT_TEMPLATES, TEMPLATE_VARS } from './message-templates';
+import {
+  fillTemplate,
+  waNumber,
+  normalizeTemplate,
+  DEFAULT_TEMPLATES,
+  SITUATIONS,
+  SITUATION_KEYS,
+  TEMPLATE_VARS,
+} from './message-templates';
 
 /**
  * The sentence a customer actually receives.
@@ -76,6 +84,75 @@ describe('the defaults', () => {
   it('leave no stray braces once filled', () => {
     for (const t of DEFAULT_TEMPLATES) {
       expect(fillTemplate(t.body, ctx)).not.toContain('{');
+    }
+  });
+});
+
+
+/**
+ * WHEN A TEMPLATE IS SAID, AND WHETHER IT IS SAID AT ALL.
+ *
+ * Templates written before situations existed are in real companies' rows
+ * right now, missing three fields. They must keep working: an agent is
+ * mid-call, and a row with a field missing must never be the reason the
+ * picker is empty.
+ */
+describe('a template written before situations existed', () => {
+  const old = { id: 't1', name: 'قديم', channel: 'SMS', body: 'مرحبا {اسم_الزبون}' };
+
+  it('lands in "غير مصنّفة" — never filed under a moment nobody chose', () => {
+    expect(normalizeTemplate(old).situation).toBe('other');
+  });
+
+  it('stays offered, because it always was', () => {
+    expect(normalizeTemplate(old).active).toBe(true);
+  });
+
+  it('and keeps its own channel and wording', () => {
+    const t = normalizeTemplate(old);
+    expect(t.channel).toBe('SMS');
+    expect(t.body).toBe('مرحبا {اسم_الزبون}');
+  });
+
+  it('turned off stays off — only a missing flag means on', () => {
+    expect(normalizeTemplate({ ...old, active: false }).active).toBe(false);
+  });
+
+  it('a situation this build does not know is dropped, not kept', () => {
+    expect(normalizeTemplate({ ...old, situation: 'invented' }).situation).toBe('other');
+  });
+
+  it('a language outside the shop languages falls back to Arabic', () => {
+    expect(normalizeTemplate({ ...old, lang: 'kl' }).lang).toBe('ar');
+    expect(normalizeTemplate({ ...old, lang: 'tr' }).lang).toBe('tr');
+  });
+
+  it('a channel that is not a channel becomes both, not nothing', () => {
+    // Nothing would be a template the picker never shows, silently.
+    expect(normalizeTemplate({ ...old, channel: 'PIGEON' }).channel).toBe('BOTH');
+  });
+});
+
+describe('the situations', () => {
+  it('every default is filed under one this build knows', () => {
+    for (const t of DEFAULT_TEMPLATES) {
+      expect(SITUATION_KEYS, t.id).toContain(t.situation);
+    }
+  });
+
+  it('every moment the document names has a sentence to start from', () => {
+    // "غير مصنّفة" is not a moment — nothing is written into it on purpose.
+    const used = new Set(DEFAULT_TEMPLATES.map((t) => t.situation));
+    for (const s of SITUATIONS) {
+      if (s.key === 'other') continue;
+      expect(used.has(s.key), s.ar).toBe(true);
+    }
+  });
+
+  it('and every default is offered and in Arabic', () => {
+    for (const t of DEFAULT_TEMPLATES) {
+      expect(t.active, t.id).toBe(true);
+      expect(t.lang, t.id).toBe('ar');
     }
   });
 });
