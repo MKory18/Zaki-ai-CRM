@@ -6,18 +6,23 @@ import { Sidebar } from './Sidebar';
 import { Header, type ShellContextInfo } from './Header';
 import { MobileNav } from './MobileNav';
 import { OfflineWatch } from './OfflineWatch';
+import { Watermark } from './Watermark';
+import { IdleGuard } from './IdleGuard';
 
 /** Frame for every contract screen: fixed RTL sidebar + context header. */
 export function Shell({
   groups,
   userName,
   userRole,
+  viewer,
   context,
   children,
 }: {
   groups: NavGroup[];
   userName: string;
   userRole: string;
+  /** Whose screen this is — for the mark a photograph of it will carry. */
+  viewer: { name: string; id: string };
   context: ShellContextInfo;
   children: React.ReactNode;
 }) {
@@ -45,6 +50,13 @@ export function Shell({
       </div>
 
       <MobileNav groups={groups} />
+
+      {/* A personal device, and the two things a web page can honestly do
+          about that: put a name in any photograph of the screen, and stop
+          being signed in on a phone nobody is holding. Neither prevents a
+          screenshot — nothing can. See src/lib/exposure.ts. */}
+      <Watermark viewer={viewer} />
+      <IdleGuard />
     </div>
   );
 }

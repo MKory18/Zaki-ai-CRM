@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
+import { logAudit } from '@/lib/audit';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { rateLimit } from '@/lib/rate-limit';
@@ -167,6 +168,44 @@ export async function GET(req: Request) {
     }
 
     const csvContent = csvParts.join('\n');
+
+    /**
+     * TEN THOUSAND NAMES AND PHONE NUMBERS, LEAVING.
+     *
+     * This is the single largest way customer data can leave the system,
+     * and until now it left no trace at all: the permission was checked,
+     * the file was handed over, and nothing anywhere recorded that it had
+     * happened. A manager asking "who took the customer list" had nowhere
+     * to look.
+     *
+     * So the FACT is recorded, never the contents. The row says how many
+     * orders, over which dates, under which filters - enough to recognise
+     * "the whole quarter, no filters, at 2am" and nothing that would turn
+     * the audit log itself into a second copy of the thing being guarded.
+     */
+    await logAudit({
+      companyId,
+      userId: user.id,
+      action: 'ORDERS_EXPORTED',
+      entity: 'Order',
+      entityId: `export:${totalRows}`,
+      newData: {
+        rows: totalRows,
+        from: start.toISOString(),
+        to: end.toISOString(),
+        handPicked: ids ? ids.length : null,
+        filters: {
+          q: q || null,
+          status: status || null,
+          productId: productId || null,
+          source: sourceParam || null,
+          courierId: courierId || null,
+          regionId: regionId || null,
+        },
+        // The columns that make this worth recording at all.
+        withContact: true,
+      },
+    });
 
     return new Response(csvContent, {
       status: 200,

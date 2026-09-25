@@ -24,6 +24,7 @@ export default async function ShellLayout({ children }: { children: React.ReactN
       groups={visibleNav(user, can)}
       userName={user.name}
       userRole={user.role}
+      viewer={{ name: user.name, id: user.id }}
       context={{
         storeName: store.name,
         storePaused: store.status !== 'ACTIVE',

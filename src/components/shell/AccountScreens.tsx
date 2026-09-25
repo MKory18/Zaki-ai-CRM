@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Clock, ShieldX, LogOut, RefreshCw, MailCheck } from 'lucide-react';
+import { signOut } from '@/lib/sign-out';
 
 /** Account-state screens for PENDING / SUSPENDED / DISABLED users. */
 
@@ -10,10 +11,7 @@ export function PendingScreen() {
   const { currentUser, refreshUser } = useApp();
   const [checking, setChecking] = useState(false);
 
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/login';
-  };
+  const handleLogout = () => signOut('manual');
 
   return (
     <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
@@ -67,10 +65,7 @@ export function PendingScreen() {
 }
 
 export function BlockedScreen({ status }: { status: string }) {
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/login';
-  };
+  const handleLogout = () => signOut('manual');
 
   return (
     <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">

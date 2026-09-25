@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOut, Menu, Repeat, Search, Store } from 'lucide-react';
 import { apiFetch } from '@/lib/api-client';
+import { signOut } from '@/lib/sign-out';
 import { NotificationBell } from '@/components/shell/NotificationBell';
 import { ConfirmationCounter } from './ConfirmationCounter';
 import { ShiftChip } from '@/components/attendance/ShiftChip';
@@ -39,10 +40,7 @@ export function Header({
     if (query.trim().length >= 2) router.push(`/orders?q=${encodeURIComponent(query.trim())}`);
   };
 
-  const logout = async () => {
-    await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
-    window.location.href = '/login';
-  };
+  const logout = () => signOut('manual');
 
   return (
     <header className="sticky top-0 z-30 h-[72px] bg-[var(--sys-card)] border-b border-[var(--sys-border)] flex items-center gap-3 px-4 md:px-6">

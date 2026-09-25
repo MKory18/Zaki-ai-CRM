@@ -16,11 +16,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingFlag, setPendingFlag] = useState(false);
+  // Not an error: nothing went wrong, the phone was put down. Saying so
+  // plainly is what stops somebody concluding the app signed them out at
+  // random and asking for the whole measure to be removed.
+  const [wasIdle, setWasIdle] = useState(false);
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.search.includes('suspended=1')) {
+    if (typeof window === 'undefined') return;
+    if (window.location.search.includes('suspended=1')) {
       setError('تم إيقاف حسابك. يرجى التواصل مع المدير.');
     }
+    if (window.location.search.includes('idle=1')) setWasIdle(true);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,6 +75,15 @@ export default function LoginPage() {
 
         <Card className="shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
           <CardContent className="p-6 space-y-4">
+            {wasIdle && !error && (
+              <div
+                data-testid="idle-notice"
+                className="p-3 text-xs rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]"
+              >
+                أُغلقت الجلسة تلقائياً لعدم الاستخدام — حمايةً للجهاز إن تُرك مفتوحاً. سجّل الدخول للمتابعة.
+              </div>
+            )}
+
             {error && (
               <div
                 className={`p-3 text-xs rounded-lg flex items-start space-x-2 rtl:space-x-reverse ${

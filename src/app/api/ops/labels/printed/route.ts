@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { verifyLabelBatch } from '@/lib/labels';
 import { printRefusal } from '@/lib/waybill';
+import { logAudit } from '@/lib/audit';
 
 /**
  * POST /api/ops/labels/printed  { t, orderIds }
@@ -30,7 +31,7 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { companyId, storeId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('ops.labels');
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -62,6 +63,27 @@ export async function POST(req: Request) {
     const { count } = await db.order.updateMany({
       where: { id: { in: printable }, companyId, storeId, labelPrintedAt: null },
       data: { labelPrintedAt: new Date() },
+    });
+
+    /**
+     * A WAYBILL IS CUSTOMER DATA ON PAPER.
+     *
+     * Every sheet carries a name, a phone and an address, and paper walks
+     * out of a building more easily than a database does. The order itself
+     * already remembers WHEN it was printed; it has never remembered by
+     * whom, so "two hundred labels were printed on Friday night" was a fact
+     * with nobody attached to it.
+     *
+     * One row, with the count and the person. Not the orders, not the
+     * names - the audit trail must not become the second copy.
+     */
+    await logAudit({
+      companyId,
+      userId: user.id,
+      action: 'LABELS_PRINTED',
+      entity: 'Order',
+      entityId: batch.batchId ?? `labels:${count}`,
+      newData: { printed: count, asked: asked.length, batchId: batch.batchId ?? null, withContact: true },
     });
 
     return NextResponse.json({ stamped: count });
