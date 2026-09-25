@@ -1,5 +1,8 @@
 'use client';
 
+import { useApp } from '@/context/AppContext';
+import { userCan } from '@/lib/can';
+import { PayoutDialog } from '@/components/screens/commission/PayoutDialog';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { PeriodProgress } from '@/components/screens/commission/PeriodProgress';
 import {
@@ -88,6 +91,12 @@ export function CommissionSettingsScreen() {
   const [rules, setRules] = useState<Rule[] | null>(null);
   /** No rule governs this store today: nothing accrues, and it must be said. */
   const [noRuleInForce, setNoRuleInForce] = useState(false);
+  /** Who is being paid right now, if anybody. */
+  const [paying, setPaying] = useState<{ id: string; name: string } | null>(null);
+  // Paying is money leaving the business, not a report being read — the
+  // server asks for the same key, so a hidden button is not the guard.
+  const { currentUser } = useApp();
+  const canPay = userCan(currentUser, 'finance.create');
   const [totals, setTotals] = useState<Totals[] | null>(null);
   const [currency, setCurrency] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -242,6 +251,7 @@ export function CommissionSettingsScreen() {
                 <th className="text-right font-medium px-3 py-2">مستحقة</th>
                 <th className="text-right font-medium px-3 py-2">مدفوعة</th>
                 <th className="text-right font-medium px-3 py-2">معكوسة</th>
+                <th className="text-right font-medium px-3 py-2"> </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e3e8ef]">
@@ -252,12 +262,33 @@ export function CommissionSettingsScreen() {
                   <td className="px-3 py-2 tabular-nums text-[#00a344]">{t.payable}</td>
                   <td className="px-3 py-2 tabular-nums text-[#697586]">{t.paid}</td>
                   <td className="px-3 py-2 tabular-nums text-[#fb323f]">{t.reversed}</td>
+                  <td className="px-3 py-2 text-left">
+                    {/* An entry used to reach "مستحقة" and stop: nothing
+                        turned it into money, so the cash left by hand. */}
+                    {t.payable > 0 && canPay && (
+                      <button
+                        onClick={() => setPaying({ id: t.userId, name: t.name })}
+                        className="h-7 rounded-[8px] border border-[#b8256e] px-2.5 text-[11px] font-medium text-[#b8256e] hover:bg-[#fdf2f8]"
+                      >
+                        صرف
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {paying && (
+        <PayoutDialog
+          userId={paying.id}
+          userName={paying.name}
+          onClose={() => setPaying(null)}
+          onPaid={() => { setPaying(null); void load(); }}
+        />
+      )}
 
       {newOpen && (
         <NewRuleDialog
