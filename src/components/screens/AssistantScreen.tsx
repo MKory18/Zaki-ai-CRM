@@ -37,7 +37,7 @@ export function AssistantScreen() {
     {
       role: 'assistant',
       content:
-        'Hello! I am your SALESFLOW AI Business Intelligence Advisor. I have real-time access to your company orders, production batches, moderator conversion rates, and delivered net profit ledger. Ask me any question about your business performance.',
+        'أهلاً. أمامي أرقام متجرك الحقيقية: الطلبات، ودفعات الإنتاج، ونسب تحويل المودريتورية، وصافي الربح من المسلَّم. اسألني عمّا تريد معرفته.',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -45,11 +45,11 @@ export function AssistantScreen() {
   const [chatLoading, setChatLoading] = useState(false);
 
   const suggestedQuestions = [
-    'How is my business performing today?',
-    'What is my most profitable product?',
-    'Which moderator has the best performance?',
-    'Which product has the highest rejection rate?',
-    'Should I increase production of this product?',
+    'كيف كان أداء المتجر اليوم؟',
+    'أي منتج هو الأكثر ربحاً؟',
+    'أي مودريتور أداؤه الأفضل؟',
+    'أي منتج نسبة رفضه الأعلى؟',
+    'هل أزيد إنتاج هذا المنتج؟',
   ];
 
   const loadSummary = async () => {
@@ -163,7 +163,7 @@ export function AssistantScreen() {
               <span>{findRoute('/assistant')?.label}</span>
             </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              Section 23-26 OpenRouter AI Business Advisor grounded on verified database metrics & zero financial hallucinations
+              يجيب من أرقام متجرك وحدها. ما لا يجده في البيانات يقول إنه لا يعرفه، ولا يخترع رقماً.
             </p>
           </div>
 
@@ -174,11 +174,11 @@ export function AssistantScreen() {
             className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Regenerate Executive Summary</span>
+            <span>أعد توليد الملخّص</span>
           </Button>
         </div>
 
-        {/* Section 25: AI Daily Summary Section */}
+        {/* The daily summary — the one thing this screen has that the dock does not. */}
         {summaryData && (
           <div className="space-y-4">
             {/* Executive Summary Card */}
@@ -188,10 +188,10 @@ export function AssistantScreen() {
                   <div className="flex items-center justify-between">
                     <span className="flex items-center space-x-2">
                       <Sparkles className="w-5 h-5 text-[var(--sys-primary)]" />
-                      <span>Executive Daily Briefing ({summaryData.date})</span>
+                      <span>ملخّص اليوم ({summaryData.date})</span>
                     </span>
                     <span className="text-xs font-mono font-medium text-[var(--sys-muted)]">
-                      OpenRouter Model Active
+                      المزوّد متصل
                     </span>
                   </div>
                 }
@@ -235,10 +235,10 @@ export function AssistantScreen() {
                 {/* 3 Pillars: Observations, Risks, Recommendations */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   {/* Key Observations */}
-                  <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-xl p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
-                      <Lightbulb className="w-4 h-4 text-[var(--sys-destructive)]" />
-                      <span>Key Observations</span>
+                  <div className="bg-[var(--sys-info-soft)]/70 border border-[var(--sys-info)]/30 rounded-xl p-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-info)] flex items-center space-x-1.5 mb-2.5">
+                      <Lightbulb className="w-4 h-4 text-[var(--sys-info)]" />
+                      <span>ملاحظات</span>
                     </h4>
                     <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
                       {observations.map((obs, i) => (
@@ -254,7 +254,7 @@ export function AssistantScreen() {
                   <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-xl p-4">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
                       <ShieldAlert className="w-4 h-4 text-[var(--sys-destructive)]" />
-                      <span>Operational Risks</span>
+                      <span>مخاطر تحتاج تدخّلاً</span>
                     </h4>
                     <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
                       {risks.map((risk, i) => (
@@ -267,10 +267,10 @@ export function AssistantScreen() {
                   </div>
 
                   {/* Recommendations */}
-                  <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-xl p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-[var(--sys-destructive)]" />
-                      <span>Tactical Recommendations</span>
+                  <div className="bg-[var(--sys-success-soft)]/70 border border-[var(--sys-success)]/30 rounded-xl p-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-success)] flex items-center space-x-1.5 mb-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-[var(--sys-success)]" />
+                      <span>توصيات</span>
                     </h4>
                     <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
                       {recommendations.map((rec, i) => (
@@ -287,10 +287,13 @@ export function AssistantScreen() {
           </div>
         )}
 
-        {/* Section 24: AI Executive Chat Advisor */}
+        {/* THE SAME CHAT AS THE BUBBLE ON EVERY SCREEN.
+            Both post to /api/ai/chat. This is a fuller view of it — room
+            for a long conversation — and it is where the menu entry leads.
+            Said here so nobody rebuilds it a third time. */}
         <Card className="flex flex-col h-[550px]">
           <CardHeader
-            title={<span className="flex items-center space-x-2"><Bot className="w-5 h-5 text-[var(--sys-destructive)]" /><span>AI Executive Chat Advisor (Section 24)</span></span>}
+            title={<span className="flex items-center space-x-2"><Bot className="w-5 h-5 text-[var(--sys-primary)]" /><span>اسأل عن أرقامك</span></span>}
             subtitle="Ask strategic questions; AI calculates responses from live verified database context"
           />
 
@@ -337,7 +340,7 @@ export function AssistantScreen() {
             {chatLoading && (
               <div className="flex items-center space-x-2 text-xs text-[var(--sys-muted)]">
                 <Bot className="w-4 h-4 text-[var(--sys-primary)] animate-spin" />
-                <span>SALESFLOW AI is analyzing live business metrics...</span>
+                <span>يقرأ أرقام متجرك…</span>
               </div>
             )}
           </CardContent>

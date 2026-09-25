@@ -208,3 +208,31 @@ describe('no new hardcoded colour in a system screen', () => {
     expect(offenders, `ألوان مثبَّتة لا تتبع المظهر:\n${offenders.join('\n')}`).toEqual([]);
   });
 });
+
+/**
+ * A RECOMMENDATION IS NOT A LOSS.
+ *
+ * The assistant screen drew three boxes — observations, risks and
+ * recommendations — and coloured all three with the destructive variable.
+ * Red means "late, or money lost" everywhere else in this system, so a
+ * screen that paints a recommendation red is teaching people to stop
+ * reading red as urgent.
+ */
+describe('a semantic colour keeps its meaning on every screen', () => {
+  it('the assistant does not paint its recommendations as losses', () => {
+    const src = readFileSync(join(process.cwd(), 'src/components/screens/AssistantScreen.tsx'), 'utf8');
+    const i = src.indexOf('<CheckCircle2');
+    expect(i, 'the recommendations box is gone').toBeGreaterThan(0);
+    const box = src.slice(src.lastIndexOf('<div className="bg-[var(--sys-', i), i);
+    expect(box.length, 'could not find the box markup').toBeGreaterThan(20);
+    expect(box).not.toContain('sys-destructive');
+  });
+
+  it('and still paints its risks as risks', () => {
+    const src = readFileSync(join(process.cwd(), 'src/components/screens/AssistantScreen.tsx'), 'utf8');
+    const i = src.indexOf('<ShieldAlert');
+    const box = src.slice(src.lastIndexOf('<div className="bg-[var(--sys-', i), i);
+    expect(box.length, 'could not find the box markup').toBeGreaterThan(20);
+    expect(box).toContain('sys-destructive');
+  });
+});
