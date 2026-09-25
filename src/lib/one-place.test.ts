@@ -122,3 +122,46 @@ describe('the store domain is written in one place', () => {
     expect(form).toContain('/store/domain');
   });
 });
+
+/**
+ * WHAT A COURIER OWES IS WORKED OUT IN ONE PLACE.
+ *
+ * `expectedAmountFor` in settlement.ts is the rule, and the statement
+ * matcher reads it. The manual-collection dialog computed its own version:
+ * `totalAmount − deliveryFee`.
+ *
+ * That is right for a whole delivery and wrong for a PARTIAL one, where the
+ * courier owes only what the customer actually took. So every partial read
+ * as a shortfall — the person collecting saw a number accusing a rep of
+ * keeping money he had never received — and because the server applied the
+ * real rule, the two disagreed and the gap was recorded as an overpayment.
+ */
+describe('what the courier owes', () => {
+  it('the collect dialog adds up the server’s figures, it does not derive them', () => {
+    const dialog = read('src/components/screens/tracking/CollectDialog.tsx');
+    expect(dialog).toContain('expectedCollection');
+    // The old arithmetic, in either of its two places in that file.
+    expect(dialog).not.toMatch(/totalAmount\)\s*-\s*Number\(o\.deliveryFee/);
+  });
+
+  it('and the tracking route computes it with the settlement rule itself', () => {
+    const route = read('src/app/api/ops/tracking/route.ts');
+    expect(route).toContain('expectedAmountFor');
+    expect(route).toContain('expectedCollection');
+  });
+
+  it('the rule still treats a partial delivery as what was collected', async () => {
+    // The behaviour both sides now share, asserted where it lives.
+    const { expectedAmountFor } = await import('./settlement');
+    const whole = expectedAmountFor({ shippingStatus: 'DELIVERED', totalAmount: 5000, deliveryFee: 500 });
+    const partial = expectedAmountFor({
+      shippingStatus: 'PARTIALLY_DELIVERED',
+      totalAmount: 5000,
+      collectedAmount: 2000,
+      deliveryFee: 500,
+    });
+    expect(whole).toBe(4500);
+    // Not 4500: the customer took part of it, and the courier owes that.
+    expect(partial).toBeLessThan(whole);
+  });
+});

@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { transitStatus } from '@/lib/transit';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { expectedAmountFor } from '@/lib/settlement';
 
 /**
  * GET /api/ops/tracking?q=&status=
@@ -86,6 +87,19 @@ export async function GET(req: Request) {
         late: transit.late,
         // Delivery, settlement and collection stay three separate facts.
         collectionStatus: o.settlementStatus,
+        /**
+         * WHAT THE COURIER OWES ON THIS ORDER, by the settlement matcher's
+         * own rule — computed here, where that rule lives.
+         *
+         * The collect dialog used to work it out as `totalAmount −
+         * deliveryFee`, which is right for a whole delivery and wrong for a
+         * partial one: on a partial the courier owes what the customer
+         * actually took, and the full value makes every partial look like a
+         * shortfall. The person then reads a total that accuses a rep of
+         * keeping money he never received, and the server — which applies
+         * the rule correctly — records a different figure.
+         */
+        expectedCollection: expectedAmountFor(o),
       };
     });
 

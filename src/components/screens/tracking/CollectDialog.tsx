@@ -21,6 +21,8 @@ interface Row {
   totalAmount: number;
   currency: string;
   deliveryFee?: number | null;
+  /** What this order owes, by the settlement rule, computed on the server. */
+  expectedCollection?: number | null;
   customer: { fullName: string };
   deliveryProvider: { id: string; name: string; kind?: string } | null;
 }
@@ -42,13 +44,22 @@ export function CollectDialog({
   const [saving, setSaving] = useState(false);
 
   const currency = orders[0]?.currency ?? '';
+  /**
+   * What the courier owes, as the SERVER worked it out per order.
+   *
+   * This used to be `totalAmount − deliveryFee`, computed here. That is
+   * right for a whole delivery and wrong for a partial one, where the
+   * courier owes only what the customer actually took — so every partial
+   * read as a shortfall, and the person collecting saw a number accusing a
+   * rep of keeping money he never received. Worse, the server applied the
+   * correct rule, so the two disagreed and the difference was recorded as
+   * an overpayment.
+   *
+   * Adding up figures the server sent is not the same as re-deriving its
+   * rule: the rule stays in settlement.ts, where the matcher reads it too.
+   */
   const expected = useMemo(
-    () =>
-      Number(
-        orders
-          .reduce((sum, o) => sum + (Number(o.totalAmount) - Number(o.deliveryFee ?? 0)), 0)
-          .toFixed(3)
-      ),
+    () => Number(orders.reduce((sum, o) => sum + Number(o.expectedCollection ?? 0), 0).toFixed(3)),
     [orders]
   );
 
@@ -106,7 +117,10 @@ export function CollectDialog({
             <div key={o.id} className="flex items-center justify-between px-3 py-1.5 text-xs">
               <span className="text-[var(--sys-foreground)]">{o.orderNumber} · {o.customer.fullName}</span>
               <span className="tabular-nums text-[var(--sys-muted-foreground)]">
-                {Number(o.totalAmount) - Number(o.deliveryFee ?? 0)}
+                {/* The server's figure, not the browser's arithmetic — a
+                    partial delivery owes what the customer took, not the
+                    order's full value. */}
+                {Number(o.expectedCollection ?? 0)}
               </span>
             </div>
           ))}
