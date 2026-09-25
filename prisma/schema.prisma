@@ -1477,6 +1477,17 @@ model Store {
   /// against landing page domains too — the proxy must never find two
   /// answers for one host.
   domain                String?
+  /// The shop's HOME PAGE, as LandingSection[] JSON — the same shape, the
+  /// same block library and the same renderer as a landing page. There is
+  /// one page builder in this system and this is it; a second one would be
+  /// two sets of blocks to keep in step.
+  ///
+  /// Two columns because save, preview and publish are three separate acts:
+  /// the seller saves and previews the DRAFT as often as they like, and only
+  /// publishing copies it to LIVE, which is the only one a shopper sees.
+  homeDraft             String?      @db.Text
+  homeLive              String?      @db.Text
+  homePublishedAt       DateTime?
   /// When this store's domain last passed BOTH checks: a TXT token only this
   /// installation can compute (ownership) and DNS actually resolving here
   /// (routing). Null means never — a badge is never set by a button.

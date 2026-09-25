@@ -135,9 +135,15 @@ export const storeCartBarSchema = z.object({
   label: z.string().trim().max(40).default(''),
 });
 
+/**
+ * The home page's COVER IMAGE, and nothing about its sections.
+ *
+ * The order of the sections briefly lived here as `sectionOrder`. It belongs
+ * to the page builder (/store/design), where the sections themselves are —
+ * an order stored apart from the things it orders is a second owner, and the
+ * two drift the first time a section is added anywhere but here.
+ */
 export const storeHomeSchema = z.object({
-  /** Section keys in the order the home page lays them out. */
-  sectionOrder: z.array(z.string().trim().min(1).max(40)).max(40).default([]),
   /** Same-origin path only, like the landing theme's page image. */
   coverImage: z.string().regex(/^(|\/[A-Za-z0-9/_.\-]*)$/).max(300).default(''),
 });

@@ -67,6 +67,14 @@ export interface Storefront {
   landingPageId: string | null;
   /** The shop's menus, already filtered to what a shopper may see. */
   menus: Partial<Record<MenuKey, MenuItem[]>>;
+  /**
+   * The home page the seller PUBLISHED, as stored JSON, or null.
+   *
+   * The draft is deliberately not here: it is the seller's own workbench,
+   * and a storefront that could read it would put half-finished work in
+   * front of a customer.
+   */
+  homeLive: string | null;
 }
 
 /**
@@ -115,7 +123,7 @@ export const getStorefront = cache(async function getStorefront(slug: string): P
     orderBy: { createdAt: 'asc' },
     select: {
       id: true, name: true, slug: true, logo: true, favicon: true, tagline: true, about: true,
-      supportPhone: true, domain: true, type: true, theme: true,
+      supportPhone: true, domain: true, type: true, theme: true, homeLive: true,
       companyId: true, countryId: true, landingPageId: true,
       country: { select: { code: true, currencyCode: true } },
     },
@@ -140,6 +148,7 @@ export const getStorefront = cache(async function getStorefront(slug: string): P
     companyId: store.companyId,
     landingPageId: store.type === 'SINGLE_PRODUCT' ? store.landingPageId : null,
     menus: await getStoreMenus(store.id),
+    homeLive: store.homeLive,
   };
 });
 

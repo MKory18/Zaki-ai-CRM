@@ -5,6 +5,11 @@ import { LandingPageView } from '@/components/landing/LandingPageView';
 import { carryQuery } from '@/lib/query-string';
 import Link from 'next/link';
 import { getStorefront, storefrontProducts } from '@/lib/storefront';
+import { parseSections } from '@/lib/landing-sections';
+import { paletteFor } from '@/lib/landing-theme';
+import { publicizeMedia } from '@/lib/public-media';
+import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
+import { BLOCK_CSS } from '@/components/landing/blocks/styles';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
 import type { Metadata } from 'next';
 import { publicTitle, storeIcons } from '@/lib/public-metadata';
@@ -58,15 +63,50 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
     if (only.length === 1) redirect(`/s/${store.slug}/p/${only[0].sku}${carryQuery(await searchParams)}`);
   }
 
+  const pixelsForHome = await getTrackingPixelsForPage(store.companyId, 'PUBLIC');
+
+  // ── A home page the seller built ──
+  // Only what was PUBLISHED: the draft is the seller's own workbench, and a
+  // half-finished page must never be what a customer opens. Drawn by the
+  // SAME renderer the builder previews with, so what they approved is what
+  // ships. A shop that has published nothing keeps the product list it
+  // always had.
+  const home = parseSections(store.homeLive).filter((s) => s.enabled);
+  if (home.length > 0) {
+    return (
+      <StorefrontShell store={store}>
+        <LandingTrackingPixels page="PUBLIC" pixels={pixelsForHome} viewContent={null} />
+        <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS }} />
+        <PageBlocks
+          // Stored images are linked privately by the builder; a shopper has
+          // no session, so they are made public for this render.
+          sections={publicizeMedia(home, { via: store.id })}
+          ctx={{
+            palette: paletteFor(store.theme),
+            productName: store.name,
+            price: 0,
+            currency: store.currencyCode,
+            stock: null,
+            offers: [],
+            // A home page sells nothing directly: the order form belongs to a
+            // product's page and to a landing page, where there is something
+            // to order. A form block here renders as nothing rather than as a
+            // form that cannot say what it is buying.
+            form: null,
+            store: { name: store.name, logo: store.logo, phone: store.supportPhone },
+          }}
+        />
+      </StorefrontShell>
+    );
+  }
+
   const products = await storefrontProducts(store.companyId, store.id);
 
   const money = (n: number) =>
     `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${store.currencyCode}`;
-  const pixels = await getTrackingPixelsForPage(store.companyId, 'PUBLIC');
-
   return (
     <StorefrontShell store={store}>
-      <LandingTrackingPixels page="PUBLIC" pixels={pixels} viewContent={null} />
+      <LandingTrackingPixels page="PUBLIC" pixels={pixelsForHome} viewContent={null} />
       <section className="sf-hero">
         <h1>{store.tagline || store.name}</h1>
         {store.about && <p>{store.about}</p>}
