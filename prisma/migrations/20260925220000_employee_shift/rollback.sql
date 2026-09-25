@@ -1,0 +1,3 @@
+ALTER TABLE "users" DROP COLUMN IF EXISTS "shift_start";
+ALTER TABLE "users" DROP COLUMN IF EXISTS "shift_end";
+ALTER TABLE "users" DROP COLUMN IF EXISTS "rest_days";

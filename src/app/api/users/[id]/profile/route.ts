@@ -23,6 +23,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         id: true, name: true, email: true, role: true, status: true,
         lastLoginAt: true, createdAt: true, phone: true, commissionRate: true,
         companyId: true,
+        // The field on the screen was writeable and never read back: it
+        // saved, and then opened empty the next time somebody looked, so
+        // nobody could tell whether it had been set at all.
+        commissionCurrency: true,
+        // When they start and hand over, and their rest days. Null means
+        // the country's — and the screen says so rather than showing 09:00
+        // as though somebody had chosen it.
+        shiftStart: true, shiftEnd: true, restDays: true,
         assignedBy: { select: { name: true } },
       },
     });

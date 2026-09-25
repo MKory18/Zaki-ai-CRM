@@ -1,0 +1,177 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Clock4 } from 'lucide-react';
+
+/**
+ * WHEN THIS PERSON STARTS, AND WHEN THEY HAND OVER.
+ *
+ * Lateness was measured against the COUNTRY's work hours — right for a shop
+ * where everybody comes at nine, and wrong for every shop that has ever run
+ * two shifts. Somebody whose day genuinely begins at noon read as three
+ * hours late every day of their life, and once a deduction is built on that
+ * figure the mistake stops being cosmetic.
+ *
+ * Both boxes empty means the country's hours, which is what everybody has
+ * today: setting a shift is a deliberate act, and until somebody performs
+ * it nothing about their record moves.
+ *
+ * Rest days are here for the same reason. A night shift does not rest on
+ * the country's weekend, and a day somebody is not expected in must never
+ * be counted as a day they were late.
+ */
+
+const DAYS = [
+  { n: 0, ar: 'الأحد' },
+  { n: 1, ar: 'الاثنين' },
+  { n: 2, ar: 'الثلاثاء' },
+  { n: 3, ar: 'الأربعاء' },
+  { n: 4, ar: 'الخميس' },
+  { n: 5, ar: 'الجمعة' },
+  { n: 6, ar: 'السبت' },
+];
+
+const FIELD =
+  'h-9 rounded-lg border border-[#e3e8ef] bg-white px-2 text-xs text-[#364152] outline-none focus:border-[#b8256e] disabled:bg-[#f8fafc]';
+
+export function UserShift({
+  userId,
+  initial,
+  canEdit,
+}: {
+  userId: string;
+  initial: { shiftStart: string | null; shiftEnd: string | null; restDays: string | null };
+  canEdit: boolean;
+}) {
+  const [start, setStart] = useState(initial.shiftStart ?? '');
+  const [end, setEnd] = useState(initial.shiftEnd ?? '');
+  const [rest, setRest] = useState<number[] | null>(
+    initial.restDays === null ? null : initial.restDays.split(',').filter(Boolean).map(Number)
+  );
+  const [saved, setSaved] = useState(JSON.stringify(initial));
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const current = JSON.stringify({
+    shiftStart: start || null,
+    shiftEnd: end || null,
+    restDays: rest === null ? null : rest.slice().sort((a, b) => a - b).join(','),
+  });
+  const changed = current !== saved;
+  // Refused here as well as on the server, so the person is told before
+  // they press rather than after.
+  const inverted = !!start && !!end && end <= start;
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'updateContact',
+          shiftStart: start || null,
+          shiftEnd: end || null,
+          restDays: rest === null ? null : rest.join(','),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'تعذّر الحفظ');
+      setSaved(current);
+      setMsg({ ok: true, text: 'حُفظ.' });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر الحفظ' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const toggleDay = (n: number) => {
+    const now = rest ?? [];
+    setRest(now.includes(n) ? now.filter((d) => d !== n) : [...now, n]);
+  };
+
+  return (
+    <div className="col-span-full rounded-xl bg-[#f8fafc] px-3 py-2.5">
+      <p className="mb-1.5 flex items-center gap-1 text-[10px] text-[#9ca3af]">
+        <Clock4 className="h-3 w-3" /> الدوام
+      </p>
+
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="block">
+          <span className="mb-0.5 block text-[10px] text-[#697586]">يبدأ</span>
+          <input
+            type="time"
+            value={start}
+            disabled={!canEdit}
+            onChange={(e) => setStart(e.target.value)}
+            className={FIELD}
+            dir="ltr"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-0.5 block text-[10px] text-[#697586]">يسلّم</span>
+          <input
+            type="time"
+            value={end}
+            disabled={!canEdit}
+            onChange={(e) => setEnd(e.target.value)}
+            className={FIELD}
+            dir="ltr"
+          />
+        </label>
+
+        {canEdit && (
+          <button
+            type="button"
+            onClick={save}
+            disabled={busy || !changed || inverted}
+            className="h-9 rounded-lg bg-[#b8256e] px-3 text-xs font-medium text-white disabled:opacity-50"
+          >
+            {busy ? 'جارٍ…' : 'احفظ'}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-2">
+        <span className="mb-1 block text-[10px] text-[#697586]">
+          أيام الراحة{' '}
+          {rest === null && <span className="text-[#9aa4b2]">— عطلة البلد</span>}
+        </span>
+        <div className="flex flex-wrap gap-1">
+          {DAYS.map((d) => (
+            <button
+              key={d.n}
+              type="button"
+              disabled={!canEdit}
+              onClick={() => toggleDay(d.n)}
+              className={`rounded border px-1.5 py-0.5 text-[10px] ${
+                rest?.includes(d.n)
+                  ? 'border-[#b8256e] bg-[#fdf2f7] text-[#b8256e]'
+                  : 'border-[#e3e8ef] bg-white text-[#697586]'
+              } disabled:opacity-60`}
+            >
+              {d.ar}
+            </button>
+          ))}
+          {canEdit && rest !== null && (
+            <button
+              type="button"
+              onClick={() => setRest(null)}
+              className="rounded px-1.5 py-0.5 text-[10px] text-[#9aa4b2] hover:text-[#b8256e]"
+            >
+              أعد عطلة البلد
+            </button>
+          )}
+        </div>
+      </div>
+
+      {inverted && <p className="mt-1 text-[10px] text-[#fb323f]">وقت التسليم يجب أن يكون بعد وقت البدء.</p>}
+      {!inverted && !start && !end && rest === null && (
+        <p className="mt-1 text-[10px] text-[#9aa4b2]">فارغ = ساعات البلد وعطلته. التأخير يُقاس بما هنا.</p>
+      )}
+      {msg && <p className={`mt-1 text-[10px] ${msg.ok ? 'text-[#00a344]' : 'text-[#fb323f]'}`}>{msg.text}</p>}
+    </div>
+  );
+}

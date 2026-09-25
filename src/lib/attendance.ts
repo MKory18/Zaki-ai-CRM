@@ -1,5 +1,6 @@
 import { db } from './db';
 import { zonedParts, type BusinessCalendar } from './business-calendar';
+import { shiftCalendar, type PersonShift } from './employee-shift';
 
 /**
  * WHO CAME, WHEN, AND FOR HOW LONG.
@@ -17,9 +18,13 @@ import { zonedParts, type BusinessCalendar } from './business-calendar';
  * a meeting. So both are reported, and the distance between them is the
  * thing a manager actually wants to see.
  *
- * LATENESS is measured against the country's own work hours, in the
- * country's own timezone. A day nobody arrived at all is absent, not late:
- * counting an off day as infinitely late would drown every real figure.
+ * LATENESS is measured against THIS PERSON's shift where they have one,
+ * and the country's work hours where they do not — in the country's own
+ * timezone either way. Somebody whose shift starts at noon measured against
+ * a nine o'clock country is three hours late every day of their life, and
+ * every figure built on that is wrong in the same direction. A day nobody
+ * arrived at all is absent, not late: counting an off day as infinitely
+ * late would drown every real figure.
  *
  * Nothing here is stored. Every number is derived from the marks and the
  * shift, so changing the work hours corrects the history rather than
@@ -149,10 +154,16 @@ export async function attendance(input: {
   storeId: string;
   userIds: string[];
   calendar: BusinessCalendar;
+  /**
+   * Each person's own hours, where they have them. Absent or missing a
+   * person means the country's — which is what everybody had before shifts
+   * existed, so nothing moves until one is set.
+   */
+  shifts?: Map<string, PersonShift>;
   start: Date;
   end: Date;
 }): Promise<Map<string, AttendanceRow>> {
-  const { companyId, storeId, userIds, calendar, start, end } = input;
+  const { companyId, storeId, userIds, calendar, shifts, start, end } = input;
   const result = new Map<string, AttendanceRow>();
   if (userIds.length === 0) return result;
 
@@ -179,9 +190,15 @@ export async function attendance(input: {
     }),
   ]);
 
-  const shiftStart = hhmm(calendar.workHoursStart, 9 * 60);
-  const shiftEnd = hhmm(calendar.workHoursEnd, 17 * 60);
-  const weekend = new Set(calendar.weekendDays ?? []);
+  /** The hours THIS person is judged by: their own, or the country's. */
+  const shiftOf = (userId: string) => {
+    const cal = shiftCalendar(shifts?.get(userId), calendar);
+    return {
+      start: hhmm(cal.workHoursStart, 9 * 60),
+      end: hhmm(cal.workHoursEnd, 17 * 60),
+      weekend: new Set(cal.weekendDays ?? []),
+    };
+  };
 
   // user → date → the day being assembled.
   const byUser = new Map<string, Map<string, DayRow>>();
@@ -235,6 +252,7 @@ export async function attendance(input: {
 
   for (const userId of userIds) {
     const days = [...(byUser.get(userId)?.values() ?? [])].sort((a, b) => a.date.localeCompare(b.date));
+    const shift = shiftOf(userId);
 
     let daysLate = 0;
     let totalLate = 0;
@@ -271,15 +289,15 @@ export async function attendance(input: {
         // A weekend day worked is extra, never late: the shift does not
         // start on a day that is not a work day.
         const p = zonedParts(day.arrivedAt, calendar.timezone);
-        if (!weekend.has(p.weekday)) {
-          const late = localMinutes(day.arrivedAt, calendar.timezone) - shiftStart;
+        if (!shift.weekend.has(p.weekday)) {
+          const late = localMinutes(day.arrivedAt, calendar.timezone) - shift.start;
           day.lateMinutes = Math.max(0, late);
           if (day.lateMinutes > 0) {
             daysLate++;
             totalLate += day.lateMinutes;
             if (day.arrivalFromWork) daysLateEstimated++;
           }
-          if (day.leftAt && localMinutes(day.leftAt, calendar.timezone) < shiftEnd) {
+          if (day.leftAt && localMinutes(day.leftAt, calendar.timezone) < shift.end) {
             day.leftEarly = true;
           }
         }

@@ -220,6 +220,18 @@ model User {
   avatar            String?
   commissionRate    Float     @default(0.0)
   status            String    @default("PENDING") // PENDING, ACTIVE, SUSPENDED, DISABLED
+  /// When this person starts and hands over, as "HH:mm" in the country's
+  /// timezone. NULL means the country's own work hours — so nothing changes
+  /// for anybody until a shift is set on purpose.
+  ///
+  /// Lateness, early leaving and every penalty built on them are measured
+  /// against THESE. Measuring a noon shift against a nine o'clock country
+  /// makes somebody three hours late every day of their life.
+  shiftStart        String?   @map("shift_start") @db.VarChar(5)
+  shiftEnd          String?   @map("shift_end") @db.VarChar(5)
+  /// Their rest days as comma-separated weekday numbers (0 = Sunday).
+  /// NULL = the country's weekend. A night shift does not rest on Friday.
+  restDays          String?   @map("rest_days")
   tokenVersion      Int       @default(0)
   lastLoginAt       DateTime?
   assignedById      String?

@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { ScoreCard } from '@/components/performance/ScoreCard';
+import { UserShift } from '@/components/screens/users/UserShift';
 import {
   PERMISSION_MODULES,
   MODULE_LABELS,
@@ -221,6 +222,20 @@ export function UserDetailScreen() {
                 <UserCommissionCurrency
                   userId={userId}
                   initial={user.commissionCurrency ?? null}
+                  canEdit={userCan(currentUser, 'users.edit')}
+                />
+              )}
+              {/* When they start and when they hand over. Lateness — and
+                  anything deducted for it — is measured against these, not
+                  against the country's nine o'clock. */}
+              {userId && (
+                <UserShift
+                  userId={userId}
+                  initial={{
+                    shiftStart: user.shiftStart ?? null,
+                    shiftEnd: user.shiftEnd ?? null,
+                    restDays: user.restDays ?? null,
+                  }}
                   canEdit={userCan(currentUser, 'users.edit')}
                 />
               )}

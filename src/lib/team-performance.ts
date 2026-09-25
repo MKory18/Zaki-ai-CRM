@@ -79,7 +79,7 @@ export interface TeamPerformance {
 }
 
 /** The middle value, rounded. Empty gives null rather than a lying zero. */
-function median(values: number[]): number | null {
+export function median(values: number[]): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = sorted.length >> 1;

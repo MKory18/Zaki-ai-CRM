@@ -5,6 +5,8 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { getDateRange, type DateFilter } from '@/lib/analytics';
 import { teamPerformance } from '@/lib/team-performance';
 import { attendance } from '@/lib/attendance';
+import { db } from '@/lib/db';
+import type { PersonShift } from '@/lib/employee-shift';
 
 /**
  * GET /api/orders/confirmation/team?period=&startDate=&endDate=
@@ -46,16 +48,22 @@ export async function GET(req: Request) {
 
     // Attendance rides along on the same window, for the same people. Two
     // requests for one table would let the halves disagree about the dates.
+    const userIds = result.employees.map((e) => e.id);
+    // Each person's own hours, where they have them. Without these the
+    // lateness column measures a noon shift against a nine o'clock country
+    // and reports three hours late, every day, forever.
+    const shifts = new Map<string, PersonShift>(
+      (
+        await db.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, shiftStart: true, shiftEnd: true, restDays: true },
+        })
+      ).map((u) => [u.id, { shiftStart: u.shiftStart, shiftEnd: u.shiftEnd, restDays: u.restDays }])
+    );
+
     const marks =
       start && end
-        ? await attendance({
-            companyId,
-            storeId,
-            userIds: result.employees.map((e) => e.id),
-            calendar,
-            start,
-            end,
-          })
+        ? await attendance({ companyId, storeId, userIds, calendar, shifts, start, end })
         : new Map();
 
     return NextResponse.json({

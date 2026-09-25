@@ -3,6 +3,8 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
+import { businessMinutesBetween } from '@/lib/business-calendar';
+import { median } from '@/lib/team-performance';
 
 
 /**
@@ -16,7 +18,7 @@ import { can } from '@/lib/authorization';
  */
 export async function GET(req: Request) {
   try {
-    const { user, companyId, storeId } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     const { searchParams } = new URL(req.url);
     const requestedEmployeeId = searchParams.get('employeeId')?.trim();
     const scope = searchParams.get('scope') || 'me';
@@ -80,19 +82,32 @@ export async function GET(req: Request) {
     const confirmationRate = processed > 0 ? Number(((confirmed / processed) * 100).toFixed(1)) : null;
     const avgAttempts = claimed > 0 ? Number((attemptsAgg / claimed).toFixed(2)) : null;
 
-    const avgConfirmHours =
-      confirmedWithTime.length > 0
-        ? Number(
-            (
-              confirmedWithTime.reduce(
-                (acc, o) => acc + (new Date(o.confirmedAt!).getTime() - new Date(o.claimedAt!).getTime()),
-                0
-              ) /
-              confirmedWithTime.length /
-              (60 * 60 * 1000)
-            ).toFixed(1)
-          )
-        : null;
+    /**
+     * How long it takes this person to confirm, in WORKING minutes.
+     *
+     * It used to be wall-clock hours, which charged an agent for every
+     * night, weekend and holiday that happened to fall between pulling an
+     * order and calling about it. An order claimed at five on a Thursday
+     * and confirmed at ten on Saturday read as forty-one hours of somebody
+     * being slow; it is one working hour.
+     *
+     * That also made this endpoint disagree with the team screen and the
+     * performance score, which have always counted business minutes — two
+     * numbers for one person's week, and an argument nobody could settle.
+     * This is the reading that survives; the same calendar, the same
+     * median, from the same function.
+     */
+    const calendar = {
+      workHoursStart: country.workHoursStart,
+      workHoursEnd: country.workHoursEnd,
+      weekendDays: country.weekendDays,
+      timezone: country.timezone,
+    };
+    const medianConfirmMinutes = median(
+      confirmedWithTime.map((o) =>
+        businessMinutesBetween(new Date(o.claimedAt!), new Date(o.confirmedAt!), calendar)
+      )
+    );
 
     // Today's action counts (claimed orders acted on today)
     const startOfToday = new Date();
@@ -116,7 +131,7 @@ export async function GET(req: Request) {
         claimed, inProgress, processed, confirmed, rejected, noAnswer,
         followUpsCompleted: followUpsDue,
         avgAttemptsPerOrder: avgAttempts,
-        avgConfirmationHours: avgConfirmHours,
+        medianConfirmMinutes,
         confirmationRate, // confirmed/processed % — NEW untouched not counted
         pendingWorkload: inProgress,
         today: { confirmedToday, rejectedToday, contactedToday, noAnswerToday },
@@ -124,6 +139,8 @@ export async function GET(req: Request) {
       definitions: {
         processed: 'orders that reached CONFIRMED or REJECTED (untouched NEW not counted)',
         confirmationRate: 'confirmed / processed',
+        medianConfirmMinutes:
+          'typical WORKING minutes from claim to confirmation — the company calendar, not wall clock',
       },
     });
   } catch (error: any) {

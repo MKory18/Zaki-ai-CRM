@@ -9,6 +9,7 @@ import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { isPrivilegedRoleName } from '@/lib/role-names';
 import { canConferRole } from '@/lib/user-permissions';
+import { parseHhMm, parseRestDays } from '@/lib/employee-shift';
 
 /**
  * PATCH /api/users/:id — admin actions on a user account:
@@ -205,6 +206,34 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         // Empty means the store's own currency, which is how it always was.
         updateData.commissionCurrency = raw || null;
       }
+
+      // WHEN THIS PERSON STARTS, AND WHEN THEY HAND OVER.
+      //
+      // Lateness was measured against the COUNTRY's hours, so somebody
+      // whose shift genuinely starts at noon read as three hours late every
+      // day — and every figure built on that, now including a deduction,
+      // was wrong in the same direction. Empty means the country's, which
+      // is what everybody had before this existed.
+      if ('shiftStart' in body || 'shiftEnd' in body) {
+        const from = parseHhMm(body.shiftStart);
+        const to = parseHhMm(body.shiftEnd);
+        if (body.shiftStart && !from) {
+          return NextResponse.json({ error: 'وقت البدء بصيغة HH:mm' }, { status: 400 });
+        }
+        if (body.shiftEnd && !to) {
+          return NextResponse.json({ error: 'وقت التسليم بصيغة HH:mm' }, { status: 400 });
+        }
+        // Refused rather than silently ignored: a shift saved and not
+        // applied is worse than one refused, because nobody goes back to
+        // check a field that reported success.
+        if (from && to && to <= from) {
+          return NextResponse.json({ error: 'وقت التسليم يجب أن يكون بعد وقت البدء' }, { status: 400 });
+        }
+        updateData.shiftStart = from;
+        updateData.shiftEnd = to;
+      }
+      if ('restDays' in body) updateData.restDays = parseRestDays(body.restDays);
+
       auditAction = 'USER_CONTACT_UPDATED';
     } else if (action === 'delete') {
       if (target.id === admin.id) {
@@ -253,7 +282,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         email: target.email,
         role: target.role,
         status: target.status,
-        ...(action === 'updateContact' ? { phone: target.phone, commissionCurrency: target.commissionCurrency } : {}),
+        ...(action === 'updateContact'
+          ? {
+              phone: target.phone,
+              commissionCurrency: target.commissionCurrency,
+              shiftStart: target.shiftStart,
+              shiftEnd: target.shiftEnd,
+              restDays: target.restDays,
+            }
+          : {}),
       },
       newData: {
         user: updated.name,
