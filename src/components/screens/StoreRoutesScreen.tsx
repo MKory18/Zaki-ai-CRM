@@ -1,0 +1,266 @@
+'use client';
+
+import React, { useCallback, useEffect, useState } from 'react';
+import { Signpost, Loader2, Plus, Trash2, Check, Power, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Input';
+import { useConfirm } from '@/components/ui/Confirm';
+import { apiJson } from '@/lib/api-client';
+
+/**
+ * OLD ADDRESSES THAT STILL ARRIVE.
+ *
+ * The screen leads with the SUGGESTIONS, because a suggestion nobody has
+ * looked at is an advertisement still landing on a 404 — the clicks are
+ * already paid for. Each says what changed and offers the two answers: yes,
+ * forward it; or no, the old address should stop working.
+ *
+ * 301 versus 302 is explained where it is chosen, not in a manual. A 301 is
+ * cached hard by browsers and search engines, so a wrong one is close to
+ * unrecoverable on the machines that took it.
+ */
+
+interface RedirectRow {
+  id: string;
+  from: string;
+  to: string;
+  kind: 301 | 302;
+  hits: number;
+  isActive: boolean;
+  suggested: boolean;
+}
+
+const CARD = 'rounded-xl border border-[#e3e8ef] bg-white p-3';
+
+export function StoreRoutesScreen() {
+  const confirm = useConfirm();
+  const [rows, setRows] = useState<RedirectRow[]>([]);
+  const [adding, setAdding] = useState<{ from: string; to: string; kind: 301 | 302 } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiJson<{ redirects: RedirectRow[] }>('/api/store/redirects');
+      setRows(data.redirects);
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر التحميل' });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  async function call(fn: () => Promise<unknown>, okText?: string) {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await fn();
+      if (okText) setMsg({ ok: true, text: okText });
+      await load();
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر التنفيذ' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const accept = (row: RedirectRow) =>
+    call(
+      () => apiJson(`/api/store/redirects/${row.id}`, { method: 'PATCH', body: JSON.stringify({ accept: true }) }),
+      'صار التحويل يعمل'
+    );
+
+  const toggle = (row: RedirectRow) =>
+    call(() =>
+      apiJson(`/api/store/redirects/${row.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive: !row.isActive }),
+      })
+    );
+
+  async function dismiss(row: RedirectRow) {
+    const ok = await confirm({
+      title: row.suggested ? 'تجاهل هذا الاقتراح؟' : `حذف التحويل من ${row.from}؟`,
+      body: row.suggested
+        ? 'العنوان القديم سيبقى يعطي «غير موجود» لكل من يفتحه — وهذا هو المطلوب إن كنت غيّرت الرابط لتهرب من حملة.'
+        : 'كل من يفتح العنوان القديم سيحصل على «غير موجود» بدل أن يُحوَّل.',
+      tone: 'danger',
+      confirmLabel: row.suggested ? 'تجاهل' : 'احذف',
+    });
+    if (!ok) return;
+    await call(() => apiJson(`/api/store/redirects/${row.id}`, { method: 'DELETE' }));
+  }
+
+  const add = () =>
+    adding &&
+    call(async () => {
+      await apiJson('/api/store/redirects', { method: 'POST', body: JSON.stringify(adding) });
+      setAdding(null);
+    }, 'أُضيف التحويل');
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
+        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+      </div>
+    );
+  }
+
+  const suggestions = rows.filter((r) => r.suggested);
+  const live = rows.filter((r) => !r.suggested);
+
+  return (
+    <div className="space-y-4 p-4 sm:p-6" dir="rtl">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
+            <Signpost className="h-5 w-5 text-[#b8256e]" />
+            المسارات
+          </h1>
+          <p className="mt-0.5 text-xs text-[#697586]">
+            عنوان قديم ما زال يأتيك منه زوّار — إلى أين تُرسلهم.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {msg && (
+            <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
+              {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
+              {msg.text}
+            </span>
+          )}
+          <Button size="sm" disabled={busy || !!adding} onClick={() => setAdding({ from: '/lp/', to: '/lp/', kind: 302 })}>
+            <Plus className="h-3.5 w-3.5" /> تحويل جديد
+          </Button>
+        </div>
+      </header>
+
+      {/* The decision that is costing money while it waits. */}
+      {suggestions.length > 0 && (
+        <section className="space-y-2 rounded-xl border border-[#f59e0b]/40 bg-[#f59e0b]/10 p-3">
+          <p className="flex items-center gap-1.5 text-xs font-bold text-[#92400e]">
+            <Sparkles className="h-3.5 w-3.5" />
+            {suggestions.length === 1 ? 'اقتراح ينتظر قرارك' : `${suggestions.length} اقتراحات تنتظر قرارك`}
+          </p>
+          <p className="text-[11px] leading-relaxed text-[#92400e]">
+            غيّرتَ رابط صفحة، والإعلان ما زال يشير إلى القديم. كل نقرة عليه مدفوعة سلفاً وتصل الآن إلى
+            «غير موجود». حوّلها، أو تجاهل الاقتراح إن كنت تريد للعنوان القديم أن يتوقف.
+          </p>
+          {suggestions.map((row) => (
+            <div key={row.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-white p-2.5">
+              <code className="text-[11px] text-[#697586]" dir="ltr">{row.from}</code>
+              <span className="text-[#9aa4b2]">←</span>
+              <code className="text-[11px] font-semibold text-[#121926]" dir="ltr">{row.to}</code>
+              <div className="ms-auto flex items-center gap-1.5">
+                <Button size="sm" disabled={busy} onClick={() => void accept(row)}>حوّلها</Button>
+                <Button variant="secondary" size="sm" disabled={busy} onClick={() => void dismiss(row)}>تجاهل</Button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {adding && (
+        <div className={CARD}>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-[#121926]">من (المسار القديم)</span>
+              <Input dir="ltr" maxLength={200} value={adding.from} onChange={(e) => setAdding({ ...adding, from: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-[#121926]">إلى</span>
+              <Input dir="ltr" maxLength={300} value={adding.to} onChange={(e) => setAdding({ ...adding, to: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-[#121926]">النوع</span>
+              <Select
+                value={String(adding.kind)}
+                onChange={(e) => setAdding({ ...adding, kind: Number(e.target.value) === 301 ? 301 : 302 })}
+              >
+                <option value="302">٣٠٢ — مؤقّت</option>
+                <option value="301">٣٠١ — دائم</option>
+              </Select>
+            </label>
+          </div>
+          <p className="mt-2 text-[10.5px] leading-relaxed text-[#9aa4b2]">
+            ٣٠٢ مؤقّت ويمكن الرجوع عنه في أي وقت. ٣٠١ دائم، وتحفظه المتصفحات ومحرّكات البحث مدّة طويلة —
+            فالخطأ فيه يصعب التراجع عنه على الأجهزة التي حفظته. ابدأ بـ٣٠٢ إن لم تكن واثقاً.
+          </p>
+          <div className="mt-2 flex items-center justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setAdding(null)}>إلغاء</Button>
+            <Button size="sm" disabled={busy} onClick={() => void add()}>أضف</Button>
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-xl border border-[#e3e8ef] bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-[#f8fafc] text-xs text-[#697586]">
+              <th className="px-3 py-2.5 text-start">من</th>
+              <th className="px-3 py-2.5 text-start">إلى</th>
+              <th className="px-3 py-2.5 text-start">النوع</th>
+              <th className="px-3 py-2.5 text-start">الزيارات</th>
+              <th className="px-3 py-2.5 text-start">الحالة</th>
+              <th className="px-3 py-2.5 text-start">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {live.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-3 py-6 text-center text-xs text-[#9aa4b2]">
+                  لا تحويلات بعد.
+                </td>
+              </tr>
+            )}
+            {live.map((row) => (
+              <tr key={row.id} className="border-t border-[#e3e8ef]">
+                <td className="px-3 py-2.5" dir="ltr"><code className="text-[11px]">{row.from}</code></td>
+                <td className="px-3 py-2.5" dir="ltr"><code className="text-[11px]">{row.to}</code></td>
+                <td className="px-3 py-2.5 tabular-nums text-xs">{row.kind}</td>
+                <td className="px-3 py-2.5 tabular-nums text-xs" title="تقديري — لا يُحتسب على حساب سرعة التحويل">
+                  {row.hits.toLocaleString('ar')}
+                </td>
+                <td className="px-3 py-2.5">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    row.isActive ? 'bg-[#00a651]/10 text-[#00a651]' : 'bg-[#eef2f6] text-[#697586]'
+                  }`}>
+                    {row.isActive ? 'يعمل' : 'موقوف'}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void toggle(row)}
+                      title={row.isActive ? 'أوقفه' : 'شغّله'}
+                      className="rounded-lg p-1.5 text-[#364152] hover:bg-[#eef2f6] disabled:opacity-40"
+                    >
+                      <Power className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void dismiss(row)}
+                      title="حذف"
+                      className="rounded-lg p-1.5 text-[#fb323f] hover:bg-[#fb323f]/10 disabled:opacity-40"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[10.5px] text-[#9aa4b2]">
+        عدد الزيارات تقديري: يُحتسب بعد إرسال الزائر، فلا ينتظر أحد على عدّاد.
+      </p>
+    </div>
+  );
+}

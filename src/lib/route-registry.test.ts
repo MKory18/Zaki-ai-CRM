@@ -24,16 +24,16 @@ describe('navigation contract', () => {
     ]);
   });
 
-  it('lists 55 unique routes', () => {
+  it('lists 56 unique routes', () => {
     // 52 until /ops/labels was folded into the shipping batches screen:
     // printing, the sizes and the courier CSV all live where the batch is.
-    // 55 with /store/themes, /store/menus and /store/pages. A screen is
-    // registered when it is real — the
+    // 56 with the store section's four live screens. A screen is registered
+    // when it is real — the
     // store section's remaining screens join this count as they ship, and
     // nothing here renders "قيد الإنشاء".
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(55);
-    expect(new Set(paths).size).toBe(55);
+    expect(paths).toHaveLength(56);
+    expect(new Set(paths).size).toBe(56);
   });
 
   it('the store section is its own group, and reads as one', () => {

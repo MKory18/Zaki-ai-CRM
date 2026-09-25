@@ -1503,6 +1503,7 @@ model Store {
   notifications   Notification[]
   pages           StorePage[]
   menus           StoreMenu[]
+  redirects       StoreRedirect[]
 
   @@unique([companyId, slug])
   @@unique([domain])
@@ -1518,6 +1519,37 @@ model Store {
 /// may want. The three legal ones are created with every store, because
 /// their absence stops an advertising account's review — a shop cannot
 /// discover on the day of the campaign that it has no privacy policy.
+/// An old address that still arrives.
+///
+/// A seller renames a landing page's slug while an ad is running on the old
+/// one; every already-paid click then lands on a 404. A rename SUGGESTS one
+/// of these (suggested = true) and the seller accepts or dismisses it —
+/// because a slug changed to get AWAY from a campaign must not forward.
+model StoreRedirect {
+  id        String   @id @default(uuid())
+  companyId String
+  storeId   String
+  /// The old path, e.g. /lp/winter-offer. No query, no fragment.
+  from      String
+  /// A path here, or an absolute http(s) URL.
+  to        String
+  /// 301 (moved for good, cached hard) or 302 (for now). Default 302.
+  kind      Int      @default(302)
+  /// Best-effort: counted without blocking the customer's redirect.
+  hits      Int      @default(0)
+  isActive  Boolean  @default(true)
+  /// Raised by a slug change and not yet decided. Suggestions do not forward.
+  suggested Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, from])
+  @@index([isActive, suggested])
+  @@map("store_redirects")
+}
+
 /// One of a shop's five menus: the header bar, the main menu, the footer,
 /// "about", and the policies.
 ///

@@ -2,6 +2,7 @@ import { SELLING_PAGE_HEADERS } from '@/lib/csp';
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { hostSite, inHostScope } from '@/lib/landing-domain';
+import { countRedirectHit, redirectFor } from '@/lib/store-redirects';
 
 let cachedJwtSecret: Uint8Array | null = null;
 function getJwtSecret(): Uint8Array {
@@ -116,6 +117,34 @@ export async function proxy(req: Request) {
   // The app's own public files (/fonts/…: the self-hosted faces a page may
   // use) are the same on every host; rewriting them under the page's path
   // made them 404 on a seller's domain.
+  // ── An old address that still arrives ──
+  //
+  // A slug renamed while an advertisement was running leaves every
+  // already-paid click landing on a 404. The seller's accepted redirects
+  // forward them instead. Only the two public spaces are consulted, and
+  // only for a GET: a redirect must never swallow an order being posted.
+  //
+  // Suggestions do not forward — redirectFor filters them — so a rename
+  // never silently changes where a live address goes.
+  if ((pathname.startsWith('/lp/') || pathname.startsWith('/s/')) && req.method === 'GET') {
+    const hop = await redirectFor(pathname);
+    if (hop) {
+      countRedirectHit(hop.id); // best-effort; the customer never waits on it
+      const target = new URL(req.url);
+      if (hop.to.startsWith('/')) {
+        target.pathname = hop.to;
+      } else {
+        // An absolute destination replaces the address entirely, but the
+        // campaign code the ad appended is what tells the shop which ad
+        // this sale came from, so the query is carried across.
+        const away = new URL(hop.to);
+        for (const [k, v] of target.searchParams) if (!away.searchParams.has(k)) away.searchParams.set(k, v);
+        return NextResponse.redirect(away, hop.kind);
+      }
+      return NextResponse.redirect(target, hop.kind);
+    }
+  }
+
   if (!pathname.startsWith('/api/') && !pathname.startsWith('/_next/') && !pathname.startsWith('/fonts/')) {
     const site = await hostSite(req.headers.get('host'));
     if (site) {

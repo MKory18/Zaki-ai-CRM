@@ -10,7 +10,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * and every public page was answered with a 302 to /login for its own font.
  */
 
-const { hostSite } = vi.hoisted(() => ({ hostSite: vi.fn() }));
+const { hostSite, redirectFor, countRedirectHit } = vi.hoisted(() => ({
+  hostSite: vi.fn(),
+  redirectFor: vi.fn(),
+  countRedirectHit: vi.fn(),
+}));
+vi.mock('@/lib/store-redirects', () => ({ redirectFor, countRedirectHit }));
 vi.mock('@/lib/landing-domain', async (orig) => ({
   ...(await orig<typeof import('@/lib/landing-domain')>()),
   hostSite,
@@ -25,9 +30,62 @@ const get = (path: string, host = 'app.example.com', cookie?: string) =>
     })
   );
 
+const post = (path: string) =>
+  proxy(new Request(`https://app.example.com${path}`, { method: 'POST', headers: { host: 'app.example.com' } }));
+
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   hostSite.mockResolvedValue(null); // the app's own hostname
+  redirectFor.mockResolvedValue(null); // no old address claims this path
+});
+
+/**
+ * AN ADDRESS AN ADVERTISEMENT STILL POINTS AT.
+ *
+ * The clicks are already paid for. These pin that the forward happens, that
+ * it carries the campaign code (without which the sale loses its credit),
+ * and that it can never touch an order being posted.
+ */
+describe('an old address that still arrives', () => {
+  it('forwards a renamed landing page, with the status the seller chose', async () => {
+    redirectFor.mockResolvedValue({ id: 'r1', to: '/lp/new', kind: 301 });
+    const res = await get('/lp/old');
+    expect(res.status).toBe(301);
+    expect(new URL(res.headers.get('location')!).pathname).toBe('/lp/new');
+  });
+
+  it('keeps the campaign code, so the sale keeps its credit', async () => {
+    redirectFor.mockResolvedValue({ id: 'r1', to: '/lp/new', kind: 302 });
+    const res = await get('/lp/old?c=ad-7');
+    expect(new URL(res.headers.get('location')!).searchParams.get('c')).toBe('ad-7');
+  });
+
+  it('carries it onto an absolute destination too', async () => {
+    redirectFor.mockResolvedValue({ id: 'r1', to: 'https://elsewhere.example/promo', kind: 302 });
+    const url = new URL((await get('/lp/old?c=ad-7')).headers.get('location')!);
+    expect(url.host).toBe('elsewhere.example');
+    expect(url.searchParams.get('c')).toBe('ad-7');
+  });
+
+  it('counts the hit without the customer waiting on it', async () => {
+    redirectFor.mockResolvedValue({ id: 'r1', to: '/lp/new', kind: 302 });
+    await get('/lp/old');
+    expect(countRedirectHit).toHaveBeenCalledWith('r1');
+  });
+
+  it('never swallows an order being posted', async () => {
+    redirectFor.mockResolvedValue({ id: 'r1', to: '/lp/new', kind: 302 });
+    const res = await post('/lp/old');
+    expect(res.headers.get('location')).toBeNull();
+    expect(redirectFor).not.toHaveBeenCalled();
+  });
+
+  it('is not consulted for the dashboard or the API', async () => {
+    redirectFor.mockResolvedValue({ id: 'r1', to: '/lp/new', kind: 302 });
+    await get('/orders');
+    await get('/api/orders');
+    expect(redirectFor).not.toHaveBeenCalled();
+  });
 });
 
 describe('what a visitor with no session may fetch', () => {

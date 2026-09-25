@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { validateSlug, clampStoredHtml, conversionRate } from '@/lib/landing-pages';
 import { validateDomain, forgetHost, dashboardHosts } from '@/lib/landing-domain';
 import { zodMessage } from '@/lib/zod-message';
+import { forgetRedirects, suggestSlugRedirect } from '@/lib/store-redirects';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -185,6 +186,24 @@ export async function PATCH(req: Request, ctx: Ctx) {
       // domain.ts): its own page by slug, and a store's host every published
       // page of the store. A new slug or a publish change must count at once.
       if (updated.slug !== lp.slug || updated.isPublished !== lp.isPublished) await forgetPageHosts(lp);
+
+      if (updated.slug !== lp.slug) {
+        // ── The advertisement is still pointing at the old address ──
+        // Every click on it is already paid for. Suggest the redirect, and
+        // let the seller decide: a slug changed to get AWAY from a campaign
+        // must not forward, and only they know which case this is.
+        await suggestSlugRedirect({
+          companyId,
+          storeId: lp.storeId,
+          oldSlug: lp.slug,
+          newSlug: updated.slug,
+        });
+        // A LIVE PAGE ALWAYS BEATS A REDIRECT. If this page has just taken a
+        // slug that some old redirect forwards away from, that redirect would
+        // shadow the page it now names — the address would answer with
+        // somewhere else. Stand it down rather than let it win.
+        await standDownRedirectsTo(companyId, updated.slug);
+      }
       await logAudit({
         companyId,
         userId: user.id,
@@ -212,6 +231,22 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const { body, status } = apiError(error);
     return NextResponse.json(body, { status });
   }
+}
+
+/**
+ * A redirect whose `from` is now a live page's address is stood down.
+ *
+ * The page wins: an address that names a page must answer with that page.
+ * Deactivated rather than deleted, so the seller can see what happened and
+ * turn it back on if they meant it.
+ */
+async function standDownRedirectsTo(companyId: string, slug: string) {
+  const from = `/lp/${slug}`;
+  const stood = await db.storeRedirect.updateMany({
+    where: { companyId, from, isActive: true },
+    data: { isActive: false },
+  });
+  if (stood.count > 0) forgetRedirects();
 }
 
 /** Forget the hosts that serve this page: its own domain and its store's. */

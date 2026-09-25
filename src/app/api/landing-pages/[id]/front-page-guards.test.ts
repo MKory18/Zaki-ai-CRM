@@ -13,6 +13,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { db } = vi.hoisted(() => ({
   db: {
     landingPage: { findFirst: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    // A slug change suggests a redirect and stands down any redirect the new
+    // slug would shadow — see src/lib/store-redirects.ts.
+    storeRedirect: { upsert: vi.fn(), updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
     store: { findFirst: vi.fn() },
     product: { findFirst: vi.fn() },
   },
