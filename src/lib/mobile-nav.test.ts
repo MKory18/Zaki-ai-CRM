@@ -157,3 +157,35 @@ describe('nothing scrolls sideways', () => {
     expect(offenders, `تمرير أفقي على ٣٦٠ بكسل:\n${offenders.join('\n')}`).toEqual([]);
   });
 });
+
+/**
+ * THE WIDE TABLES.
+ *
+ * A twelve-column table inside `overflow-hidden` at 360px does not scroll —
+ * it squeezes, until every cell wraps to four lines and one row fills the
+ * phone. Tracking is the screen followed from the field, on a phone, by the
+ * person standing next to the van.
+ *
+ * `Rows` renders the same description twice: a table on a desk, a card per
+ * row in a hand. This checks the screens that most needed it actually use
+ * it, rather than a reviewer having to count `<th>` by eye again.
+ */
+describe('the screens worked from a phone', () => {
+  const FIELD_SCREENS = ['TrackingScreen.tsx', 'DiscountAlertsScreen.tsx'];
+
+  it('render through Rows, not a raw wide table', () => {
+    for (const name of FIELD_SCREENS) {
+      const src = readFileSync(join(process.cwd(), 'src/components/screens', name), 'utf8');
+      expect(src, `${name} still draws its own table`).not.toContain('<table');
+      expect(src, `${name} does not use the shared rows`).toContain('<Rows');
+    }
+  });
+
+  it('and Rows can carry a selection, so a batch screen has no reason to', () => {
+    // Tracking picks orders to collect against. Without this the screen had
+    // to keep its own table for the checkbox column alone.
+    const rows = readFileSync(join(process.cwd(), 'src/components/ui/Rows.tsx'), 'utf8');
+    expect(rows).toContain('selection');
+    expect(rows).toContain('canSelect');
+  });
+});

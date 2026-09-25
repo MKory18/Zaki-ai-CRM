@@ -48,9 +48,24 @@ export interface RowsProps<T> {
   empty?: React.ReactNode;
   /** Rendered under every card and after every table row's cells. */
   actions?: (row: T) => React.ReactNode;
+  /**
+   * Picking rows, for the screens that act on a batch of them.
+   *
+   * `canSelect` decides which rows may be picked at all — a shipment that
+   * is not collectable has no checkbox rather than a checkbox that refuses.
+   * On a phone the checkbox sits in the card's heading, where a thumb is,
+   * instead of in a first column somebody has to aim at.
+   */
+  selection?: {
+    canSelect: (row: T) => boolean;
+    isSelected: (row: T) => boolean;
+    onToggle: (row: T, next: boolean) => void;
+  };
+  /** Marks a row as needing attention — red on the desk, red on the card. */
+  alert?: (row: T) => boolean;
 }
 
-export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions }: RowsProps<T>) {
+export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, selection, alert }: RowsProps<T>) {
   if (rows.length === 0) {
     return (
       <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
@@ -70,6 +85,7 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions }: Ro
         <table className="w-full text-sm">
           <thead className="bg-[var(--sys-surface)] text-xs text-[var(--sys-muted-foreground)]">
             <tr>
+              {selection && <th className="w-10 px-3 py-2" />}
               {columns.map((c) => (
                 <th
                   key={c.key}
@@ -86,8 +102,22 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions }: Ro
               <tr
                 key={keyOf(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={onRowClick ? 'cursor-pointer hover:bg-[var(--sys-surface)]' : undefined}
+                className={`${onRowClick ? 'cursor-pointer hover:bg-[var(--sys-surface)]' : ''} ${
+                  alert?.(row) ? 'bg-[var(--sys-destructive-soft)]/40' : ''
+                }`}
               >
+                {selection && (
+                  <td className="px-3 py-2">
+                    {selection.canSelect(row) && (
+                      <input
+                        type="checkbox"
+                        checked={selection.isSelected(row)}
+                        onChange={(e) => selection.onToggle(row, e.target.checked)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
+                  </td>
+                )}
                 {columns.map((c) => (
                   <td
                     key={c.key}
@@ -109,15 +139,30 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions }: Ro
           <li
             key={keyOf(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
-            className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-3"
+            className={`rounded-[8px] border bg-[var(--sys-card)] p-3 ${
+              alert?.(row)
+                ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]/40'
+                : 'border-[var(--sys-border)]'
+            }`}
           >
-            {titles.length > 0 && (
-              <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--sys-border)] pb-1.5">
-                {titles.map((c) => (
-                  <span key={c.key} className="text-sm font-semibold text-[var(--sys-heading)]">
-                    {c.render(row)}
-                  </span>
-                ))}
+            {(titles.length > 0 || selection) && (
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--sys-border)] pb-1.5">
+                <span className="flex items-center gap-2">
+                  {selection && selection.canSelect(row) && (
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5"
+                      checked={selection.isSelected(row)}
+                      onChange={(e) => selection.onToggle(row, e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  )}
+                  {titles.map((c) => (
+                    <span key={c.key} className="text-sm font-semibold text-[var(--sys-heading)]">
+                      {c.render(row)}
+                    </span>
+                  ))}
+                </span>
               </div>
             )}
 

@@ -126,37 +126,38 @@ export function DiscountAlertsScreen() {
             </p>
           </div>
 
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
-            <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">حسب الموظف</h2>
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-                <tr>
-                  <th className="text-right font-medium px-3 py-2">الموظف</th>
-                  <th className="text-right font-medium px-3 py-2">عدد الطلبات</th>
-                  <th className="text-right font-medium px-3 py-2">إجمالي الخصم</th>
-                  <th className="text-right font-medium px-3 py-2">أكبر نسبة</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--sys-border)]">
-                {data.byPerson.map((p) => (
-                  <tr key={p.id ?? 'unknown'}>
-                    <td className="px-3 py-2 text-[var(--sys-heading)]">{p.name}</td>
-                    <td className="px-3 py-2 tabular-nums text-[var(--sys-foreground)]">{p.orders}</td>
-                    <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)] font-medium">
+          <section className="mb-3">
+            <h2 className="mb-2 px-1 text-sm font-medium text-[var(--sys-heading)]">حسب الموظف</h2>
+            <Rows
+              rows={data.byPerson}
+              keyOf={(p) => p.id ?? 'unknown'}
+              empty="لا خصومات منحها أحد في هذه المدة."
+              columns={[
+                { key: 'name', label: 'الموظف', primary: true, render: (p) => p.name },
+                { key: 'orders', label: 'عدد الطلبات', render: (p) => <span className="tabular-nums">{p.orders}</span> },
+                {
+                  key: 'total',
+                  label: 'إجمالي الخصم',
+                  render: (p) => (
+                    <span className="font-medium tabular-nums text-[var(--sys-destructive)]">
                       {p.total} {data.currency}
-                    </td>
-                    <td
-                      className={`px-3 py-2 tabular-nums ${
-                        p.biggestShare >= data.notableThreshold ? 'text-[var(--sys-destructive)] font-semibold' : 'text-[var(--sys-muted-foreground)]'
-                      }`}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'biggest',
+                  label: 'أكبر نسبة',
+                  render: (p) => (
+                    <span
+                      className={`tabular-nums ${p.biggestShare >= data.notableThreshold ? 'font-semibold text-[var(--sys-destructive)]' : 'text-[var(--sys-muted-foreground)]'}`}
                     >
                       {p.biggestShare}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </span>
+                  ),
+                },
+              ]}
+            />
+          </section>
 
           <section>
             <h2 className="mb-2 px-1 text-sm font-medium text-[var(--sys-heading)]">

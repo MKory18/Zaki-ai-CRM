@@ -9,6 +9,7 @@ import { CollectDialog } from '@/components/screens/tracking/CollectDialog';
 import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /ops/tracking — search by order, reference, barcode, customer or phone.
@@ -230,129 +231,168 @@ export function TrackingScreen() {
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-3 py-2 w-8"> </th>
-                <th className="text-right font-medium px-3 py-2">المرجع</th>
-                <th className="text-right font-medium px-3 py-2">الباركود</th>
-                <th className="text-right font-medium px-3 py-2">العميل</th>
-                <th className="text-right font-medium px-3 py-2">المحافظة</th>
-                <th className="text-right font-medium px-3 py-2">جهة الشحن</th>
-                <th className="text-right font-medium px-3 py-2">حالة الشحن</th>
-                <th className="text-right font-medium px-3 py-2">أيام الشحن</th>
-                <th className="text-right font-medium px-3 py-2">المحاولات</th>
-                <th className="text-right font-medium px-3 py-2">حالة التحصيل</th>
-                <th className="text-right font-medium px-3 py-2">المبلغ</th>
-                <th className="text-right font-medium px-3 py-2"> </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {visible.map((o) => (
-                <tr key={o.id} className={o.late ? 'bg-[var(--sys-destructive-soft)]/40' : ''}>
-                  <td className="px-3 py-2">
-                    {canCollect(o) ? (
-                      <input
-                        type="checkbox"
-                        checked={!!selected[o.id]}
-                        onChange={(e) => setSelected((s) => ({ ...s, [o.id]: e.target.checked }))}
-                      />
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{o.merchantRef ?? o.orderNumber}</td>
-                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]" dir="ltr">{o.trackingNumber ?? '—'}</td>
-                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
-                    <span className="block">{o.customer.fullName}</span>
-                    {/* Reach the customer from the row the parcel is on: the
-                        answer to "where is it" is a message, and retyping
-                        the same sentence forty times a day is where the
-                        wrong order number comes from. */}
-                    <ContactButtons
-                      compact
-                      phone={o.customer.phone}
-                      countryCode={data.dialCode}
-                      context={{
-                        orderNumber: o.merchantRef ?? o.orderNumber,
-                        customerName: o.customer.fullName,
-                        amount: o.totalAmount,
-                        currency: o.currency,
-                        courier: o.deliveryProvider?.name ?? null,
-                        barcode: o.trackingNumber,
-                        region: o.region?.name ?? o.customer.city,
-                      }}
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{o.region?.name ?? o.customer.city}</td>
-                  <td className="px-3 py-2">
-                    {o.deliveryProvider ? (
-                      <span className="inline-flex items-center gap-1 text-[var(--sys-foreground)]">
-                        {o.deliveryProvider.kind === 'AGENT' ? (
-                          <Bike className="w-3.5 h-3.5 text-[var(--sys-primary)]" />
-                        ) : (
-                          <Truck className="w-3.5 h-3.5 text-[var(--sys-muted)]" />
-                        )}
-                        {o.deliveryProvider.name}
-                      </span>
+        <Rows
+          rows={visible}
+          keyOf={(o) => o.id}
+          empty="لا توجد شحنات مطابقة."
+          alert={(o) => o.late}
+          selection={{
+            canSelect: canCollect,
+            isSelected: (o) => !!selected[o.id],
+            onToggle: (o, next) => setSelected((sel) => ({ ...sel, [o.id]: next })),
+          }}
+          columns={[
+            {
+              key: 'ref',
+              label: 'المرجع',
+              primary: true,
+              render: (o) => (
+                <span dir="ltr" className="font-medium text-[var(--sys-heading)]">
+                  {o.merchantRef ?? o.orderNumber}
+                </span>
+              ),
+            },
+            { key: 'customer', label: 'العميل', primary: true, render: (o) => o.customer.fullName },
+            {
+              key: 'barcode',
+              label: 'الباركود',
+              render: (o) => (
+                <span dir="ltr" className="text-[var(--sys-muted-foreground)]">
+                  {o.trackingNumber ?? '—'}
+                </span>
+              ),
+            },
+            {
+              key: 'region',
+              label: 'المحافظة',
+              render: (o) => o.region?.name ?? o.customer.city,
+            },
+            {
+              key: 'courier',
+              label: 'جهة الشحن',
+              render: (o) =>
+                o.deliveryProvider ? (
+                  <span className="inline-flex items-center gap-1 text-[var(--sys-foreground)]">
+                    {o.deliveryProvider.kind === 'AGENT' ? (
+                      <Bike className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
                     ) : (
-                      <span className="text-[var(--sys-muted)]">—</span>
+                      <Truck className="h-3.5 w-3.5 text-[var(--sys-muted)]" />
                     )}
-                  </td>
-                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
-                    {STATUS_LABEL[o.shippingStatus] ?? o.shippingStatus}
-                    {o.deliveryFailureReason && <span className="block text-[11px] text-[var(--sys-destructive)]">{o.deliveryFailureReason}</span>}
-                  </td>
-                  <td className={`px-3 py-2 tabular-nums ${o.late ? 'text-[var(--sys-destructive)] font-semibold' : 'text-[var(--sys-foreground)]'}`}>
-                    {o.daysInTransit ?? '—'}
-                    {o.lateThresholdDays > 0 && <span className="text-[11px] text-[var(--sys-muted)]"> / {o.lateThresholdDays}</span>}
-                    {o.late && o.daysInTransit !== null && (
-                      <span className="block text-[11px] font-medium">{lateLabel(o.daysInTransit)}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    <span className={`tabular-nums ${(o._count?.deliveryAttempts ?? 0) > 1 ? 'text-[var(--sys-destructive)] font-semibold' : 'text-[var(--sys-muted-foreground)]'}`}>
-                      {o._count?.deliveryAttempts ?? 0}
+                    {o.deliveryProvider.name}
+                  </span>
+                ) : (
+                  <span className="text-[var(--sys-muted)]">—</span>
+                ),
+            },
+            {
+              key: 'status',
+              label: 'حالة الشحن',
+              render: (o) => (
+                <>
+                  {STATUS_LABEL[o.shippingStatus] ?? o.shippingStatus}
+                  {o.deliveryFailureReason && (
+                    <span className="block text-[11px] text-[var(--sys-destructive)]">
+                      {o.deliveryFailureReason}
                     </span>
-                    {(o._count?.notes ?? 0) > 0 && (
-                      <span className="text-[var(--sys-muted)] mr-2" title={`${o._count?.notes} ملاحظة`}>
-                        · {o._count?.notes} ملاحظة
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{COLLECTION_LABEL[o.collectionStatus] ?? o.collectionStatus}</td>
-                  <td className="px-3 py-2 tabular-nums" dir="ltr">{o.totalAmount} {o.currency}</td>
-                  <td className="px-3 py-2 text-left whitespace-nowrap">
-                    {['SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.shippingStatus) && (
-                      <button
-                        onClick={() => setDeliverFor(o)}
-                        className="text-xs text-[var(--sys-success)] hover:underline ml-3"
-                        title="سجّل ما استلمه العميل فعلاً — كاملاً أو جزئياً"
-                      >
-                        تسجيل التسليم
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setTransferFor(o)}
-                      className="text-xs text-[var(--sys-primary)] hover:underline"
-                      title={
-                        o.deliveryProvider?.kind === 'AGENT'
-                          ? 'استلام من المندوب وتحويلها لجهة أخرى'
-                          : 'سحب الشحنة وإصدار طلب بديل لجهة أخرى'
-                      }
-                    >
-                      تحويل
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {visible.length === 0 && (
-                <tr>
-                  <td colSpan={12} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">لا توجد شحنات مطابقة.</td>
-                </tr>
+                  )}
+                </>
+              ),
+            },
+            {
+              key: 'days',
+              label: 'أيام الشحن',
+              render: (o) => (
+                <span
+                  className={`tabular-nums ${o.late ? 'font-semibold text-[var(--sys-destructive)]' : 'text-[var(--sys-foreground)]'}`}
+                >
+                  {o.daysInTransit ?? '—'}
+                  {o.lateThresholdDays > 0 && (
+                    <span className="text-[11px] text-[var(--sys-muted)]"> / {o.lateThresholdDays}</span>
+                  )}
+                  {o.late && o.daysInTransit !== null && (
+                    <span className="block text-[11px] font-medium">{lateLabel(o.daysInTransit)}</span>
+                  )}
+                </span>
+              ),
+            },
+            {
+              key: 'attempts',
+              label: 'المحاولات',
+              render: (o) => (
+                <span className="text-xs">
+                  <span
+                    className={`tabular-nums ${(o._count?.deliveryAttempts ?? 0) > 1 ? 'font-semibold text-[var(--sys-destructive)]' : 'text-[var(--sys-muted-foreground)]'}`}
+                  >
+                    {o._count?.deliveryAttempts ?? 0}
+                  </span>
+                  {(o._count?.notes ?? 0) > 0 && (
+                    <span className="mr-2 text-[var(--sys-muted)]"> · {o._count?.notes} ملاحظة</span>
+                  )}
+                </span>
+              ),
+            },
+            {
+              key: 'collection',
+              label: 'حالة التحصيل',
+              render: (o) => COLLECTION_LABEL[o.collectionStatus] ?? o.collectionStatus,
+            },
+            {
+              key: 'amount',
+              label: 'المبلغ',
+              render: (o) => (
+                <span dir="ltr" className="tabular-nums">
+                  {o.totalAmount} {o.currency}
+                </span>
+              ),
+            },
+            {
+              key: 'contact',
+              label: 'تواصل',
+              // On a desk it is a column of small buttons; on a card it is a
+              // row of its own under the actions, where a thumb can hit it.
+              render: (o) => (
+                <ContactButtons
+                  compact
+                  phone={o.customer.phone}
+                  countryCode={data.dialCode}
+                  context={{
+                    orderNumber: o.merchantRef ?? o.orderNumber,
+                    customerName: o.customer.fullName,
+                    amount: o.totalAmount,
+                    currency: o.currency,
+                    courier: o.deliveryProvider?.name ?? null,
+                    barcode: o.trackingNumber,
+                    region: o.region?.name ?? o.customer.city,
+                  }}
+                />
+              ),
+            },
+          ]}
+          actions={(o) => (
+            <>
+              {['SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.shippingStatus) && (
+                <button
+                  onClick={() => setDeliverFor(o)}
+                  className="text-xs text-[var(--sys-success)] hover:underline"
+                  title="سجّل ما استلمه العميل فعلاً — كاملاً أو جزئياً"
+                >
+                  تسجيل التسليم
+                </button>
               )}
-            </tbody>
-          </table>
-        </div>
+              <button
+                onClick={() => setTransferFor(o)}
+                className="text-xs text-[var(--sys-primary)] hover:underline"
+                title={
+                  o.deliveryProvider?.kind === 'AGENT'
+                    ? 'استلام من المندوب وتحويلها لجهة أخرى'
+                    : 'سحب الشحنة وإصدار طلب بديل لجهة أخرى'
+                }
+              >
+                تحويل
+              </button>
+            </>
+          )}
+        />
       )}
 
       {collecting && chosen.length > 0 && (
