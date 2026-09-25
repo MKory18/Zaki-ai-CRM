@@ -97,7 +97,21 @@ export const storeUpdateSchema = z
       .transform((v) => toLatinDigits(v).trim() || null)
       .refine((v) => v === null || /^\+?[\d\s()-]{6,24}$/.test(v), 'رقم هاتف الدعم غير صالح — أرقام فقط، ويمكن أن يبدأ بـ +')
       .nullable(),
-    domain: z.string().trim().max(253).nullable(),
+    // `domain` is deliberately absent, for the same reason as `theme` and
+    // with a sharper edge.
+    //
+    // It was accepted here as a plain string and written straight through,
+    // while the real editor — PATCH /api/store/domain, under
+    // storefront.manage — clears `domainVerifiedAt` whenever the domain
+    // changes and only ever sets it again after a real DNS lookup.
+    //
+    // So an owner who edited the domain on THIS form moved the address and
+    // left the old verification standing: the store then reported itself
+    // verified for a host nobody had checked, and the customer met an error
+    // page while the dashboard showed a tick.
+    //
+    // `.strict()` means a body carrying it is now refused outright rather
+    // than quietly ignored — a form that still sends one finds out.
   })
   .partial()
   .strict();

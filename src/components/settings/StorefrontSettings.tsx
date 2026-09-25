@@ -39,7 +39,6 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
   const [form, setForm] = useState({
     tagline: store.tagline ?? '',
     about: store.about ?? '',
-    domain: store.domain ?? '',
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -50,7 +49,6 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
     setForm({
       tagline: store.tagline ?? '',
       about: store.about ?? '',
-      domain: store.domain ?? '',
     });
   }, [store]);
 
@@ -67,7 +65,6 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           type,
           tagline: form.tagline.trim() || null,
           about: form.about.trim() || null,
-          domain: form.domain.trim(),
         }),
       });
       setMsg({ ok: true, text: 'تم الحفظ' });
@@ -133,13 +130,25 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           value={form.tagline}
           onChange={(e) => setForm({ ...form, tagline: e.target.value })}
         />
-        <Input
-          label="نطاق خاص (اختياري)"
-          dir="ltr"
-          placeholder="shop.example.com"
-          value={form.domain}
-          onChange={(e) => setForm({ ...form, domain: e.target.value })}
-        />
+        {/* The domain is NOT edited here. It has one editor, which checks
+            DNS and re-verifies; this form wrote the address and left the
+            old verification standing, so the dashboard showed a tick for a
+            host nobody had checked while the customer met an error page. */}
+        <div>
+          <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">نطاق خاص</span>
+          <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            {store.domain ? (
+              <span dir="ltr" className="font-medium text-[var(--sys-foreground)]">{store.domain}</span>
+            ) : (
+              'لا نطاق خاص.'
+            )}{' '}
+            يُضبط من{' '}
+            <a href="/store/domain" className="font-medium text-[var(--sys-primary)] hover:underline">
+              شاشة الدومين
+            </a>{' '}
+            — هناك يُفحص الـDNS فعلاً ويُعاد التحقق عند كل تغيير.
+          </p>
+        </div>
       </div>
 
       <div>

@@ -8,7 +8,7 @@ import { commissionCostForOrders } from '@/lib/commission';
 
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId } = await requireContext();
+    const { companyId, storeId, country } = await requireContext();
     await requirePermission('finance.view');
 
     const expenses = await db.expense.findMany({
@@ -51,11 +51,19 @@ export async function GET(req: Request) {
       totalOperationalExpenses;
 
     return NextResponse.json({
+      // The country's own currency. The screen printed "$" beside every
+      // figure in a system that runs Syrian pounds, dinars and Egyptian
+      // pounds side by side.
+      currency: country.currencyCode,
       summary: {
         totalRevenue: Number(totalRevenue.toFixed(2)),
         totalCOGS: Number(totalCOGS.toFixed(2)),
         totalShipping: Number(totalShipping.toFixed(2)),
         totalCommissions: Number(totalCommissions.toFixed(2)),
+        // The two are shown together on the profit screen, so they are
+        // added HERE. Added in the browser they disagreed with the books
+        // the moment either rule changed on this side.
+        shippingAndCommissions: Number((totalShipping + totalCommissions).toFixed(2)),
         totalOperationalExpenses: Number(totalOperationalExpenses.toFixed(2)),
         netProfit: Number(netProfit.toFixed(2)),
         profitMargin:
@@ -76,25 +84,71 @@ export async function POST(req: Request) {
     await requirePermission('finance.create');
 
     const body = await req.json();
-    const { title, category, amount, expenseDate, notes } = body;
+    const { title, category, amount, expenseDate, notes, walletId } = body;
 
     if (!title || !category || !amount) {
-      return NextResponse.json(
-        { error: 'Title, Category, and Amount are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'العنوان والفئة والمبلغ مطلوبة' }, { status: 400 });
     }
 
-    const expense = await db.expense.create({
-      data: {
-        companyId,
-        title: title.trim(),
-        category, // MANUFACTURING, PACKAGING, SHIPPING, MARKETING, COMMISSION, SALARIES, OFFICE, OTHER
-        amount: parseFloat(amount),
-        expenseDate: expenseDate ? new Date(expenseDate) : new Date(),
-        notes: notes?.trim() || null,
-        createdById: user.id,
-      },
+    const value = parseFloat(amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      return NextResponse.json({ error: 'المبلغ رقم موجب' }, { status: 400 });
+    }
+
+    /**
+     * WHICH WALLET THE MONEY LEFT.
+     *
+     * Required. An expense recorded with no wallet was money that had left
+     * the company and existed nowhere in the wallet ledger — so the daily
+     * closing, which compares the drawer against the book balance, showed a
+     * shortfall nobody could explain, and somebody wrote an explanation for
+     * an expense that was already recorded on another screen.
+     */
+    if (!walletId) {
+      return NextResponse.json({ error: 'اختر المحفظة التي خرج منها المال' }, { status: 400 });
+    }
+    const wallet = await db.wallet.findFirst({
+      where: { id: walletId, companyId, isActive: true },
+      select: { id: true, name: true, currencyCode: true },
+    });
+    if (!wallet) {
+      return NextResponse.json({ error: 'المحفظة غير موجودة أو موقوفة' }, { status: 404 });
+    }
+
+    // Both in one transaction: an expense without its movement is the fault
+    // coming back, and a movement without its expense is money leaving with
+    // no reason written beside it.
+    const expense = await db.$transaction(async (tx) => {
+      const row = await tx.expense.create({
+        data: {
+          companyId,
+          title: title.trim(),
+          category, // MANUFACTURING, PACKAGING, SHIPPING, MARKETING, COMMISSION, SALARIES, OFFICE, OTHER
+          amount: value,
+          expenseDate: expenseDate ? new Date(expenseDate) : new Date(),
+          notes: notes?.trim() || null,
+          walletId: wallet.id,
+          createdById: user.id,
+        },
+      });
+
+      const movement = await tx.walletMovement.create({
+        data: {
+          companyId,
+          walletId: wallet.id,
+          direction: 'OUT',
+          amount: value,
+          currencyCode: wallet.currencyCode,
+          party: title.trim(),
+          category: 'EXPENSE',
+          note: notes?.trim() || null,
+          referenceType: 'EXPENSE',
+          referenceId: row.id,
+          createdById: user.id,
+        },
+      });
+
+      return tx.expense.update({ where: { id: row.id }, data: { movementId: movement.id } });
     });
 
     await logAudit({

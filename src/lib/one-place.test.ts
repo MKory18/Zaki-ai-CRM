@@ -83,3 +83,42 @@ describe('the store logo and favicon have one editor', () => {
     expect(read('src/components/settings/StoreIdentityCard.tsx')).toContain('StoreBrandField');
   });
 });
+
+/**
+ * A STORE'S ADDRESS HAS ONE EDITOR.
+ *
+ * It had two. `/store/domain` writes it, checks DNS, and clears
+ * `domainVerifiedAt` on every change so a new address starts unverified.
+ * The store settings form wrote the same column as a plain string and
+ * touched nothing else — so an owner who edited the address there moved
+ * the host and left the old tick standing.
+ *
+ * The dashboard then said "verified" about a domain nobody had looked up,
+ * while the customer typing it met an error page. A wrong answer is worse
+ * than no answer: nobody investigates a green tick.
+ */
+describe('the store domain is written in one place', () => {
+  it('only the domain route clears and sets the verification', () => {
+    const domainRoute = read('src/app/api/store/domain/route.ts');
+    expect(domainRoute).toContain('domainVerifiedAt');
+
+    // Anything else that writes `domain` without touching the verification
+    // is the fault coming back.
+    const geo = read('src/app/api/geo/stores/[id]/route.ts');
+    expect(geo).not.toMatch(/data\.domain\s*=/);
+  });
+
+  it('the settings schema refuses a domain rather than ignoring one', () => {
+    // `.strict()` turns a form that still sends it into a loud 400, not a
+    // save that half worked.
+    const schemas = read('src/lib/geo-schemas.ts');
+    expect(schemas).toContain('.strict()');
+    expect(schemas).not.toMatch(/^\s*domain: z\./m);
+  });
+
+  it('and the settings form points at the real editor instead of editing', () => {
+    const form = read('src/components/settings/StorefrontSettings.tsx');
+    expect(form).not.toContain('form.domain');
+    expect(form).toContain('/store/domain');
+  });
+});

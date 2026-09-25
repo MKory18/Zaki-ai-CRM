@@ -27,30 +27,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (clash) return NextResponse.json({ error: 'هذا المعرّف مستخدم لمتجر آخر' }, { status: 409 });
     }
 
-    // ── The custom domain ──
-    // Unique across stores AND against landing pages: the proxy resolves a
-    // host by asking both, and two claims on one host would make its answer
-    // depend on which table it read first.
+    // ── The custom domain is NOT written here ──
+    //
+    // It has one editor: PATCH /api/store/domain, which clears
+    // `domainVerifiedAt` whenever the address changes and sets it again
+    // only after a real DNS lookup. Writing it here moved the address and
+    // left the old verification standing — the dashboard showed a tick for
+    // a host nobody had checked, and the customer met an error page.
+    //
+    // The schema drops it and `.strict()` refuses a body that carries one,
+    // so a form still sending it fails loudly instead of half-working.
     const data: Record<string, unknown> = { ...parsed.data };
-    if (parsed.data.domain !== undefined) {
-      const raw = parsed.data.domain?.trim() ?? '';
-      if (!raw) {
-        data.domain = null;
-      } else {
-        const check = validateDomain(raw, dashboardHosts(req));
-        if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
-        const [otherStore, page] = await Promise.all([
-          db.store.findFirst({ where: { domain: check.domain, id: { not: id } }, select: { id: true } }),
-          db.landingPage.findFirst({ where: { domain: check.domain }, select: { id: true } }),
-        ]);
-        if (otherStore || page) {
-          return NextResponse.json({ error: 'هذا النطاق مستخدم بالفعل' }, { status: 409 });
-        }
-        data.domain = check.domain;
-      }
-      forgetHost(before.domain);
-      forgetHost(typeof data.domain === 'string' ? data.domain : null);
-    }
 
     // The theme is NOT written here. It has one editor
     // (PATCH /api/store/theme), and `.strict()` on the schema means a body

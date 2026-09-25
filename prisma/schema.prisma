@@ -777,12 +777,23 @@ model Expense {
   expenseDate DateTime @default(now())
   referenceId String? // batchId or orderId
   notes       String?
+  /// The wallet the money actually left. Required for every new expense:
+  /// money recorded as spent and absent from the wallet ledger makes the
+  /// daily closing show a shortfall nobody can explain — and somebody then
+  /// writes an explanation for an expense that was already recorded.
+  ///
+  /// Nullable only because the column is newer than the table.
+  walletId    String?  @map("wallet_id")
+  /// The movement this expense wrote, so the pair can never be half-made.
+  movementId  String?  @map("movement_id")
   createdById String?
   createdAt   DateTime @default(now())
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  wallet  Wallet? @relation(fields: [walletId], references: [id], onDelete: Restrict)
 
   @@index([companyId, category])
+  @@index([walletId])
   @@map("expenses")
 }
 
@@ -1894,6 +1905,7 @@ model Wallet {
   receipts  StatementReceipt[]
   commissionPayouts CommissionPayout[]
   payslips          Payslip[]
+  expenses          Expense[]
 
   @@unique([companyId, storeId, name])
   @@index([companyId, countryId, isActive])

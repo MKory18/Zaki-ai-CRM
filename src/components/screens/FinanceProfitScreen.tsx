@@ -17,6 +17,7 @@ import {
   PieChart,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { apiJson } from '@/lib/api-client';
 
 export function FinanceProfitScreen() {
   const { t } = useApp();
@@ -57,6 +58,18 @@ export function FinanceProfitScreen() {
     loadFinance();
   }, []);
 
+  /** The wallet the money leaves, and what the server said if it refused. */
+  const [walletId, setWalletId] = useState('');
+  const [wallets, setWallets] = useState<{ id: string; name: string; currencyCode: string }[]>([]);
+  const [expenseError, setExpenseError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!expenseModalOpen || wallets.length > 0) return;
+    apiJson<{ wallets: { id: string; name: string; currencyCode: string }[] }>('/api/finance/wallets')
+      .then((d: { wallets: { id: string; name: string; currencyCode: string }[] }) => setWallets(d.wallets ?? []))
+      .catch(() => setWallets([]));
+  }, [expenseModalOpen, wallets.length]);
+
   const handleRecordExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
@@ -64,16 +77,22 @@ export function FinanceProfitScreen() {
       const res = await fetch('/api/finance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, category, amount, expenseDate, notes }),
+        body: JSON.stringify({ title, category, amount, expenseDate, notes, walletId }),
       });
       if (res.ok) {
         setExpenseModalOpen(false);
         setTitle('');
         setNotes('');
+        setExpenseError(null);
         loadFinance();
+      } else {
+        // Said out loud. A form that closes on a refusal is a form somebody
+        // believes worked, and an expense they never record again.
+        const body = await res.json().catch(() => ({}));
+        setExpenseError(body.error ?? 'تعذّر تسجيل المصروف');
       }
     } catch (e) {
-      console.error(e);
+      setExpenseError(e instanceof Error ? e.message : 'تعذّر تسجيل المصروف');
     } finally {
       setModalLoading(false);
     }
@@ -115,14 +134,14 @@ export function FinanceProfitScreen() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             title="إيراد الموصَّل"
-            value={`$${summary.totalRevenue.toFixed(2)}`}
+            value={`${summary.totalRevenue.toFixed(2)} {data?.currency ?? ''}`}
             subtitle="الطلبات المسلَّمة فعلاً، لا المؤكدة"
             icon={TrendingUp}
             color="blue"
           />
           <KpiCard
             title="صافي الربح"
-            value={`$${summary.netProfit.toFixed(2)}`}
+            value={`${summary.netProfit.toFixed(2)} {data?.currency ?? ''}`}
             subtitle={`هامش ${summary.profitMargin}%`}
             icon={DollarSign}
             color="emerald"
@@ -130,14 +149,14 @@ export function FinanceProfitScreen() {
           />
           <KpiCard
             title="كلفة البضاعة"
-            value={`$${summary.totalCOGS.toFixed(2)}`}
+            value={`${summary.totalCOGS.toFixed(2)} {data?.currency ?? ''}`}
             subtitle="من كلفة التشغيلات — تُدخَل من شاشة التصنيع"
             icon={Receipt}
             color="amber"
           />
           <KpiCard
             title="المصاريف التشغيلية"
-            value={`$${summary.totalOperationalExpenses.toFixed(2)}`}
+            value={`${summary.totalOperationalExpenses.toFixed(2)} {data?.currency ?? ''}`}
             subtitle="إعلانات وشحن ورواتب وما إليها"
             icon={ArrowDownRight}
             color="rose"
@@ -155,31 +174,33 @@ export function FinanceProfitScreen() {
               <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
                 <span className="text-xs text-[var(--sys-muted)] block">إيراد الموصَّل</span>
                 <span className="text-lg font-bold text-[var(--sys-success)] mt-1 block">
-                  +${summary.totalRevenue.toFixed(2)}
+                  +{summary.totalRevenue.toFixed(2)} {data?.currency ?? ''}
                 </span>
               </div>
               <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
                 <span className="text-xs text-[var(--sys-muted)] block">كلفة البضاعة</span>
                 <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
-                  -${summary.totalCOGS.toFixed(2)}
+                  -{summary.totalCOGS.toFixed(2)} {data?.currency ?? ''}
                 </span>
               </div>
               <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
                 <span className="text-xs text-[var(--sys-muted)] block">شحن وعمولات</span>
                 <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
-                  -${(summary.totalShipping + summary.totalCommissions).toFixed(2)}
+                  {/* Read, not computed. A total assembled in the browser
+                      disagrees with the books the moment a rule changes. */}
+                  -{summary.shippingAndCommissions.toFixed(2)} {data?.currency ?? ''}
                 </span>
               </div>
               <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
                 <span className="text-xs text-[var(--sys-muted)] block">مصاريف</span>
                 <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
-                  -${summary.totalOperationalExpenses.toFixed(2)}
+                  -{summary.totalOperationalExpenses.toFixed(2)} {data?.currency ?? ''}
                 </span>
               </div>
               <div className="bg-[var(--sys-primary)] p-3 rounded-xl">
                 <span className="text-xs text-[var(--sys-primary-foreground)]/80 block font-bold">الصافي</span>
                 <span className="text-xl font-black text-[var(--sys-primary-foreground)] mt-1 block">
-                  ${summary.netProfit.toFixed(2)}
+                  {summary.netProfit.toFixed(2)} {data?.currency ?? ''}
                 </span>
               </div>
             </div>
@@ -308,6 +329,32 @@ export function FinanceProfitScreen() {
               required
             />
           </div>
+
+          {/* WHICH WALLET THE MONEY LEFT.
+              Required by the server. An expense with no wallet was money
+              gone from the company and absent from the wallet ledger, so
+              the daily closing showed a shortfall nobody could explain —
+              and somebody wrote an explanation for an expense that was
+              already recorded here. */}
+          <Select
+            label="من محفظة *"
+            value={walletId}
+            onChange={(e) => setWalletId(e.target.value)}
+            required
+          >
+            <option value="">اختر المحفظة…</option>
+            {wallets.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name} ({w.currencyCode})
+              </option>
+            ))}
+          </Select>
+
+          {expenseError && (
+            <p className="rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">
+              {expenseError}
+            </p>
+          )}
 
           <Input
             label="التاريخ *"
