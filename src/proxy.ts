@@ -222,6 +222,13 @@ export const config = {
      * Everything except Next internals and static assets. Screens resolve
      * through the route registry, so no path list is maintained here.
      */
-    '/((?!_next/static|_next/image|favicon.ico|logo.svg|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map)$).*)',
+    /*
+     * The installable app's own files are public static files like any
+     * other, and were the only two whose extensions were missing here: the
+     * manifest was redirected to /login, so the app could not be installed
+     * at all, and the offline page the worker falls back to was redirected
+     * to a page it cannot reach while offline.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|logo.svg|manifest.webmanifest|offline.html|icons/|.*\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|webmanifest|html)$).*)',
   ],
 };

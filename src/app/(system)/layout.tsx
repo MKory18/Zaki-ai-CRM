@@ -1,6 +1,7 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { SystemFrame } from './SystemFrame';
 import { getCurrentUser } from '@/lib/auth';
+import { themeByKey } from '@/lib/system-themes';
 import { AppProvider } from '@/context/AppContext';
 import { GlobalTrackingProvider } from '@/components/tracking/GlobalTrackingProvider';
 
@@ -8,7 +9,23 @@ export const metadata: Metadata = {
   title: 'Zaki AI Store — نظام المبيعات والطلبات والأرباح الذكي',
   description:
     'Zaki AI Store — منصة متكاملة لإدارة المنتجات والطلبات والمودريتورات والأرباح الحقيقية مع مستشار أعمال بالذكاء الاصطناعي.',
-  icons: { icon: '/logo.svg' },
+  icons: {
+    icon: '/logo.svg',
+    apple: '/icons/icon-192.png',
+  },
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Zaki AI' },
+};
+
+/**
+ * `viewport-fit=cover` is what lets a notched phone hand us its safe-area
+ * insets. Without it the bottom bar sits under the home indicator and its
+ * tabs close the app instead of opening a screen.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 /**
@@ -22,6 +39,10 @@ export default async function SystemLayout({ children }: { children: React.React
 
   return (
     <SystemFrame theme={user?.systemTheme}>
+      {/* The status bar takes the colour of the theme this person chose, so
+          an installed app does not wear the default's colour above a dark
+          screen. */}
+      <meta name="theme-color" content={themeByKey(user?.systemTheme).vars.sidebar} />
       <AppProvider initialUser={user}>
         {/* The engine starts empty. Pixels are registered by the selling
             page that renders — a landing page or a storefront page — with

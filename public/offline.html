@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>لا اتصال — Zaki AI Store</title>
+    <style>
+      :root { --bg:#f8fafc; --card:#ffffff; --heading:#121926; --text:#364152;
+              --muted:#697586; --border:#e3e8ef; --accent:#b8256e; }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg:#0f141b; --card:#161d26; --heading:#eef2f6; --text:#c3ccd6;
+                --muted:#8e9aa8; --border:#2a3541; --accent:#e4589b; }
+      }
+      * { box-sizing: border-box; }
+      body { margin:0; min-height:100dvh; display:flex; align-items:center; justify-content:center;
+             padding:24px; background:var(--bg); color:var(--text);
+             font-family:"Tajawal","Segoe UI",system-ui,sans-serif; line-height:1.8; }
+      .card { width:100%; max-width:420px; background:var(--card); border:1px solid var(--border);
+              border-radius:12px; padding:28px 24px; text-align:center; }
+      h1 { margin:0 0 8px; font-size:20px; color:var(--heading); }
+      p { margin:0 0 16px; font-size:14px; }
+      .warn { border-radius:8px; padding:12px; font-size:13px; text-align:right;
+              background:color-mix(in srgb, var(--accent) 8%, transparent);
+              border:1px solid color-mix(in srgb, var(--accent) 25%, transparent); }
+      button { width:100%; min-height:44px; margin-top:16px; border:0; border-radius:8px;
+               background:var(--accent); color:#fff; font-size:14px; font-weight:600;
+               font-family:inherit; cursor:pointer; }
+      small { display:block; margin-top:12px; color:var(--muted); font-size:11px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>لا اتصال بالإنترنت</h1>
+      <p>تعذّر الوصول إلى الخادم. التطبيق مفتوح، لكن لا شيء يُقرأ ولا يُكتب الآن.</p>
+
+      <!--
+        The sentence that matters. Somebody who thinks their tap was "saved
+        for later" will not redo it, and the confirmation, the shipment or
+        the cash movement simply never happened. Said plainly, once.
+      -->
+      <div class="warn">
+        <strong>لم يُحفَظ شيء أثناء الانقطاع.</strong>
+        أي تأكيد أو شحنة أو حركة مال ضغطتها ولم تنجح — لم تُسجَّل ولن تُرسَل لاحقاً.
+        أعِدها بنفسك بعد عودة الاتصال.
+      </div>
+
+      <button type="button" onclick="location.reload()">أعد المحاولة</button>
+      <small>تعود الصفحة تلقائياً حين يرجع الاتصال.</small>
+    </div>
+
+    <script>
+      // Comes back on its own, so nobody is left tapping a button to find out.
+      addEventListener('online', () => location.reload());
+    </script>
+  </body>
+</html>
