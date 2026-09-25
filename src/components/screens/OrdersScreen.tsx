@@ -298,8 +298,8 @@ export function OrdersScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.orders}</h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.orders}</h1>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               كل الطلبات بحالتها ومَن يحملها — الحالة والفلتر يقرآن نفس الشيء
             </p>
           </div>
@@ -328,7 +328,7 @@ export function OrdersScreen() {
             <Button
               size="sm"
               onClick={() => setAiModalOpen(true)}
-              className="flex items-center space-x-1.5 bg-[#fb323f] hover:bg-[#fb323f]/85"
+              className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
             >
               <Wand2 className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
@@ -348,20 +348,20 @@ export function OrdersScreen() {
         {/* One bar, three rows that each answer a different question:
             which queue am I in, what am I looking for, and how do I narrow
             it. The old grid mixed all three into six equal cells. */}
-        <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-xs divide-y divide-[#e3e8ef]">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-xl shadow-xs divide-y divide-[var(--sys-border)]">
           {/* Search — pressing Enter or the button runs it; it no longer
               fires on every keystroke, which made a long phone number send
               a request per digit. */}
           <div className="flex flex-wrap items-center gap-2 p-3">
             <div className="relative flex-1 min-w-[220px]">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
               <input
                 type="text"
                 placeholder="ابحث برقم الطلب، اسم العميل، أو الهاتف…"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
-                className="w-full ps-9 pe-3 py-2 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]"
+                className="w-full ps-9 pe-3 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
             </div>
             <Button size="sm" onClick={runSearch} className="shrink-0">
@@ -379,7 +379,7 @@ export function OrdersScreen() {
               متأخرة 10 أيام+ من الشحن
             </Button>
             {activeFilters > 0 && (
-              <Button size="sm" variant="outline" onClick={resetFilters} className="shrink-0 text-[#fb323f]">
+              <Button size="sm" variant="outline" onClick={resetFilters} className="shrink-0 text-[var(--sys-destructive)]">
                 <RotateCcw className="w-3.5 h-3.5" />
                 إعادة تعيين ({activeFilters})
               </Button>
@@ -436,15 +436,15 @@ export function OrdersScreen() {
 
         {/* Load error banner */}
         {error && (
-          <div className="rounded-xl border border-rose-300 bg-rose-50 text-rose-800 px-3 py-2.5 text-xs flex items-center justify-between gap-2">
+          <div className="rounded-xl border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs flex items-center justify-between gap-2">
             <span>{error}</span>
             <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
           </div>
         )}
 
         {selected.size > 0 && (
-          <div className="flex flex-wrap items-center gap-2 bg-[#fdf5fa] border border-[#f2c9dd] rounded-xl px-4 py-2.5">
-            <span className="text-xs font-semibold text-[#b8256e]">
+          <div className="flex flex-wrap items-center gap-2 bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] rounded-xl px-4 py-2.5">
+            <span className="text-xs font-semibold text-[var(--sys-primary)]">
               محدَّد: {selected.size} طلب
             </span>
             {/* The paper sits beside the button that uses it, so nobody
@@ -488,18 +488,18 @@ export function OrdersScreen() {
             how much — and never runs off the edge. */}
         <Card>
           <CardContent className="p-0">
-            <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b border-[#e3e8ef] bg-[#f8fafc] text-[11px] text-[#697586]">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b border-[var(--sys-border)] bg-[var(--sys-surface)] text-[11px] text-[var(--sys-muted-foreground)]">
               <input
                 type="checkbox"
                 checked={allOnPageSelected}
                 onChange={toggleAll}
                 aria-label="تحديد كل الطلبات في هذه الصفحة"
-                className="w-4 h-4 accent-[#b8256e] cursor-pointer"
+                className="w-4 h-4 accent-[var(--sys-primary)] cursor-pointer"
               />
               {orders.length > 0 && (
                 <span className="tabular-nums">
                   عرض {firstOnPage}–{lastOnPage} من أصل {pagination.total} طلب
-                  {activeFilters > 0 && <span className="text-[#b8256e]"> (مفلترة)</span>}
+                  {activeFilters > 0 && <span className="text-[var(--sys-primary)]"> (مفلترة)</span>}
                 </span>
               )}
               {/* Twenty-five at a time is right for reading and wrong for
@@ -508,7 +508,7 @@ export function OrdersScreen() {
               {!showAll && pagination.totalPages > 1 && (
                 <button
                   onClick={() => setShowAll(true)}
-                  className="ms-auto text-[11px] font-medium text-[#b8256e] hover:underline"
+                  className="ms-auto text-[11px] font-medium text-[var(--sys-primary)] hover:underline"
                 >
                   إظهار كل النتائج ({pagination.total})
                 </button>
@@ -516,7 +516,7 @@ export function OrdersScreen() {
               {showAll && (
                 <button
                   onClick={() => setShowAll(false)}
-                  className="ms-auto text-[11px] font-medium text-[#697586] hover:underline"
+                  className="ms-auto text-[11px] font-medium text-[var(--sys-muted-foreground)] hover:underline"
                 >
                   العودة للعرض بالصفحات
                 </button>
@@ -524,17 +524,17 @@ export function OrdersScreen() {
             </div>
 
             {orders.length === 0 ? (
-              <p className="py-12 text-center text-sm text-[#9ca3af]">
+              <p className="py-12 text-center text-sm text-[var(--sys-muted)]">
                 {loading ? t.loading : t.noOrders}
               </p>
             ) : (
-              <ul className="divide-y divide-[#e3e8ef]">
+              <ul className="divide-y divide-[var(--sys-border)]">
                 {orders.map((order) => (
                   <li
                     key={order.id}
                     onClick={() => setSelectedOrderId(order.id)}
                     className={`px-4 py-3 cursor-pointer transition-colors ${
-                      selected.has(order.id) ? 'bg-[#fdf5fa]' : 'hover:bg-[#f8fafc]'
+                      selected.has(order.id) ? 'bg-[var(--sys-primary-soft)]' : 'hover:bg-[var(--sys-surface)]'
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -544,7 +544,7 @@ export function OrdersScreen() {
                           checked={selected.has(order.id)}
                           onChange={() => toggleRow(order.id)}
                           aria-label={`تحديد الطلب ${order.orderNumber}`}
-                          className="w-4 h-4 accent-[#b8256e] cursor-pointer"
+                          className="w-4 h-4 accent-[var(--sys-primary)] cursor-pointer"
                         />
                       </span>
 
@@ -557,47 +557,47 @@ export function OrdersScreen() {
                       <div className="min-w-0 flex-1 space-y-1">
                         {/* Line 1 — which order, and where it stands. */}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="font-bold text-[#fb323f] text-xs" dir="ltr">{order.orderNumber}</span>
+                          <span className="font-bold text-[var(--sys-destructive)] text-xs" dir="ltr">{order.orderNumber}</span>
                           <OrderStateBadge state={order.state} />
                           {order.deliveryProvider && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-[#697586]">
+                            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--sys-muted-foreground)]">
                               {order.deliveryProvider.kind === 'AGENT' ? (
-                                <Bike className="w-3 h-3 text-[#b8256e]" />
+                                <Bike className="w-3 h-3 text-[var(--sys-primary)]" />
                               ) : (
-                                <Truck className="w-3 h-3 text-[#9aa4b2]" />
+                                <Truck className="w-3 h-3 text-[var(--sys-muted)]" />
                               )}
                               {order.deliveryProvider.name}
                             </span>
                           )}
                           {order.trackingNumber && (
-                            <span className="text-[10px] font-mono text-[#9aa4b2]" dir="ltr">
+                            <span className="text-[10px] font-mono text-[var(--sys-muted)]" dir="ltr">
                               {order.trackingNumber}
                             </span>
                           )}
                         </div>
 
                         {/* Line 2 — who it goes to. */}
-                        <p className="text-sm text-[#121926] truncate">
+                        <p className="text-sm text-[var(--sys-heading)] truncate">
                           {order.customer?.fullName}
-                          <span className="text-[11px] text-[#697586]" dir="ltr">
+                          <span className="text-[11px] text-[var(--sys-muted-foreground)]" dir="ltr">
                             {' · '}{order.customer?.rawPhone || order.customer?.phone}
                           </span>
-                          <span className="text-[11px] text-[#9aa4b2]">
+                          <span className="text-[11px] text-[var(--sys-muted)]">
                             {' · '}{order.region?.name ?? order.customer?.city ?? '—'}
                           </span>
                         </p>
 
                         {/* Line 3 — what is in it. */}
-                        <p className="text-xs text-[#697586] truncate">
+                        <p className="text-xs text-[var(--sys-muted-foreground)] truncate">
                           {order.productNameSnapshot || order.product?.name}
-                          <span className="text-[#9aa4b2]">
+                          <span className="text-[var(--sys-muted)]">
                             {' × '}{order.quantity}
                             {order.offer?.name ? ` · ${order.offer.name}` : ''}
                           </span>
                         </p>
 
                         {/* Line 4 — where it came from and when. */}
-                        <p className="text-[11px] text-[#9aa4b2] truncate">
+                        <p className="text-[11px] text-[var(--sys-muted)] truncate">
                           {order.source || '—'}
                           {order.moderator?.name ? ` · ${order.moderator.name}` : ''}
                           {' · '}
@@ -607,7 +607,7 @@ export function OrdersScreen() {
 
                       {/* The money and the two things you do with a row. */}
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <span className="font-bold text-[#121926] text-sm tabular-nums" dir="ltr">
+                        <span className="font-bold text-[var(--sys-heading)] text-sm tabular-nums" dir="ltr">
                           {currency.code
                             ? formatMoney(Number(order.totalAmount || 0), currency.code, currency.minorUnit)
                             : Number(order.totalAmount || 0).toFixed(2)}
@@ -627,7 +627,7 @@ export function OrdersScreen() {
             )}
 
             {/* Pagination Bar */}
-            <div className="px-6 py-3 border-t border-[#e3e8ef] flex items-center justify-between text-xs text-[#697586]">
+            <div className="px-6 py-3 border-t border-[var(--sys-border)] flex items-center justify-between text-xs text-[var(--sys-muted-foreground)]">
               <span>
                 عرض <strong>{orders.length}</strong> من <strong>{pagination.total}</strong> طلب
               </span>

@@ -55,9 +55,9 @@ export function TelegramSettingsScreen() {
   };
 
   const Row = ({ label, ok, value }: { label: string; ok: boolean; value?: string }) => (
-    <div className="flex items-center justify-between py-2.5 border-b border-[#f1f5f9] last:border-0">
-      <span className="text-xs text-[#697586]">{label}</span>
-      <span className={`text-xs font-semibold flex items-center gap-1.5 ${ok ? 'text-emerald-600' : 'text-rose-600'}`}>
+    <div className="flex items-center justify-between py-2.5 border-b border-[var(--sys-surface-strong)] last:border-0">
+      <span className="text-xs text-[var(--sys-muted-foreground)]">{label}</span>
+      <span className={`text-xs font-semibold flex items-center gap-1.5 ${ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
         {ok ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
         {value ?? (ok ? 'مضبوط' : 'غير مضبوط')}
       </span>
@@ -69,10 +69,10 @@ export function TelegramSettingsScreen() {
       <div className="p-6 space-y-6 max-w-3xl mx-auto" dir="rtl">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-[#121926] flex items-center gap-2">
+            <h1 className="text-xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
               <Send className="w-5 h-5 text-[#229ED9]" /> إعدادات تيليجرام
             </h1>
-            <p className="text-xs text-[#697586] mt-1">حالة اتصال البوت والويبهوك (لا تُعرض أي مفاتيح سرية هنا أبدًا)</p>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">حالة اتصال البوت والويبهوك (لا تُعرض أي مفاتيح سرية هنا أبدًا)</p>
           </div>
           <div className="flex gap-2">
             <Link href="/growth/telegram/orders"><Button variant="outline" size="sm">رجوع</Button></Link>
@@ -81,30 +81,30 @@ export function TelegramSettingsScreen() {
         </div>
 
         {error && (
-          <div className="rounded-xl border border-rose-300 bg-rose-50 text-rose-800 px-3 py-2.5 text-xs">{error}</div>
+          <div className="rounded-xl border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs">{error}</div>
         )}
 
         <Card>
           <CardHeader title="حالة البوت" subtitle="تُقرأ الحالة من متغيرات البيئة على السيرفر" />
           <CardContent>
             {loading ? (
-              <p className="text-xs text-[#697586] py-4">جارٍ التحميل...</p>
+              <p className="text-xs text-[var(--sys-muted-foreground)] py-4">جارٍ التحميل...</p>
             ) : (
               <div>
                 <Row label="TELEGRAM_BOT_TOKEN" ok={Boolean(status?.botConfigured)} />
                 <Row label="الاتصال بواجهة Telegram API" ok={Boolean(status?.botApiOk)} value={status?.botApiOk ? 'يعمل' : undefined} />
                 <Row label="TELEGRAM_WEBHOOK_SECRET" ok={Boolean(status?.webhookSecretConfigured)} />
                 <Row label="APP_URL (لبناء رابط الويبهوك)" ok={Boolean(status?.appUrlConfigured)} />
-                <div className="flex items-center justify-between py-2.5 border-b border-[#f1f5f9]">
-                  <span className="text-xs text-[#697586]">Bot username</span>
-                  <span className="text-xs font-mono text-[#121926] font-semibold" dir="ltr">
+                <div className="flex items-center justify-between py-2.5 border-b border-[var(--sys-surface-strong)]">
+                  <span className="text-xs text-[var(--sys-muted-foreground)]">Bot username</span>
+                  <span className="text-xs font-mono text-[var(--sys-heading)] font-semibold" dir="ltr">
                     {status?.botUsername ? `@${status.botUsername}` : '—'}
                   </span>
                 </div>
                 <div className="pt-3">
-                  <p className="text-xs text-[#697586] mb-1">Webhook URL:</p>
+                  <p className="text-xs text-[var(--sys-muted-foreground)] mb-1">Webhook URL:</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-[11px] bg-[#f8fafc] border border-[#e3e8ef] rounded px-3 py-2 font-mono break-all" dir="ltr">
+                    <code className="flex-1 text-[11px] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded px-3 py-2 font-mono break-all" dir="ltr">
                       {status?.webhookUrl || '— لم يتم ضبط APP_URL —'}
                     </code>
                     {status?.webhookUrl && (
@@ -121,7 +121,7 @@ export function TelegramSettingsScreen() {
           <Card>
             <CardHeader title="تسجيل الويبهوك" subtitle="يسجّل رابط الويبهوك لدى تيليجرام باستخدام TELEGRAM_WEBHOOK_SECRET" />
             <CardContent className="flex items-center justify-between">
-              <span className={`text-xs font-semibold ${status?.telegramWebhookSet ? 'text-emerald-600' : 'text-[#697586]'}`}>
+              <span className={`text-xs font-semibold ${status?.telegramWebhookSet ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}`}>
                 {status?.telegramWebhookSet ? 'الويبهوك مسجل لدى تيليجرام' : 'الويبهوك غير مسجل'}
               </span>
               <Button size="sm" disabled={busy || !status?.botConfigured || !status?.appUrlConfigured} onClick={setupWebhook}>
@@ -135,7 +135,7 @@ export function TelegramSettingsScreen() {
 
         <Card>
           <CardHeader title="ملاحظات مهمة" />
-          <CardContent className="text-xs text-[#697586] leading-relaxed space-y-2">
+          <CardContent className="text-xs text-[var(--sys-muted-foreground)] leading-relaxed space-y-2">
             <p>• يجب أن يكون البوت عضوًا في المجموعة لاستقبال الرسائل، وقد يتطلب تعطيل Privacy Mode أو منحه صلاحية قراءة الرسائل حسب نوع المجموعة.</p>
             <p>• في المجموعات ذات المواضيع (Topics/Forum) يستقبل البوت رسائل المواضيع تلقائيًا؛ يمكنك ربط موضوع محدد من «المجموعات والمواضيع المرتبطة» أعلاه.</p>
             <p>• لا تشارك مفتاح البوت أو سر الويبهوك مع أي شخص. لا تُعرض هذه القيم في هذه الصفحة مطلقًا.</p>

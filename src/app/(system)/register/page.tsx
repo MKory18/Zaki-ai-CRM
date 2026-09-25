@@ -55,12 +55,12 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-[var(--sys-surface)] flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <img src="/logo.svg" alt="Zaki AI" className="w-20 h-16 object-contain" />
-          <h1 className="text-2xl font-semibold text-[#121926]">إنشاء حساب جديد</h1>
-          <p className="text-xs text-[#697586]">
+          <h1 className="text-2xl font-semibold text-[var(--sys-heading)]">إنشاء حساب جديد</h1>
+          <p className="text-xs text-[var(--sys-muted-foreground)]">
             Zaki AI Store — نظام إدارة المبيعات والطلبات والأرباح
           </p>
         </div>
@@ -68,14 +68,14 @@ export default function RegisterPage() {
         <Card className="shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
           <CardContent className="p-6 space-y-4">
             {error && (
-              <div className="p-3 bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
+              <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {success && (
-              <div className="p-3 bg-[#e6f9ee] border border-[#c8f2d8] text-[#00c853] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
+              <div className="p-3 bg-[var(--sys-success-soft)] border border-[var(--sys-success-soft)] text-[var(--sys-success)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
                 <ShieldCheck className="w-4 h-4 shrink-0" />
                 <span>{success}</span>
               </div>
@@ -87,7 +87,7 @@ export default function RegisterPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="bg-white"
+                className="bg-[var(--sys-card)]"
               />
 
               <Input
@@ -96,7 +96,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-white"
+                className="bg-[var(--sys-card)]"
               />
 
               <div>
@@ -106,7 +106,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="bg-white"
+                  className="bg-[var(--sys-card)]"
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {passwordChecks.map((c) => (
@@ -114,8 +114,8 @@ export default function RegisterPage() {
                       key={c.label}
                       className={`text-[10px] px-2 py-0.5 rounded-full border ${
                         c.ok
-                          ? 'bg-[#e6f9ee] text-[#00c853] border-[#c8f2d8]'
-                          : 'bg-[#f8fafc] text-[#697586] border-[#e3e8ef]'
+                          ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)]'
+                          : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
                       }`}
                     >
                       {c.ok ? '✓' : '•'} {c.label}
@@ -130,7 +130,7 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="bg-white"
+                className="bg-[var(--sys-card)]"
               />
 
               <Button type="submit" loading={loading} className="w-full">
@@ -139,23 +139,23 @@ export default function RegisterPage() {
               </Button>
             </form>
 
-            <div className="p-3 bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] flex items-start space-x-2 rtl:space-x-reverse text-[11px] text-[#364152]">
-              <Clock className="w-4 h-4 text-[#ffab00] shrink-0 mt-0.5" />
+            <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] flex items-start space-x-2 rtl:space-x-reverse text-[11px] text-[var(--sys-foreground)]">
+              <Clock className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
               <span>
-                بعد التسجيل يكون حسابك بحالة <strong className="text-[#121926]">بانتظار الموافقة</strong>،
+                بعد التسجيل يكون حسابك بحالة <strong className="text-[var(--sys-heading)]">بانتظار الموافقة</strong>،
                 ويقوم مدير النظام بتعيين دورك وتنشيط حسابك قبل الوصول للوحدات.
               </span>
             </div>
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-[#697586]">
+        <p className="text-center text-xs text-[var(--sys-muted-foreground)]">
           لديك حساب؟{' '}
-          <Link href="/login" className="text-[#b8256e] font-semibold hover:underline">
+          <Link href="/login" className="text-[var(--sys-primary)] font-semibold hover:underline">
             تسجيل الدخول
           </Link>
           {' • '}
-          <Link href="/forgot-password" className="text-[#364152] hover:underline">
+          <Link href="/forgot-password" className="text-[var(--sys-foreground)] hover:underline">
             نسيت كلمة المرور؟
           </Link>
         </p>

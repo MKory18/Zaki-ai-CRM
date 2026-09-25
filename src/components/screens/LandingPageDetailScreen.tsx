@@ -159,14 +159,14 @@ export function LandingPageDetailScreen() {
   if (loading) {
     return (
       <>
-        <div className="p-10 text-center text-[#697586] text-sm">جارٍ التحميل…</div>
+        <div className="p-10 text-center text-[var(--sys-muted-foreground)] text-sm">جارٍ التحميل…</div>
       </>
     );
   }
   if (apiError || !lp) {
     return (
       <>
-        <div className="p-10 text-center text-rose-600 text-sm">{apiError || 'الصفحة غير موجودة'}</div>
+        <div className="p-10 text-center text-[var(--sys-destructive)] text-sm">{apiError || 'الصفحة غير موجودة'}</div>
       </>
     );
   }
@@ -192,11 +192,11 @@ export function LandingPageDetailScreen() {
           <Badge variant={lp.isPublished ? 'success' : 'warning'}>{lp.isPublished ? 'منشورة' : 'مسودة'}</Badge>
 
           <div className="order-last min-w-0 basis-full sm:order-none sm:basis-auto">
-            <h1 className="text-lg sm:text-2xl font-bold text-[#1a2232] flex items-center gap-2">
-              <Globe className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-[#b8256e]" />
+            <h1 className="text-lg sm:text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
+              <Globe className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-[var(--sys-primary)]" />
               تحرير صفحة الهبوط
             </h1>
-            <p className="text-xs text-[#697586] mt-0.5 truncate">{lp.name}</p>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-0.5 truncate">{lp.name}</p>
           </div>
 
           <div className="flex flex-1 items-center justify-end gap-2">
@@ -219,11 +219,11 @@ export function LandingPageDetailScreen() {
             <Card>
               <CardContent className="p-4 space-y-4">
                 <div>
-                  <label className="text-xs font-semibold text-[#364152]">اسم الصفحة</label>
+                  <label className="text-xs font-semibold text-[var(--sys-foreground)]">اسم الصفحة</label>
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-[#364152]">الرابط (slug)</label>
+                  <label className="text-xs font-semibold text-[var(--sys-foreground)]">الرابط (slug)</label>
                   <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} dir="ltr" />
                 </div>
                 {/* A domain of the seller's own. The page keeps working at
@@ -231,36 +231,36 @@ export function LandingPageDetailScreen() {
                     a replacement, so a mistyped DNS record never takes a
                     live page offline. */}
                 <div>
-                  <label className="text-xs font-semibold text-[#364152]">نطاق خاص (اختياري)</label>
+                  <label className="text-xs font-semibold text-[var(--sys-foreground)]">نطاق خاص (اختياري)</label>
                   <Input
                     value={form.domain}
                     onChange={(e) => setForm({ ...form, domain: e.target.value })}
                     dir="ltr"
                     placeholder="shop.example.com"
                   />
-                  <p className="mt-1 text-[10.5px] leading-relaxed text-[#697586]">
+                  <p className="mt-1 text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">
                     وجّه النطاق إلى هذا الخادم بسجل <code dir="ltr">A</code> أو{' '}
                     <code dir="ltr">CNAME</code> عند مزوّد النطاق، ثم اكتبه هنا. الصفحة
                     تبقى تعمل على <code dir="ltr">/lp/{lp.slug}</code> في الحالتين، فالنطاق
                     باب إضافي لا بديل — وخطأ في الـDNS لا يوقف صفحة تعمل.
                   </p>
                   {lp.domain && (
-                    <p className="mt-1 text-[10.5px] text-[#15803d]" dir="ltr">
+                    <p className="mt-1 text-[10.5px] text-[var(--sys-success)]" dir="ltr">
                       https://{lp.domain}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#364152]">المنتج المرتبط</label>
+                  <label className="text-xs font-semibold text-[var(--sys-foreground)]">المنتج المرتبط</label>
                   <Select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
                     <option value="">— اختر منتجًا —</option>
                     {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </Select>
-                  <p className="text-[11px] text-[#697586] mt-1">السعر يُؤخذ من المنتج في قاعدة البيانات — لا يُقبل من المتصفح أبدًا.</p>
+                  <p className="text-[11px] text-[var(--sys-muted-foreground)] mt-1">السعر يُؤخذ من المنتج في قاعدة البيانات — لا يُقبل من المتصفح أبدًا.</p>
                 </div>
                 <div className="flex items-center justify-between">
-                  {saveMsg && <span className="text-xs text-[#364152]">{saveMsg}</span>}
+                  {saveMsg && <span className="text-xs text-[var(--sys-foreground)]">{saveMsg}</span>}
                   <Button onClick={save} disabled={saving}>
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />} حفظ التعديلات
                   </Button>
@@ -270,8 +270,8 @@ export function LandingPageDetailScreen() {
 
             <Card>
               <CardContent className="p-4 space-y-3">
-                <h3 className="font-semibold text-[#1a2232] text-sm">ملف HTML</h3>
-                <p className="text-xs text-[#697586]">
+                <h3 className="font-semibold text-[var(--sys-heading)] text-sm">ملف HTML</h3>
+                <p className="text-xs text-[var(--sys-muted-foreground)]">
                   ارفع ملف <code dir="ltr">.html</code> جاهز (حد أقصى 2MB). يُعرض دائمًا داخل iframe معزول — لا يمكنه قراءة جلسة CRM.
                   نموذج الطلب يُضاف تلقائيًا أسفل الصفحة من النظام نفسه — لا تحتاج أي <code dir="ltr">&lt;form&gt;</code> داخل الملف.
                 </p>
@@ -285,18 +285,18 @@ export function LandingPageDetailScreen() {
                 <Button onClick={() => fileRef.current?.click()}>
                   <Upload className="w-4 h-4" /> رفع ملف HTML
                 </Button>
-                {uploadMsg && <p className="text-xs text-[#364152]">{uploadMsg}</p>}
+                {uploadMsg && <p className="text-xs text-[var(--sys-foreground)]">{uploadMsg}</p>}
               </CardContent>
             </Card>
 
             <Card>
               <CardContent className="p-4 space-y-3">
-                <h3 className="font-semibold text-[#1a2232]">نموذج الطلب</h3>
-                <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded bg-[#00c853] text-white text-xs font-bold">✓</span>
+                <h3 className="font-semibold text-[var(--sys-heading)]">نموذج الطلب</h3>
+                <div className="flex items-center gap-2 rounded-xl border border-[var(--sys-success)]/40 bg-[var(--sys-success-soft)] px-3 py-2.5">
+                  <span className="flex h-5 w-5 items-center justify-center rounded bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-bold">✓</span>
                   <div>
-                    <p className="text-sm font-semibold text-[#121926]">نموذج الطلب مفعل</p>
-                    <p className="text-[11px] text-[#697586]">يظهر تلقائيًا أسفل الصفحة لكل زائر — بدون أي إعداد إضافي. المنتج والسعر يؤخذان من قاعدة البيانات.</p>
+                    <p className="text-sm font-semibold text-[var(--sys-heading)]">نموذج الطلب مفعل</p>
+                    <p className="text-[11px] text-[var(--sys-muted-foreground)]">يظهر تلقائيًا أسفل الصفحة لكل زائر — بدون أي إعداد إضافي. المنتج والسعر يؤخذان من قاعدة البيانات.</p>
                   </div>
                 </div>
               </CardContent>
@@ -307,10 +307,10 @@ export function LandingPageDetailScreen() {
                 and raising a price in the catalogue never reached it. */}
             <Card>
               <CardContent className="p-4 space-y-2">
-                <h3 className="font-semibold text-[#1a2232] flex items-center gap-2">
-                  <Gift className="w-4 h-4 text-[#b8256e]" /> عروض المنتج
+                <h3 className="font-semibold text-[var(--sys-heading)] flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-[var(--sys-primary)]" /> عروض المنتج
                 </h3>
-                <p className="text-[11px] leading-relaxed text-[#697586]">
+                <p className="text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
                   العروض تُدار من صفحة المنتج نفسه، وهذه الصفحة تقرأ منها مباشرة —
                   فتغيير السعر هناك يصل إلى هنا وإلى كل مكان يبيع نفس المنتج.
                 </p>
@@ -321,7 +321,7 @@ export function LandingPageDetailScreen() {
                     </Button>
                   </a>
                 ) : (
-                  <p className="text-[11px] text-[#c2410c]">
+                  <p className="text-[11px] text-[var(--sys-warning)]">
                     اربط الصفحة بمنتج أولاً حتى تظهر عروضه عليها.
                   </p>
                 )}
@@ -332,11 +332,11 @@ export function LandingPageDetailScreen() {
             <Card>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-[#1a2232] flex items-center gap-2">
-                    <Gift className="w-4 h-4 text-[#b8256e]" /> المنتجات المقترحة بعد الطلب
+                  <h3 className="font-semibold text-[var(--sys-heading)] flex items-center gap-2">
+                    <Gift className="w-4 h-4 text-[var(--sys-primary)]" /> المنتجات المقترحة بعد الطلب
                   </h3>
                 </div>
-                <p className="text-[11px] text-[#697586]">تظهر في شاشة النجاح بعد الطلب — يمكن للعميل إضافتها إلى نفس الطلب خلال 30 دقيقة.</p>
+                <p className="text-[11px] text-[var(--sys-muted-foreground)]">تظهر في شاشة النجاح بعد الطلب — يمكن للعميل إضافتها إلى نفس الطلب خلال 30 دقيقة.</p>
                 <div className="flex gap-2">
                   <Select value={recProductId} onChange={(e: any) => setRecProductId(e.target.value)}>
                     <option value="">— اختر منتجًا —</option>
@@ -349,16 +349,16 @@ export function LandingPageDetailScreen() {
                   </Button>
                 </div>
                 {recs.length === 0 ? (
-                  <p className="text-xs text-[#697586]">لا توجد منتجات مقترحة.</p>
+                  <p className="text-xs text-[var(--sys-muted-foreground)]">لا توجد منتجات مقترحة.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {recs.map((r: any, i: number) => (
-                      <div key={r.id} className="flex items-center gap-2 rounded-xl border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2">
-                        <span className="text-xs text-[#9aa4b2]">{i + 1}.</span>
-                        <span className="flex-1 truncate text-sm text-[#121926]">{r.product?.name}</span>
-                        <span className="text-xs font-bold text-[#b8256e]" dir="ltr">{r.product?.basePrice ?? '—'}</span>
-                        {!r.isActive && <span className="text-[10px] text-[#ffab00]">معطّل</span>}
-                        <button title="حذف" onClick={() => deleteRecommendation(r.id)} className="p-1 rounded-lg hover:bg-rose-50 text-rose-600"><Trash2 className="w-4 h-4" /></button>
+                      <div key={r.id} className="flex items-center gap-2 rounded-xl border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2">
+                        <span className="text-xs text-[var(--sys-muted)]">{i + 1}.</span>
+                        <span className="flex-1 truncate text-sm text-[var(--sys-heading)]">{r.product?.name}</span>
+                        <span className="text-xs font-bold text-[var(--sys-primary)]" dir="ltr">{r.product?.basePrice ?? '—'}</span>
+                        {!r.isActive && <span className="text-[10px] text-[var(--sys-warning)]">معطّل</span>}
+                        <button title="حذف" onClick={() => deleteRecommendation(r.id)} className="p-1 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}
                   </div>
@@ -368,9 +368,9 @@ export function LandingPageDetailScreen() {
 
             <Card>
               <CardContent className="p-4 space-y-3">
-                <h3 className="font-semibold text-[#1a2232]">الرابط العام</h3>
+                <h3 className="font-semibold text-[var(--sys-heading)]">الرابط العام</h3>
                 <div className="flex items-center gap-2" dir="ltr">
-                  <code className="flex-1 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded px-3 py-2 truncate">{publicUrl}</code>
+                  <code className="flex-1 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded px-3 py-2 truncate">{publicUrl}</code>
                   <Button variant="secondary" size="sm" onClick={copyUrl}><Copy className="w-4 h-4" /> {copied ? 'تم' : 'نسخ'}</Button>
                   {lp.isPublished && (
                     <a href={`/lp/${lp.slug}`} target="_blank" rel="noopener noreferrer">
@@ -384,7 +384,7 @@ export function LandingPageDetailScreen() {
                     and a second place for a number is a second answer. */}
                 <a
                   href="/growth/performance?tab=landing"
-                  className="flex items-center justify-between gap-2 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2.5 text-xs text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                 >
                   <span className="flex items-center gap-1.5">
                     <Gauge className="h-3.5 w-3.5" />
@@ -400,8 +400,8 @@ export function LandingPageDetailScreen() {
           <div className="min-w-0">
             <Card className="h-full">
               <CardContent className="p-4 flex flex-col h-full">
-                <h3 className="font-semibold text-[#1a2232] flex items-center gap-2 mb-3">
-                  <MonitorPlay className="w-5 h-5 text-[#b8256e]" /> معاينة آمنة
+                <h3 className="font-semibold text-[var(--sys-heading)] flex items-center gap-2 mb-3">
+                  <MonitorPlay className="w-5 h-5 text-[var(--sys-primary)]" /> معاينة آمنة
                 </h3>
                 {previewToken ? (
                   /**
@@ -426,10 +426,10 @@ export function LandingPageDetailScreen() {
                   <iframe
                     src={previewToken}
                     title="معاينة صفحة الهبوط"
-                    className="flex-1 w-full min-h-[480px] rounded-lg border border-[#e3e8ef] bg-white"
+                    className="flex-1 w-full min-h-[480px] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]"
                   />
                 ) : (
-                  <div className="flex-1 min-h-[480px] flex items-center justify-center text-sm text-[#697586] bg-[#f8fafc] rounded-lg">
+                  <div className="flex-1 min-h-[480px] flex items-center justify-center text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] rounded-lg">
                     جارٍ تجهيز المعاينة…
                   </div>
                 )}

@@ -97,20 +97,20 @@ export function StoreBrandField({
   return (
     <div className="flex items-center gap-3">
       <div
-        className={`flex shrink-0 items-center justify-center overflow-hidden border border-[#e3e8ef] bg-white ${
+        className={`flex shrink-0 items-center justify-center overflow-hidden border border-[var(--sys-border)] bg-[var(--sys-card)] ${
           kind === 'favicon' ? 'h-10 w-10 rounded-lg' : 'h-14 w-14 rounded-xl'
         }`}
       >
         {value ? (
           <img src={value} alt="" className="h-full w-full object-contain" />
         ) : (
-          <ImagePlus className="h-5 w-5 text-[#9aa4b2]" />
+          <ImagePlus className="h-5 w-5 text-[var(--sys-muted)]" />
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-[#121926]">{copy.title}</p>
-        <p className="text-[10.5px] leading-relaxed text-[#697586]">{copy.hint}</p>
-        {error && <p className="mt-0.5 text-[11px] text-[#fb323f]">{error}</p>}
+        <p className="text-xs font-semibold text-[var(--sys-heading)]">{copy.title}</p>
+        <p className="text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">{copy.hint}</p>
+        {error && <p className="mt-0.5 text-[11px] text-[var(--sys-destructive)]">{error}</p>}
       </div>
       <input
         ref={input}
@@ -128,7 +128,7 @@ export function StoreBrandField({
           type="button"
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[#e3e8ef] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#364152] hover:border-[#b8256e] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-1.5 text-[11px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
           {value ? 'تغيير' : copy.upload}
@@ -139,7 +139,7 @@ export function StoreBrandField({
             onClick={() => void remove()}
             disabled={busy}
             title={copy.removeTitle}
-            className="rounded-lg p-1.5 text-[#697586] hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+            className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-50"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>

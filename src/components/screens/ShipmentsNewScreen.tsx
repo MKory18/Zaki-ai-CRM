@@ -154,7 +154,7 @@ export function ShipmentsNewScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 grid gap-3 md:grid-cols-5">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 grid gap-3 md:grid-cols-5">
         <Select label="شركة الشحن (للشحنة)" value={filters.courier} onChange={(v) => setFilters({ ...filters, courier: v })} options={providers.map((p) => ({ value: p.id, label: p.name }))} />
         <Select label="المحافظة" value={filters.region} onChange={(v) => setFilters({ ...filters, region: v })} options={regions.map((r) => ({ value: r.id, label: r.name }))} />
         <DateField label="من" value={filters.from} onChange={(v) => setFilters({ ...filters, from: v })} />
@@ -163,20 +163,20 @@ export function ShipmentsNewScreen() {
           <button
             onClick={create}
             disabled={busy || selectedCount === 0}
-            className="w-full h-10 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="w-full h-10 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {busy ? 'جارٍ الإنشاء…' : `إنشاء شحنة (${selectedCount})`}
           </button>
         </div>
       </div>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
 
       {exceptions.length > 0 && (
-        <section className="bg-white border border-[#fecdd1] rounded-[8px] p-4">
-          <h3 className="text-sm font-bold text-[#fb323f] mb-2">طلبات لم تُشحن ({exceptions.length})</h3>
-          <ul className="text-xs text-[#364152] space-y-1">
+        <section className="bg-[var(--sys-card)] border border-[var(--sys-destructive-border)] rounded-[8px] p-4">
+          <h3 className="text-sm font-bold text-[var(--sys-destructive)] mb-2">طلبات لم تُشحن ({exceptions.length})</h3>
+          <ul className="text-xs text-[var(--sys-foreground)] space-y-1">
             {exceptions.map((e) => (
               <li key={e.orderNumber}>
                 <span dir="ltr">{e.orderNumber}</span> — {e.reasons.join(' · ')}
@@ -187,7 +187,7 @@ export function ShipmentsNewScreen() {
       )}
 
       {!rows ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
@@ -200,17 +200,17 @@ export function ShipmentsNewScreen() {
             onClick={() => setView(k)}
             className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors ${
               view === k
-                ? 'bg-[#b8256e] text-white border-[#b8256e]'
-                : 'bg-white text-[#364152] border-[#e3e8ef] hover:border-[#b8256e]/40'
+                ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]'
+                : 'bg-[var(--sys-card)] text-[var(--sys-foreground)] border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
             }`}
           >
             {label}
           </button>
         ))}
       </div>
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="px-3 py-2 w-10">
                   <input type="checkbox" onChange={toggleAll} aria-label="اختيار الكل" />
@@ -223,9 +223,9 @@ export function ShipmentsNewScreen() {
                 <th className="text-right font-medium px-3 py-2"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {rows.map((r) => (
-                <tr key={r.id} className={r.hardBlocked ? 'bg-[#feecee]/40' : ''}>
+                <tr key={r.id} className={r.hardBlocked ? 'bg-[var(--sys-destructive-soft)]/40' : ''}>
                   <td className="px-3 py-2">
                     <input
                       type="checkbox"
@@ -234,31 +234,31 @@ export function ShipmentsNewScreen() {
                       onChange={(e) => setSelected({ ...selected, [r.id]: e.target.checked })}
                     />
                   </td>
-                  <td className="px-3 py-2 font-medium text-[#121926]" dir="ltr">{r.orderNumber}</td>
-                  <td className="px-3 py-2 text-[#364152]">
+                  <td className="px-3 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{r.orderNumber}</td>
+                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
                     <span className="flex items-center gap-2">
                       {r.customer.fullName}
                       <CustomerHistoryButton customerId={r.customer.id} orderId={r.id} previousOrders={r.previousOrders} />
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-[#697586]">{r.region?.name ?? r.customer.city}</td>
-                  <td className="px-3 py-2 text-xs text-[#364152]" dir="ltr">
+                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{r.region?.name ?? r.customer.city}</td>
+                  <td className="px-3 py-2 text-xs text-[var(--sys-foreground)]" dir="ltr">
                     {r.cod.subtotal} − {r.cod.discount} + {r.cod.deliveryFee} ={' '}
                     <strong className="tabular-nums">{r.cod.cod} {r.cod.currency}</strong>
-                    {r.cod.feeSource === 'NONE' && <span className="text-[#fb323f]"> (بلا أجرة)</span>}
+                    {r.cod.feeSource === 'NONE' && <span className="text-[var(--sys-destructive)]"> (بلا أجرة)</span>}
                   </td>
                   <td className="px-3 py-2">
                     {r.blocks.length === 0 ? (
-                      <span className="text-xs text-[#00a344]">جاهز</span>
+                      <span className="text-xs text-[var(--sys-success)]">جاهز</span>
                     ) : (
                       <div className="space-y-1">
                         {r.blocks.map((b) => (
-                          <p key={b.code} className={`text-xs flex items-center gap-1 ${b.hard ? 'text-[#fb323f]' : 'text-[#c07f2a]'}`}>
+                          <p key={b.code} className={`text-xs flex items-center gap-1 ${b.hard ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-warning)]'}`}>
                             <AlertTriangle className="w-3 h-3" /> {b.message}
                           </p>
                         ))}
                         {!r.hardBlocked && (
-                          <label className="flex items-center gap-1 text-[11px] text-[#697586]">
+                          <label className="flex items-center gap-1 text-[11px] text-[var(--sys-muted-foreground)]">
                             <input
                               type="checkbox"
                               checked={!!acknowledged[r.id]}
@@ -286,8 +286,8 @@ export function ShipmentsNewScreen() {
                       }
                       className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-lg border transition-colors disabled:opacity-50 ${
                         view === 'held'
-                          ? 'border-[#e3e8ef] text-[#00a344] hover:border-[#00a344]'
-                          : 'border-[#e3e8ef] text-[#697586] hover:border-[#c07f2a] hover:text-[#c07f2a]'
+                          ? 'border-[var(--sys-border)] text-[var(--sys-success)] hover:border-[var(--sys-success)]'
+                          : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)]'
                       }`}
                     >
                       {holding === r.id ? (
@@ -300,7 +300,7 @@ export function ShipmentsNewScreen() {
                       {view === 'held' ? 'أرجِعه' : 'أجّل'}
                     </button>
                     {r.shipHoldReason && (
-                      <span className="block text-[10px] text-[#9aa4b2] mt-0.5 max-w-[10rem] truncate" title={r.shipHoldReason}>
+                      <span className="block text-[10px] text-[var(--sys-muted)] mt-0.5 max-w-[10rem] truncate" title={r.shipHoldReason}>
                         {r.shipHoldReason}
                       </span>
                     )}
@@ -309,8 +309,8 @@ export function ShipmentsNewScreen() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-[#697586]">
-                    <Truck className="w-5 h-5 mx-auto mb-2 text-[#9aa4b2]" />
+                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">
+                    <Truck className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
                     لا توجد طلبات مؤكدة جاهزة للشحن بهذه الفلاتر.
                   </td>
                 </tr>
@@ -337,11 +337,11 @@ function Select({
 }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-[#364152] mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm"
+        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
       >
         <option value="">الكل</option>
         {options.map((o) => (
@@ -357,13 +357,13 @@ function Select({
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-[#364152] mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
       <input
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         dir="ltr"
-        className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm"
+        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
       />
     </label>
   );

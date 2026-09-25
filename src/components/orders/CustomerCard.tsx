@@ -106,26 +106,26 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
 
   const previous = Math.max(0, (order.customer.totalOrders ?? 1) - 1);
   const inputClass =
-    'w-full h-9 px-3 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]';
+    'w-full h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-black text-slate-700 flex items-center gap-2">
-          <User className="w-4 h-4 text-[#b8256e]" />
+        <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
+          <User className="w-4 h-4 text-[var(--sys-primary)]" />
           معلومات العميل
         </h4>
         <div className="flex items-center gap-1.5">
           <button
             onClick={onOpenHistory}
-            className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600 hover:text-[#b8256e] inline-flex items-center gap-1.5"
+            className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
           >
             <History className="w-3.5 h-3.5" />
             طلبات سابقة ({previous})
           </button>
           <button
             onClick={openForm}
-            className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600 hover:text-[#b8256e] inline-flex items-center gap-1.5"
+            className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
           >
             <Pencil className="w-3.5 h-3.5" />
             {open ? 'إغلاق' : 'تعديل'}
@@ -170,18 +170,18 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
             </div>
           </div>
 
-          {error && <p className="text-[11px] text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] px-2.5 py-1.5">{error}</p>}
+          {error && <p className="text-[11px] text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] px-2.5 py-1.5">{error}</p>}
 
           <div className="flex gap-2">
             <button
               onClick={save}
               disabled={busy}
-              className="text-xs px-3 py-1.5 rounded-[8px] bg-[#b8256e] text-white font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="text-xs px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
             >
               {busy && <Loader2 className="w-3 h-3 animate-spin" />}
               حفظ بيانات العميل
             </button>
-            <button onClick={() => setOpen(false)} className="text-xs px-3 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600">
+            <button onClick={() => setOpen(false)} className="text-xs px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">
               إلغاء
             </button>
           </div>
@@ -194,8 +194,8 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
 function Row({ label, value, ltr }: { label: string; value: string; ltr?: boolean }) {
   return (
     <div>
-      <dt className="text-[11px] text-slate-400">{label}</dt>
-      <dd className="text-slate-900 font-medium" dir={ltr ? 'ltr' : undefined}>{value}</dd>
+      <dt className="text-[11px] text-[var(--sys-muted)]">{label}</dt>
+      <dd className="text-[var(--sys-heading)] font-medium" dir={ltr ? 'ltr' : undefined}>{value}</dd>
     </div>
   );
 }
@@ -203,7 +203,7 @@ function Row({ label, value, ltr }: { label: string; value: string; ltr?: boolea
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-slate-600 mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-muted-foreground)] mb-1">{label}</span>
       {children}
     </label>
   );

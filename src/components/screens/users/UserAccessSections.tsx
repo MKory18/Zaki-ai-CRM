@@ -99,34 +99,34 @@ export function UserGeoAccessSection({ userId, canEdit }: { userId: string; canE
   return (
     <Card>
       <CardContent className="p-5">
-        <h3 className="mb-1 flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-[#364152]">
+        <h3 className="mb-1 flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)]">
           <Globe2 className="h-3.5 w-3.5" /> البلدان والمتاجر
         </h3>
-        <p className="mb-3 text-[11px] leading-relaxed text-[#697586]">
+        <p className="mb-3 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           البلد وحده يفتح كل متاجره؛ اختيار متاجر بعينها يحصره فيها. ومن يملك صلاحية إدارة البلدان والمتاجر
           يدخل الكل مهما اخترت هنا.
         </p>
 
         {countries === null ? (
-          <div className="flex h-16 items-center justify-center text-[#697586]"><Loader2 className="h-4 w-4 animate-spin" /></div>
+          <div className="flex h-16 items-center justify-center text-[var(--sys-muted-foreground)]"><Loader2 className="h-4 w-4 animate-spin" /></div>
         ) : (
           <div className="space-y-2">
             {countries.map((c) => {
               const on = picked.countryIds.has(c.id);
               const allStores = on && !c.stores.some((s) => picked.storeIds.has(s.id));
               return (
-                <div key={c.id} className={`rounded-lg border p-2.5 ${on ? 'border-[#c9e8d5] bg-[#f6fcf8]' : 'border-[#e3e8ef]'}`}>
-                  <label className="flex items-center gap-2 text-xs font-bold text-[#121926]">
+                <div key={c.id} className={`rounded-lg border p-2.5 ${on ? 'border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)]' : 'border-[var(--sys-border)]'}`}>
+                  <label className="flex items-center gap-2 text-xs font-bold text-[var(--sys-heading)]">
                     <input type="checkbox" checked={on} disabled={!canEdit} onChange={() => toggleCountry(c)} />
                     {c.name}
                     {allStores && c.stores.length > 0 && (
-                      <span className="rounded-full bg-[#e6f9ee] px-2 py-0.5 text-[10px] font-semibold text-[#00a651]">كل متاجره</span>
+                      <span className="rounded-full bg-[var(--sys-success-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-success)]">كل متاجره</span>
                     )}
                   </label>
                   {c.stores.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 ps-6">
                       {c.stores.map((s) => (
-                        <label key={s.id} className="flex items-center gap-1.5 text-[11px] text-[#364152]">
+                        <label key={s.id} className="flex items-center gap-1.5 text-[11px] text-[var(--sys-foreground)]">
                           <input
                             type="checkbox"
                             checked={picked.storeIds.has(s.id)}
@@ -150,10 +150,10 @@ export function UserGeoAccessSection({ userId, canEdit }: { userId: string; canE
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               احفظ الوصول
             </Button>
-            {msg && <span className={`text-xs font-medium ${msg.ok ? 'text-[#00994d]' : 'text-rose-600'}`}>{msg.text}</span>}
+            {msg && <span className={`text-xs font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</span>}
           </div>
         )}
-        {!canEdit && msg && <p className="mt-2 text-xs text-rose-600">{msg.text}</p>}
+        {!canEdit && msg && <p className="mt-2 text-xs text-[var(--sys-destructive)]">{msg.text}</p>}
       </CardContent>
     </Card>
   );
@@ -187,8 +187,8 @@ export function UserPhoneField({ userId, initial, canEdit }: { userId: string; i
   }
 
   return (
-    <div className="rounded-xl bg-[#f8fafc] px-3 py-2.5">
-      <p className="flex items-center gap-1 text-[10px] text-[#9ca3af]"><Phone className="h-3 w-3" /> الهاتف</p>
+    <div className="rounded-xl bg-[var(--sys-surface)] px-3 py-2.5">
+      <p className="flex items-center gap-1 text-[10px] text-[var(--sys-muted)]"><Phone className="h-3 w-3" /> الهاتف</p>
       {canEdit ? (
         <div className="mt-1 flex items-center gap-1.5">
           <input
@@ -197,16 +197,16 @@ export function UserPhoneField({ userId, initial, canEdit }: { userId: string; i
             dir="ltr"
             placeholder="—"
             aria-label="هاتف الموظف"
-            className="h-8 min-w-0 flex-1 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs font-bold text-[#121926] outline-none focus:border-[#b8256e]"
+            className="h-8 min-w-0 flex-1 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs font-bold text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
           />
           <Button size="sm" variant="outline" onClick={save} disabled={busy || phone.trim() === saved.trim()}>
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'حفظ'}
           </Button>
         </div>
       ) : (
-        <p className="font-bold text-[#121926]" dir="ltr">{saved || '—'}</p>
+        <p className="font-bold text-[var(--sys-heading)]" dir="ltr">{saved || '—'}</p>
       )}
-      {msg && <p className={`mt-1 text-[10px] font-medium ${msg.ok ? 'text-[#00994d]' : 'text-rose-600'}`}>{msg.text}</p>}
+      {msg && <p className={`mt-1 text-[10px] font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>}
     </div>
   );
 }

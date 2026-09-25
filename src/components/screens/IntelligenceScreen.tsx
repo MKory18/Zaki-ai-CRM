@@ -35,9 +35,9 @@ interface Payload {
 }
 
 const TONE: Record<string, { border: string; chip: string; label: string }> = {
-  ALARM: { border: 'border-[#fecdd1]', chip: 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]', label: 'يحتاج تدخّلاً' },
-  WATCH: { border: 'border-amber-200', chip: 'bg-amber-50 text-amber-700 border-amber-200', label: 'راقبه' },
-  GOOD: { border: 'border-emerald-200', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'جيد' },
+  ALARM: { border: 'border-[var(--sys-destructive-border)]', chip: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]', label: 'يحتاج تدخّلاً' },
+  WATCH: { border: 'border-[var(--sys-warning)]/40', chip: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/40', label: 'راقبه' },
+  GOOD: { border: 'border-[var(--sys-success)]/40', chip: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/40', label: 'جيد' },
 };
 
 export function IntelligenceScreen() {
@@ -62,25 +62,25 @@ export function IntelligenceScreen() {
       {/* The AI sits under the rule-based findings, never instead of them:
           those carry their evidence and can be checked, and the numbers it
           is handed are the same numbers. */}
-      <p className="text-xs text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+      <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
         تحليل مبني على طلباتك الفعلية — كل رقم هنا محسوب من طلبات موجودة، لا تقديرات. وما لا تكفي
         البيانات للإجابة عليه يُقال فيه «لا تكفي البيانات» بدل رقم يبدو معقولاً.
       </p>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
 
       {!data ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحليل…
         </div>
       ) : data.totalOrders < data.minSample ? (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
-          <Lightbulb className="w-5 h-5 mx-auto mb-2 text-[#9aa4b2]" />
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+          <Lightbulb className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا تكفي البيانات بعد — {data.totalOrders} طلباً فقط. التحليل يحتاج {data.minSample} على الأقل
           حتى لا تكون النسب مجرد ضجيج.
         </p>
       ) : data.findings.length === 0 ? (
-        <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-6 text-center">
           <CheckCircle2 className="w-5 h-5 mx-auto mb-2" />
           لا شيء يتجاوز حدود الإنذار في {data.totalOrders} طلباً. هذا صمت مقصود، لا تحليل فاشل.
         </p>
@@ -97,7 +97,7 @@ export function IntelligenceScreen() {
                 {data.counts.watch} للمراقبة
               </span>
             )}
-            <span className="px-2.5 py-1 rounded-full border border-[#e3e8ef] text-[#697586]">
+            <span className="px-2.5 py-1 rounded-full border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">
               من {data.totalOrders} طلباً
             </span>
           </div>
@@ -106,23 +106,23 @@ export function IntelligenceScreen() {
             {data.findings.map((f) => {
               const tone = TONE[f.severity];
               return (
-                <div key={f.key} className={`bg-white border rounded-[8px] p-4 ${tone.border}`}>
+                <div key={f.key} className={`bg-[var(--sys-card)] border rounded-[8px] p-4 ${tone.border}`}>
                   <div className="flex items-start gap-2">
                     {f.severity === 'ALARM' ? (
-                      <AlertTriangle className="w-4 h-4 text-[#fb323f] shrink-0 mt-0.5" />
+                      <AlertTriangle className="w-4 h-4 text-[var(--sys-destructive)] shrink-0 mt-0.5" />
                     ) : (
-                      <Eye className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <Eye className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-medium text-[#121926]">{f.title}</h3>
+                        <h3 className="text-sm font-medium text-[var(--sys-heading)]">{f.title}</h3>
                         <span className={`text-[11px] px-2 py-0.5 rounded-full border ${tone.chip}`}>{tone.label}</span>
                       </div>
 
                       {/* The number it rests on, so the claim can be checked. */}
-                      <p className="text-xs text-[#697586] mt-1">{f.evidence}</p>
+                      <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{f.evidence}</p>
 
-                      <p className="text-sm text-[#364152] mt-2 bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-2.5">
+                      <p className="text-sm text-[var(--sys-foreground)] mt-2 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-2.5">
                         {f.action}
                       </p>
                     </div>

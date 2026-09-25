@@ -141,11 +141,11 @@ export function UsersScreen() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926] flex items-center space-x-2 rtl:space-x-reverse">
-              <Users className="w-6 h-6 text-[#fb323f]" />
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2 rtl:space-x-reverse">
+              <Users className="w-6 h-6 text-[var(--sys-destructive)]" />
               <span>إدارة المستخدمين والأدوار</span>
             </h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               مراجعة طلبات التسجيل، تعيين الأدوار، تنشيط/إيقاف الحسابات — كل إجراء يُسجَّل في سجل التدقيق
             </p>
           </div>
@@ -163,19 +163,19 @@ export function UsersScreen() {
         </div>
 
         {error && (
-          <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">{error}</div>
+          <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg">{error}</div>
         )}
 
         {/* Filters */}
-        <div className="bg-white border border-[#e3e8ef] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative sm:col-span-2">
-            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
             <input
               type="text"
               placeholder="بحث بالاسم أو البريد الإلكتروني..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]"
+              className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
             />
           </div>
           <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="text-xs py-2">
@@ -205,7 +205,7 @@ export function UsersScreen() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
+                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">المستخدم</th>
                     <th className="px-6 py-3.5">الدور الحالي</th>
@@ -216,12 +216,12 @@ export function UsersScreen() {
                     <th className="px-6 py-3.5 text-right rtl:text-left">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-[#f8fafc] transition-colors">
+                    <tr key={u.id} className="hover:bg-[var(--sys-surface)] transition-colors">
                       <td className="px-6 py-3.5">
-                        <p className="font-bold text-[#121926]">{u.name}</p>
-                        <p className="text-[11px] text-[#9ca3af]">{u.email}</p>
+                        <p className="font-bold text-[var(--sys-heading)]">{u.name}</p>
+                        <p className="text-[11px] text-[var(--sys-muted)]">{u.email}</p>
                       </td>
                       <td className="px-6 py-3.5">
                         <Badge variant={u.role === 'PENDING_USER' ? 'warning' : u.role === 'SUPER_ADMIN' ? 'purple' : 'info'}>
@@ -231,13 +231,13 @@ export function UsersScreen() {
                       <td className="px-6 py-3.5">
                         <Badge variant={statusVariant(u.status) as any}>{STATUS_LABELS[u.status] || u.status}</Badge>
                       </td>
-                      <td className="px-6 py-3.5 text-[#697586]">
+                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)]">
                         {format(new Date(u.createdAt), 'yyyy-MM-dd')}
                       </td>
-                      <td className="px-6 py-3.5 text-[#697586]">
+                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)]">
                         {u.lastLoginAt ? format(new Date(u.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—'}
                       </td>
-                      <td className="px-6 py-3.5 text-[#697586]">
+                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)]">
                         {u.assignedBy?.name || '—'}
                       </td>
                       <td className="px-6 py-3.5 text-right rtl:text-left">
@@ -264,7 +264,7 @@ export function UsersScreen() {
               </table>
             </div>
 
-            <div className="px-6 py-3 border-t border-[#e3e8ef] flex items-center justify-between text-xs text-[#697586]">
+            <div className="px-6 py-3 border-t border-[var(--sys-border)] flex items-center justify-between text-xs text-[var(--sys-muted-foreground)]">
               <span>
                 إجمالي <strong>{pagination.total}</strong> مستخدم
               </span>
@@ -313,7 +313,7 @@ export function UsersScreen() {
         {manageUser && (
           <div className="space-y-5">
             {modalError && (
-              <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">{modalError}</div>
+              <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg">{modalError}</div>
             )}
 
             {/* The role is changed in ONE place — the employee's page, where the
@@ -322,15 +322,15 @@ export function UsersScreen() {
                 permissions on the old role. */}
             <a
               href={`/admin/users/${manageUser.id}`}
-              className="flex items-center justify-between rounded-xl border border-[#e3e8ef] bg-[#f8fafc] p-3 text-xs font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+              className="flex items-center justify-between rounded-xl border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
             >
               <span>الدور الحالي: {ROLE_LABELS[manageUser.role] || manageUser.role}</span>
               <span>تغيير الدور والصلاحيات والوصول ←</span>
             </a>
 
             {/* Status actions */}
-            <div className="border border-[#e3e8ef] rounded-xl p-4 space-y-3 bg-[#f8fafc]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">حالة الحساب</h4>
+            <div className="border border-[var(--sys-border)] rounded-xl p-4 space-y-3 bg-[var(--sys-surface)]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">حالة الحساب</h4>
               <div className="flex flex-wrap gap-2">
                 {manageUser.status === 'PENDING' && (
                   <Button size="sm" variant="success" loading={actionLoading} onClick={() => handleAction('changeStatus', { status: 'ACTIVE' })}>
@@ -385,7 +385,7 @@ export function UsersScreen() {
                   إنهاء الجلسات (Force Logout)
                 </Button>
               </div>
-              <p className="text-[11px] text-[#697586]">
+              <p className="text-[11px] text-[var(--sys-muted-foreground)]">
                 إيقاف/تعطيل الحساب ينهي جميع الجلسات النشطة فوراً عبر إبطال التوكن الحالي.
               </p>
             </div>
@@ -401,7 +401,7 @@ export function UsersScreen() {
         maxWidth="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-[#364152] leading-relaxed">{pendingAction?.msg}</p>
+          <p className="text-sm text-[var(--sys-foreground)] leading-relaxed">{pendingAction?.msg}</p>
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setPendingAction(null)}>
               إلغاء
@@ -412,8 +412,8 @@ export function UsersScreen() {
               onClick={confirmPendingAction}
               className={
                 pendingAction?.action === 'changeStatus' && pendingAction.extra?.status === 'ACTIVE'
-                  ? 'bg-[#00c853] hover:bg-[#00c853]/85'
-                  : 'bg-[#fb323f] hover:bg-[#fb323f]/85'
+                  ? 'bg-[var(--sys-success)] hover:bg-[var(--sys-success)]/85'
+                  : 'bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85'
               }
             >
               تأكيد

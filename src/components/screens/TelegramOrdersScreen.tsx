@@ -37,10 +37,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-[#fff7e6] text-[#b8860b]',
-  PROCESSED: 'bg-[#e6f9ee] text-[#00a651]',
-  IGNORED: 'bg-[#f1f5f9] text-[#697586]',
-  NEEDS_REVIEW: 'bg-[#fff1f2] text-[#e11d48]',
+  PENDING: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]',
+  PROCESSED: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]',
+  IGNORED: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]',
+  NEEDS_REVIEW: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]',
   FAILED: 'bg-[#fef2f2] text-[#dc2626]',
 };
 
@@ -93,7 +93,7 @@ export function TelegramOrdersScreen() {
   if (!canView) {
     return (
       <>
-        <div className="p-8 text-center text-[#697586]">ليس لديك صلاحية لعرض تكامل تيليجرام</div>
+        <div className="p-8 text-center text-[var(--sys-muted-foreground)]">ليس لديك صلاحية لعرض تكامل تيليجرام</div>
       </>
     );
   }
@@ -119,10 +119,10 @@ export function TelegramOrdersScreen() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-xl font-bold text-[#121926] flex items-center gap-2">
+            <h1 className="text-xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
               <Send className="w-5 h-5 text-[#229ED9]" /> تكامل تيليجرام
             </h1>
-            <p className="text-xs text-[#697586] mt-1">تحويل رسائل مجموعات تيليجرام إلى طلبات تلقائيًا</p>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">تحويل رسائل مجموعات تيليجرام إلى طلبات تلقائيًا</p>
           </div>
           <div className="flex items-center gap-2">
             {canManage && (
@@ -135,7 +135,7 @@ export function TelegramOrdersScreen() {
         </div>
 
         {error && (
-          <div className="rounded-xl border border-rose-300 bg-rose-50 text-rose-800 px-3 py-2.5 text-xs flex items-center justify-between gap-2">
+          <div className="rounded-xl border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs flex items-center justify-between gap-2">
             <span>{error}</span>
             <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
           </div>
@@ -146,19 +146,19 @@ export function TelegramOrdersScreen() {
           <CardContent className="p-4 flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-              <span className="text-sm font-semibold text-[#121926]">{connected ? 'متصل' : 'غير متصل'}</span>
+              <span className="text-sm font-semibold text-[var(--sys-heading)]">{connected ? 'متصل' : 'غير متصل'}</span>
             </div>
-            <div className="text-xs text-[#697586]">
+            <div className="text-xs text-[var(--sys-muted-foreground)]">
               البوت: {status?.botUsername ? <span dir="ltr" className="font-mono">@{status.botUsername}</span> : 'غير معروف'}
             </div>
-            <div className="text-xs text-[#697586]">
-              الويبهوك: {status?.telegramWebhookSet ? <span className="text-emerald-600 font-semibold">مسجل</span> : <span className="text-rose-600 font-semibold">غير مسجل</span>}
+            <div className="text-xs text-[var(--sys-muted-foreground)]">
+              الويبهوك: {status?.telegramWebhookSet ? <span className="text-[var(--sys-success)] font-semibold">مسجل</span> : <span className="text-[var(--sys-destructive)] font-semibold">غير مسجل</span>}
             </div>
-            <div className="text-xs text-[#697586]">المصادر المرتبطة: <span className="font-semibold text-[#121926]">{status?.sourcesCount ?? 0}</span></div>
+            <div className="text-xs text-[var(--sys-muted-foreground)]">المصادر المرتبطة: <span className="font-semibold text-[var(--sys-heading)]">{status?.sourcesCount ?? 0}</span></div>
             {/* Adding, switching and removing groups is configuration — it
                 lives on the settings screen, beside the bot it depends on. */}
             {canManage && (
-              <Link href="/settings/telegram" className="text-xs text-[#b8256e] hover:underline mr-auto">الاتصال والمجموعات المرتبطة ←</Link>
+              <Link href="/settings/telegram" className="text-xs text-[var(--sys-primary)] hover:underline mr-auto">الاتصال والمجموعات المرتبطة ←</Link>
             )}
           </CardContent>
         </Card>
@@ -166,17 +166,17 @@ export function TelegramOrdersScreen() {
         {/* Order processing stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { key: 'CREATED', label: 'تم الإنشاء', icon: ShoppingBag, color: 'text-emerald-600' },
-            { key: 'NEEDS_REVIEW', label: 'قيد المراجعة', icon: MessageSquare, color: 'text-rose-600' },
-            { key: 'IGNORED', label: 'تم التجاهل', icon: CheckCircle2, color: 'text-[#697586]' },
-            { key: 'FAILED', label: 'فشل', icon: XCircle, color: 'text-red-600' },
+            { key: 'CREATED', label: 'تم الإنشاء', icon: ShoppingBag, color: 'text-[var(--sys-success)]' },
+            { key: 'NEEDS_REVIEW', label: 'قيد المراجعة', icon: MessageSquare, color: 'text-[var(--sys-destructive)]' },
+            { key: 'IGNORED', label: 'تم التجاهل', icon: CheckCircle2, color: 'text-[var(--sys-muted-foreground)]' },
+            { key: 'FAILED', label: 'فشل', icon: XCircle, color: 'text-[var(--sys-destructive)]' },
           ].map((s) => (
             <Card key={s.key}>
               <CardContent className="p-4 flex items-center gap-3">
                 <s.icon className={`w-5 h-5 ${s.color}`} />
                 <div>
-                  <p className="text-lg font-bold text-[#121926]">{status?.stats?.[s.key] ?? 0}</p>
-                  <p className="text-[10px] text-[#697586]">{s.label}</p>
+                  <p className="text-lg font-bold text-[var(--sys-heading)]">{status?.stats?.[s.key] ?? 0}</p>
+                  <p className="text-[10px] text-[var(--sys-muted-foreground)]">{s.label}</p>
                 </div>
               </CardContent>
             </Card>
@@ -200,7 +200,7 @@ export function TelegramOrdersScreen() {
           <CardContent className="p-0 mt-3">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase">
+                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase">
                   <tr>
                     <th className="px-4 py-3 text-right">الرسائل</th>
                     <th className="px-4 py-3 text-right">المجموعات</th>
@@ -212,30 +212,30 @@ export function TelegramOrdersScreen() {
                     <th className="px-4 py-3 text-left">إجراء</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {messages.length === 0 ? (
-                    <tr><td colSpan={8} className="py-8 text-center text-[#9ca3af]">{loading ? 'جارٍ التحميل...' : 'لا توجد بيانات'}</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-[var(--sys-muted)]">{loading ? 'جارٍ التحميل...' : 'لا توجد بيانات'}</td></tr>
                   ) : messages.map((m) => (
-                    <tr key={m.id} className="hover:bg-[#f8fafc]">
+                    <tr key={m.id} className="hover:bg-[var(--sys-surface)]">
                       <td className="px-4 py-3 max-w-[280px]">
-                        <p className="truncate text-[#121926]">{m.text || '—'}</p>
-                        <p className="text-[10px] text-[#697586]">{m.senderName || 'مجهول'}</p>
+                        <p className="truncate text-[var(--sys-heading)]">{m.text || '—'}</p>
+                        <p className="text-[10px] text-[var(--sys-muted-foreground)]">{m.senderName || 'مجهول'}</p>
                       </td>
-                      <td className="px-4 py-3 text-[#697586]">{m.source?.chatTitle || m.chatId}</td>
-                      <td className="px-4 py-3 text-[#697586]">{m.threadName || m.source?.topicName || (m.threadId ? m.threadId : '—')}</td>
+                      <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{m.source?.chatTitle || m.chatId}</td>
+                      <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{m.threadName || m.source?.topicName || (m.threadId ? m.threadId : '—')}</td>
                       <td className="px-4 py-3">
-                        {m.pageName ? <span className="text-[#121926] font-semibold">{m.pageName}</span> : '—'}
+                        {m.pageName ? <span className="text-[var(--sys-heading)] font-semibold">{m.pageName}</span> : '—'}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[m.processingStatus] || ''}`}>
                           {STATUS_LABELS[m.processingStatus] || m.processingStatus}
                         </span>
-                        {m.reviewReason && <p className="text-[10px] text-[#e11d48] mt-0.5">{REVIEW_REASONS[m.reviewReason] || m.reviewReason}</p>}
+                        {m.reviewReason && <p className="text-[10px] text-[var(--sys-destructive)] mt-0.5">{REVIEW_REASONS[m.reviewReason] || m.reviewReason}</p>}
                       </td>
                       <td className="px-4 py-3">
-                        {m.order ? <span className="font-mono text-[#b8256e] font-semibold" dir="ltr">{m.order.orderNumber}</span> : '—'}
+                        {m.order ? <span className="font-mono text-[var(--sys-primary)] font-semibold" dir="ltr">{m.order.orderNumber}</span> : '—'}
                       </td>
-                      <td className="px-4 py-3 text-[#697586]">{new Date(m.createdAt).toLocaleString('ar')}</td>
+                      <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{new Date(m.createdAt).toLocaleString('ar')}</td>
                       <td className="px-4 py-3 text-left">
                         {['NEEDS_REVIEW', 'FAILED'].includes(m.processingStatus) && canManage && (
                           <Button size="sm" variant="outline" disabled={busyId === m.id} onClick={() => retryMessage(m)}>

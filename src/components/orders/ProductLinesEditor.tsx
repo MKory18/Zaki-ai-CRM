@@ -90,7 +90,7 @@ export function ProductLinesEditor({
 
   const total = lines.reduce((sum, l) => sum + (Number(l.price) || 0), 0);
   const inputClass =
-    'w-full h-9 px-2 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e] disabled:bg-slate-50';
+    'w-full h-9 px-2 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)] disabled:bg-[var(--sys-surface)]';
 
   return (
     <div className="space-y-2">
@@ -100,7 +100,7 @@ export function ProductLinesEditor({
         const lockedByOffer = !!line.offerId;
 
         return (
-          <div key={line.key} className="rounded-[8px] border border-[#e3e8ef] p-2.5 space-y-2">
+          <div key={line.key} className="rounded-[8px] border border-[var(--sys-border)] p-2.5 space-y-2">
             <div className="flex items-center gap-2">
               <ProductThumb src={product?.image} alt={product?.name ?? ''} size="sm" />
               <select
@@ -120,7 +120,7 @@ export function ProductLinesEditor({
                   onClick={() => onChange(lines.filter((l) => l.key !== line.key))}
                   disabled={disabled}
                   title="احذف هذا المنتج من الطلب"
-                  className="h-9 w-9 rounded-[8px] bg-[#fb323f] text-white shrink-0 disabled:opacity-40"
+                  className="h-9 w-9 rounded-[8px] bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] shrink-0 disabled:opacity-40"
                 >
                   <Trash2 className="w-4 h-4 mx-auto" />
                 </button>
@@ -149,7 +149,7 @@ export function ProductLinesEditor({
                   type="button"
                   onClick={() => patch(line.key, { quantity: Math.max(1, line.quantity - 1), offerId: null })}
                   disabled={disabled || lockedByOffer}
-                  className="h-9 w-9 rounded-[8px] border border-[#e3e8ef] text-slate-600 disabled:opacity-40"
+                  className="h-9 w-9 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
                 >
                   <Minus className="w-3.5 h-3.5 mx-auto" />
                 </button>
@@ -164,7 +164,7 @@ export function ProductLinesEditor({
                   type="button"
                   onClick={() => patch(line.key, { quantity: line.quantity + 1, offerId: null })}
                   disabled={disabled || lockedByOffer}
-                  className="h-9 w-9 rounded-[8px] border border-[#e3e8ef] text-slate-600 disabled:opacity-40"
+                  className="h-9 w-9 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
                 >
                   <Plus className="w-3.5 h-3.5 mx-auto" />
                 </button>
@@ -181,13 +181,13 @@ export function ProductLinesEditor({
                 />
               </label>
 
-              <span className="text-sm font-bold text-slate-900 tabular-nums shrink-0 w-24 text-end" dir="ltr">
+              <span className="text-sm font-bold text-[var(--sys-heading)] tabular-nums shrink-0 w-24 text-end" dir="ltr">
                 {amount(line.price, currency)}
               </span>
             </div>
 
             {lockedByOffer && (
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-[var(--sys-muted)]">
                 الكمية والسعر من العرض — غيّرهما بإلغاء العرض من القائمة أعلاه.
               </p>
             )}
@@ -200,14 +200,14 @@ export function ProductLinesEditor({
           type="button"
           onClick={() => onChange([...lines, newLine()])}
           disabled={disabled}
-          className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-dashed border-[#b8256e] text-[#b8256e] inline-flex items-center gap-1.5 disabled:opacity-40"
+          className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-dashed border-[var(--sys-primary)] text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
         >
           <Plus className="w-3.5 h-3.5" />
           أضف منتجاً آخر
         </button>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-[var(--sys-muted-foreground)]">
           قيمة البضاعة:{' '}
-          <span className="font-bold text-slate-900 tabular-nums" dir="ltr">{amount(total, currency)}</span>
+          <span className="font-bold text-[var(--sys-heading)] tabular-nums" dir="ltr">{amount(total, currency)}</span>
         </span>
       </div>
     </div>

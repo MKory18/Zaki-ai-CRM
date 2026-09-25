@@ -190,7 +190,7 @@ export function CouriersScreen() {
 
   if (!rows) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -199,33 +199,33 @@ export function CouriersScreen() {
   return (
     <div className="max-w-3xl space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-[#697586]">
+        <p className="text-sm text-[var(--sys-muted-foreground)]">
           أجور التوصيل لكل محافظة تُضبط من{' '}
-          <Link href="/settings/delivery-fees" className="text-[#b8256e] hover:underline">أجور التوصيل</Link>.
+          <Link href="/settings/delivery-fees" className="text-[var(--sys-primary)] hover:underline">أجور التوصيل</Link>.
         </p>
-        <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium">
+        <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
           <Plus className="w-4 h-4" /> شركة شحن أو مندوب
         </button>
       </div>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
 
       {adding && (
-        <form onSubmit={create} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 grid gap-3 md:grid-cols-4">
+        <form onSubmit={create} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 grid gap-3 md:grid-cols-4">
           <Field label="الاسم" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
           <Field label="الرمز" value={form.code} onChange={(v) => setForm({ ...form, code: v })} dir="ltr" />
           <Field label="الهاتف" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} dir="ltr" required={false} />
           <label className="block">
-            <span className="block text-xs font-medium text-[#364152] mb-1">النوع</span>
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">النوع</span>
             <select
               value={form.kind}
               onChange={(e) => setForm({ ...form, kind: e.target.value as 'COMPANY' | 'AGENT' })}
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               <option value="COMPANY">شركة شحن</option>
               <option value="AGENT">مندوب</option>
             </select>
-            <span className="block text-[11px] text-[#9aa4b2] mt-1">
+            <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
               المندوب فوري وتسويته يدوية، وهو الوحيد الذي يمكن سحب الشحنة منه مباشرة.
             </span>
           </label>
@@ -234,25 +234,25 @@ export function CouriersScreen() {
               platform under a different account. An agent has neither. */}
           {form.kind !== 'AGENT' && (
             <label className="block">
-              <span className="block text-xs font-medium text-[#364152] mb-1">تعمل على منصّة</span>
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">تعمل على منصّة</span>
               <select
                 value={form.adapterCode}
                 onChange={(e) => setForm({ ...form, adapterCode: e.target.value })}
-                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
               >
                 {COURIER_PLATFORMS.map((p) => (
                   <option key={p.code} value={p.code}>{p.name}</option>
                 ))}
               </select>
-              <span className="block text-[11px] text-[#9aa4b2] mt-1">
+              <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
                 {COURIER_PLATFORMS.find((p) => p.code === form.adapterCode)?.needs}
               </span>
             </label>
           )}
 
           <div className="flex gap-2 items-end">
-            <button type="submit" disabled={busy} className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm disabled:opacity-60">حفظ</button>
-            <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]">إلغاء</button>
+            <button type="submit" disabled={busy} className="px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm disabled:opacity-60">حفظ</button>
+            <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 rounded-[8px] border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">إلغاء</button>
           </div>
         </form>
       )}
@@ -261,25 +261,25 @@ export function CouriersScreen() {
           really deleted. Guessing on the client would eventually disagree
           with what actually happened. */}
       {note && (
-        <p className="rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2 text-xs text-[#364152]">
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs text-[var(--sys-foreground)]">
           {note}
         </p>
       )}
 
       {unplaced.length > 0 && (
-        <div className="rounded-lg border border-[#ffe7b8] bg-[#fff6e5] p-3 space-y-2">
-          <p className="text-xs font-semibold text-[#c07f2a]">
+        <div className="rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] p-3 space-y-2">
+          <p className="text-xs font-semibold text-[var(--sys-warning)]">
             غير مُسنَدة لأي متجر — لا يمكن استعمالها حتى تُسنَد
           </p>
           {unplaced.map((c) => (
             <div key={c.id} className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs text-[#364152]">
-                {c.name} <span dir="ltr" className="text-[#9aa4b2]">({c.code})</span>
+              <span className="text-xs text-[var(--sys-foreground)]">
+                {c.name} <span dir="ltr" className="text-[var(--sys-muted)]">({c.code})</span>
               </span>
               <button
                 onClick={() => placeHere(c)}
                 disabled={busy}
-                className="rounded-[8px] border border-[#c07f2a]/40 bg-white px-3 py-1 text-[11px] text-[#c07f2a] hover:border-[#c07f2a] disabled:opacity-50"
+                className="rounded-[8px] border border-[var(--sys-warning)]/40 bg-[var(--sys-card)] px-3 py-1 text-[11px] text-[var(--sys-warning)] hover:border-[var(--sys-warning)] disabled:opacity-50"
               >
                 أسنِدها لهذا المتجر
               </button>
@@ -288,9 +288,9 @@ export function CouriersScreen() {
         </div>
       )}
 
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+          <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
             <tr>
               <th className="text-right font-medium px-4 py-2">الجهة</th>
               <th className="text-right font-medium px-4 py-2">النوع</th>
@@ -300,20 +300,20 @@ export function CouriersScreen() {
               <th className="text-right font-medium px-4 py-2"> </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e3e8ef]">
+          <tbody className="divide-y divide-[var(--sys-border)]">
             {rows.filter((c) => c.storeId).map((c) => (
               <tr key={c.id}>
-                <td className="px-4 py-2 flex items-center gap-2 text-[#121926]">
+                <td className="px-4 py-2 flex items-center gap-2 text-[var(--sys-heading)]">
                   {c.kind === 'AGENT' ? (
-                    <Bike className="w-4 h-4 text-[#b8256e]" />
+                    <Bike className="w-4 h-4 text-[var(--sys-primary)]" />
                   ) : (
-                    <Truck className="w-4 h-4 text-[#697586]" />
+                    <Truck className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
                   )}
                   {editing === c.id ? (
                     <input
                       value={edit.name}
                       onChange={(e) => setEdit({ ...edit, name: e.target.value })}
-                      className="h-8 w-40 rounded-[8px] border border-[#e3e8ef] px-2 text-sm"
+                      className="h-8 w-40 rounded-[8px] border border-[var(--sys-border)] px-2 text-sm"
                     />
                   ) : (
                     c.name
@@ -322,30 +322,30 @@ export function CouriersScreen() {
                 <td className="px-4 py-2">
                   <span className={`text-[11px] px-2 py-0.5 rounded-full border ${
                     c.kind === 'AGENT'
-                      ? 'bg-[#fdf2f7] border-[#f8c4dd] text-[#b8256e]'
-                      : 'bg-[#f8fafc] border-[#e3e8ef] text-[#697586]'
+                      ? 'bg-[var(--sys-primary-soft)] border-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
+                      : 'bg-[var(--sys-surface)] border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
                   }`}>
                     {c.kind === 'AGENT' ? 'مندوب' : 'شركة شحن'}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-[#697586]">
+                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">
                   <span dir="ltr" className="block">{c.code}</span>
                   {/* Which platform it runs on, under its own code — the two
                       belong together and neither is the other. */}
                   {c.adapterCode && (
-                    <span dir="ltr" className="mt-0.5 block text-[10px] text-[#9aa4b2]">
+                    <span dir="ltr" className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">
                       {COURIER_PLATFORMS.find((p) => p.code === c.adapterCode)?.name ?? c.adapterCode}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-2 text-[#697586]">
+                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">
                   {editing === c.id ? (
                     <input
                       value={edit.phone}
                       onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
                       dir="ltr"
                       placeholder="—"
-                      className="h-8 w-32 rounded-[8px] border border-[#e3e8ef] px-2 text-sm"
+                      className="h-8 w-32 rounded-[8px] border border-[var(--sys-border)] px-2 text-sm"
                     />
                   ) : c.phone ? (
                     <span className="inline-flex items-center gap-2">
@@ -361,7 +361,7 @@ export function CouriersScreen() {
                 </td>
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => toggle(c)} disabled={busy} className={`text-xs px-3 py-1 rounded-[8px] border ${c.isActive ? 'border-[#e3e8ef] text-[#00a344]' : 'border-[#fecdd1] bg-[#feecee] text-[#fb323f]'}`}>
+                    <button onClick={() => toggle(c)} disabled={busy} className={`text-xs px-3 py-1 rounded-[8px] border ${c.isActive ? 'border-[var(--sys-border)] text-[var(--sys-success)]' : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'}`}>
                       {c.isActive ? 'نشطة' : 'موقوفة'}
                     </button>
                     {/* An agent has no platform account: he is a person with a
@@ -369,7 +369,7 @@ export function CouriersScreen() {
                     {c.kind !== 'AGENT' && (
                       <button
                         onClick={() => setAccountFor(accountFor === c.id ? null : c.id)}
-                        className="rounded-[8px] border border-[#e3e8ef] px-3 py-1 text-xs text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+                        className="rounded-[8px] border border-[var(--sys-border)] px-3 py-1 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                       >
                         الحساب والتكامل
                       </button>
@@ -387,14 +387,14 @@ export function CouriersScreen() {
                           onClick={() => saveEdit(c.id)}
                           disabled={busy || !edit.name.trim()}
                           title="احفظ"
-                          className="cursor-pointer rounded-lg p-1.5 text-[#00a344] hover:bg-[#e6f9ee] disabled:opacity-40"
+                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] disabled:opacity-40"
                         >
                           <Check className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setEditing(null)}
                           title="ألغِ"
-                          className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#f8fafc]"
+                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -404,7 +404,7 @@ export function CouriersScreen() {
                         <button
                           onClick={() => startEdit(c)}
                           title="عدّل"
-                          className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#fdf5fa] hover:text-[#b8256e]"
+                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -412,7 +412,7 @@ export function CouriersScreen() {
                           onClick={() => remove(c)}
                           disabled={busy}
                           title="احذف"
-                          className="cursor-pointer rounded-lg p-1.5 text-[#9aa4b2] hover:bg-[#feecee] hover:text-[#fb323f] disabled:opacity-40"
+                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-40"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -425,7 +425,7 @@ export function CouriersScreen() {
             {rows.filter((c) => c.storeId).map((c) =>
               accountFor === c.id ? (
                 <tr key={`${c.id}-account`}>
-                  <td colSpan={6} className="bg-[#f8fafc] px-4 py-4 space-y-3">
+                  <td colSpan={6} className="bg-[var(--sys-surface)] px-4 py-4 space-y-3">
                     <CourierCredentials providerId={c.id} />
                     {/* Statuses can arrive two ways; both belong to the
                         account, so both live on the account panel. */}
@@ -436,7 +436,7 @@ export function CouriersScreen() {
             )}
             {rows.filter((c) => c.storeId).length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شركات شحن ولا مندوبون بعد.</td>
+                <td colSpan={6} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">لا توجد شركات شحن ولا مندوبون بعد.</td>
               </tr>
             )}
           </tbody>
@@ -461,13 +461,13 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-[#364152] mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         dir={dir}
         required={required}
-        className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm"
+        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
       />
     </label>
   );

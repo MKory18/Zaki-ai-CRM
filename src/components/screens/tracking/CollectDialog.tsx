@@ -92,20 +92,20 @@ export function CollectDialog({
         }}
         className="space-y-3"
       >
-        <div className="text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3 space-y-1">
-          <p className="text-[#364152]">
+        <div className="text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3 space-y-1">
+          <p className="text-[var(--sys-foreground)]">
             المتوقَّع منه: <b className="tabular-nums">{expected} {currency}</b>
           </p>
-          <p className="text-[#9aa4b2]">
+          <p className="text-[var(--sys-muted)]">
             وهو صافي ما يسلّمه بعد خصم أجرة التوصيل، لا المبلغ الذي دفعه العميل.
           </p>
         </div>
 
-        <div className="max-h-32 overflow-y-auto border border-[#e3e8ef] rounded-[8px] divide-y divide-[#e3e8ef]">
+        <div className="max-h-32 overflow-y-auto border border-[var(--sys-border)] rounded-[8px] divide-y divide-[var(--sys-border)]">
           {orders.map((o) => (
             <div key={o.id} className="flex items-center justify-between px-3 py-1.5 text-xs">
-              <span className="text-[#364152]">{o.orderNumber} · {o.customer.fullName}</span>
-              <span className="tabular-nums text-[#697586]">
+              <span className="text-[var(--sys-foreground)]">{o.orderNumber} · {o.customer.fullName}</span>
+              <span className="tabular-nums text-[var(--sys-muted-foreground)]">
                 {Number(o.totalAmount) - Number(o.deliveryFee ?? 0)}
               </span>
             </div>
@@ -113,12 +113,12 @@ export function CollectDialog({
         </div>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">المحفظة التي دخل إليها المبلغ</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">المحفظة التي دخل إليها المبلغ</span>
           <select
             value={walletId}
             onChange={(e) => setWalletId(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {wallets.map((w) => (
@@ -126,14 +126,14 @@ export function CollectDialog({
             ))}
           </select>
           {wallets.length === 0 && (
-            <span className="block text-[11px] text-[#fb323f] mt-1">
+            <span className="block text-[11px] text-[var(--sys-destructive)] mt-1">
               لا توجد محفظة بعملة {currency} — أنشئ واحدة أولاً.
             </span>
           )}
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
             المبلغ المستلم فعلياً (اتركه فارغاً إن كان مطابقاً)
           </span>
           <input
@@ -143,38 +143,38 @@ export function CollectDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder={String(expected)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           {difference !== 0 && (
-            <span className="block text-[11px] text-[#fb323f] mt-1 tabular-nums">
+            <span className="block text-[11px] text-[var(--sys-destructive)] mt-1 tabular-nums">
               فارق {difference} عن المتوقَّع — سيُسجَّل كما هو.
             </span>
           )}
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">الملاحظة (إلزامية)</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الملاحظة (إلزامية)</span>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
             required
             minLength={3}
             placeholder="مثال: استلمت نقداً من المندوب"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !walletId}
-            className="h-9 px-4 rounded-[8px] bg-[#00a344] text-white text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             <HandCoins className="w-4 h-4" />
             {saving ? 'جارٍ التسجيل…' : 'استلمت منه'}

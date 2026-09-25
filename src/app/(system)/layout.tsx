@@ -21,7 +21,7 @@ export default async function SystemLayout({ children }: { children: React.React
   const user = await getCurrentUser();
 
   return (
-    <SystemFrame>
+    <SystemFrame theme={user?.systemTheme}>
       <AppProvider initialUser={user}>
         {/* The engine starts empty. Pixels are registered by the selling
             page that renders — a landing page or a storefront page — with

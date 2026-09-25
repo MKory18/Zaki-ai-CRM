@@ -39,11 +39,11 @@ const KIND_AR: Record<string, string> = {
 
 /** One colour per author, picked from their name so it never moves. */
 const TONES = [
-  'bg-[#fdf5fa] text-[#b8256e]',
-  'bg-[#eef4ff] text-[#2563eb]',
-  'bg-[#ecfdf5] text-[#047857]',
-  'bg-[#fff7ed] text-[#c2410c]',
-  'bg-[#f5f3ff] text-[#6d28d9]',
+  'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]',
+  'bg-[var(--sys-surface)] text-[var(--sys-info)]',
+  'bg-[var(--sys-success-soft)] text-[var(--sys-success)]',
+  'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]',
+  'bg-[var(--sys-surface)] text-[var(--sys-info)]',
 ];
 function toneFor(name: string): string {
   let sum = 0;
@@ -94,21 +94,21 @@ export function OrderNotes({ orderId }: { orderId: string }) {
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs">
       <div className="flex items-center gap-2 mb-4">
-        <MessageSquareText className="w-4 h-4 text-[#b8256e]" />
-        <h4 className="text-xs font-black text-slate-700">ملاحظات داخلية</h4>
+        <MessageSquareText className="w-4 h-4 text-[var(--sys-primary)]" />
+        <h4 className="text-xs font-black text-[var(--sys-foreground)]">ملاحظات داخلية</h4>
         {notes && notes.length > 0 && (
-          <span className="text-[10px] font-medium text-[#9aa4b2] tabular-nums">{notes.length}</span>
+          <span className="text-[10px] font-medium text-[var(--sys-muted)] tabular-nums">{notes.length}</span>
         )}
       </div>
 
       {notes === null ? (
-        <p className="text-[11px] text-[#9aa4b2] flex items-center gap-1.5 py-2">
+        <p className="text-[11px] text-[var(--sys-muted)] flex items-center gap-1.5 py-2">
           <Loader2 className="w-3 h-3 animate-spin" /> جارٍ التحميل…
         </p>
       ) : notes.length === 0 ? (
-        <p className="text-[11px] text-[#9aa4b2] py-2">لا ملاحظات بعد — اكتب أول واحدة.</p>
+        <p className="text-[11px] text-[var(--sys-muted)] py-2">لا ملاحظات بعد — اكتب أول واحدة.</p>
       ) : (
         <ol className="space-y-2.5">
           {notes.map((note) => {
@@ -122,11 +122,11 @@ export function OrderNotes({ orderId }: { orderId: string }) {
                   {initials(who)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] text-[#121926] whitespace-pre-line break-words leading-relaxed">
+                  <p className="text-[11px] text-[var(--sys-heading)] whitespace-pre-line break-words leading-relaxed">
                     {note.body}
                   </p>
-                  <p className="text-[10px] text-[#9aa4b2] mt-0.5 flex flex-wrap gap-x-1.5">
-                    <span className="font-medium text-[#697586]">{who}</span>
+                  <p className="text-[10px] text-[var(--sys-muted)] mt-0.5 flex flex-wrap gap-x-1.5">
+                    <span className="font-medium text-[var(--sys-muted-foreground)]">{who}</span>
                     <span>· {arDateShort(note.createdAt)}</span>
                     {note.kind !== 'internal' && <span>· {KIND_AR[note.kind] ?? note.kind}</span>}
                   </p>
@@ -137,9 +137,9 @@ export function OrderNotes({ orderId }: { orderId: string }) {
         </ol>
       )}
 
-      {error && <p className="text-[11px] text-[#fb323f] mt-2">{error}</p>}
+      {error && <p className="text-[11px] text-[var(--sys-destructive)] mt-2">{error}</p>}
 
-      <div className="mt-4 pt-3 border-t border-[#e3e8ef]">
+      <div className="mt-4 pt-3 border-t border-[var(--sys-border)]">
         <div className="flex items-end gap-2">
           <textarea
             ref={box}
@@ -154,18 +154,18 @@ export function OrderNotes({ orderId }: { orderId: string }) {
               }
             }}
             placeholder="اكتب ملاحظة لمن يكمل هذا الطلب…"
-            className="flex-1 min-h-9 max-h-32 px-3 py-2 rounded-[8px] border border-[#e3e8ef] text-[11px] resize-y focus:outline-none focus:border-[#b8256e]"
+            className="flex-1 min-h-9 max-h-32 px-3 py-2 rounded-[8px] border border-[var(--sys-border)] text-[11px] resize-y focus:outline-none focus:border-[var(--sys-primary)]"
           />
           <button
             onClick={send}
             disabled={busy || draft.trim().length < 2}
-            className="h-9 w-9 rounded-[8px] bg-[#b8256e] text-white disabled:opacity-30 flex items-center justify-center shrink-0"
+            className="h-9 w-9 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] disabled:opacity-30 flex items-center justify-center shrink-0"
             title="أضف الملاحظة (Enter)"
           >
             {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
           </button>
         </div>
-        <p className="text-[10px] text-[#9aa4b2] mt-1.5">
+        <p className="text-[10px] text-[var(--sys-muted)] mt-1.5">
           تُضاف ولا تُعدَّل — تبقى كما كُتبت وباسم كاتبها.
         </p>
       </div>

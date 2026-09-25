@@ -13,26 +13,105 @@
  * files — a system theme change must never reach a shop.
  */
 
-:root {
+/* ── THEMES — generated from src/lib/system-themes.ts ──
+ *
+ * Static rules, not an injected <style>, so the FIRST paint is already
+ * the chosen theme. A theme applied by script flashes the default first,
+ * and a dashboard that flashes white at somebody who chose the dark one
+ * does it every single time they open a page.
+ *
+ * Do not edit by hand: system-themes.ts is the source, and
+ * system-themes.test.ts fails if these two disagree.
+ */
+:root,
+[data-sys-theme='day'] {
   --sys-background: #f8fafc;
-  --sys-foreground: #364152;
   --sys-card: #ffffff;
+  --sys-surface: #f8fafc;
+  --sys-surface-strong: #f1f3f6;
   --sys-heading: #121926;
+  --sys-foreground: #364152;
+  --sys-muted-foreground: #697586;
+  --sys-muted: #9aa4b2;
+  --sys-border: #e3e8ef;
+  --sys-border-strong: #cdd5df;
   --sys-primary: #b8256e;
   --sys-primary-foreground: #ffffff;
-  --sys-muted-foreground: #697586;
-  --sys-accent: #fdf5fa;
+  --sys-primary-soft: #fdf2f8;
   --sys-destructive: #fb323f;
-  --sys-success: #00c853;
-  --sys-warning: #ffab00;
+  --sys-destructive-soft: #feecee;
+  --sys-destructive-border: #fecdd1;
+  --sys-success: #00a344;
+  --sys-success-soft: #e6f9ee;
+  --sys-warning: #c07f2a;
+  --sys-warning-soft: #fffbeb;
   --sys-info: #13b5fe;
-  --sys-border: #e3e8ef;
-  --sys-ring: #b8256e;
-  --sys-radius: 0.5rem;
+  --sys-info-soft: #eef4ff;
+  --sys-sidebar: #121926;
+  --sys-sidebar-foreground: #e3e8ef;
   --sys-scrollbar: #cdd5df;
   --sys-scrollbar-hover: #9aa4b2;
-  --sys-sidebar-scrollbar: #202939;
-  --sys-sidebar-scrollbar-hover: #364152;
+  --sys-radius: 0.5rem;
+}
+
+[data-sys-theme='ops'] {
+  --sys-background: #0f141b;
+  --sys-card: #161d26;
+  --sys-surface: #1b232e;
+  --sys-surface-strong: #222c39;
+  --sys-heading: #eef2f6;
+  --sys-foreground: #c3ccd6;
+  --sys-muted-foreground: #8e9aa8;
+  --sys-muted: #6b7683;
+  --sys-border: #2a3541;
+  --sys-border-strong: #3a4756;
+  --sys-primary: #e4589b;
+  --sys-primary-foreground: #12060c;
+  --sys-primary-soft: #2a1622;
+  --sys-destructive: #ff6b74;
+  --sys-destructive-soft: #2c1518;
+  --sys-destructive-border: #4d2429;
+  --sys-success: #3ddc84;
+  --sys-success-soft: #12251a;
+  --sys-warning: #f0b357;
+  --sys-warning-soft: #2a2013;
+  --sys-info: #5cc8ff;
+  --sys-info-soft: #12202c;
+  --sys-sidebar: #0b1017;
+  --sys-sidebar-foreground: #c3ccd6;
+  --sys-scrollbar: #2a3541;
+  --sys-scrollbar-hover: #3a4756;
+  --sys-radius: 0.5rem;
+}
+
+[data-sys-theme='calm'] {
+  --sys-background: #f7f5f2;
+  --sys-card: #fffdfb;
+  --sys-surface: #f3f0ec;
+  --sys-surface-strong: #ebe7e1;
+  --sys-heading: #2b2724;
+  --sys-foreground: #4a443e;
+  --sys-muted-foreground: #7a736b;
+  --sys-muted: #9c948a;
+  --sys-border: #e2ddd6;
+  --sys-border-strong: #cfc8bf;
+  --sys-primary: #a8306c;
+  --sys-primary-foreground: #fffdfb;
+  --sys-primary-soft: #f7ecf2;
+  --sys-destructive: #c8433f;
+  --sys-destructive-soft: #faeceb;
+  --sys-destructive-border: #eccbc9;
+  --sys-success: #2f7d4f;
+  --sys-success-soft: #eaf3ec;
+  --sys-warning: #9c6b23;
+  --sys-warning-soft: #f9f1e3;
+  --sys-info: #2b7fa8;
+  --sys-info-soft: #eaf0f4;
+  --sys-sidebar: #2b2724;
+  --sys-sidebar-foreground: #e2ddd6;
+  --sys-scrollbar: #cfc8bf;
+  --sys-scrollbar-hover: #9c948a;
+  --sys-radius: 0.5rem;
 }
 
 body {

@@ -118,28 +118,28 @@ export function DashboardScreen() {
     })}`;
 
   const statusTiles = [
-    { label: t.NEW, value: counts.new, color: 'text-[#b8256e]', dot: 'bg-[#b8256e]' },
-    { label: t.CONTACTING, value: counts.contacting, color: 'text-[#b8256e]', dot: 'bg-[#13b5fe]' },
-    { label: t.CONFIRMED, value: counts.confirmed, color: 'text-[#00c853]', dot: 'bg-[#00c853]' },
-    { label: t.POSTPONED, value: counts.postponed, color: 'text-[#ffab00]', dot: 'bg-[#ffab00]' },
-    { label: t.SHIPPED, value: counts.shipped, color: 'text-[#b8256e]', dot: 'bg-[#b8256e]' },
-    { label: t.DELIVERED, value: counts.delivered, color: 'text-[#00c853]', dot: 'bg-[#00c853]' },
-    { label: t.REJECTED, value: counts.rejected, color: 'text-[#fb323f]', dot: 'bg-[#fb323f]' },
+    { label: t.NEW, value: counts.new, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-primary)]' },
+    { label: t.CONTACTING, value: counts.contacting, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-info)]' },
+    { label: t.CONFIRMED, value: counts.confirmed, color: 'text-[var(--sys-success)]', dot: 'bg-[var(--sys-success)]' },
+    { label: t.POSTPONED, value: counts.postponed, color: 'text-[var(--sys-warning)]', dot: 'bg-[var(--sys-warning)]' },
+    { label: t.SHIPPED, value: counts.shipped, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-primary)]' },
+    { label: t.DELIVERED, value: counts.delivered, color: 'text-[var(--sys-success)]', dot: 'bg-[var(--sys-success)]' },
+    { label: t.REJECTED, value: counts.rejected, color: 'text-[var(--sys-destructive)]', dot: 'bg-[var(--sys-destructive)]' },
   ];
 
   const rankings = [
-    { icon: '🏆', label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', sub: analytics?.rankings?.mostRequested?.totalOrders ?? 0, subSuffix: locale === 'ar' ? 'طلب' : 'orders', name: analytics?.rankings?.mostRequested?.name, tint: 'bg-blue-50 border-[#f2c9dd]', text: 'text-[#b8256e]' },
-    { icon: '💰', label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', sub: analytics?.rankings?.mostProfitable?.netProfit ?? 0, prefix: '+$', name: analytics?.rankings?.mostProfitable?.name, tint: 'bg-emerald-100', text: 'text-[#00c853]' },
-    { icon: '🚚', label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', sub: analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0, subSuffix: locale === 'ar' ? 'توصيل' : 'delivered', name: analytics?.rankings?.mostDelivered?.name, tint: 'bg-amber-50 border-amber-100', text: 'text-[#c07f2a]' },
-    { icon: '⚠️', label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', sub: analytics?.rankings?.highestRejection?.rejectedOrders ?? 0, subSuffix: locale === 'ar' ? 'رفض' : 'rejected', name: analytics?.rankings?.highestRejection?.name, tint: 'bg-[#feecee] border-[#f5c6cb]', text: 'text-[#fb323f]' },
+    { icon: '🏆', label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', sub: analytics?.rankings?.mostRequested?.totalOrders ?? 0, subSuffix: locale === 'ar' ? 'طلب' : 'orders', name: analytics?.rankings?.mostRequested?.name, tint: 'bg-[var(--sys-surface)] border-[var(--sys-primary-soft)]', text: 'text-[var(--sys-primary)]' },
+    { icon: '💰', label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', sub: analytics?.rankings?.mostProfitable?.netProfit ?? 0, prefix: '+$', name: analytics?.rankings?.mostProfitable?.name, tint: 'bg-[var(--sys-success-soft)]', text: 'text-[var(--sys-success)]' },
+    { icon: '🚚', label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', sub: analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0, subSuffix: locale === 'ar' ? 'توصيل' : 'delivered', name: analytics?.rankings?.mostDelivered?.name, tint: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/30', text: 'text-[var(--sys-warning)]' },
+    { icon: '⚠️', label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', sub: analytics?.rankings?.highestRejection?.rejectedOrders ?? 0, subSuffix: locale === 'ar' ? 'رفض' : 'rejected', name: analytics?.rankings?.highestRejection?.name, tint: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]', text: 'text-[var(--sys-destructive)]' },
   ];
 
   const profitFlow = [
-    { label: locale === 'ar' ? 'إيراد التوصيل' : 'Delivered Revenue', value: `+${fmt(fin.deliveredRevenue)}`, cls: 'text-[#00c853] bg-emerald-100 border-0' },
-    { label: locale === 'ar' ? 'تكلفة البضاعة' : 'COGS', value: `-${fmt(fin.costOfGoodsSold)}`, cls: 'text-[#fb323f] bg-[#feecee] border-[#f5c6cb]' },
-    { label: locale === 'ar' ? 'الشحن' : 'Shipping', value: `-${fmt(fin.shippingCosts)}`, cls: 'text-[#fb323f] bg-[#feecee] border-[#f5c6cb]' },
-    { label: locale === 'ar' ? 'العمولات' : 'Commissions', value: `-${fmt(fin.commission)}`, cls: 'text-[#fb323f] bg-[#feecee] border-[#f5c6cb]' },
-    { label: locale === 'ar' ? 'المصروفات' : 'Expenses', value: `-${fmt(fin.operationalExpenses)}`, cls: 'text-[#fb323f] bg-[#feecee] border-[#f5c6cb]' },
+    { label: locale === 'ar' ? 'إيراد التوصيل' : 'Delivered Revenue', value: `+${fmt(fin.deliveredRevenue)}`, cls: 'text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-0' },
+    { label: locale === 'ar' ? 'تكلفة البضاعة' : 'COGS', value: `-${fmt(fin.costOfGoodsSold)}`, cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
+    { label: locale === 'ar' ? 'الشحن' : 'Shipping', value: `-${fmt(fin.shippingCosts)}`, cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
+    { label: locale === 'ar' ? 'العمولات' : 'Commissions', value: `-${fmt(fin.commission)}`, cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
+    { label: locale === 'ar' ? 'المصروفات' : 'Expenses', value: `-${fmt(fin.operationalExpenses)}`, cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
   ];
 
   return (
@@ -148,8 +148,8 @@ export function DashboardScreen() {
         {/* ─── Header ─── */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.dashboard}</h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.dashboard}</h1>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               {locale === 'ar'
                 ? 'متابعة المبيعات والتكاليف وأداء الفريق والأرباح الحقيقية — لحظة بلحظة'
                 : 'Real-time sales, cost analysis, team performance & real net profit'}
@@ -158,13 +158,13 @@ export function DashboardScreen() {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Period selector */}
-            <div className="bg-white border border-[#e3e8ef] rounded-xl p-1 flex text-xs font-medium text-[#364152] shadow-xs">
+            <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-xl p-1 flex text-xs font-medium text-[var(--sys-foreground)] shadow-xs">
               {PERIODS.map((p) => (
                 <button
                   key={p.key}
                   onClick={() => setPeriod(p.key)}
                   className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    period === p.key ? 'bg-[#fb323f] text-white font-bold shadow-sm' : 'hover:bg-[#f8fafc]'
+                    period === p.key ? 'bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] font-bold shadow-sm' : 'hover:bg-[var(--sys-surface)]'
                   }`}
                 >
                   {locale === 'ar' ? p.ar : p.en}
@@ -175,13 +175,13 @@ export function DashboardScreen() {
             <Button
               variant="outline"
               onClick={() => setAiModalOpen(true)}
-              className="items-center bg-emerald-50 text-[#00c853] border-[#bfe8d0] hover:bg-emerald-100"
+              className="items-center bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)] hover:bg-[var(--sys-success-soft)]"
             >
               <Sparkles className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
             </Button>
 
-            <Button onClick={() => setCreateModalOpen(true)} className="bg-[#fb323f] hover:bg-[#fb323f]/85 items-center">
+            <Button onClick={() => setCreateModalOpen(true)} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85 items-center">
               <Plus className="w-4 h-4" />
               <span>طلب سريع</span>
             </Button>
@@ -190,42 +190,42 @@ export function DashboardScreen() {
 
         {/* ─── AI Executive Banner ─── */}
         {canFinance && (
-          <div className="relative overflow-hidden bg-gradient-to-l rtl:bg-gradient-to-r from-[#b8256e] to-[#121926] rounded-2xl p-5 text-white shadow-md">
+          <div className="relative overflow-hidden bg-gradient-to-l rtl:bg-gradient-to-r from-[var(--sys-primary)] to-[var(--sys-heading)] rounded-2xl p-5 text-[var(--sys-primary-foreground)] shadow-md">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-white/10 border border-white/15 shrink-0">
-                  <Sparkles className="w-5 h-5 text-amber-300" />
+                <div className="p-2.5 rounded-xl bg-[var(--sys-card)]/10 border border-[var(--sys-card)]/15 shrink-0">
+                  <Sparkles className="w-5 h-5 text-[var(--sys-warning)]" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--sys-warning)]">
                       {locale === 'ar' ? 'الملخص التنفيذي الذكي' : 'AI Business Intelligence'}
                     </span>
-                    <span className="text-[10px] bg-white/15 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[10px] bg-[var(--sys-card)]/15 px-2 py-0.5 rounded-full font-mono">
                       {locale === 'ar' ? 'مبني على بيانات حقيقية' : 'Grounded on real data'}
                     </span>
                   </div>
-                  <p className="text-sm mt-1.5 max-w-3xl leading-relaxed text-white/90">
+                  <p className="text-sm mt-1.5 max-w-3xl leading-relaxed text-[var(--sys-primary-foreground)]/90">
                     {locale === 'ar' ? (
                       <>
-                        إيراد التوصيل <strong className="text-white">{fmt(fin.deliveredRevenue)}</strong> — صافي ربح حقيقي{' '}
-                        <strong className="text-white">{fmt(fin.netProfit)}</strong> بهامش{' '}
-                        <strong className="text-white">{fin.profitMargin}%</strong>. المنتج الأعلى ربحاً:{' '}
-                        <strong className="text-white">{productName(analytics?.rankings?.mostProfitable, locale) || '—'}</strong>
+                        إيراد التوصيل <strong className="text-[var(--sys-primary-foreground)]">{fmt(fin.deliveredRevenue)}</strong> — صافي ربح حقيقي{' '}
+                        <strong className="text-[var(--sys-primary-foreground)]">{fmt(fin.netProfit)}</strong> بهامش{' '}
+                        <strong className="text-[var(--sys-primary-foreground)]">{fin.profitMargin}%</strong>. المنتج الأعلى ربحاً:{' '}
+                        <strong className="text-[var(--sys-primary-foreground)]">{productName(analytics?.rankings?.mostProfitable, locale) || '—'}</strong>
                       </>
                     ) : (
                       <>
-                        Delivered revenue <strong className="text-white">{fmt(fin.deliveredRevenue)}</strong> — real net profit{' '}
-                        <strong className="text-white">{fmt(fin.netProfit)}</strong> at{' '}
-                        <strong className="text-white">{fin.profitMargin}%</strong> margin. Top yield:{' '}
-                        <strong className="text-white">{productName(analytics?.rankings?.mostProfitable, locale) || '—'}</strong>
+                        Delivered revenue <strong className="text-[var(--sys-primary-foreground)]">{fmt(fin.deliveredRevenue)}</strong> — real net profit{' '}
+                        <strong className="text-[var(--sys-primary-foreground)]">{fmt(fin.netProfit)}</strong> at{' '}
+                        <strong className="text-[var(--sys-primary-foreground)]">{fin.profitMargin}%</strong> margin. Top yield:{' '}
+                        <strong className="text-[var(--sys-primary-foreground)]">{productName(analytics?.rankings?.mostProfitable, locale) || '—'}</strong>
                       </>
                     )}
                   </p>
                 </div>
               </div>
               <Link href="/assistant" className="shrink-0">
-                <Button size="sm" variant="secondary" className="bg-white text-[#b8256e] hover:bg-blue-50 border-0">
+                <Button size="sm" variant="secondary" className="bg-[var(--sys-card)] text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] border-0">
                   {locale === 'ar' ? 'المستشار الذكي' : 'AI Advisor'}
                   <ArrowRight className={`w-3.5 h-3.5 ${isRtl ? '' : 'rotate-180'}`} />
                 </Button>
@@ -237,60 +237,60 @@ export function DashboardScreen() {
         {/* ─── KPI Cards ─── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {canFinance && (
-            <div className="bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+            <div className="bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[#697586]">{t.netProfit}</span>
-                <div className="h-14 w-14 rounded-[8px] bg-emerald-100 text-[#00c853] flex items-center justify-center">
+                <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.netProfit}</span>
+                <div className="h-14 w-14 rounded-[8px] bg-[var(--sys-success-soft)] text-[var(--sys-success)] flex items-center justify-center">
                   <Wallet className="w-6 h-6" />
                 </div>
               </div>
-              <div className="mt-2.5 text-2xl font-black text-[#121926]">{fmt(fin.netProfit)}</div>
+              <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{fmt(fin.netProfit)}</div>
               <div className="mt-1.5 flex items-center gap-1.5">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#00c853] border-0">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-0">
                   {fin.profitMargin}%
                 </span>
-                <span className="text-[11px] text-[#9ca3af]">{t.profitMargin}</span>
+                <span className="text-[11px] text-[var(--sys-muted)]">{t.profitMargin}</span>
               </div>
             </div>
           )}
 
           {canFinance && (
-            <div className="bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+            <div className="bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[#697586]">{t.deliveredRevenue}</span>
-                <div className="h-14 w-14 rounded-[8px] bg-blue-100 text-[#b8256e] flex items-center justify-center">
+                <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.deliveredRevenue}</span>
+                <div className="h-14 w-14 rounded-[8px] bg-[var(--sys-surface-strong)] text-[var(--sys-primary)] flex items-center justify-center">
                   <TrendingUp className="w-6 h-6" />
                 </div>
               </div>
-              <div className="mt-2.5 text-2xl font-black text-[#121926]">{fmt(fin.deliveredRevenue)}</div>
-              <p className="mt-1.5 text-[11px] text-[#9ca3af]">
+              <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{fmt(fin.deliveredRevenue)}</div>
+              <p className="mt-1.5 text-[11px] text-[var(--sys-muted)]">
                 {counts.delivered} {locale === 'ar' ? 'طلب موصّل' : 'delivered orders'}
               </p>
             </div>
           )}
 
-          <div className="bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+          <div className="bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[#697586]">{t.confirmationRate}</span>
-              <div className="h-14 w-14 rounded-[8px] bg-[#13b5fe]/10 text-[#13b5fe] flex items-center justify-center">
+              <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.confirmationRate}</span>
+              <div className="h-14 w-14 rounded-[8px] bg-[var(--sys-info)]/10 text-[var(--sys-info)] flex items-center justify-center">
                 <Percent className="w-6 h-6" />
               </div>
             </div>
-            <div className="mt-2.5 text-2xl font-black text-[#121926]">{rates.confirmationRate}%</div>
-            <p className="mt-1.5 text-[11px] text-[#9ca3af]">
+            <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{rates.confirmationRate}%</div>
+            <p className="mt-1.5 text-[11px] text-[var(--sys-muted)]">
               {counts.confirmed} / {counts.decided ?? counts.total} {t.decidedOrders}
             </p>
           </div>
 
-          <div className="bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+          <div className="bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[#697586]">{t.deliveryRate}</span>
-              <div className="h-14 w-14 rounded-[8px] bg-amber-100 text-[#ffab00] flex items-center justify-center">
+              <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.deliveryRate}</span>
+              <div className="h-14 w-14 rounded-[8px] bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] flex items-center justify-center">
                 <Truck className="w-6 h-6" />
               </div>
             </div>
-            <div className="mt-2.5 text-2xl font-black text-[#121926]">{rates.deliveryRate}%</div>
-            <p className="mt-1.5 text-[11px] text-[#9ca3af]">
+            <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{rates.deliveryRate}%</div>
+            <p className="mt-1.5 text-[11px] text-[var(--sys-muted)]">
               {counts.delivered} / {counts.confirmed} {t.confirmedOrders}
             </p>
           </div>
@@ -302,7 +302,7 @@ export function DashboardScreen() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-[#fb323f]" />
+                  <DollarSign className="w-4 h-4 text-[var(--sys-destructive)]" />
                   {locale === 'ar' ? 'معادلة صافي الربح الحقيقي' : 'Real Net Profit Breakdown'}
                 </span>
               }
@@ -321,16 +321,16 @@ export function DashboardScreen() {
                       <span className="block text-sm font-black mt-0.5" dir="ltr">{f.value}</span>
                     </div>
                     {i < profitFlow.length - 1 && (
-                      <Minus className="w-3.5 h-3.5 text-[#c3c8d4] shrink-0" />
+                      <Minus className="w-3.5 h-3.5 text-[var(--sys-border-strong)] shrink-0" />
                     )}
                   </React.Fragment>
                 ))}
-                <Equal className="w-4 h-4 text-[#9ca3af] shrink-0" />
-                <div className="px-4 py-2.5 rounded-xl bg-[#b8256e] text-center">
-                  <span className="block text-[10px] font-bold text-white/80">
+                <Equal className="w-4 h-4 text-[var(--sys-muted)] shrink-0" />
+                <div className="px-4 py-2.5 rounded-xl bg-[var(--sys-primary)] text-center">
+                  <span className="block text-[10px] font-bold text-[var(--sys-primary-foreground)]/80">
                     {locale === 'ar' ? 'صافي الربح' : 'NET PROFIT'}
                   </span>
-                  <span className="block text-base font-black text-white mt-0.5" dir="ltr">{fmt(fin.netProfit)}</span>
+                  <span className="block text-base font-black text-[var(--sys-primary-foreground)] mt-0.5" dir="ltr">{fmt(fin.netProfit)}</span>
                 </div>
               </div>
             </CardContent>
@@ -340,10 +340,10 @@ export function DashboardScreen() {
         {/* ─── Order Status Tiles ─── */}
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
           {statusTiles.map((s) => (
-            <div key={s.label} className="bg-white rounded-xl border border-[#e3e8ef]/80 p-3.5 text-center shadow-xs">
+            <div key={s.label} className="bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)]/80 p-3.5 text-center shadow-xs">
               <span className={`inline-block w-2 h-2 rounded-full ${s.dot} mb-1.5`} />
-              <span className="block text-[10px] font-semibold text-[#697586] leading-tight">{s.label}</span>
-              <span className={`block text-xl font-black mt-1 ${s.value > 0 ? s.color : 'text-[#c3c8d4]'}`}>
+              <span className="block text-[10px] font-semibold text-[var(--sys-muted-foreground)] leading-tight">{s.label}</span>
+              <span className={`block text-xl font-black mt-1 ${s.value > 0 ? s.color : 'text-[var(--sys-border-strong)]'}`}>
                 {s.value}
               </span>
             </div>
@@ -356,12 +356,12 @@ export function DashboardScreen() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-[#fb323f]" />
+                  <Flame className="w-4 h-4 text-[var(--sys-destructive)]" />
                   {locale === 'ar' ? 'ترتيب المنتجات والأرباح' : 'Product Rankings & Profit'}
                 </span>
               }
               action={
-                <Link href="/products" className="text-xs text-[#fb323f] font-medium hover:underline">
+                <Link href="/products" className="text-xs text-[var(--sys-destructive)] font-medium hover:underline">
                   {locale === 'ar' ? 'المنتجات ←' : 'View Products →'}
                 </Link>
               }
@@ -373,7 +373,7 @@ export function DashboardScreen() {
                     <span className="text-lg">{r.icon}</span>
                     <div>
                       <p className={`text-[10px] font-bold uppercase tracking-wide ${r.text}`}>{r.label}</p>
-                      <p className="text-sm font-bold text-[#121926] line-clamp-1">
+                      <p className="text-sm font-bold text-[var(--sys-heading)] line-clamp-1">
                         {r.name ? productName(r.name, locale) : '—'}
                       </p>
                     </div>
@@ -391,45 +391,45 @@ export function DashboardScreen() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-[#ffab00]" />
+                  <Award className="w-4 h-4 text-[var(--sys-warning)]" />
                   {t.moderatorLeaderboard}
                 </span>
               }
               action={
-                <Link href="/admin/users" className="text-xs text-[#fb323f] font-medium hover:underline">
+                <Link href="/admin/users" className="text-xs text-[var(--sys-destructive)] font-medium hover:underline">
                   {locale === 'ar' ? 'الفريق ←' : 'View Team →'}
                 </Link>
               }
             />
             <CardContent className="p-0">
-              <div className="divide-y divide-[#e3e8ef]">
+              <div className="divide-y divide-[var(--sys-border)]">
                 {analytics?.moderatorLeaderboard?.map((mod: any, idx: number) => (
                   <div key={mod.id} className="px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span
                         className={`w-7 h-7 rounded-full text-xs font-black flex items-center justify-center ${
                           idx === 0
-                            ? 'bg-amber-100 text-[#c07f2a] ring-2 ring-amber-300'
+                            ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] ring-2 ring-amber-300'
                             : idx === 1
-                            ? 'bg-[#e8eaef] text-[#364152]'
-                            : 'bg-[#f8fafc] text-[#697586]'
+                            ? 'bg-[var(--sys-border)] text-[var(--sys-foreground)]'
+                            : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]'
                         }`}
                       >
                         {idx + 1}
                       </span>
                       <div>
-                        <p className="text-sm font-bold text-[#121926]">{mod.name}</p>
-                        <p className="text-[11px] text-[#9ca3af]">
+                        <p className="text-sm font-bold text-[var(--sys-heading)]">{mod.name}</p>
+                        <p className="text-[11px] text-[var(--sys-muted)]">
                           {mod.totalOrders} {locale === 'ar' ? 'طلب' : 'orders'} • {mod.confirmedOrders}{' '}
                           {locale === 'ar' ? 'مؤكد' : 'confirmed'}
                         </p>
                       </div>
                     </div>
                     <div className="text-end">
-                      <span className="text-[11px] font-bold text-[#00c853] bg-emerald-100 border-0 px-2 py-0.5 rounded-full">
+                      <span className="text-[11px] font-bold text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-0 px-2 py-0.5 rounded-full">
                         {mod.confirmationRate}%
                       </span>
-                      <p className="text-[11px] font-semibold text-[#364152] mt-1" dir="ltr">
+                      <p className="text-[11px] font-semibold text-[var(--sys-foreground)] mt-1" dir="ltr">
                         ${mod.sales.toFixed(2)}
                       </p>
                     </div>
@@ -445,7 +445,7 @@ export function DashboardScreen() {
           <CardHeader
             title={
               <span className="flex items-center gap-2">
-                <ShoppingBag className="w-4 h-4 text-[#fb323f]" />
+                <ShoppingBag className="w-4 h-4 text-[var(--sys-destructive)]" />
                 {t.recentOrders}
               </span>
             }
@@ -458,7 +458,7 @@ export function DashboardScreen() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-start text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
+                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3 text-start">{t.thOrderNumber}</th>
                     <th className="px-6 py-3 text-start">{t.thProduct}</th>
@@ -468,14 +468,14 @@ export function DashboardScreen() {
                     <th className="px-6 py-3 text-start">{t.thDate}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {analytics?.orders?.slice(0, 8).map((order: any) => (
                     <tr
                       key={order.id}
-                      className="hover:bg-[#f8fafc] transition-colors cursor-pointer"
+                      className="hover:bg-[var(--sys-surface)] transition-colors cursor-pointer"
                       onClick={() => setSelectedOrderId(order.id)}
                     >
-                      <td className="px-6 py-3 font-bold text-[#fb323f]">{order.orderNumber}</td>
+                      <td className="px-6 py-3 font-bold text-[var(--sys-destructive)]">{order.orderNumber}</td>
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-2.5">
                           <ProductThumb
@@ -484,21 +484,21 @@ export function DashboardScreen() {
                             size="sm"
                           />
                           <div>
-                            <p className="font-semibold text-[#121926] line-clamp-1 max-w-[200px]">
+                            <p className="font-semibold text-[var(--sys-heading)] line-clamp-1 max-w-[200px]">
                               {order.productNameSnapshot || order.product?.name}
                             </p>
-                            <p className="text-[11px] text-[#9ca3af]">
+                            <p className="text-[11px] text-[var(--sys-muted)]">
                               {order.customer?.fullName} • {order.quantity} {t.units}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-3 font-bold text-[#121926]" dir="ltr">
+                      <td className="px-6 py-3 font-bold text-[var(--sys-heading)]" dir="ltr">
                         {fmt(order.totalAmount)}
                       </td>
                       <td className="px-6 py-3"><OrderStatusBadge status={order.status} /></td>
-                      <td className="px-6 py-3 text-[#364152]">{order.moderator?.name || '—'}</td>
-                      <td className="px-6 py-3 text-[#9ca3af] whitespace-nowrap">
+                      <td className="px-6 py-3 text-[var(--sys-foreground)]">{order.moderator?.name || '—'}</td>
+                      <td className="px-6 py-3 text-[var(--sys-muted)] whitespace-nowrap">
                         {format(new Date(order.createdAt), 'MMM d, HH:mm')}
                       </td>
                     </tr>

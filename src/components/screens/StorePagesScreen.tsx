@@ -27,8 +27,8 @@ interface PageRow {
   sortOrder: number;
 }
 
-const CARD = 'rounded-xl border border-[#e3e8ef] bg-white p-4';
-const LABEL = 'mb-1.5 block text-xs font-medium text-[#121926]';
+const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
+const LABEL = 'mb-1.5 block text-xs font-medium text-[var(--sys-heading)]';
 
 export function StorePagesScreen() {
   const confirm = useConfirm();
@@ -131,7 +131,7 @@ export function StorePagesScreen() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
+      <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -141,17 +141,17 @@ export function StorePagesScreen() {
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-            <FileText className="h-5 w-5 text-[#b8256e]" />
+          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+            <FileText className="h-5 w-5 text-[var(--sys-primary)]" />
             صفحات المتجر
           </h1>
-          <p className="mt-0.5 text-xs text-[#697586]">
+          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             كلام المتجر عن نفسه: من نحن، الشروط، الخصوصية، الاستبدال، تواصل معنا.
           </p>
         </div>
         <div className="flex items-center gap-2">
           {msg && (
-            <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
+            <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
               {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
               {msg.text}
             </span>
@@ -164,9 +164,9 @@ export function StorePagesScreen() {
 
       {/* The thing that stops a campaign, said in words. */}
       {missing.length > 0 && (
-        <div className="flex items-start gap-2 rounded-xl border border-[#f59e0b]/40 bg-[#f59e0b]/10 p-3">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[#b45309]" />
-          <div className="text-xs leading-relaxed text-[#92400e]">
+        <div className="flex items-start gap-2 rounded-xl border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sys-warning)]" />
+          <div className="text-xs leading-relaxed text-[var(--sys-warning)]">
             <p className="font-bold">
               {missing.length === REQUIRED_FOR_ADS.length
                 ? 'لم تُنشر بعد أيٌّ من الصفحات التي تطلبها مراجعة الإعلانات.'
@@ -184,27 +184,27 @@ export function StorePagesScreen() {
         {pages.map((page) => (
           <div key={page.id} className={CARD}>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-bold text-[#121926]">{page.title}</span>
-              <span className="rounded-full bg-[#eef2f6] px-2 py-0.5 text-[10px] text-[#697586]">
+              <span className="text-sm font-bold text-[var(--sys-heading)]">{page.title}</span>
+              <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-[10px] text-[var(--sys-muted-foreground)]">
                 {PAGE_KIND_AR[page.kind]}
               </span>
               {page.isPublished ? (
-                <span className="rounded-full bg-[#00a651]/10 px-2 py-0.5 text-[10px] font-semibold text-[#00a651]">
+                <span className="rounded-full bg-[var(--sys-success)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-success)]">
                   منشورة
                 </span>
               ) : (
-                <span className="rounded-full bg-[#f59e0b]/15 px-2 py-0.5 text-[10px] font-semibold text-[#b45309]">
+                <span className="rounded-full bg-[var(--sys-warning)]/15 px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-warning)]">
                   مسوّدة
                 </span>
               )}
-              <span className="text-[11px] text-[#9aa4b2]" dir="ltr">/s/{storeSlug}/pages/{page.slug}</span>
+              <span className="text-[11px] text-[var(--sys-muted)]" dir="ltr">/s/{storeSlug}/pages/{page.slug}</span>
               <div className="ms-auto flex items-center gap-1">
                 {page.isPublished && (
                   <a
                     href={`/s/${storeSlug}/pages/${page.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg p-1.5 text-[#364152] hover:bg-[#eef2f6]"
+                    className="rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)]"
                     title="افتحها كما يراها الزبون"
                   >
                     <ExternalLink className="h-4 w-4" />
@@ -217,7 +217,7 @@ export function StorePagesScreen() {
                   <button
                     type="button"
                     onClick={() => void remove(page)}
-                    className="rounded-lg p-1.5 text-[#fb323f] hover:bg-[#fb323f]/10"
+                    className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10"
                     title="حذف"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -227,7 +227,7 @@ export function StorePagesScreen() {
             </div>
 
             {openId === page.id && draft && (
-              <div className="mt-3 space-y-3 border-t border-[#e3e8ef] pt-3">
+              <div className="mt-3 space-y-3 border-t border-[var(--sys-border)] pt-3">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block">
                     <span className={LABEL}>العنوان</span>
@@ -255,19 +255,19 @@ export function StorePagesScreen() {
                     maxLength={20000}
                     value={draft.body}
                     onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-                    className="w-full rounded-[8px] border border-[#e3e8ef] bg-white px-3 py-2 text-sm leading-7 focus:border-[#b8256e] focus:outline-none"
+                    className="w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm leading-7 focus:border-[var(--sys-primary)] focus:outline-none"
                   />
-                  <span className="mt-1 block text-[10.5px] text-[#9aa4b2]">
+                  <span className="mt-1 block text-[10.5px] text-[var(--sys-muted)]">
                     نصّ فقط — سطر فارغ يفصل فقرة عن فقرة. لا وسوم ولا سكربتات: صفحة كلام، لا صفحة تصميم.
                   </span>
                 </label>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 text-xs text-[#364152]">
+                  <label className="flex items-center gap-2 text-xs text-[var(--sys-foreground)]">
                     <input
                       type="checkbox"
                       checked={draft.isPublished}
                       onChange={(e) => setDraft({ ...draft, isPublished: e.target.checked })}
-                      className="h-4 w-4 accent-[#b8256e]"
+                      className="h-4 w-4 accent-[var(--sys-primary)]"
                     />
                     منشورة — يراها الزبون
                   </label>

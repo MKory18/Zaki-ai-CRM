@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal';
  */
 
 const FIELD_CLS =
-  'w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]';
+  'w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
 function Buttons({ onCancel, busy, submitLabel }: { onCancel: () => void; busy?: boolean; submitLabel: string }) {
   return (
@@ -18,14 +18,14 @@ function Buttons({ onCancel, busy, submitLabel }: { onCancel: () => void; busy?:
       <button
         type="submit"
         disabled={busy}
-        className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-60"
+        className="px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-60"
       >
         {busy ? 'جارٍ الحفظ…' : submitLabel}
       </button>
       <button
         type="button"
         onClick={onCancel}
-        className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]"
+        className="px-4 py-2 rounded-[8px] border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]"
       >
         إلغاء
       </button>
@@ -36,7 +36,7 @@ function Buttons({ onCancel, busy, submitLabel }: { onCancel: () => void; busy?:
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-[#364152] mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
       {children}
     </label>
   );
@@ -93,7 +93,7 @@ export function PostponeDialog({
         className="space-y-3"
       >
         {postponeCount > 0 && (
-          <p className="text-xs text-[#c07f2a] bg-amber-50 border border-amber-100 rounded-[8px] p-2">
+          <p className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-[8px] p-2">
             هذا الطلب مؤجل {postponeCount} مرة سابقاً.
           </p>
         )}
@@ -183,7 +183,7 @@ export function IssueDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-xs text-[#697586]">
+        <p className="text-xs text-[var(--sys-muted-foreground)]">
           يعود الطلب إلى الطابور بتاريخه الأصلي، ولا يُحتسب إلغاءً عليك.
         </p>
         <Field label="نوع الإشكال">
@@ -201,7 +201,7 @@ export function IssueDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]"
+            className="w-full px-3 py-2 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
             placeholder="مثال: رقم الهاتف ٨ أرقام فقط"
           />
         </Field>
@@ -249,7 +249,7 @@ export function ChangeRequestDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-xs text-[#697586]">
+        <p className="text-xs text-[var(--sys-muted-foreground)]">
           الطلب المؤكد للقراءة فقط. يراجع المشرف التعديل، ويتوقف تقدّم الطلب حتى صدور القرار.
         </p>
         <Field label="الحقل المطلوب تعديله">
@@ -279,7 +279,7 @@ export function ChangeRequestDialog({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]"
+            className="w-full px-3 py-2 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
             placeholder="مثال: العميل أعطى عنواناً جديداً عند الاتصال"
           />
         </Field>
@@ -337,7 +337,7 @@ export function RejectDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-xs text-[#697586]">
+        <p className="text-xs text-[var(--sys-muted-foreground)]">
           يُغلق الطلب ويعود المحجوز من بضاعته إلى المخزون. القرار يُسجَّل باسمك.
         </p>
         <Field label="السبب">
@@ -364,14 +364,14 @@ export function RejectDialog({
           <button
             type="submit"
             disabled={busy}
-            className="px-4 py-2 rounded-[8px] bg-[#fb323f] text-white text-sm font-medium disabled:opacity-60"
+            className="px-4 py-2 rounded-[8px] bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-60"
           >
             ألغِ الطلب
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]"
+            className="px-4 py-2 rounded-[8px] border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]"
           >
             تراجع
           </button>

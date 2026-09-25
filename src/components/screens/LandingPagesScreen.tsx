@@ -131,17 +131,17 @@ export function LandingPagesScreen() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#1a2232] flex items-center gap-2">
-              <Globe className="w-6 h-6 text-[#b8256e]" />
+            <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
+              <Globe className="w-6 h-6 text-[var(--sys-primary)]" />
               صفحات الهبوط
             </h1>
-            <p className="text-sm text-[#697586] mt-1">
+            <p className="text-sm text-[var(--sys-muted-foreground)] mt-1">
               صفحات تسويق عامة تُنشئ طلبات حقيقية داخل CRM تلقائيًا
             </p>
             {/* The numbers in this list are lifetime totals; a period, by
                 device and by campaign, is read on the performance screen. */}
             {canAnalytics && (
-              <a href="/growth/performance?tab=landing" className="mt-1 inline-block text-xs font-semibold text-[#b8256e] hover:underline">
+              <a href="/growth/performance?tab=landing" className="mt-1 inline-block text-xs font-semibold text-[var(--sys-primary)] hover:underline">
                 تحليلات الصفحات حسب الفترة والجهاز والحملة ←
               </a>
             )}
@@ -155,27 +155,27 @@ export function LandingPagesScreen() {
         <Card>
           <CardContent className="p-0">
             {notice && (
-              <p className="rounded-[8px] border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-[#00733a]">
+              <p className="rounded-[8px] border border-[var(--sys-success)]/30 bg-[var(--sys-success-soft)] px-3 py-2 text-xs text-[var(--sys-success)]">
                 {notice}
               </p>
             )}
             {apiError && (
-              <p className="rounded-[8px] border border-[#fecdd1] bg-[#feecee] px-3 py-2 text-xs text-[#b3242e]">
+              <p className="rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs text-[var(--sys-destructive)]">
                 {apiError}
               </p>
             )}
 
             {loading ? (
-              <div className="p-10 text-center text-[#697586] text-sm">جارٍ التحميل…</div>
+              <div className="p-10 text-center text-[var(--sys-muted-foreground)] text-sm">جارٍ التحميل…</div>
             ) : pages.length === 0 ? (
-              <div className="p-10 text-center text-[#697586] text-sm">
+              <div className="p-10 text-center text-[var(--sys-muted-foreground)] text-sm">
                 لا توجد صفحات هبوط بعد. أنشئ أول صفحة لبدء استقبال الطلبات.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-[#f8fafc] text-[#697586] text-xs uppercase">
+                    <tr className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs uppercase">
                       <th className="px-4 py-3 text-start">الصفحة</th>
                       <th className="px-4 py-3 text-start">المنتج</th>
                       <th className="px-4 py-3 text-start">الحالة</th>
@@ -189,9 +189,9 @@ export function LandingPagesScreen() {
                   </thead>
                   <tbody>
                     {pages.map((lp: any) => (
-                      <tr key={lp.id} className="border-t border-[#e3e8ef] hover:bg-[#f8fafc]">
-                        <td className="px-4 py-3 font-semibold text-[#1a2232]">{lp.name}</td>
-                        <td className="px-4 py-3 text-[#364152]">{lp.product?.name || '—'}</td>
+                      <tr key={lp.id} className="border-t border-[var(--sys-border)] hover:bg-[var(--sys-surface)]">
+                        <td className="px-4 py-3 font-semibold text-[var(--sys-heading)]">{lp.name}</td>
+                        <td className="px-4 py-3 text-[var(--sys-foreground)]">{lp.product?.name || '—'}</td>
                         <td className="px-4 py-3">
                           <Badge variant={lp.isPublished ? 'success' : 'default'}>
                             {lp.isPublished ? 'منشورة' : 'مسودة'}
@@ -199,37 +199,37 @@ export function LandingPagesScreen() {
                         </td>
                         <td className="px-4 py-3" dir="ltr">
                           {lp.isPublished ? (
-                            <a href={`/lp/${lp.slug}`} target="_blank" rel="noopener noreferrer" className="text-[#b8256e] hover:underline flex items-center gap-1">
+                            <a href={`/lp/${lp.slug}`} target="_blank" rel="noopener noreferrer" className="text-[var(--sys-primary)] hover:underline flex items-center gap-1">
                               /lp/{lp.slug} <ExternalLink className="w-3 h-3" />
                             </a>
                           ) : (
-                            <span className="text-[#9aa4b2]">/lp/{lp.slug}</span>
+                            <span className="text-[var(--sys-muted)]">/lp/{lp.slug}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-[#697586]">{formatDate(lp.createdAt)}</td>
+                        <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{formatDate(lp.createdAt)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             <button title="تحرير" onClick={() => (window.location.href = `/growth/landing-pages/${lp.id}`)}
-                              className="p-1.5 rounded-lg hover:bg-[#eef2f6] text-[#364152]"><Pencil className="w-4 h-4" /></button>
+                              className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]"><Pencil className="w-4 h-4" /></button>
                             <button title={lp.isPublished ? 'إلغاء النشر' : 'نشر'} disabled={busyId === lp.id}
                               onClick={() => togglePublish(lp)}
-                              className="p-1.5 rounded-lg hover:bg-[#eef2f6] text-[#364152] disabled:opacity-40">
+                              className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)] disabled:opacity-40">
                               {lp.isPublished ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                             <button title="نسخ الرابط" onClick={() => copyUrl(lp)}
-                              className="p-1.5 rounded-lg hover:bg-[#eef2f6] text-[#364152]">
-                              {copiedId === lp.id ? <MousePointerClick className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                              className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">
+                              {copiedId === lp.id ? <MousePointerClick className="w-4 h-4 text-[var(--sys-success)]" /> : <Copy className="w-4 h-4" />}
                             </button>
                             {/* A page that converts, wanted again for the next
                                 product. Rebuilding it by hand is how a working
                                 page gets copied wrong. */}
                             <button title="انسخ الصفحة" disabled={busyId === lp.id}
                               onClick={() => duplicate(lp)}
-                              className="p-1.5 rounded-lg hover:bg-[#fdf5fa] text-[#364152] hover:text-[#b8256e] disabled:opacity-40">
+                              className="p-1.5 rounded-lg hover:bg-[var(--sys-primary-soft)] text-[var(--sys-foreground)] hover:text-[var(--sys-primary)] disabled:opacity-40">
                               <CopyPlus className="w-4 h-4" />
                             </button>
                             <button title="حذف" onClick={() => setDeleting(lp)}
-                              className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600"><Trash2 className="w-4 h-4" /></button>
+                              className="p-1.5 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
                       </tr>
@@ -254,8 +254,8 @@ export function LandingPagesScreen() {
             losing. Pick the shape, then name it.
           */}
           <div>
-            <label className="text-xs font-semibold text-[#364152]">شكل الصفحة</label>
-            <p className="mb-2 mt-0.5 text-[11px] text-[#697586]">
+            <label className="text-xs font-semibold text-[var(--sys-foreground)]">شكل الصفحة</label>
+            <p className="mb-2 mt-0.5 text-[11px] text-[var(--sys-muted-foreground)]">
               تبدأ الصفحة بهذا الشكل ولونه وخطه — ويمكنك تغيير كل شيء بعدها.
             </p>
             <div className="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto pe-1 sm:grid-cols-2">
@@ -266,36 +266,36 @@ export function LandingPagesScreen() {
                   onClick={() => setForm({ ...form, template: t.key })}
                   className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 text-start transition ${
                     form.template === t.key
-                      ? 'border-[#b8256e] bg-[#fdf2f7]'
-                      : 'border-[#e3e8ef] hover:border-[#b8256e]/40'
+                      ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)]'
+                      : 'border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
                   }`}
                 >
                   <span className="mt-0.5 h-7 w-1.5 shrink-0 rounded-full" style={{ background: t.swatch }} />
                   <span className="min-w-0">
-                    <span className="block text-xs font-semibold text-[#364152]">{t.label}</span>
-                    <span className="block text-[9.5px] leading-relaxed text-[#9aa4b2]">{t.hint}</span>
+                    <span className="block text-xs font-semibold text-[var(--sys-foreground)]">{t.label}</span>
+                    <span className="block text-[9.5px] leading-relaxed text-[var(--sys-muted)]">{t.hint}</span>
                   </span>
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#364152]">اسم الصفحة *</label>
+            <label className="text-xs font-semibold text-[var(--sys-foreground)]">اسم الصفحة *</label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: صفحة Tremella" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#364152]">الرابط (slug) * — سيصبح /lp/…</label>
+            <label className="text-xs font-semibold text-[var(--sys-foreground)]">الرابط (slug) * — سيصبح /lp/…</label>
             <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="tremella" dir="ltr" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#364152]">المنتج المرتبط</label>
+            <label className="text-xs font-semibold text-[var(--sys-foreground)]">المنتج المرتبط</label>
             <Select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
               <option value="">— اختر منتجًا —</option>
               {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </Select>
-            <p className="text-[11px] text-[#697586] mt-1">المنتج والسعر يُحدَّدان من السيرفر عند إرسال أي طلب — لا يمكن التلاعب بهما من الصفحة.</p>
+            <p className="text-[11px] text-[var(--sys-muted-foreground)] mt-1">المنتج والسعر يُحدَّدان من السيرفر عند إرسال أي طلب — لا يمكن التلاعب بهما من الصفحة.</p>
           </div>
-          {formError && <div className="text-xs text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{formError}</div>}
+          {formError && <div className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] rounded-lg px-3 py-2">{formError}</div>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)}>إلغاء</Button>
             <Button onClick={createLandingPage} disabled={saving || form.name.trim().length < 2 || form.slug.trim().length < 3}>
@@ -307,7 +307,7 @@ export function LandingPagesScreen() {
 
       {/* Delete modal */}
       <Modal isOpen={!!deleting} onClose={() => setDeleting(null)} title="تأكيد الحذف" maxWidth="sm">
-        <p className="text-sm text-[#364152] mb-4">
+        <p className="text-sm text-[var(--sys-foreground)] mb-4">
           حذف صفحة الهبوط «{deleting?.name}»؟ الطلبات السابقة المرتبطة بها ستبقى موجودة في الطلبات.
         </p>
         <div className="flex justify-end gap-2">

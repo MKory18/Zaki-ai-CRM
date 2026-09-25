@@ -68,28 +68,28 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-[#e3e8ef] bg-white p-4">
+    <div className="space-y-4 rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
       <div>
-        <p className="flex items-center gap-1.5 text-sm font-bold text-[#121926]">
-          <BadgeCheck className="h-4 w-4 text-[#b8256e]" />
+        <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
+          <BadgeCheck className="h-4 w-4 text-[var(--sys-primary)]" />
           هوية المتجر
         </p>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-[#697586]">
+        <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           تُكتب هنا مرة واحدة، وتقرؤها صفحات المتجر والبوالص واختيار المتجر.
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-xs font-medium text-[#364152]">
+        <label className="block text-xs font-medium text-[var(--sys-foreground)]">
           اسم المتجر
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
-            className="mt-1 block h-10 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-3 text-sm focus:border-[#b8256e] focus:outline-none"
+            className="mt-1 block h-10 w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm focus:border-[var(--sys-primary)] focus:outline-none"
           />
         </label>
-        <label className="block text-xs font-medium text-[#364152]">
+        <label className="block text-xs font-medium text-[var(--sys-foreground)]">
           هاتف الدعم
           <input
             value={phone}
@@ -98,9 +98,9 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
             inputMode="tel"
             maxLength={24}
             placeholder="0999 000 000"
-            className="mt-1 block h-10 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-3 text-left text-sm focus:border-[#b8256e] focus:outline-none"
+            className="mt-1 block h-10 w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-left text-sm focus:border-[var(--sys-primary)] focus:outline-none"
           />
-          <span className="mt-1 block text-[10.5px] text-[#9aa4b2]">يظهر للزبون في المتجر وتذييل الصفحات، ويُطبع على البوليصة.</span>
+          <span className="mt-1 block text-[10.5px] text-[var(--sys-muted)]">يظهر للزبون في المتجر وتذييل الصفحات، ويُطبع على البوليصة.</span>
         </label>
       </div>
       <div className="flex items-center gap-2">
@@ -108,17 +108,17 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
           type="button"
           onClick={() => void save()}
           disabled={!changed || saving || name.trim().length < 2}
-          className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-[#b8256e] px-4 text-xs font-bold text-white disabled:opacity-40"
+          className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-[var(--sys-primary)] px-4 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
         >
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           حفظ
         </button>
-        {msg && <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>{msg.text}</span>}
+        {msg && <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</span>}
       </div>
 
       {/* Saved on upload, not with the form: a file is not a field to
           remember to press save for. */}
-      <div className="space-y-3 border-t border-[#e3e8ef] pt-3">
+      <div className="space-y-3 border-t border-[var(--sys-border)] pt-3">
         <StoreBrandField storeId={store.id} kind="logo" value={logo} onChange={(v) => { setLogo(v); onSaved?.(); }} />
         <StoreBrandField storeId={store.id} kind="favicon" value={favicon} onChange={(v) => { setFavicon(v); onSaved?.(); }} />
       </div>

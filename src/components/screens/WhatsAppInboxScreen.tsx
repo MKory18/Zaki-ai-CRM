@@ -33,8 +33,8 @@ interface WMsg {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  CONNECTED: 'bg-[#e6f9ee] text-[#00a651]',
-  NEEDS_SETUP: 'bg-[#fff7e6] text-[#b8860b]',
+  CONNECTED: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]',
+  NEEDS_SETUP: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]',
 };
 
 export function WhatsAppInboxScreen() {
@@ -265,10 +265,10 @@ export function WhatsAppInboxScreen() {
     return (
       <>
         <div className="p-8">
-          <div className="max-w-md mx-auto mt-20 text-center p-8 bg-white rounded-xl border border-[#e2e8f0]">
-            <ShieldAlert className="w-10 h-10 mx-auto text-[#b8256e]" />
-            <h2 className="mt-4 font-bold text-[#121926]">ليس لديك صلاحية لعرض واتساب</h2>
-            <p className="mt-2 text-xs text-[#697586]">تواصل مع مدير الشركة لمنحك صلاحية whatsapp.view</p>
+          <div className="max-w-md mx-auto mt-20 text-center p-8 bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)]">
+            <ShieldAlert className="w-10 h-10 mx-auto text-[var(--sys-primary)]" />
+            <h2 className="mt-4 font-bold text-[var(--sys-heading)]">ليس لديك صلاحية لعرض واتساب</h2>
+            <p className="mt-2 text-xs text-[var(--sys-muted-foreground)]">تواصل مع مدير الشركة لمنحك صلاحية whatsapp.view</p>
           </div>
         </div>
       </>
@@ -281,12 +281,12 @@ export function WhatsAppInboxScreen() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">واتساب</h1>
-            <p className="text-xs text-[#697586] mt-1">صندوق وارد مشترك لكل الموظفين — WhatsApp Business Cloud API</p>
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">واتساب</h1>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">صندوق وارد مشترك لكل الموظفين — WhatsApp Business Cloud API</p>
           </div>
           {conn?.connection && (
             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${STATUS_COLORS[conn.status] || STATUS_COLORS.NEEDS_SETUP}`}>
-              <span className={`w-2 h-2 rounded-full ${conn.status === 'CONNECTED' ? 'bg-[#00a651]' : 'bg-[#b8860b]'}`} />
+              <span className={`w-2 h-2 rounded-full ${conn.status === 'CONNECTED' ? 'bg-[var(--sys-success)]' : 'bg-[var(--sys-warning)]'}`} />
               {conn.status === 'CONNECTED' ? 'متصل' : 'يحتاج إعداد'}
             </span>
           )}
@@ -295,18 +295,18 @@ export function WhatsAppInboxScreen() {
         {/* No connection state */}
         {!loading && conn && conn.status !== 'CONNECTED' ? (
           <div className="flex-1 flex items-center justify-center px-6">
-            <div className="text-center p-10 bg-white rounded-2xl border border-[#e2e8f0] max-w-md">
-              <div className="w-14 h-14 mx-auto rounded-full bg-[#f8fafc] flex items-center justify-center">
-                <MessageCircle className="w-7 h-7 text-[#697586]" />
+            <div className="text-center p-10 bg-[var(--sys-card)] rounded-2xl border border-[var(--sys-border)] max-w-md">
+              <div className="w-14 h-14 mx-auto rounded-full bg-[var(--sys-surface)] flex items-center justify-center">
+                <MessageCircle className="w-7 h-7 text-[var(--sys-muted-foreground)]" />
               </div>
-              <h2 className="mt-4 font-bold text-[#121926]">لم يتم ربط WhatsApp بعد</h2>
-              <p className="mt-2 text-xs text-[#697586] leading-relaxed">
+              <h2 className="mt-4 font-bold text-[var(--sys-heading)]">لم يتم ربط WhatsApp بعد</h2>
+              <p className="mt-2 text-xs text-[var(--sys-muted-foreground)] leading-relaxed">
                 {conn.envConfigured
                   ? 'تم إعداد البيانات لكن الاتصال غير مفعّل. جرّب إعادة الاتصال من الإعدادات.'
                   : 'أكمل متغيرات البيئة (Access Token, WABA ID, Phone Number ID, App Secret, Verify Token, Encryption Key) ثم اضغط إعادة الاتصال من صفحة الإعدادات.'}
               </p>
               {canManage && (
-                <Link href="/settings/whatsapp" className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#b8256e] text-white text-sm font-semibold hover:opacity-90">
+                <Link href="/settings/whatsapp" className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold hover:opacity-90">
                   <Settings className="w-4 h-4" />
                   إعداد WhatsApp
                 </Link>
@@ -317,22 +317,22 @@ export function WhatsAppInboxScreen() {
           /* 3-pane inbox */
           <div className="flex-1 min-h-0 px-4 md:px-6 pb-4 grid grid-cols-1 lg:grid-cols-[320px_1fr_300px] gap-4 overflow-hidden">
             {/* ── Column 1: conversations list ── */}
-            <div className={`bg-white rounded-xl border border-[#e2e8f0] flex flex-col min-h-0 ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
-              <div className="p-3 border-b border-[#f0f2f7] space-y-2">
+            <div className={`bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)] flex flex-col min-h-0 ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
+              <div className="p-3 border-b border-[var(--sys-surface-strong)] space-y-2">
                 <div className="relative">
-                  <Search className="absolute top-2.5 left-3 w-4 h-4 text-[#9aa4b2] rtl:right-3 rtl:left-auto" />
+                  <Search className="absolute top-2.5 left-3 w-4 h-4 text-[var(--sys-muted)] rtl:right-3 rtl:left-auto" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && loadConversations()}
                     placeholder="بحث برقم أو اسم..."
-                    className="w-full pl-9 rtl:pr-9 rtl:pl-3 py-2 text-xs rounded-lg border border-[#e2e8f0] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/20"
+                    className="w-full pl-9 rtl:pr-9 rtl:pl-3 py-2 text-xs rounded-lg border border-[var(--sys-border)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                   />
                 </div>
                 <div className="flex gap-1 text-[11px] font-semibold">
                   {(['OPEN', 'CLOSED'] as const).map((s) => (
                     <button key={s} onClick={() => setStatusFilter(s)}
-                      className={`px-3 py-1 rounded-full ${statusFilter === s ? 'bg-[#b8256e] text-white' : 'bg-[#f8fafc] text-[#697586]'}`}>
+                      className={`px-3 py-1 rounded-full ${statusFilter === s ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]'}`}>
                       {s === 'OPEN' ? 'مفتوحة' : 'مغلقة'}
                     </button>
                   ))}
@@ -340,38 +340,38 @@ export function WhatsAppInboxScreen() {
               </div>
               <div className="flex-1 overflow-y-auto min-h-0">
                 {loading ? (
-                  <div className="p-6 text-center text-xs text-[#697586]">جارٍ التحميل...</div>
+                  <div className="p-6 text-center text-xs text-[var(--sys-muted-foreground)]">جارٍ التحميل...</div>
                 ) : error && !offline ? (
-                  <div className="p-4 m-3 rounded-lg bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs flex flex-col gap-2">
+                  <div className="p-4 m-3 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs flex flex-col gap-2">
                     <span className="flex items-center gap-1.5"><AlertCircle className="w-4 h-4" />{error}</span>
-                    <button onClick={() => { setError(null); loadConversations(); }} className="inline-flex items-center gap-1 text-[#121926] font-semibold">
+                    <button onClick={() => { setError(null); loadConversations(); }} className="inline-flex items-center gap-1 text-[var(--sys-heading)] font-semibold">
                       <RefreshCw className="w-3 h-3" /> إعادة المحاولة
                     </button>
                   </div>
                 ) : offline ? (
-                  <div className="p-4 m-3 rounded-lg bg-[#fff7e6] border border-[#fde68a] text-[#b8860b] text-xs">
+                  <div className="p-4 m-3 rounded-lg bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)] text-[var(--sys-warning)] text-xs">
                     لا يوجد اتصال بالشبكة — سيتم تحديث الصندوق تلقائيًا عند عودة الاتصال
                   </div>
                 ) : conversations.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-[#697586]">
+                  <div className="p-8 text-center text-xs text-[var(--sys-muted-foreground)]">
                     {statusFilter === 'OPEN' ? 'لا توجد محادثات مفتوحة بعد' : 'لا توجد محادثات مغلقة'}
                   </div>
                 ) : (
                   conversations.map((c) => (
                     <button key={c.id} onClick={() => selectConversation(c)}
-                      className={`w-full text-right flex items-start gap-3 px-4 py-3 border-b border-[#f7f8fa] hover:bg-[#f8fafc] transition-colors ${selectedId === c.id ? 'bg-[#fdf2f7]' : ''}`}>
-                      <div className="w-10 h-10 rounded-full bg-[#121926] text-white flex items-center justify-center shrink-0 text-sm font-bold">
+                      className={`w-full text-right flex items-start gap-3 px-4 py-3 border-b border-[var(--sys-surface)] hover:bg-[var(--sys-surface)] transition-colors ${selectedId === c.id ? 'bg-[var(--sys-primary-soft)]' : ''}`}>
+                      <div className="w-10 h-10 rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] flex items-center justify-center shrink-0 text-sm font-bold">
                         {(c.customerName || c.customerPhone).slice(0, 2)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold text-[#121926] truncate">{c.customerName || c.customerPhone}</span>
+                          <span className="text-sm font-semibold text-[var(--sys-heading)] truncate">{c.customerName || c.customerPhone}</span>
                           {c.unreadCount > 0 && (
-                            <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-[#b8256e] text-white text-[10px] font-bold flex items-center justify-center">{c.unreadCount}</span>
+                            <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-[10px] font-bold flex items-center justify-center">{c.unreadCount}</span>
                           )}
                         </div>
-                        <p className="text-xs text-[#697586] truncate mt-0.5">{c.lastMessagePreview || '—'}</p>
-                        {c.assignedTo && <p className="text-[10px] text-[#9aa4b2] mt-0.5">مُسندة إلى: {c.assignedTo.name}</p>}
+                        <p className="text-xs text-[var(--sys-muted-foreground)] truncate mt-0.5">{c.lastMessagePreview || '—'}</p>
+                        {c.assignedTo && <p className="text-[10px] text-[var(--sys-muted)] mt-0.5">مُسندة إلى: {c.assignedTo.name}</p>}
                       </div>
                     </button>
                   ))
@@ -380,34 +380,34 @@ export function WhatsAppInboxScreen() {
             </div>
 
             {/* ── Column 2: conversation ── */}
-            <div className={`bg-white rounded-xl border border-[#e2e8f0] flex flex-col min-h-0 ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}`}>
+            <div className={`bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)] flex flex-col min-h-0 ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}`}>
               {!selected ? (
-                <div className="flex-1 flex items-center justify-center text-xs text-[#697586]">اختر محادثة لعرضها</div>
+                <div className="flex-1 flex items-center justify-center text-xs text-[var(--sys-muted-foreground)]">اختر محادثة لعرضها</div>
               ) : (
                 <>
-                  <div className="flex items-center gap-3 px-4 py-3 border-b border-[#f0f2f7]">
-                    <button className="lg:hidden text-[#697586]" onClick={() => setMobileView('list')}><ChevronRight className="w-5 h-5 rtl:rotate-180" /></button>
-                    <div className="w-9 h-9 rounded-full bg-[#121926] text-white flex items-center justify-center text-xs font-bold">
+                  <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--sys-surface-strong)]">
+                    <button className="lg:hidden text-[var(--sys-muted-foreground)]" onClick={() => setMobileView('list')}><ChevronRight className="w-5 h-5 rtl:rotate-180" /></button>
+                    <div className="w-9 h-9 rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] flex items-center justify-center text-xs font-bold">
                       {(selected.customerName || selected.customerPhone).slice(0, 2)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-[#121926] truncate">{selected.customerName || selected.customerPhone}</p>
-                      <p className="text-[11px] text-[#697586] truncate" dir="ltr">{selected.customerPhone}</p>
+                      <p className="text-sm font-bold text-[var(--sys-heading)] truncate">{selected.customerName || selected.customerPhone}</p>
+                      <p className="text-[11px] text-[var(--sys-muted-foreground)] truncate" dir="ltr">{selected.customerPhone}</p>
                     </div>
                     <button onClick={toggleStatus}
-                      className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold ${selected.status === 'OPEN' ? 'bg-[#f8fafc] text-[#697586] hover:bg-[#feecee] hover:text-[#fb323f]' : 'bg-[#e6f9ee] text-[#00a651]'}`}>
+                      className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold ${selected.status === 'OPEN' ? 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]' : 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]'}`}>
                       {selected.status === 'OPEN' ? 'إغلاق المحادثة' : 'إعادة فتح'}
                     </button>
                   </div>
 
                   {canAssign && (
-                    <div className="flex items-center gap-2 px-4 py-2 border-b border-[#f7f8fa] bg-[#fafbfc]">
-                      <span className="text-[11px] text-[#697586] shrink-0">مُسندة إلى:</span>
+                    <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--sys-surface)] bg-[var(--sys-surface)]">
+                      <span className="text-[11px] text-[var(--sys-muted-foreground)] shrink-0">مُسندة إلى:</span>
                       <select
                         value={selected.assignedUserId || ''}
                         disabled={assigning}
                         onChange={(e) => assign(e.target.value || null)}
-                        className="text-[11px] border border-[#e2e8f0] rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-[#b8256e]/20"
+                        className="text-[11px] border border-[var(--sys-border)] rounded-lg px-2 py-1 bg-[var(--sys-card)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                       >
                         <option value="">غير معين</option>
                         {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -416,25 +416,25 @@ export function WhatsAppInboxScreen() {
                   )}
 
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-2 bg-[#fafbfc]" dir="ltr">
+                  <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-2 bg-[var(--sys-surface)]" dir="ltr">
                     {msgsLoading ? (
-                      <div className="text-center text-xs text-[#697586] py-8">جارٍ التحميل...</div>
+                      <div className="text-center text-xs text-[var(--sys-muted-foreground)] py-8">جارٍ التحميل...</div>
                     ) : messages.length === 0 ? (
-                      <div className="text-center text-xs text-[#697586] py-8">لا توجد رسائل بعد</div>
+                      <div className="text-center text-xs text-[var(--sys-muted-foreground)] py-8">لا توجد رسائل بعد</div>
                     ) : (
                       messages.map((m) => (
                         <div key={m.id} className={`flex ${m.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${m.direction === 'OUTBOUND' ? 'bg-[#d9fdd3] text-[#121926]' : 'bg-white text-[#121926] border border-[#eef1f5]'}`}>
+                          <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${m.direction === 'OUTBOUND' ? 'bg-[#d9fdd3] text-[var(--sys-heading)]' : 'bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[#eef1f5]'}`}>
                             {m.messageType !== 'TEXT' && !m.text && (
-                              <span className="text-[10px] font-semibold text-[#697586]">[{m.messageType}]</span>
+                              <span className="text-[10px] font-semibold text-[var(--sys-muted-foreground)]">[{m.messageType}]</span>
                             )}
                             <p className="whitespace-pre-wrap break-words" dir="auto">{m.text || ''}</p>
                             <div className="flex items-center gap-1 justify-end mt-0.5">
-                              <span className="text-[9px] text-[#9aa4b2]">{new Date(m.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-[9px] text-[var(--sys-muted)]">{new Date(m.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
                               {m.direction === 'OUTBOUND' && (
                                 m.status === 'READ' ? <CheckCheck className="w-3 h-3 text-[#53bdeb]" />
-                                : m.status === 'FAILED' ? <X className="w-3 h-3 text-[#fb323f]" />
-                                : <Check className="w-3 h-3 text-[#9aa4b2]" />
+                                : m.status === 'FAILED' ? <X className="w-3 h-3 text-[var(--sys-destructive)]" />
+                                : <Check className="w-3 h-3 text-[var(--sys-muted)]" />
                               )}
                             </div>
                           </div>
@@ -445,12 +445,12 @@ export function WhatsAppInboxScreen() {
 
                   {/* Composer */}
                   {canSend && selected.status === 'OPEN' && (
-                    <div className="border-t border-[#f0f2f7] p-3 space-y-2">
+                    <div className="border-t border-[var(--sys-surface-strong)] p-3 space-y-2">
                       {sendError && (
-                        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#feecee] border border-[#fecdd1] text-[#fb323f] text-xs">
+                        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs">
                           <span className="flex items-center gap-1.5"><AlertCircle className="w-4 h-4 shrink-0" />{sendError}</span>
                           {retryText && (
-                            <button onClick={retrySend} className="shrink-0 inline-flex items-center gap-1 font-semibold text-[#121926]">
+                            <button onClick={retrySend} className="shrink-0 inline-flex items-center gap-1 font-semibold text-[var(--sys-heading)]">
                               <RefreshCw className="w-3 h-3" /> إعادة الإرسال
                             </button>
                           )}
@@ -465,71 +465,71 @@ export function WhatsAppInboxScreen() {
                           }}
                           rows={1}
                           placeholder="اكتب رسالة..."
-                          className="flex-1 resize-none max-h-32 px-3 py-2.5 text-sm rounded-xl border border-[#e2e8f0] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/20"
+                          className="flex-1 resize-none max-h-32 px-3 py-2.5 text-sm rounded-xl border border-[var(--sys-border)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                         />
                         <button onClick={sendMessage} disabled={sending || !composing.trim()}
-                          className="shrink-0 w-10 h-10 rounded-full bg-[#b8256e] text-white flex items-center justify-center disabled:opacity-40 hover:opacity-90">
+                          className="shrink-0 w-10 h-10 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center disabled:opacity-40 hover:opacity-90">
                           {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 rtl:rotate-180" />}
                         </button>
                       </div>
                     </div>
                   )}
                   {selected.status === 'CLOSED' && (
-                    <div className="border-t border-[#f0f2f7] p-3 text-center text-[11px] text-[#697586]">المحادثة مغلقة — أعد فتحها للإرسال</div>
+                    <div className="border-t border-[var(--sys-surface-strong)] p-3 text-center text-[11px] text-[var(--sys-muted-foreground)]">المحادثة مغلقة — أعد فتحها للإرسال</div>
                   )}
                   {!canSend && (
-                    <div className="border-t border-[#f0f2f7] p-3 text-center text-[11px] text-[#697586]">ليس لديك صلاحية لإرسال الرسائل</div>
+                    <div className="border-t border-[var(--sys-surface-strong)] p-3 text-center text-[11px] text-[var(--sys-muted-foreground)]">ليس لديك صلاحية لإرسال الرسائل</div>
                   )}
                 </>
               )}
             </div>
 
             {/* ── Column 3: customer panel ── */}
-            <div className={`bg-white rounded-xl border border-[#e2e8f0] overflow-y-auto min-h-0 hidden lg:block`}>
+            <div className={`bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)] overflow-y-auto min-h-0 hidden lg:block`}>
               {!selected ? (
-                <div className="flex items-center justify-center h-full text-xs text-[#697586]">لوحة العميل</div>
+                <div className="flex items-center justify-center h-full text-xs text-[var(--sys-muted-foreground)]">لوحة العميل</div>
               ) : (
                 <div className="p-4 space-y-5">
                   <div className="text-center">
-                    <div className="w-16 h-16 mx-auto rounded-full bg-[#121926] text-white flex items-center justify-center text-lg font-bold">
+                    <div className="w-16 h-16 mx-auto rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] flex items-center justify-center text-lg font-bold">
                       {(selected.customerName || selected.customerPhone).slice(0, 2)}
                     </div>
-                    <p className="mt-2 font-bold text-sm text-[#121926]">{selected.customerName || 'عميل غير مرتبط'}</p>
-                    <p className="text-[11px] text-[#697586] flex items-center justify-center gap-1 mt-1" dir="ltr">
+                    <p className="mt-2 font-bold text-sm text-[var(--sys-heading)]">{selected.customerName || 'عميل غير مرتبط'}</p>
+                    <p className="text-[11px] text-[var(--sys-muted-foreground)] flex items-center justify-center gap-1 mt-1" dir="ltr">
                       <Phone className="w-3 h-3" /> {selected.customerPhone}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa4b2] mb-2">المحادثات</p>
-                    <p className="text-xs text-[#697586]">{convCountByPhone[selected.customerPhone] || 1} محادثة (مفتوحة)</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2">المحادثات</p>
+                    <p className="text-xs text-[var(--sys-muted-foreground)]">{convCountByPhone[selected.customerPhone] || 1} محادثة (مفتوحة)</p>
                     {selected.customerId ? (
-                      <Link href={`/customers?search=${encodeURIComponent(selected.customerPhone)}`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#b8256e] hover:underline">
+                      <Link href={`/customers?search=${encodeURIComponent(selected.customerPhone)}`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-primary)] hover:underline">
                         <User className="w-3 h-3" /> فتح العميل
                       </Link>
                     ) : (
-                      <p className="mt-2 text-[11px] text-[#9aa4b2]">عميل غير مرتبط</p>
+                      <p className="mt-2 text-[11px] text-[var(--sys-muted)]">عميل غير مرتبط</p>
                     )}
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa4b2] mb-2">الطلبات الأخيرة</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2">الطلبات الأخيرة</p>
                     {selected.customerId ? (
                       recentOrders.length === 0 ? (
-                        <p className="text-[11px] text-[#9aa4b2]">لا توجد طلبات</p>
+                        <p className="text-[11px] text-[var(--sys-muted)]">لا توجد طلبات</p>
                       ) : (
                         <div className="space-y-1.5">
                           {recentOrders.map((o: any) => (
-                            <Link key={o.id} href={`/orders/${o.id}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#f8fafc] hover:bg-[#fdf2f7] text-xs">
-                              <span className="font-semibold text-[#121926]" dir="ltr">#{o.orderNumber}</span>
-                              <span className="text-[10px] text-[#697586]">{o.status}</span>
-                              <span className="font-semibold text-[#121926]" dir="ltr">{o.totalAmount} {o.currency}</span>
+                            <Link key={o.id} href={`/orders/${o.id}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[var(--sys-surface)] hover:bg-[var(--sys-primary-soft)] text-xs">
+                              <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">#{o.orderNumber}</span>
+                              <span className="text-[10px] text-[var(--sys-muted-foreground)]">{o.status}</span>
+                              <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{o.totalAmount} {o.currency}</span>
                             </Link>
                           ))}
                         </div>
                       )
                     ) : (
-                      <p className="text-[11px] text-[#9aa4b2] flex items-center gap-1"><ShoppingBag className="w-3 h-3" /> لا يوجد عميل مرتبط</p>
+                      <p className="text-[11px] text-[var(--sys-muted)] flex items-center gap-1"><ShoppingBag className="w-3 h-3" /> لا يوجد عميل مرتبط</p>
                     )}
                   </div>
                 </div>

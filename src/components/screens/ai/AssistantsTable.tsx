@@ -59,15 +59,15 @@ export function AssistantsTable({
 
   return (
     <div className="space-y-3">
-      <p className="rounded-xl bg-[#f8fafc] px-3 py-2.5 text-[11px] leading-relaxed text-[#697586]">
+      <p className="rounded-xl bg-[var(--sys-surface)] px-3 py-2.5 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
         كل مساعد يقرأ ما هو مكتوب في سطره فقط — الخدمة ترفض جلب غيره، فالسطر وعدٌ يحفظه الكود لا وصفٌ
         على برومبت. ولا مساعد، مهما كان نطاقه، ينقل حالة طلب أو يسجّل حركة صندوق أو يغيّر سعراً أو
         يعتمد تسوية.
       </p>
 
-      <div className="overflow-hidden rounded-xl border border-[#e3e8ef] bg-white">
+      <div className="overflow-hidden rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)]">
         <table className="w-full text-xs">
-          <thead className="border-b border-[#e3e8ef] bg-[#f8fafc] text-[#697586]">
+          <thead className="border-b border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]">
             <tr>
               <th className="px-3 py-2 text-right font-medium">المساعد</th>
               <th className="px-3 py-2 text-right font-medium">لمن</th>
@@ -75,38 +75,38 @@ export function AssistantsTable({
               <th className="px-3 py-2 text-right font-medium">بيانات الزبون</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e3e8ef]">
+          <tbody className="divide-y divide-[var(--sys-border)]">
             {ASSISTANTS.map((a) => (
               <tr key={a.key} className="align-top">
                 <td className="px-3 py-2.5">
-                  <p className="font-semibold text-[#121926]">{a.label}</p>
-                  <p className="mt-0.5 text-[10.5px] leading-relaxed text-[#697586]">{a.note}</p>
+                  <p className="font-semibold text-[var(--sys-heading)]">{a.label}</p>
+                  <p className="mt-0.5 text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">{a.note}</p>
                 </td>
-                <td className="px-3 py-2.5 whitespace-nowrap text-[#364152]">
+                <td className="px-3 py-2.5 whitespace-nowrap text-[var(--sys-foreground)]">
                   {a.who}
-                  <span className="mt-0.5 block text-[10px] text-[#9aa4b2]" dir="ltr">{a.needs}</span>
+                  <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]" dir="ltr">{a.needs}</span>
                 </td>
                 <td className="px-3 py-2.5">
                   {a.scopes.length === 0 && !a.optionalScopes ? (
-                    <span className="text-[#9aa4b2]">لا شيء من قاعدة البيانات</span>
+                    <span className="text-[var(--sys-muted)]">لا شيء من قاعدة البيانات</span>
                   ) : (
-                    <span className="text-[#364152]">
+                    <span className="text-[var(--sys-foreground)]">
                       {a.scopes.map((s) => SCOPE_LABEL_AR[s]).join(' · ') || '—'}
                     </span>
                   )}
                   {a.optionalScopes && (
-                    <span className="mt-0.5 block text-[10px] text-[#9aa4b2]">
+                    <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">
                       {enabled.length === 0 ? 'ولا مجال مؤشَّر' : `مؤشَّر: ${enabled.map((s) => SCOPE_LABEL_AR[s as AiScope]).join(' · ')}`}
                     </span>
                   )}
                 </td>
                 <td className="px-3 py-2.5 whitespace-nowrap">
                   {a.pii ? (
-                    <span className="inline-flex items-center gap-1 text-[#c07f2a]">
+                    <span className="inline-flex items-center gap-1 text-[var(--sys-warning)]">
                       <ShieldCheck className="h-3 w-3" /> نعم
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[#00a651]">
+                    <span className="inline-flex items-center gap-1 text-[var(--sys-success)]">
                       <ShieldOff className="h-3 w-3" /> لا — أبداً
                     </span>
                   )}
@@ -118,9 +118,9 @@ export function AssistantsTable({
       </div>
 
       {/* The one assistant whose reach is a decision rather than a job. */}
-      <section className="rounded-xl border border-[#e3e8ef] bg-white p-4">
-        <h3 className="text-sm font-bold text-[#121926]">ما يقرؤه مركز الذكاء</h3>
-        <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-[#697586]">
+      <section className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+        <h3 className="text-sm font-bold text-[var(--sys-heading)]">ما يقرؤه مركز الذكاء</h3>
+        <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           يبدأ بلا مجال واحد. أشّر ما تسمح له بقراءته — وغير المؤشَّر لا يُجلَب أصلاً، فلا يمكن
           استخراجه بسؤال ذكي.
         </p>
@@ -129,7 +129,7 @@ export function AssistantsTable({
             <label
               key={scope}
               className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2.5 ${
-                enabled.includes(scope) ? 'border-[#c9e8d5] bg-[#f6fcf8]' : 'border-[#e3e8ef]'
+                enabled.includes(scope) ? 'border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)]' : 'border-[var(--sys-border)]'
               }`}
             >
               <input
@@ -140,14 +140,14 @@ export function AssistantsTable({
                 className="mt-0.5"
               />
               <span>
-                <span className="block text-xs font-semibold text-[#121926]">{SCOPE_LABEL_AR[scope]}</span>
-                <span className="block text-[10.5px] leading-relaxed text-[#697586]">{SCOPE_NOTE_AR[scope]}</span>
+                <span className="block text-xs font-semibold text-[var(--sys-heading)]">{SCOPE_LABEL_AR[scope]}</span>
+                <span className="block text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">{SCOPE_NOTE_AR[scope]}</span>
               </span>
             </label>
           ))}
         </div>
         {msg && (
-          <p className={`mt-2 text-[11px] ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>{msg.text}</p>
+          <p className={`mt-2 text-[11px] ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>
         )}
       </section>
     </div>

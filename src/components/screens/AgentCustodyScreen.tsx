@@ -91,7 +91,7 @@ export function AgentCustodyScreen() {
 
   if (!agents) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -104,18 +104,18 @@ export function AgentCustodyScreen() {
       <div className="max-w-4xl space-y-4">
         <button
           onClick={() => setOpen(null)}
-          className="text-xs text-[#697586] hover:text-[#b8256e] inline-flex items-center gap-1"
+          className="text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1"
         >
           <ChevronLeft className="w-4 h-4 rotate-180" />
           كل المندوبين
         </button>
 
         <div>
-          <h1 className="text-2xl font-bold text-[#121926] flex items-center gap-2">
-            <Bike className="w-6 h-6 text-[#b8256e]" />
+          <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
+            <Bike className="w-6 h-6 text-[var(--sys-primary)]" />
             عهدة {open.agent.name}
           </h1>
-          <p className="text-xs text-[#697586] mt-1" dir="ltr">{open.agent.code}</p>
+          <p className="text-xs text-[var(--sys-muted-foreground)] mt-1" dir="ltr">{open.agent.code}</p>
         </div>
 
         <Summary totals={open.totals} money={money} />
@@ -144,50 +144,50 @@ export function AgentCustodyScreen() {
   return (
     <div className="max-w-4xl space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-[#121926] flex items-center gap-2">
-          <Bike className="w-6 h-6 text-[#b8256e]" />
+        <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
+          <Bike className="w-6 h-6 text-[var(--sys-primary)]" />
           عهدة المندوبين
         </h1>
-        <p className="text-xs text-[#697586] mt-1">
+        <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
           ما بيد كل مندوب الآن: بضاعة لم تُغلق، ومال حصّله ولم يسلّمه.
         </p>
       </div>
 
       {error && (
-        <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>
       )}
 
       {agents.length === 0 ? (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
           لا مندوبين بعد — يُضافون من الإعدادات ← شركات الشحن بنوع «مندوب».
         </p>
       ) : (
-        <ul className="bg-white border border-[#e3e8ef] rounded-[8px] divide-y divide-[#e3e8ef]">
+        <ul className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] divide-y divide-[var(--sys-border)]">
           {agents.map(({ agent, totals }) => (
             <li key={agent.id}>
               <button
                 onClick={() => openAgent(agent.id)}
                 disabled={loadingDetail}
-                className="w-full text-start p-4 hover:bg-[#f8fafc] transition-colors disabled:opacity-60"
+                className="w-full text-start p-4 hover:bg-[var(--sys-surface)] transition-colors disabled:opacity-60"
               >
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                  <span className="font-bold text-[#121926] text-sm inline-flex items-center gap-1.5 min-w-[130px]">
-                    <Bike className="w-4 h-4 text-[#b8256e]" />
+                  <span className="font-bold text-[var(--sys-heading)] text-sm inline-flex items-center gap-1.5 min-w-[130px]">
+                    <Bike className="w-4 h-4 text-[var(--sys-primary)]" />
                     {agent.name}
                   </span>
 
-                  <span className="text-[11px] text-[#697586]">
+                  <span className="text-[11px] text-[var(--sys-muted-foreground)]">
                     بيده:{' '}
-                    <span className="font-semibold text-[#121926] tabular-nums">{totals.inHandCount}</span> طلب
-                    <span className="text-[#9aa4b2]"> ({money(totals.inHandValue)})</span>
+                    <span className="font-semibold text-[var(--sys-heading)] tabular-nums">{totals.inHandCount}</span> طلب
+                    <span className="text-[var(--sys-muted)]"> ({money(totals.inHandValue)})</span>
                   </span>
 
-                  <span className="text-[11px] text-[#697586]">
-                    حصّل: <span className="font-semibold text-[#121926] tabular-nums">{money(totals.collected)}</span>
+                  <span className="text-[11px] text-[var(--sys-muted-foreground)]">
+                    حصّل: <span className="font-semibold text-[var(--sys-heading)] tabular-nums">{money(totals.collected)}</span>
                   </span>
 
-                  <span className="text-[11px] text-[#697586]">
-                    له: <span className="font-semibold text-[#121926] tabular-nums">{money(totals.fees)}</span>
+                  <span className="text-[11px] text-[var(--sys-muted-foreground)]">
+                    له: <span className="font-semibold text-[var(--sys-heading)] tabular-nums">{money(totals.fees)}</span>
                   </span>
 
                   <Balance value={totals.balance} money={money} />
@@ -198,7 +198,7 @@ export function AgentCustodyScreen() {
         </ul>
       )}
 
-      <p className="text-[11px] text-[#9aa4b2]">
+      <p className="text-[11px] text-[var(--sys-muted)]">
         الأرقام محسوبة من الطلبات نفسها لحظة فتح الشاشة — لا رصيد مخزَّن يمكن أن يختلف عن الواقع.
       </p>
     </div>
@@ -212,10 +212,10 @@ function Balance({ value, money }: { value: number; money: (n: number) => string
     <span
       className={`ms-auto text-xs font-bold tabular-nums px-2.5 py-1 rounded-[6px] border ${
         owesUs
-          ? 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]'
+          ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]'
           : weOwe
-            ? 'bg-[#eef4ff] text-[#2563eb] border-[#c7dbff]'
-            : 'bg-[#f8fafc] text-[#697586] border-[#e3e8ef]'
+            ? 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-border)]'
+            : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
       }`}
     >
       {owesUs ? 'عليه ' : weOwe ? 'له ' : 'متوازن '}
@@ -233,16 +233,16 @@ function Summary({ totals, money }: { totals: Totals; money: (n: number) => stri
       <div
         className={`rounded-xl border p-3 ${
           totals.balance > 0
-            ? 'bg-[#fff7ed] border-[#fed7aa]'
+            ? 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]'
             : totals.balance < 0
-              ? 'bg-[#eef4ff] border-[#c7dbff]'
-              : 'bg-[#f8fafc] border-[#e3e8ef]'
+              ? 'bg-[var(--sys-surface)] border-[var(--sys-border)]'
+              : 'bg-[var(--sys-surface)] border-[var(--sys-border)]'
         }`}
       >
-        <p className="text-[10px] text-[#697586]">
+        <p className="text-[10px] text-[var(--sys-muted-foreground)]">
           {totals.balance > 0 ? 'صافي عليه' : totals.balance < 0 ? 'صافي له' : 'متوازن'}
         </p>
-        <p className="text-sm font-black text-[#121926] tabular-nums mt-0.5" dir="ltr">
+        <p className="text-sm font-black text-[var(--sys-heading)] tabular-nums mt-0.5" dir="ltr">
           {money(Math.abs(totals.balance))}
         </p>
       </div>
@@ -252,10 +252,10 @@ function Summary({ totals, money }: { totals: Totals; money: (n: number) => stri
 
 function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-[#e3e8ef] bg-white p-3">
-      <p className="text-[10px] text-[#697586]">{label}</p>
-      <p className="text-sm font-black text-[#121926] tabular-nums mt-0.5" dir="ltr">{value}</p>
-      {hint && <p className="text-[10px] text-[#9aa4b2] tabular-nums" dir="ltr">{hint}</p>}
+    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+      <p className="text-[10px] text-[var(--sys-muted-foreground)]">{label}</p>
+      <p className="text-sm font-black text-[var(--sys-heading)] tabular-nums mt-0.5" dir="ltr">{value}</p>
+      {hint && <p className="text-[10px] text-[var(--sys-muted)] tabular-nums" dir="ltr">{hint}</p>}
     </div>
   );
 }
@@ -271,42 +271,42 @@ function Section({
   showFee: boolean;
 }) {
   return (
-    <div className="bg-white border border-[#e3e8ef] rounded-[8px]">
-      <div className="px-4 py-3 border-b border-[#e3e8ef]">
-        <h4 className="text-xs font-black text-[#121926] flex items-center gap-2">
-          <Icon className="w-4 h-4 text-[#b8256e]" />
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px]">
+      <div className="px-4 py-3 border-b border-[var(--sys-border)]">
+        <h4 className="text-xs font-black text-[var(--sys-heading)] flex items-center gap-2">
+          <Icon className="w-4 h-4 text-[var(--sys-primary)]" />
           {title}
-          <span className="text-[10px] font-medium text-[#9aa4b2] tabular-nums">{orders.length}</span>
+          <span className="text-[10px] font-medium text-[var(--sys-muted)] tabular-nums">{orders.length}</span>
         </h4>
-        <p className="text-[11px] text-[#9aa4b2] mt-0.5">{subtitle}</p>
+        <p className="text-[11px] text-[var(--sys-muted)] mt-0.5">{subtitle}</p>
       </div>
 
       {orders.length === 0 ? (
-        <p className="px-4 py-5 text-[11px] text-[#9aa4b2] text-center">لا شيء هنا.</p>
+        <p className="px-4 py-5 text-[11px] text-[var(--sys-muted)] text-center">لا شيء هنا.</p>
       ) : (
-        <ul className="divide-y divide-[#e3e8ef]">
+        <ul className="divide-y divide-[var(--sys-border)]">
           {orders.map((o) => {
             const stuck = o.shippingStatus === 'FAILED_DELIVERY' || o.shippingStatus === 'RETURN_REQUESTED';
             return (
               <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-[11px]">
-                <span className="font-semibold text-[#121926]" dir="ltr">{o.orderNumber}</span>
+                <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
                 {stuck && (
-                  <span className="inline-flex items-center gap-1 text-[#c2410c]">
+                  <span className="inline-flex items-center gap-1 text-[var(--sys-warning)]">
                     <AlertTriangle className="w-3 h-3" />
                     {STATUS_AR[o.shippingStatus]}
                   </span>
                 )}
-                <span className="text-[#697586] truncate max-w-[160px]">{o.customerName}</span>
-                {o.regionName && <span className="text-[#9aa4b2]">{o.regionName}</span>}
-                <span className="text-[#9aa4b2]">
+                <span className="text-[var(--sys-muted-foreground)] truncate max-w-[160px]">{o.customerName}</span>
+                {o.regionName && <span className="text-[var(--sys-muted)]">{o.regionName}</span>}
+                <span className="text-[var(--sys-muted)]">
                   {arDateShort(o.deliveredAt ?? o.shippedAt)}
                 </span>
                 {showFee && (
-                  <span className="text-[#9aa4b2] tabular-nums" dir="ltr">
+                  <span className="text-[var(--sys-muted)] tabular-nums" dir="ltr">
                     أجرة {money(o.fee)}
                   </span>
                 )}
-                <span className="ms-auto font-bold text-[#121926] tabular-nums" dir="ltr">
+                <span className="ms-auto font-bold text-[var(--sys-heading)] tabular-nums" dir="ltr">
                   {money(o.collected)}
                 </span>
               </li>

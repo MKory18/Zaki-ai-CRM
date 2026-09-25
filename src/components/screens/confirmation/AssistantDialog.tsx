@@ -54,9 +54,9 @@ const TIER_TEXT: Record<string, string> = {
 function Fact({ label, value, alarm }: { label: string; value: string; alarm?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5">
-      <span className="text-xs text-[#697586]">{label}</span>
+      <span className="text-xs text-[var(--sys-muted-foreground)]">{label}</span>
       <span
-        className={`text-sm tabular-nums ${alarm ? 'text-[#fb323f] font-medium' : 'text-[#121926]'}`}
+        className={`text-sm tabular-nums ${alarm ? 'text-[var(--sys-destructive)] font-medium' : 'text-[var(--sys-heading)]'}`}
         dir="auto"
       >
         {value}
@@ -107,9 +107,9 @@ export function AssistantDialog({
       <div className="space-y-4">
         {/* The record first. What the model was told is what she can check it against. */}
         {answer && (
-          <section className="rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] px-4 py-2">
-            <h4 className="text-xs font-medium text-[#364152] mb-1">ما أُعطي للمساعد</h4>
-            <div className="divide-y divide-[#e3e8ef]">
+          <section className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] px-4 py-2">
+            <h4 className="text-xs font-medium text-[var(--sys-foreground)] mb-1">ما أُعطي للمساعد</h4>
+            <div className="divide-y divide-[var(--sys-border)]">
               {customer && (
                 <>
                   <Fact label="طلبات سابقة" value={String(customer.orders)} />
@@ -134,9 +134,9 @@ export function AssistantDialog({
               {answer.context.order.notes && <Fact label="ملاحظة الزبون" value={answer.context.order.notes} />}
             </div>
             {customer && customer.previous.length > 0 && (
-              <ul className="mt-2 pt-2 border-t border-[#e3e8ef] space-y-1">
+              <ul className="mt-2 pt-2 border-t border-[var(--sys-border)] space-y-1">
                 {customer.previous.map((p) => (
-                  <li key={p.number} className="flex items-center justify-between text-xs text-[#697586]">
+                  <li key={p.number} className="flex items-center justify-between text-xs text-[var(--sys-muted-foreground)]">
                     <span className="tabular-nums" dir="ltr">{p.number}</span>
                     <span>{p.state}</span>
                     <span className="tabular-nums" dir="ltr">{p.at}</span>
@@ -145,7 +145,7 @@ export function AssistantDialog({
               </ul>
             )}
             {customer && customer.previous.length === 0 && (
-              <p className="mt-2 pt-2 border-t border-[#e3e8ef] text-xs text-[#697586]">
+              <p className="mt-2 pt-2 border-t border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]">
                 لا طلبات سابقة لهذا الزبون.
               </p>
             )}
@@ -154,36 +154,36 @@ export function AssistantDialog({
 
         {/* Then the suggestion. */}
         {!answer && !failed && (
-          <p className="flex items-center gap-2 text-sm text-[#697586] py-6 justify-center">
+          <p className="flex items-center gap-2 text-sm text-[var(--sys-muted-foreground)] py-6 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> جارٍ القراءة…
           </p>
         )}
 
-        {failed && <p className="text-sm text-[#fb323f]">{failed}</p>}
+        {failed && <p className="text-sm text-[var(--sys-destructive)]">{failed}</p>}
 
-        {answer?.error && <p className="text-sm text-[#c07f2a]">{answer.error}</p>}
+        {answer?.error && <p className="text-sm text-[var(--sys-warning)]">{answer.error}</p>}
 
         {answer?.suggestion && (
           <section>
             <div className="flex items-center justify-between mb-1">
-              <h4 className="flex items-center gap-1.5 text-xs font-medium text-[#364152]">
-                <Sparkles className="w-3.5 h-3.5 text-[#b8256e]" /> اقتراح
+              <h4 className="flex items-center gap-1.5 text-xs font-medium text-[var(--sys-foreground)]">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--sys-primary)]" /> اقتراح
               </h4>
               <button
                 onClick={copy}
-                className="flex items-center gap-1 text-xs text-[#697586] hover:text-[#b8256e] cursor-pointer"
+                className="flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] cursor-pointer"
               >
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? 'نُسخ' : 'انسخ'}
               </button>
             </div>
-            <p className="whitespace-pre-wrap text-sm text-[#121926] leading-7 rounded-[8px] border border-[#e3e8ef] px-4 py-3">
+            <p className="whitespace-pre-wrap text-sm text-[var(--sys-heading)] leading-7 rounded-[8px] border border-[var(--sys-border)] px-4 py-3">
               {answer.suggestion}
             </p>
           </section>
         )}
 
-        <p className="text-[11px] text-[#9aa4b2] border-t border-[#e3e8ef] pt-2">
+        <p className="text-[11px] text-[var(--sys-muted)] border-t border-[var(--sys-border)] pt-2">
           اقتراح فقط. التأكيد والإلغاء والتأجيل والسعر تبقى قرارك أنت — لا يغيّر المساعد شيئاً في الطلب.
         </p>
       </div>

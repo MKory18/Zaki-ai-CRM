@@ -209,23 +209,23 @@ export function ConfirmationIssuesScreen() {
 
   if (!issues) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
 
   const inputClass =
-    'w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]';
+    'w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
   const flaggedClass =
-    'w-full h-10 px-3 rounded-[8px] border-2 border-[#fb323f] bg-[#fff7f7] text-sm focus:outline-none';
+    'w-full h-10 px-3 rounded-[8px] border-2 border-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] text-sm focus:outline-none';
 
   return (
     <div className="max-w-4xl space-y-3">
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
 
       {issues.length === 0 && (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
           لا توجد إشكالات مفتوحة.
         </p>
       )}
@@ -236,30 +236,30 @@ export function ConfirmationIssuesScreen() {
         const isVoiding = voiding === issue.id;
 
         return (
-          <article key={issue.id} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-2">
+          <article key={issue.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-2">
             <header className="flex flex-wrap items-center gap-2">
-              <span className="w-8 h-8 rounded-[8px] bg-[#feecee] border border-[#fecdd1] flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4 text-[#fb323f]" />
+              <span className="w-8 h-8 rounded-[8px] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-[var(--sys-destructive)]" />
               </span>
-              <span className="font-semibold text-[#121926]" dir="ltr">{issue.order.orderNumber}</span>
-              <span className="text-xs px-2 py-0.5 rounded-[6px] bg-[#feecee] border border-[#fecdd1] text-[#fb323f] font-medium">
+              <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{issue.order.orderNumber}</span>
+              <span className="text-xs px-2 py-0.5 rounded-[6px] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] font-medium">
                 {REASON_LABEL[issue.reason] ?? issue.reason}
               </span>
-              <span className="mr-auto text-xs text-[#697586]">
+              <span className="mr-auto text-xs text-[var(--sys-muted-foreground)]">
                 المودريتور: {issue.order.moderator?.name ?? '—'}
               </span>
             </header>
 
             {!isEditing && (
               <>
-                <p className="text-sm text-[#364152]">
+                <p className="text-sm text-[var(--sys-foreground)]">
                   {issue.order.customer.fullName} ·{' '}
                   <span dir="ltr">{issue.order.customer.rawPhone || issue.order.customer.phone}</span> ·{' '}
                   {issue.order.region?.name ?? issue.order.customer.city}
                 </p>
-                <p className="text-xs text-[#697586]">{issue.order.customer.address}</p>
+                <p className="text-xs text-[var(--sys-muted-foreground)]">{issue.order.customer.address}</p>
                 {issue.order.product && (
-                  <p className="text-xs text-[#9aa4b2]">
+                  <p className="text-xs text-[var(--sys-muted)]">
                     {issue.order.product.name} × {issue.order.quantity}
                   </p>
                 )}
@@ -267,21 +267,21 @@ export function ConfirmationIssuesScreen() {
             )}
 
             {issue.note && (
-              <p className="text-sm text-[#121926] bg-[#f8fafc] rounded-[8px] p-2">
-                <span className="text-[#697586]">ملاحظة موظف التأكيد: </span>
+              <p className="text-sm text-[var(--sys-heading)] bg-[var(--sys-surface)] rounded-[8px] p-2">
+                <span className="text-[var(--sys-muted-foreground)]">ملاحظة موظف التأكيد: </span>
                 {issue.note}
               </p>
             )}
 
             {isEditing && draft && (
-              <div className="rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] p-3 space-y-3">
-                <p className="text-xs text-[#697586]">
+              <div className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 space-y-3">
+                <p className="text-xs text-[var(--sys-muted-foreground)]">
                   صحّح البيانات هنا — الحقل المؤشَّر بالأحمر هو ما أبلغ عنه موظف التأكيد.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="block">
-                    <span className="block text-xs font-medium text-[#364152] mb-1">{FIELD_LABEL.fullName}</span>
+                    <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{FIELD_LABEL.fullName}</span>
                     <input
                       value={draft.fullName}
                       onChange={(e) => setDraft({ ...draft, fullName: e.target.value })}
@@ -290,7 +290,7 @@ export function ConfirmationIssuesScreen() {
                   </label>
 
                   <label className="block">
-                    <span className="block text-xs font-medium text-[#364152] mb-1">{FIELD_LABEL.phone}</span>
+                    <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{FIELD_LABEL.phone}</span>
                     <input
                       value={draft.phone}
                       onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
@@ -301,7 +301,7 @@ export function ConfirmationIssuesScreen() {
                   </label>
 
                   <label className="block">
-                    <span className="block text-xs font-medium text-[#364152] mb-1">
+                    <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
                       {FIELD_LABEL.regionId}
                       {countryName ? ` — ${countryName}` : ''}
                     </span>
@@ -318,7 +318,7 @@ export function ConfirmationIssuesScreen() {
                   </label>
 
                   <label className="block">
-                    <span className="block text-xs font-medium text-[#364152] mb-1">{FIELD_LABEL.address}</span>
+                    <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{FIELD_LABEL.address}</span>
                     <input
                       value={draft.address}
                       onChange={(e) => setDraft({ ...draft, address: e.target.value })}
@@ -329,8 +329,8 @@ export function ConfirmationIssuesScreen() {
                 </div>
 
                 {changeSummary(issue, draft).length > 0 && (
-                  <div className="text-[11px] text-[#364152] bg-white border border-[#e3e8ef] rounded-[8px] p-2 space-y-0.5">
-                    <p className="text-[#697586]">سيُسجَّل في الطلب:</p>
+                  <div className="text-[11px] text-[var(--sys-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-2 space-y-0.5">
+                    <p className="text-[var(--sys-muted-foreground)]">سيُسجَّل في الطلب:</p>
                     {changeSummary(issue, draft).map((line) => (
                       <p key={line} dir="rtl">• {line}</p>
                     ))}
@@ -341,13 +341,13 @@ export function ConfirmationIssuesScreen() {
                   <button
                     onClick={() => saveCorrection(issue)}
                     disabled={busy === issue.id}
-                    className="px-3 py-1.5 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                   >
                     {busy === issue.id ? 'جارٍ الحفظ…' : 'احفظ التصحيح وأعده للطابور'}
                   </button>
                   <button
                     onClick={() => { setEditing(null); setDraft(null); setError(null); }}
-                    className="px-3 py-1.5 rounded-[8px] border border-[#e3e8ef] text-xs text-[#697586]"
+                    className="px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                   >
                     إلغاء
                   </button>
@@ -356,9 +356,9 @@ export function ConfirmationIssuesScreen() {
             )}
 
             {isVoiding && (
-              <div className="rounded-[8px] border border-[#fecdd1] bg-[#fff7f7] p-3 space-y-2">
+              <div className="rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 space-y-2">
                 <label className="block">
-                  <span className="block text-xs font-medium text-[#364152] mb-1">سبب الإبطال</span>
+                  <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">سبب الإبطال</span>
                   <input
                     value={voidReason}
                     onChange={(e) => setVoidReason(e.target.value)}
@@ -371,13 +371,13 @@ export function ConfirmationIssuesScreen() {
                   <button
                     onClick={() => confirmVoid(issue)}
                     disabled={busy === issue.id}
-                    className="px-3 py-1.5 rounded-[8px] bg-[#fb323f] text-white text-xs font-medium disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-[8px] bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                   >
                     تأكيد الإبطال
                   </button>
                   <button
                     onClick={() => { setVoiding(null); setVoidReason(''); setError(null); }}
-                    className="px-3 py-1.5 rounded-[8px] border border-[#e3e8ef] text-xs text-[#697586]"
+                    className="px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                   >
                     تراجع
                   </button>
@@ -385,23 +385,23 @@ export function ConfirmationIssuesScreen() {
               </div>
             )}
 
-            <p className="text-[11px] text-[#9aa4b2]">
+            <p className="text-[11px] text-[var(--sys-muted)]">
               تاريخ إنشاء الطلب الأصلي:{' '}
               <span>{arDateTime(issue.order.createdAt)}</span> — لا يتغير بعد التصحيح.
             </p>
 
             {!isEditing && !isVoiding && (
-              <footer className="flex gap-2 pt-2 border-t border-[#e3e8ef]">
+              <footer className="flex gap-2 pt-2 border-t border-[var(--sys-border)]">
                 <button
                   onClick={() => openCorrection(issue)}
-                  className="px-3 py-1.5 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
                 >
                   <PencilLine className="w-3.5 h-3.5" />
                   صحّح البيانات
                 </button>
                 <button
                   onClick={() => { setVoiding(issue.id); setVoidReason(''); setError(null); }}
-                  className="px-3 py-1.5 rounded-[8px] border border-[#e3e8ef] text-xs text-[#697586] hover:text-[#fb323f] inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
                 >
                   <Ban className="w-3.5 h-3.5" />
                   إبطال الطلب (المالك فقط)

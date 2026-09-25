@@ -89,8 +89,8 @@ export function InventoryBalancesScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.inventory}</h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.inventory}</h1>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               Section 6 Movement tracking: Production additions, delivery deductions, returns & adjustments
             </p>
           </div>
@@ -107,14 +107,14 @@ export function InventoryBalancesScreen() {
 
         {/* Every product and what it holds. 105 cards need a way in, so the
             search comes before them rather than after the scroll. */}
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-3">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-3">
           <input
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder="ابحث باسم المنتج أو رمزه…"
-            className="w-full min-w-0 h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full min-w-0 h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
-          <p className="mt-1.5 text-[10.5px] text-[#697586]">
+          <p className="mt-1.5 text-[10.5px] text-[var(--sys-muted-foreground)]">
             {visible.length} من {stockSummary.length} منتج
           </p>
         </div>
@@ -125,18 +125,18 @@ export function InventoryBalancesScreen() {
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <span className="font-mono text-xs font-bold text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded">
+                    <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded">
                       {s.sku}
                     </span>
                     <a
                       href={`/products/${s.id}`}
-                      className="mt-1 block text-sm font-bold text-[#121926] hover:text-[#b8256e]"
+                      className="mt-1 block text-sm font-bold text-[var(--sys-heading)] hover:text-[var(--sys-primary)]"
                     >
                       {s.name}
                     </a>
                     {/* Which door adds to this one — the question you ask
                         the moment you see it is empty. */}
-                    <span className="mt-1 inline-block rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-semibold text-[#475467]">
+                    <span className="mt-1 inline-block rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-foreground)]">
                       {s.sourceType === 'PURCHASED' ? 'جاهز — يُستلم' : 'مصنّع — تشغيلة'}
                     </span>
                   </div>
@@ -146,17 +146,17 @@ export function InventoryBalancesScreen() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
-                  <div className="bg-[#f8fafc] p-2 rounded-lg">
-                    <span className="text-[#9ca3af] block text-[10px]">دخل</span>
-                    <span className="font-bold text-[#121926]">{s.produced}</span>
+                  <div className="bg-[var(--sys-surface)] p-2 rounded-lg">
+                    <span className="text-[var(--sys-muted)] block text-[10px]">دخل</span>
+                    <span className="font-bold text-[var(--sys-heading)]">{s.produced}</span>
                   </div>
-                  <div className="bg-[#feecee] p-2 rounded-lg">
-                    <span className="text-[#fb323f] block text-[10px]">خرج</span>
-                    <span className="font-bold text-[#fb323f]">{s.sold}</span>
+                  <div className="bg-[var(--sys-destructive-soft)] p-2 rounded-lg">
+                    <span className="text-[var(--sys-destructive)] block text-[10px]">خرج</span>
+                    <span className="font-bold text-[var(--sys-destructive)]">{s.sold}</span>
                   </div>
-                  <div className="bg-[#feecee] p-2 rounded-lg">
-                    <span className="text-[#fb323f] block text-[10px]">متبقٍّ</span>
-                    <span className="font-black text-[#fb323f]">{s.remaining}</span>
+                  <div className="bg-[var(--sys-destructive-soft)] p-2 rounded-lg">
+                    <span className="text-[var(--sys-destructive)] block text-[10px]">متبقٍّ</span>
+                    <span className="font-black text-[var(--sys-destructive)]">{s.remaining}</span>
                   </div>
                 </div>
               </CardContent>
@@ -173,7 +173,7 @@ export function InventoryBalancesScreen() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
+                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">التاريخ</th>
                     <th className="px-6 py-3.5">المنتج</th>
@@ -184,16 +184,16 @@ export function InventoryBalancesScreen() {
                     <th className="px-6 py-3.5">السبب</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {movements.map((m) => (
-                    <tr key={m.id} className="hover:bg-[#f8fafc] transition-colors">
-                      <td className="px-6 py-3.5 text-[#697586] font-mono">
+                    <tr key={m.id} className="hover:bg-[var(--sys-surface)] transition-colors">
+                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)] font-mono">
                         {format(new Date(m.createdAt), 'MMM d, h:mm a')}
                       </td>
-                      <td className="px-6 py-3.5 font-semibold text-[#121926]">
+                      <td className="px-6 py-3.5 font-semibold text-[var(--sys-heading)]">
                         {m.product?.name}
                       </td>
-                      <td className="px-6 py-3.5 font-mono text-[#697586]">
+                      <td className="px-6 py-3.5 font-mono text-[var(--sys-muted-foreground)]">
                         {m.batch?.batchNumber || '—'}
                       </td>
                       <td className="px-6 py-3.5">
@@ -210,14 +210,14 @@ export function InventoryBalancesScreen() {
                         </Badge>
                       </td>
                       <td className="px-6 py-3.5 font-bold">
-                        <span className={m.quantity > 0 ? 'text-[#fb323f]' : 'text-[#fb323f]'}>
+                        <span className={m.quantity > 0 ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-destructive)]'}>
                           {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
                         </span>
                       </td>
-                      <td className="px-6 py-3.5 font-semibold text-[#121926]">
+                      <td className="px-6 py-3.5 font-semibold text-[var(--sys-heading)]">
                         {m.balanceAfter}
                       </td>
-                      <td className="px-6 py-3.5 text-[#697586] max-w-xs truncate">
+                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)] max-w-xs truncate">
                         {m.reason}
                       </td>
                     </tr>
@@ -253,8 +253,8 @@ export function InventoryBalancesScreen() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-[#121926]">رصيد النظام</label>
-              <div className="rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2 text-sm font-bold tabular-nums text-[#697586]" dir="ltr">
+              <label className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">رصيد النظام</label>
+              <div className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-sm font-bold tabular-nums text-[var(--sys-muted-foreground)]" dir="ltr">
                 {systemQty}
               </div>
             </div>
@@ -274,22 +274,22 @@ export function InventoryBalancesScreen() {
           <div
             className={`rounded-xl border p-3 text-center ${
               difference === 0
-                ? 'border-[#e3e8ef] bg-[#f8fafc]'
+                ? 'border-[var(--sys-border)] bg-[var(--sys-surface)]'
                 : difference > 0
-                  ? 'border-[#bbf7d0] bg-[#f0fdf4]'
-                  : 'border-[#fecdd1] bg-[#feecee]'
+                  ? 'border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)]'
+                  : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]'
             }`}
           >
-            <p className="text-[10px] font-medium text-[#697586]">الفرق الذي سيُسجَّل</p>
+            <p className="text-[10px] font-medium text-[var(--sys-muted-foreground)]">الفرق الذي سيُسجَّل</p>
             <p
               className={`mt-0.5 text-lg font-black tabular-nums ${
-                difference === 0 ? 'text-[#697586]' : difference > 0 ? 'text-[#15803d]' : 'text-[#be123c]'
+                difference === 0 ? 'text-[var(--sys-muted-foreground)]' : difference > 0 ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'
               }`}
               dir="ltr"
             >
               {difference > 0 ? `+${difference}` : difference}
             </p>
-            <p className="mt-0.5 text-[10.5px] text-[#697586]">
+            <p className="mt-0.5 text-[10.5px] text-[var(--sys-muted-foreground)]">
               {difference === 0
                 ? 'الجرد مطابق — لن يُسجَّل شيء.'
                 : difference > 0
@@ -307,9 +307,9 @@ export function InventoryBalancesScreen() {
             required
           />
 
-          {countError && <p className="text-xs text-rose-600">{countError}</p>}
+          {countError && <p className="text-xs text-[var(--sys-destructive)]">{countError}</p>}
 
-          <p className="rounded-lg bg-[#f8fafc] p-2.5 text-[10.5px] leading-relaxed text-[#697586]">
+          <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">
             إضافة بضاعة جديدة لا تتم من هنا: ما تصنعه يدخل من «تشغيلات الإنتاج»
             ببنود كلفته، وما تشتريه جاهزاً من «استلام بضاعة جاهزة» بسعر شرائه.
             البضاعة التي تدخل بلا تكلفة تخفض متوسط التكلفة وتُظهر ربحاً لم يتحقق.

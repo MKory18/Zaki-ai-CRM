@@ -87,7 +87,7 @@ export function AppStoreScreen() {
 
   if (!shelf) {
     return (
-      <div className="flex items-center justify-center gap-2 py-16 text-sm text-[#697586]">
+      <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -97,11 +97,11 @@ export function AppStoreScreen() {
     <div className="max-w-5xl space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-[#121926]">
-            <LayoutGrid className="h-6 w-6 text-[#b8256e]" />
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-[var(--sys-heading)]">
+            <LayoutGrid className="h-6 w-6 text-[var(--sys-primary)]" />
             متجر التطبيقات
           </h1>
-          <p className="mt-1 text-xs leading-relaxed text-[#697586]">
+          <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             ما يمكن وصل النظام به. الجاهزة يعرفها النظام مسبقاً ويكفي تفعيلها وإدخال
             حسابها؛ والمسجَّلة من مطوّرين تُخبَر بما يحدث عبر ويبهوك موقَّع.
           </p>
@@ -112,36 +112,36 @@ export function AppStoreScreen() {
       </div>
 
       {error && (
-        <p className="rounded-[8px] border border-[#fecdd1] bg-[#feecee] p-3 text-sm text-[#be123c]">{error}</p>
+        <p className="rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 text-sm text-[var(--sys-destructive)]">{error}</p>
       )}
 
       <section>
-        <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[#697586]">تكاملات جاهزة</h2>
+        <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)]">تكاملات جاهزة</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {shelf.builtIn.map((a) => (
             <div
               key={a.code}
               className={`rounded-xl border p-4 ${
-                a.installed && a.enabled ? 'border-[#b8256e]/40 bg-[#fdf2f7]' : 'border-[#e3e8ef] bg-white'
+                a.installed && a.enabled ? 'border-[var(--sys-primary)]/40 bg-[var(--sys-primary-soft)]' : 'border-[var(--sys-border)] bg-[var(--sys-card)]'
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-[#121926]">{a.name}</p>
-                  <p className="text-[11px] text-[#697586]">{a.summary}</p>
+                  <p className="text-sm font-bold text-[var(--sys-heading)]">{a.name}</p>
+                  <p className="text-[11px] text-[var(--sys-muted-foreground)]">{a.summary}</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-semibold text-[#475467]">
+                <span className="shrink-0 rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-foreground)]">
                   {a.categoryLabel}
                 </span>
               </div>
 
-              <p className="mt-2 text-[11px] leading-relaxed text-[#697586]">{a.description}</p>
+              <p className="mt-2 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">{a.description}</p>
 
               {/* Installed is not the same as working. A courier whose
                   credentials were cleared is installed and useless, and the
                   card says which. */}
               {a.installed && (
-                <p className={`mt-2 flex items-center gap-1.5 text-[11px] ${a.configured ? 'text-[#15803d]' : 'text-[#c2410c]'}`}>
+                <p className={`mt-2 flex items-center gap-1.5 text-[11px] ${a.configured ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
                   {a.configured ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
                   {a.configured ? 'مهيَّأ ويعمل' : 'مثبَّت لكن غير مهيَّأ — أدخل بياناته'}
                 </p>
@@ -171,14 +171,14 @@ export function AppStoreScreen() {
                     <button
                       onClick={() => act(a.code, 'uninstall')}
                       disabled={!a.canManage || busy === a.code}
-                      className="cursor-pointer text-[11px] text-[#9aa4b2] hover:text-rose-600"
+                      className="cursor-pointer text-[11px] text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
                     >
                       إزالة
                     </button>
                   </>
                 )}
                 {!a.canManage && (
-                  <span className="text-[10.5px] text-[#9aa4b2]">تحتاج صلاحية لتثبيته</span>
+                  <span className="text-[10.5px] text-[var(--sys-muted)]">تحتاج صلاحية لتثبيته</span>
                 )}
               </div>
             </div>
@@ -187,26 +187,26 @@ export function AppStoreScreen() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[#697586]">
+        <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)]">
           تطبيقات مسجَّلة عندك
         </h2>
         {shelf.external.length === 0 ? (
-          <p className="rounded-xl border border-[#e3e8ef] bg-white p-6 text-center text-xs leading-relaxed text-[#697586]">
+          <p className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             لا تطبيقات مسجَّلة بعد. سجّل واحداً ليصله ويبهوك موقَّع عند كل حدث تختاره —
             طلب جديد، تأكيد، شحن، تسليم، إرجاع.
           </p>
         ) : (
           <div className="space-y-2">
             {shelf.external.map((a) => (
-              <div key={a.id} className="rounded-xl border border-[#e3e8ef] bg-white p-4">
+              <div key={a.id} className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-[#121926]">
-                      {a.name} <span className="font-mono text-[11px] text-[#9aa4b2]" dir="ltr">{a.code}</span>
+                    <p className="text-sm font-bold text-[var(--sys-heading)]">
+                      {a.name} <span className="font-mono text-[11px] text-[var(--sys-muted)]" dir="ltr">{a.code}</span>
                     </p>
-                    {a.developerName && <p className="text-[11px] text-[#697586]">{a.developerName}</p>}
+                    {a.developerName && <p className="text-[11px] text-[var(--sys-muted-foreground)]">{a.developerName}</p>}
                     {a.webhookUrl && (
-                      <p className="mt-1 truncate font-mono text-[10.5px] text-[#697586]" dir="ltr">{a.webhookUrl}</p>
+                      <p className="mt-1 truncate font-mono text-[10.5px] text-[var(--sys-muted-foreground)]" dir="ltr">{a.webhookUrl}</p>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -224,7 +224,7 @@ export function AppStoreScreen() {
                 {a.events.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {a.events.map((e) => (
-                      <span key={e} className="rounded-full bg-[#f1f5f9] px-2 py-0.5 font-mono text-[10px] text-[#475467]" dir="ltr">
+                      <span key={e} className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 font-mono text-[10px] text-[var(--sys-foreground)]" dir="ltr">
                         {e}
                       </span>
                     ))}
@@ -290,13 +290,13 @@ function RegisterApp({
     return (
       <Modal isOpen onClose={onDone} title="سرّ التوقيع" subtitle="يُعرض مرة واحدة فقط">
         <div className="space-y-3">
-          <p className="text-xs leading-relaxed text-[#364152]">
+          <p className="text-xs leading-relaxed text-[var(--sys-foreground)]">
             احفظه الآن. يوقّع كل ويبهوك بترويسة <code dir="ltr">X-Zaki-Signature</code> بصيغة
             {' '}<code dir="ltr">sha256=HMAC(secret, "&lt;timestamp&gt;.&lt;body&gt;")</code>؛
             الوقت داخل النصّ الموقَّع حتى لا يُعاد إرسال طلب مُلتقَط بعد أسبوع بنفس التوقيع.
           </p>
-          <div className="flex items-center gap-2 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] p-2.5">
-            <code className="min-w-0 flex-1 break-all font-mono text-[11px] text-[#121926]" dir="ltr">{secret}</code>
+          <div className="flex items-center gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
+            <code className="min-w-0 flex-1 break-all font-mono text-[11px] text-[var(--sys-heading)]" dir="ltr">{secret}</code>
             <button
               onClick={async () => {
                 // Shown once and never again, so a copy that silently
@@ -308,9 +308,9 @@ function RegisterApp({
                   value: secret,
                 });
               }}
-              className="shrink-0 cursor-pointer rounded-lg p-2 text-[#697586] hover:bg-white"
+              className="shrink-0 cursor-pointer rounded-lg p-2 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-card)]"
             >
-              {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-4 w-4 text-[var(--sys-success)]" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
           <div className="flex justify-end">
@@ -348,31 +348,31 @@ function RegisterApp({
         <Input label="وصف" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#121926]">الأحداث *</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">الأحداث *</label>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             {events.map((ev) => (
-              <label key={ev.code} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#e3e8ef] px-2.5 py-1.5 text-xs text-[#364152]">
+              <label key={ev.code} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-xs text-[var(--sys-foreground)]">
                 <input
                   type="checkbox"
-                  className="h-3.5 w-3.5 cursor-pointer accent-[#b8256e]"
+                  className="h-3.5 w-3.5 cursor-pointer accent-[var(--sys-primary)]"
                   checked={chosen.includes(ev.code)}
                   onChange={(e) =>
                     setChosen(e.target.checked ? [...chosen, ev.code] : chosen.filter((c) => c !== ev.code))
                   }
                 />
                 {ev.label}
-                <span className="ms-auto font-mono text-[10px] text-[#9aa4b2]" dir="ltr">{ev.code}</span>
+                <span className="ms-auto font-mono text-[10px] text-[var(--sys-muted)]" dir="ltr">{ev.code}</span>
               </label>
             ))}
           </div>
         </div>
 
-        <p className="rounded-lg bg-[#f8fafc] p-2.5 text-[10.5px] leading-relaxed text-[#697586]">
+        <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">
           التطبيق يُخبَر فقط — لا يقرأ بياناتك ولا يعدّلها. عنوان الويبهوك يجب أن يكون
           <code dir="ltr"> https</code>، والإرسال يُعاد خمس مرات بتباعد متزايد قبل أن يُعلَّم فاشلاً.
         </p>
 
-        {error && <p className="text-xs text-rose-600">{error}</p>}
+        {error && <p className="text-xs text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="outline" onClick={onClose}>

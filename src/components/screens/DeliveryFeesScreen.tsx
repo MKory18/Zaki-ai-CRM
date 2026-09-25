@@ -106,7 +106,7 @@ export function DeliveryFeesScreen() {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -116,21 +116,21 @@ export function DeliveryFeesScreen() {
     <div className="max-w-4xl space-y-3">
       <div className="flex flex-wrap items-end gap-3">
         <label>
-          <span className="block text-xs font-medium text-[#364152] mb-1">شركة الشحن</span>
-          <select value={courier} onChange={(e) => setCourier(e.target.value)} className="h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">شركة الشحن</span>
+          <select value={courier} onChange={(e) => setCourier(e.target.value)} className="h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm">
             {data.providers.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
         </label>
-        <p className="text-xs text-[#697586] pb-2">
+        <p className="text-xs text-[var(--sys-muted-foreground)] pb-2">
           الطلبات المشحونة تحتفظ بالأجرة وقت شحنها؛ التعديل هنا يسري على الشحنات الجديدة فقط.
         </p>
 
         {missing.length > 0 && (
           <button
             onClick={() => setBulkOpen(true)}
-            className="h-10 px-3 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
+            className="h-10 px-3 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
           >
             <Wand2 className="w-3.5 h-3.5" /> عبّئ الفارغة ({missing.length})
           </button>
@@ -141,7 +141,7 @@ export function DeliveryFeesScreen() {
           at the shipment screen. Saying so here is the difference between a
           blank cell and a known cause. */}
       {missing.length > 0 && (
-        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-[8px] p-3 flex items-start gap-2">
+        <p className="text-sm text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-[8px] p-3 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
             <b>{missing.length}</b> محافظة بلا أجرة عند هذه الشركة — أي طلب إليها سيتوقف في شاشة إنشاء
@@ -152,22 +152,22 @@ export function DeliveryFeesScreen() {
       )}
 
       {data.providers.length === 0 && (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
           أضف شركة شحن أولاً من شاشة شركات الشحن.
         </p>
       )}
       {data.regions.length === 0 && (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
           لا توجد محافظات لهذا البلد. أضفها من البلدان والمتاجر والمحافظ.
         </p>
       )}
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
 
       {data.regions.length > 0 && courier && (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-4 py-2">المحافظة</th>
                 <th className="text-right font-medium px-4 py-2">الأجرة</th>
@@ -177,7 +177,7 @@ export function DeliveryFeesScreen() {
                 <th className="text-right font-medium px-4 py-2"> </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {data.regions.map((r) => {
                 const current = feeFor(r.id);
                 const d = draft[r.id] ?? {
@@ -187,23 +187,23 @@ export function DeliveryFeesScreen() {
                 };
                 const set = (patch: Partial<typeof d>) => setDraft({ ...draft, [r.id]: { ...d, ...patch } });
                 return (
-                  <tr key={r.id} className={current ? '' : 'bg-[#f8fafc]/60'}>
-                    <td className="px-4 py-2 text-[#121926]">{r.name}</td>
+                  <tr key={r.id} className={current ? '' : 'bg-[var(--sys-surface)]/60'}>
+                    <td className="px-4 py-2 text-[var(--sys-heading)]">{r.name}</td>
                     <td className="px-4 py-2">
-                      <input value={d.fee} onChange={(e) => set({ fee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-9 px-2 rounded-[8px] border border-[#e3e8ef] text-sm" />
+                      <input value={d.fee} onChange={(e) => set({ fee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-9 px-2 rounded-[8px] border border-[var(--sys-border)] text-sm" />
                     </td>
                     <td className="px-4 py-2">
-                      <input value={d.lateThresholdDays} onChange={(e) => set({ lateThresholdDays: e.target.value })} type="number" min={0} max={90} dir="ltr" className="w-20 h-9 px-2 rounded-[8px] border border-[#e3e8ef] text-sm" />
+                      <input value={d.lateThresholdDays} onChange={(e) => set({ lateThresholdDays: e.target.value })} type="number" min={0} max={90} dir="ltr" className="w-20 h-9 px-2 rounded-[8px] border border-[var(--sys-border)] text-sm" />
                     </td>
                     <td className="px-4 py-2">
-                      <input value={d.returnFee} onChange={(e) => set({ returnFee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-9 px-2 rounded-[8px] border border-[#e3e8ef] text-sm" />
+                      <input value={d.returnFee} onChange={(e) => set({ returnFee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-9 px-2 rounded-[8px] border border-[var(--sys-border)] text-sm" />
                     </td>
                     {/* Read-only: their id, not ours to invent. A blank one
                         means their API will refuse the shipment, and that is
                         better seen here than when a parcel fails to book. */}
                     <td className="px-4 py-2" dir="ltr">
                       {current?.courierCityId ? (
-                        <span className="text-xs text-[#697586]">{current.courierCityId}</span>
+                        <span className="text-xs text-[var(--sys-muted-foreground)]">{current.courierCityId}</span>
                       ) : (
                         /* "We do not have their id" — not "they do not serve
                            it". Those are different claims, and only the
@@ -211,7 +211,7 @@ export function DeliveryFeesScreen() {
                         <span
                           dir="rtl"
                           title="لا نملك رمز هذه المحافظة لدى الشركة — بدونه لا تُنشأ الشحنة آلياً. اطلبه منهم أو ارفع قائمة مناطقهم."
-                          className="inline-flex items-center gap-1 rounded-full border border-[#ffe7b8] bg-[#fff6e5] px-2 py-0.5 text-[10px] text-[#c07f2a]"
+                          className="inline-flex items-center gap-1 rounded-full border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] px-2 py-0.5 text-[10px] text-[var(--sys-warning)]"
                         >
                           بلا رمز
                         </span>
@@ -221,7 +221,7 @@ export function DeliveryFeesScreen() {
                       <button
                         onClick={() => save(r.id)}
                         disabled={busy === r.id}
-                        className="inline-flex items-center gap-1 text-xs text-[#b8256e] hover:underline disabled:opacity-50"
+                        className="inline-flex items-center gap-1 text-xs text-[var(--sys-primary)] hover:underline disabled:opacity-50"
                       >
                         <Save className="w-3.5 h-3.5" />
                         {saved === r.id ? 'تم الحفظ' : current ? 'تحديث' : 'إضافة'}
@@ -323,53 +323,53 @@ function BulkFillDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-xs text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+        <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
           تُكتب على المحافظات التي <b>لا أجرة لها</b> فقط. المحافظات المسعّرة مسبقاً لا تُلمس — تعديلها
           قرار منفصل يحتاج سبباً مكتوباً. تقدر تعدّل أي محافظة بعدها من الجدول.
         </p>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">الأجرة</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الأجرة</span>
           <input
             type="number" min="0" step="0.001" value={fee} onChange={(e) => setFee(e.target.value)}
             required autoFocus dir="ltr"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
         <div className="grid grid-cols-2 gap-3">
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">حد التأخير (أيام)</span>
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">حد التأخير (أيام)</span>
             <input
               type="number" min="0" max="90" value={days} onChange={(e) => setDays(e.target.value)} dir="ltr"
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             />
           </label>
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">أجرة الإرجاع</span>
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">أجرة الإرجاع</span>
             <input
               type="number" min="0" step="0.001" value={returnFee} onChange={(e) => setReturnFee(e.target.value)} dir="ltr"
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             />
           </label>
         </div>
 
-        <p className="text-[11px] text-[#9aa4b2]">
+        <p className="text-[11px] text-[var(--sys-muted)]">
           {regions.map((r) => r.name).join(' · ')}
         </p>
 
         {saving && (
-          <p className="text-xs text-[#697586] tabular-nums">جارٍ الحفظ… {progress} / {regions.length}</p>
+          <p className="text-xs text-[var(--sys-muted-foreground)] tabular-nums">جارٍ الحفظ… {progress} / {regions.length}</p>
         )}
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit" disabled={saving || !fee}
-            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ…' : `عبّئ ${regions.length}`}
           </button>
@@ -400,23 +400,23 @@ function ReasonDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-xs text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+        <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
           تغيير أجرة قائمة يُسجَّل في سجل التدقيق باسمك وبالسبب. الشحنات القائمة تحتفظ بأجرتها.
         </p>
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">السبب (إلزامي)</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">السبب (إلزامي)</span>
           <textarea
             value={reason} onChange={(e) => setReason(e.target.value)}
             required minLength={3} rows={3} autoFocus
             placeholder="مثال: اتفاق جديد مع الشركة على هذه المحافظة"
-            className="w-full p-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full p-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
-          <button type="submit" className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium">
+          <button type="submit" className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
             حفظ التعديل
           </button>
         </div>

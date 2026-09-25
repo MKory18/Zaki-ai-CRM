@@ -79,8 +79,8 @@ export function TransferDialog({
         <div
           className={`text-xs rounded-[8px] p-3 border ${
             fromAgent
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-amber-50 border-amber-200 text-amber-800'
+              ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
+              : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]'
           }`}
         >
           {fromAgent ? (
@@ -101,12 +101,12 @@ export function TransferDialog({
         </div>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">الجهة الجديدة</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الجهة الجديدة</span>
           <select
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {providers.map((p) => (
@@ -118,32 +118,32 @@ export function TransferDialog({
         </label>
 
         {to && (
-          <p className="text-xs text-[#697586] flex items-center gap-1.5">
-            {to.kind === 'AGENT' ? <Bike className="w-3.5 h-3.5 text-[#b8256e]" /> : <Truck className="w-3.5 h-3.5" />}
+          <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center gap-1.5">
+            {to.kind === 'AGENT' ? <Bike className="w-3.5 h-3.5 text-[var(--sys-primary)]" /> : <Truck className="w-3.5 h-3.5" />}
             ستذهب إلى {to.name}
           </p>
         )}
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">ملاحظة (اختيارية)</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختيارية)</span>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="سبب التحويل"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !target}
-            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ التحويل…' : fromAgent ? 'استلام وتحويل' : 'سحب وإصدار بديل'}
           </button>

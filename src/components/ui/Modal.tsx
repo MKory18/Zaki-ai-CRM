@@ -53,7 +53,7 @@ export function Modal({
   // in the order instead of the history.
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--sys-sidebar)]/50 backdrop-blur-xs animate-in fade-in duration-200"
       // The portal moves the modal out of the row in the DOM, but a React
       // event still travels up the COMPONENT tree — so a click on a tab
       // inside this modal reached the row's onClick and opened the order
@@ -68,18 +68,18 @@ export function Modal({
       />
       <div
         className={clsx(
-          'relative w-full bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] overflow-hidden z-10 max-h-[90vh] flex flex-col',
+          'relative w-full bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] overflow-hidden z-10 max-h-[90vh] flex flex-col',
           widthStyles[maxWidth]
         )}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e3e8ef] bg-[#f8fafc]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--sys-border)] bg-[var(--sys-surface)]">
           <div>
-            <h3 className="text-lg font-semibold text-[#121926]">{title}</h3>
-            {subtitle && <p className="text-xs text-[#697586] mt-0.5">{subtitle}</p>}
+            <h3 className="text-lg font-semibold text-[var(--sys-heading)]">{title}</h3>
+            {subtitle && <p className="text-xs text-[var(--sys-muted-foreground)] mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#9aa4b2] hover:text-[#121926] hover:bg-[#e3e8ef] transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-heading)] hover:bg-[var(--sys-border)] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

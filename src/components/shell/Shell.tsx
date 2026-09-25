@@ -22,7 +22,7 @@ export function Shell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+    <div className="min-h-screen bg-[var(--sys-surface)] flex flex-col">
       <Sidebar groups={groups} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-200 md:mr-[280px]">
         <Header

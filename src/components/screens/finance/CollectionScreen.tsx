@@ -41,10 +41,10 @@ const STATUS_AR: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  IMPORTED: 'bg-[#f8fafc] text-[#697586] border-[#e3e8ef]',
-  RECEIPTED: 'bg-amber-50 text-amber-700 border-amber-200',
+  IMPORTED: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
+  RECEIPTED: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/40',
   MATCHED: 'bg-sky-50 text-sky-700 border-sky-200',
-  APPROVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  APPROVED: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/40',
 };
 
 export function CollectionScreen() {
@@ -118,22 +118,22 @@ export function CollectionScreen() {
         }}
       />
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
 
       {!rows ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
-          <FileSpreadsheet className="w-5 h-5 mx-auto mb-2 text-[#9aa4b2]" />
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+          <FileSpreadsheet className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا توجد كشوف مستوردة بعد.
         </p>
       ) : (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-3 py-2">الكشف</th>
                 <th className="text-right font-medium px-3 py-2">الحالة</th>
@@ -144,7 +144,7 @@ export function CollectionScreen() {
                 <th className="text-right font-medium px-3 py-2"> </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {rows.map((s) => {
                 const approvable =
                   s.status !== 'APPROVED' &&
@@ -154,8 +154,8 @@ export function CollectionScreen() {
                 return (
                   <tr key={s.id}>
                     <td className="px-3 py-2">
-                      <span className="font-medium text-[#121926]" dir="ltr">{s.reference}</span>
-                      <span className="block text-xs text-[#9aa4b2]" dir="ltr">{s.fileName}</span>
+                      <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{s.reference}</span>
+                      <span className="block text-xs text-[var(--sys-muted)]" dir="ltr">{s.fileName}</span>
                     </td>
                     <td className="px-3 py-2">
                       <span className={`text-xs px-2 py-1 rounded-full border ${STATUS_STYLE[s.status] ?? ''}`}>
@@ -164,23 +164,23 @@ export function CollectionScreen() {
                     </td>
                     <td className="px-3 py-2 tabular-nums">{s.gap.claimed} {s.currencyCode}</td>
                     <td className="px-3 py-2 tabular-nums">{s.gap.received}</td>
-                    <td className={`px-3 py-2 tabular-nums ${s.gap.gap === 0 ? 'text-[#697586]' : 'text-[#fb323f] font-medium'}`}>
+                    <td className={`px-3 py-2 tabular-nums ${s.gap.gap === 0 ? 'text-[var(--sys-muted-foreground)]' : 'text-[var(--sys-destructive)] font-medium'}`}>
                       {s.gap.gap}
                       {s.gap.needsExplanation && !s.gap.explained && (
                         <AlertTriangle className="w-3.5 h-3.5 inline mr-1 align-[-2px]" />
                       )}
                     </td>
-                    <td className="px-3 py-2 text-xs text-[#697586] tabular-nums">
+                    <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] tabular-nums">
                       {s.counts.lines} سطر · {s.counts.receipts} إيصال · {s.counts.matches} مطابقة
                     </td>
                     <td className="px-3 py-2 text-left whitespace-nowrap">
                       {s.status === 'APPROVED' ? (
-                        <span className="text-xs text-emerald-600 inline-flex items-center gap-1">
+                        <span className="text-xs text-[var(--sys-success)] inline-flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" /> معتمد
                         </span>
                       ) : (
                         <span className="flex gap-3 justify-end">
-                          <button onClick={() => setReceiptFor(s)} className="text-xs text-[#b8256e] hover:underline">
+                          <button onClick={() => setReceiptFor(s)} className="text-xs text-[var(--sys-primary)] hover:underline">
                             إيصال استلام
                           </button>
                           <button
@@ -190,12 +190,12 @@ export function CollectionScreen() {
                                 apiJson(`/api/finance/statements/${s.id}/match`, { method: 'POST' })
                               )
                             }
-                            className="text-xs text-[#b8256e] hover:underline disabled:text-[#cdd5df] disabled:no-underline"
+                            className="text-xs text-[var(--sys-primary)] hover:underline disabled:text-[var(--sys-border-strong)] disabled:no-underline"
                           >
                             مطابقة
                           </button>
                           {s.gap.needsExplanation && !s.gap.explained && (
-                            <button onClick={() => setExplainFor(s)} className="text-xs text-amber-700 hover:underline">
+                            <button onClick={() => setExplainFor(s)} className="text-xs text-[var(--sys-warning)] hover:underline">
                               تفسير الفرق
                             </button>
                           )}
@@ -218,7 +218,7 @@ export function CollectionScreen() {
                                 })
                               )
                             }
-                            className="text-xs font-medium text-[#00a344] hover:underline disabled:text-[#cdd5df] disabled:no-underline"
+                            className="text-xs font-medium text-[var(--sys-success)] hover:underline disabled:text-[var(--sys-border-strong)] disabled:no-underline"
                           >
                             اعتماد
                           </button>
@@ -297,15 +297,15 @@ function ImportCard({
           setFile(null);
         }
       }}
-      className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 grid gap-3 md:grid-cols-4 items-end"
+      className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 grid gap-3 md:grid-cols-4 items-end"
     >
       <label>
-        <span className="block text-xs font-medium text-[#364152] mb-1">شركة الشحن</span>
+        <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">شركة الشحن</span>
         <select
           value={providerId}
           onChange={(e) => setProviderId(e.target.value)}
           required
-          className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+          className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
         >
           <option value="">اختر…</option>
           {providers.map((p) => (
@@ -315,19 +315,19 @@ function ImportCard({
       </label>
 
       <label>
-        <span className="block text-xs font-medium text-[#364152] mb-1">مرجع الكشف</span>
+        <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">مرجع الكشف</span>
         <input
           value={reference}
           onChange={(e) => setReference(e.target.value)}
           required
           minLength={2}
           placeholder="ST-2026-09"
-          className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+          className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
         />
       </label>
 
       <label>
-        <span className="block text-xs font-medium text-[#364152] mb-1">ملف الكشف (Excel أو CSV)</span>
+        <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملف الكشف (Excel أو CSV)</span>
         <input
           type="file"
           accept=".csv,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -345,14 +345,14 @@ function ImportCard({
               setFile({ name: picked.name, content: await picked.text(), encoding: 'text' });
             }
           }}
-          className="w-full text-xs file:h-8 file:px-3 file:rounded-[6px] file:border-0 file:bg-[#f8fafc] file:text-[#364152] file:ml-2"
+          className="w-full text-xs file:h-8 file:px-3 file:rounded-[6px] file:border-0 file:bg-[var(--sys-surface)] file:text-[var(--sys-foreground)] file:ml-2"
         />
       </label>
 
       <button
         type="submit"
         disabled={busy || !file || !providerId}
-        className="h-10 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50"
+        className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
         استيراد
@@ -408,18 +408,18 @@ function ReceiptDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-xs text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+        <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
           أقرّت الشركة {statement.gap.claimed} {statement.currencyCode} ووصل حتى الآن {statement.gap.received}.
           يمكن تسجيل أكثر من إيصال لنفس الكشف (نقد + حوالة).
         </p>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">المحفظة التي وصل إليها المبلغ</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">المحفظة التي وصل إليها المبلغ</span>
           <select
             value={walletId}
             onChange={(e) => setWalletId(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {wallets.map((w) => (
@@ -429,7 +429,7 @@ function ReceiptDialog({
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">المبلغ الواصل</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">المبلغ الواصل</span>
           <input
             type="number"
             step="0.001"
@@ -437,14 +437,14 @@ function ReceiptDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
 
         {needsRate && (
           <label className="block">
-            <span className="block text-xs font-medium text-[#364152] mb-1">
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
               سعر الصرف ({statement.currencyCode} → {wallet?.currencyCode})
             </span>
             <input
@@ -454,31 +454,31 @@ function ReceiptDialog({
               value={rate}
               onChange={(e) => setRate(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
           </label>
         )}
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">ملاحظة (اختيارية)</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختيارية)</span>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end pt-1">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحفظ…' : 'حفظ الإيصال'}
           </button>
@@ -522,8 +522,8 @@ function ExplainDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-sm text-[#364152]">
-          الفرق بين ما أقرّته الشركة وما وصل: <b className="tabular-nums text-[#fb323f]">{statement.gap.gap}</b>{' '}
+        <p className="text-sm text-[var(--sys-foreground)]">
+          الفرق بين ما أقرّته الشركة وما وصل: <b className="tabular-nums text-[var(--sys-destructive)]">{statement.gap.gap}</b>{' '}
           {statement.currencyCode}. اكتب سبب الفرق — بدونه لا يُعتمد الكشف.
         </p>
         <textarea
@@ -532,18 +532,18 @@ function ExplainDialog({
           required
           minLength={5}
           rows={3}
-          className="w-full p-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+          className="w-full p-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           placeholder="مثال: خصمت الشركة رسوم إرجاع شحنتين"
         />
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             حفظ التفسير
           </button>

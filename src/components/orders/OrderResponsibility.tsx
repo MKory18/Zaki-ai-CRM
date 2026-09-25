@@ -94,25 +94,25 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
   }
 
   const inputClass =
-    'w-full h-9 px-3 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]';
+    'w-full h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <UserCheck className="w-4 h-4 text-[#b8256e] shrink-0" />
+          <UserCheck className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
           {holder ? (
-            <p className="text-sm text-slate-900">
-              <span className="text-slate-500 text-xs">بين يدي </span>
+            <p className="text-sm text-[var(--sys-heading)]">
+              <span className="text-[var(--sys-muted-foreground)] text-xs">بين يدي </span>
               <span className="font-bold">{holder.name}</span>
-              {heldByMe && <span className="text-xs text-emerald-700"> (أنت)</span>}
+              {heldByMe && <span className="text-xs text-[var(--sys-success)]"> (أنت)</span>}
               {order.claimedAt && (
-                <span className="text-[11px] text-slate-400"> · منذ {arDateShort(order.claimedAt)}</span>
+                <span className="text-[11px] text-[var(--sys-muted)]"> · منذ {arDateShort(order.claimedAt)}</span>
               )}
             </p>
           ) : (
-            <p className="text-sm text-slate-500">
-              لم يستلمه أحد بعد — <span className="text-slate-700">متاح في الطابور</span>
+            <p className="text-sm text-[var(--sys-muted-foreground)]">
+              لم يستلمه أحد بعد — <span className="text-[var(--sys-foreground)]">متاح في الطابور</span>
             </p>
           )}
         </div>
@@ -121,7 +121,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => { setOpen(open === 'release' ? null : 'release'); setError(null); }}
-              className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600 hover:text-[#fb323f] inline-flex items-center gap-1.5"
+              className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
             >
               <UserMinus className="w-3.5 h-3.5" />
               سحبه منه
@@ -130,7 +130,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
               onClick={() => { setOpen(open === 'transfer' ? null : 'transfer'); setError(null); }}
               disabled={candidates.length === 0}
               title={candidates.length === 0 ? 'لا يوجد زميل بنفس الرتبة' : undefined}
-              className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600 hover:text-[#b8256e] inline-flex items-center gap-1.5 disabled:opacity-40"
+              className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
             >
               <ArrowLeftRight className="w-3.5 h-3.5" />
               تحويل لزميل
@@ -140,10 +140,10 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
       </div>
 
       {open && (
-        <div className="rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] p-3 space-y-2">
+        <div className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 space-y-2">
           {open === 'transfer' && (
             <label className="block">
-              <span className="block text-xs font-medium text-slate-600 mb-1">
+              <span className="block text-xs font-medium text-[var(--sys-muted-foreground)] mb-1">
                 يُحوَّل إلى (زملاء بنفس الرتبة فقط)
               </span>
               <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className={inputClass}>
@@ -156,7 +156,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
           )}
 
           <label className="block">
-            <span className="block text-xs font-medium text-slate-600 mb-1">
+            <span className="block text-xs font-medium text-[var(--sys-muted-foreground)] mb-1">
               السبب {open === 'release' ? '(لماذا يُسحب منه)' : ''}
             </span>
             <input
@@ -168,20 +168,20 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
             />
           </label>
 
-          {error && <p className="text-[11px] text-[#fb323f]">{error}</p>}
+          {error && <p className="text-[11px] text-[var(--sys-destructive)]">{error}</p>}
 
           <div className="flex gap-2">
             <button
               onClick={() => run(open)}
               disabled={busy}
-              className="text-xs px-3 py-1.5 rounded-[8px] bg-[#b8256e] text-white font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="text-xs px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
             >
               {busy && <Loader2 className="w-3 h-3 animate-spin" />}
               {open === 'release' ? 'أعِده للطابور' : 'حوّل الطلب'}
             </button>
             <button
               onClick={() => { setOpen(null); setError(null); }}
-              className="text-xs px-3 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600"
+              className="text-xs px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]"
             >
               إلغاء
             </button>

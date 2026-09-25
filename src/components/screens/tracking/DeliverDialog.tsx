@@ -96,18 +96,18 @@ export function DeliverDialog({
         className="space-y-3"
       >
         {!lines ? (
-          <p className="text-sm text-[#697586] py-6 text-center">جارٍ التحميل…</p>
+          <p className="text-sm text-[var(--sys-muted-foreground)] py-6 text-center">جارٍ التحميل…</p>
         ) : (
           <>
-            <div className="border border-[#e3e8ef] rounded-[8px] divide-y divide-[#e3e8ef]">
+            <div className="border border-[var(--sys-border)] rounded-[8px] divide-y divide-[var(--sys-border)]">
               {lines.map((l) => {
                 const shipped = l.quantity + l.freeQuantity;
                 const value = taken[l.id] ?? 0;
                 return (
                   <div key={l.id} className="flex items-center justify-between gap-3 px-3 py-2">
                     <div className="min-w-0">
-                      <p className="text-sm text-[#121926] truncate">{l.productName}</p>
-                      <p className="text-[11px] text-[#9aa4b2] tabular-nums">
+                      <p className="text-sm text-[var(--sys-heading)] truncate">{l.productName}</p>
+                      <p className="text-[11px] text-[var(--sys-muted)] tabular-nums">
                         شُحن {shipped}
                         {l.freeQuantity > 0 && ` (منها ${l.freeQuantity} هدية)`}
                       </p>
@@ -117,7 +117,7 @@ export function DeliverDialog({
                         type="button"
                         onClick={() => setTaken((t) => ({ ...t, [l.id]: 0 }))}
                         className={`text-[11px] px-2 py-1 rounded-[6px] border ${
-                          value === 0 ? 'bg-[#feecee] border-[#fecdd1] text-[#fb323f]' : 'border-[#e3e8ef] text-[#697586]'
+                          value === 0 ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
                         }`}
                       >
                         رفضه
@@ -130,7 +130,7 @@ export function DeliverDialog({
                         onChange={(e) =>
                           setTaken((t) => ({ ...t, [l.id]: Math.max(0, Math.min(shipped, Number(e.target.value))) }))
                         }
-                        className="w-16 h-8 px-2 rounded-[6px] border border-[#e3e8ef] text-sm text-center tabular-nums"
+                        className="w-16 h-8 px-2 rounded-[6px] border border-[var(--sys-border)] text-sm text-center tabular-nums"
                         dir="ltr"
                       />
                     </div>
@@ -139,61 +139,61 @@ export function DeliverDialog({
               })}
             </div>
 
-            <div className="text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3 space-y-1 tabular-nums">
-              <p className="flex justify-between text-[#364152]">
+            <div className="text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3 space-y-1 tabular-nums">
+              <p className="flex justify-between text-[var(--sys-foreground)]">
                 <span>قيمة ما استُلم</span>
                 <span>{Math.round(goods * 100) / 100} {order.currency}</span>
               </p>
-              <p className="flex justify-between text-[#364152]">
+              <p className="flex justify-between text-[var(--sys-foreground)]">
                 <span>
                   أجرة التوصيل
-                  {order.priceIncludesDelivery && <span className="text-[#9aa4b2]"> (داخلة في السعر)</span>}
+                  {order.priceIncludesDelivery && <span className="text-[var(--sys-muted)]"> (داخلة في السعر)</span>}
                 </span>
                 <span>{chargedFee} {order.currency}</span>
               </p>
-              <p className="flex justify-between font-semibold text-[#121926] border-t border-[#e3e8ef] pt-1">
+              <p className="flex justify-between font-semibold text-[var(--sys-heading)] border-t border-[var(--sys-border)] pt-1">
                 <span>المحصَّل من العميل</span>
                 <span>{Math.round(collected * 100) / 100} {order.currency}</span>
               </p>
 
               {!allTaken && anyTaken && (
-                <p className="text-[11px] text-amber-700 pt-1">
+                <p className="text-[11px] text-[var(--sys-warning)] pt-1">
                   الأجرة تُحتسب كاملة رغم رفض بعض البنود — المندوب قطع الطريق فعلاً.
                 </p>
               )}
               {!anyTaken && (
-                <p className="text-[11px] text-[#fb323f] pt-1">
+                <p className="text-[11px] text-[var(--sys-destructive)] pt-1">
                   لم يُستلم شيء — سيُسجَّل الطلب مرتجعاً بلا أجرة.
                 </p>
               )}
             </div>
 
-            <p className="text-[11px] text-[#9aa4b2]">
+            <p className="text-[11px] text-[var(--sys-muted)]">
               البنود المرفوضة لا تعود للمخزون من هنا — تُستلم وتُفحص في شاشة المرتجعات.
             </p>
 
             <label className="block">
-              <span className="block text-xs font-medium text-[#364152] mb-1">ملاحظة (اختيارية)</span>
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختيارية)</span>
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="سبب رفض البنود مثلاً"
-                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
               />
             </label>
           </>
         )}
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !lines}
-            className="h-9 px-4 rounded-[8px] bg-[#00a344] text-white text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             <PackageCheck className="w-4 h-4" />
             {saving ? 'جارٍ التسجيل…' : !anyTaken ? 'تسجيل كمرتجع' : allTaken ? 'تسليم كامل' : 'تسليم جزئي'}

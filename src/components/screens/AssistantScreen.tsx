@@ -157,11 +157,11 @@ export function AssistantScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926] flex items-center space-x-2">
-              <Sparkles className="w-6 h-6 text-[#fb323f]" />
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2">
+              <Sparkles className="w-6 h-6 text-[var(--sys-destructive)]" />
               <span>{t.aiAssistant}</span>
             </h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               Section 23-26 OpenRouter AI Business Advisor grounded on verified database metrics & zero financial hallucinations
             </p>
           </div>
@@ -170,7 +170,7 @@ export function AssistantScreen() {
             size="sm"
             onClick={handleGenerateSummary}
             loading={generating}
-            className="flex items-center space-x-1.5 bg-[#fb323f] hover:bg-[#fb323f]/85"
+            className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
           >
             <Sparkles className="w-4 h-4" />
             <span>Regenerate Executive Summary</span>
@@ -181,15 +181,15 @@ export function AssistantScreen() {
         {summaryData && (
           <div className="space-y-4">
             {/* Executive Summary Card */}
-            <Card className="border-[#f2c9dd] bg-gradient-to-br from-[#b8256e]/10 to-[#13b5fe]/5">
+            <Card className="border-[var(--sys-primary-soft)] bg-gradient-to-br from-[var(--sys-primary)]/10 to-[var(--sys-info)]/5">
               <CardHeader
                 title={
                   <div className="flex items-center justify-between">
                     <span className="flex items-center space-x-2">
-                      <Sparkles className="w-5 h-5 text-[#b8256e]" />
+                      <Sparkles className="w-5 h-5 text-[var(--sys-primary)]" />
                       <span>Executive Daily Briefing ({summaryData.date})</span>
                     </span>
-                    <span className="text-xs font-mono font-medium text-[#9ca3af]">
+                    <span className="text-xs font-mono font-medium text-[var(--sys-muted)]">
                       OpenRouter Model Active
                     </span>
                   </div>
@@ -197,36 +197,36 @@ export function AssistantScreen() {
                 subtitle="Aggregated business intelligence summary calculated from real orders & production costs"
               />
               <CardContent className="space-y-4">
-                <p className="text-sm font-medium text-[#121926] leading-relaxed bg-white/80 p-4 rounded-xl border border-[#f2c9dd]/60 shadow-xs">
+                <p className="text-sm font-medium text-[var(--sys-heading)] leading-relaxed bg-[var(--sys-card)]/80 p-4 rounded-xl border border-[var(--sys-primary-soft)]/60 shadow-xs">
                   {summaryData.summaryText}
                 </p>
 
                 {/* Ground-truth Metrics Pill Bar */}
                 {metrics && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-center text-xs">
-                    <div className="bg-white p-2.5 rounded-lg border border-[#e3e8ef]">
-                      <span className="text-[10px] text-[#9ca3af] block">Orders</span>
-                      <strong className="text-[#121926] font-bold">{metrics.total_orders}</strong>
+                    <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
+                      <span className="text-[10px] text-[var(--sys-muted)] block">Orders</span>
+                      <strong className="text-[var(--sys-heading)] font-bold">{metrics.total_orders}</strong>
                     </div>
-                    <div className="bg-white p-2.5 rounded-lg border border-[#e3e8ef]">
-                      <span className="text-[10px] text-[#9ca3af] block">Confirmed</span>
-                      <strong className="text-[#fb323f] font-bold">{metrics.confirmed_orders}</strong>
+                    <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
+                      <span className="text-[10px] text-[var(--sys-muted)] block">Confirmed</span>
+                      <strong className="text-[var(--sys-destructive)] font-bold">{metrics.confirmed_orders}</strong>
                     </div>
-                    <div className="bg-white p-2.5 rounded-lg border border-[#e3e8ef]">
-                      <span className="text-[10px] text-[#9ca3af] block">Delivered</span>
-                      <strong className="text-[#fb323f] font-bold">{metrics.delivered_orders}</strong>
+                    <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
+                      <span className="text-[10px] text-[var(--sys-muted)] block">Delivered</span>
+                      <strong className="text-[var(--sys-destructive)] font-bold">{metrics.delivered_orders}</strong>
                     </div>
-                    <div className="bg-white p-2.5 rounded-lg border border-[#e3e8ef]">
-                      <span className="text-[10px] text-[#9ca3af] block">Delivered Revenue</span>
-                      <strong className="text-[#121926] font-bold">${metrics.revenue?.toFixed(2)}</strong>
+                    <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
+                      <span className="text-[10px] text-[var(--sys-muted)] block">Delivered Revenue</span>
+                      <strong className="text-[var(--sys-heading)] font-bold">${metrics.revenue?.toFixed(2)}</strong>
                     </div>
-                    <div className="bg-white p-2.5 rounded-lg border border-[#e3e8ef]">
-                      <span className="text-[10px] text-[#9ca3af] block">Real Net Profit</span>
-                      <strong className="text-[#fb323f] font-black">${metrics.net_profit?.toFixed(2)}</strong>
+                    <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
+                      <span className="text-[10px] text-[var(--sys-muted)] block">Real Net Profit</span>
+                      <strong className="text-[var(--sys-destructive)] font-black">${metrics.net_profit?.toFixed(2)}</strong>
                     </div>
-                    <div className="bg-white p-2.5 rounded-lg border border-[#e3e8ef]">
-                      <span className="text-[10px] text-[#9ca3af] block">Confirm Rate</span>
-                      <strong className="text-[#fb323f] font-bold">{metrics.confirmation_rate}%</strong>
+                    <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
+                      <span className="text-[10px] text-[var(--sys-muted)] block">Confirm Rate</span>
+                      <strong className="text-[var(--sys-destructive)] font-bold">{metrics.confirmation_rate}%</strong>
                     </div>
                   </div>
                 )}
@@ -234,15 +234,15 @@ export function AssistantScreen() {
                 {/* 3 Pillars: Observations, Risks, Recommendations */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   {/* Key Observations */}
-                  <div className="bg-[#feecee]/70 border border-[#f5c6cb] rounded-xl p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#fb323f] flex items-center space-x-1.5 mb-2.5">
-                      <Lightbulb className="w-4 h-4 text-[#fb323f]" />
+                  <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-xl p-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
+                      <Lightbulb className="w-4 h-4 text-[var(--sys-destructive)]" />
                       <span>Key Observations</span>
                     </h4>
-                    <ul className="space-y-2 text-xs text-[#364152]">
+                    <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
                       {observations.map((obs, i) => (
                         <li key={i} className="flex items-start space-x-1.5">
-                          <span className="text-[#fb323f] font-bold">•</span>
+                          <span className="text-[var(--sys-destructive)] font-bold">•</span>
                           <span>{obs}</span>
                         </li>
                       ))}
@@ -250,15 +250,15 @@ export function AssistantScreen() {
                   </div>
 
                   {/* Risks */}
-                  <div className="bg-[#feecee]/70 border border-[#f5c6cb] rounded-xl p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#fb323f] flex items-center space-x-1.5 mb-2.5">
-                      <ShieldAlert className="w-4 h-4 text-[#fb323f]" />
+                  <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-xl p-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
+                      <ShieldAlert className="w-4 h-4 text-[var(--sys-destructive)]" />
                       <span>Operational Risks</span>
                     </h4>
-                    <ul className="space-y-2 text-xs text-[#364152]">
+                    <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
                       {risks.map((risk, i) => (
                         <li key={i} className="flex items-start space-x-1.5">
-                          <span className="text-[#fb323f] font-bold">•</span>
+                          <span className="text-[var(--sys-destructive)] font-bold">•</span>
                           <span>{risk}</span>
                         </li>
                       ))}
@@ -266,15 +266,15 @@ export function AssistantScreen() {
                   </div>
 
                   {/* Recommendations */}
-                  <div className="bg-[#feecee]/70 border border-[#f5c6cb] rounded-xl p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#fb323f] flex items-center space-x-1.5 mb-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-[#fb323f]" />
+                  <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-xl p-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-[var(--sys-destructive)]" />
                       <span>Tactical Recommendations</span>
                     </h4>
-                    <ul className="space-y-2 text-xs text-[#364152]">
+                    <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
                       {recommendations.map((rec, i) => (
                         <li key={i} className="flex items-start space-x-1.5">
-                          <span className="text-[#fb323f] font-bold">•</span>
+                          <span className="text-[var(--sys-destructive)] font-bold">•</span>
                           <span>{rec}</span>
                         </li>
                       ))}
@@ -289,7 +289,7 @@ export function AssistantScreen() {
         {/* Section 24: AI Executive Chat Advisor */}
         <Card className="flex flex-col h-[550px]">
           <CardHeader
-            title={<span className="flex items-center space-x-2"><Bot className="w-5 h-5 text-[#fb323f]" /><span>AI Executive Chat Advisor (Section 24)</span></span>}
+            title={<span className="flex items-center space-x-2"><Bot className="w-5 h-5 text-[var(--sys-destructive)]" /><span>AI Executive Chat Advisor (Section 24)</span></span>}
             subtitle="Ask strategic questions; AI calculates responses from live verified database context"
           />
 
@@ -303,7 +303,7 @@ export function AssistantScreen() {
                 }`}
               >
                 {m.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full bg-[#fb323f] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-8 h-8 rounded-full bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] flex items-center justify-center shrink-0 shadow-xs">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
@@ -311,14 +311,14 @@ export function AssistantScreen() {
                 <div
                   className={`max-w-xl rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-xs ${
                     m.role === 'user'
-                      ? 'bg-[#b8256e] text-white rounded-tr-none'
-                      : 'bg-[#f8fafc] text-[#121926] rounded-tl-none whitespace-pre-wrap'
+                      ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] rounded-tr-none'
+                      : 'bg-[var(--sys-surface)] text-[var(--sys-heading)] rounded-tl-none whitespace-pre-wrap'
                   }`}
                 >
                   <p>{m.content}</p>
                   <span
                     className={`text-[9px] block mt-1 text-right ${
-                      m.role === 'user' ? 'text-white/80' : 'text-[#9ca3af]'
+                      m.role === 'user' ? 'text-[var(--sys-primary-foreground)]/80' : 'text-[var(--sys-muted)]'
                     }`}
                   >
                     {m.time}
@@ -326,7 +326,7 @@ export function AssistantScreen() {
                 </div>
 
                 {m.role === 'user' && (
-                  <div className="w-8 h-8 rounded-full bg-blue-100 text-[#b8256e] flex items-center justify-center shrink-0 font-bold text-xs">
+                  <div className="w-8 h-8 rounded-full bg-[var(--sys-surface-strong)] text-[var(--sys-primary)] flex items-center justify-center shrink-0 font-bold text-xs">
                     U
                   </div>
                 )}
@@ -334,21 +334,21 @@ export function AssistantScreen() {
             ))}
 
             {chatLoading && (
-              <div className="flex items-center space-x-2 text-xs text-[#9ca3af]">
-                <Bot className="w-4 h-4 text-[#b8256e] animate-spin" />
+              <div className="flex items-center space-x-2 text-xs text-[var(--sys-muted)]">
+                <Bot className="w-4 h-4 text-[var(--sys-primary)] animate-spin" />
                 <span>SALESFLOW AI is analyzing live business metrics...</span>
               </div>
             )}
           </CardContent>
 
           {/* Quick Prompts Bar */}
-          <div className="px-4 py-2 bg-[#f8fafc] border-t border-[#e3e8ef] flex items-center space-x-2 rtl:space-x-reverse overflow-x-auto text-[11px]">
-            <span className="text-[#9ca3af] shrink-0 font-medium">Try asking:</span>
+          <div className="px-4 py-2 bg-[var(--sys-surface)] border-t border-[var(--sys-border)] flex items-center space-x-2 rtl:space-x-reverse overflow-x-auto text-[11px]">
+            <span className="text-[var(--sys-muted)] shrink-0 font-medium">Try asking:</span>
             {suggestedQuestions.map((sq, i) => (
               <button
                 key={i}
                 onClick={() => handleSendMessage(sq)}
-                className="shrink-0 px-2.5 py-1 rounded-full bg-white border border-[#e3e8ef] text-[#364152] hover:bg-[#f8fafc] hover:border-[#e2e5ec] transition-colors cursor-pointer"
+                className="shrink-0 px-2.5 py-1 rounded-full bg-[var(--sys-card)] border border-[var(--sys-border)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] hover:border-[var(--sys-border)] transition-colors cursor-pointer"
               >
                 {sq}
               </button>
@@ -356,7 +356,7 @@ export function AssistantScreen() {
           </div>
 
           {/* Input Bar */}
-          <div className="p-3 border-t border-[#e3e8ef] bg-white">
+          <div className="p-3 border-t border-[var(--sys-border)] bg-[var(--sys-card)]">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -369,9 +369,9 @@ export function AssistantScreen() {
                 placeholder="Ask about revenue, top profitable products, moderator performance, or production advice..."
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
-                className="flex-1 px-4 py-2 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]"
+                className="flex-1 px-4 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
-              <Button type="submit" size="sm" loading={chatLoading} className="bg-[#fb323f] hover:bg-[#fb323f]/85">
+              <Button type="submit" size="sm" loading={chatLoading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
                 <Send className="w-4 h-4" />
               </Button>
             </form>

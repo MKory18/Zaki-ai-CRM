@@ -210,8 +210,8 @@ export function ProductsScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.products}</h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.products}</h1>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               كتالوج المنتجات مع الصور، تحليل تكاليف التصنيع متعدد التشغيلات والمخزون
             </p>
           </div>
@@ -226,7 +226,7 @@ export function ProductsScreen() {
             <Button
               size="sm"
               onClick={() => setCreateModalOpen(true)}
-              className="flex items-center space-x-1.5 bg-[#fb323f] hover:bg-[#fb323f]/85"
+              className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
             >
               <Plus className="w-4 h-4" />
               <span>إضافة منتج</span>
@@ -243,23 +243,23 @@ export function ProductsScreen() {
           <CardContent className="pt-4">
             {/* Search bar */}
             <div className="relative max-w-md mb-4">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
               <input
                 type="text"
                 placeholder="بحث بالاسم (عربي/إنجليزي) أو SKU..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full ps-9 pe-4 py-2.5 text-xs bg-[#f8fafc] border border-[#e3e8ef] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e]"
+                className="w-full ps-9 pe-4 py-2.5 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute end-3 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-[#364152] cursor-pointer"
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-[var(--sys-muted)] hover:text-[var(--sys-foreground)] cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
-              <span className="absolute -bottom-5 start-1 text-[10px] text-[#9ca3af]">
+              <span className="absolute -bottom-5 start-1 text-[10px] text-[var(--sys-muted)]">
                 {filteredProducts.length} من أصل {products.length} منتج
               </span>
             </div>
@@ -267,7 +267,7 @@ export function ProductsScreen() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
+                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">الصورة</th>
                     <th className="px-6 py-3.5">اسم المنتج</th>
@@ -279,37 +279,37 @@ export function ProductsScreen() {
                     <th className="px-6 py-3.5 text-right rtl:text-left">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {filteredProducts.map((p) => {
                     const img = primaryImageOf(p);
                     return (
                       <tr
                         key={p.id}
-                        className="hover:bg-[#f8fafc] transition-colors cursor-pointer"
+                        className="hover:bg-[var(--sys-surface)] transition-colors cursor-pointer"
                         onClick={() => router.push(`/products/${p.id}`)}
                       >
                         <td className="px-6 py-3">
                           <ProductThumb src={img?.url} alt={productName(p, locale)} size="md" />
                         </td>
                         <td className="px-6 py-3">
-                          <span className="font-bold text-[#121926] block">{productName(p, locale)}</span>
-                          <span className="text-[11px] text-[#9ca3af]">
+                          <span className="font-bold text-[var(--sys-heading)] block">{productName(p, locale)}</span>
+                          <span className="text-[11px] text-[var(--sys-muted)]">
                             {p.images?.length || 0} صورة • {p.offers?.length || 0} عرض
                           </span>
                         </td>
-                        <td className="px-6 py-3 font-mono text-[#697586]">{p.sku}</td>
+                        <td className="px-6 py-3 font-mono text-[var(--sys-muted-foreground)]">{p.sku}</td>
                         <td className="px-6 py-3">
                           <Badge variant={p.status === 'ACTIVE' ? 'success' : 'warning'}>
                             {p.status === 'ACTIVE' ? 'نشط' : p.status === 'INACTIVE' ? 'غير نشط' : 'نفد المخزون'}
                           </Badge>
                         </td>
-                        <td className="px-6 py-3 font-bold text-[#00c853]">
+                        <td className="px-6 py-3 font-bold text-[var(--sys-success)]">
                           {p.analytics?.totalRemaining ?? 0}
                         </td>
-                        <td className="px-6 py-3 text-[#121926]">
+                        <td className="px-6 py-3 text-[var(--sys-heading)]">
                           ${p.analytics?.avgCostPerUnit?.toFixed(2) || '0.00'}
                         </td>
-                        <td className="px-6 py-3 text-[#b8256e] font-medium">
+                        <td className="px-6 py-3 text-[var(--sys-primary)] font-medium">
                           {p.analytics?.totalSold ?? 0}
                         </td>
                         <td className="px-6 py-3 text-right rtl:text-left">
@@ -327,7 +327,7 @@ export function ProductsScreen() {
                               size="sm"
                               variant="secondary"
                               onClick={() => openEdit(p)}
-                              className="p-2 bg-blue-50 text-[#b8256e] border-[#f2c9dd] hover:bg-blue-100"
+                              className="p-2 bg-[var(--sys-surface)] text-[var(--sys-primary)] border-[var(--sys-primary-soft)] hover:bg-[var(--sys-surface-strong)]"
                               title="تعديل المنتج"
                             >
                               <Pencil className="w-3.5 h-3.5" />
@@ -348,7 +348,7 @@ export function ProductsScreen() {
                   })}
                   {filteredProducts.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-[#9ca3af] text-xs">
+                      <td colSpan={8} className="py-12 text-center text-[var(--sys-muted)] text-xs">
                         {loading ? t.loading : 'لا توجد منتجات مطابقة للبحث.'}
                       </td>
                     </tr>
@@ -370,14 +370,14 @@ export function ProductsScreen() {
       >
         <form onSubmit={handleCreateProduct} className="space-y-4">
           {modalError && (
-            <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">
+            <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg">
               {modalError}
             </div>
           )}
 
           {/* Basic Information */}
-          <div className="border border-[#e3e8ef] rounded-xl p-4 bg-[#f8fafc] space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">1. المعلومات الأساسية</h4>
+          <div className="border border-[var(--sys-border)] rounded-xl p-4 bg-[var(--sys-surface)] space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">1. المعلومات الأساسية</h4>
             <Input
               label="اسم المنتج *"
               placeholder="مثال: كريم إزالة الندبات الألماني الأصلي"
@@ -413,7 +413,7 @@ export function ProductsScreen() {
                 run" puts invented manufacturing costs into your cost
                 reports, which is why it is asked once, here. */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-[#121926]">مصدر المنتج *</label>
+              <label className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">مصدر المنتج *</label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {([
                   ['MANUFACTURED', 'نصنّعه', 'تشغيلة إنتاج ببنود كلفة — مواد، أجور، تغليف'],
@@ -425,14 +425,14 @@ export function ProductsScreen() {
                     onClick={() => setSourceType(key)}
                     className={`cursor-pointer rounded-xl border p-3 text-start transition ${
                       sourceType === key
-                        ? 'border-[#b8256e] bg-[#fdf2f7]'
-                        : 'border-[#e3e8ef] bg-white hover:border-[#b8256e]/40'
+                        ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)]'
+                        : 'border-[var(--sys-border)] bg-[var(--sys-card)] hover:border-[var(--sys-primary)]/40'
                     }`}
                   >
-                    <span className={`block text-sm font-bold ${sourceType === key ? 'text-[#b8256e]' : 'text-[#121926]'}`}>
+                    <span className={`block text-sm font-bold ${sourceType === key ? 'text-[var(--sys-primary)]' : 'text-[var(--sys-heading)]'}`}>
                       {title}
                     </span>
-                    <span className="mt-0.5 block text-[10.5px] leading-relaxed text-[#697586]">{hint}</span>
+                    <span className="mt-0.5 block text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">{hint}</span>
                   </button>
                 ))}
               </div>
@@ -446,9 +446,9 @@ export function ProductsScreen() {
           </div>
 
           {/* Product Images */}
-          <div className="border border-[#e3e8ef] rounded-xl p-4 bg-[#f8fafc] space-y-3">
+          <div className="border border-[var(--sys-border)] rounded-xl p-4 bg-[var(--sys-surface)] space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">
                 2. صور المنتج (الأولى = الصورة الرئيسية)
               </h4>
               <input
@@ -472,7 +472,7 @@ export function ProductsScreen() {
             </div>
 
             {selectedFiles.length === 0 ? (
-              <div className="border-2 border-dashed border-[#e2e5ec] rounded-xl p-6 text-center text-xs text-[#9ca3af]">
+              <div className="border-2 border-dashed border-[var(--sys-border)] rounded-xl p-6 text-center text-xs text-[var(--sys-muted)]">
                 JPG / PNG / WEBP — حتى 10 ميجابايت للصورة
               </div>
             ) : (
@@ -481,7 +481,7 @@ export function ProductsScreen() {
                   <div
                     key={idx}
                     className={`relative group rounded-xl overflow-hidden border-2 ${
-                      primaryIndex === idx ? 'border-[#b8256e]' : 'border-[#e3e8ef]'
+                      primaryIndex === idx ? 'border-[var(--sys-primary)]' : 'border-[var(--sys-border)]'
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -491,7 +491,7 @@ export function ProductsScreen() {
                       className="w-full h-20 object-cover"
                     />
                     {primaryIndex === idx && (
-                      <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-[#fb323f] text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center space-x-0.5">
+                      <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center space-x-0.5">
                         <Star className="w-2.5 h-2.5" />
                         <span>رئيسية</span>
                       </span>
@@ -499,7 +499,7 @@ export function ProductsScreen() {
                     <button
                       type="button"
                       onClick={() => removeFile(idx)}
-                      className="absolute top-1 right-1 rtl:right-auto rtl:left-1 bg-white/90 text-[#fb323f] rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      className="absolute top-1 right-1 rtl:right-auto rtl:left-1 bg-[var(--sys-card)]/90 text-[var(--sys-destructive)] rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -507,7 +507,7 @@ export function ProductsScreen() {
                       <button
                         type="button"
                         onClick={() => setPrimaryIndex(idx)}
-                        className="absolute bottom-1 left-1 rtl:left-auto rtl:right-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        className="absolute bottom-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-sidebar)]/60 text-[var(--sys-primary-foreground)] text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
                         رئيسية
                       </button>
@@ -519,7 +519,7 @@ export function ProductsScreen() {
           </div>
 
           {/* Inventory info hint */}
-          <div className="p-3 bg-blue-50 border border-[#f2c9dd] rounded-xl text-[11px] text-[#b8256e]">
+          <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] rounded-xl text-[11px] text-[var(--sys-primary)]">
             بعد إنشاء المنتج أضف تشغيلات الإنتاج من صفحة <Link href="/manufacturing" className="underline font-semibold">تشغيلات الإنتاج</Link> لحساب تكلفة الوحدة والمخزون تلقائياً.
           </div>
 
@@ -527,7 +527,7 @@ export function ProductsScreen() {
             <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" loading={modalLoading} className="bg-[#fb323f] hover:bg-[#fb323f]/85">
+            <Button type="submit" loading={modalLoading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
               حفظ المنتج
             </Button>
           </div>
@@ -544,7 +544,7 @@ export function ProductsScreen() {
       >
         <form onSubmit={handleEditSave} className="space-y-4">
           {editError && (
-            <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-xl">
+            <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-xl">
               {editError}
             </div>
           )}
@@ -568,12 +568,12 @@ export function ProductsScreen() {
           <Textarea label="الوصف بالإنجليزية" rows={2} dir="ltr" value={editForm.descriptionEn} onChange={(e) => setEditForm({ ...editForm, descriptionEn: e.target.value })} />
 
           {editProduct && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-[#f2c9dd] rounded-xl">
+            <div className="flex items-center gap-3 p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] rounded-xl">
               <ProductThumb
                 src={editProduct.images?.find((i: any) => i.isPrimary)?.url || editProduct.images?.[0]?.url}
                 size="md"
               />
-              <div className="text-[11px] text-[#b8256e]">
+              <div className="text-[11px] text-[var(--sys-primary)]">
                 <p className="font-bold">إدارة الصور</p>
                 <p>
                   {editProduct.images?.length || 0} صورة — للتعديل والتبديل والحذف افتح{' '}
@@ -596,7 +596,7 @@ export function ProductsScreen() {
             <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" loading={editLoading} className="bg-[#b8256e] hover:bg-[#b8256e]/85">
+            <Button type="submit" loading={editLoading} className="bg-[var(--sys-primary)] hover:bg-[var(--sys-primary)]/85">
               <Pencil className="w-4 h-4" />
               حفظ التعديلات
             </Button>

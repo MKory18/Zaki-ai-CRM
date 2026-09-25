@@ -30,7 +30,7 @@ interface Weight {
 }
 
 const FIELD =
-  'h-9 w-full rounded-lg border border-[#e3e8ef] bg-white px-2 text-xs text-[#364152] outline-none focus:border-[#b8256e]';
+  'h-9 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]';
 
 export function PerformanceSettingsCard() {
   const [settings, setSettings] = useState<PerformanceSettings | null>(null);
@@ -85,18 +85,18 @@ export function PerformanceSettingsCard() {
       />
       <CardContent className="space-y-4">
         {/* Shown, explained, and not a field. */}
-        <div className="rounded-lg border border-[#e3e8ef] bg-[#f8fafc] p-2.5">
-          <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold text-[#697586]">
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
+          <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold text-[var(--sys-muted-foreground)]">
             <Lock className="h-3 w-3" /> الأوزان — مثبّتة بالكود، لا تُعدَّل من هنا ولا من غيره
           </p>
           <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
             {weights.map((w) => (
               <li key={w.key} className="flex items-baseline justify-between text-[11px]">
-                <span className="text-[#697586]">
+                <span className="text-[var(--sys-muted-foreground)]">
                   {w.ar}
-                  {w.negative && <span className="text-[#9aa4b2]"> (بالسالب)</span>}
+                  {w.negative && <span className="text-[var(--sys-muted)]"> (بالسالب)</span>}
                 </span>
-                <span className="font-semibold tabular-nums text-[#364152]">{w.weight}</span>
+                <span className="font-semibold tabular-nums text-[var(--sys-foreground)]">{w.weight}</span>
               </li>
             ))}
           </ul>
@@ -104,7 +104,7 @@ export function PerformanceSettingsCard() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold text-[#364152]">عتبة نسبة التسليم المقبولة</span>
+            <span className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">عتبة نسبة التسليم المقبولة</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -114,13 +114,13 @@ export function PerformanceSettingsCard() {
                 onChange={(e) => patch({ deliveryRateBar: Number(e.target.value) / 100 })}
                 className={FIELD}
               />
-              <span className="text-xs text-[#9aa4b2]">٪</span>
+              <span className="text-xs text-[var(--sys-muted)]">٪</span>
             </div>
-            <span className="mt-0.5 block text-[10px] text-[#9aa4b2]">دونها يُعلَّم السطر بالأحمر — ولا تتغيّر النقاط.</span>
+            <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">دونها يُعلَّم السطر بالأحمر — ولا تتغيّر النقاط.</span>
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold text-[#364152]">عتبة نسبة الإشكالات</span>
+            <span className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">عتبة نسبة الإشكالات</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -130,13 +130,13 @@ export function PerformanceSettingsCard() {
                 onChange={(e) => patch({ issuesRateBar: Number(e.target.value) / 100 })}
                 className={FIELD}
               />
-              <span className="text-xs text-[#9aa4b2]">٪</span>
+              <span className="text-xs text-[var(--sys-muted)]">٪</span>
             </div>
-            <span className="mt-0.5 block text-[10px] text-[#9aa4b2]">فوقها يُعلَّم السطر — والإشكال المُلغى لا يُحتسب على أحد.</span>
+            <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">فوقها يُعلَّم السطر — والإشكال المُلغى لا يُحتسب على أحد.</span>
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold text-[#364152]">الحد الأدنى للعيّنة</span>
+            <span className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">الحد الأدنى للعيّنة</span>
             <input
               type="number"
               min={1}
@@ -145,13 +145,13 @@ export function PerformanceSettingsCard() {
               onChange={(e) => patch({ minSample: Number(e.target.value) })}
               className={FIELD}
             />
-            <span className="mt-0.5 block text-[10px] text-[#9aa4b2]">
+            <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">
               تحته لا يُحتسب سكور أصلاً. غير الحد الأدنى في قواعد العمولة: ذاك يحكم المال، وهذا يحكم القياس.
             </span>
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold text-[#364152]">فترة القياس</span>
+            <span className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">فترة القياس</span>
             <select
               value={settings.period}
               onChange={(e) => patch({ period: e.target.value as PerformanceSettings['period'] })}
@@ -160,7 +160,7 @@ export function PerformanceSettingsCard() {
               <option value="WEEKLY">أسبوع</option>
               <option value="MONTHLY">شهر</option>
             </select>
-            <span className="mt-0.5 block text-[10px] text-[#9aa4b2]">الأسبوع يبدأ السبت، كتقويم العمل.</span>
+            <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">الأسبوع يبدأ السبت، كتقويم العمل.</span>
           </label>
         </div>
 
@@ -170,14 +170,14 @@ export function PerformanceSettingsCard() {
             احفظ العتبات
           </Button>
           {saved && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-[#00a344]">
+            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--sys-success)]">
               <Check className="h-3.5 w-3.5" /> تم الحفظ
             </span>
           )}
         </div>
 
         {error && (
-          <p className="rounded-lg border border-[#fecdd1] bg-[#feecee] p-2.5 text-xs text-[#fb323f]">{error}</p>
+          <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">{error}</p>
         )}
       </CardContent>
     </Card>

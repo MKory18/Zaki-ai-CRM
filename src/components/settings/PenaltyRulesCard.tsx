@@ -38,7 +38,7 @@ interface Rule {
 }
 
 const FIELD =
-  'h-9 rounded-lg border border-[#e3e8ef] bg-white px-2 text-xs text-[#364152] outline-none focus:border-[#b8256e]';
+  'h-9 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]';
 
 export function PenaltyRulesCard() {
   const [kinds, setKinds] = useState<Kind[]>([]);
@@ -124,7 +124,7 @@ export function PenaltyRulesCard() {
       />
       <CardContent className="space-y-3">
         {rules.length === 0 && (
-          <p className="rounded-lg border border-[#e3e8ef] bg-[#f8fafc] p-3 text-xs leading-relaxed text-[#697586]">
+          <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             لا قواعد بعد، فلا يُقترح أي خصم على أحد. الصمت ليس خصماً.
           </p>
         )}
@@ -135,23 +135,23 @@ export function PenaltyRulesCard() {
             <div
               key={r.id}
               className={`flex flex-wrap items-center gap-2 rounded-lg border p-2.5 text-xs ${
-                r.isActive ? 'border-[#e3e8ef]' : 'border-dashed border-[#e3e8ef] bg-[#fafbfc]'
+                r.isActive ? 'border-[var(--sys-border)]' : 'border-dashed border-[var(--sys-border)] bg-[var(--sys-surface)]'
               }`}
             >
-              <span className="font-semibold text-[#121926]">{k?.ar ?? r.kind}</span>
-              <span className="text-[#697586]">
+              <span className="font-semibold text-[var(--sys-heading)]">{k?.ar ?? r.kind}</span>
+              <span className="text-[var(--sys-muted-foreground)]">
                 {r.role ? (ROLE_LABELS[r.role as keyof typeof ROLE_LABELS]?.ar ?? r.role) : 'كل الأدوار'}
               </span>
-              <span className="tabular-nums text-[#364152]" dir="ltr">
+              <span className="tabular-nums text-[var(--sys-foreground)]" dir="ltr">
                 {r.perUnit} {r.currencyCode}/{k?.unitAr}
               </span>
-              <span className="text-[#697586]">
+              <span className="text-[var(--sys-muted-foreground)]">
                 سماح <span className="tabular-nums">{r.grace}</span>
               </span>
-              <span className="text-[#697586]">
+              <span className="text-[var(--sys-muted-foreground)]">
                 سقف{' '}
                 {r.periodCap === null ? (
-                  <span className="text-[#fb323f]">بلا</span>
+                  <span className="text-[var(--sys-destructive)]">بلا</span>
                 ) : (
                   <span className="tabular-nums">{r.periodCap}</span>
                 )}
@@ -160,7 +160,7 @@ export function PenaltyRulesCard() {
                 type="button"
                 disabled={busy}
                 onClick={() => toggle(r)}
-                className="ms-auto rounded border border-[#e3e8ef] px-2 py-0.5 text-[10px] text-[#697586]"
+                className="ms-auto rounded border border-[var(--sys-border)] px-2 py-0.5 text-[10px] text-[var(--sys-muted-foreground)]"
               >
                 {r.isActive ? 'أوقفها' : 'شغّلها'}
               </button>
@@ -168,10 +168,10 @@ export function PenaltyRulesCard() {
           );
         })}
 
-        <div className="rounded-lg border border-[#e3e8ef] p-2.5">
+        <div className="rounded-lg border border-[var(--sys-border)] p-2.5">
           <div className="flex flex-wrap items-end gap-2">
             <label className="block">
-              <span className="mb-0.5 block text-[10px] text-[#697586]">النوع</span>
+              <span className="mb-0.5 block text-[10px] text-[var(--sys-muted-foreground)]">النوع</span>
               <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value })} className={`${FIELD} w-36`}>
                 {kinds.map((k) => (
                   <option key={k.key} value={k.key}>{k.ar}</option>
@@ -179,7 +179,7 @@ export function PenaltyRulesCard() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-[10px] text-[#697586]">الدور</span>
+              <span className="mb-0.5 block text-[10px] text-[var(--sys-muted-foreground)]">الدور</span>
               <select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className={`${FIELD} w-32`}>
                 <option value="">كل الأدوار</option>
                 {roles.map((r) => (
@@ -188,7 +188,7 @@ export function PenaltyRulesCard() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-[10px] text-[#697586]">لكل {kind?.unitAr}</span>
+              <span className="mb-0.5 block text-[10px] text-[var(--sys-muted-foreground)]">لكل {kind?.unitAr}</span>
               <input
                 type="number"
                 min={0}
@@ -200,7 +200,7 @@ export function PenaltyRulesCard() {
               />
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-[10px] text-[#697586]">العملة</span>
+              <span className="mb-0.5 block text-[10px] text-[var(--sys-muted-foreground)]">العملة</span>
               <input
                 value={draft.currencyCode}
                 onChange={(e) => setDraft({ ...draft, currencyCode: e.target.value })}
@@ -211,7 +211,7 @@ export function PenaltyRulesCard() {
               />
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-[10px] text-[#697586]">سماح ({kind?.unitAr})</span>
+              <span className="mb-0.5 block text-[10px] text-[var(--sys-muted-foreground)]">سماح ({kind?.unitAr})</span>
               <input
                 type="number"
                 min={0}
@@ -222,7 +222,7 @@ export function PenaltyRulesCard() {
               />
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-[10px] text-[#697586]">سقف الفترة</span>
+              <span className="mb-0.5 block text-[10px] text-[var(--sys-muted-foreground)]">سقف الفترة</span>
               <input
                 type="number"
                 min={0}
@@ -239,16 +239,16 @@ export function PenaltyRulesCard() {
             </Button>
           </div>
 
-          {kind && <p className="mt-2 text-[10px] leading-relaxed text-[#9aa4b2]">{kind.sourceAr}</p>}
+          {kind && <p className="mt-2 text-[10px] leading-relaxed text-[var(--sys-muted)]">{kind.sourceAr}</p>}
           {!draft.periodCap && (
-            <p className="mt-1 flex items-start gap-1 text-[10px] leading-relaxed text-[#c07f2a]">
+            <p className="mt-1 flex items-start gap-1 text-[10px] leading-relaxed text-[var(--sys-warning)]">
               <ShieldQuestion className="mt-px h-3 w-3 shrink-0" />
               بلا سقف، قاعدةٌ بالدقيقة قد تأكل راتباً كاملاً على مرضٍ واحد.
             </p>
           )}
         </div>
 
-        {error && <p className="rounded-lg border border-[#fecdd1] bg-[#feecee] p-2.5 text-xs text-[#fb323f]">{error}</p>}
+        {error && <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">{error}</p>}
       </CardContent>
     </Card>
   );

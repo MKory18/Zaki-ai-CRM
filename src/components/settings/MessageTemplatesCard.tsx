@@ -42,7 +42,7 @@ interface Loaded {
 }
 
 const INPUT =
-  'h-9 px-2 rounded-lg border border-[#e3e8ef] bg-white text-xs text-[#364152] focus:outline-none focus:border-[#b8256e]';
+  'h-9 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]';
 
 /** Nothing to fill from — said plainly rather than previewed against a lie. */
 const NO_SAMPLE = 'لا طلبات في هذا المتجر بعد، فلا معاينة بطلب حقيقي.';
@@ -72,7 +72,7 @@ export function MessageTemplatesCard() {
   }, [load]);
 
   if (error && !data) {
-    return <p className="rounded-lg border border-[#fecdd1] bg-[#feecee] p-2.5 text-xs text-[#fb323f]">{error}</p>;
+    return <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">{error}</p>;
   }
   if (!data) return null;
 
@@ -136,7 +136,7 @@ export function MessageTemplatesCard() {
 
   return (
     <div className="space-y-2" dir="rtl">
-      <p className="text-[11px] leading-relaxed text-[#697586]">
+      <p className="text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
         تُرسَل من رقم شركتك عبر تطبيقك — بلا بوابة ولا اشتراك ولا كلفة لكل رسالة. مجمّعة حسب الموقف
         الذي تُقال فيه، لا حسب القناة.
       </p>
@@ -146,26 +146,26 @@ export function MessageTemplatesCard() {
         const isOpen = openGroup === s.key;
         const live = mine.filter((t) => t.active).length;
         return (
-          <section key={s.key} className="rounded-lg border border-[#e3e8ef] bg-white">
+          <section key={s.key} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
             <button
               type="button"
               onClick={() => setOpenGroup(isOpen ? null : s.key)}
               className="flex w-full items-center gap-2 px-3 py-2 text-start"
             >
-              <span className="flex-1 text-xs font-semibold text-[#364152]">{s.ar}</span>
-              <span className="text-[10px] tabular-nums text-[#9aa4b2]">
+              <span className="flex-1 text-xs font-semibold text-[var(--sys-foreground)]">{s.ar}</span>
+              <span className="text-[10px] tabular-nums text-[var(--sys-muted)]">
                 {mine.length === 0 ? 'لا قوالب' : `${live} من ${mine.length} مفعّلة`}
               </span>
-              <ChevronDown className={`h-3.5 w-3.5 text-[#9aa4b2] transition ${isOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-3.5 w-3.5 text-[var(--sys-muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
-              <div className="space-y-2 border-t border-[#f1f3f6] p-2.5">
+              <div className="space-y-2 border-t border-[var(--sys-surface-strong)] p-2.5">
                 {mine.map((t) => (
                   <div
                     key={t.id}
                     className={`space-y-2 rounded-lg border p-2.5 ${
-                      t.active ? 'border-[#e3e8ef]' : 'border-dashed border-[#e3e8ef] bg-[#fafbfc]'
+                      t.active ? 'border-[var(--sys-border)]' : 'border-dashed border-[var(--sys-border)] bg-[var(--sys-surface)]'
                     }`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
@@ -205,12 +205,12 @@ export function MessageTemplatesCard() {
                           <option key={l.code} value={l.code}>{l.label}</option>
                         ))}
                       </select>
-                      <label className="flex items-center gap-1 text-[10px] text-[#697586]">
+                      <label className="flex items-center gap-1 text-[10px] text-[var(--sys-muted-foreground)]">
                         <input
                           type="checkbox"
                           checked={t.active}
                           onChange={(e) => patch(t.id, { active: e.target.checked })}
-                          className="accent-[#b8256e]"
+                          className="accent-[var(--sys-primary)]"
                         />
                         مفعّل
                       </label>
@@ -218,7 +218,7 @@ export function MessageTemplatesCard() {
                         type="button"
                         onClick={() => setTemplates(templates.filter((x) => x.id !== t.id))}
                         aria-label="احذف القالب"
-                        className="rounded-lg p-1.5 text-[#9aa4b2] hover:bg-[#feecee] hover:text-[#fb323f]"
+                        className="rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -232,7 +232,7 @@ export function MessageTemplatesCard() {
                       onChange={(e) => patch(t.id, { body: e.target.value })}
                       rows={2}
                       maxLength={1000}
-                      className="w-full rounded-lg border border-[#e3e8ef] bg-white px-2 py-2 text-xs text-[#364152] outline-none focus:border-[#b8256e]"
+                      className="w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 py-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]"
                     />
 
                     {/* Clicked, never typed: a hand-written placeholder with a
@@ -244,14 +244,14 @@ export function MessageTemplatesCard() {
                           type="button"
                           title={v.label}
                           onClick={() => insertVar(t.id, v.key)}
-                          className="rounded border border-[#e3e8ef] bg-[#f8fafc] px-1.5 py-0.5 text-[10px] text-[#b8256e] hover:border-[#b8256e]"
+                          className="rounded border border-[var(--sys-border)] bg-[var(--sys-surface)] px-1.5 py-0.5 text-[10px] text-[var(--sys-primary)] hover:border-[var(--sys-primary)]"
                         >
                           {v.label}
                         </button>
                       ))}
                     </div>
 
-                    <p className="rounded bg-[#f8fafc] px-2 py-1.5 text-[10px] leading-relaxed text-[#697586]">
+                    <p className="rounded bg-[var(--sys-surface)] px-2 py-1.5 text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
                       {data.sample ? fillTemplate(t.body, data.sample) || '—' : NO_SAMPLE}
                     </p>
                   </div>
@@ -273,12 +273,12 @@ export function MessageTemplatesCard() {
           احفظ القوالب
         </Button>
         {saved && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-[#00a344]">
+          <span className="inline-flex items-center gap-1 text-[11px] text-[var(--sys-success)]">
             <Check className="h-3.5 w-3.5" /> تم الحفظ
           </span>
         )}
         {data.sample && (
-          <span className="text-[10px] text-[#9aa4b2]">
+          <span className="text-[10px] text-[var(--sys-muted)]">
             المعاينة بالطلب{' '}
             <span dir="ltr" className="tabular-nums">{data.sample.orderNumber}</span>
           </span>
@@ -286,7 +286,7 @@ export function MessageTemplatesCard() {
       </div>
 
       {error && (
-        <p className="rounded-lg border border-[#fecdd1] bg-[#feecee] p-2.5 text-xs text-[#fb323f]">{error}</p>
+        <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">{error}</p>
       )}
     </div>
   );

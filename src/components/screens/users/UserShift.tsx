@@ -32,7 +32,7 @@ const DAYS = [
 ];
 
 const FIELD =
-  'h-9 rounded-lg border border-[#e3e8ef] bg-white px-2 text-xs text-[#364152] outline-none focus:border-[#b8256e] disabled:bg-[#f8fafc]';
+  'h-9 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)] disabled:bg-[var(--sys-surface)]';
 
 export function UserShift({
   userId,
@@ -93,14 +93,14 @@ export function UserShift({
   };
 
   return (
-    <div className="col-span-full rounded-xl bg-[#f8fafc] px-3 py-2.5">
-      <p className="mb-1.5 flex items-center gap-1 text-[10px] text-[#9ca3af]">
+    <div className="col-span-full rounded-xl bg-[var(--sys-surface)] px-3 py-2.5">
+      <p className="mb-1.5 flex items-center gap-1 text-[10px] text-[var(--sys-muted)]">
         <Clock4 className="h-3 w-3" /> الدوام
       </p>
 
       <div className="flex flex-wrap items-end gap-2">
         <label className="block">
-          <span className="mb-0.5 block text-[10px] text-[#697586]">يبدأ</span>
+          <span className="mb-0.5 block text-[10px] text-[var(--sys-muted-foreground)]">يبدأ</span>
           <input
             type="time"
             value={start}
@@ -111,7 +111,7 @@ export function UserShift({
           />
         </label>
         <label className="block">
-          <span className="mb-0.5 block text-[10px] text-[#697586]">يسلّم</span>
+          <span className="mb-0.5 block text-[10px] text-[var(--sys-muted-foreground)]">يسلّم</span>
           <input
             type="time"
             value={end}
@@ -127,7 +127,7 @@ export function UserShift({
             type="button"
             onClick={save}
             disabled={busy || !changed || inverted}
-            className="h-9 rounded-lg bg-[#b8256e] px-3 text-xs font-medium text-white disabled:opacity-50"
+            className="h-9 rounded-lg bg-[var(--sys-primary)] px-3 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
           >
             {busy ? 'جارٍ…' : 'احفظ'}
           </button>
@@ -135,9 +135,9 @@ export function UserShift({
       </div>
 
       <div className="mt-2">
-        <span className="mb-1 block text-[10px] text-[#697586]">
+        <span className="mb-1 block text-[10px] text-[var(--sys-muted-foreground)]">
           أيام الراحة{' '}
-          {rest === null && <span className="text-[#9aa4b2]">— عطلة البلد</span>}
+          {rest === null && <span className="text-[var(--sys-muted)]">— عطلة البلد</span>}
         </span>
         <div className="flex flex-wrap gap-1">
           {DAYS.map((d) => (
@@ -148,8 +148,8 @@ export function UserShift({
               onClick={() => toggleDay(d.n)}
               className={`rounded border px-1.5 py-0.5 text-[10px] ${
                 rest?.includes(d.n)
-                  ? 'border-[#b8256e] bg-[#fdf2f7] text-[#b8256e]'
-                  : 'border-[#e3e8ef] bg-white text-[#697586]'
+                  ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
+                  : 'border-[var(--sys-border)] bg-[var(--sys-card)] text-[var(--sys-muted-foreground)]'
               } disabled:opacity-60`}
             >
               {d.ar}
@@ -159,7 +159,7 @@ export function UserShift({
             <button
               type="button"
               onClick={() => setRest(null)}
-              className="rounded px-1.5 py-0.5 text-[10px] text-[#9aa4b2] hover:text-[#b8256e]"
+              className="rounded px-1.5 py-0.5 text-[10px] text-[var(--sys-muted)] hover:text-[var(--sys-primary)]"
             >
               أعد عطلة البلد
             </button>
@@ -167,11 +167,11 @@ export function UserShift({
         </div>
       </div>
 
-      {inverted && <p className="mt-1 text-[10px] text-[#fb323f]">وقت التسليم يجب أن يكون بعد وقت البدء.</p>}
+      {inverted && <p className="mt-1 text-[10px] text-[var(--sys-destructive)]">وقت التسليم يجب أن يكون بعد وقت البدء.</p>}
       {!inverted && !start && !end && rest === null && (
-        <p className="mt-1 text-[10px] text-[#9aa4b2]">فارغ = ساعات البلد وعطلته. التأخير يُقاس بما هنا.</p>
+        <p className="mt-1 text-[10px] text-[var(--sys-muted)]">فارغ = ساعات البلد وعطلته. التأخير يُقاس بما هنا.</p>
       )}
-      {msg && <p className={`mt-1 text-[10px] ${msg.ok ? 'text-[#00a344]' : 'text-[#fb323f]'}`}>{msg.text}</p>}
+      {msg && <p className={`mt-1 text-[10px] ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>}
     </div>
   );
 }

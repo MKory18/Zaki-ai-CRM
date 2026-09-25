@@ -71,7 +71,7 @@ export function ConfirmationQueueScreen() {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -79,23 +79,23 @@ export function ConfirmationQueueScreen() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-8 text-center">
-        <div className="mx-auto w-14 h-14 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center">
-          <Inbox className="w-7 h-7 text-[#b8256e]" />
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-8 text-center">
+        <div className="mx-auto w-14 h-14 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
+          <Inbox className="w-7 h-7 text-[var(--sys-primary)]" />
         </div>
-        <p className="mt-4 text-4xl font-bold text-[#121926] tabular-nums">{data.waiting}</p>
-        <p className="mt-1 text-sm text-[#697586]">طلب بانتظار التأكيد</p>
+        <p className="mt-4 text-4xl font-bold text-[var(--sys-heading)] tabular-nums">{data.waiting}</p>
+        <p className="mt-1 text-sm text-[var(--sys-muted-foreground)]">طلب بانتظار التأكيد</p>
 
         <button
           onClick={pullNext}
           disabled={!data.canPull || pulling || data.waiting === 0}
-          className="mt-6 px-8 py-3 rounded-[8px] bg-[#b8256e] text-white text-sm font-semibold disabled:opacity-50"
+          className="mt-6 px-8 py-3 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold disabled:opacity-50"
         >
           {pulling ? 'جارٍ السحب…' : 'اسحب الطلب التالي'}
         </button>
 
         {(error || data.refusal) && (
-          <p className="mt-4 text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">
+          <p className="mt-4 text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">
             {error ?? data.refusal?.message}
           </p>
         )}
@@ -112,19 +112,19 @@ export function ConfirmationQueueScreen() {
             value={`${data.owned.total} / ${data.caps.total}`}
           />
         </div>
-        <p className="mt-4 text-xs text-[#9aa4b2]">
+        <p className="mt-4 text-xs text-[var(--sys-muted)]">
           الأولوية للطلبات المؤجلة المستحقة خلال {data.leadDays} يوم، ثم الأقدم. يُحرَّر أي طلب بلا محاولة اتصال بعد ٩٠
           دقيقة عمل.
         </p>
       </div>
 
       {data.orders && (
-        <section className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
-          <header className="px-4 py-3 border-b border-[#e3e8ef] text-sm font-semibold text-[#121926]">
+        <section className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+          <header className="px-4 py-3 border-b border-[var(--sys-border)] text-sm font-semibold text-[var(--sys-heading)]">
             عرض المشرف — نفس الطلبات المنتظرة ({data.orders.length})
           </header>
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-4 py-2">الطلب</th>
                 <th className="text-right font-medium px-4 py-2">العميل</th>
@@ -132,15 +132,15 @@ export function ConfirmationQueueScreen() {
                 <th className="text-right font-medium px-4 py-2">التأجيلات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {data.orders.map((o) => (
                 <tr key={o.id}>
-                  <td className="px-4 py-2 font-medium text-[#121926]" dir="ltr">{o.orderNumber}</td>
-                  <td className="px-4 py-2 text-[#364152]">
+                  <td className="px-4 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</td>
+                  <td className="px-4 py-2 text-[var(--sys-foreground)]">
                     {o.customer.fullName} · {o.customer.city}
                   </td>
-                  <td className="px-4 py-2 text-[#697586]">{o.confirmationStatus}</td>
-                  <td className="px-4 py-2 text-[#697586] tabular-nums">{o.postponeCount}</td>
+                  <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{o.confirmationStatus}</td>
+                  <td className="px-4 py-2 text-[var(--sys-muted-foreground)] tabular-nums">{o.postponeCount}</td>
                 </tr>
               ))}
             </tbody>
@@ -153,11 +153,11 @@ export function ConfirmationQueueScreen() {
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 p-3 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef]">
-      <span className="text-[#697586]">{icon}</span>
+    <div className="flex items-center gap-2 p-3 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)]">
+      <span className="text-[var(--sys-muted-foreground)]">{icon}</span>
       <div className="min-w-0">
-        <p className="text-xs text-[#697586] truncate">{label}</p>
-        <p className="text-sm font-semibold text-[#121926] tabular-nums" dir="ltr">{value}</p>
+        <p className="text-xs text-[var(--sys-muted-foreground)] truncate">{label}</p>
+        <p className="text-sm font-semibold text-[var(--sys-heading)] tabular-nums" dir="ltr">{value}</p>
       </div>
     </div>
   );

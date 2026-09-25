@@ -93,8 +93,8 @@ export function CustomersScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.customers}</h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.customers}</h1>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               ملف العملاء مع توحيد أرقام الهاتݡ كشف التكرار وسجل الطلبات الكامل
             </p>
           </div>
@@ -102,7 +102,7 @@ export function CustomersScreen() {
           <Button
             size="sm"
             onClick={() => setCreateModalOpen(true)}
-            className="flex items-center space-x-1.5 bg-[#fb323f] hover:bg-[#fb323f]/85"
+            className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
           >
             <Plus className="w-4 h-4" />
             <span>إضافة عميل</span>
@@ -111,13 +111,13 @@ export function CustomersScreen() {
 
         {/* Search */}
         <div className="relative max-w-md">
-          <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+          <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
           <input
             type="text"
             placeholder="بحث بالاسم، رقم الهاتف، المحافظة..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-white border border-[#e3e8ef] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#b8256e]/30 focus:border-[#b8256e] shadow-xs"
+            className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)] shadow-xs"
           />
         </div>
 
@@ -126,52 +126,52 @@ export function CustomersScreen() {
           {customers.map((c) => (
             <Card
               key={c.id}
-              className="cursor-pointer hover:border-[#b8256e]/40 transition-colors"
+              className="cursor-pointer hover:border-[var(--sys-primary)]/40 transition-colors"
               onClick={() => setSelectedCustomer(c)}
             >
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-bold text-[#121926] text-sm flex items-center space-x-1.5 rtl:space-x-reverse">
-                      <User className="w-3.5 h-3.5 text-[#fb323f]" />
+                    <h3 className="font-bold text-[var(--sys-heading)] text-sm flex items-center space-x-1.5 rtl:space-x-reverse">
+                      <User className="w-3.5 h-3.5 text-[var(--sys-destructive)]" />
                       <span>{c.fullName}</span>
                     </h3>
-                    <p className="text-xs text-[#697586] flex items-center space-x-1 mt-1">
-                      <MapPin className="w-3 h-3 text-[#9ca3af]" />
+                    <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center space-x-1 mt-1">
+                      <MapPin className="w-3 h-3 text-[var(--sys-muted)]" />
                       <span>
                         {c.city}، {c.address}
                       </span>
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-md">
                     ${(c.totalPurchaseValue ?? 0).toFixed(2)}
                   </span>
                 </div>
 
-                <div className="flex items-center space-x-2 text-xs pt-2 border-t border-[#e3e8ef]">
+                <div className="flex items-center space-x-2 text-xs pt-2 border-t border-[var(--sys-border)]">
                   <a
                     href={`tel:${c.phone}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center space-x-1 rtl:space-x-reverse font-mono font-bold text-[#121926] bg-[#f8fafc] px-2 py-1 rounded hover:bg-[#e8eaef]"
+                    className="inline-flex items-center space-x-1 rtl:space-x-reverse font-mono font-bold text-[var(--sys-heading)] bg-[var(--sys-surface)] px-2 py-1 rounded hover:bg-[var(--sys-border)]"
                   >
-                    <Phone className="w-3 h-3 text-[#fb323f]" />
+                    <Phone className="w-3 h-3 text-[var(--sys-destructive)]" />
                     <span dir="ltr">{c.rawPhone || c.phone}</span>
                   </a>
-                  {c.altPhone && <span className="text-[#9ca3af]">بديل: {c.altPhone}</span>}
+                  {c.altPhone && <span className="text-[var(--sys-muted)]">بديل: {c.altPhone}</span>}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#e3e8ef] text-center text-[11px]">
-                  <div className="bg-[#f8fafc] p-1.5 rounded-lg">
-                    <span className="text-[#9ca3af] block">الكل</span>
-                    <span className="font-bold text-[#121926]">{c.totalOrders}</span>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--sys-border)] text-center text-[11px]">
+                  <div className="bg-[var(--sys-surface)] p-1.5 rounded-lg">
+                    <span className="text-[var(--sys-muted)] block">الكل</span>
+                    <span className="font-bold text-[var(--sys-heading)]">{c.totalOrders}</span>
                   </div>
-                  <div className="bg-emerald-100 p-1.5 rounded-lg">
-                    <span className="text-[#00c853] block">موصّل</span>
-                    <span className="font-bold text-[#00c853]">{c.deliveredOrders}</span>
+                  <div className="bg-[var(--sys-success-soft)] p-1.5 rounded-lg">
+                    <span className="text-[var(--sys-success)] block">موصّل</span>
+                    <span className="font-bold text-[var(--sys-success)]">{c.deliveredOrders}</span>
                   </div>
-                  <div className="bg-[#feecee] p-1.5 rounded-lg">
-                    <span className="text-[#fb323f] block">ملغي</span>
-                    <span className="font-bold text-[#fb323f]">{c.cancelledOrders}</span>
+                  <div className="bg-[var(--sys-destructive-soft)] p-1.5 rounded-lg">
+                    <span className="text-[var(--sys-destructive)] block">ملغي</span>
+                    <span className="font-bold text-[var(--sys-destructive)]">{c.cancelledOrders}</span>
                   </div>
                 </div>
               </CardContent>
@@ -190,44 +190,44 @@ export function CustomersScreen() {
           maxWidth="2xl"
         >
           <div className="space-y-4">
-            <div className="p-4 bg-[#f8fafc] rounded-xl grid grid-cols-2 gap-3 text-xs">
+            <div className="p-4 bg-[var(--sys-surface)] rounded-xl grid grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-[#9ca3af]">رقم الهاتف:</span>
-                <p className="font-bold font-mono text-[#121926] text-sm" dir="ltr">
+                <span className="text-[var(--sys-muted)]">رقم الهاتف:</span>
+                <p className="font-bold font-mono text-[var(--sys-heading)] text-sm" dir="ltr">
                   {selectedCustomer.rawPhone || selectedCustomer.phone}
                 </p>
               </div>
               <div>
-                <span className="text-[#9ca3af]">إجمالي المشتريات:</span>
-                <p className="font-bold text-[#fb323f] text-sm">
+                <span className="text-[var(--sys-muted)]">إجمالي المشتريات:</span>
+                <p className="font-bold text-[var(--sys-destructive)] text-sm">
                   ${(selectedCustomer.totalPurchaseValue ?? 0).toFixed(2)}
                 </p>
               </div>
               <div>
-                <span className="text-[#9ca3af]">العنوان:</span>
-                <p className="font-medium text-[#121926]">{selectedCustomer.address}</p>
+                <span className="text-[var(--sys-muted)]">العنوان:</span>
+                <p className="font-medium text-[var(--sys-heading)]">{selectedCustomer.address}</p>
               </div>
               <div>
-                <span className="text-[#9ca3af]">المحافظة / الدولة:</span>
-                <p className="font-medium text-[#121926]">
+                <span className="text-[var(--sys-muted)]">المحافظة / الدولة:</span>
+                <p className="font-medium text-[var(--sys-heading)]">
                   {selectedCustomer.city}، {selectedCustomer.country}
                 </p>
               </div>
             </div>
 
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152] mt-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)] mt-2">
               سجل الطلبات ({selectedCustomer.orders?.length || 0})
             </h4>
 
-            <div className="divide-y divide-[#e3e8ef] max-h-60 overflow-y-auto">
+            <div className="divide-y divide-[var(--sys-border)] max-h-60 overflow-y-auto">
               {selectedCustomer.orders?.map((ord: any) => (
                 <div key={ord.id} className="py-2.5 flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-bold text-[#fb323f]">{ord.orderNumber}</span>
-                    <span className="text-[#697586] ml-2 rtl:ml-0 rtl:mr-2">{ord.product?.name}</span>
+                    <span className="font-bold text-[var(--sys-destructive)]">{ord.orderNumber}</span>
+                    <span className="text-[var(--sys-muted-foreground)] ml-2 rtl:ml-0 rtl:mr-2">{ord.product?.name}</span>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                    <span className="font-bold text-[#121926]">${ord.totalAmount.toFixed(2)}</span>
+                    <span className="font-bold text-[var(--sys-heading)]">${ord.totalAmount.toFixed(2)}</span>
                     <OrderStatusBadge status={ord.status} />
                   </div>
                 </div>
@@ -247,7 +247,7 @@ export function CustomersScreen() {
       >
         <form onSubmit={handleCreateCustomer} className="space-y-4">
           {modalMsg && (
-            <div className="p-3 bg-blue-50 border border-[#f2c9dd] text-[#b8256e] text-xs rounded-lg">
+            <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] text-[var(--sys-primary)] text-xs rounded-lg">
               {modalMsg}
             </div>
           )}
@@ -307,7 +307,7 @@ export function CustomersScreen() {
             <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" loading={modalLoading} className="bg-[#fb323f] hover:bg-[#fb323f]/85">
+            <Button type="submit" loading={modalLoading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
               حفظ العميل
             </Button>
           </div>

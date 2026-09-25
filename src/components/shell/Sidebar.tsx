@@ -102,23 +102,23 @@ export function Sidebar({
 
   return (
     <>
-      {mobileOpen && <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={onClose} />}
+      {mobileOpen && <div className="fixed inset-0 z-40 bg-[var(--sys-sidebar)]/50 md:hidden" onClick={onClose} />}
 
       <aside
         className={clsx(
-          'fixed top-0 bottom-0 right-0 z-40 flex flex-col w-[280px] bg-[#121926] text-[#697586] transition-transform duration-200 md:translate-x-0',
+          'fixed top-0 bottom-0 right-0 z-40 flex flex-col w-[280px] bg-[var(--sys-heading)] text-[var(--sys-muted-foreground)] transition-transform duration-200 md:translate-x-0',
           mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
         )}
       >
-        <div className="flex items-center h-[72px] px-5 border-b border-[#202939] shrink-0">
+        <div className="flex items-center h-[72px] px-5 border-b border-[var(--sys-heading)] shrink-0">
           <Link href="/" className="flex items-center gap-3" onClick={onClose}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="Zaki AI" className="w-11 h-9 object-contain" />
             <div>
-              <span className="font-bold text-white tracking-wide text-base leading-tight block" dir="ltr">
-                Zaki <span className="text-[#b8256e]">AI</span> Store
+              <span className="font-bold text-[var(--sys-primary-foreground)] tracking-wide text-base leading-tight block" dir="ltr">
+                Zaki <span className="text-[var(--sys-primary)]">AI</span> Store
               </span>
-              <span className="block text-[10px] text-[#697586] font-semibold uppercase tracking-[0.18em]" dir="ltr">
+              <span className="block text-[10px] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-[0.18em]" dir="ltr">
                 Operations
               </span>
             </div>
@@ -133,18 +133,18 @@ export function Sidebar({
             return (
             <div key={group.key} className="pb-1">
               {pinned ? (
-                <p className="px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[#5b6474]">
+                <p className="px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--sys-muted-foreground)]">
                   {group.label}
                 </p>
               ) : (
                 <button
                   onClick={() => toggle(group.key)}
                   aria-expanded={isOpen}
-                  className="w-full flex items-center justify-between gap-2 px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[#5b6474] hover:text-[#9aa4b2] transition-colors"
+                  className="w-full flex items-center justify-between gap-2 px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-muted)] transition-colors"
                 >
                   <span className="flex items-center gap-2">
                     {group.label}
-                    {!isOpen && <span className="text-[#3f4757] tabular-nums">{count}</span>}
+                    {!isOpen && <span className="text-[var(--sys-border-strong)] tabular-nums">{count}</span>}
                   </span>
                   <ChevronDown
                     className={clsx('w-3.5 h-3.5 transition-transform', isOpen ? '' : '-rotate-90')}
@@ -161,14 +161,14 @@ export function Sidebar({
                     onClick={onClose}
                     className={clsx(
                       'flex items-center justify-between mx-3 px-2 py-2.5 rounded-[8px] text-sm font-medium transition-colors group',
-                      isActive ? 'bg-[#b8256e] text-white' : 'text-[#697586] hover:text-white hover:bg-[#1a2232]'
+                      isActive ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-heading)]'
                     )}
                   >
                     <span className="flex items-center gap-3">
                       <span
                         className={clsx(
                           'w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 transition-colors',
-                          isActive ? 'bg-white/10 text-white' : 'bg-[#1a2232] text-[#697586] group-hover:text-white'
+                          isActive ? 'bg-[var(--sys-card)]/10 text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-heading)] text-[var(--sys-muted-foreground)] group-hover:text-[var(--sys-primary-foreground)]'
                         )}
                       >
                         <Icon className="w-[18px] h-[18px]" />
@@ -178,7 +178,7 @@ export function Sidebar({
                     {route.stage !== null && (
                       <span
                         title={`قيد البناء — المرحلة ${route.stage}`}
-                        className="flex items-center gap-1 text-[10px] text-[#5b6474]"
+                        className="flex items-center gap-1 text-[10px] text-[var(--sys-muted-foreground)]"
                       >
                         <Hammer className="w-3 h-3" />
                         {route.stage}
@@ -197,7 +197,7 @@ export function Sidebar({
             remembered on this browser. */}
         <button
           onClick={togglePinned}
-          className="shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[#202939] text-[11px] text-[#5b6474] hover:text-[#9aa4b2] transition-colors"
+          className="shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[var(--sys-heading)] text-[11px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-muted)] transition-colors"
         >
           {pinned ? <List className="w-3.5 h-3.5" /> : <ListTree className="w-3.5 h-3.5" />}
           {pinned ? 'اطوِ القوائم' : 'اعرض كل القوائم'}

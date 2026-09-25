@@ -90,12 +90,12 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
 
   // Badge state machine
   const badge: OwnershipBadge = lockActive
-    ? { key: 'BEING_EDITED', cls: 'bg-amber-50 text-amber-700 border-amber-300', icon: Lock, label: ar ? 'قيد التحرير' : 'Being Edited' }
+    ? { key: 'BEING_EDITED', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60', icon: Lock, label: ar ? 'قيد التحرير' : 'Being Edited' }
     : signed
-    ? { key: 'CLAIMED', cls: 'bg-blue-50 text-blue-700 border-blue-300', icon: UserCheck, label: ar ? 'مستلم' : 'Claimed' }
+    ? { key: 'CLAIMED', cls: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-info)]/50', icon: UserCheck, label: ar ? 'مستلم' : 'Claimed' }
     : claimed
     ? { key: 'ASSIGNED', cls: 'bg-yellow-50 text-yellow-700 border-yellow-300', icon: Clock, label: ar ? 'مسند' : 'Assigned' }
-    : { key: 'AVAILABLE', cls: 'bg-green-50 text-green-700 border-green-300', icon: CheckIcon, label: ar ? 'متاح' : 'Available' };
+    : { key: 'AVAILABLE', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60', icon: CheckIcon, label: ar ? 'متاح' : 'Available' };
   const BadgeIcon = badge.icon;
 
   const claimDisabled = claimed || ownership.actionLoading === 'claim';
@@ -132,11 +132,11 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="rounded-2xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-xs" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-red-600" />
+        <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-[var(--sys-destructive)]" />
           {ar ? 'مسؤولية الطلب' : 'Order Responsibility'}
         </h4>
         <span
@@ -168,14 +168,14 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
 
       {/* Editing lock warning */}
       {lockActive && (
-        <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 flex items-start gap-2">
-          <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+        <div className="mt-3 rounded-xl border border-[var(--sys-warning)]/60 bg-[var(--sys-warning-soft)] p-3 flex items-start gap-2">
+          <Lock className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
           <div className="text-xs">
-            <p className="font-bold text-amber-800">
+            <p className="font-bold text-[var(--sys-warning)]">
               {ar ? 'يتم تعديل هذا الطلب حالياً بواسطة:' : 'This order is currently being edited by:'}{' '}
               <span className="font-black">{order.lockHolder?.name ?? '—'}</span>
             </p>
-            <p className="text-amber-700 mt-0.5">
+            <p className="text-[var(--sys-warning)] mt-0.5">
               {ar ? 'بدأ التعديل:' : 'Started:'}{' '}
               {arTime(order.lockedAt)}
               {' • '}
@@ -188,7 +188,7 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
 
       {/* My active edit session banner */}
       {lockActive && order.lockedById && !order.lockHolder && (
-        <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 flex items-center gap-2">
+        <div className="mt-3 rounded-xl border border-blue-200 bg-[var(--sys-surface)] p-3 text-xs text-blue-800 flex items-center gap-2">
           <Pencil className="w-3.5 h-3.5" />
           {ar ? 'أنت تقوم الآن بتعديل هذا الطلب.' : 'You are now editing this order.'}
         </div>
@@ -197,16 +197,16 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
       {/* Actions */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {!claimed && (
-          <Button size="sm" onClick={handleClaim} loading={ownership.actionLoading === 'claim'} className="bg-red-600 hover:bg-red-700">
+          <Button size="sm" onClick={handleClaim} loading={ownership.actionLoading === 'claim'} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]">
             <PenLine className="w-3.5 h-3.5" />
             {ar ? '✍️ استلام الطلب' : '✍️ Claim Order'}
           </Button>
         )}
         {claimed && !signed && (
-          <span className="text-[11px] text-slate-500">{ar ? 'بانتظار التوقيع الرقمي' : 'Awaiting digital signature'}</span>
+          <span className="text-[11px] text-[var(--sys-muted-foreground)]">{ar ? 'بانتظار التوقيع الرقمي' : 'Awaiting digital signature'}</span>
         )}
         {signed && (
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-2.5 py-1.5">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/40 rounded-lg px-2.5 py-1.5">
             <CheckIcon className="w-3 h-3" />
             {ar ? `موقّع رقمياً بواسطة ${order.claimer?.name ?? '—'}` : `Digitally signed by ${order.claimer?.name ?? '—'}`}
           </span>
@@ -217,7 +217,7 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
         {isSuperAdmin && (
           <button
             onClick={() => setOverrideOpen(true)}
-            className="ms-auto text-[11px] text-slate-400 hover:text-rose-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
+            className="ms-auto text-[11px] text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] transition-colors inline-flex items-center gap-1 cursor-pointer"
             title={ar ? 'تجاوز إداري (يتطلب سبباً)' : 'Administrative override (reason required)'}
           >
             <Unlock className="w-3 h-3" />
@@ -228,7 +228,7 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
 
       {/* Claim explanation */}
       {!claimed && (
-        <p className="mt-2 text-[11px] text-slate-500 leading-relaxed">
+        <p className="mt-2 text-[11px] text-[var(--sys-muted-foreground)] leading-relaxed">
           {ar
             ? 'عند استلام الطلب سيتم تسجيل أنك المسؤول الحالي عنه.'
             : 'Claiming this order will register you as the current responsible employee.'}
@@ -240,10 +240,10 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
         <div
           className={`mt-3 rounded-xl border p-3 text-xs flex items-start justify-between gap-2 ${
             ownership.message.type === 'conflict'
-              ? 'border-orange-300 bg-orange-50 text-orange-800'
+              ? 'border-[var(--sys-warning)]/60 bg-[var(--sys-warning-soft)] text-orange-800'
               : ownership.message.type === 'success'
-              ? 'border-green-300 bg-green-50 text-green-800'
-              : 'border-rose-300 bg-rose-50 text-rose-800'
+              ? 'border-[var(--sys-success)]/60 bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
+              : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
           }`}
         >
           <span className="leading-relaxed">{ownership.message.text}</span>
@@ -268,20 +268,20 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
       {/* Ownership history */}
       {order.claimHistory?.length > 0 && (
         <div className="mt-3 border-t border-slate-100 pt-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2">
             {ar ? 'سجل الملكية' : 'Ownership History'}
           </p>
           <div className="space-y-1.5">
             {order.claimHistory.slice(0, 5).map((h: any) => (
               <div key={h.id} className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-600">
-                  <span className="font-semibold text-slate-800">{h.user?.name}</span>
+                <span className="text-[var(--sys-muted-foreground)]">
+                  <span className="font-semibold text-[var(--sys-foreground)]">{h.user?.name}</span>
                   {' — '}
                   {ar ? ({ CLAIMED: 'استلام', RELEASED: 'تحرير', TRANSFERRED: 'نقل', OVERRIDDEN: 'تجاوز إداري', UNLOCKED: 'إلغاء قفل' } as Record<string,string>)[h.action] ?? h.action
                     : h.action.toLowerCase()}
                   {h.reason ? ` (${CLAIM_REASON_AR[h.reason] ?? h.reason})` : ''}
                 </span>
-                <span className="text-slate-400">{arDateShort(h.createdAt)}</span>
+                <span className="text-[var(--sys-muted)]">{arDateShort(h.createdAt)}</span>
               </div>
             ))}
           </div>
@@ -296,7 +296,7 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
         maxWidth="md"
       >
         <div className="space-y-3" dir={isRtl ? 'rtl' : 'ltr'}>
-          <p className="text-xs text-slate-600 leading-relaxed">
+          <p className="text-xs text-[var(--sys-muted-foreground)] leading-relaxed">
             {ar
               ? 'هذا الإجراء سيسجل تجاوزاً إدارياً في سجل التدقيق مع اسمك والسبب ووقت التنفيذ. لا يمكن التراجع عنه بصمت.'
               : 'This action will be recorded in the audit log with your name, reason, and timestamp. Silent overrides are never allowed.'}
@@ -306,7 +306,7 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
             onChange={(e) => setOverrideReason(e.target.value)}
             rows={3}
             placeholder={ar ? 'سبب التجاوز (إلزامي)…' : 'Reason for override (required)…'}
-            className="w-full px-3 py-2 text-xs border-2 border-slate-200 rounded-xl focus:border-red-500 focus:outline-none"
+            className="w-full px-3 py-2 text-xs border-2 border-[var(--sys-border)] rounded-xl focus:border-[var(--sys-destructive)] focus:outline-none"
           />
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => setOverrideOpen(false)}>
@@ -330,9 +330,9 @@ export function OwnershipSection({ order, ar, isRtl, ownership, nowMs: nowMsProp
 
 function Field({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className={highlight ? 'rounded-xl bg-red-50 border border-red-200 px-2.5 py-2' : 'rounded-xl bg-slate-50 px-2.5 py-2'}>
-      <p className="text-[10px] text-slate-400">{label}</p>
-      <p className={`text-xs font-bold ${highlight ? 'text-red-700' : 'text-slate-800'} truncate`}>{value}</p>
+    <div className={highlight ? 'rounded-xl bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] px-2.5 py-2' : 'rounded-xl bg-[var(--sys-surface)] px-2.5 py-2'}>
+      <p className="text-[10px] text-[var(--sys-muted)]">{label}</p>
+      <p className={`text-xs font-bold ${highlight ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-foreground)]'} truncate`}>{value}</p>
     </div>
   );
 }

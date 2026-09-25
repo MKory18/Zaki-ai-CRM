@@ -113,7 +113,7 @@ export function ChangeRequestsScreen() {
 
   if (!lists) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -123,9 +123,9 @@ export function ChangeRequestsScreen() {
 
   return (
     <div className="max-w-4xl space-y-3">
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
 
-      <div className="flex gap-1 rounded-lg bg-[#eef2f6] p-0.5 w-fit">
+      <div className="flex gap-1 rounded-lg bg-[var(--sys-surface-strong)] p-0.5 w-fit">
         {(
           [
             ['PENDING', 'بانتظار القرار'],
@@ -137,13 +137,13 @@ export function ChangeRequestsScreen() {
             type="button"
             onClick={() => setTab(key)}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              tab === key ? 'bg-white text-[#b8256e] shadow-sm' : 'text-[#697586] hover:text-[#364152]'
+              tab === key ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-sm' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
             }`}
           >
             {label}
             <span
               className={`tabular-nums rounded px-1.5 text-[10px] ${
-                lists[key].length > 0 ? 'bg-[#b8256e] text-white' : 'bg-[#dde3ea] text-[#697586]'
+                lists[key].length > 0 ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
               }`}
             >
               {lists[key].length}
@@ -153,7 +153,7 @@ export function ChangeRequestsScreen() {
       </div>
 
       {rows.length === 0 && (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
           {tab === 'PENDING' ? 'لا توجد طلبات تعديل قيد المراجعة.' : 'لا تعديلات معتمدة بانتظار التطبيق.'}
         </p>
       )}
@@ -162,66 +162,66 @@ export function ChangeRequestsScreen() {
         const role = ROLE_LABELS[r.requestedRole as UserRole]?.ar ?? r.requestedRole;
         const state = STATE_LABEL_AR[deriveCoreState(r.order)];
         return (
-          <article key={r.id} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
+          <article key={r.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3">
             <header className="flex flex-wrap items-center gap-2">
-              <span className="w-8 h-8 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center">
+              <span className="w-8 h-8 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
                 {tab === 'PENDING' ? (
-                  <FilePen className="w-4 h-4 text-[#b8256e]" />
+                  <FilePen className="w-4 h-4 text-[var(--sys-primary)]" />
                 ) : (
-                  <CheckCircle2 className="w-4 h-4 text-[#00994d]" />
+                  <CheckCircle2 className="w-4 h-4 text-[var(--sys-success)]" />
                 )}
               </span>
-              <span className="font-semibold text-[#121926]" dir="ltr">{r.order.orderNumber}</span>
-              <span className="text-[11px] px-2 py-0.5 rounded-[6px] bg-[#f1f5f9] text-[#475467]">{state}</span>
+              <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{r.order.orderNumber}</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-[6px] bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">{state}</span>
               {tab === 'PENDING' && r.blocking && (
-                <span className="text-[11px] px-2 py-0.5 rounded-[6px] bg-[#feecee] border border-[#fecdd1] text-[#fb323f]">
+                <span className="text-[11px] px-2 py-0.5 rounded-[6px] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]">
                   يوقف تقدّم الطلب
                 </span>
               )}
               {tab === 'PENDING' && r.overdue && (
-                <span className="text-[11px] px-2 py-0.5 rounded-[6px] bg-amber-50 border border-amber-100 text-[#c07f2a]">
+                <span className="text-[11px] px-2 py-0.5 rounded-[6px] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
                   تجاوز مهلة المراجعة
                 </span>
               )}
-              <span className="mr-auto text-xs text-[#697586]">
+              <span className="mr-auto text-xs text-[var(--sys-muted-foreground)]">
                 {r.requestedByName ?? '—'} · {role}
               </span>
             </header>
 
-            <p className="text-sm text-[#121926]">{r.reason}</p>
+            <p className="text-sm text-[var(--sys-heading)]">{r.reason}</p>
 
             {/* What changes, in words the person deciding reads: the field's
                 Arabic name, and the value before and after. */}
-            <ul className="rounded-lg border border-[#e3e8ef] divide-y divide-[#e3e8ef]">
+            <ul className="rounded-lg border border-[var(--sys-border)] divide-y divide-[var(--sys-border)]">
               {Object.entries(r.changes ?? {}).map(([field, value]) => (
                 <li key={field} className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
-                  <span className="w-28 shrink-0 font-semibold text-[#697586]">{changeFieldLabel(field)}</span>
+                  <span className="w-28 shrink-0 font-semibold text-[var(--sys-muted-foreground)]">{changeFieldLabel(field)}</span>
                   {value?.from !== undefined && (
                     <>
-                      <span className="text-[#9aa4b2] line-through">{show(value.from)}</span>
-                      <ArrowLeft className="w-3.5 h-3.5 text-[#b8256e] shrink-0" />
+                      <span className="text-[var(--sys-muted)] line-through">{show(value.from)}</span>
+                      <ArrowLeft className="w-3.5 h-3.5 text-[var(--sys-primary)] shrink-0" />
                     </>
                   )}
-                  <span className="font-semibold text-[#121926]">{show(value?.to)}</span>
+                  <span className="font-semibold text-[var(--sys-heading)]">{show(value?.to)}</span>
                 </li>
               ))}
             </ul>
 
             {tab === 'AWAITING_APPLY' && r.decisionNote && (
-              <p className="text-xs text-[#364152] bg-[#e6f9ee] rounded-lg px-3 py-2">
-                <b className="text-[#00994d]">القرار:</b> {r.decisionNote}
+              <p className="text-xs text-[var(--sys-foreground)] bg-[var(--sys-success-soft)] rounded-lg px-3 py-2">
+                <b className="text-[var(--sys-success)]">القرار:</b> {r.decisionNote}
               </p>
             )}
 
-            <p className="text-xs text-[#697586]">
+            <p className="text-xs text-[var(--sys-muted-foreground)]">
               {r.order.customer.fullName} · <span dir="ltr">{r.order.customer.phone}</span>
             </p>
 
-            <footer className="flex pt-2 border-t border-[#e3e8ef]">
+            <footer className="flex pt-2 border-t border-[var(--sys-border)]">
               {tab === 'PENDING' ? (
                 <button
                   onClick={() => setReviewing(r.id)}
-                  className="px-4 py-1.5 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium"
+                  className="px-4 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium"
                 >
                   مراجعة واتخاذ القرار
                 </button>
@@ -229,7 +229,7 @@ export function ChangeRequestsScreen() {
                 <button
                   onClick={() => void apply(r)}
                   disabled={applying === r.id}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-[8px] bg-[#00994d] text-white text-xs font-medium disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-[8px] bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                 >
                   {applying === r.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   طبّق التعديل على الطلب

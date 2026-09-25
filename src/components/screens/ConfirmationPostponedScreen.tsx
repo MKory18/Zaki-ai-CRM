@@ -36,11 +36,11 @@ export function ConfirmationPostponedScreen() {
   }, []);
 
   if (error) {
-    return <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>;
+    return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>;
   }
   if (!data) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -48,12 +48,12 @@ export function ConfirmationPostponedScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
-      <p className="text-sm text-[#697586]">
+      <p className="text-sm text-[var(--sys-muted-foreground)]">
         القابل للعمل عليه: المستحق خلال {data.leadDays} يوم أو المتأخر. الباقي للعرض فقط.
       </p>
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+          <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
             <tr>
               <th className="text-right font-medium px-4 py-2">الطلب</th>
               <th className="text-right font-medium px-4 py-2">العميل</th>
@@ -65,34 +65,34 @@ export function ConfirmationPostponedScreen() {
               <th className="text-right font-medium px-4 py-2">الموظف</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e3e8ef]">
+          <tbody className="divide-y divide-[var(--sys-border)]">
             {data.orders.map((o) => (
               <tr key={o.id} className={o.actionable ? '' : 'opacity-50'}>
-                <td className="px-4 py-2 font-medium text-[#121926]" dir="ltr">{o.orderNumber}</td>
-                <td className="px-4 py-2 text-[#364152]">
+                <td className="px-4 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</td>
+                <td className="px-4 py-2 text-[var(--sys-foreground)]">
                   {o.customer.fullName} · {o.customer.city}
                 </td>
-                <td className="px-4 py-2 text-[#364152]" dir="ltr">
+                <td className="px-4 py-2 text-[var(--sys-foreground)]" dir="ltr">
                   {o.dueAt ? new Date(o.dueAt).toLocaleDateString('ar-EG') : '—'}
                 </td>
                 <td className="px-4 py-2 tabular-nums">
                   {o.daysRemaining === null ? (
                     '—'
                   ) : o.daysRemaining < 0 ? (
-                    <span className="text-[#fb323f]">متأخر {Math.abs(o.daysRemaining)} يوم</span>
+                    <span className="text-[var(--sys-destructive)]">متأخر {Math.abs(o.daysRemaining)} يوم</span>
                   ) : (
                     `${o.daysRemaining} يوم`
                   )}
                 </td>
-                <td className="px-4 py-2 text-[#697586]">{o.postponePreferredTime ?? '—'}</td>
-                <td className="px-4 py-2 text-[#697586]">{o.followUpReason ?? '—'}</td>
-                <td className="px-4 py-2 tabular-nums text-[#364152]">{o.postponeCount}</td>
-                <td className="px-4 py-2 text-[#697586]">{o.claimer?.name ?? '—'}</td>
+                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{o.postponePreferredTime ?? '—'}</td>
+                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{o.followUpReason ?? '—'}</td>
+                <td className="px-4 py-2 tabular-nums text-[var(--sys-foreground)]">{o.postponeCount}</td>
+                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{o.claimer?.name ?? '—'}</td>
               </tr>
             ))}
             {data.orders.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-sm text-[#697586]">
+                <td colSpan={8} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">
                   لا توجد طلبات مؤجلة.
                 </td>
               </tr>

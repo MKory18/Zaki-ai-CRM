@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { User, Lock, Image as ImageIcon, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ScoreCard } from '@/components/performance/ScoreCard';
+import { ThemePicker } from '@/components/settings/ThemePicker';
 
 export function ProfileScreen() {
   const { currentUser, refreshUser } = useApp();
@@ -61,11 +62,11 @@ export function ProfileScreen() {
     <>
       <div className="space-y-6 max-w-3xl">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#121926] flex items-center space-x-2 rtl:space-x-reverse">
-            <User className="w-6 h-6 text-[#fb323f]" />
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2 rtl:space-x-reverse">
+            <User className="w-6 h-6 text-[var(--sys-destructive)]" />
             <span>الملف الشخصي</span>
           </h1>
-          <p className="text-xs text-[#697586] mt-1">
+          <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
             تحديث بياناتك الشخصية وكلمة المرور — الدور والصلاحيات يديرها المدير فقط
           </p>
         </div>
@@ -74,8 +75,8 @@ export function ProfileScreen() {
           <div
             className={`p-3 rounded-xl text-xs flex items-center space-x-2 rtl:space-x-reverse ${
               message.type === 'success'
-                ? 'bg-emerald-100 border-0 text-[#00c853]'
-                : 'bg-[#feecee] border border-[#f5c6cb] text-[#fb323f]'
+                ? 'bg-[var(--sys-success-soft)] border-0 text-[var(--sys-success)]'
+                : 'bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]'
             }`}
           >
             {message.type === 'success' ? (
@@ -90,6 +91,12 @@ export function ProfileScreen() {
         {/* Their own numbers, on their own page, without anybody having to
             grant them anything. A person who cannot see where they stand
             cannot be asked to improve it. */}
+        {/* How the system looks, on the page about them. It applies the
+            moment it is clicked — choosing a theme means looking at it. */}
+        <div className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+          <ThemePicker initial={currentUser?.systemTheme} />
+        </div>
+
         <ScoreCard />
 
         <form onSubmit={handleSave} className="space-y-6">
@@ -100,16 +107,16 @@ export function ProfileScreen() {
               subtitle="تُدار من قِبل مدير النظام — للقراءة فقط"
             />
             <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-[#9ca3af] block">البريد الإلكتروني</span>
-                <span className="font-bold text-[#121926]">{currentUser?.email}</span>
+              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+                <span className="text-[var(--sys-muted)] block">البريد الإلكتروني</span>
+                <span className="font-bold text-[var(--sys-heading)]">{currentUser?.email}</span>
               </div>
-              <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-[#9ca3af] block">الدور</span>
+              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+                <span className="text-[var(--sys-muted)] block">الدور</span>
                 <Badge variant="info">{currentUser?.role}</Badge>
               </div>
-              <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-[#9ca3af] block">حالة الحساب</span>
+              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+                <span className="text-[var(--sys-muted)] block">حالة الحساب</span>
                 <Badge variant={currentUser?.status === 'ACTIVE' ? 'success' : 'warning'}>
                   {currentUser?.status}
                 </Badge>
@@ -140,7 +147,7 @@ export function ProfileScreen() {
                 <img
                   src={avatar}
                   alt="معاينة الصورة"
-                  className="w-16 h-16 rounded-full object-cover border-2 border-[#f5c6cb]"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-[var(--sys-destructive-border)]"
                 />
               )}
             </CardContent>
@@ -173,15 +180,15 @@ export function ProfileScreen() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
-              <p className="text-[11px] text-[#697586] flex items-center space-x-1.5 rtl:space-x-reverse">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#fb323f]" />
+              <p className="text-[11px] text-[var(--sys-muted-foreground)] flex items-center space-x-1.5 rtl:space-x-reverse">
+                <ShieldCheck className="w-3.5 h-3.5 text-[var(--sys-destructive)]" />
                 <span>تغيير كلمة المرور يُنهي جميع الجلسات النشطة على حسابك.</span>
               </p>
             </CardContent>
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" loading={loading} className="bg-[#fb323f] hover:bg-[#fb323f]/85">
+            <Button type="submit" loading={loading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
               حفظ التغييرات
             </Button>
           </div>

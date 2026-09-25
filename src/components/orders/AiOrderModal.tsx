@@ -163,7 +163,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
     >
       <div className="space-y-5">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
+          <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -172,7 +172,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
         {/* Step 1: Paste text */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="block text-xs font-medium text-[var(--sys-foreground)]">
               1. الصق نص الطلب
             </label>
             <Button size="sm" variant="outline" onClick={handlePaste} className="text-[11px]">
@@ -197,7 +197,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
             className="font-mono text-xs leading-relaxed"
           />
           <div className="flex justify-end mt-3">
-            <Button onClick={handleParse} loading={parsing} className="bg-red-600 hover:bg-red-700">
+            <Button onClick={handleParse} loading={parsing} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]">
               <Wand2 className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
               تحليل الطلب بالذكاء الاصطناعي
             </Button>
@@ -206,19 +206,19 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
 
         {/* Step 2: Parsed preview (editable) */}
         {result && p && (
-          <div className="border border-red-200 bg-red-50/40 rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between border-b border-red-200 pb-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-red-800 flex items-center space-x-2 rtl:space-x-reverse">
-                <CheckCircle2 className="w-4 h-4 text-red-600" />
+          <div className="border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]/40 rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--sys-destructive-border)] pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-2 rtl:space-x-reverse">
+                <CheckCircle2 className="w-4 h-4 text-[var(--sys-destructive)]" />
                 <span>2. تأكيد البيانات المستخرجة (قابلة للتعديل)</span>
               </h4>
-              <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border">
+              <span className="text-[10px] font-mono text-[var(--sys-muted)] bg-[var(--sys-card)] px-2 py-0.5 rounded border">
                 {result.engine === 'ai' ? 'OpenRouter AI' : 'Smart Parser'}
               </span>
             </div>
 
             {result.existingCustomer && (
-              <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg">
+              <div className="p-2.5 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] text-xs rounded-lg">
                 ⚠️ هذا الرقم مسجل مسبقاً لعميل: <strong>{result.existingCustomer.fullName}</strong> (
                 {result.existingCustomer.totalOrders} طلب سابق) — سيتم ربط الطلب بنفس الملف.
               </div>
@@ -242,7 +242,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               ))}
             </Select>
             {p.governorate && !regionNames.includes(p.governorate) && (
-              <p className="text-[11px] text-[#c07f2a]">
+              <p className="text-[11px] text-[var(--sys-warning)]">
                 «{p.governorate}» ليست من محافظات {countryName ?? 'البلد الحالي'} — اختر المحافظة الصحيحة.
               </p>
             )}
@@ -294,8 +294,8 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               <div
                 className={`p-2.5 rounded-lg text-xs flex items-start space-x-2 rtl:space-x-reverse ${
                   result.productMatchConfident
-                    ? 'bg-red-100/70 text-red-800'
-                    : 'bg-amber-50 text-amber-800'
+                    ? 'bg-red-100/70 text-[var(--sys-destructive)]'
+                    : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0" />
@@ -311,7 +311,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               <Button variant="outline" onClick={() => setResult(null)}>
                 إلغاء
               </Button>
-              <Button onClick={handleConfirm} loading={saving} className="bg-red-600 hover:bg-red-700">
+              <Button onClick={handleConfirm} loading={saving} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]">
                 <CheckCircle2 className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 تسجيل الطلب (${finalPrice})
               </Button>

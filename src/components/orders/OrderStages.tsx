@@ -23,8 +23,8 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
   const withFacts = stages.filter((s) => s.status !== 'PENDING' && (s.who || s.facts.length > 0));
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-      <h4 className="text-xs font-black text-slate-700 mb-4">مسار الطلب</h4>
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs">
+      <h4 className="text-xs font-black text-[var(--sys-foreground)] mb-4">مسار الطلب</h4>
 
       {/* The steps. The connecting line sits behind them so it never pushes
           a label out of its place. */}
@@ -41,7 +41,7 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
               {i > 0 && (
                 <span
                   className={`absolute top-3.5 right-1/2 left-1/2 h-0.5 -z-0 ${
-                    reached ? 'bg-[#00a344]/40' : 'bg-[#e3e8ef]'
+                    reached ? 'bg-[var(--sys-success)]/40' : 'bg-[var(--sys-border)]'
                   }`}
                   style={{ right: '50%', left: '50%', width: '100%', transform: 'translateX(50%)' }}
                   aria-hidden="true"
@@ -52,12 +52,12 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
                 <span
                   className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold z-10 ${
                     current
-                      ? 'bg-[#b8256e] text-white ring-4 ring-[#b8256e]/15'
+                      ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] ring-4 ring-[var(--sys-primary)]/15'
                       : done
-                        ? 'bg-[#00a344] text-white'
+                        ? 'bg-[var(--sys-success)] text-[var(--sys-primary-foreground)]'
                         : skipped
-                          ? 'bg-white text-[#9aa4b2] border border-[#e3e8ef]'
-                          : 'bg-white text-[#c3c8d4] border border-dashed border-[#e3e8ef]'
+                          ? 'bg-[var(--sys-card)] text-[var(--sys-muted)] border border-[var(--sys-border)]'
+                          : 'bg-[var(--sys-card)] text-[var(--sys-border-strong)] border border-dashed border-[var(--sys-border)]'
                   }`}
                 >
                   {done ? <Check className="w-3.5 h-3.5" /> : skipped ? <Minus className="w-3.5 h-3.5" /> : i + 1}
@@ -65,16 +65,16 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
 
                 <span
                   className={`text-[11px] font-bold text-center leading-tight ${
-                    current ? 'text-[#b8256e]' : done ? 'text-[#121926]' : 'text-[#9aa4b2]'
+                    current ? 'text-[var(--sys-primary)]' : done ? 'text-[var(--sys-heading)]' : 'text-[var(--sys-muted)]'
                   }`}
                 >
                   {stage.title}
                 </span>
 
-                <span className="text-[10px] text-[#9aa4b2] text-center leading-tight">
+                <span className="text-[10px] text-[var(--sys-muted)] text-center leading-tight">
                   {stage.at ? arDateShort(stage.at) : skipped ? 'لم يمر بها' : '—'}
                   {stage.minutes !== null && (
-                    <span className={`block ${stage.ongoing ? 'text-[#c2410c]' : 'text-[#9aa4b2]'}`}>
+                    <span className={`block ${stage.ongoing ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-muted)]'}`}>
                       {humanMinutes(stage.minutes)}
                     </span>
                   )}
@@ -87,29 +87,29 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
 
       {/* What happened, on lines wide enough to hold it. */}
       {withFacts.length > 0 && (
-        <div className="mt-4 pt-3 border-t border-[#e3e8ef] space-y-1.5">
+        <div className="mt-4 pt-3 border-t border-[var(--sys-border)] space-y-1.5">
           {withFacts.map((stage) => (
-            <p key={stage.key} className="text-[11px] text-[#697586] flex flex-wrap gap-x-1.5">
+            <p key={stage.key} className="text-[11px] text-[var(--sys-muted-foreground)] flex flex-wrap gap-x-1.5">
               <span
                 className={`font-bold shrink-0 ${
-                  stage.status === 'CURRENT' ? 'text-[#b8256e]' : 'text-[#364152]'
+                  stage.status === 'CURRENT' ? 'text-[var(--sys-primary)]' : 'text-[var(--sys-foreground)]'
                 }`}
               >
                 {stage.title}
               </span>
-              {stage.who && <span className="text-[#364152]">· {stage.who}</span>}
+              {stage.who && <span className="text-[var(--sys-foreground)]">· {stage.who}</span>}
               {/* How long it took, or how long it is taking. The stage an
                   order is in now is the one worth watching while it is still
                   three days and not after it became a week. */}
               {stage.minutes !== null && (
-                <span className={stage.ongoing ? 'font-semibold text-[#c2410c]' : 'text-[#697586]'}>
+                <span className={stage.ongoing ? 'font-semibold text-[var(--sys-warning)]' : 'text-[var(--sys-muted-foreground)]'}>
                   · {stage.ongoing ? 'منذ ' : 'استغرقت '}{humanMinutes(stage.minutes)}
                 </span>
               )}
               {stage.facts.map((f) => (
                 <span key={f.label} className="min-w-0">
-                  <span className="text-[#9aa4b2]">· {f.label}: </span>
-                  <span className="text-[#364152]" dir="auto">{f.value}</span>
+                  <span className="text-[var(--sys-muted)]">· {f.label}: </span>
+                  <span className="text-[var(--sys-foreground)]" dir="auto">{f.value}</span>
                 </span>
               ))}
             </p>

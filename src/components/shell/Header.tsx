@@ -45,25 +45,25 @@ export function Header({
   };
 
   return (
-    <header className="sticky top-0 z-30 h-[72px] bg-white border-b border-[#e3e8ef] flex items-center gap-3 px-4 md:px-6">
-      <button onClick={onMenuClick} className="md:hidden p-2 rounded-[8px] hover:bg-[#f8fafc]" aria-label="القائمة">
-        <Menu className="w-5 h-5 text-[#364152]" />
+    <header className="sticky top-0 z-30 h-[72px] bg-[var(--sys-card)] border-b border-[var(--sys-border)] flex items-center gap-3 px-4 md:px-6">
+      <button onClick={onMenuClick} className="md:hidden p-2 rounded-[8px] hover:bg-[var(--sys-surface)]" aria-label="القائمة">
+        <Menu className="w-5 h-5 text-[var(--sys-foreground)]" />
       </button>
 
       {/* Country + store context, always visible: every request carries it */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef]">
-        <Store className="w-4 h-4 text-[#b8256e] shrink-0" />
+      <div className="flex items-center gap-2 px-3 py-2 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)]">
+        <Store className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
         <div className="leading-tight min-w-0">
-          <p className="text-xs font-semibold text-[#121926] truncate max-w-[160px]">{context.storeName}</p>
-          <p className="text-[10px] text-[#697586] truncate">
+          <p className="text-xs font-semibold text-[var(--sys-heading)] truncate max-w-[160px]">{context.storeName}</p>
+          <p className="text-[10px] text-[var(--sys-muted-foreground)] truncate">
             {context.countryName} · {context.currencyCode}
-            {context.storePaused && <span className="text-[#fb323f]"> · موقوف</span>}
+            {context.storePaused && <span className="text-[var(--sys-destructive)]"> · موقوف</span>}
           </p>
         </div>
         {context.canSwitch && (
           <Link
             href="/entry?change=1"
-            className="mr-1 p-1.5 rounded-[6px] text-[#697586] hover:text-[#b8256e] hover:bg-white"
+            className="mr-1 p-1.5 rounded-[6px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-card)]"
             title="تبديل البلد أو المتجر"
           >
             <Repeat className="w-4 h-4" />
@@ -78,12 +78,12 @@ export function Header({
           customer is not the same thing as a box only the owner has. */}
       {canSearch && (
       <form onSubmit={submitSearch} className="hidden md:flex flex-1 max-w-md items-center relative">
-        <Search className="w-4 h-4 text-[#9aa4b2] absolute right-3" />
+        <Search className="w-4 h-4 text-[var(--sys-muted)] absolute right-3" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="ابحث برقم الطلب أو اسم العميل أو الهاتف"
-          className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] text-sm focus:outline-none focus:border-[#b8256e]"
+          className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
         />
       </form>
       )}
@@ -105,14 +105,14 @@ export function Header({
         <NotificationBell />
 
         <div className="text-left leading-tight hidden sm:block">
-          <p className="text-xs font-semibold text-[#121926]">{userName}</p>
-          <p className="text-[10px] text-[#697586]">
+          <p className="text-xs font-semibold text-[var(--sys-heading)]">{userName}</p>
+          <p className="text-[10px] text-[var(--sys-muted-foreground)]">
             {ROLE_LABELS[userRole as keyof typeof ROLE_LABELS]?.ar ?? userRole}
           </p>
         </div>
         <button
           onClick={logout}
-          className="p-2 rounded-[8px] text-[#697586] hover:text-[#fb323f] hover:bg-[#feecee]"
+          className="p-2 rounded-[8px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
           title="تسجيل الخروج"
         >
           <LogOut className="w-5 h-5" />

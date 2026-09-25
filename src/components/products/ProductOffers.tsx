@@ -177,7 +177,7 @@ export function ProductOffers({
       <CardHeader
         title={
           <span className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-[#b8256e]" />
+            <Tag className="w-4 h-4 text-[var(--sys-primary)]" />
             <span>عروض المنتج</span>
           </span>
         }
@@ -214,21 +214,21 @@ export function ProductOffers({
         }
       />
       <CardContent className="space-y-3">
-        <p className="text-[11px] leading-relaxed text-[#697586]">
+        <p className="text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           هذه العروض هي المصدر الوحيد للأسعار — صفحات الهبوط والطلب السريع تقرأ منها،
           فتغيير السعر هنا يصل إلى كل مكان يبيع هذا المنتج.
         </p>
 
         {msg && (
-          <p className={`text-xs ${msg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{msg.text}</p>
+          <p className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>
         )}
 
         {offers === null ? (
-          <p className="flex items-center gap-2 text-xs text-[#697586]">
+          <p className="flex items-center gap-2 text-xs text-[var(--sys-muted-foreground)]">
             <Loader2 className="w-3.5 h-3.5 animate-spin" /> جارٍ التحميل…
           </p>
         ) : offers.length === 0 ? (
-          <p className="text-xs text-[#9aa4b2]">
+          <p className="text-xs text-[var(--sys-muted)]">
             لا عروض بعد — النموذج سيعرض سعر المنتج الأساسي فقط.
           </p>
         ) : (
@@ -241,10 +241,10 @@ export function ProductOffers({
                   key={o.id}
                   className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border px-3 py-2.5 ${
                     inactive
-                      ? 'border-[#e3e8ef] bg-[#f8fafc] opacity-60'
+                      ? 'border-[var(--sys-border)] bg-[var(--sys-surface)] opacity-60'
                       : o.isDefault
-                        ? 'border-[#b8256e] bg-[#fdf2f7]'
-                        : 'border-[#e3e8ef] bg-white'
+                        ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)]'
+                        : 'border-[var(--sys-border)] bg-[var(--sys-card)]'
                   }`}
                 >
                   {canManage && (
@@ -252,7 +252,7 @@ export function ProductOffers({
                       <button
                         onClick={() => move(i, -1)}
                         disabled={i === 0 || busy}
-                        className="cursor-pointer text-[#9aa4b2] hover:text-[#b8256e] disabled:opacity-25"
+                        className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
                         title="لأعلى"
                       >
                         <ChevronUp className="w-3 h-3" />
@@ -260,7 +260,7 @@ export function ProductOffers({
                       <button
                         onClick={() => move(i, 1)}
                         disabled={i === offers.length - 1 || busy}
-                        className="cursor-pointer text-[#9aa4b2] hover:text-[#b8256e] disabled:opacity-25"
+                        className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
                         title="لأسفل"
                       >
                         <ChevronDown className="w-3 h-3" />
@@ -269,24 +269,24 @@ export function ProductOffers({
                   )}
 
                   <div className="min-w-0 flex-1 basis-[55%]">
-                    <p className="flex items-center gap-1.5 text-sm font-bold text-[#121926]">
+                    <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
                       <span className="truncate">{o.name}</span>
-                      {o.isDefault && <Star className="w-3.5 h-3.5 shrink-0 fill-[#ffab00] text-[#ffab00]" />}
-                      {inactive && <EyeOff className="w-3.5 h-3.5 shrink-0 text-[#9aa4b2]" />}
+                      {o.isDefault && <Star className="w-3.5 h-3.5 shrink-0 fill-[var(--sys-warning)] text-[var(--sys-warning)]" />}
+                      {inactive && <EyeOff className="w-3.5 h-3.5 shrink-0 text-[var(--sys-muted)]" />}
                     </p>
                     {/* Every run of digits + Latin currency is isolated, or
                         Arabic bidi reorders "100 USD · 50 USD/قطعة" into
                         something that reads like a different price. */}
-                    <p className="text-[11px] text-[#697586]">
+                    <p className="text-[11px] text-[var(--sys-muted-foreground)]">
                       {o.quantity} قطعة
-                      {o.freeQuantity > 0 && <span className="text-[#b8256e]"> + {o.freeQuantity} مجاناً</span>}
+                      {o.freeQuantity > 0 && <span className="text-[var(--sys-primary)]"> + {o.freeQuantity} مجاناً</span>}
                       {' — '}
                       <bdi className="font-semibold tabular-nums">{money(o.sellingPrice)}</bdi>
                       {o.compareAtPrice && o.compareAtPrice > o.sellingPrice && (
-                        <> <bdi className="text-[#9aa4b2] line-through">{money(o.compareAtPrice)}</bdi></>
+                        <> <bdi className="text-[var(--sys-muted)] line-through">{money(o.compareAtPrice)}</bdi></>
                       )}
                       {units > 1 && (
-                        <span className="text-[#9aa4b2]">
+                        <span className="text-[var(--sys-muted)]">
                           {' · '}
                           <bdi>{money(o.sellingPrice / units)}</bdi> للقطعة
                         </span>
@@ -301,7 +301,7 @@ export function ProductOffers({
                           title="اجعله الافتراضي"
                           onClick={() => patch(o.id, { isDefault: true })}
                           disabled={busy}
-                          className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#eef2f6]"
+                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                         >
                           <Star className="w-4 h-4" />
                         </button>
@@ -310,7 +310,7 @@ export function ProductOffers({
                         title={inactive ? 'تفعيل' : 'إيقاف'}
                         onClick={() => patch(o.id, { status: inactive ? 'ACTIVE' : 'INACTIVE' })}
                         disabled={busy}
-                        className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#eef2f6]"
+                        className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                       >
                         <EyeOff className="w-4 h-4" />
                       </button>
@@ -318,7 +318,7 @@ export function ProductOffers({
                         title="تعديل"
                         onClick={() => setDraft({ ...o })}
                         disabled={busy}
-                        className="cursor-pointer rounded-lg p-1.5 text-[#364152] hover:bg-[#eef2f6]"
+                        className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)]"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
@@ -326,7 +326,7 @@ export function ProductOffers({
                         title="حذف"
                         onClick={() => remove(o.id)}
                         disabled={busy}
-                        className="cursor-pointer rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
+                        className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -339,7 +339,7 @@ export function ProductOffers({
         )}
 
         {draft && (
-          <div className="space-y-2 rounded-xl border border-[#b8256e]/30 bg-[#fdf2f7] p-3">
+          <div className="space-y-2 rounded-xl border border-[var(--sys-primary)]/30 bg-[var(--sys-primary-soft)] p-3">
             <Input
               label="اسم العرض"
               placeholder="مثال: ثلاث قطع + واحدة هدية"
@@ -375,24 +375,24 @@ export function ProductOffers({
                 }
               />
             </div>
-            <p className="text-[10px] leading-relaxed text-[#697586]">
+            <p className="text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
               «السعر» هو ما يدفعه الزبون فعلاً. «السعر قبل الخصم» للعرض فقط — يظهر مشطوباً
               ولا يدخل في أي حساب مال.
             </p>
             <div className="flex flex-wrap items-center gap-4">
-              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[#364152]">
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--sys-foreground)]">
                 <input
                   type="checkbox"
-                  className="accent-[#b8256e]"
+                  className="accent-[var(--sys-primary)]"
                   checked={!!draft.isDefault}
                   onChange={(e) => setDraft({ ...draft, isDefault: e.target.checked })}
                 />
                 العرض الافتراضي
               </label>
-              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[#364152]">
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--sys-foreground)]">
                 <input
                   type="checkbox"
-                  className="accent-[#b8256e]"
+                  className="accent-[var(--sys-primary)]"
                   checked={draft.deliveryIncluded !== false}
                   onChange={(e) => setDraft({ ...draft, deliveryIncluded: e.target.checked })}
                 />

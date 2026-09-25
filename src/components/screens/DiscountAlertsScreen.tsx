@@ -71,13 +71,13 @@ export function DiscountAlertsScreen() {
 
   return (
     <div className="max-w-6xl space-y-3">
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end">
         <label>
-          <span className="block text-xs font-medium text-[#364152] mb-1">المدة</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">المدة</span>
           <select
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
-            className="h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            className="h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value={7}>آخر ٧ أيام</option>
             <option value={30}>آخر ٣٠ يوماً</option>
@@ -85,11 +85,11 @@ export function DiscountAlertsScreen() {
           </select>
         </label>
         {data && (
-          <label className="flex items-center gap-2 h-10 text-sm text-[#364152]">
+          <label className="flex items-center gap-2 h-10 text-sm text-[var(--sys-foreground)]">
             <input type="checkbox" checked={onlyNotable} onChange={(e) => setOnlyNotable(e.target.checked)} />
             الخصومات الكبيرة فقط (فوق {data.notableThreshold}%)
             {data.totals.notable > 0 && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#feecee] border border-[#fecdd1] text-[#fb323f] tabular-nums">
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] tabular-nums">
                 {data.totals.notable}
               </span>
             )}
@@ -97,35 +97,35 @@ export function DiscountAlertsScreen() {
         )}
       </div>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
 
       {!data ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : data.totals.orders === 0 ? (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
-          <BadgePercent className="w-5 h-5 mx-auto mb-2 text-[#9aa4b2]" />
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+          <BadgePercent className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا خصومات في هذه المدة.
         </p>
       ) : (
         <>
-          <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-4">
-            <p className="text-sm text-[#364152] tabular-nums">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4">
+            <p className="text-sm text-[var(--sys-foreground)] tabular-nums">
               <b>{data.totals.orders}</b> طلباً بخصم، بإجمالي{' '}
-              <b className="text-[#fb323f]">{data.totals.discount} {data.currency}</b>
+              <b className="text-[var(--sys-destructive)]">{data.totals.discount} {data.currency}</b>
               {data.totals.notable > 0 && (
-                <span className="text-[#fb323f]">
+                <span className="text-[var(--sys-destructive)]">
                   {' '}— منها <b>{data.totals.notable}</b> فوق {data.notableThreshold}%
                 </span>
               )}
             </p>
           </div>
 
-          <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
-            <h2 className="text-sm font-medium text-[#121926] px-4 py-3 border-b border-[#e3e8ef]">حسب الموظف</h2>
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+            <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">حسب الموظف</h2>
             <table className="w-full text-sm">
-              <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+              <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
                 <tr>
                   <th className="text-right font-medium px-3 py-2">الموظف</th>
                   <th className="text-right font-medium px-3 py-2">عدد الطلبات</th>
@@ -133,17 +133,17 @@ export function DiscountAlertsScreen() {
                   <th className="text-right font-medium px-3 py-2">أكبر نسبة</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e3e8ef]">
+              <tbody className="divide-y divide-[var(--sys-border)]">
                 {data.byPerson.map((p) => (
                   <tr key={p.id ?? 'unknown'}>
-                    <td className="px-3 py-2 text-[#121926]">{p.name}</td>
-                    <td className="px-3 py-2 tabular-nums text-[#364152]">{p.orders}</td>
-                    <td className="px-3 py-2 tabular-nums text-[#fb323f] font-medium">
+                    <td className="px-3 py-2 text-[var(--sys-heading)]">{p.name}</td>
+                    <td className="px-3 py-2 tabular-nums text-[var(--sys-foreground)]">{p.orders}</td>
+                    <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)] font-medium">
                       {p.total} {data.currency}
                     </td>
                     <td
                       className={`px-3 py-2 tabular-nums ${
-                        p.biggestShare >= data.notableThreshold ? 'text-[#fb323f] font-semibold' : 'text-[#697586]'
+                        p.biggestShare >= data.notableThreshold ? 'text-[var(--sys-destructive)] font-semibold' : 'text-[var(--sys-muted-foreground)]'
                       }`}
                     >
                       {p.biggestShare}%
@@ -154,12 +154,12 @@ export function DiscountAlertsScreen() {
             </table>
           </div>
 
-          <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
-            <h2 className="text-sm font-medium text-[#121926] px-4 py-3 border-b border-[#e3e8ef]">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+            <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">
               الطلبات ({rows.length})
             </h2>
             <table className="w-full text-sm">
-              <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+              <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
                 <tr>
                   <th className="text-right font-medium px-3 py-2">الطلب</th>
                   <th className="text-right font-medium px-3 py-2">العميل</th>
@@ -170,25 +170,25 @@ export function DiscountAlertsScreen() {
                   <th className="text-right font-medium px-3 py-2">التاريخ</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e3e8ef]">
+              <tbody className="divide-y divide-[var(--sys-border)]">
                 {rows.map((r) => (
-                  <tr key={r.id} className={r.notable ? 'bg-[#feecee]/40' : undefined}>
+                  <tr key={r.id} className={r.notable ? 'bg-[var(--sys-destructive-soft)]/40' : undefined}>
                     <td className="px-3 py-2">
-                      <a href={`/orders?highlight=${r.id}`} className="text-[#b8256e] hover:underline" dir="ltr">
+                      <a href={`/orders?highlight=${r.id}`} className="text-[var(--sys-primary)] hover:underline" dir="ltr">
                         {r.merchantRef ?? r.orderNumber}
                       </a>
                     </td>
-                    <td className="px-3 py-2 text-[#364152]">{r.customerName ?? '—'}</td>
-                    <td className="px-3 py-2 tabular-nums text-[#fb323f] font-medium">
+                    <td className="px-3 py-2 text-[var(--sys-foreground)]">{r.customerName ?? '—'}</td>
+                    <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)] font-medium">
                       {r.discount} {r.currency}
                     </td>
-                    <td className={`px-3 py-2 tabular-nums ${r.notable ? 'text-[#fb323f] font-semibold' : 'text-[#697586]'}`}>
+                    <td className={`px-3 py-2 tabular-nums ${r.notable ? 'text-[var(--sys-destructive)] font-semibold' : 'text-[var(--sys-muted-foreground)]'}`}>
                       {r.notable && <AlertTriangle className="w-3 h-3 inline ml-1 align-[-1px]" />}
                       {r.share}%
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-[#364152]">{r.total}</td>
-                    <td className="px-3 py-2 text-[#697586]">{r.byName ?? '—'}</td>
-                    <td className="px-3 py-2 text-xs text-[#697586] whitespace-nowrap">
+                    <td className="px-3 py-2 tabular-nums text-[var(--sys-foreground)]">{r.total}</td>
+                    <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{r.byName ?? '—'}</td>
+                    <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
                       {new Date(r.createdAt).toLocaleDateString('ar', { dateStyle: 'short' })}
                     </td>
                   </tr>

@@ -113,7 +113,7 @@ export function AiSettingsScreen() {
 
   if (!settings) {
     return (
-      <div className="flex h-40 items-center justify-center text-[#697586]">
+      <div className="flex h-40 items-center justify-center text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" />
       </div>
     );
@@ -124,10 +124,10 @@ export function AiSettingsScreen() {
   return (
     <div className="max-w-3xl space-y-4" dir="rtl">
       <div>
-        <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-          <Bot className="h-5 w-5 text-[#b8256e]" /> الذكاء الاصطناعي والنصوص
+        <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+          <Bot className="h-5 w-5 text-[var(--sys-primary)]" /> الذكاء الاصطناعي والنصوص
         </h1>
-        <p className="mt-0.5 text-xs text-[#697586]">
+        <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
           أي نموذج تستعمل، وبأي كلمات يخاطبه النظام.
         </p>
       </div>
@@ -146,7 +146,7 @@ export function AiSettingsScreen() {
             type="button"
             onClick={() => setTab(value)}
             className={`h-9 flex-1 rounded-[8px] border text-xs font-medium ${
-              tab === value ? 'border-[#b8256e] bg-[#fdf2f8] text-[#b8256e]' : 'border-[#e3e8ef] text-[#364152]'
+              tab === value ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] text-[var(--sys-foreground)]'
             }`}
           >
             {label}
@@ -162,11 +162,11 @@ export function AiSettingsScreen() {
       )}
 
       {/* ── the vendor ── */}
-      <section className={`rounded-xl border border-[#e3e8ef] bg-white p-4 ${tab === 'provider' ? '' : 'hidden'}`}>
-        <h2 className="mb-3 text-sm font-bold text-[#121926]">المزوّد والنموذج</h2>
+      <section className={`rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'provider' ? '' : 'hidden'}`}>
+        <h2 className="mb-3 text-sm font-bold text-[var(--sys-heading)]">المزوّد والنموذج</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-[11px] font-semibold text-[#364152]">المزوّد</label>
+            <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">المزوّد</label>
             <select
               value={settings.provider}
               onChange={(e) => {
@@ -179,7 +179,7 @@ export function AiSettingsScreen() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold text-[#364152]">النموذج</label>
+            <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">النموذج</label>
             <input
               value={settings.model}
               onChange={(e) => setSettings({ ...settings, model: e.target.value })}
@@ -190,7 +190,7 @@ export function AiSettingsScreen() {
         </div>
 
         <div className="mt-3">
-          <label className="mb-1 flex items-center gap-1 text-[11px] font-semibold text-[#364152]">
+          <label className="mb-1 flex items-center gap-1 text-[11px] font-semibold text-[var(--sys-foreground)]">
             <KeyRound className="h-3 w-3" /> مفتاح الوصول
           </label>
           <input
@@ -202,7 +202,7 @@ export function AiSettingsScreen() {
             dir="ltr"
             autoComplete="off"
           />
-          <p className="mt-1 text-[10px] leading-relaxed text-[#9aa4b2]">
+          <p className="mt-1 text-[10px] leading-relaxed text-[var(--sys-muted)]">
             {provider?.keyHelp}
             {' — '}
             المفتاح يُشفَّر ولا يُعرَض بعدها أبداً، ولا يُكتب في سجل التدقيق.
@@ -212,27 +212,27 @@ export function AiSettingsScreen() {
         {/* A key is pasted and saved, and nothing says whether it works —
             the assistant just quietly stops being an assistant. This asks
             the provider one cheap question and repeats what came back. */}
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#e3e8ef] pt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--sys-border)] pt-3">
           <button
             type="button"
             onClick={() => void testConnection()}
             disabled={testing || !settings.hasKey}
-            className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[#e3e8ef] px-3 text-[11px] font-semibold text-[#364152] hover:border-[#b8256e] disabled:opacity-50"
+            className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[var(--sys-border)] px-3 text-[11px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
           >
             {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plug className="h-3.5 w-3.5" />}
             اختبار الاتصال
           </button>
-          {!settings.hasKey && <span className="text-[11px] text-[#9aa4b2]">احفظ المفتاح أولاً.</span>}
+          {!settings.hasKey && <span className="text-[11px] text-[var(--sys-muted)]">احفظ المفتاح أولاً.</span>}
           {test && (
-            <span className={`text-[11px] ${test.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>{test.text}</span>
+            <span className={`text-[11px] ${test.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{test.text}</span>
           )}
         </div>
       </section>
 
       {/* ── the words ── */}
-      <section className={`rounded-xl border border-[#e3e8ef] bg-white p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
-        <h2 className="text-sm font-bold text-[#121926]">النصوص</h2>
-        <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-[#697586]">
+      <section className={`rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
+        <h2 className="text-sm font-bold text-[var(--sys-heading)]">النصوص</h2>
+        <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           كل وظيفة ونصّها. اترك الحقل فارغاً ليعود النص الأصلي — لا يُحفَظ إلا ما غيّرته أنت،
           فتبقى الوظائف التي لم تلمسها على أحدث صياغة.
         </p>
@@ -244,7 +244,7 @@ export function AiSettingsScreen() {
             const isOpen = open === job.key;
             const missing = overridden ? missingSlots(job.key, value) : [];
             return (
-              <div key={job.key} className="rounded-lg border border-[#e3e8ef]">
+              <div key={job.key} className="rounded-lg border border-[var(--sys-border)]">
                 <button
                   type="button"
                   onClick={() => setOpen(isOpen ? null : job.key)}
@@ -252,27 +252,27 @@ export function AiSettingsScreen() {
                 >
                   <span className="min-w-0">
                     <span className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold text-[#364152]">{job.label}</span>
+                      <span className="text-xs font-semibold text-[var(--sys-foreground)]">{job.label}</span>
                       {overridden && (
-                        <span className="rounded bg-[#fdf2f7] px-1.5 py-0.5 text-[9px] font-semibold text-[#b8256e]">
+                        <span className="rounded bg-[var(--sys-primary-soft)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-primary)]">
                           معدّل
                         </span>
                       )}
                     </span>
-                    <span className="mt-0.5 block text-[10px] text-[#9aa4b2]">{job.where}</span>
+                    <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">{job.where}</span>
                   </span>
-                  <ChevronDown className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9aa4b2] transition ${isOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--sys-muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isOpen && (
-                  <div className="border-t border-[#f1f3f6] p-3">
-                    <p className="mb-2 text-[10px] leading-relaxed text-[#697586]">{job.note}</p>
+                  <div className="border-t border-[var(--sys-surface-strong)] p-3">
+                    <p className="mb-2 text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">{job.note}</p>
 
                     {job.slots.length > 0 && (
-                      <p className="mb-2 text-[10px] text-[#697586]">
+                      <p className="mb-2 text-[10px] text-[var(--sys-muted-foreground)]">
                         يستبدل النظام:{' '}
                         {job.slots.map((s) => (
-                          <code key={s} className="mx-0.5 rounded bg-[#f1f3f6] px-1 font-mono text-[9px]">{s}</code>
+                          <code key={s} className="mx-0.5 rounded bg-[var(--sys-surface-strong)] px-1 font-mono text-[9px]">{s}</code>
                         ))}
                       </p>
                     )}
@@ -282,16 +282,16 @@ export function AiSettingsScreen() {
                       onChange={(e) => setDrafts({ ...drafts, [job.key]: e.target.value.slice(0, MAX_PROMPT) })}
                       rows={8}
                       placeholder={job.default || 'لا نصّ افتراضي لهذه الوظيفة — اكتب تعليماتك.'}
-                      className="w-full rounded-lg border border-[#e3e8ef] p-2 font-mono text-[11px] leading-relaxed text-[#121926] outline-none focus:border-[#b8256e]"
+                      className="w-full rounded-lg border border-[var(--sys-border)] p-2 font-mono text-[11px] leading-relaxed text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
                     />
 
                     <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-[9px] text-[#9aa4b2]">{value.length} / {MAX_PROMPT}</span>
+                      <span className="text-[9px] text-[var(--sys-muted)]">{value.length} / {MAX_PROMPT}</span>
                       {overridden && (
                         <button
                           type="button"
                           onClick={() => setDrafts({ ...drafts, [job.key]: '' })}
-                          className="flex items-center gap-1 text-[10px] font-semibold text-[#697586] hover:text-[#b8256e]"
+                          className="flex items-center gap-1 text-[10px] font-semibold text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
                         >
                           <RotateCcw className="h-3 w-3" /> أعد النص الأصلي
                         </button>
@@ -302,29 +302,29 @@ export function AiSettingsScreen() {
                         a good change and a ruinous one look identical in the
                         box, and the wording that worked is otherwise gone. */}
                     {(settings.promptHistory?.[job.key]?.length ?? 0) > 0 && (
-                      <details className="mt-2 rounded-lg border border-[#e3e8ef]">
-                        <summary className="cursor-pointer px-2 py-1.5 text-[10px] font-semibold text-[#697586]">
+                      <details className="mt-2 rounded-lg border border-[var(--sys-border)]">
+                        <summary className="cursor-pointer px-2 py-1.5 text-[10px] font-semibold text-[var(--sys-muted-foreground)]">
                           النسخ السابقة ({settings.promptHistory![job.key].length})
                         </summary>
-                        <ul className="divide-y divide-[#f1f3f6] border-t border-[#f1f3f6]">
+                        <ul className="divide-y divide-[var(--sys-surface-strong)] border-t border-[var(--sys-surface-strong)]">
                           {settings.promptHistory![job.key].map((v, n) => (
                             <li key={n} className="px-2 py-2">
                               <div className="flex items-center justify-between gap-2">
-                                <span className="text-[9px] text-[#9aa4b2]">
+                                <span className="text-[9px] text-[var(--sys-muted)]">
                                   <span dir="ltr" className="tabular-nums">{v.at.slice(0, 16).replace('T', ' ')}</span>
                                   {v.by && <span> · {v.by}</span>}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => setDrafts({ ...drafts, [job.key]: v.text })}
-                                  className="flex items-center gap-1 text-[10px] font-semibold text-[#b8256e]"
+                                  className="flex items-center gap-1 text-[10px] font-semibold text-[var(--sys-primary)]"
                                 >
                                   <RotateCcw className="h-3 w-3" /> استرجع
                                 </button>
                               </div>
                               {/* Restoring puts it in the box; the save button
                                   is still the one that commits it. */}
-                              <p className="mt-1 line-clamp-3 whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-[#697586]">
+                              <p className="mt-1 line-clamp-3 whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
                                 {v.text || 'النص الأصلي (بلا تعديل)'}
                               </p>
                             </li>
@@ -338,7 +338,7 @@ export function AiSettingsScreen() {
                         summary prompt with no {context} summarises nothing
                         and fails silently otherwise. */}
                     {missing.length > 0 && (
-                      <p className="mt-1.5 flex items-start gap-1 rounded bg-amber-50 p-1.5 text-[10px] leading-relaxed text-amber-800">
+                      <p className="mt-1.5 flex items-start gap-1 rounded bg-[var(--sys-warning-soft)] p-1.5 text-[10px] leading-relaxed text-[var(--sys-warning)]">
                         <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
                         <span>
                           نصّك لا يحتوي {missing.join('، ')} — لن تصل الأرقام إلى النموذج، وسيجيب من
@@ -360,8 +360,8 @@ export function AiSettingsScreen() {
           holds which half of it. Its own save button, because these are
           stored apart and one form saving both would be a form where half
           of it silently did nothing. */}
-      <section className={`rounded-xl border border-[#e3e8ef] bg-white p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
-        <h2 className="mb-3 text-sm font-bold text-[#121926]">قوالب رسائل الزبائن</h2>
+      <section className={`rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
+        <h2 className="mb-3 text-sm font-bold text-[var(--sys-heading)]">قوالب رسائل الزبائن</h2>
         <MessageTemplatesCard />
       </section>
 
@@ -371,7 +371,7 @@ export function AiSettingsScreen() {
           احفظ الإعدادات والنصوص
         </Button>
         {msg && (
-          <span className={`text-xs font-medium ${msg.ok ? 'text-[#00994d]' : 'text-rose-600'}`}>{msg.text}</span>
+          <span className={`text-xs font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</span>
         )}
       </div>
     </div>
@@ -379,4 +379,4 @@ export function AiSettingsScreen() {
 }
 
 const INPUT =
-  'w-full rounded-lg border border-[#e3e8ef] bg-white px-3 py-2 text-sm text-[#121926] outline-none focus:border-[#b8256e]';
+  'w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]';

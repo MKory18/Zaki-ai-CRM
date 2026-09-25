@@ -67,83 +67,83 @@ export function InventoryReceivingScreen() {
   return (
     <div className="max-w-5xl space-y-3">
       <div>
-        <h1 className="text-2xl font-bold text-[#121926]">استلام بضاعة جاهزة</h1>
-        <p className="mt-1 text-xs leading-relaxed text-[#697586]">
+        <h1 className="text-2xl font-bold text-[var(--sys-heading)]">استلام بضاعة جاهزة</h1>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           الباب الذي تدخل منه بضاعة المنتجات التي تشتريها جاهزة، بسعر شرائها.
           ما تصنّعه بنفسك يدخل من «تشغيلات الإنتاج» ببنود كلفته — ولهذا لا يظهر هنا.
         </p>
       </div>
 
       {rows.length === 0 && (products?.length ?? 0) > 0 && !term && !onlyEmpty && (
-        <p className="rounded-[8px] border border-[#e3e8ef] bg-white p-6 text-center text-sm text-[#697586]">
+        <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
           لا منتجات جاهزة بعد — كل منتجاتك مصنّعة. يُحدَّد النوع عند إضافة المنتج،
           ويمكن تغييره من صفحة المنتج.
         </p>
       )}
 
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end">
         <label className="flex-1 min-w-[220px]">
-          <span className="block text-xs font-medium text-[#364152] mb-1">ابحث عن المنتج</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ابحث عن المنتج</span>
           <div className="relative">
-            <Search className="w-4 h-4 text-[#9aa4b2] absolute right-3 top-3" />
+            <Search className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               autoFocus
               placeholder="اسم المنتج"
-              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             />
           </div>
         </label>
-        <label className="flex items-center gap-2 h-10 text-sm text-[#364152]">
+        <label className="flex items-center gap-2 h-10 text-sm text-[var(--sys-foreground)]">
           <input type="checkbox" checked={onlyEmpty} onChange={(e) => setOnlyEmpty(e.target.checked)} />
           بدون رصيد فقط
           {emptyCount > 0 && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 tabular-nums">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] tabular-nums">
               {emptyCount}
             </span>
           )}
         </label>
       </div>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
 
       {!products ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
           لا منتجات مطابقة.
         </p>
       ) : (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-3 py-2">المنتج</th>
                 <th className="text-right font-medium px-3 py-2">الرصيد الحالي</th>
                 <th className="text-right font-medium px-3 py-2"> </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {rows.slice(0, 100).map((p) => (
                 <tr key={p.id}>
-                  <td className="px-3 py-2 text-[#121926]">{p.name}</td>
+                  <td className="px-3 py-2 text-[var(--sys-heading)]">{p.name}</td>
                   <td className="px-3 py-2">
                     <span
                       className={`tabular-nums px-2 py-0.5 rounded-[6px] border text-xs ${
                         p.remaining > 0
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                          : 'bg-amber-50 border-amber-200 text-amber-700'
+                          ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
+                          : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]'
                       }`}
                     >
                       {p.remaining}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-left">
-                    <button onClick={() => setActive(p)} className="text-xs text-[#b8256e] hover:underline inline-flex items-center gap-1">
+                    <button onClick={() => setActive(p)} className="text-xs text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1">
                       <PackagePlus className="w-3.5 h-3.5" /> استلام
                     </button>
                   </td>
@@ -152,7 +152,7 @@ export function InventoryReceivingScreen() {
             </tbody>
           </table>
           {rows.length > 100 && (
-            <p className="text-xs text-[#9aa4b2] px-3 py-2 border-t border-[#e3e8ef]">
+            <p className="text-xs text-[var(--sys-muted)] px-3 py-2 border-t border-[var(--sys-border)]">
               يعرض أول ١٠٠ من {rows.length} — ضيّق البحث.
             </p>
           )}
@@ -217,12 +217,12 @@ function ReceiveDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-sm text-[#364152] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3 tabular-nums">
+        <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3 tabular-nums">
           الرصيد الحالي: <b>{product.remaining}</b> وحدة
         </p>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">الكمية المستلمة</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الكمية المستلمة</span>
           <input
             type="number"
             min="1"
@@ -231,47 +231,47 @@ function ReceiveDialog({
             onChange={(e) => setQuantity(e.target.value)}
             required
             autoFocus
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">تكلفة الوحدة في هذه الدفعة (اختياري)</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">تكلفة الوحدة في هذه الدفعة (اختياري)</span>
           <input
             type="number"
             min="0"
             step="0.001"
             value={unitCost}
             onChange={(e) => setUnitCost(e.target.value)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
-          <span className="block text-[11px] text-[#9aa4b2] mt-1">
+          <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
             تُفتح دفعة جديدة بهذه التكلفة، فلا تتأثر تكلفة البضاعة القديمة.
           </span>
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">ملاحظة</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة</span>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="مثال: وصلت من المورّد"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الاستلام…' : 'استلام'}
           </button>

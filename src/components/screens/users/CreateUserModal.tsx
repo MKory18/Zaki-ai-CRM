@@ -171,7 +171,7 @@ export function CreateUserModal({
                 return (
                   <li
                     key={rule.key}
-                    className={`flex items-center gap-1 text-[11px] ${met ? 'text-[#00994d]' : 'text-[#9aa4b2]'}`}
+                    className={`flex items-center gap-1 text-[11px] ${met ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted)]'}`}
                   >
                     {met ? <Check className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5" />}
                     {rule.ar}
@@ -197,58 +197,58 @@ export function CreateUserModal({
             anybody any more: commission comes from the rules — per store,
             with effective dates — and accrues on delivery. Asking for a
             number here that changes nothing is worse than not asking. */}
-        <p className="rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] p-3 text-[11px] leading-relaxed text-[#697586]">
-            العمولة لا تُضبط من هنا. تُحسب من <span className="font-bold text-[#364152]">قواعد العمولة</span>
+        <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
+            العمولة لا تُضبط من هنا. تُحسب من <span className="font-bold text-[var(--sys-foreground)]">قواعد العمولة</span>
             {' '}لكل متجر، بتواريخ سريان، وتُستحق عند التسليم.
         </p>
 
-        <div className="rounded-[8px] border border-[#e3e8ef] p-3 space-y-3">
-          <p className="text-xs font-bold text-[#121926] flex items-center gap-1.5">
-            <Globe className="w-4 h-4 text-[#b8256e]" />
+        <div className="rounded-[8px] border border-[var(--sys-border)] p-3 space-y-3">
+          <p className="text-xs font-bold text-[var(--sys-heading)] flex items-center gap-1.5">
+            <Globe className="w-4 h-4 text-[var(--sys-primary)]" />
             الدول التي يعمل فيها
           </p>
           {countries.length === 0 ? (
-            <p className="text-[11px] text-[#9aa4b2]">لا توجد دول معرّفة بعد.</p>
+            <p className="text-[11px] text-[var(--sys-muted)]">لا توجد دول معرّفة بعد.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {countries.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 text-xs text-[#121926] cursor-pointer">
+                <label key={c.id} className="flex items-center gap-2 text-xs text-[var(--sys-heading)] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={countryIds.includes(c.id)}
                     onChange={() => toggleCountry(c.id)}
-                    className="w-4 h-4 accent-[#b8256e] cursor-pointer"
+                    className="w-4 h-4 accent-[var(--sys-primary)] cursor-pointer"
                   />
                   {c.name}
-                  <span className="text-[10px] text-[#9aa4b2] font-mono" dir="ltr">{c.code}</span>
+                  <span className="text-[10px] text-[var(--sys-muted)] font-mono" dir="ltr">{c.code}</span>
                 </label>
               ))}
             </div>
           )}
 
           {selectedCountries.length > 0 && (
-            <div className="space-y-2 pt-1 border-t border-[#e3e8ef]">
-              <p className="text-xs font-bold text-[#121926] flex items-center gap-1.5 pt-2">
-                <StoreIcon className="w-4 h-4 text-[#b8256e]" />
+            <div className="space-y-2 pt-1 border-t border-[var(--sys-border)]">
+              <p className="text-xs font-bold text-[var(--sys-heading)] flex items-center gap-1.5 pt-2">
+                <StoreIcon className="w-4 h-4 text-[var(--sys-primary)]" />
                 المتاجر
               </p>
-              <p className="text-[11px] text-[#9aa4b2]">
+              <p className="text-[11px] text-[var(--sys-muted)]">
                 اتركها فارغة ليصل إلى كل متاجر الدولة، أو اختر متاجر بعينها.
               </p>
               {selectedCountries.map((c) => (
-                <div key={c.id} className="rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] p-2.5">
-                  <p className="text-[11px] font-bold text-[#364152] mb-1.5">{c.name}</p>
+                <div key={c.id} className="rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] p-2.5">
+                  <p className="text-[11px] font-bold text-[var(--sys-foreground)] mb-1.5">{c.name}</p>
                   {c.stores.length === 0 ? (
-                    <p className="text-[11px] text-[#9aa4b2]">لا متاجر في هذه الدولة بعد.</p>
+                    <p className="text-[11px] text-[var(--sys-muted)]">لا متاجر في هذه الدولة بعد.</p>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                       {c.stores.map((s) => (
-                        <label key={s.id} className="flex items-center gap-1.5 text-[11px] text-[#121926] cursor-pointer">
+                        <label key={s.id} className="flex items-center gap-1.5 text-[11px] text-[var(--sys-heading)] cursor-pointer">
                           <input
                             type="checkbox"
                             checked={storeIds.includes(s.id)}
                             onChange={() => toggleStore(s.id)}
-                            className="w-3.5 h-3.5 accent-[#b8256e] cursor-pointer"
+                            className="w-3.5 h-3.5 accent-[var(--sys-primary)] cursor-pointer"
                           />
                           {s.name}
                         </label>
@@ -265,18 +265,18 @@ export function CreateUserModal({
         {/* Stuck to the bottom of the scrolling area: the form is long
             enough that the button used to sit below the fold, and a save
             you have to hunt for reads as a save that is not there. */}
-        <div className="sticky bottom-0 -mx-6 -mb-6 mt-2 flex flex-wrap items-center justify-end gap-2 border-t border-[#e3e8ef] bg-white px-6 py-3">
+        <div className="sticky bottom-0 -mx-6 -mb-6 mt-2 flex flex-wrap items-center justify-end gap-2 border-t border-[var(--sys-border)] bg-[var(--sys-card)] px-6 py-3">
           {/* The server's answer sits beside the button that asked. It used
               to render at the end of the scrolling body, under the list of
               stores — pressing "create" and seeing nothing happen is how
               «ما بنشء موظف» was reported. */}
           {error ? (
-            <span role="alert" className="me-auto text-[11px] font-medium text-[#fb323f]">
+            <span role="alert" className="me-auto text-[11px] font-medium text-[var(--sys-destructive)]">
               {error}
             </span>
           ) : (
             !ready && (
-              <span className="me-auto text-[11px] text-[#c07f2a]">
+              <span className="me-auto text-[11px] text-[var(--sys-warning)]">
                 ناقص: {missing.join('، ')}
               </span>
             )

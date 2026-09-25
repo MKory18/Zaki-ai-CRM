@@ -81,10 +81,10 @@ export function PreparationScreen() {
     void load();
   }, [load]);
 
-  if (error) return <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>;
+  if (error) return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>;
   if (!data) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -96,7 +96,7 @@ export function PreparationScreen() {
         <Kpi label="منتجات للتجهيز" value={data.totals.products} />
         <Kpi label="طلبات" value={data.totals.orders} />
         <Kpi label="نواقص" value={data.totals.shortages} danger={data.totals.shortages > 0} />
-        <span className="text-xs text-[#697586] self-center">
+        <span className="text-xs text-[var(--sys-muted-foreground)] self-center">
           {data.allowNegativeStock ? 'المخزون السالب مسموح مع تنبيه' : 'المخزون السالب ممنوع — النقص يمنع الشحن'}
         </span>
       </div>
@@ -104,33 +104,33 @@ export function PreparationScreen() {
       {data.groups.length > 0 && <PickingAssistant />}
 
       {data.groups.length === 0 && (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
           لا توجد طلبات مؤكدة بانتظار التجهيز.
         </p>
       )}
 
       {data.groups.map((g) => (
-        <section key={g.productId} className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+        <section key={g.productId} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
           <button
             onClick={() => setOpen((o) => ({ ...o, [g.productId]: !o[g.productId] }))}
-            className="w-full flex items-center gap-3 p-4 text-right hover:bg-[#f8fafc]"
+            className="w-full flex items-center gap-3 p-4 text-right hover:bg-[var(--sys-surface)]"
           >
-            <span className="w-9 h-9 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center">
-              <PackageCheck className="w-4 h-4 text-[#b8256e]" />
+            <span className="w-9 h-9 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
+              <PackageCheck className="w-4 h-4 text-[var(--sys-primary)]" />
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block text-sm font-semibold text-[#121926] truncate">{g.productName}</span>
-              <span className="block text-xs text-[#697586]">
+              <span className="block text-sm font-semibold text-[var(--sys-heading)] truncate">{g.productName}</span>
+              <span className="block text-xs text-[var(--sys-muted-foreground)]">
                 {g.orders} طلب · مطلوب {g.required} · متاح {g.available}
-                {g.shortage > 0 && <span className="text-[#fb323f]"> · نقص {g.shortage}</span>}
+                {g.shortage > 0 && <span className="text-[var(--sys-destructive)]"> · نقص {g.shortage}</span>}
               </span>
             </span>
-            {open[g.productId] ? <ChevronDown className="w-4 h-4 text-[#697586]" /> : <ChevronLeft className="w-4 h-4 text-[#697586]" />}
+            {open[g.productId] ? <ChevronDown className="w-4 h-4 text-[var(--sys-muted-foreground)]" /> : <ChevronLeft className="w-4 h-4 text-[var(--sys-muted-foreground)]" />}
           </button>
 
           {open[g.productId] && (
-            <table className="w-full text-sm border-t border-[#e3e8ef]">
-              <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <table className="w-full text-sm border-t border-[var(--sys-border)]">
+              <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
                 <tr>
                   <th className="text-right font-medium px-4 py-2">الطلب</th>
                   <th className="text-right font-medium px-4 py-2">العميل</th>
@@ -140,17 +140,17 @@ export function PreparationScreen() {
                   <th className="text-right font-medium px-4 py-2"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e3e8ef]">
+              <tbody className="divide-y divide-[var(--sys-border)]">
                 {g.lines.map((l) => (
                   <tr key={l.orderId}>
-                    <td className="px-4 py-2 font-medium text-[#121926]" dir="ltr">{l.orderNumber}</td>
-                    <td className="px-4 py-2 text-[#364152]">{l.customerName}</td>
-                    <td className="px-4 py-2 text-[#697586]">{l.regionName ?? '—'}</td>
+                    <td className="px-4 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{l.orderNumber}</td>
+                    <td className="px-4 py-2 text-[var(--sys-foreground)]">{l.customerName}</td>
+                    <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{l.regionName ?? '—'}</td>
                     <td className="px-4 py-2 tabular-nums">
                       {l.quantity}
                       {l.freeQuantity > 0 && ` (+${l.freeQuantity})`}
                     </td>
-                    <td className={`px-4 py-2 tabular-nums ${l.reservedQty >= l.quantity + l.freeQuantity ? 'text-[#00a344]' : 'text-[#fb323f]'}`}>
+                    <td className={`px-4 py-2 tabular-nums ${l.reservedQty >= l.quantity + l.freeQuantity ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
                       {l.reservedQty}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
@@ -159,7 +159,7 @@ export function PreparationScreen() {
                           type="button"
                           onClick={() => setOpenOrderId(l.orderId)}
                           title="افتح الطلب وعدّله — ما لم تكن بوليصته قد طُبعت"
-                          className="p-1 rounded-lg text-[#9aa4b2] hover:text-[#b8256e] hover:bg-[#fdf5fa]"
+                          className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -169,7 +169,7 @@ export function PreparationScreen() {
                           type="button"
                           onClick={() => setCancelling({ id: l.orderId, orderNumber: l.orderNumber })}
                           title="ألغِ الطلب — يعود المحجوز من بضاعته إلى المخزون"
-                          className="p-1 rounded-lg text-[#9aa4b2] hover:text-[#fb323f] hover:bg-[#feecee]"
+                          className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                         </button>
@@ -179,9 +179,9 @@ export function PreparationScreen() {
                           type="button"
                           onClick={() => setReviewing(l.pendingChangeRequestId!)}
                           title="طلب تعديل بانتظار البتّ — راجعه قبل التغليف"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-[11px] font-semibold text-[#c07f2a] hover:border-[#c07f2a]"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] text-[11px] font-semibold text-[var(--sys-warning)] hover:border-[var(--sys-warning)]"
                         >
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#c07f2a] animate-pulse" aria-hidden />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--sys-warning)] animate-pulse" aria-hidden />
                           طلب تعديل
                         </button>
                       )}
@@ -250,9 +250,9 @@ export function PreparationScreen() {
 
 function Kpi({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
   return (
-    <div className={`px-4 py-2 rounded-[8px] border ${danger ? 'bg-[#feecee] border-[#fecdd1]' : 'bg-white border-[#e3e8ef]'}`}>
-      <p className="text-xs text-[#697586]">{label}</p>
-      <p className={`text-lg font-bold tabular-nums ${danger ? 'text-[#fb323f]' : 'text-[#121926]'}`}>{value}</p>
+    <div className={`px-4 py-2 rounded-[8px] border ${danger ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' : 'bg-[var(--sys-card)] border-[var(--sys-border)]'}`}>
+      <p className="text-xs text-[var(--sys-muted-foreground)]">{label}</p>
+      <p className={`text-lg font-bold tabular-nums ${danger ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-heading)]'}`}>{value}</p>
     </div>
   );
 }

@@ -30,7 +30,7 @@ interface PageOption {
   isPublished: boolean;
 }
 
-const CARD = 'rounded-xl border border-[#e3e8ef] bg-white p-4';
+const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
 
 export function StoreMenusScreen() {
   const [menus, setMenus] = useState<Record<MenuKey, MenuItem[]> | null>(null);
@@ -82,7 +82,7 @@ export function StoreMenusScreen() {
 
   if (loading || !menus) {
     return (
-      <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
+      <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -94,35 +94,35 @@ export function StoreMenusScreen() {
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-            <ListTree className="h-5 w-5 text-[#b8256e]" />
+          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+            <ListTree className="h-5 w-5 text-[var(--sys-primary)]" />
             قوائم المتجر
           </h1>
-          <p className="mt-0.5 text-xs text-[#697586]">
+          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             أين يذهب الزبون من كل صفحة. الوجهة تُختار من صفحات متجرك، أو تُكتب لرابط خارجي.
           </p>
         </div>
         {msg && (
-          <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
+          <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
             {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
             {msg.text}
           </span>
         )}
       </header>
 
-      <nav className="flex flex-wrap gap-1 border-b border-[#e3e8ef]">
+      <nav className="flex flex-wrap gap-1 border-b border-[var(--sys-border)]">
         {MENU_KEYS.map((key) => (
           <button
             key={key}
             type="button"
             onClick={() => setOpen(key)}
             className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-semibold transition ${
-              open === key ? 'border-[#b8256e] text-[#b8256e]' : 'border-transparent text-[#697586] hover:text-[#364152]'
+              open === key ? 'border-[var(--sys-primary)] text-[var(--sys-primary)]' : 'border-transparent text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
             }`}
           >
             {MENU_AR[key].label}
             {(menus[key]?.length ?? 0) > 0 && (
-              <span className="rounded-full bg-[#eef2f6] px-1.5 text-[10px] text-[#697586]">
+              <span className="rounded-full bg-[var(--sys-surface-strong)] px-1.5 text-[10px] text-[var(--sys-muted-foreground)]">
                 {menus[key].length}
               </span>
             )}
@@ -131,11 +131,11 @@ export function StoreMenusScreen() {
       </nav>
 
       <div className={CARD}>
-        <p className="mb-3 text-[11px] text-[#9aa4b2]">{MENU_AR[open].hint}</p>
+        <p className="mb-3 text-[11px] text-[var(--sys-muted)]">{MENU_AR[open].hint}</p>
 
         <div className="space-y-2">
           {items.length === 0 && (
-            <p className="rounded-lg border border-dashed border-[#e3e8ef] p-4 text-center text-xs text-[#9aa4b2]">
+            <p className="rounded-lg border border-dashed border-[var(--sys-border)] p-4 text-center text-xs text-[var(--sys-muted)]">
               لا عناصر في هذه القائمة بعد.
             </p>
           )}
@@ -143,7 +143,7 @@ export function StoreMenusScreen() {
           {items.map((item, i) => {
             const matchedPage = pages.find((p) => storePageHref(storeSlug, p.slug) === item.href);
             return (
-              <div key={i} className="space-y-2 rounded-lg border border-[#e3e8ef] p-2.5">
+              <div key={i} className="space-y-2 rounded-lg border border-[var(--sys-border)] p-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Input
                     className="max-w-[200px]"
@@ -198,7 +198,7 @@ export function StoreMenusScreen() {
                         next[i] = { ...next[i], visible: !next[i].visible };
                         edit(open, next);
                       }}
-                      className={`rounded-lg p-1.5 hover:bg-[#eef2f6] ${item.visible ? 'text-[#00a651]' : 'text-[#9aa4b2]'}`}
+                      className={`rounded-lg p-1.5 hover:bg-[var(--sys-surface-strong)] ${item.visible ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted)]'}`}
                     >
                       {item.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                     </button>
@@ -210,7 +210,7 @@ export function StoreMenusScreen() {
                         [next[i - 1], next[i]] = [next[i], next[i - 1]];
                         edit(open, next);
                       }}
-                      className="rounded-lg p-1.5 text-[#697586] hover:bg-[#eef2f6] disabled:opacity-30"
+                      className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
                       aria-label="حرّكه لأعلى"
                     >
                       <ArrowUp className="h-4 w-4" />
@@ -223,7 +223,7 @@ export function StoreMenusScreen() {
                         [next[i + 1], next[i]] = [next[i], next[i + 1]];
                         edit(open, next);
                       }}
-                      className="rounded-lg p-1.5 text-[#697586] hover:bg-[#eef2f6] disabled:opacity-30"
+                      className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
                       aria-label="حرّكه لأسفل"
                     >
                       <ArrowDown className="h-4 w-4" />
@@ -231,7 +231,7 @@ export function StoreMenusScreen() {
                     <button
                       type="button"
                       onClick={() => edit(open, items.filter((_, j) => j !== i))}
-                      className="rounded-lg p-1.5 text-[#fb323f] hover:bg-[#fb323f]/10"
+                      className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10"
                       aria-label="حذف"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -239,10 +239,10 @@ export function StoreMenusScreen() {
                   </div>
                 </div>
                 {matchedPage && (
-                  <p className="text-[10.5px] text-[#9aa4b2]" dir="ltr">
+                  <p className="text-[10.5px] text-[var(--sys-muted)]" dir="ltr">
                     {item.href}
                     {!matchedPage.isPublished && (
-                      <span dir="rtl" className="ms-2 text-[#b45309]">
+                      <span dir="rtl" className="ms-2 text-[var(--sys-warning)]">
                         — الصفحة مسوّدة، الرابط معطّل حتى تُنشر
                       </span>
                     )}
@@ -267,7 +267,7 @@ export function StoreMenusScreen() {
             احفظ «{MENU_AR[open].label}»
           </Button>
         </div>
-        <p className="mt-2 text-[10.5px] leading-relaxed text-[#9aa4b2]">
+        <p className="mt-2 text-[10.5px] leading-relaxed text-[var(--sys-muted)]">
           الرابط الخارجي يبدأ بـ https. مسار داخلي يبدأ بشرطة مائلة واحدة — شرطتان تعني موقعاً آخر، وهي مرفوضة.
         </p>
       </div>

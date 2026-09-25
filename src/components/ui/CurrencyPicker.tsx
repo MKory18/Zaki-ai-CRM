@@ -31,9 +31,9 @@ export function currencyChoiceReady(c: CurrencyChoice): boolean {
   return /^[A-Za-z]{3}$/.test(c.code.trim()) && c.minorUnit !== null;
 }
 
-const LABEL = 'block text-xs font-medium text-[#364152]';
+const LABEL = 'block text-xs font-medium text-[var(--sys-foreground)]';
 const CONTROL =
-  'mt-1 block h-10 w-full rounded-[8px] border border-[#e3e8ef] bg-white px-3 text-sm focus:outline-none focus:border-[#b8256e]';
+  'mt-1 block h-10 w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
 export function CurrencyPicker({
   value,
@@ -63,7 +63,7 @@ export function CurrencyPicker({
   return (
     <div className={`grid grid-cols-[1fr_7rem] gap-2 ${className}`}>
       <label className={LABEL}>
-        العملة <span className="text-[#fb323f]">*</span>
+        العملة <span className="text-[var(--sys-destructive)]">*</span>
         <select required value={typing ? OTHER : code} onChange={(e) => pick(e.target.value)} className={CONTROL}>
           <option value="" disabled>
             اختر العملة
@@ -93,7 +93,7 @@ export function CurrencyPicker({
         )}
       </label>
       <label className={LABEL}>
-        الخانات العشرية <span className="text-[#fb323f]">*</span>
+        الخانات العشرية <span className="text-[var(--sys-destructive)]">*</span>
         <select
           required
           value={value.minorUnit ?? ''}
@@ -112,7 +112,7 @@ export function CurrencyPicker({
         </select>
       </label>
       {official !== null && value.minorUnit !== null && value.minorUnit !== official && (
-        <p className="col-span-2 text-[11px] text-[#c07f2a]">
+        <p className="col-span-2 text-[11px] text-[var(--sys-warning)]">
           الرسمي لـ {code} هو {official} — كل مبلغ في هذا البلد سيُقرَّب على ما تختاره.
         </p>
       )}

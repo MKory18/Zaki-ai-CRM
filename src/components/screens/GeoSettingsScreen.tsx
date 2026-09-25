@@ -101,7 +101,7 @@ export function GeoSettingsScreen() {
 
   if (!countries) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -111,19 +111,19 @@ export function GeoSettingsScreen() {
     <div className="space-y-4 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[#121926]">البلدان والمتاجر</h1>
-          <p className="text-sm text-[#697586] mt-1">المتجر يرث كل الإعدادات من بلده.</p>
+          <h1 className="text-lg font-bold text-[var(--sys-heading)]">البلدان والمتاجر</h1>
+          <p className="text-sm text-[var(--sys-muted-foreground)] mt-1">المتجر يرث كل الإعدادات من بلده.</p>
         </div>
         <button
           onClick={() => setAdding('country')}
-          className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium"
         >
           <Plus className="w-4 h-4" /> بلد جديد
         </button>
       </div>
 
       {error && (
-        <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>
       )}
 
       {adding === 'country' && (
@@ -137,30 +137,30 @@ export function GeoSettingsScreen() {
       )}
 
       {countries.map((c) => (
-        <section key={c.id} className="bg-white border border-[#e3e8ef] rounded-[8px]">
-          <header className="flex items-center gap-3 p-4 border-b border-[#e3e8ef]">
-            <span className="w-10 h-10 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center">
-              <Globe className="w-5 h-5 text-[#b8256e]" />
+        <section key={c.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px]">
+          <header className="flex items-center gap-3 p-4 border-b border-[var(--sys-border)]">
+            <span className="w-10 h-10 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
+              <Globe className="w-5 h-5 text-[var(--sys-primary)]" />
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[#121926]">
-                {c.name} <span className="text-xs text-[#9aa4b2]" dir="ltr">{c.code}</span>
+              <p className="text-sm font-semibold text-[var(--sys-heading)]">
+                {c.name} <span className="text-xs text-[var(--sys-muted)]" dir="ltr">{c.code}</span>
               </p>
-              <p className="text-xs text-[#697586]">
+              <p className="text-xs text-[var(--sys-muted-foreground)]">
                 {c.currencyCode} · {c.minorUnit} خانات · {c.stores.length} متجر · {c._count.regions} محافظة
-                {!c.isActive && <span className="text-[#fb323f]"> · غير مفعّل</span>}
+                {!c.isActive && <span className="text-[var(--sys-destructive)]"> · غير مفعّل</span>}
               </p>
             </div>
             <button
               onClick={() => setOpenCountry(openCountry === c.id ? null : c.id)}
-              className="text-xs text-[#697586] hover:text-[#b8256e]"
+              className="text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
             >
               {openCountry === c.id ? 'إخفاء' : 'الإعدادات'}
             </button>
           </header>
 
           {openCountry === c.id && (
-            <div className="p-4 grid gap-3 md:grid-cols-2 border-b border-[#e3e8ef] bg-[#f8fafc]">
+            <div className="p-4 grid gap-3 md:grid-cols-2 border-b border-[var(--sys-border)] bg-[var(--sys-surface)]">
               <CurrencyField
                 code={c.currencyCode}
                 minorUnit={c.minorUnit}
@@ -170,7 +170,7 @@ export function GeoSettingsScreen() {
               <TimeField label="بداية الدوام" value={c.workHoursStart} onSave={(v) => patchCountry(c.id, { workHoursStart: v })} />
               <TimeField label="نهاية الدوام" value={c.workHoursEnd} onSave={(v) => patchCountry(c.id, { workHoursEnd: v })} />
               <div className="md:col-span-2">
-                <p className="text-xs font-medium text-[#364152] mb-2">أيام العطلة</p>
+                <p className="text-xs font-medium text-[var(--sys-foreground)] mb-2">أيام العطلة</p>
                 <div className="flex flex-wrap gap-2">
                   {DAYS.map((d, i) => {
                     const on = c.weekendDays.includes(i);
@@ -183,7 +183,7 @@ export function GeoSettingsScreen() {
                           })
                         }
                         className={`px-3 py-1.5 rounded-[8px] text-xs border ${
-                          on ? 'bg-[#b8256e] text-white border-[#b8256e]' : 'bg-white text-[#364152] border-[#e3e8ef]'
+                          on ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]' : 'bg-[var(--sys-card)] text-[var(--sys-foreground)] border-[var(--sys-border)]'
                         }`}
                       >
                         {d}
@@ -194,7 +194,7 @@ export function GeoSettingsScreen() {
               </div>
               <TextField label="بادئة رقم الطلب" value={c.orderPrefix} dir="ltr" onSave={(v) => patchCountry(c.id, { orderPrefix: v.toUpperCase() })} />
               <TextField label="المنطقة الزمنية" value={c.timezone} dir="ltr" onSave={(v) => patchCountry(c.id, { timezone: v })} />
-              <label className="flex items-center gap-2 text-sm text-[#364152]">
+              <label className="flex items-center gap-2 text-sm text-[var(--sys-foreground)]">
                 <input
                   type="checkbox"
                   checked={c.allowNegativeStock}
@@ -202,7 +202,7 @@ export function GeoSettingsScreen() {
                 />
                 السماح بالمخزون السالب (يُطبّق عند إنشاء الشحنة)
               </label>
-              <label className="flex items-center gap-2 text-sm text-[#364152]">
+              <label className="flex items-center gap-2 text-sm text-[var(--sys-foreground)]">
                 <input type="checkbox" checked={c.isActive} onChange={(e) => patchCountry(c.id, { isActive: e.target.checked })} />
                 البلد مفعّل
               </label>
@@ -212,26 +212,26 @@ export function GeoSettingsScreen() {
             </div>
           )}
 
-          <ul className="divide-y divide-[#e3e8ef]">
+          <ul className="divide-y divide-[var(--sys-border)]">
             {c.stores.map((s) => (
               <React.Fragment key={s.id}>
               <li className="flex items-center gap-3 p-4">
-                <span className="w-8 h-8 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center overflow-hidden">
+                <span className="w-8 h-8 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center overflow-hidden">
                   {s.logo ? (
                     <img src={s.logo} alt="" className="h-full w-full object-contain" />
                   ) : (
-                    <Store className="w-4 h-4 text-[#697586]" />
+                    <Store className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
                   )}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#121926]">{s.name}</p>
-                  <p className="text-xs text-[#697586]" dir="ltr">
+                  <p className="text-sm font-medium text-[var(--sys-heading)]">{s.name}</p>
+                  <p className="text-xs text-[var(--sys-muted-foreground)]" dir="ltr">
                     /{s.slug} · {storeTypeLabel(s.type)}
                   </p>
                   {/* Read on every direct order of this store (an offer can
                       still override it), and until now it had no control at
                       all — every store priced as price + delivery. */}
-                  <label className="mt-1 flex items-center gap-1.5 text-[11px] text-[#364152]">
+                  <label className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--sys-foreground)]">
                     <input
                       type="checkbox"
                       checked={!!s.priceIncludesDelivery}
@@ -244,8 +244,8 @@ export function GeoSettingsScreen() {
                   onClick={() => setStorefrontFor((cur) => (cur === s.id ? null : s.id))}
                   className={`text-xs px-3 py-1.5 rounded-[8px] border ${
                     storefrontFor === s.id
-                      ? 'border-[#b8256e] text-[#b8256e] bg-[#fdf2f8]'
-                      : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]'
+                      ? 'border-[var(--sys-primary)] text-[var(--sys-primary)] bg-[var(--sys-primary-soft)]'
+                      : 'border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]'
                   }`}
                 >
                   الهوية والواجهة
@@ -254,8 +254,8 @@ export function GeoSettingsScreen() {
                   onClick={() => patchStore(s.id, { status: s.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' })}
                   className={`text-xs px-3 py-1.5 rounded-[8px] border ${
                     s.status === 'ACTIVE'
-                      ? 'border-[#e3e8ef] text-[#697586] hover:text-[#fb323f]'
-                      : 'border-[#fecdd1] bg-[#feecee] text-[#fb323f]'
+                      ? 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)]'
+                      : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
                   }`}
                 >
                   {s.status === 'ACTIVE' ? 'إيقاف مؤقت' : 'تفعيل'}
@@ -267,7 +267,7 @@ export function GeoSettingsScreen() {
                   storefront's theme, phone, domain — and now its logo —
                   could not be reached from anywhere. */}
               {storefrontFor === s.id && (
-                <li className="space-y-3 bg-[#f8fafc] p-4">
+                <li className="space-y-3 bg-[var(--sys-surface)] p-4">
                   <StoreIdentityCard store={s as never} onSaved={load} />
                   <StorefrontSettings store={s as never} onSaved={load} />
                 </li>
@@ -289,7 +289,7 @@ export function GeoSettingsScreen() {
               ) : (
                 <button
                   onClick={() => setAdding(c.id)}
-                  className="w-full flex items-center justify-center gap-2 p-2 rounded-[8px] border border-dashed border-[#e3e8ef] text-sm text-[#697586] hover:border-[#b8256e] hover:text-[#b8256e]"
+                  className="w-full flex items-center justify-center gap-2 p-2 rounded-[8px] border border-dashed border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                 >
                   <Plus className="w-4 h-4" /> متجر في {c.name}
                 </button>
@@ -338,25 +338,25 @@ function Regions({ countryId }: { countryId: string }) {
   };
 
   return (
-    <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-3">
-      <p className="text-xs font-medium text-[#364152] mb-2">المحافظات</p>
-      {error && <p className="text-xs text-[#fb323f] mb-2">{error}</p>}
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-3">
+      <p className="text-xs font-medium text-[var(--sys-foreground)] mb-2">المحافظات</p>
+      {error && <p className="text-xs text-[var(--sys-destructive)] mb-2">{error}</p>}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {(regions ?? []).map((r) => (
-          <span key={r.id} className="px-2.5 py-1 rounded-[6px] bg-[#f8fafc] border border-[#e3e8ef] text-xs text-[#364152]">
+          <span key={r.id} className="px-2.5 py-1 rounded-[6px] bg-[var(--sys-surface)] border border-[var(--sys-border)] text-xs text-[var(--sys-foreground)]">
             {r.name}
           </span>
         ))}
-        {regions?.length === 0 && <span className="text-xs text-[#9aa4b2]">لا توجد محافظات بعد.</span>}
+        {regions?.length === 0 && <span className="text-xs text-[var(--sys-muted)]">لا توجد محافظات بعد.</span>}
       </div>
       <form onSubmit={add} className="flex gap-2">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="اسم المحافظة"
-          className="flex-1 h-9 px-3 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]"
+          className="flex-1 h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
         />
-        <button type="submit" className="px-3 h-9 rounded-[8px] bg-[#121926] text-white text-xs">
+        <button type="submit" className="px-3 h-9 rounded-[8px] bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] text-xs">
           إضافة
         </button>
       </form>
@@ -398,8 +398,8 @@ function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => 
   };
 
   return (
-    <form onSubmit={submit} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 grid gap-3 md:grid-cols-4">
-      {error && <p className="md:col-span-4 text-sm text-[#fb323f]">{error}</p>}
+    <form onSubmit={submit} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 grid gap-3 md:grid-cols-4">
+      {error && <p className="md:col-span-4 text-sm text-[var(--sys-destructive)]">{error}</p>}
       <Input label="الاسم" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
       <Input label="الرمز (حرفان)" value={form.code} onChange={(v) => setForm({ ...form, code: v })} dir="ltr" />
 
@@ -409,11 +409,11 @@ function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => 
         <button
           type="submit"
           disabled={busy || !ready}
-          className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm disabled:opacity-60"
+          className="px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm disabled:opacity-60"
         >
           {busy ? 'جارٍ الحفظ…' : 'حفظ'}
         </button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]">
+        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-[8px] border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">
           إلغاء
         </button>
       </div>
@@ -457,35 +457,35 @@ function AddStore({
   };
 
   return (
-    <form onSubmit={submit} className="grid gap-3 md:grid-cols-3 p-3 bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px]">
-      {error && <p className="md:col-span-3 text-sm text-[#fb323f]">{error}</p>}
+    <form onSubmit={submit} className="grid gap-3 md:grid-cols-3 p-3 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px]">
+      {error && <p className="md:col-span-3 text-sm text-[var(--sys-destructive)]">{error}</p>}
       {/* What the store takes from its country, said at the moment it is
           created — not left to be discovered on the first order. The wallet
           is the one exception, and the line says where that is chosen. */}
-      <p className="md:col-span-3 rounded-lg bg-white border border-[#e3e8ef] px-3 py-2 text-xs text-[#364152]">
+      <p className="md:col-span-3 rounded-lg bg-[var(--sys-card)] border border-[var(--sys-border)] px-3 py-2 text-xs text-[var(--sys-foreground)]">
         العملة: <b>{currencyLabel(currencyCode)}</b> · {minorUnit} خانات عشرية — موروثة من البلد ولا تُغيَّر هنا.
-        <span className="block mt-0.5 text-[#697586]">
+        <span className="block mt-0.5 text-[var(--sys-muted-foreground)]">
           عملة المحفظة تُختار منفصلة عند إنشائها من المال ← المحافظ والحركات.
         </span>
       </p>
       <Input label="اسم المتجر" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
       <Input label="المعرّف" value={form.slug} onChange={(v) => setForm({ ...form, slug: v })} dir="ltr" />
       <label className="block">
-        <span className="block text-xs font-medium text-[#364152] mb-1">النوع</span>
+        <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">النوع</span>
         <select
           value={form.type}
           onChange={(e) => setForm({ ...form, type: e.target.value })}
-          className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm"
+          className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
         >
           <option value="MULTI_PRODUCT">متعدد المنتجات</option>
           <option value="SINGLE_PRODUCT">{STORE_TYPE_LABEL.SINGLE_PRODUCT}</option>
         </select>
       </label>
       <div className="md:col-span-3 flex gap-2">
-        <button type="submit" disabled={busy} className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm disabled:opacity-60">
+        <button type="submit" disabled={busy} className="px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm disabled:opacity-60">
           {busy ? 'جارٍ الحفظ…' : 'حفظ'}
         </button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]">
+        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-[8px] border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">
           إلغاء
         </button>
       </div>
@@ -506,13 +506,13 @@ function Input({
 }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-[#364152] mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         dir={dir}
         required
-        className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]"
+        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
       />
     </label>
   );
@@ -532,13 +532,13 @@ function TextField({
   const [v, setV] = useState(value);
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-[#364152] mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
       <input
         value={v}
         dir={dir}
         onChange={(e) => setV(e.target.value)}
         onBlur={() => v !== value && onSave(v)}
-        className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]"
+        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
       />
     </label>
   );
@@ -547,13 +547,13 @@ function TextField({
 function TimeField({ label, value, onSave }: { label: string; value: string; onSave: (v: string) => void }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-[#364152] mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
       <input
         type="time"
         defaultValue={value}
         onBlur={(e) => e.target.value !== value && onSave(e.target.value)}
         dir="ltr"
-        className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]"
+        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
       />
     </label>
   );
@@ -579,9 +579,9 @@ function CurrencyField({
 
   if (orders > 0) {
     return (
-      <div className="md:col-span-2 rounded-[8px] border border-[#e3e8ef] bg-white px-3 py-2 text-xs text-[#364152]">
+      <div className="md:col-span-2 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-xs text-[var(--sys-foreground)]">
         العملة: <b>{currencyLabel(code)}</b> · {minorUnit} خانات عشرية
-        <span className="ms-2 text-[10px] text-[#9aa4b2]">لا تتغيّر بعد أول طلب — على هذا البلد {orders} طلباً مسجّلاً بها.</span>
+        <span className="ms-2 text-[10px] text-[var(--sys-muted)]">لا تتغيّر بعد أول طلب — على هذا البلد {orders} طلباً مسجّلاً بها.</span>
       </div>
     );
   }
@@ -592,11 +592,11 @@ function CurrencyField({
         type="button"
         disabled={!changed || !currencyChoiceReady(draft)}
         onClick={() => onSave(draft.code.trim().toUpperCase(), draft.minorUnit as number)}
-        className="mt-5 h-10 rounded-[8px] bg-[#b8256e] px-3 text-xs font-bold text-white disabled:opacity-40"
+        className="mt-5 h-10 rounded-[8px] bg-[var(--sys-primary)] px-3 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
       >
         حفظ العملة
       </button>
-      <p className="w-full text-[10px] text-[#9aa4b2]">تُصحَّح حتى أول طلب في هذا البلد، ثم تُقفل.</p>
+      <p className="w-full text-[10px] text-[var(--sys-muted)]">تُصحَّح حتى أول طلب في هذا البلد، ثم تُقفل.</p>
     </div>
   );
 }

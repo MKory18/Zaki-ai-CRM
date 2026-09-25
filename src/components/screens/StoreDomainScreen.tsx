@@ -36,17 +36,17 @@ interface Payload {
   publicPath: string;
 }
 
-const CARD = 'rounded-xl border border-[#e3e8ef] bg-white p-4';
+const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-[10.5px] font-medium text-[#697586]">{label}</p>
+      <p className="mb-1 text-[10.5px] font-medium text-[var(--sys-muted-foreground)]">{label}</p>
       <div className="flex items-center gap-1">
         <code
           dir="ltr"
-          className="min-w-0 flex-1 truncate rounded-[6px] border border-[#e3e8ef] bg-[#f8fafc] px-2 py-1.5 text-[11px] text-[#121926]"
+          className="min-w-0 flex-1 truncate rounded-[6px] border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-1.5 text-[11px] text-[var(--sys-heading)]"
           title={value}
         >
           {value}
@@ -59,10 +59,10 @@ function CopyField({ label, value }: { label: string; value: string }) {
               setTimeout(() => setCopied(false), 1500);
             });
           }}
-          className="shrink-0 rounded-[6px] border border-[#e3e8ef] p-1.5 text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+          className="shrink-0 rounded-[6px] border border-[var(--sys-border)] p-1.5 text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
           aria-label={`انسخ ${label}`}
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-[#00a651]" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? <Check className="h-3.5 w-3.5 text-[var(--sys-success)]" /> : <Copy className="h-3.5 w-3.5" />}
         </button>
       </div>
     </div>
@@ -127,7 +127,7 @@ export function StoreDomainScreen() {
 
   if (loading || !data) {
     return (
-      <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
+      <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -140,30 +140,30 @@ export function StoreDomainScreen() {
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-            <Globe className="h-5 w-5 text-[#b8256e]" />
+          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+            <Globe className="h-5 w-5 text-[var(--sys-primary)]" />
             نطاق المتجر
           </h1>
-          <p className="mt-0.5 text-xs text-[#697586]">
+          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             عنوان المتجر الذي يراه الزبون. عنوانه الداخلي <code dir="ltr">{data.publicPath}</code> يبقى يعمل دائماً.
           </p>
         </div>
         {msg && (
-          <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
+          <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
             {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
             {msg.text}
           </span>
         )}
       </header>
 
-      <nav className="flex flex-wrap gap-1 border-b border-[#e3e8ef]">
+      <nav className="flex flex-wrap gap-1 border-b border-[var(--sys-border)]">
         {([['connect', 'ربط نطاق موجود'], ['buy', 'شراء نطاق']] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"
             onClick={() => setTab(key)}
             className={`-mb-px border-b-2 px-3 py-2 text-xs font-semibold transition ${
-              tab === key ? 'border-[#b8256e] text-[#b8256e]' : 'border-transparent text-[#697586] hover:text-[#364152]'
+              tab === key ? 'border-[var(--sys-primary)] text-[var(--sys-primary)]' : 'border-transparent text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
             }`}
           >
             {label}
@@ -173,13 +173,13 @@ export function StoreDomainScreen() {
 
       {tab === 'buy' ? (
         <div className={CARD}>
-          <p className="text-sm font-bold text-[#121926]">شراء نطاق من هنا غير متاح</p>
-          <p className="mt-1.5 text-xs leading-relaxed text-[#697586]">
+          <p className="text-sm font-bold text-[var(--sys-heading)]">شراء نطاق من هنا غير متاح</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             الشراء يحتاج حساباً ومفتاحاً عند مُسجِّل نطاقات (registrar)، وهذا ما لم يُربط بالنظام بعد.
             اشترِ النطاق من أي مُسجِّل تختاره، ثم اربطه من تبويب «ربط نطاق موجود» — الخطوات هي نفسها
             أيًّا كان المُسجِّل.
           </p>
-          <p className="mt-2 text-[10.5px] text-[#9aa4b2]">
+          <p className="mt-2 text-[10.5px] text-[var(--sys-muted)]">
             لا نعرض لك تعليمات مُسجِّل بعينه: القيم المطلوبة واحدة، ومكان إدخالها يختلف من لوحة إلى أخرى.
           </p>
           <Button className="mt-3" size="sm" variant="secondary" onClick={() => setTab('connect')}>
@@ -190,7 +190,7 @@ export function StoreDomainScreen() {
         <>
           <div className={CARD}>
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-[#121926]">النطاق</span>
+              <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">النطاق</span>
               <div className="flex flex-wrap items-center gap-2">
                 <Input
                   className="max-w-[320px]"
@@ -208,7 +208,7 @@ export function StoreDomainScreen() {
                     type="button"
                     disabled={busy}
                     onClick={() => void clear()}
-                    className="rounded-lg p-1.5 text-[#fb323f] hover:bg-[#fb323f]/10 disabled:opacity-40"
+                    className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10 disabled:opacity-40"
                     title="افصل النطاق"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -217,7 +217,7 @@ export function StoreDomainScreen() {
               </div>
             </label>
             {!data.storefrontEnabled && (
-              <p className="mt-2 text-[11px] text-[#b45309]">
+              <p className="mt-2 text-[11px] text-[var(--sys-warning)]">
                 واجهة هذا المتجر مطفأة — النطاق لن يعرض شيئاً حتى تُشغّلها من «البلدان والمتاجر».
               </p>
             )}
@@ -227,7 +227,7 @@ export function StoreDomainScreen() {
             <>
               <div className={CARD}>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-[#121926]">حالة التحقّق</p>
+                  <p className="text-sm font-bold text-[var(--sys-heading)]">حالة التحقّق</p>
                   <Button size="sm" variant="secondary" disabled={busy} onClick={() => void check()}>
                     {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                     تحقّق الآن
@@ -235,44 +235,44 @@ export function StoreDomainScreen() {
                 </div>
 
                 {!last ? (
-                  <p className="text-xs text-[#697586]">لم يُجرَ فحص بعد. أضف السجلّين أدناه ثم اضغط «تحقّق الآن».</p>
+                  <p className="text-xs text-[var(--sys-muted-foreground)]">لم يُجرَ فحص بعد. أضف السجلّين أدناه ثم اضغط «تحقّق الآن».</p>
                 ) : (
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
                           verified
-                            ? 'bg-[#00a651]/10 text-[#00a651]'
+                            ? 'bg-[var(--sys-success)]/10 text-[var(--sys-success)]'
                             : last.status === 'FAILED'
-                              ? 'bg-[#fb323f]/10 text-[#fb323f]'
-                              : 'bg-[#f59e0b]/15 text-[#b45309]'
+                              ? 'bg-[var(--sys-destructive)]/10 text-[var(--sys-destructive)]'
+                              : 'bg-[var(--sys-warning)]/15 text-[var(--sys-warning)]'
                         }`}
                       >
                         {verified ? 'متحقَّق' : last.status === 'FAILED' ? 'فشل' : 'بانتظار'}
                       </span>
-                      <span className="text-[11px] text-[#697586]">
+                      <span className="text-[11px] text-[var(--sys-muted-foreground)]">
                         آخر فحص: {new Date(last.checkedAt).toLocaleString('ar')}
                       </span>
                     </div>
-                    <p className="text-xs leading-relaxed text-[#364152]">{last.detail}</p>
+                    <p className="text-xs leading-relaxed text-[var(--sys-foreground)]">{last.detail}</p>
                     <ul className="space-y-1 text-[11px]">
-                      <li className={last.ownership ? 'text-[#00a651]' : 'text-[#697586]'}>
+                      <li className={last.ownership ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}>
                         {last.ownership ? '✓' : '○'} ملكية النطاق (سجل TXT)
                       </li>
-                      <li className={last.routing ? 'text-[#00a651]' : 'text-[#697586]'}>
+                      <li className={last.routing ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}>
                         {last.routing ? '✓' : '○'} توجيه النطاق إلينا (سجل {data.target?.kind ?? 'A/CNAME'})
                       </li>
-                      <li className="flex items-center gap-1.5 text-[#697586]">
+                      <li className="flex items-center gap-1.5 text-[var(--sys-muted-foreground)]">
                         {last.ssl === 'VALID' ? (
-                          <ShieldCheck className="h-3.5 w-3.5 text-[#00a651]" />
+                          <ShieldCheck className="h-3.5 w-3.5 text-[var(--sys-success)]" />
                         ) : last.ssl === 'INVALID' ? (
-                          <ShieldAlert className="h-3.5 w-3.5 text-[#fb323f]" />
+                          <ShieldAlert className="h-3.5 w-3.5 text-[var(--sys-destructive)]" />
                         ) : (
-                          <ShieldQuestion className="h-3.5 w-3.5 text-[#9aa4b2]" />
+                          <ShieldQuestion className="h-3.5 w-3.5 text-[var(--sys-muted)]" />
                         )}
                         شهادة SSL:{' '}
                         {last.ssl === 'VALID' ? 'صالحة' : last.ssl === 'INVALID' ? 'غير صالحة' : 'غير معروفة'}
-                        {last.sslDetail && <span className="text-[#9aa4b2]"> — {last.sslDetail}</span>}
+                        {last.sslDetail && <span className="text-[var(--sys-muted)]"> — {last.sslDetail}</span>}
                       </li>
                     </ul>
                   </div>
@@ -280,14 +280,14 @@ export function StoreDomainScreen() {
               </div>
 
               <div className={CARD}>
-                <p className="text-sm font-bold text-[#121926]">السجلّات المطلوبة</p>
-                <p className="mb-3 mt-1 text-[11px] leading-relaxed text-[#697586]">
+                <p className="text-sm font-bold text-[var(--sys-heading)]">السجلّات المطلوبة</p>
+                <p className="mb-3 mt-1 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
                   أضف سجل TXT، <strong>وواحداً</strong> من سجلّي التوجيه (أيّهما يقبله مُسجِّلك لهذا
                   النطاق)، في لوحة إدارة النطاق، ثم اضغط «تحقّق الآن». انتشار السجلّات قد يستغرق من
                   دقائق إلى ساعات.
                 </p>
                 {data.records.length === 0 || !data.target ? (
-                  <p className="rounded-lg border border-[#f59e0b]/40 bg-[#f59e0b]/10 p-3 text-[11px] leading-relaxed text-[#92400e]">
+                  <p className="rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3 text-[11px] leading-relaxed text-[var(--sys-warning)]">
                     لم يُضبط عنوان التطبيق على الخادم بعد (<code dir="ltr">APP_DOMAIN</code> أو{' '}
                     <code dir="ltr">APP_PUBLIC_IP</code>)، فلا يمكن إخبارك بقيمة التوجيه المطلوبة — لن نخترع لك
                     قيمة تُخرج متجرك عن الخدمة. اضبطها على الخادم وستظهر هنا.
@@ -295,7 +295,7 @@ export function StoreDomainScreen() {
                 ) : (
                   <div className="space-y-3">
                     {data.records.map((record, i) => (
-                      <div key={i} className="rounded-lg border border-[#e3e8ef] p-2.5">
+                      <div key={i} className="rounded-lg border border-[var(--sys-border)] p-2.5">
                         <div className="grid gap-2 sm:grid-cols-4">
                           <CopyField label="النوع" value={record.type} />
                           <CopyField label="الاسم" value={record.name} />
@@ -307,7 +307,7 @@ export function StoreDomainScreen() {
                             rather than leaving the seller to find out from a
                             registrar's refusal. */}
                         {record.note && (
-                          <p className="mt-1.5 text-[10.5px] text-[#9aa4b2]">{record.note}</p>
+                          <p className="mt-1.5 text-[10.5px] text-[var(--sys-muted)]">{record.note}</p>
                         )}
                       </div>
                     ))}

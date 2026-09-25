@@ -47,14 +47,14 @@ const RESULTS: Record<string, { ar: string; en: string }> = {
 };
 
 const WORKFLOW_STATE: Record<string, { ar: string; en: string; cls: string }> = {
-  NEW: { ar: 'جديد', en: 'New', cls: 'bg-blue-50 text-blue-700 border-blue-300' },
-  IN_PROGRESS: { ar: 'قيد المعالجة', en: 'In Progress', cls: 'bg-purple-50 text-purple-700 border-purple-300' },
-  NO_ANSWER: { ar: 'لا يجيب', en: 'No Answer', cls: 'bg-amber-50 text-amber-700 border-amber-300' },
-  FOLLOW_UP_REQUIRED: { ar: 'يتطلب متابعة', en: 'Follow-Up Required', cls: 'bg-orange-50 text-orange-700 border-orange-300' },
+  NEW: { ar: 'جديد', en: 'New', cls: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-info)]/50' },
+  IN_PROGRESS: { ar: 'قيد المعالجة', en: 'In Progress', cls: 'bg-[var(--sys-surface)] text-purple-700 border-purple-300' },
+  NO_ANSWER: { ar: 'لا يجيب', en: 'No Answer', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
+  FOLLOW_UP_REQUIRED: { ar: 'يتطلب متابعة', en: 'Follow-Up Required', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
   POSTPONED: { ar: 'مؤجل', en: 'Postponed', cls: 'bg-yellow-50 text-yellow-700 border-yellow-300' },
-  CONFIRMED: { ar: 'مؤكد ✓', en: 'Confirmed ✓', cls: 'bg-green-50 text-green-700 border-green-300' },
-  REJECTED: { ar: 'مرفوض', en: 'Rejected', cls: 'bg-red-50 text-red-700 border-red-300' },
-  CANCELLED: { ar: 'ملغى', en: 'Cancelled', cls: 'bg-slate-100 text-slate-600 border-slate-300' },
+  CONFIRMED: { ar: 'مؤكد ✓', en: 'Confirmed ✓', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
+  REJECTED: { ar: 'مرفوض', en: 'Rejected', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
+  CANCELLED: { ar: 'ملغى', en: 'Cancelled', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
 };
 
 const METHOD_LABELS: Record<string, { ar: string; en: string }> = {
@@ -197,21 +197,21 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="rounded-2xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-xs" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 flex items-center gap-2">
+        <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
           <PhoneCall className="w-4 h-4 text-indigo-600" />
           {ar ? 'تسجيل نتيجة الاتصال' : 'Record a call outcome'}
         </h4>
         <div className="flex items-center gap-2">
           {summary?.total > 0 && (
-            <span className="text-[11px] font-bold text-slate-600 bg-slate-100 rounded-lg px-2 py-1">
+            <span className="text-[11px] font-bold text-[var(--sys-muted-foreground)] bg-[var(--sys-surface-strong)] rounded-lg px-2 py-1">
               {ar ? `محاولات: ${summary.total}` : `Attempts: ${summary.total}`}
             </span>
           )}
           {order.nextFollowUpAt && order.followUpStatus !== 'COMPLETED' && order.followUpStatus !== 'CANCELLED' && (
-            <span className="text-[11px] font-bold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+            <span className="text-[11px] font-bold text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-orange-200 rounded-lg px-2 py-1 inline-flex items-center gap-1">
               <CalendarClock className="w-3 h-3" />
               {ar ? 'متابعة:' : 'Follow-up:'} {arDateShort(order.nextFollowUpAt)}
             </span>
@@ -228,49 +228,49 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'ANSWERED' })}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-info)]/50 text-[var(--sys-info)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <Phone className="w-3.5 h-3.5" />{ar ? '📞 العميل أجاب' : '📞 Answered'}
           </button>
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'NO_ANSWER' })}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <PhoneOff className="w-3.5 h-3.5" />{ar ? '☎️ لم يجب' : '☎️ No Answer'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('call_later'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-purple-300 text-purple-700 hover:bg-purple-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-purple-300 text-purple-700 hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <Clock className="w-3.5 h-3.5" />{ar ? '⏰ الاتصال لاحقاً' : '⏰ Call Later'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('followup'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-orange-300 text-orange-700 hover:bg-orange-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className="w-3.5 h-3.5" />{ar ? '🔄 متابعة' : '🔄 Follow Up'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('confirm'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-green-400 text-green-700 hover:bg-green-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-green-400 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <Check className="w-3.5 h-3.5" />{ar ? '✅ تأكيد الطلب' : '✅ Confirm Order'}
           </button>
           <button
             onClick={() => { setNote(''); setRejectionReason(''); setOpenForm('reject'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <XCircle className="w-3.5 h-3.5" />{ar ? '❌ العميل رفض' : '❌ Rejected'}
           </button>
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'WRONG_NUMBER' })}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <PhoneOff className="w-3.5 h-3.5" />{ar ? '🚫 رقم خاطئ' : '🚫 Wrong Number'}
           </button>
@@ -282,8 +282,8 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
         <div
           className={`mb-3 rounded-xl border p-2.5 text-xs flex items-center justify-between gap-2 ${
             feedback.type === 'success'
-              ? 'border-green-300 bg-green-50 text-green-800'
-              : 'border-rose-300 bg-rose-50 text-rose-800'
+              ? 'border-[var(--sys-success)]/60 bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
+              : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
           }`}
         >
           <span className="leading-relaxed">{feedback.text}</span>
@@ -296,7 +296,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
         <div className="space-y-3" dir={isRtl ? 'rtl' : 'ltr'}>
           {openForm === 'confirm' && (
             <>
-              <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-xl p-2.5">
+              <p className="text-xs text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/40 rounded-xl p-2.5">
                 {ar
                   ? 'سيتم تسجيل تأكيد العميل للطلب ونقله لمرحلة ما بعد التأكيد.'
                   : 'The order will be confirmed and prepared for the next operational stage.'}
@@ -324,7 +324,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
 
           {(openForm === 'followup' || openForm === 'call_later') && (
             <>
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+              <p className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-xl p-2.5">
                 {ar ? 'تحديد موعد المتابعة إلزامي لهذا الإجراء.' : 'A next follow-up date is required for this action.'}
               </p>
               <Input label={ar ? 'موعد المتابعة *' : 'Next Follow-Up *'} type="datetime-local" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
@@ -336,7 +336,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
             <Button size="sm" variant="outline" onClick={() => setOpenForm(null)}>
               {ar ? 'إلغاء' : 'Cancel'}
             </Button>
-            <Button size="sm" loading={actionLoading} onClick={handleQuickSubmit} disabled={formDisabled()} className="bg-red-600 hover:bg-red-700">
+            <Button size="sm" loading={actionLoading} onClick={handleQuickSubmit} disabled={formDisabled()} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]">
               {ar ? 'تأكيد' : 'Submit'}
             </Button>
           </div>

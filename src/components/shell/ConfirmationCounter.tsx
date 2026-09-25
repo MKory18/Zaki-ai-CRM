@@ -57,12 +57,12 @@ export function ConfirmationCounter() {
 
   const busy = counter.count > 0;
   const chip = `flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
-    busy ? 'border-[#f5d9e7] bg-[#fdf2f8] text-[#b8256e]' : 'border-[#e3e8ef] bg-white text-[#697586]'
+    busy ? 'border-[var(--sys-primary-soft)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] bg-[var(--sys-card)] text-[var(--sys-muted-foreground)]'
   }`;
 
   if (counter.kind === 'POOL') {
     return (
-      <Link href="/confirmation/queue" className={`${chip} hover:border-[#b8256e]`} title="طلبات تنتظر السحب">
+      <Link href="/confirmation/queue" className={`${chip} hover:border-[var(--sys-primary)]`} title="طلبات تنتظر السحب">
         <PhoneCall className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">بانتظار السحب</span>
         {counter.count}

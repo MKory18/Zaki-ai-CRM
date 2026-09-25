@@ -84,14 +84,14 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
   if (!status) return null;
 
   return (
-    <div className="space-y-2 rounded-lg border border-[#e3e8ef] bg-white p-3">
+    <div className="space-y-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-xs font-bold text-[#121926]">
-            <Webhook className="h-3.5 w-3.5 text-[#b8256e]" />
+          <p className="flex items-center gap-1.5 text-xs font-bold text-[var(--sys-heading)]">
+            <Webhook className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
             رابط استقبال الحالات
           </p>
-          <p className="mt-0.5 text-[11px] text-[#697586]">
+          <p className="mt-0.5 text-[11px] text-[var(--sys-muted-foreground)]">
             {!status.configured ? (
               <>لا رابط بعد — الحالات تصل بالاستطلاع كل دقيقتين.</>
             ) : status.lastSeenAt ? (
@@ -113,15 +113,15 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
 
       {/* Shown once. Reloading this screen will not bring it back. */}
       {url && (
-        <div className="space-y-1.5 rounded-lg border border-[#f2c9dd] bg-[#fdf5fa] p-2.5">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[#b8256e]">
+        <div className="space-y-1.5 rounded-lg border border-[var(--sys-primary-soft)] bg-[var(--sys-primary-soft)] p-2.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--sys-primary)]">
             <AlertTriangle className="h-3.5 w-3.5" />
             انسخه الآن — لن يُعرَض مرة أخرى.
           </p>
           <div className="flex items-center gap-1.5">
             <code
               dir="ltr"
-              className="flex-1 truncate rounded border border-[#e3e8ef] bg-white px-2 py-1.5 text-[10px] text-[#364152]"
+              className="flex-1 truncate rounded border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 py-1.5 text-[10px] text-[var(--sys-foreground)]"
             >
               {url}
             </code>
@@ -129,19 +129,19 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
               type="button"
               onClick={copy}
               title="انسخ"
-              className="shrink-0 cursor-pointer rounded-lg border border-[#e3e8ef] bg-white p-1.5 text-[#697586] hover:border-[#b8256e] hover:text-[#b8256e]"
+              className="shrink-0 cursor-pointer rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-1.5 text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
             >
-              {copied ? <Check className="h-3.5 w-3.5 text-[#00a344]" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? <Check className="h-3.5 w-3.5 text-[var(--sys-success)]" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
           </div>
-          <p className="text-[10px] text-[#697586]">
+          <p className="text-[10px] text-[var(--sys-muted-foreground)]">
             أرسله لشركة الشحن ليضيفوه عندهم. الرابط كلمة سرّ: من يملكه يستطيع إرسال
             حالات باسمهم — لا تنشره في مجموعة.
           </p>
         </div>
       )}
 
-      {error && <p className="text-[11px] text-[#fb323f]">{error}</p>}
+      {error && <p className="text-[11px] text-[var(--sys-destructive)]">{error}</p>}
     </div>
   );
 }

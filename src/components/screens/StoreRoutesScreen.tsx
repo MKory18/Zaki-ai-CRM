@@ -30,7 +30,7 @@ interface RedirectRow {
   suggested: boolean;
 }
 
-const CARD = 'rounded-xl border border-[#e3e8ef] bg-white p-3';
+const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3';
 
 export function StoreRoutesScreen() {
   const confirm = useConfirm();
@@ -104,7 +104,7 @@ export function StoreRoutesScreen() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
+      <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -117,17 +117,17 @@ export function StoreRoutesScreen() {
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-            <Signpost className="h-5 w-5 text-[#b8256e]" />
+          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+            <Signpost className="h-5 w-5 text-[var(--sys-primary)]" />
             المسارات
           </h1>
-          <p className="mt-0.5 text-xs text-[#697586]">
+          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             عنوان قديم ما زال يأتيك منه زوّار — إلى أين تُرسلهم.
           </p>
         </div>
         <div className="flex items-center gap-2">
           {msg && (
-            <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
+            <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
               {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
               {msg.text}
             </span>
@@ -140,20 +140,20 @@ export function StoreRoutesScreen() {
 
       {/* The decision that is costing money while it waits. */}
       {suggestions.length > 0 && (
-        <section className="space-y-2 rounded-xl border border-[#f59e0b]/40 bg-[#f59e0b]/10 p-3">
-          <p className="flex items-center gap-1.5 text-xs font-bold text-[#92400e]">
+        <section className="space-y-2 rounded-xl border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3">
+          <p className="flex items-center gap-1.5 text-xs font-bold text-[var(--sys-warning)]">
             <Sparkles className="h-3.5 w-3.5" />
             {suggestions.length === 1 ? 'اقتراح ينتظر قرارك' : `${suggestions.length} اقتراحات تنتظر قرارك`}
           </p>
-          <p className="text-[11px] leading-relaxed text-[#92400e]">
+          <p className="text-[11px] leading-relaxed text-[var(--sys-warning)]">
             غيّرتَ رابط صفحة، والإعلان ما زال يشير إلى القديم. كل نقرة عليه مدفوعة سلفاً وتصل الآن إلى
             «غير موجود». حوّلها، أو تجاهل الاقتراح إن كنت تريد للعنوان القديم أن يتوقف.
           </p>
           {suggestions.map((row) => (
-            <div key={row.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-white p-2.5">
-              <code className="text-[11px] text-[#697586]" dir="ltr">{row.from}</code>
-              <span className="text-[#9aa4b2]">←</span>
-              <code className="text-[11px] font-semibold text-[#121926]" dir="ltr">{row.to}</code>
+            <div key={row.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--sys-card)] p-2.5">
+              <code className="text-[11px] text-[var(--sys-muted-foreground)]" dir="ltr">{row.from}</code>
+              <span className="text-[var(--sys-muted)]">←</span>
+              <code className="text-[11px] font-semibold text-[var(--sys-heading)]" dir="ltr">{row.to}</code>
               <div className="ms-auto flex items-center gap-1.5">
                 <Button size="sm" disabled={busy} onClick={() => void accept(row)}>حوّلها</Button>
                 <Button variant="secondary" size="sm" disabled={busy} onClick={() => void dismiss(row)}>تجاهل</Button>
@@ -167,15 +167,15 @@ export function StoreRoutesScreen() {
         <div className={CARD}>
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-[#121926]">من (المسار القديم)</span>
+              <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">من (المسار القديم)</span>
               <Input dir="ltr" maxLength={200} value={adding.from} onChange={(e) => setAdding({ ...adding, from: e.target.value })} />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-[#121926]">إلى</span>
+              <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">إلى</span>
               <Input dir="ltr" maxLength={300} value={adding.to} onChange={(e) => setAdding({ ...adding, to: e.target.value })} />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-[#121926]">النوع</span>
+              <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">النوع</span>
               <Select
                 value={String(adding.kind)}
                 onChange={(e) => setAdding({ ...adding, kind: Number(e.target.value) === 301 ? 301 : 302 })}
@@ -185,7 +185,7 @@ export function StoreRoutesScreen() {
               </Select>
             </label>
           </div>
-          <p className="mt-2 text-[10.5px] leading-relaxed text-[#9aa4b2]">
+          <p className="mt-2 text-[10.5px] leading-relaxed text-[var(--sys-muted)]">
             ٣٠٢ مؤقّت ويمكن الرجوع عنه في أي وقت. ٣٠١ دائم، وتحفظه المتصفحات ومحرّكات البحث مدّة طويلة —
             فالخطأ فيه يصعب التراجع عنه على الأجهزة التي حفظته. ابدأ بـ٣٠٢ إن لم تكن واثقاً.
           </p>
@@ -196,10 +196,10 @@ export function StoreRoutesScreen() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-[#e3e8ef] bg-white">
+      <div className="overflow-hidden rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#f8fafc] text-xs text-[#697586]">
+            <tr className="bg-[var(--sys-surface)] text-xs text-[var(--sys-muted-foreground)]">
               <th className="px-3 py-2.5 text-start">من</th>
               <th className="px-3 py-2.5 text-start">إلى</th>
               <th className="px-3 py-2.5 text-start">النوع</th>
@@ -211,13 +211,13 @@ export function StoreRoutesScreen() {
           <tbody>
             {live.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-xs text-[#9aa4b2]">
+                <td colSpan={6} className="px-3 py-6 text-center text-xs text-[var(--sys-muted)]">
                   لا تحويلات بعد.
                 </td>
               </tr>
             )}
             {live.map((row) => (
-              <tr key={row.id} className="border-t border-[#e3e8ef]">
+              <tr key={row.id} className="border-t border-[var(--sys-border)]">
                 <td className="px-3 py-2.5" dir="ltr"><code className="text-[11px]">{row.from}</code></td>
                 <td className="px-3 py-2.5" dir="ltr"><code className="text-[11px]">{row.to}</code></td>
                 <td className="px-3 py-2.5 tabular-nums text-xs">{row.kind}</td>
@@ -226,7 +226,7 @@ export function StoreRoutesScreen() {
                 </td>
                 <td className="px-3 py-2.5">
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    row.isActive ? 'bg-[#00a651]/10 text-[#00a651]' : 'bg-[#eef2f6] text-[#697586]'
+                    row.isActive ? 'bg-[var(--sys-success)]/10 text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
                   }`}>
                     {row.isActive ? 'يعمل' : 'موقوف'}
                   </span>
@@ -238,7 +238,7 @@ export function StoreRoutesScreen() {
                       disabled={busy}
                       onClick={() => void toggle(row)}
                       title={row.isActive ? 'أوقفه' : 'شغّله'}
-                      className="rounded-lg p-1.5 text-[#364152] hover:bg-[#eef2f6] disabled:opacity-40"
+                      className="rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-40"
                     >
                       <Power className="h-4 w-4" />
                     </button>
@@ -247,7 +247,7 @@ export function StoreRoutesScreen() {
                       disabled={busy}
                       onClick={() => void dismiss(row)}
                       title="حذف"
-                      className="rounded-lg p-1.5 text-[#fb323f] hover:bg-[#fb323f]/10 disabled:opacity-40"
+                      className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10 disabled:opacity-40"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -258,7 +258,7 @@ export function StoreRoutesScreen() {
           </tbody>
         </table>
       </div>
-      <p className="text-[10.5px] text-[#9aa4b2]">
+      <p className="text-[10.5px] text-[var(--sys-muted)]">
         عدد الزيارات تقديري: يُحتسب بعد إرسال الزائر، فلا ينتظر أحد على عدّاد.
       </p>
     </div>

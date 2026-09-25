@@ -143,8 +143,8 @@ export function ManufacturingScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">تشغيلات الإنتاج</h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">تشغيلات الإنتاج</h1>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               الباب الذي تدخل منه بضاعة المنتجات التي تصنّعها — كل تشغيلة ببنود كلفتها،
               ومنها تُحسب تكلفة الوحدة التي يقرأها الربح.
             </p>
@@ -172,7 +172,7 @@ export function ManufacturingScreen() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
+                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">رقم التشغيلة</th>
                     <th className="px-6 py-3.5">المنتج</th>
@@ -185,33 +185,33 @@ export function ManufacturingScreen() {
                     <th className="px-6 py-3.5"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {batches.map((b) => (
-                    <tr key={b.id} className="hover:bg-[#f8fafc] transition-colors">
-                      <td className="px-6 py-3.5 font-bold font-mono text-[#fb323f]">
+                    <tr key={b.id} className="hover:bg-[var(--sys-surface)] transition-colors">
+                      <td className="px-6 py-3.5 font-bold font-mono text-[var(--sys-destructive)]">
                         {b.batchNumber}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-semibold text-[#121926] block">{b.product?.name}</span>
-                        <span className="text-[10px] text-[#9ca3af] font-mono">{b.product?.sku}</span>
+                        <span className="font-semibold text-[var(--sys-heading)] block">{b.product?.name}</span>
+                        <span className="text-[10px] text-[var(--sys-muted)] font-mono">{b.product?.sku}</span>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#121926]">
+                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
                         {b.quantityProduced} قطعة
                       </td>
-                      <td className="px-6 py-3.5 text-[#fb323f] font-medium">
+                      <td className="px-6 py-3.5 text-[var(--sys-destructive)] font-medium">
                         {b.quantitySold} قطعة
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-[#fb323f] bg-[#feecee] px-2 py-0.5 rounded-full">
+                        <span className="font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-full">
                           {b.quantityRemaining} قطعة
                         </span>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#121926]">
+                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
                         ${b.totalProductionCost.toFixed(2)}
                       </td>
                       <td className="px-6 py-3.5">
                         {b.costPerUnit > 0 ? (
-                          <span className="font-black text-[#121926] bg-[#f8fafc] px-2.5 py-1 rounded-md text-xs tabular-nums">
+                          <span className="font-black text-[var(--sys-heading)] bg-[var(--sys-surface)] px-2.5 py-1 rounded-md text-xs tabular-nums">
                             ${b.costPerUnit.toFixed(2)}
                           </span>
                         ) : (
@@ -219,20 +219,20 @@ export function ManufacturingScreen() {
                             type="button"
                             onClick={() => setCosting(b)}
                             title="هذه التشغيلة بلا كلفة، فالربح المحسوب منها إجمالي لا صافي"
-                            className="font-bold text-[#c07f2a] bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md text-xs hover:border-[#c07f2a]"
+                            className="font-bold text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 px-2.5 py-1 rounded-md text-xs hover:border-[var(--sys-warning)]"
                           >
                             بلا كلفة
                           </button>
                         )}
                       </td>
-                      <td className="px-6 py-3.5 text-[#9ca3af]">
+                      <td className="px-6 py-3.5 text-[var(--sys-muted)]">
                         {format(new Date(b.productionDate), 'd MMM yyyy')}
                       </td>
                       <td className="px-6 py-3.5">
                         <button
                           type="button"
                           onClick={() => setCosting(b)}
-                          className="text-[11px] text-[#b8256e] hover:underline whitespace-nowrap"
+                          className="text-[11px] text-[var(--sys-primary)] hover:underline whitespace-nowrap"
                         >
                           عدّل الكلفة
                         </button>
@@ -260,7 +260,7 @@ export function ManufacturingScreen() {
       >
         <form onSubmit={handleCreateBatch} className="space-y-4">
           {modalError && (
-            <div className="p-3 bg-[#feecee] border border-[#f5c6cb] text-[#fb323f] text-xs rounded-lg">
+            <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg">
               {modalError}
             </div>
           )}
@@ -297,8 +297,8 @@ export function ManufacturingScreen() {
           />
 
           {/* Cost Items Grid */}
-          <div className="border border-[#e3e8ef] rounded-xl p-4 bg-[#f8fafc]/60 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#364152]">
+          <div className="border border-[var(--sys-border)] rounded-xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">
               Direct Cost Breakdown ($)
             </h4>
 
@@ -336,9 +336,9 @@ export function ManufacturingScreen() {
             {/* Whatever else this run actually cost. A mould, a day of
                 labour, the courier who brought the raw material — each with
                 its own name, so the total can be explained a month later. */}
-            <div className="mt-4 border-t border-[#e3e8ef] pt-3">
+            <div className="mt-4 border-t border-[var(--sys-border)] pt-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-bold text-[#364152]">بنود كلفة إضافية</p>
+                <p className="text-xs font-bold text-[var(--sys-foreground)]">بنود كلفة إضافية</p>
                 <div className="flex items-center gap-2">
                   <Select
                     className="text-xs"
@@ -362,7 +362,7 @@ export function ManufacturingScreen() {
               </div>
 
               {costLines.length === 0 ? (
-                <p className="text-[10.5px] leading-relaxed text-[#697586]">
+                <p className="text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">
                   اختياري — أضف أي كلفة لا تناسبها الخانات الأربع أعلاه: قالب، أجرة عامل،
                   شحن مواد، كهرباء. كل بند باسمه ومبلغه، ويدخل في المجموع وفي تكلفة الوحدة.
                 </p>
@@ -401,7 +401,7 @@ export function ManufacturingScreen() {
                         type="button"
                         title="حذف البند"
                         onClick={() => setCostLines(costLines.filter((_, n) => n !== i))}
-                        className="mb-1 cursor-pointer rounded-lg p-2 text-rose-600 hover:bg-rose-50"
+                        className="mb-1 cursor-pointer rounded-lg p-2 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -413,20 +413,20 @@ export function ManufacturingScreen() {
           </div>
 
           {/* Section 5 Live Real-time Calculator Box */}
-          <div className="p-4 bg-[#feecee] border border-[#f5c6cb] rounded-xl flex items-center justify-between text-xs">
+          <div className="p-4 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-xl flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2">
-              <Calculator className="w-5 h-5 text-[#fb323f]" />
+              <Calculator className="w-5 h-5 text-[var(--sys-destructive)]" />
               <div>
-                <p className="font-bold text-[#121926]">الكلفة الكلية: {totalProductionCost.toFixed(2)}</p>
-                <p className="text-[#697586]">
+                <p className="font-bold text-[var(--sys-heading)]">الكلفة الكلية: {totalProductionCost.toFixed(2)}</p>
+                <p className="text-[var(--sys-muted-foreground)]">
                   Formula: Mfg (${manufacturingCost}) + Packaging (${packagingCost}) + Raw (${rawMaterialCost})
                 </p>
               </div>
             </div>
 
             <div className="text-right">
-              <span className="text-[#697586] block">تكلفة الوحدة المحسوبة:</span>
-              <span className="text-xl font-black text-[#fb323f] block">
+              <span className="text-[var(--sys-muted-foreground)] block">تكلفة الوحدة المحسوبة:</span>
+              <span className="text-xl font-black text-[var(--sys-destructive)] block">
                 ${costPerUnit}
               </span>
             </div>

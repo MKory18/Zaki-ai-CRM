@@ -51,7 +51,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
     return (
       <Card>
         <CardContent className="p-4">
-          <p className="text-xs text-rose-600">{error}</p>
+          <p className="text-xs text-[var(--sys-destructive)]">{error}</p>
         </CardContent>
       </Card>
     );
@@ -60,7 +60,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
   if (!stock) {
     return (
       <Card>
-        <CardContent className="flex items-center gap-2 p-4 text-xs text-[#697586]">
+        <CardContent className="flex items-center gap-2 p-4 text-xs text-[var(--sys-muted-foreground)]">
           <Loader2 className="h-3.5 w-3.5 animate-spin" /> جارٍ تحميل المخزون…
         </CardContent>
       </Card>
@@ -76,9 +76,9 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
       <CardHeader
         title={
           <span className="flex items-center gap-2">
-            <Boxes className="h-4 w-4 text-[#b8256e]" />
+            <Boxes className="h-4 w-4 text-[var(--sys-primary)]" />
             <span>المخزون والتكلفة</span>
-            <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-[#475467]">
+            <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-[10px] font-bold text-[var(--sys-foreground)]">
               {made ? 'منتج مصنّع' : 'منتج جاهز'}
             </span>
           </span>
@@ -119,7 +119,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
           <Tile label="قيمة المخزون" value={money(stock.stockValue)} />
         </div>
 
-        <p className="text-[10.5px] leading-relaxed text-[#697586]">
+        <p className="text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">
           «متوسط مرجّح» يعني: كل دفعة بوزن ما تبقّى منها فعلاً. ٩٠ قطعة بـ٣ و١٠ بـ٨
           تكلفتها ٣.٥٠ للقطعة — لا ٥.٥٠. الدفعات الفارغة خارج الحساب لأنها تقول
           ماذا كلّف الماضي، لا ماذا تكلّف قطعة اليوم.
@@ -128,7 +128,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
 
         <Link
           href="/inventory/movements"
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#b8256e] hover:underline"
+          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--sys-primary)] hover:underline"
         >
           <ArrowLeftRight className="h-3 w-3" /> سجل حركات هذا المخزون
         </Link>
@@ -146,15 +146,15 @@ function Tile({
   tone?: 'plain' | 'good' | 'bad' | 'hold';
 }) {
   const tones = {
-    plain: 'border-[#e3e8ef] bg-white text-[#121926]',
-    good: 'border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d]',
-    bad: 'border-[#fecdd1] bg-[#feecee] text-[#be123c]',
-    hold: 'border-[#fed7aa] bg-[#fff7ed] text-[#c2410c]',
+    plain: 'border-[var(--sys-border)] bg-[var(--sys-card)] text-[var(--sys-heading)]',
+    good: 'border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)] text-[var(--sys-success)]',
+    bad: 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]',
+    hold: 'border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]',
   } as const;
 
   return (
     <div className={`rounded-xl border p-3 ${tones[tone]}`}>
-      <p className="flex items-center gap-1 text-[10px] font-medium text-[#697586]">
+      <p className="flex items-center gap-1 text-[10px] font-medium text-[var(--sys-muted-foreground)]">
         {icon} {label}
       </p>
       <p className="mt-0.5 text-sm font-black tabular-nums" dir="ltr">{value}</p>

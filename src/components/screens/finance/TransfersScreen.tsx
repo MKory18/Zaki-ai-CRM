@@ -155,16 +155,16 @@ export function TransfersScreen() {
             setSaving(false);
           }
         }}
-        className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3"
+        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3"
       >
         <div className="grid gap-3 md:grid-cols-2">
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">من محفظة</span>
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">من محفظة</span>
             <select
               value={fromId}
               onChange={(e) => setFromId(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               <option value="">اختر…</option>
               {options(toId)}
@@ -172,12 +172,12 @@ export function TransfersScreen() {
           </label>
 
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">إلى محفظة</span>
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">إلى محفظة</span>
             <select
               value={toId}
               onChange={(e) => setToId(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               <option value="">اختر…</option>
               {options(fromId)}
@@ -187,7 +187,7 @@ export function TransfersScreen() {
 
         <div className="grid gap-3 md:grid-cols-2">
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
               المبلغ الصادر {from ? `(${from.currencyCode})` : ''}
             </span>
             <input
@@ -197,14 +197,14 @@ export function TransfersScreen() {
               value={amountOut}
               onChange={(e) => setAmountOut(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
           </label>
 
           {crossCurrency && (
             <label>
-              <span className="block text-xs font-medium text-[#364152] mb-1">
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
                 سعر الصرف ({from?.currencyCode} → {to?.currencyCode})
               </span>
               <input
@@ -214,7 +214,7 @@ export function TransfersScreen() {
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
                 required
-                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
                 dir="ltr"
               />
             </label>
@@ -222,9 +222,9 @@ export function TransfersScreen() {
         </div>
 
         {from && to && amountOut && (
-          <p className="text-sm text-[#364152] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3 flex items-center gap-2 flex-wrap">
+          <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3 flex items-center gap-2 flex-wrap">
             <span className="tabular-nums">{amountOut} {from.currencyCode}</span>
-            <ArrowLeft className="w-4 h-4 text-[#9aa4b2]" />
+            <ArrowLeft className="w-4 h-4 text-[var(--sys-muted)]" />
             <span className="tabular-nums font-medium">
               {crossCurrency && !rate ? '— (أدخل سعر الصرف)' : `${amountIn} ${to.currencyCode}`}
             </span>
@@ -232,19 +232,19 @@ export function TransfersScreen() {
         )}
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">الملاحظة (إلزامية)</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الملاحظة (إلزامية)</span>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
             required
             minLength={3}
             placeholder="سبب التحويل"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
-        {done && <p className="text-sm text-[#00a344]">{done}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
+        {done && <p className="text-sm text-[var(--sys-success)]">{done}</p>}
 
         <div className="flex justify-end">
           {/* What you are about to do, said before you do it. The three
@@ -252,16 +252,16 @@ export function TransfersScreen() {
               books, one crosses a currency as well — so the screen names the
               one in front of you rather than making you pick it first. */}
           {reading && !refusal && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2">
-              <span className="rounded-full bg-[#b8256e] px-2 py-0.5 text-[10px] font-semibold text-white">
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2">
+              <span className="rounded-full bg-[var(--sys-primary)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-primary-foreground)]">
                 {reading.label}
               </span>
-              <span className="text-xs text-[#364152]">{reading.detail}</span>
+              <span className="text-xs text-[var(--sys-foreground)]">{reading.detail}</span>
             </div>
           )}
 
           {refusal && (
-            <p className="rounded-lg border border-[#fecdd1] bg-[#feecee] px-3 py-2 text-xs text-[#b3242e]">
+            <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs text-[var(--sys-destructive)]">
               {refusal}
             </p>
           )}
@@ -269,7 +269,7 @@ export function TransfersScreen() {
           <button
             type="submit"
             disabled={saving || !!refusal}
-            className="h-10 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
+            className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Repeat className="w-4 h-4" />}
             تحويل
@@ -277,17 +277,17 @@ export function TransfersScreen() {
         </div>
       </form>
 
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
-        <h2 className="text-sm font-medium text-[#121926] px-4 py-3 border-b border-[#e3e8ef]">آخر التحويلات</h2>
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">آخر التحويلات</h2>
         {!rows ? (
-          <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-12">
+          <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-12">
             <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
           </div>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-[#697586] py-10 text-center">لا تحويلات بعد.</p>
+          <p className="text-sm text-[var(--sys-muted-foreground)] py-10 text-center">لا تحويلات بعد.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-3 py-2">التاريخ</th>
                 <th className="text-right font-medium px-3 py-2">النوع</th>
@@ -299,35 +299,35 @@ export function TransfersScreen() {
                 <th className="text-right font-medium px-3 py-2">الملاحظة</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {rows.map((t) => (
                 <tr key={t.id}>
-                  <td className="px-3 py-2 text-xs text-[#697586] whitespace-nowrap">
+                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
                     {new Date(t.createdAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}
                   </td>
                   {/* As RECORDED, not re-read now: a wallet moved to another
                       store since must not change what this transfer was. */}
                   <td className="px-3 py-2">
-                    <span className="rounded-full border border-[#e3e8ef] bg-[#f8fafc] px-2 py-0.5 text-[10px] text-[#364152] whitespace-nowrap">
+                    <span className="rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-0.5 text-[10px] text-[var(--sys-foreground)] whitespace-nowrap">
                       {t.kindLabel ?? '—'}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-[#364152]">
+                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
                     {t.from?.name ?? '—'}
                     {t.from?.store && (
-                      <span className="block text-[10px] text-[#9aa4b2]">{t.from.store.name}</span>
+                      <span className="block text-[10px] text-[var(--sys-muted)]">{t.from.store.name}</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-[#364152]">
+                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
                     {t.to?.name ?? '—'}
                     {t.to?.store && (
-                      <span className="block text-[10px] text-[#9aa4b2]">{t.to.store.name}</span>
+                      <span className="block text-[10px] text-[var(--sys-muted)]">{t.to.store.name}</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 tabular-nums text-[#fb323f]">{t.amountOut} {t.from?.currencyCode}</td>
-                  <td className="px-3 py-2 tabular-nums text-[#00a344]">{t.amountIn} {t.to?.currencyCode}</td>
-                  <td className="px-3 py-2 tabular-nums text-xs text-[#697586]">{t.exchangeRate}</td>
-                  <td className="px-3 py-2 text-xs text-[#697586]">{t.note ?? '—'}</td>
+                  <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)]">{t.amountOut} {t.from?.currencyCode}</td>
+                  <td className="px-3 py-2 tabular-nums text-[var(--sys-success)]">{t.amountIn} {t.to?.currencyCode}</td>
+                  <td className="px-3 py-2 tabular-nums text-xs text-[var(--sys-muted-foreground)]">{t.exchangeRate}</td>
+                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{t.note ?? '—'}</td>
                 </tr>
               ))}
             </tbody>

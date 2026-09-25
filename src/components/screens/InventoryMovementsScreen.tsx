@@ -63,26 +63,26 @@ export function InventoryMovementsScreen() {
           e.preventDefault();
           void load();
         }}
-        className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 flex flex-wrap gap-3 items-end"
+        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end"
       >
         <label className="flex-1 min-w-[220px]">
-          <span className="block text-xs font-medium text-[#364152] mb-1">بحث</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">بحث</span>
           <div className="relative">
-            <Search className="w-4 h-4 text-[#9aa4b2] absolute right-3 top-3" />
+            <Search className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="اسم المنتج، الرمز، رقم الدفعة أو السبب"
-              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             />
           </div>
         </label>
         <label>
-          <span className="block text-xs font-medium text-[#364152] mb-1">النوع</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">النوع</span>
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            className="h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="all">الكل</option>
             {(data?.types ?? []).map((t) => (
@@ -92,23 +92,23 @@ export function InventoryMovementsScreen() {
             ))}
           </select>
         </label>
-        <button type="submit" className="h-10 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium">بحث</button>
+        <button type="submit" className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
       </form>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
 
       {!data ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : data.movements.length === 0 ? (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
           لا حركات مطابقة.
         </p>
       ) : (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-3 py-2">التاريخ</th>
                 <th className="text-right font-medium px-3 py-2">المنتج</th>
@@ -120,37 +120,37 @@ export function InventoryMovementsScreen() {
                 <th className="text-right font-medium px-3 py-2">سجّلها</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {data.movements.map((m) => (
                 <tr key={m.id}>
-                  <td className="px-3 py-2 text-xs text-[#697586] whitespace-nowrap">
+                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
                     {new Date(m.createdAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}
                   </td>
-                  <td className="px-3 py-2 text-[#121926]">
+                  <td className="px-3 py-2 text-[var(--sys-heading)]">
                     {m.product?.name ?? '—'}
-                    {m.product?.sku && <span className="block text-[11px] text-[#9aa4b2]" dir="ltr">{m.product.sku}</span>}
+                    {m.product?.sku && <span className="block text-[11px] text-[var(--sys-muted)]" dir="ltr">{m.product.sku}</span>}
                   </td>
-                  <td className="px-3 py-2 text-xs text-[#697586]">{TYPE_AR[m.type] ?? m.type}</td>
+                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{TYPE_AR[m.type] ?? m.type}</td>
                   <td className="px-3 py-2">
                     <span
                       className={`inline-flex items-center gap-1 tabular-nums font-medium ${
-                        m.quantity >= 0 ? 'text-[#00a344]' : 'text-[#fb323f]'
+                        m.quantity >= 0 ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'
                       }`}
                     >
                       {m.quantity >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
                       {Math.abs(m.quantity)}
                     </span>
                   </td>
-                  <td className="px-3 py-2 tabular-nums text-[#364152]">{m.balanceAfter}</td>
-                  <td className="px-3 py-2 text-xs text-[#697586]" dir="ltr">{m.batchNumber ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-[#697586]">{m.reason ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-[#697586]">{m.createdByName ?? '—'}</td>
+                  <td className="px-3 py-2 tabular-nums text-[var(--sys-foreground)]">{m.balanceAfter}</td>
+                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]" dir="ltr">{m.batchNumber ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{m.reason ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{m.createdByName ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {data.hasMore && (
-            <p className="text-xs text-[#9aa4b2] px-3 py-2 border-t border-[#e3e8ef]">
+            <p className="text-xs text-[var(--sys-muted)] px-3 py-2 border-t border-[var(--sys-border)]">
               تُعرض أحدث الحركات — ضيّق البحث لرؤية أقدم منها.
             </p>
           )}

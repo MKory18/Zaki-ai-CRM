@@ -160,21 +160,21 @@ export function CampaignsScreen() {
     <div className="space-y-4" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-            <Megaphone className="h-5 w-5 text-[#b8256e]" /> الحملات
+          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+            <Megaphone className="h-5 w-5 text-[var(--sys-primary)]" /> الحملات
           </h1>
-          <p className="mt-0.5 text-xs text-[#697586]">
+          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             تكتب ما أنفقت، والباقي محسوب من طلباتك الفعلية.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-[#e3e8ef] p-0.5">
+          <div className="flex rounded-lg border border-[var(--sys-border)] p-0.5">
             {PERIODS.map((p) => (
               <button
                 key={p.key}
                 onClick={() => setPeriod(p.key)}
                 className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition ${
-                  period === p.key ? 'bg-[#fdf2f7] text-[#b8256e]' : 'text-[#697586] hover:bg-[#f8fafc]'
+                  period === p.key ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]'
                 }`}
               >
                 {p.label}
@@ -194,7 +194,7 @@ export function CampaignsScreen() {
       </div>
 
       {syncMsg && (
-        <p className="rounded-lg bg-[#f8fafc] px-3 py-2 text-[11px] text-[#364152]">{syncMsg}</p>
+        <p className="rounded-lg bg-[var(--sys-surface)] px-3 py-2 text-[11px] text-[var(--sys-foreground)]">{syncMsg}</p>
       )}
 
       {/* The shop's whole picture, so nobody adds the column up by hand. */}
@@ -214,7 +214,7 @@ export function CampaignsScreen() {
       )}
 
       {loading && !data ? (
-        <div className="flex h-40 items-center justify-center text-sm text-[#697586]">
+        <div className="flex h-40 items-center justify-center text-sm text-[var(--sys-muted-foreground)]">
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       ) : data && data.campaigns.length === 0 ? (
@@ -237,7 +237,7 @@ export function CampaignsScreen() {
       )}
 
       {data && (
-        <p className="text-[10px] leading-relaxed text-[#9aa4b2]">
+        <p className="text-[10px] leading-relaxed text-[var(--sys-muted)]">
           «الفرق» هو الإيراد ناقص الإنفاق الإعلاني فقط — ليس الربح: كلفة البضاعة والتوصيل والعمولة
           محسوبة في شاشة الأرباح. و«الإيراد» هو المحصَّل فعلاً حيث نعرفه وإجمالي الطلب حيث لا نعرفه،
           نفس التعريف في كل الشاشات.
@@ -276,12 +276,12 @@ function roasTone(roas: number | null): 'good' | 'warn' | 'bad' | undefined {
 
 function Stat({ label, value, tone, hint }: { label: string; value: string; tone?: 'good' | 'warn' | 'bad'; hint?: string }) {
   const colour =
-    tone === 'good' ? 'text-[#00994d]' : tone === 'bad' ? 'text-[#fb323f]' : tone === 'warn' ? 'text-[#b45309]' : 'text-[#121926]';
+    tone === 'good' ? 'text-[var(--sys-success)]' : tone === 'bad' ? 'text-[var(--sys-destructive)]' : tone === 'warn' ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-heading)]';
   return (
-    <div className="rounded-xl border border-[#e3e8ef] bg-white p-3">
-      <p className="text-[10px] font-semibold text-[#697586]">{label}</p>
+    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+      <p className="text-[10px] font-semibold text-[var(--sys-muted-foreground)]">{label}</p>
       <p className={`mt-0.5 text-base font-bold tabular-nums ${colour}`} dir="ltr">{value}</p>
-      {hint && <p className="mt-0.5 text-[9px] text-[#9aa4b2]">{hint}</p>}
+      {hint && <p className="mt-0.5 text-[9px] text-[var(--sys-muted)]">{hint}</p>}
     </div>
   );
 }
@@ -294,25 +294,25 @@ function Row({
 }) {
   const tone = roasTone(c.money.roas);
   return (
-    <div className="rounded-xl border border-[#e3e8ef] bg-white p-3">
+    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-sm font-bold text-[#121926]">{c.name}</span>
-            <span className="rounded bg-[#f1f3f6] px-1.5 py-0.5 text-[9px] font-semibold text-[#697586]">
+            <span className="text-sm font-bold text-[var(--sys-heading)]">{c.name}</span>
+            <span className="rounded bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-muted-foreground)]">
               {platformLabel(c.platform)}
             </span>
             <span
               className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${
-                c.status === 'ACTIVE' ? 'bg-[#e6f9ee] text-[#00994d]'
-                : c.status === 'PAUSED' ? 'bg-[#fff7e6] text-[#b45309]'
-                : 'bg-[#f1f3f6] text-[#697586]'
+                c.status === 'ACTIVE' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
+                : c.status === 'PAUSED' ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'
+                : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
               }`}
             >
               {statusLabel(c.status)}
             </span>
           </div>
-          <p className="mt-1 text-[10px] text-[#697586]">
+          <p className="mt-1 text-[10px] text-[var(--sys-muted-foreground)]">
             {c.landingPage ? c.landingPage.name : 'واجهة المتجر'} · الرمز {c.code}
           </p>
         </div>
@@ -324,8 +324,8 @@ function Row({
               title={c.adAccount ? 'غيّر الربط بميتا' : 'اربطها بحملة في ميتا'}
               className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition ${
                 c.spendSource === 'SYNCED'
-                  ? 'border-[#c9e8d5] bg-[#f0fdf4] text-[#00994d]'
-                  : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]'
+                  ? 'border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
+                  : 'border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]'
               }`}
             >
               <Plug className="h-3 w-3" />
@@ -335,21 +335,21 @@ function Row({
           <button
             onClick={onCopy}
             title="انسخ رابط الإعلان"
-            className="flex items-center gap-1 rounded-lg border border-[#e3e8ef] px-2 py-1 text-[10px] font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+            className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-[10px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
           >
-            {copied ? <Check className="h-3 w-3 text-[#00994d]" /> : <Link2 className="h-3 w-3" />}
+            {copied ? <Check className="h-3 w-3 text-[var(--sys-success)]" /> : <Link2 className="h-3 w-3" />}
             {copied ? 'نُسخ' : 'رابط الإعلان'}
           </button>
-          <button onClick={onEdit} title="تعديل" className="rounded p-1.5 text-[#697586] hover:bg-[#f8fafc]">
+          <button onClick={onEdit} title="تعديل" className="rounded p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
             <Pencil className="h-3.5 w-3.5" />
           </button>
-          <button onClick={onRemove} title="حذف" className="rounded p-1.5 text-[#697586] hover:bg-rose-50 hover:text-rose-600">
+          <button onClick={onRemove} title="حذف" className="rounded p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
-      <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-[#f1f3f6] pt-2.5 sm:grid-cols-6">
+      <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-[var(--sys-surface-strong)] pt-2.5 sm:grid-cols-6">
         <Cell
           label={c.spendSource === 'SYNCED' ? 'أُنفق · من ميتا' : 'أُنفق · يدوي'}
           value={`${fmt(c.money.spend)}`}
@@ -367,18 +367,18 @@ function Row({
         <Cell label="كلفة الواصل" value={fmt(c.money.costPerDelivered)} unit={currency} />
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[#697586]">
-        <span>طلبات <b className="text-[#121926]">{c.funnel.brought}</b></span>
-        <span>مؤكدة <b className="text-[#121926]">{c.funnel.confirmed}</b>{c.funnel.confirmationRate !== null && ` (${c.funnel.confirmationRate}%)`}</span>
-        <span>وصلت <b className="text-[#121926]">{c.funnel.delivered}</b>{c.funnel.deliveryRate !== null && ` (${c.funnel.deliveryRate}%)`}</span>
-        {c.funnel.returned > 0 && <span className="text-[#b45309]">مرتجعة {c.funnel.returned}</span>}
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[var(--sys-muted-foreground)]">
+        <span>طلبات <b className="text-[var(--sys-heading)]">{c.funnel.brought}</b></span>
+        <span>مؤكدة <b className="text-[var(--sys-heading)]">{c.funnel.confirmed}</b>{c.funnel.confirmationRate !== null && ` (${c.funnel.confirmationRate}%)`}</span>
+        <span>وصلت <b className="text-[var(--sys-heading)]">{c.funnel.delivered}</b>{c.funnel.deliveryRate !== null && ` (${c.funnel.deliveryRate}%)`}</span>
+        {c.funnel.returned > 0 && <span className="text-[var(--sys-warning)]">مرتجعة {c.funnel.returned}</span>}
         {/* A zero that says why it is zero. */}
         {c.funnel.brought === 0 && !c.ranInWindow && (
-          <span className="text-[#9aa4b2]">لم تكن تعمل في هذه المدة</span>
+          <span className="text-[var(--sys-muted)]">لم تكن تعمل في هذه المدة</span>
         )}
       </div>
 
-      <p className="mt-1.5 truncate font-mono text-[9px] text-[#9aa4b2]" dir="ltr" title={c.link}>
+      <p className="mt-1.5 truncate font-mono text-[9px] text-[var(--sys-muted)]" dir="ltr" title={c.link}>
         {c.link}
       </p>
     </div>
@@ -387,15 +387,15 @@ function Row({
 
 function Cell({ label, value, unit, tone, icon }: { label: string; value: string; unit?: string; tone?: 'good' | 'warn' | 'bad'; icon?: 'up' | 'down' }) {
   const colour =
-    tone === 'good' ? 'text-[#00994d]' : tone === 'bad' ? 'text-[#fb323f]' : tone === 'warn' ? 'text-[#b45309]' : 'text-[#121926]';
+    tone === 'good' ? 'text-[var(--sys-success)]' : tone === 'bad' ? 'text-[var(--sys-destructive)]' : tone === 'warn' ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-heading)]';
   return (
     <div>
-      <p className="text-[9px] text-[#9aa4b2]">{label}</p>
+      <p className="text-[9px] text-[var(--sys-muted)]">{label}</p>
       <p className={`flex items-center gap-0.5 text-xs font-bold tabular-nums ${colour}`} dir="ltr">
         {icon === 'up' && <TrendingUp className="h-3 w-3" />}
         {icon === 'down' && <TrendingDown className="h-3 w-3" />}
         {value}
-        {unit && value !== '—' && <span className="text-[9px] font-normal text-[#9aa4b2]">{unit}</span>}
+        {unit && value !== '—' && <span className="text-[9px] font-normal text-[var(--sys-muted)]">{unit}</span>}
       </p>
     </div>
   );
@@ -403,10 +403,10 @@ function Cell({ label, value, unit, tone, icon }: { label: string; value: string
 
 function Empty({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="rounded-xl border border-dashed border-[#c9d2e0] p-8 text-center">
-      <Megaphone className="mx-auto h-8 w-8 text-[#c9d2e0]" />
-      <p className="mt-2 text-sm font-semibold text-[#364152]">لا حملات بعد</p>
-      <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-[#697586]">
+    <div className="rounded-xl border border-dashed border-[var(--sys-border-strong)] p-8 text-center">
+      <Megaphone className="mx-auto h-8 w-8 text-[var(--sys-border-strong)]" />
+      <p className="mt-2 text-sm font-semibold text-[var(--sys-foreground)]">لا حملات بعد</p>
+      <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
         أنشئ حملة، انسخ رابطها، والصقه في إعلانك. كل طلب يأتي من ذلك الرابط يُحسب عليها —
         وأنت تكتب ما أنفقت، فترى العائد الحقيقي بدل التخمين.
       </p>
@@ -470,15 +470,15 @@ function Editor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--sys-sidebar)]/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <div
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-4 sm:rounded-2xl"
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-[var(--sys-card)] p-4 sm:rounded-2xl"
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#121926]">{campaign ? 'تعديل الحملة' : 'حملة جديدة'}</h2>
-          <button onClick={onClose} className="rounded p-1 text-[#697586] hover:bg-[#f8fafc]">
+          <h2 className="text-sm font-bold text-[var(--sys-heading)]">{campaign ? 'تعديل الحملة' : 'حملة جديدة'}</h2>
+          <button onClick={onClose} className="rounded p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -545,13 +545,13 @@ function Editor({
           </Field>
 
           {campaign && (
-            <p className="rounded-lg bg-[#f8fafc] p-2 text-[10px] leading-relaxed text-[#697586]">
+            <p className="rounded-lg bg-[var(--sys-surface)] p-2 text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
               الرمز <b className="font-mono">{campaign.code}</b> لا يتغيّر — فهو مطبوع على كل طلب جاءت به
               هذه الحملة. حملة تحتاج رمزاً جديداً هي حملة جديدة.
             </p>
           )}
 
-          {error && <p className="text-xs font-medium text-rose-600">{error}</p>}
+          {error && <p className="text-xs font-medium text-[var(--sys-destructive)]">{error}</p>}
         </div>
 
         <div className="mt-4 flex gap-2">
@@ -567,14 +567,14 @@ function Editor({
 }
 
 const INPUT =
-  'w-full rounded-lg border border-[#e3e8ef] bg-white px-3 py-2 text-sm text-[#121926] outline-none focus:border-[#b8256e]';
+  'w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]';
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-semibold text-[#364152]">{label}</label>
+      <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">{label}</label>
       {children}
-      {hint && <p className="mt-0.5 text-[9px] text-[#9aa4b2]">{hint}</p>}
+      {hint && <p className="mt-0.5 text-[9px] text-[var(--sys-muted)]">{hint}</p>}
     </div>
   );
 }
@@ -637,26 +637,26 @@ function LinkDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--sys-sidebar)]/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <div
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-4 sm:rounded-2xl"
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-[var(--sys-card)] p-4 sm:rounded-2xl"
       >
         <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#121926]">اربط «{campaign.name}» بحملة في ميتا</h2>
-          <button onClick={onClose} className="rounded p-1 text-[#697586] hover:bg-[#f8fafc]">
+          <h2 className="text-sm font-bold text-[var(--sys-heading)]">اربط «{campaign.name}» بحملة في ميتا</h2>
+          <button onClick={onClose} className="rounded p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="mb-3 text-[11px] leading-relaxed text-[#697586]">
+        <p className="mb-3 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           بعدها يأتي الإنفاق تلقائياً. الربط بالمعرّف لا بالاسم — فتغيير اسم الحملة في ميتا
           لن يقطعه.
         </p>
 
         {accounts.length > 1 && (
           <div className="mb-3">
-            <label className="mb-1 block text-[11px] font-semibold text-[#364152]">الحساب الإعلاني</label>
+            <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">الحساب الإعلاني</label>
             <select value={accountId} onChange={(e) => { setAccountId(e.target.value); setChosen(''); }} className={INPUT}>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.accountName ?? a.accountId}</option>
@@ -665,14 +665,14 @@ function LinkDialog({
           </div>
         )}
 
-        {error && <p className="mb-2 rounded bg-rose-50 p-2 text-[11px] text-rose-700">{error}</p>}
+        {error && <p className="mb-2 rounded bg-[var(--sys-destructive-soft)] p-2 text-[11px] text-[var(--sys-destructive)]">{error}</p>}
 
         {remote === null && !error ? (
-          <div className="flex h-24 items-center justify-center text-[#697586]">
+          <div className="flex h-24 items-center justify-center text-[var(--sys-muted-foreground)]">
             <Loader2 className="h-4 w-4 animate-spin" />
           </div>
         ) : remote && remote.length === 0 ? (
-          <p className="rounded-lg bg-[#f8fafc] p-3 text-[11px] text-[#697586]">
+          <p className="rounded-lg bg-[var(--sys-surface)] p-3 text-[11px] text-[var(--sys-muted-foreground)]">
             لا حملات في هذا الحساب.
           </p>
         ) : (
@@ -683,15 +683,15 @@ function LinkDialog({
                 type="button"
                 onClick={() => setChosen(r.id)}
                 className={`flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-start transition ${
-                  chosen === r.id ? 'border-[#b8256e] bg-[#fdf2f7]' : 'border-[#e3e8ef] hover:border-[#b8256e]/40'
+                  chosen === r.id ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)]' : 'border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
                 }`}
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-xs font-semibold text-[#364152]">{r.name}</span>
-                  <span className="block font-mono text-[9px] text-[#9aa4b2]" dir="ltr">{r.id}</span>
+                  <span className="block truncate text-xs font-semibold text-[var(--sys-foreground)]">{r.name}</span>
+                  <span className="block font-mono text-[9px] text-[var(--sys-muted)]" dir="ltr">{r.id}</span>
                 </span>
                 <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold ${
-                  r.status === 'ACTIVE' ? 'bg-[#e6f9ee] text-[#00994d]' : 'bg-[#f1f3f6] text-[#697586]'
+                  r.status === 'ACTIVE' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
                 }`}>
                   {r.status === 'ACTIVE' ? 'تعمل' : 'متوقفة'}
                 </span>
@@ -714,7 +714,7 @@ function LinkDialog({
         </div>
 
         {campaign.spendSource === 'SYNCED' && (
-          <p className="mt-2 text-[10px] leading-relaxed text-[#9aa4b2]">
+          <p className="mt-2 text-[10px] leading-relaxed text-[var(--sys-muted)]">
             فكّ الربط يعيد الإنفاق للإدخال اليدوي، ولا يمسح الرقم المسحوب — هو مصروف حقيقي حدث.
           </p>
         )}

@@ -47,26 +47,26 @@ function Row({ person, bars }: { person: Person; bars: BoardData['bars'] }) {
     <>
       <tr
         onClick={() => !unmeasured && setOpen(!open)}
-        className={unmeasured ? '' : 'cursor-pointer hover:bg-[#f8fafc]'}
+        className={unmeasured ? '' : 'cursor-pointer hover:bg-[var(--sys-surface)]'}
       >
-        <td className="px-3 py-2 tabular-nums text-[#9aa4b2]">{unmeasured ? '—' : person.rank}</td>
-        <td className="px-3 py-2 font-medium text-[#121926]">{person.name}</td>
+        <td className="px-3 py-2 tabular-nums text-[var(--sys-muted)]">{unmeasured ? '—' : person.rank}</td>
+        <td className="px-3 py-2 font-medium text-[var(--sys-heading)]">{person.name}</td>
         <td className="px-3 py-2">
           {unmeasured ? (
-            <span className="text-[11px] text-[#9aa4b2]">
+            <span className="text-[11px] text-[var(--sys-muted)]">
               العيّنة {s.sample} — الحد الأدنى {s.minSample}
             </span>
           ) : (
             <span className="tabular-nums" dir="ltr">
-              <span className="font-bold text-[#b8256e]">{s.total}</span>
-              <span className="text-[#9aa4b2]"> / {s.possible}</span>
+              <span className="font-bold text-[var(--sys-primary)]">{s.total}</span>
+              <span className="text-[var(--sys-muted)]"> / {s.possible}</span>
             </span>
           )}
         </td>
       </tr>
       {open && (
         <tr>
-          <td colSpan={3} className="bg-[#fafbfc] px-3 py-2">
+          <td colSpan={3} className="bg-[var(--sys-surface)] px-3 py-2">
             <ul className="space-y-1">
               {s.bands.map((b) => {
                 const low =
@@ -75,8 +75,8 @@ function Row({ person, bars }: { person: Person; bars: BoardData['bars'] }) {
                     (b.key === 'issues_rate' && b.value > bars.issuesRate));
                 return (
                   <li key={b.key} className="flex items-baseline justify-between gap-2 text-[11px]">
-                    <span className={low ? 'text-[#fb323f]' : 'text-[#697586]'}>{b.ar}</span>
-                    <span className="tabular-nums text-[#364152]">
+                    <span className={low ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-muted-foreground)]'}>{b.ar}</span>
+                    <span className="tabular-nums text-[var(--sys-foreground)]">
                       {b.points === null ? 'لا يُقاس' : `${b.points} من ${b.weight}`}
                     </span>
                   </li>
@@ -107,11 +107,11 @@ export function ScoreBoard() {
   }, [load]);
 
   if (error) {
-    return <p className="rounded-lg border border-[#fecdd1] bg-[#feecee] p-2.5 text-xs text-[#fb323f]">{error}</p>;
+    return <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">{error}</p>;
   }
   if (!data) {
     return (
-      <p className="flex items-center justify-center gap-2 py-8 text-sm text-[#697586]">
+      <p className="flex items-center justify-center gap-2 py-8 text-sm text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" /> جارٍ الحساب…
       </p>
     );
@@ -119,25 +119,25 @@ export function ScoreBoard() {
 
   return (
     <div className="space-y-3" dir="rtl">
-      <p className="text-[11px] text-[#697586]">
+      <p className="text-[11px] text-[var(--sys-muted-foreground)]">
         {PERIOD_AR[data.window.period]} · الأعلى أولاً. لا توجد قائمة معلنة للأسوأ، ولا زرّ يقلب
         الترتيب — السكور أداة قياس، ولوحةُ فشلٍ تجعل الناس تتجنّب المركز الأخير بدل أن ترفع الرقم.
       </p>
 
       {data.roles.map((r) => (
-        <section key={r.role} className="overflow-hidden rounded-[8px] border border-[#e3e8ef] bg-white">
-          <h3 className="border-b border-[#e3e8ef] bg-[#f8fafc] px-3 py-2 text-xs font-bold text-[#364152]">
+        <section key={r.role} className="overflow-hidden rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)]">
+          <h3 className="border-b border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs font-bold text-[var(--sys-foreground)]">
             {r.ar}
           </h3>
           <table className="w-full text-sm">
-            <thead className="text-[10px] text-[#9aa4b2]">
+            <thead className="text-[10px] text-[var(--sys-muted)]">
               <tr>
                 <th className="w-10 px-3 py-1.5 text-right font-medium">#</th>
                 <th className="px-3 py-1.5 text-right font-medium">الموظف</th>
                 <th className="px-3 py-1.5 text-right font-medium">السكور</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#f1f3f6]">
+            <tbody className="divide-y divide-[var(--sys-surface-strong)]">
               {r.people.map((p) => (
                 <Row key={p.id} person={p} bars={data.bars} />
               ))}
@@ -147,7 +147,7 @@ export function ScoreBoard() {
       ))}
 
       {data.roles.length === 0 && (
-        <p className="rounded-[8px] border border-[#e3e8ef] bg-white p-6 text-center text-sm text-[#697586]">
+        <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
           لا موظفين في الأدوار التي يقيسها هذا السكور بهذا المتجر.
         </p>
       )}

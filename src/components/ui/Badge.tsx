@@ -12,13 +12,13 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const variantStyles = {
-    default: 'bg-[#f8fafc] text-[#121926] border-[#e3e8ef]',
-    success: 'bg-[#e6f9ee] text-[#00c853] border-[#c8f2d8]',
-    warning: 'bg-[#fff6e5] text-[#ffab00] border-[#ffe7b8]',
-    danger: 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]',
-    info: 'bg-[#e7f6fd] text-[#13b5fe] border-[#cfeefa]',
-    purple: 'bg-[#f3effe] text-[#8c72f7] border-[#e4dafb]',
-    outline: 'bg-transparent text-[#364152] border-[#e3e8ef]',
+    default: 'bg-[var(--sys-surface)] text-[var(--sys-heading)] border-[var(--sys-border)]',
+    success: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)]',
+    warning: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]',
+    danger: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]',
+    info: 'bg-[var(--sys-info-soft)] text-[var(--sys-info)] border-[var(--sys-info)]',
+    purple: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-info-soft)]',
+    outline: 'bg-transparent text-[var(--sys-foreground)] border-[var(--sys-border)]',
   };
 
   return (

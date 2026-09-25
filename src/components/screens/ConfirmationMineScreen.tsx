@@ -68,9 +68,9 @@ interface MineResponse {
 }
 
 const RISK_LABEL: Record<string, { text: string; cls: string }> = {
-  SAFE: { text: 'خطورة منخفضة', cls: 'bg-emerald-50 text-[#00a344] border-emerald-100' },
-  WATCH: { text: 'تحت المراقبة', cls: 'bg-amber-50 text-[#c07f2a] border-amber-100' },
-  HIGH: { text: 'خطورة عالية', cls: 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]' },
+  SAFE: { text: 'خطورة منخفضة', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/30' },
+  WATCH: { text: 'تحت المراقبة', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30' },
+  HIGH: { text: 'خطورة عالية', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
 };
 
 type DialogState =
@@ -221,7 +221,7 @@ export function ConfirmationMineScreen() {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -249,10 +249,10 @@ export function ConfirmationMineScreen() {
   return (
     <div className="space-y-6 max-w-5xl">
       {error && (
-        <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>
       )}
       {notice && (
-        <p className="text-sm text-[#c07f2a] bg-amber-50 border border-amber-100 rounded-[8px] p-3">{notice}</p>
+        <p className="text-sm text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-[8px] p-3">{notice}</p>
       )}
 
       <section>
@@ -270,16 +270,16 @@ export function ConfirmationMineScreen() {
         />
         <div className="space-y-3">
           {inConfirmation.length === 0 && (
-            <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+            <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
               لا يوجد طلب بيدك الآن. اسحب طلباً من مركز التأكيد.
             </p>
           )}
           {inConfirmation.map((order) => {
             const remaining = Math.max(0, data.noAnswerLimit - order.noAnswerCount);
             return (
-              <article key={order.id} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
+              <article key={order.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3">
                 <header className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-[#121926]" dir="ltr">{order.orderNumber}</span>
+                  <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{order.orderNumber}</span>
                   <OrderStateBadge state={order.state} />
                   <CustomerHistoryButton
                     customerId={order.customer.id}
@@ -297,17 +297,17 @@ export function ConfirmationMineScreen() {
                     firstActionAt={order.firstActionAt}
                     serverNow={data.serverNow}
                   />
-                  <span className="mr-auto text-sm font-semibold text-[#121926] tabular-nums" dir="ltr">
+                  <span className="mr-auto text-sm font-semibold text-[var(--sys-heading)] tabular-nums" dir="ltr">
                     {order.totalAmount} {order.currency}
                   </span>
                 </header>
 
-                <div className="text-sm text-[#364152]">
+                <div className="text-sm text-[var(--sys-foreground)]">
                   {order.customer.fullName} · <span dir="ltr">{order.customer.rawPhone}</span> · {order.customer.city}
-                  <p className="text-xs text-[#697586] mt-1">{order.customer.address}</p>
+                  <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{order.customer.address}</p>
                 </div>
 
-                <ul className="text-xs text-[#697586] space-y-0.5">
+                <ul className="text-xs text-[var(--sys-muted-foreground)] space-y-0.5">
                   {order.items.map((it) => (
                     <li key={it.id}>
                       {it.productName} × {it.quantity}
@@ -317,7 +317,7 @@ export function ConfirmationMineScreen() {
                 </ul>
 
                 {order.postponedUntil && (
-                  <p className="text-xs text-[#c07f2a]">
+                  <p className="text-xs text-[var(--sys-warning)]">
                     مؤجل حتى{' '}
                     <span dir="ltr">{new Date(order.postponedUntil).toLocaleDateString('ar-EG')}</span>
                     {order.postponePreferredTime && ` · ${order.postponePreferredTime}`} · تأجيل رقم{' '}
@@ -326,12 +326,12 @@ export function ConfirmationMineScreen() {
                 )}
 
                 {order.risk?.requiresPrepaymentOrApproval && (
-                  <p className="flex items-center gap-2 text-xs text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-2">
+                  <p className="flex items-center gap-2 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-2">
                     <ShieldAlert className="w-4 h-4" /> عميل عالي الخطورة: يتطلب دفعاً مسبقاً أو موافقة المشرف.
                   </p>
                 )}
 
-                <footer className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#e3e8ef]">
+                <footer className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--sys-border)]">
                   {/* The order she is working on, opened in the same screen
                       everyone else sees it in. She fixes what the customer
                       just told her — a wrong name, a wrong street, a second
@@ -355,7 +355,7 @@ export function ConfirmationMineScreen() {
                       {order.noAnswerCount}/{data.noAnswerLimit}
                     </span>
                   </Action>
-                  <span className="text-[11px] text-[#9aa4b2]">
+                  <span className="text-[11px] text-[var(--sys-muted)]">
                     {remaining === 0
                       ? 'بلغ الحد'
                       : remaining === 1
@@ -405,9 +405,9 @@ export function ConfirmationMineScreen() {
           value={findDone}
           onChange={setFindDone}
         />
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-4 py-2">الطلب</th>
                 <th className="text-right font-medium px-4 py-2">العميل</th>
@@ -416,11 +416,11 @@ export function ConfirmationMineScreen() {
                 <th className="text-right font-medium px-4 py-2"> </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {confirmed.map((order) => (
                 <tr key={order.id}>
-                  <td className="px-4 py-2 font-medium text-[#121926]" dir="ltr">{order.orderNumber}</td>
-                  <td className="px-4 py-2 text-[#364152]">
+                  <td className="px-4 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{order.orderNumber}</td>
+                  <td className="px-4 py-2 text-[var(--sys-foreground)]">
                     <span className="flex items-center gap-2">
                       {order.customer.fullName}
                       <CustomerHistoryButton
@@ -430,22 +430,22 @@ export function ConfirmationMineScreen() {
                       />
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-[#364152]" dir="ltr">
-                    <a href={`tel:${order.customer.rawPhone}`} className="tabular-nums hover:text-[#b8256e]">
+                  <td className="px-4 py-2 text-[var(--sys-foreground)]" dir="ltr">
+                    <a href={`tel:${order.customer.rawPhone}`} className="tabular-nums hover:text-[var(--sys-primary)]">
                       {order.customer.rawPhone}
                     </a>
                   </td>
-                  <td className="px-4 py-2 tabular-nums text-[#364152]" dir="ltr">
+                  <td className="px-4 py-2 tabular-nums text-[var(--sys-foreground)]" dir="ltr">
                     {order.totalAmount} {order.currency}
                   </td>
                   <td className="px-4 py-2 text-left">
                     {order.changeRequests && order.changeRequests.length > 0 ? (
-                      <span className="text-xs text-[#c07f2a]">طلب تعديل قيد المراجعة</span>
+                      <span className="text-xs text-[var(--sys-warning)]">طلب تعديل قيد المراجعة</span>
                     ) : (
                       <button
                         onClick={() => setDialog({ kind: 'change', order })}
                         disabled={busyId === order.id}
-                        className="text-xs text-[#b8256e] hover:underline disabled:opacity-50"
+                        className="text-xs text-[var(--sys-primary)] hover:underline disabled:opacity-50"
                       >
                         طلب تعديل
                       </button>
@@ -455,7 +455,7 @@ export function ConfirmationMineScreen() {
               ))}
               {confirmed.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-[#697586]">
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">
                     لا توجد طلبات مؤكدة بعد.
                   </td>
                 </tr>
@@ -546,7 +546,7 @@ function ResponseClock({
   if (firstActionAt && claimedAt) {
     const took = Math.max(0, Math.round((+new Date(firstActionAt) - +new Date(claimedAt)) / 60000));
     return (
-      <span className="text-[11px] px-2 py-0.5 rounded-[6px] border bg-[#f8fafc] text-[#697586] border-[#e3e8ef] tabular-nums">
+      <span className="text-[11px] px-2 py-0.5 rounded-[6px] border bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)] tabular-nums">
         رددت خلال {humanMinutes(took)}
       </span>
     );
@@ -559,8 +559,8 @@ function ResponseClock({
     <span
       className={`text-[11px] px-2 py-0.5 rounded-[6px] border tabular-nums ${
         late
-          ? 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]'
-          : 'bg-amber-50 text-[#c07f2a] border-amber-100'
+          ? 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]'
+          : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30'
       }`}
     >
       بانتظار أول اتصال منذ {humanMinutes(waiting)}
@@ -591,24 +591,24 @@ function SectionHead({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 mb-3">
-      <h2 className="text-sm font-bold text-[#121926]">
+      <h2 className="text-sm font-bold text-[var(--sys-heading)]">
         {title} ({value.trim() ? `${count} من ${total}` : total})
       </h2>
-      {note && <span className="text-[11px] text-[#9aa4b2]">{note}</span>}
+      {note && <span className="text-[11px] text-[var(--sys-muted)]">{note}</span>}
       <div className="relative ms-auto">
-        <Search className="w-3.5 h-3.5 text-[#9aa4b2] absolute top-1/2 -translate-y-1/2 end-2.5" />
+        <Search className="w-3.5 h-3.5 text-[var(--sys-muted)] absolute top-1/2 -translate-y-1/2 end-2.5" />
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="رقم الهاتف أو الطلب أو الاسم"
-          className="h-8 w-56 ps-2.5 pe-8 rounded-lg border border-[#e3e8ef] bg-white text-[11px] text-[#364152] focus:outline-none focus:border-[#b8256e]"
+          className="h-8 w-56 ps-2.5 pe-8 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-[11px] text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
         />
         {value && (
           <button
             type="button"
             onClick={() => onChange('')}
             aria-label="امسح البحث"
-            className="absolute top-1/2 -translate-y-1/2 start-1.5 text-[#9aa4b2] hover:text-[#fb323f]"
+            className="absolute top-1/2 -translate-y-1/2 start-1.5 text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -639,10 +639,10 @@ function Action({
       disabled={busy}
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-xs font-medium border disabled:opacity-50 ${
         primary
-          ? 'bg-[#b8256e] text-white border-[#b8256e]'
+          ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]'
           : danger
-            ? 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]'
-            : 'bg-white text-[#364152] border-[#e3e8ef] hover:border-[#b8256e]'
+            ? 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]'
+            : 'bg-[var(--sys-card)] text-[var(--sys-foreground)] border-[var(--sys-border)] hover:border-[var(--sys-primary)]'
       }`}
     >
       {icon}

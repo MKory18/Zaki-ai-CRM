@@ -31,11 +31,11 @@ export function ProductThumb({
       <div
         className={clsx(
           sizeStyles[size],
-          'bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center shrink-0 overflow-hidden',
+          'bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center shrink-0 overflow-hidden',
           className
         )}
       >
-        <Package className={clsx('text-[#c9cdd4]', size === 'xs' ? 'w-3.5 h-3.5' : 'w-5 h-5')} />
+        <Package className={clsx('text-[var(--sys-border-strong)]', size === 'xs' ? 'w-3.5 h-3.5' : 'w-5 h-5')} />
       </div>
     );
   }
@@ -46,7 +46,7 @@ export function ProductThumb({
       src={src}
       alt={alt || 'صورة المنتج'}
       loading="lazy"
-      className={clsx(sizeStyles[size], 'object-cover border border-[#e3e8ef] bg-white shrink-0', className)}
+      className={clsx(sizeStyles[size], 'object-cover border border-[var(--sys-border)] bg-[var(--sys-card)] shrink-0', className)}
     />
   );
 }

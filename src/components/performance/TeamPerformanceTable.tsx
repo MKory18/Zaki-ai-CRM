@@ -46,18 +46,18 @@ const GROUPS: { roles: string[]; label: string; icon: React.ReactNode }[] = [
   {
     roles: ['CONFIRMATION_AGENT'],
     label: 'موظفو التأكيد',
-    icon: <PhoneCall className="w-3.5 h-3.5 text-[#b8256e]" />,
+    icon: <PhoneCall className="w-3.5 h-3.5 text-[var(--sys-primary)]" />,
   },
   {
     roles: ['CONFIRMATION_SUPERVISOR'],
     label: 'مشرفو التأكيد',
-    icon: <ShieldCheck className="w-3.5 h-3.5 text-[#b8256e]" />,
+    icon: <ShieldCheck className="w-3.5 h-3.5 text-[var(--sys-primary)]" />,
   },
 ];
 
 const OTHERS = {
   label: 'أدوار أخرى لامست طلبات التأكيد',
-  icon: <UserCog className="w-3.5 h-3.5 text-[#9aa4b2]" />,
+  icon: <UserCog className="w-3.5 h-3.5 text-[var(--sys-muted)]" />,
 };
 
 /** Minutes as something sayable: ٤٥ د، ٢ س ١٠ د، ١ ي ٣ س. */
@@ -91,10 +91,10 @@ function clock(minutes: number | null): string {
 }
 
 function rateTone(rate: number | null): string {
-  if (rate === null) return 'text-[#9aa4b2]';
-  if (rate >= 70) return 'text-[#00a344]';
-  if (rate >= 45) return 'text-[#c07f2a]';
-  return 'text-[#fb323f]';
+  if (rate === null) return 'text-[var(--sys-muted)]';
+  if (rate >= 70) return 'text-[var(--sys-success)]';
+  if (rate >= 45) return 'text-[var(--sys-warning)]';
+  return 'text-[var(--sys-destructive)]';
 }
 
 const HEADS = [
@@ -116,11 +116,11 @@ const HEADS = [
 
 export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null; totals?: TeamRow | null }) {
   if (rows === null) {
-    return <p className="p-6 text-sm text-[#9aa4b2] text-center">جارٍ التحميل…</p>;
+    return <p className="p-6 text-sm text-[var(--sys-muted)] text-center">جارٍ التحميل…</p>;
   }
   if (rows.length === 0) {
     return (
-      <p className="p-6 text-sm text-[#9aa4b2] text-center">
+      <p className="p-6 text-sm text-[var(--sys-muted)] text-center">
         لا عمل تأكيد مسجَّل في هذه المدة. جرّب مدة أوسع.
       </p>
     );
@@ -135,7 +135,7 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
-        <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586]">
+        <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">
           <tr>
             {HEADS.map((h) => (
               <th
@@ -152,21 +152,21 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
         </thead>
 
         {sections.map((section) => (
-          <tbody key={section.label} className="divide-y divide-[#e3e8ef]">
-            <tr className="bg-[#fdf5fa]/60">
+          <tbody key={section.label} className="divide-y divide-[var(--sys-border)]">
+            <tr className="bg-[var(--sys-primary-soft)]/60">
               <td colSpan={HEADS.length} className="px-4 py-1.5">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#697586]">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[var(--sys-muted-foreground)]">
                   {section.icon}
                   {section.label}
                 </span>
               </td>
             </tr>
             {section.rows.map((r) => (
-              <tr key={r.id} className="hover:bg-[#f8fafc] transition-colors">
-                <td className="px-4 py-3 font-semibold text-[#121926] whitespace-nowrap">{r.name}</td>
+              <tr key={r.id} className="hover:bg-[var(--sys-surface)] transition-colors">
+                <td className="px-4 py-3 font-semibold text-[var(--sys-heading)] whitespace-nowrap">{r.name}</td>
                 <Num value={r.claimed} />
-                <Num value={r.confirmed} tone="text-[#00a344]" />
-                <Num value={r.rejected} tone={r.rejected > 0 ? 'text-[#fb323f]' : undefined} />
+                <Num value={r.confirmed} tone="text-[var(--sys-success)]" />
+                <Num value={r.rejected} tone={r.rejected > 0 ? 'text-[var(--sys-destructive)]' : undefined} />
                 <Num value={r.noAnswer} />
                 <td className={`px-4 py-3 text-center tabular-nums font-bold ${rateTone(r.confirmationRate)}`}>
                   {r.confirmationRate === null ? '—' : `${r.confirmationRate}%`}
@@ -175,19 +175,19 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
                 <Text value={duration(r.medianConfirmMinutes)} />
                 <Text value={duration(r.medianGapMinutes)} />
                 <Text value={r.attemptsPerDecision === null ? '—' : String(r.attemptsPerDecision)} />
-                <Num value={r.openNow} tone={r.openNow > 10 ? 'text-[#c07f2a]' : undefined} />
+                <Num value={r.openNow} tone={r.openNow > 10 ? 'text-[var(--sys-warning)]' : undefined} />
                 <td
-                  className="px-4 py-3 text-center tabular-nums font-semibold text-[#121926]"
+                  className="px-4 py-3 text-center tabular-nums font-semibold text-[var(--sys-heading)]"
                   title={r.daysWithoutWork > 0 ? `${r.daysWithoutWork} يوم حضور بلا أي إجراء مسجَّل` : undefined}
                 >
-                  {r.daysPresent === 0 ? <span className="text-[#c3c8d4]">0</span> : r.daysPresent}
+                  {r.daysPresent === 0 ? <span className="text-[var(--sys-border-strong)]">0</span> : r.daysPresent}
                   {r.daysWithoutWork > 0 && (
-                    <span className="text-[10px] text-[#c07f2a] font-normal"> ({r.daysWithoutWork} بلا شغل)</span>
+                    <span className="text-[10px] text-[var(--sys-warning)] font-normal"> ({r.daysWithoutWork} بلا شغل)</span>
                   )}
                 </td>
                 <td
                   className={`px-4 py-3 text-center tabular-nums font-semibold ${
-                    r.daysLate > 0 ? 'text-[#fb323f]' : 'text-[#c3c8d4]'
+                    r.daysLate > 0 ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-border-strong)]'
                   }`}
                   title={
                     r.daysLate > 0
@@ -203,7 +203,7 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
                     <span className="text-[10px] font-normal"> ({clock(r.totalLateMinutes)})</span>
                   )}
                   {r.daysLateEstimated > 0 && (
-                    <span className="text-[10px] text-[#9aa4b2] font-normal"> ≈</span>
+                    <span className="text-[10px] text-[var(--sys-muted)] font-normal"> ≈</span>
                   )}
                 </td>
                 <Text value={clock(r.avgPresentMinutes)} />
@@ -213,11 +213,11 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
         ))}
 
         {totals && (
-          <tfoot className="border-t-2 border-[#e3e8ef] bg-[#f8fafc]">
+          <tfoot className="border-t-2 border-[var(--sys-border)] bg-[var(--sys-surface)]">
             <tr>
-              <td className="px-4 py-3 font-bold text-[#121926]">الإجمالي</td>
+              <td className="px-4 py-3 font-bold text-[var(--sys-heading)]">الإجمالي</td>
               <Num value={totals.claimed} bold />
-              <Num value={totals.confirmed} bold tone="text-[#00a344]" />
+              <Num value={totals.confirmed} bold tone="text-[var(--sys-success)]" />
               <Num value={totals.rejected} bold />
               <td />
               <td className={`px-4 py-3 text-center tabular-nums font-black ${rateTone(totals.confirmationRate)}`}>
@@ -243,7 +243,7 @@ function Num({ value, tone, bold }: { value: number; tone?: string; bold?: boole
   return (
     <td
       className={`px-4 py-3 text-center tabular-nums ${bold ? 'font-bold' : 'font-semibold'} ${
-        tone ?? (value === 0 ? 'text-[#c3c8d4]' : 'text-[#121926]')
+        tone ?? (value === 0 ? 'text-[var(--sys-border-strong)]' : 'text-[var(--sys-heading)]')
       }`}
     >
       {value}
@@ -255,7 +255,7 @@ function Text({ value, bold }: { value: string; bold?: boolean }) {
   return (
     <td
       className={`px-4 py-3 text-center tabular-nums whitespace-nowrap ${
-        bold ? 'font-bold text-[#121926]' : value === '—' ? 'text-[#c3c8d4]' : 'text-[#364152]'
+        bold ? 'font-bold text-[var(--sys-heading)]' : value === '—' ? 'text-[var(--sys-border-strong)]' : 'text-[var(--sys-foreground)]'
       }`}
     >
       {value}

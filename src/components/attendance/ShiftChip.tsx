@@ -105,7 +105,7 @@ export function ShiftChip() {
           // work on — so the counter they asked for was invisible to the
           // two roles it was built for. It shows from a phone up now; only
           // the very narrowest layout drops it.
-          className="hidden sm:inline text-[11px] text-[#697586] tabular-nums whitespace-nowrap"
+          className="hidden sm:inline text-[11px] text-[var(--sys-muted-foreground)] tabular-nums whitespace-nowrap"
           title="يُحتسب من ساعة الخادم"
         >
           {counter}
@@ -114,7 +114,7 @@ export function ShiftChip() {
 
       {state.leftAt ? (
         <span
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#f8fafc] border border-[#e3e8ef] text-[11px] text-[#697586]"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] text-[11px] text-[var(--sys-muted-foreground)]"
           title="انتهى دوامك اليوم"
         >
           <Check className="w-3.5 h-3.5" />
@@ -129,14 +129,14 @@ export function ShiftChip() {
           title={`في الدوام منذ ${elapsed === null ? '—' : humanMinutes(elapsed)} · الدوام ${state.hours?.start}—${state.hours?.end}`}
           className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-[11px] font-semibold tabular-nums transition-colors disabled:opacity-60 ${
             confirming
-              ? 'border-[#b8256e] bg-[#fdf5fa] text-[#b8256e]'
-              : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e]/50'
+              ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
+              : 'border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)]/50'
           }`}
         >
           {busy ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00a344]" aria-hidden />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--sys-success)]" aria-hidden />
           )}
           {confirming ? 'أنهي الدوام؟' : elapsed === null ? 'في الدوام' : humanMinutes(elapsed)}
         </button>
@@ -146,7 +146,7 @@ export function ShiftChip() {
           disabled={busy}
           onClick={() => press('CHECK_IN')}
           title={`سجّل بداية دوامك · الدوام ${state.hours?.start}—${state.hours?.end}`}
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-[#e3e8ef] text-[11px] font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e] transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-[var(--sys-border)] text-[11px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] transition-colors disabled:opacity-60"
         >
           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogIn className="w-3.5 h-3.5" />}
           استلمت

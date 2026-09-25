@@ -233,6 +233,10 @@ model User {
   /// What this person is paid, and in what. Null = no salary on file,
   /// which is every employee until somebody enters one: a salary is a
   /// deliberate entry and never a default.
+  /// Which of the system's looks this person chose. Null = the default.
+  /// On the user rather than in browser storage: somebody who works from
+  /// the counter and from a laptop chose once, not twice.
+  systemTheme       String?   @map("system_theme")
   salaryAmount      Decimal?  @map("salary_amount") @db.Decimal(12, 2)
   salaryCurrency    String?   @map("salary_currency")
   shiftStart        String?   @map("shift_start") @db.VarChar(5)

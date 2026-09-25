@@ -50,15 +50,15 @@ const TYPE_AR: Record<NotificationType, string> = {
 };
 
 const TONE: Record<NotificationType, string> = {
-  ORDER_NEW: 'bg-[#eef4ff] text-[#2563eb]',
-  FOLLOW_UP: 'bg-[#fff7ed] text-[#c2410c]',
-  LOW_STOCK: 'bg-[#fefce8] text-[#a16207]',
-  HIGH_REJECTION: 'bg-[#feecee] text-[#fb323f]',
-  CLOSING_DUE: 'bg-[#f5f3ff] text-[#6d28d9]',
-  POSTPONED_DUE: 'bg-[#fff7ed] text-[#c2410c]',
-  RETURNS_NOT_RECEIVED: 'bg-[#fefce8] text-[#a16207]',
-  PERFORMANCE: 'bg-[#ecfdf5] text-[#047857]',
-  SYSTEM_ALERT: 'bg-[#f8fafc] text-[#697586]',
+  ORDER_NEW: 'bg-[var(--sys-surface)] text-[var(--sys-info)]',
+  FOLLOW_UP: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]',
+  LOW_STOCK: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]',
+  HIGH_REJECTION: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]',
+  CLOSING_DUE: 'bg-[var(--sys-surface)] text-[var(--sys-info)]',
+  POSTPONED_DUE: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]',
+  RETURNS_NOT_RECEIVED: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]',
+  PERFORMANCE: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]',
+  SYSTEM_ALERT: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]',
 };
 
 const POLL_MS = 60_000;
@@ -164,11 +164,11 @@ export function NotificationBell() {
       <button
         onClick={toggle}
         aria-label={unread > 0 ? `${unread} إشعار غير مقروء` : 'الإشعارات'}
-        className="relative p-2 rounded-[8px] text-[#697586] hover:text-[#b8256e] hover:bg-[#f8fafc] transition-colors"
+        className="relative p-2 rounded-[8px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] transition-colors"
       >
         <Bell className="w-5 h-5" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#fb323f] text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+          <span className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-[10px] font-bold flex items-center justify-center tabular-nums">
             {unread > 99 ? '99+' : unread}
           </span>
         )}
@@ -177,15 +177,15 @@ export function NotificationBell() {
       {open && (
         <div
           dir="rtl"
-          className="absolute z-40 mt-1 end-0 w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border border-[#e3e8ef] bg-white shadow-lg overflow-hidden"
+          className="absolute z-40 mt-1 end-0 w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-lg overflow-hidden"
         >
-          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-[#e3e8ef] bg-[#f8fafc]">
-            <span className="text-xs font-bold text-[#121926]">الإشعارات</span>
+          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-[var(--sys-border)] bg-[var(--sys-surface)]">
+            <span className="text-xs font-bold text-[var(--sys-heading)]">الإشعارات</span>
             {unread > 0 && (
               <button
                 onClick={markAll}
                 disabled={busy}
-                className="text-[11px] text-[#b8256e] hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+                className="text-[11px] text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1 disabled:opacity-50"
               >
                 {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                 تعليم الكل كمقروء
@@ -195,36 +195,36 @@ export function NotificationBell() {
 
           <div className="max-h-[22rem] overflow-y-auto">
             {items === null ? (
-              <p className="px-4 py-6 text-xs text-[#9aa4b2] flex items-center justify-center gap-1.5">
+              <p className="px-4 py-6 text-xs text-[var(--sys-muted)] flex items-center justify-center gap-1.5">
                 <Loader2 className="w-3 h-3 animate-spin" /> جارٍ التحميل…
               </p>
             ) : items.length === 0 ? (
-              <p className="px-4 py-6 text-xs text-[#9aa4b2] text-center">لا إشعارات.</p>
+              <p className="px-4 py-6 text-xs text-[var(--sys-muted)] text-center">لا إشعارات.</p>
             ) : (
-              <ul className="divide-y divide-[#e3e8ef]">
+              <ul className="divide-y divide-[var(--sys-border)]">
                 {items.map((n) => (
                   <li key={n.id}>
                     <button
                       onClick={() => openItem(n)}
-                      className={`w-full text-start px-4 py-2.5 hover:bg-[#f8fafc] transition-colors ${
-                        n.isRead ? '' : 'bg-[#fdf5fa]/60'
+                      className={`w-full text-start px-4 py-2.5 hover:bg-[var(--sys-surface)] transition-colors ${
+                        n.isRead ? '' : 'bg-[var(--sys-primary-soft)]/60'
                       }`}
                     >
                       <span className="flex items-start gap-2">
                         {!n.isRead && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#b8256e] mt-1.5 shrink-0" aria-hidden="true" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--sys-primary)] mt-1.5 shrink-0" aria-hidden="true" />
                         )}
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5 flex-wrap">
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${TONE[n.type as NotificationType] ?? TONE.SYSTEM_ALERT}`}>
                               {TYPE_AR[n.type as NotificationType] ?? TYPE_AR.SYSTEM_ALERT}
                             </span>
-                            <span className="text-[10px] text-[#9aa4b2]">{arDateShort(n.createdAt)}</span>
+                            <span className="text-[10px] text-[var(--sys-muted)]">{arDateShort(n.createdAt)}</span>
                           </span>
-                          <span className={`block text-xs mt-1 ${n.isRead ? 'text-[#697586]' : 'text-[#121926] font-medium'}`}>
+                          <span className={`block text-xs mt-1 ${n.isRead ? 'text-[var(--sys-muted-foreground)]' : 'text-[var(--sys-heading)] font-medium'}`}>
                             {n.title}
                           </span>
-                          <span className="block text-[11px] text-[#9aa4b2] mt-0.5 break-words">{n.message}</span>
+                          <span className="block text-[11px] text-[var(--sys-muted)] mt-0.5 break-words">{n.message}</span>
                         </span>
                       </span>
                     </button>

@@ -102,7 +102,7 @@ export function EntryPicker() {
   if (!data) {
     return (
       <Screen>
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-10">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-10">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
         {error && <Error message={error} />}
@@ -115,7 +115,7 @@ export function EntryPicker() {
       <Screen title="اختر البلد" subtitle="كل متجر يتبع بلداً واحداً، ويرث منه العملة وأجور التوصيل وأيام العمل.">
         {error && <Error message={error} />}
         {data.countries.length === 0 && !data.canAddCountry && (
-          <p className="text-sm text-[#697586] text-center py-6">
+          <p className="text-sm text-[var(--sys-muted-foreground)] text-center py-6">
             لا توجد بلدان مسندة لحسابك. تواصل مع المدير لإسنادك إلى بلد.
           </p>
         )}
@@ -125,18 +125,18 @@ export function EntryPicker() {
               <button
                 disabled={busy}
                 onClick={() => select(c.id)}
-                className="w-full flex items-center gap-3 p-4 rounded-[8px] border border-[#e3e8ef] bg-white hover:border-[#b8256e] text-right disabled:opacity-60"
+                className="w-full flex items-center gap-3 p-4 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] hover:border-[var(--sys-primary)] text-right disabled:opacity-60"
               >
-                <span className="w-10 h-10 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-[#b8256e]" />
+                <span className="w-10 h-10 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-[var(--sys-primary)]" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-semibold text-[#121926]">{c.name}</span>
-                  <span className="block text-xs text-[#697586]">
+                  <span className="block text-sm font-semibold text-[var(--sys-heading)]">{c.name}</span>
+                  <span className="block text-xs text-[var(--sys-muted-foreground)]">
                     {c.currencyCode} · {c.activeStores} متجر نشط
                   </span>
                 </span>
-                <span className="text-xs text-[#9aa4b2]" dir="ltr">{c.code}</span>
+                <span className="text-xs text-[var(--sys-muted)]" dir="ltr">{c.code}</span>
               </button>
             </li>
           ))}
@@ -165,7 +165,7 @@ export function EntryPicker() {
     >
       {error && <Error message={error} />}
       {data.stores.length === 0 && (
-        <p className="text-sm text-[#697586] text-center py-6">
+        <p className="text-sm text-[var(--sys-muted-foreground)] text-center py-6">
           لا يوجد متجر في هذا البلد بعد.{data.canAddStore ? ' أنشئ المتجر الأول للمتابعة.' : ' تواصل مع المدير.'}
         </p>
       )}
@@ -175,19 +175,19 @@ export function EntryPicker() {
             <button
               disabled={busy}
               onClick={() => data.selection && select(data.selection.countryId, s.id)}
-              className="w-full flex items-center gap-3 p-4 rounded-[8px] border border-[#e3e8ef] bg-white hover:border-[#b8256e] text-right disabled:opacity-60"
+              className="w-full flex items-center gap-3 p-4 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] hover:border-[var(--sys-primary)] text-right disabled:opacity-60"
             >
-              <span className="w-10 h-10 rounded-[8px] bg-[#f8fafc] border border-[#e3e8ef] flex items-center justify-center overflow-hidden">
+              <span className="w-10 h-10 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center overflow-hidden">
                 {s.logo ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={s.logo} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <Store className="w-5 h-5 text-[#b8256e]" />
+                  <Store className="w-5 h-5 text-[var(--sys-primary)]" />
                 )}
               </span>
               <span className="flex-1 min-w-0">
-                <span className="block text-sm font-semibold text-[#121926]">{s.name}</span>
-                <span className="block text-xs text-[#697586]">
+                <span className="block text-sm font-semibold text-[var(--sys-heading)]">{s.name}</span>
+                <span className="block text-xs text-[var(--sys-muted-foreground)]">
                   {s.status === 'ACTIVE' ? 'نشط' : 'موقوف'} ·{' '}
                   {storeTypeLabel(s.type)}
                 </span>
@@ -224,17 +224,17 @@ function Screen({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-lg space-y-4">
         {title && (
           <div className="text-center">
-            <h1 className="text-xl font-bold text-[#121926]">{title}</h1>
-            {subtitle && <p className="mt-2 text-sm text-[#697586]">{subtitle}</p>}
+            <h1 className="text-xl font-bold text-[var(--sys-heading)]">{title}</h1>
+            {subtitle && <p className="mt-2 text-sm text-[var(--sys-muted-foreground)]">{subtitle}</p>}
           </div>
         )}
         {children}
         {onBack && (
-          <button onClick={onBack} className="block mx-auto text-xs text-[#697586] hover:text-[#b8256e]">
+          <button onClick={onBack} className="block mx-auto text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]">
             تغيير البلد
           </button>
         )}
@@ -245,7 +245,7 @@ function Screen({
 
 function Error({ message }: { message: string }) {
   return (
-    <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3 text-center">
+    <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3 text-center">
       {message}
     </p>
   );
@@ -261,7 +261,7 @@ function AddCountryForm({ open, onOpen, onDone }: { open: boolean; onOpen: () =>
     return (
       <button
         onClick={onOpen}
-        className="w-full flex items-center justify-center gap-2 p-3 rounded-[8px] border border-dashed border-[#e3e8ef] text-sm text-[#697586] hover:border-[#b8256e] hover:text-[#b8256e]"
+        className="w-full flex items-center justify-center gap-2 p-3 rounded-[8px] border border-dashed border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
       >
         <Plus className="w-4 h-4" /> إضافة بلد
       </button>
@@ -294,7 +294,7 @@ function AddCountryForm({ open, onOpen, onDone }: { open: boolean; onOpen: () =>
   };
 
   return (
-    <form onSubmit={submit} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
+    <form onSubmit={submit} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3">
       {error && <Error message={error} />}
       <Field label="اسم البلد" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="سوريا" />
       <Field label="الرمز (ISO)" value={form.code} onChange={(v) => setForm({ ...form, code: v })} placeholder="SY" dir="ltr" />
@@ -302,7 +302,7 @@ function AddCountryForm({ open, onOpen, onDone }: { open: boolean; onOpen: () =>
       <button
         type="submit"
         disabled={busy || !currencyChoiceReady(currency)}
-        className="w-full py-2 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-60"
+        className="w-full py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-60"
       >
         {busy ? 'جارٍ الحفظ…' : 'إضافة البلد'}
       </button>
@@ -329,7 +329,7 @@ function AddStoreForm({
     return (
       <button
         onClick={onOpen}
-        className="w-full flex items-center justify-center gap-2 p-3 rounded-[8px] border border-dashed border-[#e3e8ef] text-sm text-[#697586] hover:border-[#b8256e] hover:text-[#b8256e]"
+        className="w-full flex items-center justify-center gap-2 p-3 rounded-[8px] border border-dashed border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
       >
         <Plus className="w-4 h-4" /> إضافة متجر
       </button>
@@ -355,7 +355,7 @@ function AddStoreForm({
   };
 
   return (
-    <form onSubmit={submit} className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
+    <form onSubmit={submit} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3">
       {error && <Error message={error} />}
       <Field label="اسم المتجر" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="متجر دمشق" />
       <Field
@@ -368,7 +368,7 @@ function AddStoreForm({
       <button
         type="submit"
         disabled={busy}
-        className="w-full py-2 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-60"
+        className="w-full py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-60"
       >
         {busy ? 'جارٍ الحفظ…' : 'إضافة المتجر'}
       </button>
@@ -391,14 +391,14 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-[#364152] mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         dir={dir}
         required
-        className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] bg-white text-sm focus:outline-none focus:border-[#b8256e]"
+        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
       />
     </label>
   );

@@ -266,22 +266,22 @@ export function CustomConversionsCard() {
   const labelOf = (t: string) => options?.triggers.find((x) => x.value === t)?.label ?? t;
 
   return (
-    <div className="rounded-xl border border-[#e3e8ef] bg-white p-4" dir="rtl">
+    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
       <div className="mb-1 flex items-center gap-2">
-        <Target className="h-4 w-4 text-[#b8256e]" />
-        <h2 className="text-sm font-bold text-[#121926]">التحويلات المخصّصة</h2>
+        <Target className="h-4 w-4 text-[var(--sys-primary)]" />
+        <h2 className="text-sm font-bold text-[var(--sys-heading)]">التحويلات المخصّصة</h2>
       </div>
-      <p className="mb-3 text-[11px] leading-relaxed text-[#697586]">
+      <p className="mb-3 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
         البكسل أعلاه يُطلق حدثه لحظة تعبئة النموذج. هنا تختار أنت لحظة أخرى من رحلة الطلب — التأكيد
         أو الاستلام — ويرسلها خادمنا إلى ميتا باسم حدث خاصّ بها. البكسل لا يتغيّر، ولا ازدواج في العدّ.
       </p>
 
       {pixels === null ? (
-        <div className="flex h-16 items-center justify-center text-[#697586]">
+        <div className="flex h-16 items-center justify-center text-[var(--sys-muted-foreground)]">
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       ) : pixels.length === 0 ? (
-        <p className="rounded-lg bg-[#f8fafc] p-3 text-[11px] leading-relaxed text-[#697586]">
+        <p className="rounded-lg bg-[var(--sys-surface)] p-3 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           أضف بكسل ميتا أعلاه أولاً — التحويل يُرسَل إلى بكسل بعينه.
         </p>
       ) : (
@@ -302,23 +302,23 @@ export function CustomConversionsCard() {
           )}
 
           {/* ── The token. Nothing sends without it. ── */}
-          <div className="mb-3 rounded-lg bg-[#f8fafc] p-3">
+          <div className="mb-3 rounded-lg bg-[var(--sys-surface)] p-3">
             {connected ? (
               <>
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[#00994d]">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--sys-success)]">
                   <Check className="h-3.5 w-3.5" />
                   واجهة التحويلات مربوطة
-                  <span className="font-mono text-[10px] text-[#9aa4b2]" dir="ltr">••••{pixel?.capiTokenHint}</span>
+                  <span className="font-mono text-[10px] text-[var(--sys-muted)]" dir="ltr">••••{pixel?.capiTokenHint}</span>
                   <button
                     onClick={() => void removeToken()}
-                    className="mr-auto rounded p-1 text-[#697586] hover:bg-rose-50 hover:text-rose-600"
+                    className="mr-auto rounded p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                     title="فصل"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </p>
                 <div className="mt-2">
-                  <label className="mb-1 block text-[11px] font-semibold text-[#364152]">
+                  <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">
                     رمز الاختبار (اختياري)
                   </label>
                   <div className="flex gap-2">
@@ -333,13 +333,13 @@ export function CustomConversionsCard() {
                       حفظ
                     </Button>
                   </div>
-                  <p className="mt-1 text-[10px] leading-relaxed text-[#9aa4b2]">
+                  <p className="mt-1 text-[10px] leading-relaxed text-[var(--sys-muted)]">
                     من Events Manager ← Test Events. حين يكون موجوداً تظهر الأحداث في لوحة الاختبار
                     و<b>لا تُحتسب تحويلات</b> — فامسحه حين تنتهي، وإلا رأيت أحداثاً تصل بلا تحويلات أبداً.
                   </p>
                 </div>
                 <div className="mt-2">
-                  <label className="mb-1 block text-[11px] font-semibold text-[#364152]">Dataset ID (اختياري)</label>
+                  <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">Dataset ID (اختياري)</label>
                   <div className="flex gap-2">
                     <input
                       value={dataset}
@@ -358,7 +358,7 @@ export function CustomConversionsCard() {
                       حفظ
                     </Button>
                   </div>
-                  <p className="mt-1 text-[10px] leading-relaxed text-[#9aa4b2]">
+                  <p className="mt-1 text-[10px] leading-relaxed text-[var(--sys-muted)]">
                     فارغ = الأحداث تذهب إلى البكسل نفسه، وهو نفس رقم الـ Dataset في بكسل الويب. عبّئه فقط إن
                     أنشأت في Events Manager مجموعة بيانات منفصلة لأحداث الخادم.
                   </p>
@@ -366,8 +366,8 @@ export function CustomConversionsCard() {
               </>
             ) : (
               <>
-                <label className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-[#364152]">
-                  <KeyRound className="h-3.5 w-3.5 text-[#b8256e]" />
+                <label className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-[var(--sys-foreground)]">
+                  <KeyRound className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
                   رمز واجهة التحويلات
                 </label>
                 <input
@@ -379,11 +379,11 @@ export function CustomConversionsCard() {
                   dir="ltr"
                   autoComplete="off"
                 />
-                <p className="mt-1 text-[10px] leading-relaxed text-[#9aa4b2]">
+                <p className="mt-1 text-[10px] leading-relaxed text-[var(--sys-muted)]">
                   يُشفَّر قبل الحفظ ولا يُعرَض بعدها أبداً، ولا يُكتب في سجل التدقيق. نتحقق منه مع ميتا
                   قبل حفظه — الخلل هنا لا يظهر إلا بعد أيام داخل عامل لا يراقبه أحد.
                 </p>
-                <label className="mb-1 mt-2 block text-[11px] font-semibold text-[#364152]">Dataset ID (اختياري)</label>
+                <label className="mb-1 mt-2 block text-[11px] font-semibold text-[var(--sys-foreground)]">Dataset ID (اختياري)</label>
                 <input
                   value={dataset}
                   onChange={(e) => setDataset(e.target.value.replace(/\D/g, ''))}
@@ -409,33 +409,33 @@ export function CustomConversionsCard() {
           {mine.length > 0 && (
             <div className="mb-3 space-y-2">
               {mine.map((c) => (
-                  <div key={c.id} className="rounded-lg border border-[#e3e8ef] p-2.5">
+                  <div key={c.id} className="rounded-lg border border-[var(--sys-border)] p-2.5">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[#121926]">
+                        <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[var(--sys-heading)]">
                           {c.name}
-                          <span className="rounded bg-[#f1f5f9] px-1.5 py-0.5 font-mono text-[9px] text-[#475467]" dir="ltr">
+                          <span className="rounded bg-[var(--sys-surface-strong)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--sys-foreground)]" dir="ltr">
                             {c.eventName}
                           </span>
                           {!c.enabled && (
-                            <span className="rounded bg-[#f1f5f9] px-1.5 py-0.5 text-[9px] font-semibold text-[#697586]">
+                            <span className="rounded bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-muted-foreground)]">
                               موقوف
                             </span>
                           )}
                         </p>
-                        <p className="mt-0.5 text-[10px] text-[#697586]">
+                        <p className="mt-0.5 text-[10px] text-[var(--sys-muted-foreground)]">
                           عند: {labelOf(c.trigger)} ·{' '}
                           {options?.valueSources.find((v) => v.value === c.valueSource)?.label}
                         </p>
-                        <p className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-[#697586]">
-                          <span>أُرسل <b className="text-[#00994d]">{c.stats.sent}</b></span>
+                        <p className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-[var(--sys-muted-foreground)]">
+                          <span>أُرسل <b className="text-[var(--sys-success)]">{c.stats.sent}</b></span>
                           {c.stats.pending > 0 && <span>بالانتظار {c.stats.pending}</span>}
-                          {c.stats.failed > 0 && <span className="text-rose-600">فشل {c.stats.failed}</span>}
-                          {c.stats.skipped > 0 && <span className="text-amber-600">متأخّر {c.stats.skipped}</span>}
+                          {c.stats.failed > 0 && <span className="text-[var(--sys-destructive)]">فشل {c.stats.failed}</span>}
+                          {c.stats.skipped > 0 && <span className="text-[var(--sys-warning)]">متأخّر {c.stats.skipped}</span>}
                           {c.stats.matchQuality !== null && (
                             /* The only way anybody finds out that events are
                                arriving and matching nobody. */
-                            <span className={c.stats.matchQuality < 0.4 ? 'text-amber-600' : ''}>
+                            <span className={c.stats.matchQuality < 0.4 ? 'text-[var(--sys-warning)]' : ''}>
                               جودة المطابقة {Math.round(c.stats.matchQuality * 100)}%
                             </span>
                           )}
@@ -444,14 +444,14 @@ export function CustomConversionsCard() {
                       <div className="flex shrink-0 items-center gap-1">
                         <button
                           onClick={() => void toggle(c)}
-                          className="rounded px-2 py-1 text-[10px] font-semibold text-[#697586] hover:bg-[#f8fafc]"
+                          className="rounded px-2 py-1 text-[10px] font-semibold text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
                         >
                           {c.enabled ? 'أوقف' : 'شغّل'}
                         </button>
                         <button
                           onClick={() => void remove(c)}
                           title="حذف"
-                          className="rounded p-1 text-[#697586] hover:bg-rose-50 hover:text-rose-600"
+                          className="rounded p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -459,7 +459,7 @@ export function CustomConversionsCard() {
                     </div>
 
                     {c.stats.matchQuality !== null && c.stats.matchQuality < 0.4 && (
-                      <p className="mt-1.5 flex items-start gap-1 rounded bg-amber-50 p-1.5 text-[10px] leading-relaxed text-amber-800">
+                      <p className="mt-1.5 flex items-start gap-1 rounded bg-[var(--sys-warning-soft)] p-1.5 text-[10px] leading-relaxed text-[var(--sys-warning)]">
                         <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
                         جودة المطابقة منخفضة — الأحداث تصل لكن ميتا تربط قليلاً منها بأشخاص. تحقّق أن
                         أرقام الهواتف مخزّنة كاملة.
@@ -473,13 +473,13 @@ export function CustomConversionsCard() {
           {/* ── Add one ── */}
           {!showForm ? (
             <Button size="sm" variant="outline" onClick={() => setAdding(true)} className="w-full gap-1.5">
-              <Plus className="h-3.5 w-3.5 text-[#b8256e]" />
+              <Plus className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
               أضف تحويلاً
             </Button>
           ) : (
-            <div className="space-y-2 rounded-lg bg-[#f8fafc] p-3">
+            <div className="space-y-2 rounded-lg bg-[var(--sys-surface)] p-3">
               <div>
-                <label className="mb-1.5 block text-[11px] font-semibold text-[#364152]">
+                <label className="mb-1.5 block text-[11px] font-semibold text-[var(--sys-foreground)]">
                   متى يُحتسب التحويل؟
                 </label>
                 <div className="space-y-1.5">
@@ -490,12 +490,12 @@ export function CustomConversionsCard() {
                       onClick={() => pickTrigger(t.value)}
                       className={`w-full rounded-lg border p-2 text-right transition ${
                         form.trigger === t.value
-                          ? 'border-[#b8256e] bg-white'
-                          : 'border-[#e3e8ef] bg-white hover:border-[#cdd5df]'
+                          ? 'border-[var(--sys-primary)] bg-[var(--sys-card)]'
+                          : 'border-[var(--sys-border)] bg-[var(--sys-card)] hover:border-[var(--sys-border-strong)]'
                       }`}
                     >
-                      <span className="block text-[11px] font-bold text-[#121926]">{t.label}</span>
-                      <span className="mt-0.5 block text-[10px] leading-relaxed text-[#697586]">{t.hint}</span>
+                      <span className="block text-[11px] font-bold text-[var(--sys-heading)]">{t.label}</span>
+                      <span className="mt-0.5 block text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">{t.hint}</span>
                     </button>
                   ))}
                 </div>
@@ -504,7 +504,7 @@ export function CustomConversionsCard() {
               {form.trigger && (
                 <>
                   <div>
-                    <label className="mb-1 block text-[11px] font-semibold text-[#364152]">الاسم عندك</label>
+                    <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">الاسم عندك</label>
                     <input
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -513,7 +513,7 @@ export function CustomConversionsCard() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-semibold text-[#364152]">
+                    <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">
                       اسم الحدث في ميتا
                     </label>
                     <input
@@ -523,14 +523,14 @@ export function CustomConversionsCard() {
                       dir="ltr"
                       placeholder="OrderDelivered"
                     />
-                    <p className="mt-1 text-[10px] leading-relaxed text-[#9aa4b2]">
+                    <p className="mt-1 text-[10px] leading-relaxed text-[var(--sys-muted)]">
                       حروف إنجليزية وأرقام وشرطة سفلية فقط. من هذا الاسم تبني التحويل المخصّص في مدير
                       الأحداث. لا تستخدم <code className="font-mono">Purchase</code> — البكسل يرسله أصلاً
                       وسيتضاعف العدّ.
                     </p>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-semibold text-[#364152]">القيمة المرسَلة</label>
+                    <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">القيمة المرسَلة</label>
                     <select
                       value={form.valueSource}
                       onChange={(e) => setForm({ ...form, valueSource: e.target.value })}
@@ -559,7 +559,7 @@ export function CustomConversionsCard() {
           )}
 
           {msg && (
-            <p className={`mt-2 text-[11px] font-medium leading-relaxed ${msg.ok ? 'text-[#00994d]' : 'text-rose-600'}`}>
+            <p className={`mt-2 text-[11px] font-medium leading-relaxed ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
               {msg.text}
             </p>
           )}
@@ -569,21 +569,21 @@ export function CustomConversionsCard() {
       <button
         type="button"
         onClick={() => setHowOpen((v) => !v)}
-        className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-[#697586] hover:text-[#b8256e]"
+        className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
       >
         <ChevronDown className={`h-3 w-3 transition ${howOpen ? 'rotate-180' : ''}`} />
         كيف أُشغّلها؟
       </button>
 
       {howOpen && (
-        <ol className="mt-2 space-y-2 rounded-lg bg-[#f8fafc] p-3 text-[11px] leading-relaxed text-[#364152]">
+        <ol className="mt-2 space-y-2 rounded-lg bg-[var(--sys-surface)] p-3 text-[11px] leading-relaxed text-[var(--sys-foreground)]">
           <li>
             <b>١.</b> في{' '}
             <a
               href="https://business.facebook.com/events_manager2"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#0ea5e9] hover:underline"
+              className="text-[var(--sys-info)] hover:underline"
             >
               مدير الأحداث
             </a>{' '}
@@ -599,7 +599,7 @@ export function CustomConversionsCard() {
             <b>٤.</b> ثمّ <b>Custom Conversions ← Create</b>، واختر حدثك اسماً للتحويل المخصّص. هناك
             تضيف شروط الرابط أو النطاق إن أردت — هذا مكانها، لا هنا.
           </li>
-          <li className="border-t border-[#e3e8ef] pt-2 text-[#697586]">
+          <li className="border-t border-[var(--sys-border)] pt-2 text-[var(--sys-muted-foreground)]">
             ميتا ترفض حدثاً أقدم من <b>٧ أيام</b>. طلب تأخّر تسليمه أكثر من ذلك يُسجَّل «متأخّر» ولا يُرسَل —
             ليس خللاً، بل حدود نافذة الإسناد عندهم.
           </li>
@@ -610,4 +610,4 @@ export function CustomConversionsCard() {
 }
 
 const INPUT =
-  'w-full rounded-lg border border-[#e3e8ef] bg-white px-3 py-2 text-sm text-[#121926] outline-none focus:border-[#b8256e]';
+  'w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]';

@@ -153,30 +153,30 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
   }
 
   const inputClass =
-    'w-full h-9 px-3 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]';
+    'w-full h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-black text-slate-700 flex items-center gap-2">
-          <Package className="w-4 h-4 text-[#b8256e]" />
+        <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
+          <Package className="w-4 h-4 text-[var(--sys-primary)]" />
           بيانات الطلب
           {offerName && (
-            <span className="text-[10px] font-medium text-[#b8256e] bg-[#fdf5fa] border border-[#f2c9dd] rounded-md px-1.5 py-0.5">
+            <span className="text-[10px] font-medium text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5">
               عرض: {offerName}
             </span>
           )}
         </h4>
         <button
           onClick={openForm}
-          className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600 hover:text-[#b8256e] inline-flex items-center gap-1.5"
+          className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
         >
           <Pencil className="w-3.5 h-3.5" />
           {open ? 'إغلاق' : 'تعديل'}
         </button>
       </div>
 
-      <div className="border border-[#e3e8ef] rounded-[8px] divide-y divide-[#e3e8ef]">
+      <div className="border border-[var(--sys-border)] rounded-[8px] divide-y divide-[var(--sys-border)]">
         {lines.map((line) => (
           <div key={line.id} className="flex items-center gap-3 px-3 py-2.5">
             <ProductThumb
@@ -185,13 +185,13 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
               size="sm"
             />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-slate-900 truncate">{line.productName}</p>
-              <p className="text-[11px] text-slate-400 tabular-nums" dir="ltr">
+              <p className="text-sm font-medium text-[var(--sys-heading)] truncate">{line.productName}</p>
+              <p className="text-[11px] text-[var(--sys-muted)] tabular-nums" dir="ltr">
                 {line.quantity} × {amount(line.unitPrice, currency)}
                 {line.freeQuantity > 0 && ` + ${line.freeQuantity} هدية`}
               </p>
             </div>
-            <span className="text-sm font-bold text-slate-900 tabular-nums shrink-0" dir="ltr">
+            <span className="text-sm font-bold text-[var(--sys-heading)] tabular-nums shrink-0" dir="ltr">
               {amount(line.lineTotal, currency)}
             </span>
           </div>
@@ -215,12 +215,12 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
       )}
 
       {order.priceIncludesDelivery && !open && (
-        <p className="text-[11px] text-slate-400">سعر البيع شامل التوصيل.</p>
+        <p className="text-[11px] text-[var(--sys-muted)]">سعر البيع شامل التوصيل.</p>
       )}
 
       {order.customerNotes && !open && (
-        <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-[8px] px-2.5 py-1.5 whitespace-pre-line">
-          <span className="text-amber-700">ملاحظات الطلب: </span>
+        <p className="text-xs text-amber-900 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-[8px] px-2.5 py-1.5 whitespace-pre-line">
+          <span className="text-[var(--sys-warning)]">ملاحظات الطلب: </span>
           {order.customerNotes}
         </p>
       )}
@@ -236,7 +236,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
           />
 
           <label className="block max-w-xs">
-            <span className="block text-xs font-medium text-slate-600 mb-1">الخصم على الطلب</span>
+            <span className="block text-xs font-medium text-[var(--sys-muted-foreground)] mb-1">الخصم على الطلب</span>
             <input
               type="number" min="0" step="0.01" dir="ltr"
               value={form.discountAmount}
@@ -246,32 +246,32 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
           </label>
 
           <label className="block">
-            <span className="block text-xs font-medium text-slate-600 mb-1">ملاحظات الطلب</span>
+            <span className="block text-xs font-medium text-[var(--sys-muted-foreground)] mb-1">ملاحظات الطلب</span>
             <textarea
               rows={2}
               value={form.customerNotes}
               onChange={(e) => setForm({ ...form, customerNotes: e.target.value })}
               placeholder="ما طلبه العميل: وقت التوصيل المفضل، تفاصيل العنوان…"
-              className="w-full px-3 py-2 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]"
+              className="w-full px-3 py-2 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
             />
           </label>
 
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-[var(--sys-muted)]">
             أجرة التوصيل لا تُكتب هنا — تُحسب من جدول الأجور حين يُسند الطلب لشركة شحن.
           </p>
 
-          {error && <p className="text-[11px] text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] px-2.5 py-1.5">{error}</p>}
+          {error && <p className="text-[11px] text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] px-2.5 py-1.5">{error}</p>}
 
           <div className="flex gap-2">
             <button
               onClick={save}
               disabled={busy}
-              className="text-xs px-3 py-1.5 rounded-[8px] bg-[#b8256e] text-white font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="text-xs px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
             >
               {busy && <Loader2 className="w-3 h-3 animate-spin" />}
               حفظ بيانات الطلب
             </button>
-            <button onClick={() => setOpen(false)} className="text-xs px-3 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600">
+            <button onClick={() => setOpen(false)} className="text-xs px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">
               إلغاء
             </button>
           </div>
@@ -284,8 +284,8 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
 function Small({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[11px] text-slate-400">{label}</dt>
-      <dd className="text-slate-900 font-medium tabular-nums" dir="ltr">{value}</dd>
+      <dt className="text-[11px] text-[var(--sys-muted)]">{label}</dt>
+      <dd className="text-[var(--sys-heading)] font-medium tabular-nums" dir="ltr">{value}</dd>
     </div>
   );
 }

@@ -13,21 +13,21 @@ export function Input({ label, error, helperText, className, id, ...props }: Inp
   return (
     <div className="w-full min-w-0">
       {label && (
-        <label htmlFor={inputId} className="block text-xs font-medium text-[#121926] mb-1.5">
+        <label htmlFor={inputId} className="block text-xs font-medium text-[var(--sys-heading)] mb-1.5">
           {label}
         </label>
       )}
       <input
         id={inputId}
         className={clsx(
-          'w-full min-w-0 px-3 py-2 text-sm bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors placeholder:text-[#9aa4b2]',
-          error ? 'border-[#fb323f] focus:border-[#fb323f] focus:ring-[#fb323f]/20' : 'border-[#e3e8ef]',
+          'w-full min-w-0 px-3 py-2 text-sm bg-[var(--sys-card)] border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/25 focus:border-[var(--sys-primary)] transition-colors placeholder:text-[var(--sys-muted)]',
+          error ? 'border-[var(--sys-destructive)] focus:border-[var(--sys-destructive)] focus:ring-[var(--sys-destructive)]/20' : 'border-[var(--sys-border)]',
           className
         )}
         {...props}
       />
-      {error && <p className="text-xs text-[#fb323f] mt-1">{error}</p>}
-      {helperText && !error && <p className="text-xs text-[#697586] mt-1">{helperText}</p>}
+      {error && <p className="text-xs text-[var(--sys-destructive)] mt-1">{error}</p>}
+      {helperText && !error && <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{helperText}</p>}
     </div>
   );
 }
@@ -44,15 +44,15 @@ export function Select({ label, error, options, children, className, id, ...prop
   return (
     <div className="w-full min-w-0">
       {label && (
-        <label htmlFor={selectId} className="block text-xs font-medium text-[#121926] mb-1.5">
+        <label htmlFor={selectId} className="block text-xs font-medium text-[var(--sys-heading)] mb-1.5">
           {label}
         </label>
       )}
       <select
         id={selectId}
         className={clsx(
-          'w-full min-w-0 px-3 py-2 text-sm bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors',
-          error ? 'border-[#fb323f]' : 'border-[#e3e8ef]',
+          'w-full min-w-0 px-3 py-2 text-sm bg-[var(--sys-card)] border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/25 focus:border-[var(--sys-primary)] transition-colors',
+          error ? 'border-[var(--sys-destructive)]' : 'border-[var(--sys-border)]',
           className
         )}
         {...props}
@@ -65,7 +65,7 @@ export function Select({ label, error, options, children, className, id, ...prop
             ))
           : children}
       </select>
-      {error && <p className="text-xs text-[#fb323f] mt-1">{error}</p>}
+      {error && <p className="text-xs text-[var(--sys-destructive)] mt-1">{error}</p>}
     </div>
   );
 }
@@ -81,20 +81,20 @@ export function Textarea({ label, error, className, id, ...props }: TextareaProp
   return (
     <div className="w-full min-w-0">
       {label && (
-        <label htmlFor={textareaId} className="block text-xs font-medium text-[#121926] mb-1.5">
+        <label htmlFor={textareaId} className="block text-xs font-medium text-[var(--sys-heading)] mb-1.5">
           {label}
         </label>
       )}
       <textarea
         id={textareaId}
         className={clsx(
-          'w-full min-w-0 px-3 py-2 text-sm bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#b8256e]/25 focus:border-[#b8256e] transition-colors placeholder:text-[#9aa4b2]',
-          error ? 'border-[#fb323f]' : 'border-[#e3e8ef]',
+          'w-full min-w-0 px-3 py-2 text-sm bg-[var(--sys-card)] border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/25 focus:border-[var(--sys-primary)] transition-colors placeholder:text-[var(--sys-muted)]',
+          error ? 'border-[var(--sys-destructive)]' : 'border-[var(--sys-border)]',
           className
         )}
         {...props}
       />
-      {error && <p className="text-xs text-[#fb323f] mt-1">{error}</p>}
+      {error && <p className="text-xs text-[var(--sys-destructive)] mt-1">{error}</p>}
     </div>
   );
 }

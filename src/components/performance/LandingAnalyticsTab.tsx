@@ -44,11 +44,11 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
   }, [dateQuery]);
 
   if (failed) {
-    return <p className="rounded-xl border border-[#e3e8ef] bg-white p-6 text-center text-xs text-[#697586]">تعذّر تحميل التحليلات.</p>;
+    return <p className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-xs text-[var(--sys-muted-foreground)]">تعذّر تحميل التحليلات.</p>;
   }
   if (!data) {
     return (
-      <div className="flex h-40 items-center justify-center text-[#697586]">
+      <div className="flex h-40 items-center justify-center text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" />
       </div>
     );
@@ -68,7 +68,7 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
       </div>
 
       {partial && (
-        <p className="flex items-start gap-1.5 rounded-lg bg-[#f1f5f9] px-3 py-2 text-[11px] leading-relaxed text-[#475467]">
+        <p className="flex items-start gap-1.5 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-[11px] leading-relaxed text-[var(--sys-foreground)]">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {data.countingSince
             ? `المشاهدات تُعدّ يومياً منذ ${data.countingSince}. عمود الطلبات يشمل المدة كلها، أما نسبة التحويل فتُحسب من طلبات الأيام التي عُدّت فيها المشاهدات فقط.`
@@ -81,7 +81,7 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
         <Table title="حسب الجهاز" rows={data.byDevice} empty="لا بيانات." />
         <Table title="حسب الحملة" rows={data.byCampaign} empty="لا حملات لها زيارات أو طلبات في هذه المدة." />
       </div>
-      <p className="text-[10px] leading-relaxed text-[#9aa4b2]">
+      <p className="text-[10px] leading-relaxed text-[var(--sys-muted)]">
         المشاهدة زيارة حقيقية لصفحة منشورة — المعاينة من لوحة التحكم وروابط المعاينة في المحادثات لا تُعدّ. الطلب
         كل طلب جاء من صفحة هبوط خلال المدة، والحملة من رمز ?c= في رابطها.
       </p>
@@ -91,24 +91,24 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
 
 function Tile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[#e3e8ef] bg-white p-3">
-      <p className="flex items-center gap-1 text-[11px] font-semibold text-[#697586]">{icon}{label}</p>
-      <p className="mt-1 text-xl font-black tabular-nums text-[#121926]" dir="ltr">{value}</p>
+    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+      <p className="flex items-center gap-1 text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{icon}{label}</p>
+      <p className="mt-1 text-xl font-black tabular-nums text-[var(--sys-heading)]" dir="ltr">{value}</p>
     </div>
   );
 }
 
 function Table({ title, rows, empty, linkPages }: { title: string; rows: Row[]; empty: string; linkPages?: boolean }) {
   return (
-    <section className="rounded-xl border border-[#e3e8ef] bg-white">
-      <h3 className="border-b border-[#f1f3f6] px-4 py-2.5 text-sm font-bold text-[#121926]">{title}</h3>
+    <section className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)]">
+      <h3 className="border-b border-[var(--sys-surface-strong)] px-4 py-2.5 text-sm font-bold text-[var(--sys-heading)]">{title}</h3>
       {rows.length === 0 || rows.every((r) => !r.views && !r.orders) ? (
-        <p className="p-4 text-center text-xs text-[#9aa4b2]">{empty}</p>
+        <p className="p-4 text-center text-xs text-[var(--sys-muted)]">{empty}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-[10px] text-[#697586]">
+              <tr className="text-[10px] text-[var(--sys-muted-foreground)]">
                 <th className="px-4 py-2 text-start font-semibold">الاسم</th>
                 <th className="px-2 py-2 text-end font-semibold">مشاهدات</th>
                 <th className="px-2 py-2 text-end font-semibold">طلبات</th>
@@ -117,20 +117,20 @@ function Table({ title, rows, empty, linkPages }: { title: string; rows: Row[]; 
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.key} className="border-t border-[#f1f3f6]">
+                <tr key={r.key} className="border-t border-[var(--sys-surface-strong)]">
                   <td className="px-4 py-2">
-                    <span className="font-semibold text-[#121926]">
+                    <span className="font-semibold text-[var(--sys-heading)]">
                       {linkPages && r.hint?.startsWith('/lp/') ? (
-                        <Link href={r.hint} target="_blank" className="hover:text-[#b8256e] hover:underline">{r.label}</Link>
+                        <Link href={r.hint} target="_blank" className="hover:text-[var(--sys-primary)] hover:underline">{r.label}</Link>
                       ) : r.label}
                     </span>
                     {r.hint && !r.hint.startsWith('/lp/') && (
-                      <span className="ms-1.5 text-[10px] text-[#9aa4b2]" dir={r.hint.startsWith('?') ? 'ltr' : undefined}>{r.hint}</span>
+                      <span className="ms-1.5 text-[10px] text-[var(--sys-muted)]" dir={r.hint.startsWith('?') ? 'ltr' : undefined}>{r.hint}</span>
                     )}
                   </td>
-                  <td className="px-2 py-2 text-end tabular-nums text-[#364152]" dir="ltr">{fmt(r.views)}</td>
-                  <td className="px-2 py-2 text-end tabular-nums text-[#364152]" dir="ltr">{fmt(r.orders)}</td>
-                  <td className="px-4 py-2 text-end font-bold tabular-nums text-[#121926]" dir="ltr">{pct(r.conversion)}</td>
+                  <td className="px-2 py-2 text-end tabular-nums text-[var(--sys-foreground)]" dir="ltr">{fmt(r.views)}</td>
+                  <td className="px-2 py-2 text-end tabular-nums text-[var(--sys-foreground)]" dir="ltr">{fmt(r.orders)}</td>
+                  <td className="px-4 py-2 text-end font-bold tabular-nums text-[var(--sys-heading)]" dir="ltr">{pct(r.conversion)}</td>
                 </tr>
               ))}
             </tbody>

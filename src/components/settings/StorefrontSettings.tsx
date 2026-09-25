@@ -80,14 +80,14 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-[#e3e8ef] bg-white p-4">
+    <div className="space-y-4 rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-sm font-bold text-[#121926]">
-            <StoreIcon className="h-4 w-4 text-[#b8256e]" />
+          <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
+            <StoreIcon className="h-4 w-4 text-[var(--sys-primary)]" />
             واجهة متجر {store.name}
           </p>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-[#697586]">
+          <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
             يعرض منتجات هذا المتجر ويستقبل الطلبات بنفس مسار صفحات الهبوط —
             نفس العروض، نفس نموذج الطلب، نفس التحقق.
           </p>
@@ -98,17 +98,17 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
             href={`/s/${store.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-bold text-[#b8256e] hover:underline"
+            className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-bold text-[var(--sys-primary)] hover:underline"
           >
             <ExternalLink className="h-3.5 w-3.5" /> افتح المتجر
           </a>
         )}
       </div>
 
-      <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#364152]">
+      <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[var(--sys-foreground)]">
         <input
           type="checkbox"
-          className="h-4 w-4 cursor-pointer accent-[#b8256e]"
+          className="h-4 w-4 cursor-pointer accent-[var(--sys-primary)]"
           checked={enabled}
           onChange={(e) => setEnabled(e.target.checked)}
         />
@@ -116,7 +116,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
       </label>
 
       {!enabled && (
-        <p className="rounded-lg bg-[#f8fafc] p-2.5 text-[10.5px] leading-relaxed text-[#697586]">
+        <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">
           مغلق الآن: الرابط يقرأ كأنه غير موجود، ولا يقبل طلبات. متجر غير مفتوح
           لا يجوز أن يكون قابلاً للتصفّح.
         </p>
@@ -143,13 +143,13 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-medium text-[#121926]">نبذة عن المتجر</label>
+        <label className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">نبذة عن المتجر</label>
         <textarea
           rows={2}
           value={form.about}
           onChange={(e) => setForm({ ...form, about: e.target.value })}
           placeholder="نوصّل لكل المحافظات، والدفع عند الاستلام."
-          className="w-full min-w-0 resize-y rounded-[8px] border border-[#e3e8ef] px-3 py-2 text-sm outline-none focus:border-[#b8256e]"
+          className="w-full min-w-0 resize-y rounded-[8px] border border-[var(--sys-border)] px-3 py-2 text-sm outline-none focus:border-[var(--sys-primary)]"
         />
       </div>
 
@@ -158,9 +158,9 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           the seller would otherwise change a colour and see nothing move.
           The logo and the support phone still count — waybills print them. */}
       {store.type === 'SINGLE_PRODUCT' && store.landingPageId && (
-        <p className="rounded-lg bg-[#f1f5f9] px-3 py-2 text-[11px] leading-relaxed text-[#475467]">
+        <p className="rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-[11px] leading-relaxed text-[var(--sys-foreground)]">
           واجهة هذا المتجر صفحة هبوط — ألوانها وخطها ونصوصها تُعدَّل من{' '}
-          <a href="/growth/single-product-stores" className="font-semibold text-[#b8256e] hover:underline">
+          <a href="/growth/single-product-stores" className="font-semibold text-[var(--sys-primary)] hover:underline">
             متجر Single Product ← صمّم الواجهة
           </a>
           . اللون والنصوص هنا لا تظهر عليها؛ الشعار ورقم الدعم يُطبعان على البوالص.
@@ -176,7 +176,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           to what colour it is. */}
       <a
         href="/store/themes"
-        className="flex items-center justify-between gap-2 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2.5 text-xs text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+        className="flex items-center justify-between gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
       >
         <span className="flex items-center gap-1.5">
           <Palette className="h-3.5 w-3.5" />
@@ -187,7 +187,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         {msg && (
-          <span className={`text-xs ${msg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
             {msg.ok && <Check className="mb-0.5 mr-1 inline h-3.5 w-3.5" />}
             {msg.text}
           </span>

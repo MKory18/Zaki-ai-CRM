@@ -69,10 +69,10 @@ export function SystemSettingsScreen() {
   return (
     <div className="max-w-3xl space-y-4" dir="rtl">
       <div>
-        <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-          <Settings className="h-5 w-5 text-[#b8256e]" /> إعدادات النظام
+        <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+          <Settings className="h-5 w-5 text-[var(--sys-primary)]" /> إعدادات النظام
         </h1>
-        <p className="mt-0.5 text-xs text-[#697586]">
+        <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
           ما يخصّ الشركة كلها. العملة والبلد في «البلدان والمتاجر والمحافظ»، والذكاء الاصطناعي في شاشته.
         </p>
       </div>
@@ -81,13 +81,13 @@ export function SystemSettingsScreen() {
         <CardHeader
           title={
             <span className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-[#b8256e]" /> بيانات الشركة
+              <Building2 className="h-4 w-4 text-[var(--sys-primary)]" /> بيانات الشركة
             </span>
           }
         />
         <CardContent>
           {loading ? (
-            <div className="flex h-16 items-center justify-center text-[#697586]">
+            <div className="flex h-16 items-center justify-center text-[var(--sys-muted-foreground)]">
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
           ) : (
@@ -100,7 +100,7 @@ export function SystemSettingsScreen() {
                 احفظ
               </Button>
               {msg && (
-                <p className={`w-full text-xs font-medium ${msg.ok ? 'text-[#00994d]' : 'text-rose-600'}`}>{msg.text}</p>
+                <p className={`w-full text-xs font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>
               )}
             </form>
           )}

@@ -49,10 +49,10 @@ const KIND_AR: Record<string, string> = {
 };
 
 function rateTone(rate: number | null): string {
-  if (rate === null) return 'text-[#c3c8d4]';
-  if (rate >= 70) return 'text-[#00a344]';
-  if (rate >= 45) return 'text-[#c07f2a]';
-  return 'text-[#fb323f]';
+  if (rate === null) return 'text-[var(--sys-border-strong)]';
+  if (rate >= 70) return 'text-[var(--sys-success)]';
+  if (rate >= 45) return 'text-[var(--sys-warning)]';
+  return 'text-[var(--sys-destructive)]';
 }
 
 const HEADS = [
@@ -78,14 +78,14 @@ export function AttributionTable({
   totals?: AttributionRow | null;
   empty: string;
 }) {
-  if (rows === null) return <p className="p-6 text-sm text-[#9aa4b2] text-center">جارٍ التحميل…</p>;
-  if (rows.length === 0) return <p className="p-6 text-sm text-[#9aa4b2] text-center">{empty}</p>;
+  if (rows === null) return <p className="p-6 text-sm text-[var(--sys-muted)] text-center">جارٍ التحميل…</p>;
+  if (rows.length === 0) return <p className="p-6 text-sm text-[var(--sys-muted)] text-center">{empty}</p>;
 
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
-        <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586]">
+        <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">
           <tr>
             {HEADS.map((h) => (
               <th
@@ -100,48 +100,48 @@ export function AttributionTable({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#e3e8ef]">
+        <tbody className="divide-y divide-[var(--sys-border)]">
           {rows.map((r) => (
-            <tr key={r.id} className="hover:bg-[#f8fafc] transition-colors">
+            <tr key={r.id} className="hover:bg-[var(--sys-surface)] transition-colors">
               <td className="px-4 py-3 whitespace-nowrap">
-                <span className="font-semibold text-[#121926]">{r.name}</span>
+                <span className="font-semibold text-[var(--sys-heading)]">{r.name}</span>
                 {r.kind && (
-                  <span className="text-[10px] text-[#9aa4b2] block">{KIND_AR[r.kind] ?? r.kind}</span>
+                  <span className="text-[10px] text-[var(--sys-muted)] block">{KIND_AR[r.kind] ?? r.kind}</span>
                 )}
               </td>
               <Num value={r.brought} />
-              <Num value={r.confirmed} tone="text-[#00a344]" />
-              <Num value={r.rejected} tone={r.rejected > 0 ? 'text-[#fb323f]' : undefined} />
+              <Num value={r.confirmed} tone="text-[var(--sys-success)]" />
+              <Num value={r.rejected} tone={r.rejected > 0 ? 'text-[var(--sys-destructive)]' : undefined} />
               <Rate value={r.confirmationRate} />
-              <Num value={r.delivered} tone="text-[#00a344]" />
-              <Num value={r.returned} tone={r.returned > 0 ? 'text-[#c07f2a]' : undefined} />
+              <Num value={r.delivered} tone="text-[var(--sys-success)]" />
+              <Num value={r.returned} tone={r.returned > 0 ? 'text-[var(--sys-warning)]' : undefined} />
               <Rate value={r.deliveryRate} />
-              <td className="px-4 py-3 text-center tabular-nums font-bold text-[#121926]" dir="ltr">
+              <td className="px-4 py-3 text-center tabular-nums font-bold text-[var(--sys-heading)]" dir="ltr">
                 {r.revenue.toFixed(2)}
               </td>
-              <td className="px-4 py-3 text-center tabular-nums font-semibold text-[#b8256e]" dir="ltr">
+              <td className="px-4 py-3 text-center tabular-nums font-semibold text-[var(--sys-primary)]" dir="ltr">
                 {r.revenuePerOrder === null ? '—' : r.revenuePerOrder.toFixed(2)}
               </td>
             </tr>
           ))}
         </tbody>
-        <tfoot className="border-t-2 border-[#e3e8ef] bg-[#f8fafc]">
+        <tfoot className="border-t-2 border-[var(--sys-border)] bg-[var(--sys-surface)]">
           <tr>
-            <td className="px-4 py-3 font-bold text-[#121926]">الإجمالي</td>
+            <td className="px-4 py-3 font-bold text-[var(--sys-heading)]">الإجمالي</td>
             <Num value={totals?.brought ?? 0} bold />
-            <Num value={totals?.confirmed ?? 0} bold tone="text-[#00a344]" />
+            <Num value={totals?.confirmed ?? 0} bold tone="text-[var(--sys-success)]" />
             <Num value={totals?.rejected ?? 0} bold />
             {/* Both rates come from the server (attributionTotals): the
                 screen recomputed their denominators from the row list, and
                 a displayed rate is not frontend code's to work out. */}
             <Rate value={totals?.confirmationRate ?? null} bold />
-            <Num value={totals?.delivered ?? 0} bold tone="text-[#00a344]" />
+            <Num value={totals?.delivered ?? 0} bold tone="text-[var(--sys-success)]" />
             <Num value={totals?.returned ?? 0} bold />
             <Rate value={totals?.deliveryRate ?? null} bold />
-            <td className="px-4 py-3 text-center tabular-nums font-black text-[#121926]" dir="ltr">
+            <td className="px-4 py-3 text-center tabular-nums font-black text-[var(--sys-heading)]" dir="ltr">
               {(totals?.revenue ?? 0).toFixed(2)}
             </td>
-            <td className="px-4 py-3 text-center tabular-nums font-bold text-[#b8256e]" dir="ltr">
+            <td className="px-4 py-3 text-center tabular-nums font-bold text-[var(--sys-primary)]" dir="ltr">
               {totals?.revenuePerOrder != null ? totals.revenuePerOrder.toFixed(2) : '—'}
             </td>
           </tr>
@@ -155,7 +155,7 @@ function Num({ value, tone, bold }: { value: number; tone?: string; bold?: boole
   return (
     <td
       className={`px-4 py-3 text-center tabular-nums ${bold ? 'font-bold' : 'font-semibold'} ${
-        tone ?? (value === 0 ? 'text-[#c3c8d4]' : 'text-[#121926]')
+        tone ?? (value === 0 ? 'text-[var(--sys-border-strong)]' : 'text-[var(--sys-heading)]')
       }`}
     >
       {value}

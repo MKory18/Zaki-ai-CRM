@@ -19,7 +19,7 @@ import type { StoreLanguage } from '@/lib/store-languages';
  * system does not keep, and they would find out from a customer.
  */
 
-const CARD = 'rounded-xl border border-[#e3e8ef] bg-white p-4';
+const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
 
 export function StoreLanguagesScreen() {
   const [available, setAvailable] = useState<StoreLanguage[]>([]);
@@ -69,7 +69,7 @@ export function StoreLanguagesScreen() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
+      <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -81,16 +81,16 @@ export function StoreLanguagesScreen() {
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-            <Languages className="h-5 w-5 text-[#b8256e]" />
+          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+            <Languages className="h-5 w-5 text-[var(--sys-primary)]" />
             لغة المتجر
           </h1>
-          <p className="mt-0.5 text-xs text-[#697586]">
+          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             اللغة التي تُكتب بها صفحات متجرك، والاتجاه الذي تُقرأ به.
           </p>
         </div>
         {msg && (
-          <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
+          <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
             {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
             {msg.text}
           </span>
@@ -98,7 +98,7 @@ export function StoreLanguagesScreen() {
       </header>
 
       <div className={CARD}>
-        <p className="mb-3 text-sm font-bold text-[#121926]">اللغة الافتراضية</p>
+        <p className="mb-3 text-sm font-bold text-[var(--sys-heading)]">اللغة الافتراضية</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {available.map((l) => (
             <button
@@ -107,12 +107,12 @@ export function StoreLanguagesScreen() {
               onClick={() => setLanguage(l.code)}
               className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-start transition ${
                 language === l.code
-                  ? 'border-[#b8256e] bg-[#b8256e]/5'
-                  : 'border-[#e3e8ef] hover:border-[#b8256e]/40'
+                  ? 'border-[var(--sys-primary)] bg-[var(--sys-primary)]/5'
+                  : 'border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
               }`}
             >
-              <span className="text-sm font-medium text-[#121926]" dir={l.dir}>{l.label}</span>
-              <span className="rounded-full bg-[#eef2f6] px-2 py-0.5 text-[10px] font-semibold text-[#697586]">
+              <span className="text-sm font-medium text-[var(--sys-heading)]" dir={l.dir}>{l.label}</span>
+              <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-muted-foreground)]">
                 {l.dir === 'rtl' ? 'من اليمين' : 'من اليسار'}
               </span>
             </button>
@@ -121,7 +121,7 @@ export function StoreLanguagesScreen() {
 
         {/* The direction is derived, and shown as a consequence — not as a
             second control that could be set to disagree with the language. */}
-        <p className="mt-3 text-[11px] text-[#697586]">
+        <p className="mt-3 text-[11px] text-[var(--sys-muted-foreground)]">
           الاتجاه يتبع اللغة: «{chosen?.label}» تُقرأ{' '}
           <strong>{chosen?.dir === 'rtl' ? 'من اليمين إلى اليسار' : 'من اليسار إلى اليمين'}</strong>.
           لا يُضبط منفصلاً حتى لا يتناقض الاثنان.
@@ -134,7 +134,7 @@ export function StoreLanguagesScreen() {
           {language !== saved && (
             <Button variant="secondary" size="sm" onClick={() => setLanguage(saved)}>تراجع</Button>
           )}
-          <span className="text-[11px] text-[#9aa4b2]">
+          <span className="text-[11px] text-[var(--sys-muted)]">
             المحفوظ حالياً: {available.find((l) => l.code === saved)?.label} ({dir === 'rtl' ? 'RTL' : 'LTR'})
           </span>
         </div>
@@ -142,17 +142,17 @@ export function StoreLanguagesScreen() {
 
       {/* Said plainly, rather than shown as a disabled control nobody can
           make work. */}
-      <div className={`${CARD} border-[#e3e8ef]`}>
-        <p className="flex items-center gap-1.5 text-sm font-bold text-[#121926]">
-          <Info className="h-4 w-4 text-[#697586]" />
+      <div className={`${CARD} border-[var(--sys-border)]`}>
+        <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
+          <Info className="h-4 w-4 text-[var(--sys-muted-foreground)]" />
           لغات إضافية — غير متاحة بعد، وهذا ما تحتاجه
         </p>
-        <p className="mt-1.5 text-xs leading-relaxed text-[#697586]">
+        <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           لغة ثانية ليست خانة تُضاف: تعني نسخة ثانية من كل نصّ يراه الزبون — اسم كل منتج ووصفه،
           كلمات كل قسم في الصفحات، الصفحات الثابتة الخمس، ونصوص الدفع والتأكيد. تحتاج مخزن ترجمة
           لكل حقل، ومحرّراً بجانب كل حقل، وقاعدة لما تفعله الصفحة حين تنقص ترجمة.
         </p>
-        <p className="mt-2 text-xs leading-relaxed text-[#697586]">
+        <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           لم نضع لك زرّاً يضيف «English» بينما يبقى المتجر يجيب بالعربية — كنت ستكتشف ذلك من زبون.
           حين تقرّر أنّك تحتاجها فعلاً، هي مشروع مستقل وليست حقلاً في هذه الشاشة.
         </p>

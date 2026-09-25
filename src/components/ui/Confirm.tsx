@@ -89,7 +89,7 @@ interface Dialogs {
 const ConfirmContext = createContext<Dialogs | null>(null);
 
 const FIELD =
-  'w-full rounded-lg border border-[#e3e8ef] bg-white px-3 py-2 text-sm text-[#121926] outline-none focus:border-[#b8256e]';
+  'w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]';
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState<Open | null>(null);
@@ -161,24 +161,24 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             <div className="flex items-start gap-3">
               <span
                 className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                  danger ? 'bg-[#feecee] text-[#fb323f]' : 'bg-[#eef2f6] text-[#364152]'
+                  danger ? 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]'
                 }`}
               >
                 {danger ? <AlertTriangle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-[#121926]">{open.options.title}</p>
+                <p className="text-sm font-semibold text-[var(--sys-heading)]">{open.options.title}</p>
                 {open.options.body && (
-                  <p className="mt-1 whitespace-pre-line text-xs leading-6 text-[#697586]">{open.options.body}</p>
+                  <p className="mt-1 whitespace-pre-line text-xs leading-6 text-[var(--sys-muted-foreground)]">{open.options.body}</p>
                 )}
               </div>
             </div>
 
             {input && (
               <label className="block">
-                <span className="mb-1 block text-[11px] font-semibold text-[#364152]">
+                <span className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">
                   {input.label}
-                  {input.required && <span className="text-[#fb323f]"> *</span>}
+                  {input.required && <span className="text-[var(--sys-destructive)]"> *</span>}
                 </span>
                 {input.multiline ? (
                   <textarea
@@ -213,7 +213,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                   className={`${FIELD} font-mono text-xs`}
                 />
                 <Button type="button" variant="outline" size="sm" onClick={() => void copy(open.options.value!)}>
-                  {copied ? <Check className="h-3.5 w-3.5 text-[#00994d]" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? <Check className="h-3.5 w-3.5 text-[var(--sys-success)]" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied ? 'نُسخ' : 'انسخ'}
                 </Button>
               </div>
@@ -229,7 +229,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 type="submit"
                 size="sm"
                 disabled={blocked}
-                className={danger && open.kind !== 'tell' ? 'bg-[#fb323f] hover:bg-[#e02b37]' : undefined}
+                className={danger && open.kind !== 'tell' ? 'bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]' : undefined}
               >
                 {open.kind === 'tell'
                   ? open.options.okLabel ?? 'حسناً'

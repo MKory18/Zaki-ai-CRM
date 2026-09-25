@@ -191,11 +191,11 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     lines.every((l) => l.productId);
 
   const SectionTitle = ({ icon: Icon, title, color }: { icon: React.ElementType; title: string; color: string }) => (
-    <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+    <div className="flex items-center gap-2 pb-2 border-b border-[var(--sys-border)]">
       <div className={`p-1.5 rounded-lg ${color}`}>
         <Icon className="w-4 h-4" />
       </div>
-      <h4 className="text-xs font-black uppercase tracking-wide text-slate-700">{title}</h4>
+      <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)]">{title}</h4>
     </div>
   );
 
@@ -209,18 +209,18 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     >
       <form onSubmit={handleSubmit} className="space-y-4" dir={isRtl ? 'rtl' : 'ltr'}>
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+          <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-xl flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* ─── 1. Customer ─── */}
-        <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 space-y-3">
+        <div className="border border-[var(--sys-border)] rounded-2xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <SectionTitle icon={UserCheck} title="1. بيانات العميل" color="bg-red-100 text-red-600" />
+            <SectionTitle icon={UserCheck} title="1. بيانات العميل" color="bg-red-100 text-[var(--sys-destructive)]" />
             {existingCustomerAlert?.exists && (
-              <span className="text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/60 px-2.5 py-1 rounded-full flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 عميل موجود — {existingCustomerAlert.name} ({existingCustomerAlert.totalOrders} طلب سابق)
               </span>
@@ -229,9 +229,9 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">رقم الهاتف *</label>
+              <label className="block text-xs font-medium text-[var(--sys-foreground)] mb-1.5">رقم الهاتف *</label>
               <div className="relative">
-                <Phone className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Phone className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
                 <input
                   type="tel"
                   placeholder="مثال: 0936654998"
@@ -240,11 +240,11 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                   onBlur={handlePhoneBlur}
                   required
                   dir="ltr"
-                  className="w-full ps-9 pe-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-colors"
+                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-[var(--sys-destructive)] transition-colors"
                 />
               </div>
               {existingCustomerAlert && (
-                <p className={`text-[11px] mt-1 flex items-center gap-1 ${existingCustomerAlert.exists ? 'text-amber-700' : 'text-green-700'}`}>
+                <p className={`text-[11px] mt-1 flex items-center gap-1 ${existingCustomerAlert.exists ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-success)]'}`}>
                   {existingCustomerAlert.exists ? (
                     <>
                       <CheckCircle2 className="w-3 h-3" /> تم ربط البيانات بملف العميل تلقائياً
@@ -264,7 +264,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input label="رقم بديل" placeholder="اختياري" value={customerAltPhone} onChange={(e) => setCustomerAltPhone(e.target.value)} />
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+              <label className="block text-xs font-medium text-[var(--sys-foreground)] mb-1.5">
                 المحافظة{countryName ? ` — ${countryName}` : ''} *
               </label>
               <Select value={regionId} onChange={(e) => setRegionId(e.target.value)} required>
@@ -274,21 +274,21 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                 ))}
               </Select>
               {regions.length === 0 && (
-                <p className="mt-1 text-[11px] text-[#fb323f]">
+                <p className="mt-1 text-[11px] text-[var(--sys-destructive)]">
                   لا توجد محافظات لهذا البلد — أضفها من الإعدادات ← البلدان والمتاجر والمحافظ.
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">العنوان *</label>
+              <label className="block text-xs font-medium text-[var(--sys-foreground)] mb-1.5">العنوان *</label>
               <div className="relative">
-                <MapPin className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <MapPin className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
                 <input
                   placeholder="الشارڡ البناء، المنطقة..."
                   value={customerAddress}
                   onChange={(e) => setCustomerAddress(e.target.value)}
                   required
-                  className="w-full ps-9 pe-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-[var(--sys-destructive)]"
                 />
               </div>
             </div>
@@ -296,8 +296,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         </div>
 
         {/* ─── 2. المنتجات ─── */}
-        <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 space-y-3">
-          <SectionTitle icon={Package} title="2. المنتجات" color="bg-blue-100 text-blue-600" />
+        <div className="border border-[var(--sys-border)] rounded-2xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
+          <SectionTitle icon={Package} title="2. المنتجات" color="bg-[var(--sys-surface-strong)] text-blue-600" />
           {/* The same editor the order screen uses, so a line means the same
               thing whether it is typed here or corrected later. */}
           <ProductLinesEditor
@@ -310,7 +310,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         </div>
 
         {/* ─── 3. Assignment & Source ─── */}
-        <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 space-y-3">
+        <div className="border border-[var(--sys-border)] rounded-2xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
           <SectionTitle icon={UserCog} title="3. التعيين والمصدر" color="bg-purple-100 text-purple-600" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -322,7 +322,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             </Select>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">قناة الطلب</label>
+              <label className="block text-xs font-medium text-[var(--sys-foreground)] mb-1.5">قناة الطلب</label>
               {/* The shop's own channels, not a list written into this form —
                   they are what the numbers are counted by. */}
               <Select value={channelId} onChange={(e) => setChannelId(e.target.value)}>
@@ -332,7 +332,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                 ))}
               </Select>
               {channels.length === 0 && (
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-[var(--sys-muted)] mt-1">
                   لا قنوات بعد — تُضاف من الإعدادات ← قنوات الطلبات.
                 </p>
               )}
@@ -341,8 +341,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         </div>
 
         {/* ─── 4. Notes ─── */}
-        <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 space-y-3">
-          <SectionTitle icon={StickyNote} title="4. الملاحظات" color="bg-amber-100 text-amber-600" />
+        <div className="border border-[var(--sys-border)] rounded-2xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
+          <SectionTitle icon={StickyNote} title="4. الملاحظات" color="bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Textarea label="ملاحظات العميل (وقت التوصيل المفضل...)" placeholder="مثال: يرجى الاتصال قبل الوصول" rows={2} value={customerNotes} onChange={(e) => setCustomerNotes(e.target.value)} />
@@ -355,7 +355,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           <button
             type="button"
             onClick={onClose}
-            className="text-xs font-medium text-slate-500 hover:text-slate-800 cursor-pointer flex items-center gap-1.5"
+            className="text-xs font-medium text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)] cursor-pointer flex items-center gap-1.5"
           >
             <Wand2 className="w-3.5 h-3.5" />
             نص حر طويل؟ جرّب الإدخال بالذكاء الاصطناعي من الزر الأخضر
@@ -365,7 +365,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             <Button type="button" variant="outline" onClick={onClose}>
               إلغاء
             </Button>
-            <Button type="submit" loading={loading} disabled={!ready} className="bg-red-600 hover:bg-red-700">
+            <Button type="submit" loading={loading} disabled={!ready} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]">
               <Megaphone className="w-4 h-4" />
               إنشاء الطلب ({money(goodsTotal)})
             </Button>

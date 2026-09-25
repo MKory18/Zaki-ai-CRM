@@ -398,7 +398,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     return (
       <Modal isOpen={isOpen} onClose={onClose} title={t.loading}>
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--sys-destructive)]"></div>
         </div>
         {historyOpen && order.customer?.id && (
         <CustomerHistoryModal
@@ -414,7 +414,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     return (
       <Modal isOpen={isOpen} onClose={onClose} title={t.orders} maxWidth="md">
         <div className="py-6 text-center space-y-4" dir={isRtl ? 'rtl' : 'ltr'}>
-          <p className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 inline-block">
+          <p className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-xl px-3 py-2.5 inline-block">
             {loadError}
           </p>
           <div className="flex justify-center gap-2">
@@ -485,14 +485,14 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           title={ar ? 'الطلب التالي (الأحدث)' : 'Next order (newer)'}
         >
           {navLoading === 'next' ? (
-            <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-red-600" />
+            <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[var(--sys-destructive)]" />
           ) : (
             <ChevronRight className="w-4 h-4 rtl:rotate-180" />
           )}
           <span className="hidden sm:inline">{ar ? 'الطلب التالي' : 'Next Order'}</span>
         </Button>
 
-        <span className="text-[11px] text-slate-400 font-medium">
+        <span className="text-[11px] text-[var(--sys-muted)] font-medium">
           {navLoading || loading ? (ar ? 'جارٍ التحميل…' : 'Loading…') : ''}
         </span>
 
@@ -504,7 +504,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           title={ar ? 'الطلب السابق (الأقدم)' : 'Previous order (older)'}
         >
           {navLoading === 'prev' ? (
-            <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-red-600" />
+            <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[var(--sys-destructive)]" />
           ) : (
             <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
           )}
@@ -516,8 +516,8 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         <div
           className={`mb-4 rounded-xl border p-2.5 text-xs flex items-center justify-between gap-2 ${
             actionFeedback.type === 'success'
-              ? 'border-green-300 bg-green-50 text-green-800'
-              : 'border-rose-300 bg-rose-50 text-rose-800'
+              ? 'border-[var(--sys-success)]/60 bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
+              : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
           }`}
           dir={isRtl ? 'rtl' : 'ltr'}
         >
@@ -544,23 +544,23 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {/* The state, and the facts that travel with it. No button: the
               edit lock is taken by whichever card you actually edit, and a
               standalone "تعديل" here neither advanced nor stopped anything. */}
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-xs">
+          <div className="rounded-2xl border border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3 shadow-xs">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="text-[11px] font-semibold text-slate-400">حالة الطلب</span>
+              <span className="text-[11px] font-semibold text-[var(--sys-muted)]">حالة الطلب</span>
               <OrderStateBadge state={order.state} />
 
               {order.deliveryProvider && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-200 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] text-[11px] font-semibold text-[var(--sys-muted-foreground)]">
                   {order.deliveryProvider.kind === 'AGENT' ? (
-                    <Bike className="w-3 h-3 text-[#b8256e]" />
+                    <Bike className="w-3 h-3 text-[var(--sys-primary)]" />
                   ) : (
-                    <Truck className="w-3 h-3 text-slate-400" />
+                    <Truck className="w-3 h-3 text-[var(--sys-muted)]" />
                   )}
                   {order.deliveryProvider.name}
                 </span>
               )}
               {order.trackingNumber && (
-                <span className="px-2.5 py-1 rounded-full border border-slate-200 bg-[#f8fafc] text-[11px] font-mono text-slate-500" dir="ltr">
+                <span className="px-2.5 py-1 rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] text-[11px] font-mono text-[var(--sys-muted-foreground)]" dir="ltr">
                   {order.trackingNumber}
                 </span>
               )}
@@ -568,8 +568,8 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 <span
                   className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold ${
                     order.settlementStatus === 'SETTLED'
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                      : 'bg-amber-50 border-amber-200 text-amber-700'
+                      ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
+                      : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]'
                   }`}
                 >
                   {SETTLEMENT_AR[order.settlementStatus] ?? order.settlementStatus}
@@ -577,7 +577,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               )}
 
               {editingLockedByOther && (
-                <span className="ms-auto text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1 inline-flex items-center gap-1.5">
+                <span className="ms-auto text-[11px] text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1 inline-flex items-center gap-1.5">
                   <Lock className="w-3 h-3" />
                   {t.editingBy} {lockHolderName}
                 </span>
@@ -647,21 +647,21 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         {/* ─── Right column ─── */}
         <div className="space-y-5">
           {/* Financial overview */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
-            <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-red-600" />
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-[var(--sys-destructive)]" />
               الملخص المالي
             </h4>
 
-            <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl">
+            <div className="flex items-center gap-3 p-2.5 bg-[var(--sys-surface)] rounded-xl">
               <ProductThumb
                 src={order.productImageSnapshot || order.product?.image}
                 alt={order.productNameSnapshot || order.product?.name}
                 size="md"
               />
               <div className="min-w-0">
-                <p className="text-[11px] text-slate-400">المنتج</p>
-                <p className="text-xs font-bold text-slate-900 line-clamp-2">
+                <p className="text-[11px] text-[var(--sys-muted)]">المنتج</p>
+                <p className="text-xs font-bold text-[var(--sys-heading)] line-clamp-2">
                   {order.productNameSnapshot || order.product?.name}
                 </p>
               </div>
@@ -669,15 +669,15 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between">
-                <span className="text-slate-500">العرض / الكمية:</span>
-                <span className="font-medium text-slate-900">
+                <span className="text-[var(--sys-muted-foreground)]">العرض / الكمية:</span>
+                <span className="font-medium text-[var(--sys-heading)]">
                   {order.offer?.name || 'مباشر'} ({order.quantity} {t.units}{order.freeQuantity ? ` + ${order.freeQuantity} هدية` : ''})
                 </span>
               </div>
               {order.addOns?.length > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-slate-500">منتجات إضافية:</span>
-                  <span className="font-medium text-slate-900 text-end">
+                  <span className="text-[var(--sys-muted-foreground)]">منتجات إضافية:</span>
+                  <span className="font-medium text-[var(--sys-heading)] text-end">
                     {order.addOns.map((a: any) => `${a.productName} ×${a.quantity} (${money(a.total)})`).join(' + ')}
                   </span>
                 </div>
@@ -685,39 +685,39 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
               {/* What the customer pays. The figures come from the one COD
                   function on the server — a screen never adds up money. */}
-              <div className="mt-2 rounded-xl border border-slate-200 divide-y divide-slate-100">
-                <p className="text-[11px] font-bold text-slate-600 px-2.5 py-1.5 bg-slate-50 rounded-t-xl">
+              <div className="mt-2 rounded-xl border border-[var(--sys-border)] divide-y divide-slate-100">
+                <p className="text-[11px] font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-xl">
                   ما يدفعه العميل
                 </p>
                 <div className="flex justify-between px-2.5 py-1.5">
-                  <span className="text-slate-500">قيمة البضاعة:</span>
-                  <span className="text-slate-900" dir="ltr">{money(cod?.subtotal ?? order.sellingPrice)}</span>
+                  <span className="text-[var(--sys-muted-foreground)]">قيمة البضاعة:</span>
+                  <span className="text-[var(--sys-heading)]" dir="ltr">{money(cod?.subtotal ?? order.sellingPrice)}</span>
                 </div>
                 {!!cod?.discount && (
                   <div className="flex justify-between px-2.5 py-1.5">
-                    <span className="text-slate-500">الخصم:</span>
-                    <span className="text-slate-700" dir="ltr">− {money(cod.discount)}</span>
+                    <span className="text-[var(--sys-muted-foreground)]">الخصم:</span>
+                    <span className="text-[var(--sys-foreground)]" dir="ltr">− {money(cod.discount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between px-2.5 py-1.5">
-                  <span className="text-slate-500">
+                  <span className="text-[var(--sys-muted-foreground)]">
                     أجرة التوصيل:
                     {cod?.includesDelivery && (
-                      <span className="text-slate-400"> (داخلة في السعر)</span>
+                      <span className="text-[var(--sys-muted)]"> (داخلة في السعر)</span>
                     )}
                   </span>
                   {/* The fee follows the courier, and the courier is chosen when
                       the shipment is created. Before that it is undecided, not
                       zero — printing 0.00 here reads as free delivery. */}
                   {!order.deliveryProvider && !Number(cod?.deliveryFee ?? 0) ? (
-                    <span className="text-slate-400 text-[11px]">تُحدَّد عند إنشاء الشحنة</span>
+                    <span className="text-[var(--sys-muted)] text-[11px]">تُحدَّد عند إنشاء الشحنة</span>
                   ) : (
-                    <span className="text-slate-700" dir="ltr">{money(cod?.deliveryFee ?? order.shippingCost)}</span>
+                    <span className="text-[var(--sys-foreground)]" dir="ltr">{money(cod?.deliveryFee ?? order.shippingCost)}</span>
                   )}
                 </div>
-                <div className="flex justify-between px-2.5 py-2 bg-slate-50 rounded-b-xl">
+                <div className="flex justify-between px-2.5 py-2 bg-[var(--sys-surface)] rounded-b-xl">
                   <span className="font-bold">المحصَّل عند الباب:</span>
-                  <span className="font-black text-red-600 text-sm" dir="ltr">
+                  <span className="font-black text-[var(--sys-destructive)] text-sm" dir="ltr">
                     {money(cod?.cod ?? order.totalAmount)}
                   </span>
                 </div>
@@ -725,17 +725,17 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
               {/* Costs are ours, not the customer's — kept apart so the column
                   above never reads as a sum that includes them. */}
-              <div className="mt-2 rounded-xl border border-slate-200 divide-y divide-slate-100">
-                <p className="text-[11px] font-bold text-slate-600 px-2.5 py-1.5 bg-slate-50 rounded-t-xl">
+              <div className="mt-2 rounded-xl border border-[var(--sys-border)] divide-y divide-slate-100">
+                <p className="text-[11px] font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-xl">
                   تكاليفنا على هذا الطلب
                 </p>
                 <div className="flex justify-between px-2.5 py-1.5">
-                  <span className="text-slate-500">تكلفة البضاعة:</span>
-                  <span className="text-slate-700" dir="ltr">{money(order.estimatedCostOfGoods)}</span>
+                  <span className="text-[var(--sys-muted-foreground)]">تكلفة البضاعة:</span>
+                  <span className="text-[var(--sys-foreground)]" dir="ltr">{money(order.estimatedCostOfGoods)}</span>
                 </div>
                 <div className="flex justify-between px-2.5 py-1.5">
-                  <span className="text-slate-500">العمولة:</span>
-                  <span className="text-slate-700" dir="ltr">{money(order.commission ?? 0)}</span>
+                  <span className="text-[var(--sys-muted-foreground)]">العمولة:</span>
+                  <span className="text-[var(--sys-foreground)]" dir="ltr">{money(order.commission ?? 0)}</span>
                 </div>
               </div>
             </div>
@@ -744,10 +744,10 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {/* Where the order came from. Editable, because the numbers are
               counted per channel and an order filed under the wrong one is a
               wrong number rather than a wrong label. */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-2">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <h4 className="text-xs font-black text-slate-700 flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-[#b8256e]" />
+              <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-[var(--sys-primary)]" />
                 جهة الطلب
               </h4>
               {/* The channel is the order's attribution — which campaign or
@@ -758,7 +758,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               {mayChangeChannel && (
                 <button
                   onClick={() => { setChannelOpen((v) => !v); setChannelDraft(order.channelId ?? ''); }}
-                  className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[#e3e8ef] text-slate-600 hover:text-[#b8256e] inline-flex items-center gap-1.5"
+                  className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   {channelOpen ? 'إغلاق' : 'تعديل'}
@@ -771,7 +771,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 <select
                   value={channelDraft}
                   onChange={(e) => setChannelDraft(e.target.value)}
-                  className="w-full h-9 px-3 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]"
+                  className="w-full h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
                 >
                   <option value="">— بلا قناة —</option>
                   {channels.map((c) => (
@@ -780,19 +780,19 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 </select>
                 <button
                   onClick={saveChannel}
-                  className="text-xs px-3 py-1.5 rounded-[8px] bg-[#b8256e] text-white font-medium"
+                  className="text-xs px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium"
                 >
                   حفظ القناة
                 </button>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-[var(--sys-muted)]">
                   القنوات تُدار من الإعدادات ← قنوات الطلبات.
                 </p>
               </div>
             ) : (
               <>
-                <p className="text-sm font-bold text-slate-900">{order.source || '—'}</p>
+                <p className="text-sm font-bold text-[var(--sys-heading)]">{order.source || '—'}</p>
                 {order.moderator?.name && (
-                  <p className="text-[11px] text-slate-400">أدخله: {order.moderator.name}</p>
+                  <p className="text-[11px] text-[var(--sys-muted)]">أدخله: {order.moderator.name}</p>
                 )}
               </>
             )}
@@ -800,28 +800,28 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
           {/* Timeline — merged from every event table (src/lib/order-timeline.ts),
               not just the activity log, so it always matches the state above. */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-            <h4 className="text-xs font-black uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-slate-400" />
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs">
+            <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[var(--sys-muted)]" />
               سجل الأحداث ({timeline.length})
               {timeline.length > 5 && (
                 <button
                   onClick={() => setTimelineExpanded((v) => !v)}
-                  className="ms-auto text-[11px] font-medium text-[#b8256e] hover:underline"
+                  className="ms-auto text-[11px] font-medium text-[var(--sys-primary)] hover:underline"
                 >
                   {timelineExpanded ? 'إظهار الأحدث فقط' : `إظهار الكل (${timeline.length})`}
                 </button>
               )}
             </h4>
 
-            <div className="relative border-s-2 border-slate-200 ms-2.5 space-y-4 text-xs">
-              {timeline.length === 0 && <p className="ps-4 text-slate-400">لا توجد أحداث بعد.</p>}
+            <div className="relative border-s-2 border-[var(--sys-border)] ms-2.5 space-y-4 text-xs">
+              {timeline.length === 0 && <p className="ps-4 text-[var(--sys-muted)]">لا توجد أحداث بعد.</p>}
               {(timelineExpanded ? timeline : timeline.slice(-5)).map((event) => (
                 <div key={event.id} className="relative ps-4">
-                  <span className="absolute -start-[7px] top-1 w-2.5 h-2.5 rounded-full bg-red-600 border-2 border-white" />
-                  <p className="font-bold text-slate-800">{event.title}</p>
-                  {event.detail && <p className="text-slate-500 mt-0.5 break-words">{event.detail}</p>}
-                  <p className="text-[10px] text-slate-400 mt-0.5">
+                  <span className="absolute -start-[7px] top-1 w-2.5 h-2.5 rounded-full bg-[var(--sys-destructive)] border-2 border-[var(--sys-card)]" />
+                  <p className="font-bold text-[var(--sys-foreground)]">{event.title}</p>
+                  {event.detail && <p className="text-[var(--sys-muted-foreground)] mt-0.5 break-words">{event.detail}</p>}
+                  <p className="text-[10px] text-[var(--sys-muted)] mt-0.5">
                     {arDateShort(event.at)}
                     {event.actorName ? ` — ${event.actorName}` : ''}
                   </p>
@@ -862,21 +862,21 @@ function OrderRegionField({
   if (!editing) {
     return (
       <div className="flex items-start gap-1.5">
-        <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+        <MapPin className="w-3.5 h-3.5 text-[var(--sys-muted)] mt-0.5 shrink-0" />
         <div className="flex-1">
-          <p className="text-[11px] text-slate-400">المحافظة</p>
+          <p className="text-[11px] text-[var(--sys-muted)]">المحافظة</p>
           <div className="flex items-center gap-2">
             {order.regionId ? (
-              <p className="text-slate-700 text-xs font-medium">{current?.name ?? order.customer?.city}</p>
+              <p className="text-[var(--sys-foreground)] text-xs font-medium">{current?.name ?? order.customer?.city}</p>
             ) : (
-              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[6px] px-2 py-0.5">
+              <p className="text-[11px] text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-[6px] px-2 py-0.5">
                 لم تُحدَّد — لا يمكن حساب أجرة التوصيل
               </p>
             )}
             <button
               type="button"
               onClick={() => { setValue(order.regionId ?? ''); setEditing(true); }}
-              className="text-[11px] text-[#b8256e] hover:underline"
+              className="text-[11px] text-[var(--sys-primary)] hover:underline"
             >
               {order.regionId ? 'تغيير' : 'تحديد'}
             </button>
@@ -888,15 +888,15 @@ function OrderRegionField({
 
   return (
     <div className="flex items-start gap-1.5">
-      <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+      <MapPin className="w-3.5 h-3.5 text-[var(--sys-muted)] mt-0.5 shrink-0" />
       <div className="flex-1">
-        <p className="text-[11px] text-slate-400 mb-1">المحافظة</p>
+        <p className="text-[11px] text-[var(--sys-muted)] mb-1">المحافظة</p>
         <div className="flex items-center gap-2">
           <select
             value={value}
             onChange={(e) => setValue(e.target.value)}
             disabled={loading || saving}
-            className="flex-1 h-8 px-2 rounded-lg border border-slate-200 text-xs bg-white"
+            className="flex-1 h-8 px-2 rounded-lg border border-[var(--sys-border)] text-xs bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {regions.map((r) => (
@@ -923,15 +923,15 @@ function OrderRegionField({
                 setSaving(false);
               }
             }}
-            className="h-8 px-3 rounded-lg bg-[#b8256e] text-white text-xs font-bold disabled:opacity-50"
+            className="h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-bold disabled:opacity-50"
           >
             {saving ? '…' : 'حفظ'}
           </button>
-          <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-slate-500">
+          <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-[var(--sys-muted-foreground)]">
             إلغاء
           </button>
         </div>
-        {error && <p className="text-[11px] text-red-600 mt-1">{error}</p>}
+        {error && <p className="text-[11px] text-[var(--sys-destructive)] mt-1">{error}</p>}
       </div>
     </div>
   );

@@ -23,19 +23,19 @@ export function Button({
   };
 
   const variantStyles = {
-    primary: 'bg-[#b8256e] text-white hover:bg-[#b8256e]/85 border border-transparent',
-    secondary: 'bg-[#f8fafc] text-[#121926] hover:bg-[#e3e8ef] border border-[#e3e8ef]',
-    outline: 'bg-white text-[#121926] hover:bg-[#f8fafc] border border-[#e3e8ef]',
-    danger: 'bg-[#fb323f] text-white hover:bg-[#fb323f]/85 border border-transparent',
-    ghost: 'bg-transparent text-[#364152] hover:bg-[#f8fafc] border border-transparent',
-    success: 'bg-[#00c853] text-white hover:bg-[#00c853]/85 border border-transparent',
+    primary: 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/85 border border-transparent',
+    secondary: 'bg-[var(--sys-surface)] text-[var(--sys-heading)] hover:bg-[var(--sys-border)] border border-[var(--sys-border)]',
+    outline: 'bg-[var(--sys-card)] text-[var(--sys-heading)] hover:bg-[var(--sys-surface)] border border-[var(--sys-border)]',
+    danger: 'bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-destructive)]/85 border border-transparent',
+    ghost: 'bg-transparent text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] border border-transparent',
+    success: 'bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-success)]/85 border border-transparent',
   };
 
   return (
     <button
       disabled={disabled || loading}
       className={clsx(
-        'inline-flex items-center justify-center font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-[#b8256e] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
+        'inline-flex items-center justify-center font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
         sizeStyles[size],
         variantStyles[variant],
         className

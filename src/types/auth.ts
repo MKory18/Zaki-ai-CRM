@@ -408,6 +408,8 @@ export interface SessionUser {
   companyId: string | null;
   companyName?: string;
   commissionRate?: number;
+  /** Which of the system's looks they chose. Null = the default. */
+  systemTheme?: string | null;
   /** Effective permission KEYS from the Permission Engine (role + overrides). */
   permissions: string[];
   /** Attached by getCurrentUser — engine scope data (never sent to client). */

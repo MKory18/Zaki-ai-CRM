@@ -98,49 +98,49 @@ export function ChangeRequestReview({
       <div className="space-y-4">
         {row && (
           <>
-            <p className="text-[11px] text-[#697586]">
+            <p className="text-[11px] text-[var(--sys-muted-foreground)]">
               {row.requestedByName ?? 'موظف'} · {new Date(row.createdAt).toLocaleString('ar-EG')}
             </p>
 
-            <div className="rounded-lg border border-[#e3e8ef] divide-y divide-[#e3e8ef]">
+            <div className="rounded-lg border border-[var(--sys-border)] divide-y divide-[var(--sys-border)]">
               {fields.length === 0 ? (
-                <p className="p-3 text-xs text-[#9aa4b2]">لا تفاصيل مرفقة.</p>
+                <p className="p-3 text-xs text-[var(--sys-muted)]">لا تفاصيل مرفقة.</p>
               ) : (
                 fields.map(([field, change]) => (
                   <div key={field} className="p-3">
-                    <p className="text-[11px] font-semibold text-[#697586] mb-1">
+                    <p className="text-[11px] font-semibold text-[var(--sys-muted-foreground)] mb-1">
                       {changeFieldLabel(field)}
                     </p>
                     <div className="flex items-center gap-2 text-xs flex-wrap">
-                      <span className="text-[#9aa4b2] line-through">{show(change?.from)}</span>
-                      <ArrowLeft className="w-3.5 h-3.5 text-[#b8256e] shrink-0" />
-                      <span className="font-semibold text-[#121926]">{show(change?.to)}</span>
+                      <span className="text-[var(--sys-muted)] line-through">{show(change?.from)}</span>
+                      <ArrowLeft className="w-3.5 h-3.5 text-[var(--sys-primary)] shrink-0" />
+                      <span className="font-semibold text-[var(--sys-heading)]">{show(change?.to)}</span>
                     </div>
                   </div>
                 ))
               )}
             </div>
 
-            <div className="rounded-lg bg-[#f8fafc] border border-[#e3e8ef] p-3">
-              <p className="text-[11px] font-semibold text-[#697586] mb-1">السبب</p>
-              <p className="text-xs text-[#364152]">{row.reason}</p>
+            <div className="rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--sys-muted-foreground)] mb-1">السبب</p>
+              <p className="text-xs text-[var(--sys-foreground)]">{row.reason}</p>
             </div>
 
             <label className="block">
-              <span className="block text-[11px] text-[#697586] mb-1">
-                ردّك — <span className="text-[#c07f2a]">مطلوب مع الرفض</span>
+              <span className="block text-[11px] text-[var(--sys-muted-foreground)] mb-1">
+                ردّك — <span className="text-[var(--sys-warning)]">مطلوب مع الرفض</span>
               </span>
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="مثلاً: الطرد خرج مع المندوب، بلّغي الزبون أنه سيُسلَّم بالعنوان القديم"
                 maxLength={500}
-                className="w-full h-9 px-2 rounded-lg border border-[#e3e8ef] bg-white text-xs text-[#364152] focus:outline-none focus:border-[#b8256e]"
+                className="w-full h-9 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
               />
             </label>
 
-            <p className="flex items-start gap-1.5 text-[11px] text-[#697586]">
-              <AlertTriangle className="w-3.5 h-3.5 text-[#c07f2a] shrink-0 mt-0.5" />
+            <p className="flex items-start gap-1.5 text-[11px] text-[var(--sys-muted-foreground)]">
+              <AlertTriangle className="w-3.5 h-3.5 text-[var(--sys-warning)] shrink-0 mt-0.5" />
               الموافقة تسجّل القرار ولا تكتب التعديل بعد — يظهر بعدها في «بانتظار التطبيق» بطلبات
               التعديل، ومن هناك يُطبَّق بزرّ واحد عبر مسار المال نفسه، لا بنسخ حقل.
             </p>
@@ -148,7 +148,7 @@ export function ChangeRequestReview({
         )}
 
         {error && (
-          <p className="text-xs text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-lg p-2.5">{error}</p>
+          <p className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-2.5">{error}</p>
         )}
 
         <div className="flex gap-2 justify-end pt-1">

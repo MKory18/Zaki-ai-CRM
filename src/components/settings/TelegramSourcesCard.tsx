@@ -134,10 +134,10 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
             <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="ml-1 h-4 w-4" /> إضافة مصدر</Button>
           </div>
         )}
-        {error && <p className="mx-4 mb-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>}
+        {error && <p className="mx-4 mb-2 rounded-lg bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs text-[var(--sys-destructive)]">{error}</p>}
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="border-b border-[#e3e8ef] bg-[#f8fafc] font-semibold text-[#697586]">
+            <thead className="border-b border-[var(--sys-border)] bg-[var(--sys-surface)] font-semibold text-[var(--sys-muted-foreground)]">
               <tr>
                 <th className="px-4 py-3 text-right">المجموعة</th>
                 <th className="px-4 py-3 text-right">المتجر</th>
@@ -148,40 +148,40 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
                 {canManage && <th className="px-4 py-3 text-left">إجراءات</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {sources === null ? (
-                <tr><td colSpan={7} className="py-8 text-center text-[#9ca3af]">جارٍ التحميل...</td></tr>
+                <tr><td colSpan={7} className="py-8 text-center text-[var(--sys-muted)]">جارٍ التحميل...</td></tr>
               ) : sources.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-[#9ca3af]">لا مجموعات مرتبطة بعد.</td></tr>
+                <tr><td colSpan={7} className="py-8 text-center text-[var(--sys-muted)]">لا مجموعات مرتبطة بعد.</td></tr>
               ) : sources.map((s) => (
-                <tr key={s.id} className="hover:bg-[#f8fafc]">
+                <tr key={s.id} className="hover:bg-[var(--sys-surface)]">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-[#121926]">{s.chatTitle || 'بدون عنوان'}</p>
-                    <p className="font-mono text-[10px] text-[#697586]" dir="ltr">{s.chatId}{s.topicId ? ` • topic ${s.topicId}` : ''}</p>
-                    {s.topicName && <p className="text-[10px] text-[#697586]">الموضوع: {s.topicName}</p>}
+                    <p className="font-semibold text-[var(--sys-heading)]">{s.chatTitle || 'بدون عنوان'}</p>
+                    <p className="font-mono text-[10px] text-[var(--sys-muted-foreground)]" dir="ltr">{s.chatId}{s.topicId ? ` • topic ${s.topicId}` : ''}</p>
+                    {s.topicName && <p className="text-[10px] text-[var(--sys-muted-foreground)]">الموضوع: {s.topicName}</p>}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-[#364152]">{s.storeName ?? '—'}</td>
-                  <td className="px-4 py-3 text-[#697586]">{s.chatType === 'supergroup' ? 'مجموعة فائقة' : s.chatType === 'group' ? 'مجموعة' : 'قناة'}</td>
+                  <td className="px-4 py-3 font-semibold text-[var(--sys-foreground)]">{s.storeName ?? '—'}</td>
+                  <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{s.chatType === 'supergroup' ? 'مجموعة فائقة' : s.chatType === 'group' ? 'مجموعة' : 'قناة'}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.isActive ? 'bg-[#e6f9ee] text-[#00a651]' : 'bg-[#f1f5f9] text-[#697586]'}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.isActive ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
                       {s.isActive ? 'مفعل' : 'معطل'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-semibold text-[#121926]">{s.ordersCount}</td>
-                  <td className="px-4 py-3 text-[#697586]">{s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar') : '—'}</td>
+                  <td className="px-4 py-3 font-semibold text-[var(--sys-heading)]">{s.ordersCount}</td>
+                  <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar') : '—'}</td>
                   {canManage && (
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button disabled={busyId === s.id} onClick={() => void testSource(s)} title="اختبار" className="rounded p-1.5 text-[#697586] hover:bg-[#f1f5f9]"><FlaskConical className="h-4 w-4" /></button>
+                        <button disabled={busyId === s.id} onClick={() => void testSource(s)} title="اختبار" className="rounded p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"><FlaskConical className="h-4 w-4" /></button>
                         <button
                           disabled={busyId === s.id}
                           onClick={() => void act(s, () => crmApi(`/api/telegram/sources/${s.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: !s.isActive }) }), 'تعذر التحديث')}
                           title={s.isActive ? 'تعطيل' : 'تفعيل'}
-                          className="rounded p-1.5 text-[#697586] hover:bg-[#f1f5f9]"
+                          className="rounded p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                         >
                           <Power className="h-4 w-4" />
                         </button>
-                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded p-1.5 text-rose-500 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
+                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded p-1.5 text-rose-500 hover:bg-[var(--sys-destructive-soft)]"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </td>
                   )}
@@ -195,25 +195,25 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
       <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="إضافة مصدر تيليجرام">
         <div className="space-y-4" dir="rtl">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[#121926]">Chat ID *</label>
+            <label className="mb-1 block text-xs font-semibold text-[var(--sys-heading)]">Chat ID *</label>
             <Input value={form.chatId} onChange={(e) => setForm({ ...form, chatId: e.target.value })} placeholder="-1001234567890" dir="ltr" className="text-left font-mono" />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[#121926]">اسم المجموعة</label>
+            <label className="mb-1 block text-xs font-semibold text-[var(--sys-heading)]">اسم المجموعة</label>
             <Input value={form.chatTitle} onChange={(e) => setForm({ ...form, chatTitle: e.target.value })} placeholder="مجموعة طلبات المتجر" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#121926]">Topic ID (اختياري)</label>
+              <label className="mb-1 block text-xs font-semibold text-[var(--sys-heading)]">Topic ID (اختياري)</label>
               <Input value={form.topicId} onChange={(e) => setForm({ ...form, topicId: e.target.value })} placeholder="فارغ = المجموعة كاملة" dir="ltr" className="text-left font-mono" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#121926]">اسم الموضوع</label>
+              <label className="mb-1 block text-xs font-semibold text-[var(--sys-heading)]">اسم الموضوع</label>
               <Input value={form.topicName} onChange={(e) => setForm({ ...form, topicName: e.target.value })} />
             </div>
           </div>
-          {formError && <p className="text-xs text-rose-600">{formError}</p>}
-          <p className="text-[10px] leading-relaxed text-[#697586]">
+          {formError && <p className="text-xs text-[var(--sys-destructive)]">{formError}</p>}
+          <p className="text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
             تأكد من إضافة البوت إلى المجموعة ومن تفعيل Privacy Mode المناسب. اترك Topic ID فارغًا لربط المجموعة بالكامل.
           </p>
           <div className="flex justify-end gap-2 pt-2">

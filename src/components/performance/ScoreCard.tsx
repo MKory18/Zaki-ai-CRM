@@ -62,29 +62,29 @@ function BandLine({ band, bars }: { band: ScoredBand; bars: CardData['bars'] }) 
   return (
     <li className="py-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs font-medium text-[#364152]">{band.ar}</span>
-        <span className="text-[11px] tabular-nums text-[#697586]">
+        <span className="text-xs font-medium text-[var(--sys-foreground)]">{band.ar}</span>
+        <span className="text-[11px] tabular-nums text-[var(--sys-muted-foreground)]">
           {missing ? (
             'لا يُقاس'
           ) : (
             <>
               {valueText(band)}{' '}
-              <span className="text-[#9aa4b2]">←</span>{' '}
-              <span className="font-semibold text-[#121926]">
+              <span className="text-[var(--sys-muted)]">←</span>{' '}
+              <span className="font-semibold text-[var(--sys-heading)]">
                 {band.points} من {band.weight}
               </span>
             </>
           )}
         </span>
       </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#f1f3f6]">
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--sys-surface-strong)]">
         <div
-          className={`h-full rounded-full ${low ? 'bg-[#fb323f]' : 'bg-[#b8256e]'}`}
+          className={`h-full rounded-full ${low ? 'bg-[var(--sys-destructive)]' : 'bg-[var(--sys-primary)]'}`}
           style={{ width: `${Math.max(0, Math.min(100, fill))}%` }}
         />
       </div>
       {low && (
-        <p className="mt-1 flex items-center gap-1 text-[10px] text-[#fb323f]">
+        <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--sys-destructive)]">
           <TrendingDown className="h-3 w-3" /> دون العتبة التي حدّدها المتجر
         </p>
       )}
@@ -109,11 +109,11 @@ export function ScoreCard({ userId }: { userId?: string }) {
   }, [load]);
 
   if (error) {
-    return <p className="rounded-lg border border-[#fecdd1] bg-[#feecee] p-2.5 text-xs text-[#fb323f]">{error}</p>;
+    return <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">{error}</p>;
   }
   if (!data) {
     return (
-      <p className="flex items-center justify-center gap-2 py-8 text-sm text-[#697586]">
+      <p className="flex items-center justify-center gap-2 py-8 text-sm text-[var(--sys-muted-foreground)]">
         <Loader2 className="h-4 w-4 animate-spin" /> جارٍ الحساب…
       </p>
     );
@@ -122,16 +122,16 @@ export function ScoreCard({ userId }: { userId?: string }) {
   const score = data.score;
 
   return (
-    <section className="rounded-[8px] border border-[#e3e8ef] bg-white p-4" dir="rtl">
-      <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[#e3e8ef] pb-3">
+    <section className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
+      <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--sys-border)] pb-3">
         <div>
-          <h3 className="text-sm font-bold text-[#121926]">{data.person.name}</h3>
-          <p className="text-[11px] text-[#697586]">{PERIOD_AR[data.window.period]}</p>
+          <h3 className="text-sm font-bold text-[var(--sys-heading)]">{data.person.name}</h3>
+          <p className="text-[11px] text-[var(--sys-muted-foreground)]">{PERIOD_AR[data.window.period]}</p>
         </div>
         {score?.total !== null && score !== null && (
           <div className="text-left" dir="ltr">
-            <span className="text-2xl font-bold tabular-nums text-[#b8256e]">{score.total}</span>
-            <span className="text-xs text-[#697586]"> / {score.possible}</span>
+            <span className="text-2xl font-bold tabular-nums text-[var(--sys-primary)]">{score.total}</span>
+            <span className="text-xs text-[var(--sys-muted-foreground)]"> / {score.possible}</span>
           </div>
         )}
       </header>
@@ -139,7 +139,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
       {/* Nothing at all when the sample is too small. A delivery rate out of
           four orders is noise, and noise shown once is believed for a month. */}
       {score === null || score.reason === 'BELOW_MINIMUM' ? (
-        <p className="py-6 text-center text-xs leading-relaxed text-[#697586]">
+        <p className="py-6 text-center text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           {score === null
             ? 'لا يُقاس هذا الدور بهذا السكور.'
             : `العيّنة ${score.sample} طلباً، والحد الأدنى ${score.minSample}. لا سكور بعد — رقمٌ من عيّنة صغيرة يُصدَّق شهراً كاملاً.`}
@@ -147,14 +147,14 @@ export function ScoreCard({ userId }: { userId?: string }) {
       ) : (
         <>
           {data.rank && (
-            <p className="flex items-center gap-1.5 pt-3 text-[11px] text-[#697586]">
-              <Medal className="h-3.5 w-3.5 text-[#c07f2a]" />
-              ترتيبك <span className="font-semibold tabular-nums text-[#121926]">{data.rank.position}</span> من{' '}
+            <p className="flex items-center gap-1.5 pt-3 text-[11px] text-[var(--sys-muted-foreground)]">
+              <Medal className="h-3.5 w-3.5 text-[var(--sys-warning)]" />
+              ترتيبك <span className="font-semibold tabular-nums text-[var(--sys-heading)]">{data.rank.position}</span> من{' '}
               <span className="tabular-nums">{data.rank.of}</span> في دورك بهذا المتجر
             </p>
           )}
 
-          <ul className="mt-2 divide-y divide-[#f1f3f6]">
+          <ul className="mt-2 divide-y divide-[var(--sys-surface-strong)]">
             {score.bands.map((b) => (
               <BandLine key={b.key} band={b} bars={data.bars} />
             ))}
@@ -163,11 +163,11 @@ export function ScoreCard({ userId }: { userId?: string }) {
       )}
 
       {data.owed && data.owed.length > 0 && (
-        <footer className="mt-3 border-t border-[#e3e8ef] pt-2">
-          <p className="text-[11px] text-[#697586]">
+        <footer className="mt-3 border-t border-[var(--sys-border)] pt-2">
+          <p className="text-[11px] text-[var(--sys-muted-foreground)]">
             عمولة مستحقة لم تُصرف بعد:{' '}
             {data.owed.map((o) => (
-              <span key={o.currencyCode} className="ms-2 font-semibold tabular-nums text-[#121926]" dir="ltr">
+              <span key={o.currencyCode} className="ms-2 font-semibold tabular-nums text-[var(--sys-heading)]" dir="ltr">
                 {o.amount} {o.currencyCode}
               </span>
             ))}
@@ -175,7 +175,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
         </footer>
       )}
 
-      <p className="mt-2 text-[10px] leading-relaxed text-[#9aa4b2]">
+      <p className="mt-2 text-[10px] leading-relaxed text-[var(--sys-muted)]">
         الأوزان ثابتة ولا تُعدَّل، ليبقى الرقم قابلاً للمقارنة بين الشهور. القابل للضبط هو العتبات
         وحدها، وهي تلوّن السطر ولا تحرّك النقاط.
       </p>

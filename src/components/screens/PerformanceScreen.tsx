@@ -138,8 +138,8 @@ export function PerformanceScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.analytics}</h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.analytics}</h1>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               ربح كل منتج، وترتيب المنتجات، وأداء الفريق — للمدة المختارة
             </p>
           </div>
@@ -162,7 +162,7 @@ export function PerformanceScreen() {
         </div>
 
         {(canLanding || canScores) && (
-          <div className="flex gap-6 border-b border-[#e3e8ef] text-sm" role="tablist">
+          <div className="flex gap-6 border-b border-[var(--sys-border)] text-sm" role="tablist">
             {([
               ['team', 'المنتجات والفريق والقنوات'],
               ...(canScores ? [['scores', 'سكور الموظفين'] as [Tab, string]] : []),
@@ -175,7 +175,7 @@ export function PerformanceScreen() {
                 aria-selected={tab === key}
                 onClick={() => pickTab(key)}
                 className={`-mb-px border-b-2 pb-2.5 font-semibold transition-colors ${
-                  tab === key ? 'border-[#b8256e] text-[#b8256e]' : 'border-transparent text-[#697586] hover:text-[#364152]'
+                  tab === key ? 'border-[var(--sys-primary)] text-[var(--sys-primary)]' : 'border-transparent text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
                 }`}
               >
                 {label}
@@ -238,7 +238,7 @@ export function PerformanceScreen() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
+                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">المنتج</th>
                     <th className="px-6 py-3.5">الطلبات</th>
@@ -252,37 +252,37 @@ export function PerformanceScreen() {
                     <th className="px-6 py-3.5">هامش الربح</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {analytics?.productStats?.map((prod: any) => (
-                    <tr key={prod.id} className="hover:bg-[#f8fafc] transition-colors">
+                    <tr key={prod.id} className="hover:bg-[var(--sys-surface)] transition-colors">
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-[#121926] block">{prod.name}</span>
-                        <span className="font-mono text-[10px] text-[#9ca3af]">{prod.sku}</span>
+                        <span className="font-bold text-[var(--sys-heading)] block">{prod.name}</span>
+                        <span className="font-mono text-[10px] text-[var(--sys-muted)]">{prod.sku}</span>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#121926]">{prod.totalOrders}</td>
-                      <td className="px-6 py-3.5 font-bold text-[#00a344]">
+                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">{prod.totalOrders}</td>
+                      <td className="px-6 py-3.5 font-bold text-[var(--sys-success)]">
                         {prod.confirmedOrders}
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#00a344]">
+                      <td className="px-6 py-3.5 font-bold text-[var(--sys-success)]">
                         {prod.deliveredOrders}
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#fb323f]">
+                      <td className="px-6 py-3.5 font-bold text-[var(--sys-destructive)]">
                         {prod.rejectedOrders}
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#121926]">
+                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
                         ${prod.revenue.toFixed(2)}
                       </td>
-                      <td className="px-6 py-3.5 text-[#fb323f] font-medium">
+                      <td className="px-6 py-3.5 text-[var(--sys-destructive)] font-medium">
                         -${prod.cogs.toFixed(2)}
                       </td>
-                      <td className="px-6 py-3.5 text-[#fb323f] font-medium">
+                      <td className="px-6 py-3.5 text-[var(--sys-destructive)] font-medium">
                         -${prod.shippingCost.toFixed(2)}
                       </td>
-                      <td className="px-6 py-3.5 font-black text-[#121926]">
+                      <td className="px-6 py-3.5 font-black text-[var(--sys-heading)]">
                         ${prod.netProfit.toFixed(2)}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-[#b8256e] bg-[#fdf5fa] px-2 py-0.5 rounded text-xs">
+                        <span className="font-bold text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] px-2 py-0.5 rounded text-xs">
                           {prod.profitMargin}%
                         </span>
                       </td>
@@ -332,31 +332,31 @@ export function PerformanceScreen() {
           <CardHeader title="أداء شركات الشحن" subtitle="نسبة النجاح والمرتجعات ومتوسط زمن التوصيل" />
           <CardContent className="p-0">
             {couriers === null ? (
-              <p className="p-6 text-sm text-[#9aa4b2] text-center">جارٍ التحميل…</p>
+              <p className="p-6 text-sm text-[var(--sys-muted)] text-center">جارٍ التحميل…</p>
             ) : couriers.length === 0 ? (
-              <p className="p-6 text-sm text-[#9aa4b2] text-center">لا شركات شحن بعد.</p>
+              <p className="p-6 text-sm text-[var(--sys-muted)] text-center">لا شركات شحن بعد.</p>
             ) : (
-              <ul className="divide-y divide-[#e3e8ef]">
+              <ul className="divide-y divide-[var(--sys-border)]">
                 {couriers.map((c) => (
                   <li key={c.provider.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-xs">
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-[#121926] min-w-[130px]">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--sys-heading)] min-w-[130px]">
                       {c.provider.kind === 'AGENT' ? (
-                        <Bike className="w-3.5 h-3.5 text-[#b8256e]" />
+                        <Bike className="w-3.5 h-3.5 text-[var(--sys-primary)]" />
                       ) : (
-                        <Truck className="w-3.5 h-3.5 text-[#9aa4b2]" />
+                        <Truck className="w-3.5 h-3.5 text-[var(--sys-muted)]" />
                       )}
                       {c.provider.name}
                     </span>
                     <Metric label="مُسند" value={c.metrics.assigned} />
-                    <Metric label="مُسلَّم" value={c.metrics.delivered} tone="text-[#00a344]" />
-                    <Metric label="مرتجع" value={c.metrics.returned} tone="text-[#fb323f]" />
+                    <Metric label="مُسلَّم" value={c.metrics.delivered} tone="text-[var(--sys-success)]" />
+                    <Metric label="مرتجع" value={c.metrics.returned} tone="text-[var(--sys-destructive)]" />
                     <Metric
                       label="متوسط التوصيل"
                       value={c.metrics.avgDeliveryHours === null ? '—' : `${c.metrics.avgDeliveryHours} س`}
                     />
-                    <span className="ms-auto tabular-nums font-bold text-[#121926]">
+                    <span className="ms-auto tabular-nums font-bold text-[var(--sys-heading)]">
                       {c.metrics.successRate ?? '—'}%
-                      <span className="text-[10px] text-[#9aa4b2] font-normal"> نجاح</span>
+                      <span className="text-[10px] text-[var(--sys-muted)] font-normal"> نجاح</span>
                     </span>
                   </li>
                 ))}
@@ -373,8 +373,8 @@ export function PerformanceScreen() {
 
 function Metric({ label, value, tone }: { label: string; value: number | string; tone?: string }) {
   return (
-    <span className="text-[#697586]">
-      {label}: <span className={`tabular-nums font-semibold ${tone ?? 'text-[#121926]'}`}>{value}</span>
+    <span className="text-[var(--sys-muted-foreground)]">
+      {label}: <span className={`tabular-nums font-semibold ${tone ?? 'text-[var(--sys-heading)]'}`}>{value}</span>
     </span>
   );
 }
@@ -396,17 +396,17 @@ function Rank({
   note: string;
   warn?: boolean;
 }) {
-  const tone = warn ? 'text-[#c07f2a]' : 'text-[#b8256e]';
+  const tone = warn ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-primary)]';
   return (
-    <div className="bg-white border border-[#e3e8ef] p-3.5 rounded-xl">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] p-3.5 rounded-xl">
       <span className={`text-[10px] font-bold ${tone} inline-flex items-center gap-1.5`}>
         {icon}
         {label}
       </span>
-      <p className="font-bold text-[#121926] text-sm mt-1.5 line-clamp-1" title={name}>
+      <p className="font-bold text-[var(--sys-heading)] text-sm mt-1.5 line-clamp-1" title={name}>
         {name || '—'}
       </p>
-      <p className="text-[11px] text-[#697586] font-semibold mt-0.5 tabular-nums">{note}</p>
+      <p className="text-[11px] text-[var(--sys-muted-foreground)] font-semibold mt-0.5 tabular-nums">{note}</p>
     </div>
   );
 }

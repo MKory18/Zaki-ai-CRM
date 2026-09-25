@@ -127,24 +127,24 @@ export function CommissionSettingsScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
-      <p className="text-xs text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+      <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
         القاعدة لا تُعدَّل بعد كتابتها: لإنهاء العمل بها حدِّد لها تاريخ انتهاء واكتب قاعدة جديدة من اليوم التالي.
         العمولة تُحتسب بالقاعدة السارية يوم التسليم، وتصبح مستحقة عند اعتماد كشف التحصيل.
       </p>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
 
       {/* A period rule only becomes money once its span closes, so without
           this there was nothing to see while it could still be changed. */}
       <PeriodProgress />
 
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#e3e8ef]">
-          <h2 className="text-sm font-medium text-[#121926]">قواعد العمولة</h2>
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--sys-border)]">
+          <h2 className="text-sm font-medium text-[var(--sys-heading)]">قواعد العمولة</h2>
           <button
             onClick={() => setNewOpen(true)}
-            className="h-8 px-3 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5"
+            className="h-8 px-3 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" /> قاعدة جديدة
           </button>
@@ -154,7 +154,7 @@ export function CommissionSettingsScreen() {
             correct arithmetic and reads on a payslip as a quiet month, so
             the screen says which it is instead of showing a silent zero. */}
         {noRuleInForce && rules && rules.length > 0 && (
-          <div className="mb-3 flex items-start gap-2 rounded-[8px] border border-[#fde68a] bg-[#fffbeb] px-3 py-2.5 text-xs leading-relaxed text-[#92400e]">
+          <div className="mb-3 flex items-start gap-2 rounded-[8px] border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] px-3 py-2.5 text-xs leading-relaxed text-[var(--sys-warning)]">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               لا قاعدة سارية على هذا المتجر اليوم — القواعد الموجودة إمّا منتهية أو معطّلة، فلا تُحتسب أي
@@ -164,17 +164,17 @@ export function CommissionSettingsScreen() {
         )}
 
         {!rules ? (
-          <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-12">
+          <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-12">
             <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
           </div>
         ) : rules.length === 0 ? (
-          <p className="text-sm text-[#697586] py-10 text-center">
-            <Percent className="w-5 h-5 mx-auto mb-2 text-[#9aa4b2]" />
+          <p className="text-sm text-[var(--sys-muted-foreground)] py-10 text-center">
+            <Percent className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
             لا قواعد بعد — بدون قاعدة لا تُحتسب أي عمولة.
           </p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-3 py-2">القاعدة</th>
                 <th className="text-right font-medium px-3 py-2">تنطبق على</th>
@@ -185,18 +185,18 @@ export function CommissionSettingsScreen() {
                 <th className="text-right font-medium px-3 py-2"> </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {rules.map((r) => {
                 const ended = !!r.effectiveTo || !r.isActive;
                 return (
-                  <tr key={r.id} className={ended ? 'text-[#9aa4b2]' : undefined}>
-                    <td className="px-3 py-2 font-medium text-[#121926]">{r.name}</td>
+                  <tr key={r.id} className={ended ? 'text-[var(--sys-muted)]' : undefined}>
+                    <td className="px-3 py-2 font-medium text-[var(--sys-heading)]">{r.name}</td>
                     <td className="px-3 py-2">
                       {r.appliesToUserName
                         ? r.appliesToUserName
                         : ROLES.find((x) => x.value === r.appliesToRole)?.label ?? r.appliesToRole ?? '—'}
                     </td>
-                    <td className="px-3 py-2 text-[11px] text-[#697586]">
+                    <td className="px-3 py-2 text-[11px] text-[var(--sys-muted-foreground)]">
                       {METRIC_LABEL_AR[r.metric] ?? r.metric}
                       {r.period !== 'PER_ORDER' && ` · ${PERIOD_LABEL_AR[r.period] ?? r.period}`}
                     </td>
@@ -221,7 +221,7 @@ export function CommissionSettingsScreen() {
                     </td>
                     <td className="px-3 py-2 text-left">
                       {!ended && (
-                        <button onClick={() => setEndFor(r)} className="text-xs text-[#b8256e] hover:underline">
+                        <button onClick={() => setEndFor(r)} className="text-xs text-[var(--sys-primary)] hover:underline">
                           إنهاء العمل بها
                         </button>
                       )}
@@ -234,17 +234,17 @@ export function CommissionSettingsScreen() {
         )}
       </div>
 
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
-        <h2 className="text-sm font-medium text-[#121926] px-4 py-3 border-b border-[#e3e8ef]">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">
           عمولات الشهر الحالي ({period()})
         </h2>
         {!totals ? (
-          <p className="text-sm text-[#697586] py-8 text-center">—</p>
+          <p className="text-sm text-[var(--sys-muted-foreground)] py-8 text-center">—</p>
         ) : totals.length === 0 ? (
-          <p className="text-sm text-[#697586] py-8 text-center">لا عمولات محتسبة هذا الشهر.</p>
+          <p className="text-sm text-[var(--sys-muted-foreground)] py-8 text-center">لا عمولات محتسبة هذا الشهر.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-3 py-2">الموظف</th>
                 <th className="text-right font-medium px-3 py-2">محتسبة</th>
@@ -254,21 +254,21 @@ export function CommissionSettingsScreen() {
                 <th className="text-right font-medium px-3 py-2"> </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {totals.map((t) => (
                 <tr key={t.userId}>
-                  <td className="px-3 py-2 text-[#364152]">{t.name}</td>
+                  <td className="px-3 py-2 text-[var(--sys-foreground)]">{t.name}</td>
                   <td className="px-3 py-2 tabular-nums">{t.accrued} {currency}</td>
-                  <td className="px-3 py-2 tabular-nums text-[#00a344]">{t.payable}</td>
-                  <td className="px-3 py-2 tabular-nums text-[#697586]">{t.paid}</td>
-                  <td className="px-3 py-2 tabular-nums text-[#fb323f]">{t.reversed}</td>
+                  <td className="px-3 py-2 tabular-nums text-[var(--sys-success)]">{t.payable}</td>
+                  <td className="px-3 py-2 tabular-nums text-[var(--sys-muted-foreground)]">{t.paid}</td>
+                  <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)]">{t.reversed}</td>
                   <td className="px-3 py-2 text-left">
                     {/* An entry used to reach "مستحقة" and stop: nothing
                         turned it into money, so the cash left by hand. */}
                     {t.payable > 0 && canPay && (
                       <button
                         onClick={() => setPaying({ id: t.userId, name: t.name })}
-                        className="h-7 rounded-[8px] border border-[#b8256e] px-2.5 text-[11px] font-medium text-[#b8256e] hover:bg-[#fdf2f8]"
+                        className="h-7 rounded-[8px] border border-[var(--sys-primary)] px-2.5 text-[11px] font-medium text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
                       >
                         صرف
                       </button>
@@ -428,24 +428,24 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         className="space-y-3"
       >
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">اسم القاعدة</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">اسم القاعدة</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             minLength={2}
             placeholder="شرائح التأكيد اليومي 2026"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
         <div className="grid grid-cols-2 gap-3">
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">تنطبق على دور</span>
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">تنطبق على دور</span>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               {ROLES.map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
@@ -453,12 +453,12 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             </select>
           </label>
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">أو موظف بعينه</span>
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">أو موظف بعينه</span>
             <select
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               disabled={people.length === 0}
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white disabled:bg-[#f8fafc]"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)] disabled:bg-[var(--sys-surface)]"
             >
               <option value="">كل من في هذا الدور</option>
               {people.map((p) => (
@@ -467,7 +467,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             </select>
           </label>
           {userId && (
-            <p className="col-span-2 -mt-1 text-[10.5px] text-[#697586]">
+            <p className="col-span-2 -mt-1 text-[10.5px] text-[var(--sys-muted-foreground)]">
               قاعدة باسم موظف تتجاوز قاعدة دوره.
             </p>
           )}
@@ -475,11 +475,11 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
 
         <div className="grid grid-cols-2 gap-3">
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">تُحتسب على</span>
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">تُحتسب على</span>
             <select
               value={metric}
               onChange={(e) => pickMetric(e.target.value as CommissionMetric)}
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               {COMMISSION_METRICS.map((m) => (
                 <option key={m} value={m}>{METRIC_LABEL_AR[m]}</option>
@@ -487,12 +487,12 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             </select>
           </label>
           <label>
-            <span className="block text-xs font-medium text-[#364152] mb-1">الفترة</span>
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الفترة</span>
             <select
               value={perOrder ? 'PER_ORDER' : period}
               disabled={perOrder}
               onChange={(e) => setPeriod(e.target.value as CommissionPeriod)}
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white disabled:bg-[#f8fafc] disabled:text-[#9aa4b2]"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)] disabled:bg-[var(--sys-surface)] disabled:text-[var(--sys-muted)]"
             >
               {(perOrder ? (['PER_ORDER'] as const) : (['DAILY', 'WEEKLY', 'MONTHLY'] as const)).map((p) => (
                 <option key={p} value={p}>{PERIOD_LABEL_AR[p]}</option>
@@ -501,7 +501,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
           </label>
         </div>
 
-        <p className="rounded-[8px] bg-[#f8fafc] px-2.5 py-2 text-[11px] leading-relaxed text-[#697586]">
+        <p className="rounded-[8px] bg-[var(--sys-surface)] px-2.5 py-2 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           {perOrder
             ? 'تُحتسب مع كل طلب مسلَّم، لحظة تسليمه.'
             : `تُحتسب بعد انتهاء ${PERIOD_LABEL_AR[period]} — لأن العدد لا يُعرف قبل أن ينتهي.`}
@@ -524,8 +524,8 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               disabled={value !== 'single' && perOrder}
               className={`h-8 flex-1 rounded-[8px] border text-xs font-medium disabled:opacity-40 ${
                 shape === value
-                  ? 'border-[#b8256e] bg-[#fdf2f8] text-[#b8256e]'
-                  : 'border-[#e3e8ef] text-[#364152]'
+                  ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
+                  : 'border-[var(--sys-border)] text-[var(--sys-foreground)]'
               }`}
             >
               {label}
@@ -536,11 +536,11 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         {!banded ? (
           <div className="grid grid-cols-2 gap-3">
             <label>
-              <span className="block text-xs font-medium text-[#364152] mb-1">النوع</span>
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">النوع</span>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as CommissionType)}
-                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
               >
                 {COMMISSION_TYPES.map((t) => (
                   <option key={t} value={t}>{TYPE_LABEL_AR[t]}</option>
@@ -548,7 +548,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               </select>
             </label>
             <label>
-              <span className="block text-xs font-medium text-[#364152] mb-1">
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
                 {type === 'PERCENT' ? 'النسبة %' : 'المبلغ'}
               </span>
               <input
@@ -558,7 +558,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 required
-                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
                 dir="ltr"
               />
             </label>
@@ -566,7 +566,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         ) : shape === 'target' ? (
           <div className="grid grid-cols-2 gap-3">
             <label>
-              <span className="block text-xs font-medium text-[#364152] mb-1">
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
                 الهدف {isRate ? '(نسبة %)' : '(عدد)'}
               </span>
               <input
@@ -577,12 +577,12 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                 onChange={(e) => setGoal(e.target.value)}
                 required
                 placeholder={isRate ? '70' : '150'}
-                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
                 dir="ltr"
               />
             </label>
             <label>
-              <span className="block text-xs font-medium text-[#364152] mb-1">المكافأة</span>
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">المكافأة</span>
               <input
                 type="number"
                 step="0.01"
@@ -590,11 +590,11 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                 value={bonus}
                 onChange={(e) => setBonus(e.target.value)}
                 required
-                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
                 dir="ltr"
               />
             </label>
-            <p className="col-span-2 rounded-[8px] bg-[#f8fafc] px-2.5 py-2 text-[11px] leading-relaxed text-[#697586]">
+            <p className="col-span-2 rounded-[8px] bg-[var(--sys-surface)] px-2.5 py-2 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
               مكافأة واحدة عند بلوغ الهدف، مهما زاد العدد عليه — وتُدفع فوق أي قاعدة شرائح أخرى، لا بدلاً
               منها.
             </p>
@@ -602,11 +602,11 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         ) : (
           <div className="space-y-2">
             <label className="block">
-              <span className="block text-xs font-medium text-[#364152] mb-1">كيف تدفع الشريحة</span>
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">كيف تدفع الشريحة</span>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as CommissionType)}
-                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
               >
                 {COMMISSION_TYPES.map((t) => (
                   <option key={t} value={t}>{TYPE_LABEL_AR[t]}</option>
@@ -614,8 +614,8 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               </select>
             </label>
 
-            <div className="rounded-[8px] border border-[#e3e8ef] p-2 space-y-2">
-              <div className="grid grid-cols-[1fr_1fr_1fr_1.2fr_auto] gap-1.5 text-[10px] font-medium text-[#697586]">
+            <div className="rounded-[8px] border border-[var(--sys-border)] p-2 space-y-2">
+              <div className="grid grid-cols-[1fr_1fr_1fr_1.2fr_auto] gap-1.5 text-[10px] font-medium text-[var(--sys-muted-foreground)]">
                 <span>من {isRate ? '%' : ''}</span>
                 <span>إلى (فارغ = فما فوق)</span>
                 <span>القيمة</span>
@@ -635,7 +635,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                       onChange={(e) =>
                         setTiers(tiers.map((row, j) => (j === i ? { ...row, [field]: e.target.value } : row)))
                       }
-                      className="h-9 px-2 rounded-[8px] border border-[#e3e8ef] text-sm"
+                      className="h-9 px-2 rounded-[8px] border border-[var(--sys-border)] text-sm"
                       dir="ltr"
                     />
                   ))}
@@ -643,14 +643,14 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                     value={t.label}
                     onChange={(e) => setTiers(tiers.map((row, j) => (j === i ? { ...row, label: e.target.value } : row)))}
                     placeholder="اختياري"
-                    className="h-9 px-2 rounded-[8px] border border-[#e3e8ef] text-sm"
+                    className="h-9 px-2 rounded-[8px] border border-[var(--sys-border)] text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setTiers(tiers.filter((_, j) => j !== i))}
                     disabled={tiers.length === 1}
                     title="حذف الشريحة"
-                    className="h-9 w-9 rounded-[8px] text-[#9aa4b2] hover:text-[#fb323f] disabled:opacity-30"
+                    className="h-9 w-9 rounded-[8px] text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] disabled:opacity-30"
                   >
                     ×
                   </button>
@@ -659,7 +659,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               <button
                 type="button"
                 onClick={() => setTiers([...tiers, { from: '', to: '', value: '', label: '' }])}
-                className="text-xs font-medium text-[#b8256e]"
+                className="text-xs font-medium text-[var(--sys-primary)]"
               >
                 + شريحة
               </button>
@@ -669,7 +669,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
 
         {!perOrder && (
           <label className="block">
-            <span className="block text-xs font-medium text-[#364152] mb-1">
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
               أقل عدد طلبات قبل الاحتساب (اختياري)
             </span>
             <input
@@ -678,10 +678,10 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               value={minOrders}
               onChange={(e) => setMinOrders(e.target.value)}
               placeholder="مثلاً 30"
-              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
-            <span className="mt-1 block text-[10.5px] text-[#9aa4b2]">
+            <span className="mt-1 block text-[10.5px] text-[var(--sys-muted)]">
               {isRate
                 ? 'نسبة تسليم ١٠٠٪ من طلبين ليست أداءً — يُقاس الحد على عدد الطلبات لا على النسبة.'
                 : 'أقل من هذا العدد لا تستحق القاعدة شيئاً.'}
@@ -690,27 +690,27 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         )}
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">سارية من</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">سارية من</span>
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحفظ…' : 'حفظ'}
           </button>
@@ -746,29 +746,29 @@ function EndRuleDialog({ rule, onClose, onSaved }: { rule: Rule; onClose: () => 
         }}
         className="space-y-3"
       >
-        <p className="text-sm text-[#364152] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+        <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
           الطلبات المسلَّمة حتى هذا التاريخ تبقى محسوبة بهذه القاعدة. لما بعده اكتب قاعدة جديدة.
         </p>
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">آخر يوم تسري فيه</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">آخر يوم تسري فيه</span>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             إنهاء
           </button>

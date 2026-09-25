@@ -103,7 +103,9 @@ describe('confirm', () => {
     act(() => {
       void api.confirm({ title: 'حذف؟', tone: 'danger' });
     });
-    expect(button('احذف').className).toContain('bg-[#fb323f]');
+    // The destructive VARIABLE, not a literal red: the colour moves with
+    // the theme and its meaning does not.
+    expect(button('احذف').className).toContain('bg-[var(--sys-destructive)]');
   });
 });
 

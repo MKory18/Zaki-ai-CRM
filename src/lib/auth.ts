@@ -123,6 +123,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       companyId: user.companyId,
       companyName: user.company?.name,
       commissionRate: user.commissionRate,
+      systemTheme: user.systemTheme,
       permissions: Object.keys(effective.grants),
       legacyPermissions: !user.roleId,
     };

@@ -78,26 +78,26 @@ export function JobsScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
-      <p className="text-xs text-[#697586] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+      <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
         المهام تعمل في عملية مستقلة عن المتصفح:{' '}
-        <code className="font-mono text-[11px] bg-white border border-[#e3e8ef] rounded px-1.5 py-0.5" dir="ltr">
+        <code className="font-mono text-[11px] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded px-1.5 py-0.5" dir="ltr">
           npx tsx scripts/worker.ts
         </code>
         . إن لم تكن تعمل، ستظهر المهام هنا «متأخرة».
       </p>
 
       {overdue.length > 0 && (
-        <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3 flex items-center gap-2">
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           {overdue.length} مهمة تجاوزت موعدها — تحقّق من أن المجدول يعمل.
         </p>
       )}
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
 
       {!data ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
@@ -106,40 +106,40 @@ export function JobsScreen() {
             {data.jobs.map((job) => (
               <div
                 key={job.name}
-                className={`bg-white border rounded-[8px] p-4 ${
+                className={`bg-[var(--sys-card)] border rounded-[8px] p-4 ${
                   job.parked
-                    ? 'border-[#fb323f] bg-[#fffafa]'
+                    ? 'border-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)]'
                     : job.alerting
-                      ? 'border-[#fb323f]'
+                      ? 'border-[var(--sys-destructive)]'
                       : job.overdue
-                        ? 'border-amber-300'
-                        : 'border-[#e3e8ef]'
+                        ? 'border-[var(--sys-warning)]/60'
+                        : 'border-[var(--sys-border)]'
                 }`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-[240px]">
                     <div className="flex items-center gap-2">
                       {job.last?.status === 'FAILED' ? (
-                        <XCircle className="w-4 h-4 text-[#fb323f]" />
+                        <XCircle className="w-4 h-4 text-[var(--sys-destructive)]" />
                       ) : job.overdue ? (
-                        <Clock className="w-4 h-4 text-amber-600" />
+                        <Clock className="w-4 h-4 text-[var(--sys-warning)]" />
                       ) : (
-                        <CheckCircle2 className="w-4 h-4 text-[#00a344]" />
+                        <CheckCircle2 className="w-4 h-4 text-[var(--sys-success)]" />
                       )}
-                      <span className="text-sm font-medium text-[#121926]" dir="ltr">{job.name}</span>
-                      <span className="text-[11px] text-[#9aa4b2]">{job.schedule}</span>
+                      <span className="text-sm font-medium text-[var(--sys-heading)]" dir="ltr">{job.name}</span>
+                      <span className="text-[11px] text-[var(--sys-muted)]">{job.schedule}</span>
                     </div>
-                    <p className="text-xs text-[#697586] mt-1">{job.description}</p>
+                    <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{job.description}</p>
                   </div>
 
-                  <div className="text-xs text-[#697586] flex-1 min-w-[200px]">
+                  <div className="text-xs text-[var(--sys-muted-foreground)] flex-1 min-w-[200px]">
                     <p>
-                      آخر نجاح: <span className={job.overdue ? 'text-[#fb323f] font-medium' : ''}>{ago(job.lastSuccessAt)}</span>
+                      آخر نجاح: <span className={job.overdue ? 'text-[var(--sys-destructive)] font-medium' : ''}>{ago(job.lastSuccessAt)}</span>
                     </p>
-                    {job.last?.detail && <p className="text-[#364152] mt-0.5">{job.last.detail}</p>}
-                    {job.last?.error && <p className="text-[#fb323f] mt-0.5">{job.last.error}</p>}
+                    {job.last?.detail && <p className="text-[var(--sys-foreground)] mt-0.5">{job.last.detail}</p>}
+                    {job.last?.error && <p className="text-[var(--sys-destructive)] mt-0.5">{job.last.error}</p>}
                     {job.consecutiveFailures > 0 && (
-                      <p className="text-[#fb323f] mt-0.5">
+                      <p className="text-[var(--sys-destructive)] mt-0.5">
                         فشلت {job.consecutiveFailures} مرة متتالية
                         {job.alerting && ' — تحتاج تدخّلاً'}
                       </p>
@@ -148,7 +148,7 @@ export function JobsScreen() {
                         because the thing a person needs to know is that it
                         has STOPPED — not that it is unwell. */}
                     {job.parked && (
-                      <p className="mt-1 rounded bg-[#feecee] px-2 py-1 text-[#fb323f]">
+                      <p className="mt-1 rounded bg-[var(--sys-destructive-soft)] px-2 py-1 text-[var(--sys-destructive)]">
                         توقّفت عن المحاولة بعد فشل متكرّر. لن تعمل حتى تُعيد تفعيلها — أصلح السبب
                         أولاً، فإعادة التفعيل بلا إصلاح تعيدها إلى الحائط نفسه.
                       </p>
@@ -174,7 +174,7 @@ export function JobsScreen() {
                         await load();
                       }
                     }}
-                    className="h-8 px-3 rounded-[8px] border border-[#e3e8ef] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+                    className="h-8 px-3 rounded-[8px] border border-[var(--sys-border)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
                   >
                     {running === job.name ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
                     شغّلها الآن
@@ -200,7 +200,7 @@ export function JobsScreen() {
                           await load();
                         }
                       }}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[#fecdd1] bg-[#feecee] px-3 text-xs font-medium text-[#fb323f] disabled:opacity-50"
+                      className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 text-xs font-medium text-[var(--sys-destructive)] disabled:opacity-50"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                       أعد تفعيلها
@@ -211,13 +211,13 @@ export function JobsScreen() {
             ))}
           </div>
 
-          <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
-            <h2 className="text-sm font-medium text-[#121926] px-4 py-3 border-b border-[#e3e8ef]">آخر التشغيلات</h2>
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+            <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">آخر التشغيلات</h2>
             {data.recent.length === 0 ? (
-              <p className="text-sm text-[#697586] py-8 text-center">لم تعمل أي مهمة بعد.</p>
+              <p className="text-sm text-[var(--sys-muted-foreground)] py-8 text-center">لم تعمل أي مهمة بعد.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+                <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
                   <tr>
                     <th className="text-right font-medium px-3 py-2">المهمة</th>
                     <th className="text-right font-medium px-3 py-2">الحالة</th>
@@ -226,28 +226,28 @@ export function JobsScreen() {
                     <th className="text-right font-medium px-3 py-2">التفصيل</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {data.recent.map((run) => (
                     <tr key={run.id}>
-                      <td className="px-3 py-2 text-[#364152]" dir="ltr">{run.jobName}</td>
+                      <td className="px-3 py-2 text-[var(--sys-foreground)]" dir="ltr">{run.jobName}</td>
                       <td className="px-3 py-2">
                         <span
                           className={`text-[11px] px-2 py-0.5 rounded-full border ${
                             run.status === 'SUCCEEDED'
-                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                              ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
                               : run.status === 'FAILED'
-                                ? 'bg-[#feecee] border-[#fecdd1] text-[#fb323f]'
-                                : 'bg-amber-50 border-amber-200 text-amber-700'
+                                ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]'
+                                : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]'
                           }`}
                         >
                           {run.status === 'SUCCEEDED' ? 'نجحت' : run.status === 'FAILED' ? 'فشلت' : 'تعمل'}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-xs text-[#697586] whitespace-nowrap">
+                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
                         {new Date(run.startedAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}
                       </td>
-                      <td className="px-3 py-2 tabular-nums text-[#364152]">{run.processed}</td>
-                      <td className="px-3 py-2 text-xs text-[#697586]">{run.error ?? run.detail ?? '—'}</td>
+                      <td className="px-3 py-2 tabular-nums text-[var(--sys-foreground)]">{run.processed}</td>
+                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{run.error ?? run.detail ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>

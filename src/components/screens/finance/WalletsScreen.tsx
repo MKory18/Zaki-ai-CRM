@@ -155,25 +155,25 @@ export function WalletsScreen() {
   return (
     <div className="max-w-6xl space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-[#697586]">
+        <p className="text-xs text-[var(--sys-muted-foreground)]">
           المحفظة تتبع متجراً واحداً وتحمل عملته. حركاتها سجل دائم: ما مرّ بها مبلغ يُوقَف
           ولا يُحذف — ولا يُحذف فعلياً إلا ما لم يمرّ به شيء.
         </p>
         <button
           onClick={() => setCreating(true)}
-          className="h-9 px-3 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5 shrink-0"
+          className="h-9 px-3 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 shrink-0"
         >
           <Plus className="w-3.5 h-3.5" /> محفظة جديدة
         </button>
       </div>
 
       {!wallets ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : wallets.length === 0 ? (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
-          <WalletIcon className="w-5 h-5 mx-auto mb-2 text-[#9aa4b2]" />
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+          <WalletIcon className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا توجد محافظ بعد — أنشئ واحدة من الزر أعلاه.
         </p>
       ) : (
@@ -183,57 +183,57 @@ export function WalletsScreen() {
               <button
                 key={w.id}
                 onClick={() => setActive(w.id)}
-                className={`text-right bg-white border rounded-[8px] p-4 transition ${
-                  w.id === active ? 'border-[#b8256e] ring-1 ring-[#b8256e]/20' : 'border-[#e3e8ef]'
+                className={`text-right bg-[var(--sys-card)] border rounded-[8px] p-4 transition ${
+                  w.id === active ? 'border-[var(--sys-primary)] ring-1 ring-[var(--sys-primary)]/20' : 'border-[var(--sys-border)]'
                 }`}
               >
                 <span className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-[#121926]">{w.name}</span>
-                  {!w.isActive && <span className="text-[10px] text-[#9aa4b2] border border-[#e3e8ef] rounded-full px-2 py-0.5">موقوفة</span>}
+                  <span className="text-sm font-medium text-[var(--sys-heading)]">{w.name}</span>
+                  {!w.isActive && <span className="text-[10px] text-[var(--sys-muted)] border border-[var(--sys-border)] rounded-full px-2 py-0.5">موقوفة</span>}
                 </span>
-                <span className="block text-2xl font-semibold text-[#121926] tabular-nums mt-2">
-                  {w.balance} <span className="text-sm font-normal text-[#697586]">{w.currencyCode}</span>
+                <span className="block text-2xl font-semibold text-[var(--sys-heading)] tabular-nums mt-2">
+                  {w.balance} <span className="text-sm font-normal text-[var(--sys-muted-foreground)]">{w.currencyCode}</span>
                 </span>
-                <span className="block text-xs text-[#697586] mt-1 tabular-nums">
+                <span className="block text-xs text-[var(--sys-muted-foreground)] mt-1 tabular-nums">
                   افتتاحي {w.opening} · وارد {w.in} · صادر {w.out}
                 </span>
               </button>
             ))}
           </div>
 
-          {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
-          {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
+          {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+          {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
 
-          <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
             {/* The wallet's own actions live here, on the one that is
                 selected — not repeated on every card, where they would be
                 twelve buttons for one decision. */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-[#e3e8ef]">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-[var(--sys-border)]">
               {renaming && wallet ? (
                 <span className="flex items-center gap-1.5">
                   <input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="h-8 w-44 rounded-[8px] border border-[#e3e8ef] px-2 text-sm"
+                    className="h-8 w-44 rounded-[8px] border border-[var(--sys-border)] px-2 text-sm"
                   />
                   <button
                     onClick={() => patchWallet({ name: newName.trim() }, 'تم تغيير الاسم')}
                     disabled={busy || newName.trim().length < 2}
                     title="احفظ"
-                    className="cursor-pointer rounded-lg p-1.5 text-[#00a344] hover:bg-[#e6f9ee] disabled:opacity-40"
+                    className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] disabled:opacity-40"
                   >
                     <Check className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setRenaming(false)}
                     title="ألغِ"
-                    className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#f8fafc]"
+                    className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </span>
               ) : (
-                <h2 className="text-sm font-medium text-[#121926]">حركات {wallet?.name ?? ''}</h2>
+                <h2 className="text-sm font-medium text-[var(--sys-heading)]">حركات {wallet?.name ?? ''}</h2>
               )}
 
               <span className="flex items-center gap-1.5">
@@ -242,7 +242,7 @@ export function WalletsScreen() {
                     <button
                       onClick={() => { setRenaming(true); setNewName(wallet.name); }}
                       title="عدّل الاسم"
-                      className="cursor-pointer rounded-lg p-1.5 text-[#697586] hover:bg-[#fdf5fa] hover:text-[#b8256e]"
+                      className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -257,8 +257,8 @@ export function WalletsScreen() {
                       title={wallet.isActive ? 'أوقف المحفظة' : 'أعِد تشغيلها'}
                       className={`cursor-pointer rounded-lg p-1.5 disabled:opacity-40 ${
                         wallet.isActive
-                          ? 'text-[#697586] hover:bg-[#fff6e5] hover:text-[#c07f2a]'
-                          : 'text-[#00a344] hover:bg-[#e6f9ee]'
+                          ? 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-warning-soft)] hover:text-[var(--sys-warning)]'
+                          : 'text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)]'
                       }`}
                     >
                       <Power className="w-4 h-4" />
@@ -267,17 +267,17 @@ export function WalletsScreen() {
                       onClick={removeWallet}
                       disabled={busy}
                       title="احذف"
-                      className="cursor-pointer rounded-lg p-1.5 text-[#9aa4b2] hover:bg-[#feecee] hover:text-[#fb323f] disabled:opacity-40"
+                      className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-40"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                    <span className="mx-1 h-5 w-px bg-[#e3e8ef]" />
+                    <span className="mx-1 h-5 w-px bg-[var(--sys-border)]" />
                   </>
                 )}
                 <button
                   disabled={!wallet?.isActive}
                   onClick={() => setRecordOpen(true)}
-                  className="h-8 px-3 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+                  className="h-8 px-3 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <Plus className="w-3.5 h-3.5" /> حركة جديدة
                 </button>
@@ -285,14 +285,14 @@ export function WalletsScreen() {
             </div>
 
             {!movements ? (
-              <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-12">
+              <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-12">
                 <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
               </div>
             ) : movements.length === 0 ? (
-              <p className="text-sm text-[#697586] py-10 text-center">لا حركات بعد.</p>
+              <p className="text-sm text-[var(--sys-muted-foreground)] py-10 text-center">لا حركات بعد.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+                <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
                   <tr>
                     <th className="text-right font-medium px-3 py-2">التاريخ</th>
                     <th className="text-right font-medium px-3 py-2">الطرف</th>
@@ -303,32 +303,32 @@ export function WalletsScreen() {
                     <th className="text-right font-medium px-3 py-2"> </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {movements.map((m) => (
-                    <tr key={m.id} className={m.isReversal ? 'bg-[#fffbfa]' : undefined}>
-                      <td className="px-3 py-2 text-xs text-[#697586] whitespace-nowrap">
+                    <tr key={m.id} className={m.isReversal ? 'bg-[var(--sys-destructive-soft)]' : undefined}>
+                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
                         {new Date(m.createdAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}
                       </td>
-                      <td className="px-3 py-2 text-[#364152]">
+                      <td className="px-3 py-2 text-[var(--sys-foreground)]">
                         {m.party}
-                        {m.note && <span className="block text-xs text-[#9aa4b2]">{m.note}</span>}
+                        {m.note && <span className="block text-xs text-[var(--sys-muted)]">{m.note}</span>}
                         {m.reversalReason && (
-                          <span className="block text-xs text-[#fb323f]">قيد عكسي: {m.reversalReason}</span>
+                          <span className="block text-xs text-[var(--sys-destructive)]">قيد عكسي: {m.reversalReason}</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-xs text-[#697586]">{CATEGORY_AR[m.category] ?? m.category}</td>
-                      <td className="px-3 py-2 tabular-nums text-[#00a344]">{m.direction === 'IN' ? m.amount : ''}</td>
-                      <td className="px-3 py-2 tabular-nums text-[#fb323f]">{m.direction === 'OUT' ? m.amount : ''}</td>
-                      <td className="px-3 py-2 text-xs text-[#697586]">{m.createdByName ?? '—'}</td>
+                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{CATEGORY_AR[m.category] ?? m.category}</td>
+                      <td className="px-3 py-2 tabular-nums text-[var(--sys-success)]">{m.direction === 'IN' ? m.amount : ''}</td>
+                      <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)]">{m.direction === 'OUT' ? m.amount : ''}</td>
+                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{m.createdByName ?? '—'}</td>
                       <td className="px-3 py-2 text-left">
                         {m.wasReversed ? (
-                          <span className="text-xs text-[#9aa4b2]">عُكِست</span>
+                          <span className="text-xs text-[var(--sys-muted)]">عُكِست</span>
                         ) : m.isReversal ? (
-                          <span className="text-xs text-[#9aa4b2]">قيد عكسي</span>
+                          <span className="text-xs text-[var(--sys-muted)]">قيد عكسي</span>
                         ) : (
                           <button
                             onClick={() => setReverseFor(m)}
-                            className="text-xs text-[#b8256e] hover:underline inline-flex items-center gap-1"
+                            className="text-xs text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1"
                           >
                             <RotateCcw className="w-3 h-3" /> قيد عكسي
                           </button>
@@ -432,9 +432,9 @@ function RecordDialog({
               className={`flex-1 h-10 rounded-[8px] border text-sm font-medium ${
                 direction === d
                   ? d === 'IN'
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                    : 'bg-[#feecee] border-[#fecdd1] text-[#fb323f]'
-                  : 'border-[#e3e8ef] text-[#697586]'
+                    ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/60 text-[var(--sys-success)]'
+                    : 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]'
+                  : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
               }`}
             >
               {d === 'IN' ? 'وارد' : 'صادر'}
@@ -443,7 +443,7 @@ function RecordDialog({
         </div>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">المبلغ ({wallet.currencyCode})</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">المبلغ ({wallet.currencyCode})</span>
           <input
             type="number"
             step="0.001"
@@ -451,29 +451,29 @@ function RecordDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">الطرف</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الطرف</span>
           <input
             value={party}
             onChange={(e) => setParty(e.target.value)}
             required
             minLength={2}
             placeholder="اسم الشخص أو الجهة"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">البند</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">البند</span>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             {Object.entries(CATEGORY_AR)
               .filter(([key]) => key !== 'TRANSFER_IN' && key !== 'TRANSFER_OUT')
@@ -481,30 +481,30 @@ function RecordDialog({
                 <option key={key} value={key}>{label}</option>
               ))}
           </select>
-          <span className="block text-[11px] text-[#9aa4b2] mt-1">التحويلات تُسجَّل من شاشة التحويلات لا من هنا.</span>
+          <span className="block text-[11px] text-[var(--sys-muted)] mt-1">التحويلات تُسجَّل من شاشة التحويلات لا من هنا.</span>
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">الملاحظة (إلزامية)</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الملاحظة (إلزامية)</span>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
             required
             minLength={3}
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end pt-1">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحفظ…' : 'تسجيل'}
           </button>
@@ -550,35 +550,35 @@ function ReverseDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-sm text-[#364152] bg-[#f8fafc] border border-[#e3e8ef] rounded-[8px] p-3">
+        <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
           سيُسجَّل قيد معاكس بمبلغ <b className="tabular-nums">{movement.amount}</b> {wallet.currencyCode}{' '}
           ({movement.direction === 'IN' ? 'صادر' : 'وارد'}) مرتبطاً بالحركة الأصلية.
           القيد الأصلي لا يُحذف ولا يُعدَّل.
         </p>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">سبب القيد العكسي (إلزامي)</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">سبب القيد العكسي (إلزامي)</span>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             required
             minLength={5}
             rows={3}
-            className="w-full p-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full p-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             placeholder="مثال: سُجِّل المبلغ مرتين بالخطأ"
           />
         </label>
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[#fb323f] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ التسجيل…' : 'تسجيل القيد العكسي'}
           </button>
@@ -656,7 +656,7 @@ function CreateWalletDialog({
         className="space-y-3"
       >
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">البلد</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">البلد</span>
           <select
             value={countryId}
             onChange={(e) => {
@@ -666,7 +666,7 @@ function CreateWalletDialog({
               if (picked && !currency) setCurrency(picked.currencyCode);
             }}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {countries.map((c) => (
@@ -676,7 +676,7 @@ function CreateWalletDialog({
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">اسم المحفظة</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">اسم المحفظة</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -684,25 +684,25 @@ function CreateWalletDialog({
             minLength={2}
             autoFocus
             placeholder="مثال: الصندوق النقدي، حساب البنك العربي"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
           />
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">العملة</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">العملة</span>
           <input
             value={currency}
             onChange={(e) => setCurrency(e.target.value.toUpperCase())}
             required
             maxLength={3}
             placeholder="USD"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
-          <span className="block text-[11px] text-[#9aa4b2] mt-1">
+          <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
             ثلاثة أحرف. لا يمكن تغييرها لاحقاً — كل حركة تُسجَّل بها.
             {country && currency && currency !== country.currencyCode && (
-              <span className="block text-amber-700 mt-0.5">
+              <span className="block text-[var(--sys-warning)] mt-0.5">
                 تختلف عن عملة {country.name} ({country.currencyCode}) — مقبول، وسيُطلب سعر الصرف عند الحاجة.
               </span>
             )}
@@ -710,31 +710,31 @@ function CreateWalletDialog({
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">الرصيد الافتتاحي</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الرصيد الافتتاحي</span>
           <input
             type="number"
             step="0.001"
             value={opening}
             onChange={(e) => setOpening(e.target.value)}
             placeholder="0"
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
-          <span className="block text-[11px] text-[#9aa4b2] mt-1">
+          <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
             ما في المحفظة الآن قبل أي حركة. ليس حركة بحد ذاته، فلا يظهر في السجل.
           </span>
         </label>
 
-        {error && <p className="text-sm text-[#fb323f]">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !countryId}
-            className="h-9 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الإنشاء…' : 'إنشاء'}
           </button>

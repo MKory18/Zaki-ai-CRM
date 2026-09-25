@@ -31,16 +31,16 @@ const KIND_AR: Record<string, string> = {
 };
 
 const KIND_TONE: Record<string, string> = {
-  LANDING_PAGE: 'bg-[#eef4ff] text-[#2563eb] border-[#c7dbff]',
-  FACEBOOK: 'bg-[#eef4ff] text-[#1d4ed8] border-[#c7dbff]',
-  INSTAGRAM: 'bg-[#fdf2f8] text-[#be185d] border-[#fbcfe8]',
-  TIKTOK: 'bg-[#f1f5f9] text-[#0f172a] border-[#e2e8f0]',
-  WHATSAPP: 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]',
-  TELEGRAM: 'bg-[#eff6ff] text-[#0284c7] border-[#bae6fd]',
-  PHONE: 'bg-[#f8fafc] text-[#475569] border-[#e2e8f0]',
-  SHEET: 'bg-[#fefce8] text-[#a16207] border-[#fde68a]',
-  WEBSITE: 'bg-[#f5f3ff] text-[#6d28d9] border-[#ddd6fe]',
-  OTHER: 'bg-[#f8fafc] text-[#697586] border-[#e3e8ef]',
+  LANDING_PAGE: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-border)]',
+  FACEBOOK: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-border)]',
+  INSTAGRAM: 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border-[#fbcfe8]',
+  TIKTOK: 'bg-[var(--sys-surface-strong)] text-[#0f172a] border-[var(--sys-border)]',
+  WHATSAPP: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[#a7f3d0]',
+  TELEGRAM: 'bg-[var(--sys-surface)] text-[#0284c7] border-[#bae6fd]',
+  PHONE: 'bg-[var(--sys-surface)] text-[#475569] border-[var(--sys-border)]',
+  SHEET: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]',
+  WEBSITE: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[#ddd6fe]',
+  OTHER: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
 };
 
 interface Channel {
@@ -53,7 +53,7 @@ interface Channel {
 }
 
 const INPUT =
-  'w-full h-9 px-3 rounded-[8px] border border-[#e3e8ef] text-sm focus:outline-none focus:border-[#b8256e]';
+  'w-full h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
 export function ChannelsScreen() {
   const [channels, setChannels] = useState<Channel[] | null>(null);
@@ -133,7 +133,7 @@ export function ChannelsScreen() {
 
   if (!channels) {
     return (
-      <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+      <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -145,18 +145,18 @@ export function ChannelsScreen() {
     <div className="max-w-3xl space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#121926] flex items-center gap-2">
-            <Radio className="w-6 h-6 text-[#b8256e]" />
+          <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
+            <Radio className="w-6 h-6 text-[var(--sys-primary)]" />
             قنوات الطلبات
           </h1>
-          <p className="text-xs text-[#697586] mt-1">
+          <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
             من أين تصل الطلبات — تُختار عند الإدخال وتُحسب عليها الأرقام.
           </p>
         </div>
         {!adding && (
           <button
             onClick={() => { setAdding(true); setError(null); }}
-            className="px-3 py-2 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium inline-flex items-center gap-1.5"
+            className="px-3 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             قناة جديدة
@@ -165,14 +165,14 @@ export function ChannelsScreen() {
       </div>
 
       {error && (
-        <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>
       )}
 
       {adding && (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 space-y-3">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="block">
-              <span className="block text-xs font-medium text-[#364152] mb-1">اسم القناة</span>
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">اسم القناة</span>
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -182,7 +182,7 @@ export function ChannelsScreen() {
               />
             </label>
             <label className="block">
-              <span className="block text-xs font-medium text-[#364152] mb-1">المنصة</span>
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">المنصة</span>
               <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value })} className={INPUT}>
                 {Object.entries(KIND_AR).map(([k, label]) => (
                   <option key={k} value={k}>{label}</option>
@@ -190,20 +190,20 @@ export function ChannelsScreen() {
               </select>
             </label>
           </div>
-          <p className="text-[11px] text-[#9aa4b2]">
+          <p className="text-[11px] text-[var(--sys-muted)]">
             عدة قنوات قد تشترك بمنصة واحدة — هكذا تعرف كم جاء من تيكتوك كلها، وكم من كل صفحة فيها.
           </p>
           <div className="flex gap-2">
             <button
               onClick={create}
               disabled={busy === 'new'}
-              className="px-3 py-1.5 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium disabled:opacity-50"
+              className="px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
             >
               {busy === 'new' ? 'جارٍ الإضافة…' : 'أضف القناة'}
             </button>
             <button
               onClick={() => { setAdding(false); setError(null); }}
-              className="px-3 py-1.5 rounded-[8px] border border-[#e3e8ef] text-xs text-[#697586]"
+              className="px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
             >
               إلغاء
             </button>
@@ -211,17 +211,17 @@ export function ChannelsScreen() {
         </div>
       )}
 
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] divide-y divide-[#e3e8ef]">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] divide-y divide-[var(--sys-border)]">
         {channels.length === 0 && (
-          <p className="p-6 text-sm text-[#697586] text-center">لا قنوات بعد — أضف أول واحدة.</p>
+          <p className="p-6 text-sm text-[var(--sys-muted-foreground)] text-center">لا قنوات بعد — أضف أول واحدة.</p>
         )}
 
         {channels.map((c) => (
-          <div key={c.id} className={`p-3 ${c.isActive ? '' : 'bg-[#f8fafc]'}`}>
+          <div key={c.id} className={`p-3 ${c.isActive ? '' : 'bg-[var(--sys-surface)]'}`}>
             {editing === c.id ? (
               <div className="flex flex-wrap items-end gap-2">
                 <label className="flex-1 min-w-[180px]">
-                  <span className="block text-[11px] text-[#697586] mb-1">الاسم</span>
+                  <span className="block text-[11px] text-[var(--sys-muted-foreground)] mb-1">الاسم</span>
                   <input
                     value={editDraft.name}
                     onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
@@ -230,7 +230,7 @@ export function ChannelsScreen() {
                   />
                 </label>
                 <label className="w-40">
-                  <span className="block text-[11px] text-[#697586] mb-1">المنصة</span>
+                  <span className="block text-[11px] text-[var(--sys-muted-foreground)] mb-1">المنصة</span>
                   <select
                     value={editDraft.kind}
                     onChange={(e) => setEditDraft({ ...editDraft, kind: e.target.value })}
@@ -244,13 +244,13 @@ export function ChannelsScreen() {
                 <button
                   onClick={() => patch(c.id, { name: editDraft.name.trim(), kind: editDraft.kind })}
                   disabled={busy === c.id}
-                  className="h-9 px-3 rounded-[8px] bg-[#b8256e] text-white text-xs font-medium disabled:opacity-50"
+                  className="h-9 px-3 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setEditing(null)}
-                  className="h-9 px-3 rounded-[8px] border border-[#e3e8ef] text-xs text-[#697586]"
+                  className="h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -260,10 +260,10 @@ export function ChannelsScreen() {
                 <span className={`text-[11px] px-2 py-0.5 rounded-[6px] border ${KIND_TONE[c.kind] ?? KIND_TONE.OTHER}`}>
                   {KIND_AR[c.kind] ?? c.kind}
                 </span>
-                <span className={`text-sm font-medium ${c.isActive ? 'text-[#121926]' : 'text-[#9aa4b2] line-through'}`}>
+                <span className={`text-sm font-medium ${c.isActive ? 'text-[var(--sys-heading)]' : 'text-[var(--sys-muted)] line-through'}`}>
                   {c.name}
                 </span>
-                <span className="text-[11px] text-[#9aa4b2] tabular-nums">
+                <span className="text-[11px] text-[var(--sys-muted)] tabular-nums">
                   {c.orders} طلب
                   {total > 0 && c.orders > 0 && ` · ${Math.round((c.orders / total) * 100)}%`}
                 </span>
@@ -271,7 +271,7 @@ export function ChannelsScreen() {
                 <div className="ms-auto flex items-center gap-1">
                   <button
                     onClick={() => { setEditing(c.id); setEditDraft({ name: c.name, kind: c.kind }); setError(null); }}
-                    className="p-1.5 rounded-[6px] text-[#697586] hover:text-[#b8256e] hover:bg-[#f8fafc]"
+                    className="p-1.5 rounded-[6px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)]"
                     title="تعديل"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -279,7 +279,7 @@ export function ChannelsScreen() {
                   <button
                     onClick={() => patch(c.id, { isActive: !c.isActive })}
                     disabled={busy === c.id}
-                    className="text-[11px] px-2 py-1 rounded-[6px] border border-[#e3e8ef] text-[#697586] hover:text-[#b8256e]"
+                    className="text-[11px] px-2 py-1 rounded-[6px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
                   >
                     {c.isActive ? 'إيقاف' : 'تفعيل'}
                   </button>
@@ -287,7 +287,7 @@ export function ChannelsScreen() {
                     <button
                       onClick={() => remove(c)}
                       disabled={busy === c.id}
-                      className="p-1.5 rounded-[6px] text-[#9aa4b2] hover:text-[#fb323f] hover:bg-[#feecee]"
+                      className="p-1.5 rounded-[6px] text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       title="حذف — لا طلبات عليها"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -300,7 +300,7 @@ export function ChannelsScreen() {
         ))}
       </div>
 
-      <p className="text-[11px] text-[#9aa4b2]">
+      <p className="text-[11px] text-[var(--sys-muted)]">
         القناة التي عليها طلبات لا تُحذف — تُوقَف فتختفي من قوائم الاختيار وتبقى في الإحصاءات.
       </p>
     </div>

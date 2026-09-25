@@ -53,41 +53,41 @@ export function ReturnsScreen() {
           e.preventDefault();
           void load();
         }}
-        className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 flex gap-3 items-end"
+        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex gap-3 items-end"
       >
         <label className="flex-1">
-          <span className="block text-xs font-medium text-[#364152] mb-1">امسح الباركود أو اكتب المرجع</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">امسح الباركود أو اكتب المرجع</span>
           <div className="relative">
-            <ScanLine className="w-4 h-4 text-[#9aa4b2] absolute right-3 top-3" />
+            <ScanLine className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               autoFocus
               placeholder="امسح الباركود هنا"
-              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
           </div>
         </label>
-        <button type="submit" className="h-10 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium">بحث</button>
+        <button type="submit" className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
       </form>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
 
       {!rows ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
-          <PackageOpen className="w-5 h-5 mx-auto mb-2 text-[#9aa4b2]" />
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+          <PackageOpen className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا توجد مرتجعات بانتظار الاستلام.
         </p>
       ) : (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-3 py-2">المرجع</th>
                 <th className="text-right font-medium px-3 py-2">العميل</th>
@@ -97,16 +97,16 @@ export function ReturnsScreen() {
                 <th className="text-right font-medium px-3 py-2"> </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {rows.map((r) => (
                 <tr key={r.id}>
-                  <td className="px-3 py-2 font-medium text-[#121926]" dir="ltr">{r.merchantRef ?? r.orderNumber}</td>
-                  <td className="px-3 py-2 text-[#364152]">{r.customer.fullName}</td>
-                  <td className="px-3 py-2 text-[#697586]">{r.deliveryProvider?.name ?? '—'}</td>
-                  <td className="px-3 py-2 text-[#697586]">{r.returnReason ?? '—'}</td>
+                  <td className="px-3 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{r.merchantRef ?? r.orderNumber}</td>
+                  <td className="px-3 py-2 text-[var(--sys-foreground)]">{r.customer.fullName}</td>
+                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{r.deliveryProvider?.name ?? '—'}</td>
+                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{r.returnReason ?? '—'}</td>
                   <td className="px-3 py-2 tabular-nums">{r.expectedQty}</td>
                   <td className="px-3 py-2 text-left">
-                    <button onClick={() => setActive(r)} className="text-xs text-[#b8256e] hover:underline">
+                    <button onClick={() => setActive(r)} className="text-xs text-[var(--sys-primary)] hover:underline">
                       استلام
                     </button>
                   </td>
@@ -182,9 +182,9 @@ function ReceiveDialog({
   return (
     <Modal isOpen onClose={onClose} title="استلام مرتجع" subtitle={order.merchantRef ?? order.orderNumber} maxWidth="sm">
       <form onSubmit={submit} className="space-y-3">
-        {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-2">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-2">{error}</p>}
 
-        <ul className="text-xs text-[#697586] bg-[#f8fafc] rounded-[8px] p-2 space-y-0.5">
+        <ul className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] rounded-[8px] p-2 space-y-0.5">
           {order.items.map((i, idx) => (
             <li key={idx}>
               {i.productName} × {i.quantity + i.freeQuantity}
@@ -196,33 +196,33 @@ function ReceiveDialog({
           <Num label="سليم" value={received} onChange={setReceived} max={order.expectedQty} />
           <Num label="تالف" value={damaged} onChange={setDamaged} max={order.expectedQty} />
           <div>
-            <span className="block text-xs font-medium text-[#364152] mb-1">ناقص (محسوب)</span>
-            <p className={`h-10 flex items-center px-3 rounded-[8px] border text-sm tabular-nums ${missing > 0 ? 'border-[#fecdd1] bg-[#feecee] text-[#fb323f]' : 'border-[#e3e8ef] bg-[#f8fafc] text-[#364152]'}`} dir="ltr">
+            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ناقص (محسوب)</span>
+            <p className={`h-10 flex items-center px-3 rounded-[8px] border text-sm tabular-nums ${missing > 0 ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-foreground)]'}`} dir="ltr">
               {missing}
             </p>
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-[#364152]">
+        <label className="flex items-center gap-2 text-sm text-[var(--sys-foreground)]">
           <input type="checkbox" checked={courierFee} onChange={(e) => setCourierFee(e.target.checked)} />
           احتساب أجرة إرجاع لشركة الشحن (تُؤخذ من جدول الأجور)
         </label>
 
         <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">ملاحظة (اختياري)</span>
-          <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm" />
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختياري)</span>
+          <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm" />
         </label>
 
-        <label className="flex items-start gap-2 text-sm text-[#121926] bg-amber-50 border border-amber-100 rounded-[8px] p-2">
+        <label className="flex items-start gap-2 text-sm text-[var(--sys-heading)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-[8px] p-2">
           <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-1" />
           <span>أقرّ بأنني عددت البضاعة وفحصتها. لا تدخل البضاعة للمخزون قبل هذا الإقرار.</span>
         </label>
 
         <div className="flex gap-2 pt-1">
-          <button type="submit" disabled={busy || !acknowledged} className="px-4 py-2 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium disabled:opacity-50">
+          <button type="submit" disabled={busy || !acknowledged} className="px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50">
             {busy ? 'جارٍ الحفظ…' : 'تأكيد الاستلام'}
           </button>
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-[8px] border border-[#e3e8ef] text-sm text-[#697586]">إلغاء</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-[8px] border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">إلغاء</button>
         </div>
       </form>
     </Modal>
@@ -232,7 +232,7 @@ function ReceiveDialog({
 function Num({ label, value, onChange, max }: { label: string; value: number; onChange: (v: number) => void; max: number }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-[#364152] mb-1">{label}</span>
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
       <input
         type="number"
         min={0}
@@ -240,7 +240,7 @@ function Num({ label, value, onChange, max }: { label: string; value: number; on
         value={value}
         onChange={(e) => onChange(Math.max(0, Math.min(max, Number(e.target.value))))}
         dir="ltr"
-        className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
       />
     </label>
   );

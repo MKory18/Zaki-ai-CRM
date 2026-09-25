@@ -35,9 +35,9 @@ interface HistoryResponse {
 
 
 const RISK: Record<string, { text: string; cls: string }> = {
-  SAFE: { text: 'خطورة منخفضة', cls: 'bg-emerald-50 text-[#00a344] border-emerald-100' },
-  WATCH: { text: 'تحت المراقبة', cls: 'bg-amber-50 text-[#c07f2a] border-amber-100' },
-  HIGH: { text: 'خطورة عالية', cls: 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]' },
+  SAFE: { text: 'خطورة منخفضة', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/30' },
+  WATCH: { text: 'تحت المراقبة', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30' },
+  HIGH: { text: 'خطورة عالية', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
 };
 
 /** Small counter button: "سجل 3". Renders nothing distracting at zero. */
@@ -64,8 +64,8 @@ export function CustomerHistoryButton({
         title={previousOrders > 0 ? `${previousOrders} طلب سابق لهذا العميل` : 'عميل جديد — لا طلبات سابقة'}
         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] border text-[11px] ${
           previousOrders > 0
-            ? 'bg-[#f8fafc] border-[#e3e8ef] text-[#364152] hover:border-[#b8256e]'
-            : 'bg-white border-[#e3e8ef] text-[#9aa4b2] hover:border-[#b8256e]'
+            ? 'bg-[var(--sys-surface)] border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)]'
+            : 'bg-[var(--sys-card)] border-[var(--sys-border)] text-[var(--sys-muted)] hover:border-[var(--sys-primary)]'
         }`}
       >
         <History className="w-3 h-3" />
@@ -102,19 +102,19 @@ export function CustomerHistoryModal({
 
   return (
     <Modal isOpen onClose={onClose} title="طلبات العميل السابقة" subtitle={history?.customer.fullName} maxWidth="2xl">
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3 mb-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3 mb-3">{error}</p>}
 
       {history && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <span className={`text-[11px] px-2 py-0.5 rounded-[6px] border ${RISK[history.risk.tier].cls}`}>
             {RISK[history.risk.tier].text} · {Math.round(history.risk.returnRate * 100)}% مرتجع من {history.risk.orders} طلب
           </span>
-          <span className="text-xs text-[#697586]">
+          <span className="text-xs text-[var(--sys-muted-foreground)]">
             إجمالي {history.customer.totalOrders} · مسلّم {history.customer.deliveredOrders} · ملغى{' '}
             {history.customer.cancelledOrders}
           </span>
           {history.risk.requiresPrepaymentOrApproval && (
-            <span className="flex items-center gap-1 text-[11px] text-[#fb323f]">
+            <span className="flex items-center gap-1 text-[11px] text-[var(--sys-destructive)]">
               <ShieldAlert className="w-3 h-3" /> يتطلب دفعاً مسبقاً أو موافقة مشرف
             </span>
           )}
@@ -122,32 +122,32 @@ export function CustomerHistoryModal({
       )}
 
       {!history ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-10">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-10">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
         <div className="space-y-2">
           {history?.orders.length === 0 && (
-            <p className="text-sm text-[#697586]">لا توجد طلبات سابقة لهذا العميل.</p>
+            <p className="text-sm text-[var(--sys-muted-foreground)]">لا توجد طلبات سابقة لهذا العميل.</p>
           )}
           {history?.orders.map((o) => (
-            <article key={o.id} className="border border-[#e3e8ef] rounded-[8px] p-3">
+            <article key={o.id} className="border border-[var(--sys-border)] rounded-[8px] p-3">
               <header className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="font-medium text-[#121926]" dir="ltr">{o.orderNumber}</span>
+                <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
                 <OrderStateBadge state={o.state} />
-                <span className="text-xs text-[#697586]" dir="ltr">
+                <span className="text-xs text-[var(--sys-muted-foreground)]" dir="ltr">
                   {arDate(o.createdAt)}
                 </span>
-                {o.store && <span className="text-xs text-[#9aa4b2]">{o.store.name}</span>}
-                <span className="mr-auto tabular-nums text-[#121926]" dir="ltr">
+                {o.store && <span className="text-xs text-[var(--sys-muted)]">{o.store.name}</span>}
+                <span className="mr-auto tabular-nums text-[var(--sys-heading)]" dir="ltr">
                   {o.totalAmount} {o.currency}
                 </span>
               </header>
-              <p className="mt-1 text-xs text-[#697586]">
+              <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
                 {o.items.map((i) => `${i.productName} × ${i.quantity + i.freeQuantity}`).join(' · ')}
               </p>
               {(o.rejectionReason || o.returnReason) && (
-                <p className="mt-1 text-[11px] text-[#fb323f]">{o.returnReason ?? o.rejectionReason}</p>
+                <p className="mt-1 text-[11px] text-[var(--sys-destructive)]">{o.returnReason ?? o.rejectionReason}</p>
               )}
             </article>
           ))}

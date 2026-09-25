@@ -12,7 +12,7 @@ export function Card({ children, className, onClick }: CardProps) {
     <div
       onClick={onClick}
       className={clsx(
-        'bg-white rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] transition-all',
+        'bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] transition-all',
         className
       )}
     >
@@ -41,13 +41,13 @@ export function CardHeader({
   return (
     <div
       className={clsx(
-        'flex items-center justify-between px-6 py-4 border-b border-[#e3e8ef]',
+        'flex items-center justify-between px-6 py-4 border-b border-[var(--sys-border)]',
         className
       )}
     >
       <div>
-        <h3 className="text-base font-semibold text-[#121926]">{title}</h3>
-        {subtitle && <p className="text-xs text-[#697586] mt-0.5">{subtitle}</p>}
+        <h3 className="text-base font-semibold text-[var(--sys-heading)]">{title}</h3>
+        {subtitle && <p className="text-xs text-[var(--sys-muted-foreground)] mt-0.5">{subtitle}</p>}
       </div>
       {action && <div>{action}</div>}
     </div>
@@ -80,18 +80,18 @@ export function KpiCard({
   color?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'slate';
 }) {
   const colorMap = {
-    blue: 'bg-[#fdf5fa] text-[#b8256e] border-[#f2c9dd]',
-    emerald: 'bg-[#e6f9ee] text-[#00c853] border-[#c8f2d8]',
-    amber: 'bg-[#fff6e5] text-[#ffab00] border-[#ffe7b8]',
-    rose: 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]',
-    purple: 'bg-[#fdf5fa] text-[#13b5fe] border-[#f2c9dd]',
-    slate: 'bg-[#f8fafc] text-[#697586] border-[#e3e8ef]',
+    blue: 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border-[var(--sys-primary-soft)]',
+    emerald: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)]',
+    amber: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]',
+    rose: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]',
+    purple: 'bg-[var(--sys-primary-soft)] text-[var(--sys-info)] border-[var(--sys-primary-soft)]',
+    slate: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
   };
 
   return (
-    <div className="bg-white rounded-[8px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+    <div className="bg-[var(--sys-card)] rounded-[8px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-[#697586] uppercase tracking-wider">{title}</span>
+        <span className="text-xs font-medium text-[var(--sys-muted-foreground)] uppercase tracking-wider">{title}</span>
         {Icon && (
           <div className={clsx('p-2 rounded-lg border', colorMap[color])}>
             <Icon className="w-5 h-5" />
@@ -99,19 +99,19 @@ export function KpiCard({
         )}
       </div>
       <div className="mt-3 flex items-baseline justify-between">
-        <div className="text-2xl font-semibold text-[#121926]">{value}</div>
+        <div className="text-2xl font-semibold text-[var(--sys-heading)]">{value}</div>
         {trend && (
           <span
             className={clsx(
               'text-xs font-semibold px-2 py-0.5 rounded-full',
-              trend.positive ? 'bg-[#e6f9ee] text-[#00c853]' : 'bg-[#feecee] text-[#fb323f]'
+              trend.positive ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
             )}
           >
             {trend.value}
           </span>
         )}
       </div>
-      {subtitle && <p className="text-xs text-[#697586] mt-1">{subtitle}</p>}
+      {subtitle && <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{subtitle}</p>}
     </div>
   );
 }

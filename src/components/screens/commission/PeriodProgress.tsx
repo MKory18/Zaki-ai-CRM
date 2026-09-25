@@ -45,44 +45,44 @@ export function PeriodProgress() {
   if (rows !== null && rows.length === 0) return null;
 
   return (
-    <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
-      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-[#e3e8ef]">
-        <Target className="w-3.5 h-3.5 text-[#b8256e]" />
-        <h2 className="text-sm font-medium text-[#121926]">الفترة الجارية</h2>
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-[var(--sys-border)]">
+        <Target className="w-3.5 h-3.5 text-[var(--sys-primary)]" />
+        <h2 className="text-sm font-medium text-[var(--sys-heading)]">الفترة الجارية</h2>
       </div>
 
       {!rows ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-8">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-8">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
         <>
-          <ul className="divide-y divide-[#e3e8ef]">
+          <ul className="divide-y divide-[var(--sys-border)]">
             {rows.map((r) => {
               const short = r.minOrders != null && r.count < r.minOrders;
               return (
                 <li key={`${r.ruleId}:${r.userId}`} className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="text-sm font-medium text-[#121926] min-w-[120px]">{r.userName}</span>
-                  <span className="text-[11px] text-[#697586]">
+                  <span className="text-sm font-medium text-[var(--sys-heading)] min-w-[120px]">{r.userName}</span>
+                  <span className="text-[11px] text-[var(--sys-muted-foreground)]">
                     {r.ruleName} · {r.metricLabel} · {r.periodLabel}
                   </span>
-                  <span className="text-sm font-bold text-[#121926] tabular-nums ms-auto" dir="ltr">
+                  <span className="text-sm font-bold text-[var(--sys-heading)] tabular-nums ms-auto" dir="ltr">
                     {r.count}
-                    {r.goal !== null && <span className="text-[#9aa4b2] font-normal"> / {r.goal}</span>}
+                    {r.goal !== null && <span className="text-[var(--sys-muted)] font-normal"> / {r.goal}</span>}
                   </span>
                   {short ? (
-                    <span className="text-[11px] text-[#c07f2a] whitespace-nowrap">
+                    <span className="text-[11px] text-[var(--sys-warning)] whitespace-nowrap">
                       دون الحد الأدنى ({r.minOrders}) — لا تُحتسب بعد
                     </span>
                   ) : r.inBand ? (
-                    <span className="text-[11px] text-[#00a344] whitespace-nowrap">
+                    <span className="text-[11px] text-[var(--sys-success)] whitespace-nowrap">
                       {r.isTarget ? `بلغ الهدف · ${r.inBand.value}` : `شريحة ${r.inBand.label} · ${r.inBand.value}`}
                     </span>
                   ) : (
-                    <span className="text-[11px] text-[#9aa4b2] whitespace-nowrap">لم يبلغ أي شريحة بعد</span>
+                    <span className="text-[11px] text-[var(--sys-muted)] whitespace-nowrap">لم يبلغ أي شريحة بعد</span>
                   )}
                   {r.next && (
-                    <span className="text-[11px] text-[#697586] whitespace-nowrap">
+                    <span className="text-[11px] text-[var(--sys-muted-foreground)] whitespace-nowrap">
                       باقي {r.next.remaining} لـ {r.next.at}
                     </span>
                   )}
@@ -90,7 +90,7 @@ export function PeriodProgress() {
               );
             })}
           </ul>
-          {note && <p className="px-4 py-2 text-[11px] text-[#9aa4b2] border-t border-[#e3e8ef]">{note}</p>}
+          {note && <p className="px-4 py-2 text-[11px] text-[var(--sys-muted)] border-t border-[var(--sys-border)]">{note}</p>}
         </>
       )}
     </div>

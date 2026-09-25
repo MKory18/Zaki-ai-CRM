@@ -124,35 +124,35 @@ export function StorefrontsScreen() {
   return (
     <div className="space-y-4" dir="rtl">
       <div>
-        <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-          <Store className="h-5 w-5 text-[#b8256e]" /> متجر {STORE_TYPE_LABEL.SINGLE_PRODUCT}
+        <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+          <Store className="h-5 w-5 text-[var(--sys-primary)]" /> متجر {STORE_TYPE_LABEL.SINGLE_PRODUCT}
         </h1>
-        <p className="mt-0.5 text-xs leading-relaxed text-[#697586]">
+        <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           متجر يبيع منتجاً واحداً. واجهته صفحة هبوط من صفحاتك — بكل أقسامها وقوالبها وبكسلاتها وعروض ما
           بعد الطلب — على رابط المتجر ونطاقه. لا سلة ولا كتالوج.
         </p>
       </div>
 
-      {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700" role="alert">{error}</p>}
+      {error && <p className="rounded-lg bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs font-medium text-[var(--sys-destructive)]" role="alert">{error}</p>}
 
       {loadFailed && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700" role="alert">
+        <p className="rounded-lg bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs font-medium text-[var(--sys-destructive)]" role="alert">
           تعذّر تحميل المتاجر — أعد تحميل الصفحة.
         </p>
       )}
 
       {shops === null ? (
-        <div className="flex h-40 items-center justify-center text-[#697586]">
+        <div className="flex h-40 items-center justify-center text-[var(--sys-muted-foreground)]">
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       ) : shops.length === 0 && !loadFailed ? (
-        <div className="rounded-xl border border-dashed border-[#c9d2e0] p-8 text-center">
-          <Store className="mx-auto h-8 w-8 text-[#c9d2e0]" />
-          <p className="mt-2 text-sm font-semibold text-[#364152]">لا متاجر {STORE_TYPE_LABEL.SINGLE_PRODUCT} في هذه الدولة</p>
-          <p className="mt-1 text-xs text-[#697586]">
+        <div className="rounded-xl border border-dashed border-[var(--sys-border-strong)] p-8 text-center">
+          <Store className="mx-auto h-8 w-8 text-[var(--sys-border-strong)]" />
+          <p className="mt-2 text-sm font-semibold text-[var(--sys-foreground)]">لا متاجر {STORE_TYPE_LABEL.SINGLE_PRODUCT} في هذه الدولة</p>
+          <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
             أنشئ متجراً من «البلدان والمتاجر» واختر نوعه {STORE_TYPE_LABEL.SINGLE_PRODUCT}، ثم اختر له صفحته هنا.
           </p>
-          <Link href="/settings/geo" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#b8256e] hover:underline">
+          <Link href="/settings/geo" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-primary)] hover:underline">
             <Settings2 className="h-3.5 w-3.5" /> البلدان والمتاجر
           </Link>
         </div>
@@ -173,7 +173,7 @@ export function StorefrontsScreen() {
       )}
 
       {shops && shops.length > 0 && (
-        <p className="text-[10px] leading-relaxed text-[#9aa4b2]">
+        <p className="text-[10px] leading-relaxed text-[var(--sys-muted)]">
           «طلبات الواجهة» كل طلب جاء من صفحة الواجهة الحالية — من رابط المتجر أو من رابط الصفحة نفسها — ومن صفحة
           منتج المتجر. والإيراد هو المحصَّل فعلاً حيث نعرفه، نفس التعريف في شاشة الأرباح.
         </p>
@@ -189,25 +189,25 @@ function Card({
 }) {
   const url = shop.domain ? `https://${shop.domain}` : shop.path;
   return (
-    <div className={`rounded-xl border bg-white p-3 ${shop.live ? 'border-[#c9e8d5]' : 'border-[#e3e8ef]'}`}>
+    <div className={`rounded-xl border bg-[var(--sys-card)] p-3 ${shop.live ? 'border-[var(--sys-success-soft)]' : 'border-[var(--sys-border)]'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2.5">
           {shop.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={shop.logo} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
           ) : (
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f1f3f6]">
-              <Store className="h-4 w-4 text-[#9aa4b2]" />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--sys-surface-strong)]">
+              <Store className="h-4 w-4 text-[var(--sys-muted)]" />
             </span>
           )}
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-[#121926]">{shop.name}</p>
-            <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-[#697586]">
-              <span className={`rounded px-1.5 py-0.5 font-semibold ${shop.live ? 'bg-[#e6f9ee] text-[#00994d]' : 'bg-[#f1f3f6] text-[#697586]'}`}>
+            <p className="truncate text-sm font-bold text-[var(--sys-heading)]">{shop.name}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-[var(--sys-muted-foreground)]">
+              <span className={`rounded px-1.5 py-0.5 font-semibold ${shop.live ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
                 {shop.live ? 'مفتوح' : 'مغلق'}
               </span>
               {shop.domain && (
-                <span className="flex items-center gap-0.5 text-[#0ea5e9]">
+                <span className="flex items-center gap-0.5 text-[var(--sys-info)]">
                   <Globe className="h-2.5 w-2.5" /> {shop.domain}
                 </span>
               )}
@@ -224,22 +224,22 @@ function Card({
           role="switch"
           aria-checked={shop.live}
           aria-label={shop.live ? `متجر ${shop.name} مفتوح` : `متجر ${shop.name} مغلق`}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 ${shop.live ? 'bg-[#00994d]' : 'bg-[#c9d2e0]'}`}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 ${shop.live ? 'bg-[var(--sys-success)]' : 'bg-[var(--sys-border-strong)]'}`}
         >
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${shop.live ? 'start-0.5' : 'start-[1.375rem]'}`} />
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-[var(--sys-card)] shadow transition-all ${shop.live ? 'start-0.5' : 'start-[1.375rem]'}`} />
         </button>
       </div>
 
       {/* ── The front page: the feature itself, always in view ── */}
-      <div className="mt-3 rounded-lg bg-[#f8fafc] p-2.5">
-        <label className="mb-1 block text-[11px] font-semibold text-[#364152]" htmlFor={`front-${shop.id}`}>
+      <div className="mt-3 rounded-lg bg-[var(--sys-surface)] p-2.5">
+        <label className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]" htmlFor={`front-${shop.id}`}>
           صفحة الواجهة
         </label>
         {shop.pages.length === 0 ? (
-          <p className="text-[11px] leading-relaxed text-[#697586]">
+          <p className="text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
             لا صفحات هبوط تبيع منتجاً في هذا المتجر بعد.{' '}
             {shop.current ? (
-              <Link href="/growth/landing-pages" className="inline-flex items-center gap-0.5 font-semibold text-[#b8256e] hover:underline">
+              <Link href="/growth/landing-pages" className="inline-flex items-center gap-0.5 font-semibold text-[var(--sys-primary)] hover:underline">
                 <Plus className="h-3 w-3" /> أنشئ صفحة من قالب
               </Link>
             ) : (
@@ -252,7 +252,7 @@ function Card({
             value={shop.frontPage?.id ?? ''}
             disabled={busy}
             onChange={(e) => onPick(e.target.value || null)}
-            className="h-9 w-full rounded-lg border border-[#e3e8ef] bg-white px-2 text-xs text-[#121926]"
+            className="h-9 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-heading)]"
           >
             <option value="">— لم تُختر بعد —</option>
             {shop.pages.map((p) => (
@@ -271,21 +271,21 @@ function Card({
             {shop.current ? (
               <Link
                 href={`/growth/landing-pages/${shop.frontPage.id}/editor`}
-                className="inline-flex items-center gap-1 rounded-lg bg-[#b8256e] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#b8256e]/90"
+                className="inline-flex items-center gap-1 rounded-lg bg-[var(--sys-primary)] px-2.5 py-1 text-[11px] font-bold text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/90"
               >
                 <Paintbrush className="h-3 w-3" /> صمّم الواجهة
               </Link>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] text-[#697586]">
+              <span className="flex items-center gap-1 text-[10px] text-[var(--sys-muted-foreground)]">
                 <Info className="h-3 w-3" /> بدّل إلى هذا المتجر من الأعلى لتصمّم صفحته.
               </span>
             )}
-            {!shop.frontPage.isPublished && <span className="text-[10px] font-semibold text-amber-700">الصفحة غير منشورة</span>}
+            {!shop.frontPage.isPublished && <span className="text-[10px] font-semibold text-[var(--sys-warning)]">الصفحة غير منشورة</span>}
           </div>
         )}
       </div>
 
-      <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-[#f1f3f6] pt-2.5">
+      <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-[var(--sys-surface-strong)] pt-2.5">
         <Num label="طلبات الواجهة" value={shop.orders} />
         <Num label={`إيراد ${shop.currency}`} value={shop.revenue} />
       </div>
@@ -294,17 +294,17 @@ function Card({
         // Open and broken is the case that matters most: an advert is
         // probably pointing at this link right now.
         shop.live ? (
-          <p className="mt-2 flex items-start gap-1 rounded-lg bg-rose-50 p-2 text-[10px] font-semibold leading-relaxed text-rose-700" role="alert">
+          <p className="mt-2 flex items-start gap-1 rounded-lg bg-[var(--sys-destructive-soft)] p-2 text-[10px] font-semibold leading-relaxed text-[var(--sys-destructive)]" role="alert">
             <AlertTriangle className="mt-px h-3 w-3 shrink-0" /> المتجر مفتوح لكن رابطه لا يبيع: {shop.refusal}
           </p>
         ) : (
-          <p className="mt-2 flex items-start gap-1 rounded-lg bg-amber-50 p-2 text-[10px] leading-relaxed text-amber-800">
+          <p className="mt-2 flex items-start gap-1 rounded-lg bg-[var(--sys-warning-soft)] p-2 text-[10px] leading-relaxed text-[var(--sys-warning)]">
             <AlertTriangle className="mt-px h-3 w-3 shrink-0" /> قبل أن يُفتح: {shop.refusal}
           </p>
         )
       )}
       {shop.warnings.length > 0 && (
-        <p className="mt-1.5 text-[10px] text-[#697586]">يُستحسن: {shop.warnings.join('، ')}</p>
+        <p className="mt-1.5 text-[10px] text-[var(--sys-muted-foreground)]">يُستحسن: {shop.warnings.join('، ')}</p>
       )}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -312,28 +312,28 @@ function Card({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 rounded-lg border border-[#e3e8ef] px-2 py-1 text-[10px] font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+          className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-[10px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
         >
           <ExternalLink className="h-3 w-3" /> افتح المتجر
         </a>
         <button
           type="button"
           onClick={onCopy}
-          className="flex items-center gap-1 rounded-lg border border-[#e3e8ef] px-2 py-1 text-[10px] font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+          className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-[10px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
         >
-          {copied ? <Check className="h-3 w-3 text-[#00994d]" /> : <Link2 className="h-3 w-3" />}
+          {copied ? <Check className="h-3 w-3 text-[var(--sys-success)]" /> : <Link2 className="h-3 w-3" />}
           {copied ? 'نُسخ' : 'انسخ الرابط'}
         </button>
         {/* Name, domain, logo and support phone live in the store's own panel. */}
         <a
           href={`/settings/geo?store=${shop.id}`}
-          className="flex items-center gap-1 rounded-lg border border-[#e3e8ef] px-2 py-1 text-[10px] font-semibold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+          className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-[10px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
         >
           <Settings2 className="h-3 w-3" /> الإعدادات والنطاق
         </a>
       </div>
 
-      <p className="mt-1.5 truncate font-mono text-[9px] text-[#9aa4b2]" dir="ltr" title={url}>{url}</p>
+      <p className="mt-1.5 truncate font-mono text-[9px] text-[var(--sys-muted)]" dir="ltr" title={url}>{url}</p>
     </div>
   );
 }
@@ -341,8 +341,8 @@ function Card({
 function Num({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <p className="text-[9px] text-[#9aa4b2]">{label}</p>
-      <p className="text-xs font-bold tabular-nums text-[#121926]" dir="ltr">
+      <p className="text-[9px] text-[var(--sys-muted)]">{label}</p>
+      <p className="text-xs font-bold tabular-nums text-[var(--sys-heading)]" dir="ltr">
         {value.toLocaleString('en-US', { maximumFractionDigits: 2 })}
       </p>
     </div>

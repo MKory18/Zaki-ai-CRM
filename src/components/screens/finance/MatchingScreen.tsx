@@ -73,13 +73,13 @@ export function MatchingScreen() {
 
   return (
     <div className="max-w-6xl space-y-3">
-      <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end">
         <label className="flex-1 min-w-[220px]">
-          <span className="block text-xs font-medium text-[#364152] mb-1">الكشف</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الكشف</span>
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر كشفاً…</option>
             {(statements ?? []).map((s) => (
@@ -104,21 +104,21 @@ export function MatchingScreen() {
               setBusy(false);
             }
           }}
-          className="h-10 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
+          className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitCompare className="w-4 h-4" />}
           تشغيل المطابقة
         </button>
       </div>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
 
       {!selected ? null : !matches ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : matches.length === 0 ? (
-        <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
           لم تُشغَّل المطابقة على هذا الكشف بعد.
         </p>
       ) : (
@@ -158,9 +158,9 @@ export function MatchingScreen() {
 }
 
 const TONE: Record<string, string> = {
-  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  rose: 'bg-[#feecee] text-[#fb323f] border-[#fecdd1]',
-  amber: 'bg-amber-50 text-amber-700 border-amber-200',
+  emerald: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/40',
+  rose: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]',
+  amber: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/40',
 };
 
 function Queue({
@@ -179,26 +179,26 @@ function Queue({
   const [open, setOpen] = useState(rows.length > 0 && tone !== 'emerald');
 
   return (
-    <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 text-right"
       >
         <span className="flex items-center gap-2">
           <span className={`text-xs px-2 py-1 rounded-full border ${TONE[tone]}`}>{rows.length}</span>
-          <span className="text-sm font-medium text-[#121926]">{title}</span>
+          <span className="text-sm font-medium text-[var(--sys-heading)]">{title}</span>
         </span>
-        <span className="text-xs text-[#9aa4b2]">{open ? 'إخفاء' : 'عرض'}</span>
+        <span className="text-xs text-[var(--sys-muted)]">{open ? 'إخفاء' : 'عرض'}</span>
       </button>
 
       {open && (
-        <div className="border-t border-[#e3e8ef]">
-          <p className="text-xs text-[#697586] px-4 py-2 bg-[#f8fafc]">{hint}</p>
+        <div className="border-t border-[var(--sys-border)]">
+          <p className="text-xs text-[var(--sys-muted-foreground)] px-4 py-2 bg-[var(--sys-surface)]">{hint}</p>
           {rows.length === 0 ? (
-            <p className="text-sm text-[#697586] px-4 py-6 text-center">لا شيء هنا.</p>
+            <p className="text-sm text-[var(--sys-muted-foreground)] px-4 py-6 text-center">لا شيء هنا.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+              <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
                 <tr>
                   <th className="text-right font-medium px-3 py-2">باركود الشحنة</th>
                   <th className="text-right font-medium px-3 py-2">الطلب</th>
@@ -209,7 +209,7 @@ function Queue({
                   <th className="text-right font-medium px-3 py-2">طوبق عبر</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e3e8ef]">
+              <tbody className="divide-y divide-[var(--sys-border)]">
                 {rows.map((m) => {
                   const diff = num(m.difference);
                   const feeDiff = num(m.feeDifference);
@@ -218,42 +218,42 @@ function Queue({
                       {/* The barcode IS the reference: the courier assigns it
                           and writes their statement in it. Our own number is
                           shown under it, smaller, as the fallback key. */}
-                      <td className="px-3 py-2 text-[#364152]" dir="ltr">
+                      <td className="px-3 py-2 text-[var(--sys-foreground)]" dir="ltr">
                         <span className="block font-medium">
                           {m.statementLine?.barcode ?? '—'}
                         </span>
                         {(m.statementLine?.merchantRef ?? m.order?.merchantRef) && (
-                          <span className="block text-[11px] text-[#9aa4b2]">
+                          <span className="block text-[11px] text-[var(--sys-muted)]">
                             {m.statementLine?.merchantRef ?? m.order?.merchantRef}
                           </span>
                         )}
                       </td>
                       <td className="px-3 py-2">
                         {m.order ? (
-                          <a href={`/orders/${m.order.id}`} className="text-[#b8256e] hover:underline" dir="ltr">
+                          <a href={`/orders/${m.order.id}`} className="text-[var(--sys-primary)] hover:underline" dir="ltr">
                             {m.order.orderNumber}
                           </a>
                         ) : (
-                          <span className="text-[#9aa4b2]">—</span>
+                          <span className="text-[var(--sys-muted)]">—</span>
                         )}
                       </td>
                       <td className="px-3 py-2 tabular-nums">{num(m.expectedAmount) ?? '—'}</td>
                       <td className="px-3 py-2 tabular-nums">{num(m.statementAmount) ?? '—'}</td>
-                      <td className={`px-3 py-2 tabular-nums ${diff ? 'text-[#fb323f] font-medium' : 'text-[#697586]'}`}>
+                      <td className={`px-3 py-2 tabular-nums ${diff ? 'text-[var(--sys-destructive)] font-medium' : 'text-[var(--sys-muted-foreground)]'}`}>
                         {diff === null ? '—' : `${diff} ${currency}`}
                       </td>
                       <td className="px-3 py-2 text-xs tabular-nums">
                         {num(m.statementFee) === null ? (
-                          <span className="text-[#9aa4b2]">—</span>
+                          <span className="text-[var(--sys-muted)]">—</span>
                         ) : feeDiff ? (
-                          <span className="text-[#fb323f] font-medium">
+                          <span className="text-[var(--sys-destructive)] font-medium">
                             {num(m.statementFee)} بدل {num(m.expectedFee)}
                           </span>
                         ) : (
-                          <span className="text-[#697586]">{num(m.statementFee)}</span>
+                          <span className="text-[var(--sys-muted-foreground)]">{num(m.statementFee)}</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-xs text-[#697586]">
+                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
                         {m.matchedBy === 'MERCHANT_REF' ? 'المرجع' : m.matchedBy === 'BARCODE' ? 'الباركود' : '—'}
                       </td>
                     </tr>

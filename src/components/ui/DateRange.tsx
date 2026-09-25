@@ -95,9 +95,9 @@ export function DateRange({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full h-9 px-3 rounded-lg border border-[#e3e8ef] bg-white text-xs text-[#364152] inline-flex items-center gap-2 hover:border-[#b8256e]/50"
+        className="w-full h-9 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] inline-flex items-center gap-2 hover:border-[var(--sys-primary)]/50"
       >
-        <CalendarDays className="w-3.5 h-3.5 text-[#9aa4b2] shrink-0" />
+        <CalendarDays className="w-3.5 h-3.5 text-[var(--sys-muted)] shrink-0" />
         <span className="truncate flex-1 text-start">{summary}</span>
         {(value.from || value.to) && (
           <span
@@ -115,7 +115,7 @@ export function DateRange({
                 onChange({ from: '', to: '' });
               }
             }}
-            className="text-[#9aa4b2] hover:text-[#fb323f] shrink-0"
+            className="text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </span>
@@ -125,7 +125,7 @@ export function DateRange({
       {open && (
         <div
           dir="rtl"
-          className="absolute z-30 mt-1 w-[19rem] rounded-xl border border-[#e3e8ef] bg-white shadow-lg p-3 space-y-3"
+          className="absolute z-30 mt-1 w-[19rem] rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-lg p-3 space-y-3"
         >
           <div className="flex flex-wrap gap-1.5">
             {[
@@ -138,7 +138,7 @@ export function DateRange({
                 key={p.label}
                 type="button"
                 onClick={p.run}
-                className="px-2.5 py-1 text-[11px] rounded-lg border border-[#e3e8ef] text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+                className="px-2.5 py-1 text-[11px] rounded-lg border border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
               >
                 {p.label}
               </button>
@@ -149,18 +149,18 @@ export function DateRange({
             <button
               type="button"
               onClick={() => setMonth(addMonths(month, -1))}
-              className="p-1.5 rounded-lg text-[#697586] hover:bg-[#f8fafc]"
+              className="p-1.5 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
               aria-label="الشهر السابق"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
-            <span className="text-xs font-bold text-[#121926]">
+            <span className="text-xs font-bold text-[var(--sys-heading)]">
               {format(month, 'MMMM yyyy', { locale: ar })}
             </span>
             <button
               type="button"
               onClick={() => setMonth(addMonths(month, 1))}
-              className="p-1.5 rounded-lg text-[#697586] hover:bg-[#f8fafc]"
+              className="p-1.5 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
               aria-label="الشهر التالي"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -175,7 +175,7 @@ export function DateRange({
             style={{ gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}
           >
             {DAY_INITIALS.map((d) => (
-              <span key={d} className="text-[10px] text-[#9aa4b2] py-1">{d}</span>
+              <span key={d} className="text-[10px] text-[var(--sys-muted)] py-1">{d}</span>
             ))}
             {days.map((day) => {
               const outside = day.getMonth() !== month.getMonth();
@@ -191,12 +191,12 @@ export function DateRange({
                   onClick={() => pick(day)}
                   className={`h-8 text-[11px] tabular-nums rounded-lg transition-colors ${
                     edge
-                      ? 'bg-[#b8256e] text-white font-bold'
+                      ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-bold'
                       : inside
-                        ? 'bg-[#fdf5fa] text-[#b8256e]'
+                        ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
                         : outside
-                          ? 'text-[#c3c8d4] hover:bg-[#f8fafc]'
-                          : 'text-[#364152] hover:bg-[#f8fafc]'
+                          ? 'text-[var(--sys-border-strong)] hover:bg-[var(--sys-surface)]'
+                          : 'text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]'
                   }`}
                 >
                   {format(day, 'd')}
@@ -206,7 +206,7 @@ export function DateRange({
           </div>
 
           {anchor && (
-            <p className="text-[11px] text-[#b8256e]">اختر يوم النهاية…</p>
+            <p className="text-[11px] text-[var(--sys-primary)]">اختر يوم النهاية…</p>
           )}
         </div>
       )}

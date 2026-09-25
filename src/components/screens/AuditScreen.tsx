@@ -36,11 +36,11 @@ export function AuditScreen() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#121926] flex items-center space-x-2">
-            <History className="w-6 h-6 text-[#364152]" />
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2">
+            <History className="w-6 h-6 text-[var(--sys-foreground)]" />
             <span>{t.auditLogs}</span>
           </h1>
-          <p className="text-xs text-[#697586] mt-1">
+          <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
             Section 29 Complete immutable system audit trail: entity modifications, order mutations, batch creation & security actions
           </p>
         </div>
@@ -50,7 +50,7 @@ export function AuditScreen() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
+                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Timestamp</th>
                     <th className="px-6 py-3.5">User</th>
@@ -60,23 +60,23 @@ export function AuditScreen() {
                     <th className="px-6 py-3.5">Mutation Details</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef] font-mono">
+                <tbody className="divide-y divide-[var(--sys-border)] font-mono">
                   {logs.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-[#9ca3af] font-sans">
+                      <td colSpan={6} className="py-12 text-center text-[var(--sys-muted)] font-sans">
                         No audit events recorded yet.
                       </td>
                     </tr>
                   ) : (
                     logs.map((l) => (
-                      <tr key={l.id} className="hover:bg-[#f8fafc] transition-colors">
-                        <td className="px-6 py-3.5 text-[#697586]">
+                      <tr key={l.id} className="hover:bg-[var(--sys-surface)] transition-colors">
+                        <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)]">
                           {format(new Date(l.createdAt), 'MMM d, yyyy HH:mm:ss')}
                         </td>
 
-                        <td className="px-6 py-3.5 font-sans font-medium text-[#121926]">
+                        <td className="px-6 py-3.5 font-sans font-medium text-[var(--sys-heading)]">
                           {l.user?.name || 'System Auto'}
-                          <span className="block text-[10px] text-[#9ca3af] font-mono">
+                          <span className="block text-[10px] text-[var(--sys-muted)] font-mono">
                             {l.user?.role || 'SYSTEM'}
                           </span>
                         </td>
@@ -85,17 +85,17 @@ export function AuditScreen() {
                           <Badge variant="purple">{l.action}</Badge>
                         </td>
 
-                        <td className="px-6 py-3.5 font-sans font-semibold text-[#121926]">
+                        <td className="px-6 py-3.5 font-sans font-semibold text-[var(--sys-heading)]">
                           {l.entity}
                         </td>
 
-                        <td className="px-6 py-3.5 text-[#9ca3af] max-w-[120px] truncate">
+                        <td className="px-6 py-3.5 text-[var(--sys-muted)] max-w-[120px] truncate">
                           {l.entityId}
                         </td>
 
-                        <td className="px-6 py-3.5 text-[#364152] font-sans max-w-xs truncate text-[11px]">
+                        <td className="px-6 py-3.5 text-[var(--sys-foreground)] font-sans max-w-xs truncate text-[11px]">
                           {l.newData ? (
-                            <span title={l.newData} className="bg-[#f8fafc] px-2 py-0.5 rounded">
+                            <span title={l.newData} className="bg-[var(--sys-surface)] px-2 py-0.5 rounded">
                               {l.newData.slice(0, 60)}...
                             </span>
                           ) : (

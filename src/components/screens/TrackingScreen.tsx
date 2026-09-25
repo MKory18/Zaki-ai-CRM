@@ -52,9 +52,9 @@ const STATUS_LABEL: Record<string, string> = {
 type TaskFilter = 'all' | 'late' | 'failed' | 'returning' | 'nobarcode' | 'uncollected';
 
 const TASK_TONE: Record<string, string> = {
-  rose: 'bg-[#feecee] border-[#fecdd1] text-[#fb323f]',
-  amber: 'bg-amber-50 border-amber-200 text-amber-700',
-  emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+  rose: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]',
+  amber: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]',
+  emerald: 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]',
 };
 
 const COLLECTION_LABEL: Record<string, string> = {
@@ -126,23 +126,23 @@ export function TrackingScreen() {
           e.preventDefault();
           void load();
         }}
-        className="bg-white border border-[#e3e8ef] rounded-[8px] p-4 flex flex-wrap gap-3 items-end"
+        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end"
       >
         <label className="flex-1 min-w-[220px]">
-          <span className="block text-xs font-medium text-[#364152] mb-1">بحث</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">بحث</span>
           <div className="relative">
-            <Search className="w-4 h-4 text-[#9aa4b2] absolute right-3 top-3" />
+            <Search className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="رقم الطلب، المرجع، الباركود، اسم العميل أو الهاتف"
-              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
             />
           </div>
         </label>
         <label>
-          <span className="block text-xs font-medium text-[#364152] mb-1">الحالة</span>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm">
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الحالة</span>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm">
             <option value="">قيد الشحن</option>
             {Object.entries(STATUS_LABEL).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
@@ -150,23 +150,23 @@ export function TrackingScreen() {
             <option value="all">الكل</option>
           </select>
         </label>
-        <button type="submit" className="h-10 px-4 rounded-[8px] bg-[#b8256e] text-white text-sm font-medium">بحث</button>
+        <button type="submit" className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
         {data && data.lateCount > 0 && (
-          <span className="flex items-center gap-1 text-xs text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] px-3 h-10">
+          <span className="flex items-center gap-1 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] px-3 h-10">
             <Clock className="w-4 h-4" /> {data.lateCount} شحنة متأخرة
           </span>
         )}
       </form>
 
-      {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
 
       {data && all.length > 0 && (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-3 flex flex-wrap items-center gap-2">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-3 flex flex-wrap items-center gap-2">
           <button
             onClick={() => { setTask('all'); setSelected({}); }}
             className={`text-xs px-2.5 py-1 rounded-full border ${
-              task === 'all' ? 'bg-[#121926] text-white border-[#121926]' : 'border-[#e3e8ef] text-[#697586]'
+              task === 'all' ? 'bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] border-[var(--sys-heading)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
             }`}
           >
             الكل {all.length}
@@ -178,10 +178,10 @@ export function TrackingScreen() {
               disabled={t.rows.length === 0}
               className={`text-xs px-2.5 py-1 rounded-full border disabled:opacity-40 ${
                 task === t.key
-                  ? 'bg-[#121926] text-white border-[#121926]'
+                  ? 'bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] border-[var(--sys-heading)]'
                   : t.rows.length > 0
                     ? TASK_TONE[t.tone]
-                    : 'border-[#e3e8ef] text-[#9aa4b2]'
+                    : 'border-[var(--sys-border)] text-[var(--sys-muted)]'
               }`}
             >
               {t.label} {t.rows.length}
@@ -194,26 +194,26 @@ export function TrackingScreen() {
           has no statement to import, so collection is done by naming the
           orders here. Only delivered, unsettled ones can be chosen. */}
       {collectable.length > 0 && (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] p-3 flex flex-wrap items-center gap-3">
-          <span className="text-xs text-[#697586]">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-3 flex flex-wrap items-center gap-3">
+          <span className="text-xs text-[var(--sys-muted-foreground)]">
             {chosen.length > 0
               ? `مختار ${chosen.length} طلب · صافي ${netOfChosen}`
               : `${collectable.length} طلب مسلَّم بانتظار التحصيل اليدوي`}
           </span>
           <button
             onClick={() => setSelected(Object.fromEntries(collectable.map((o) => [o.id, true])))}
-            className="text-xs text-[#b8256e] hover:underline"
+            className="text-xs text-[var(--sys-primary)] hover:underline"
           >
             اختر الكل
           </button>
           {chosen.length > 0 && (
             <>
-              <button onClick={() => setSelected({})} className="text-xs text-[#697586] hover:underline">
+              <button onClick={() => setSelected({})} className="text-xs text-[var(--sys-muted-foreground)] hover:underline">
                 إلغاء الاختيار
               </button>
               <button
                 onClick={() => setCollecting(true)}
-                className="h-8 px-3 rounded-[8px] bg-[#00a344] text-white text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
+                className="h-8 px-3 rounded-[8px] bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
               >
                 <HandCoins className="w-3.5 h-3.5" /> استلمت منه
               </button>
@@ -223,13 +223,13 @@ export function TrackingScreen() {
       )}
 
       {!data ? (
-        <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-16">
+        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
-        <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#f8fafc] text-[#697586] text-xs">
+            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
                 <th className="text-right font-medium px-3 py-2 w-8"> </th>
                 <th className="text-right font-medium px-3 py-2">المرجع</th>
@@ -245,9 +245,9 @@ export function TrackingScreen() {
                 <th className="text-right font-medium px-3 py-2"> </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e3e8ef]">
+            <tbody className="divide-y divide-[var(--sys-border)]">
               {visible.map((o) => (
-                <tr key={o.id} className={o.late ? 'bg-[#feecee]/40' : ''}>
+                <tr key={o.id} className={o.late ? 'bg-[var(--sys-destructive-soft)]/40' : ''}>
                   <td className="px-3 py-2">
                     {canCollect(o) ? (
                       <input
@@ -257,9 +257,9 @@ export function TrackingScreen() {
                       />
                     ) : null}
                   </td>
-                  <td className="px-3 py-2 font-medium text-[#121926]" dir="ltr">{o.merchantRef ?? o.orderNumber}</td>
-                  <td className="px-3 py-2 text-[#697586]" dir="ltr">{o.trackingNumber ?? '—'}</td>
-                  <td className="px-3 py-2 text-[#364152]">
+                  <td className="px-3 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{o.merchantRef ?? o.orderNumber}</td>
+                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]" dir="ltr">{o.trackingNumber ?? '—'}</td>
+                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
                     <span className="block">{o.customer.fullName}</span>
                     {/* Reach the customer from the row the parcel is on: the
                         answer to "where is it" is a message, and retyping
@@ -280,49 +280,49 @@ export function TrackingScreen() {
                       }}
                     />
                   </td>
-                  <td className="px-3 py-2 text-[#697586]">{o.region?.name ?? o.customer.city}</td>
+                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{o.region?.name ?? o.customer.city}</td>
                   <td className="px-3 py-2">
                     {o.deliveryProvider ? (
-                      <span className="inline-flex items-center gap-1 text-[#364152]">
+                      <span className="inline-flex items-center gap-1 text-[var(--sys-foreground)]">
                         {o.deliveryProvider.kind === 'AGENT' ? (
-                          <Bike className="w-3.5 h-3.5 text-[#b8256e]" />
+                          <Bike className="w-3.5 h-3.5 text-[var(--sys-primary)]" />
                         ) : (
-                          <Truck className="w-3.5 h-3.5 text-[#9aa4b2]" />
+                          <Truck className="w-3.5 h-3.5 text-[var(--sys-muted)]" />
                         )}
                         {o.deliveryProvider.name}
                       </span>
                     ) : (
-                      <span className="text-[#9aa4b2]">—</span>
+                      <span className="text-[var(--sys-muted)]">—</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-[#364152]">
+                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
                     {STATUS_LABEL[o.shippingStatus] ?? o.shippingStatus}
-                    {o.deliveryFailureReason && <span className="block text-[11px] text-[#fb323f]">{o.deliveryFailureReason}</span>}
+                    {o.deliveryFailureReason && <span className="block text-[11px] text-[var(--sys-destructive)]">{o.deliveryFailureReason}</span>}
                   </td>
-                  <td className={`px-3 py-2 tabular-nums ${o.late ? 'text-[#fb323f] font-semibold' : 'text-[#364152]'}`}>
+                  <td className={`px-3 py-2 tabular-nums ${o.late ? 'text-[var(--sys-destructive)] font-semibold' : 'text-[var(--sys-foreground)]'}`}>
                     {o.daysInTransit ?? '—'}
-                    {o.lateThresholdDays > 0 && <span className="text-[11px] text-[#9aa4b2]"> / {o.lateThresholdDays}</span>}
+                    {o.lateThresholdDays > 0 && <span className="text-[11px] text-[var(--sys-muted)]"> / {o.lateThresholdDays}</span>}
                     {o.late && o.daysInTransit !== null && (
                       <span className="block text-[11px] font-medium">{lateLabel(o.daysInTransit)}</span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-xs">
-                    <span className={`tabular-nums ${(o._count?.deliveryAttempts ?? 0) > 1 ? 'text-[#fb323f] font-semibold' : 'text-[#697586]'}`}>
+                    <span className={`tabular-nums ${(o._count?.deliveryAttempts ?? 0) > 1 ? 'text-[var(--sys-destructive)] font-semibold' : 'text-[var(--sys-muted-foreground)]'}`}>
                       {o._count?.deliveryAttempts ?? 0}
                     </span>
                     {(o._count?.notes ?? 0) > 0 && (
-                      <span className="text-[#9aa4b2] mr-2" title={`${o._count?.notes} ملاحظة`}>
+                      <span className="text-[var(--sys-muted)] mr-2" title={`${o._count?.notes} ملاحظة`}>
                         · {o._count?.notes} ملاحظة
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-[#697586]">{COLLECTION_LABEL[o.collectionStatus] ?? o.collectionStatus}</td>
+                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{COLLECTION_LABEL[o.collectionStatus] ?? o.collectionStatus}</td>
                   <td className="px-3 py-2 tabular-nums" dir="ltr">{o.totalAmount} {o.currency}</td>
                   <td className="px-3 py-2 text-left whitespace-nowrap">
                     {['SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.shippingStatus) && (
                       <button
                         onClick={() => setDeliverFor(o)}
-                        className="text-xs text-[#00a344] hover:underline ml-3"
+                        className="text-xs text-[var(--sys-success)] hover:underline ml-3"
                         title="سجّل ما استلمه العميل فعلاً — كاملاً أو جزئياً"
                       >
                         تسجيل التسليم
@@ -330,7 +330,7 @@ export function TrackingScreen() {
                     )}
                     <button
                       onClick={() => setTransferFor(o)}
-                      className="text-xs text-[#b8256e] hover:underline"
+                      className="text-xs text-[var(--sys-primary)] hover:underline"
                       title={
                         o.deliveryProvider?.kind === 'AGENT'
                           ? 'استلام من المندوب وتحويلها لجهة أخرى'
@@ -344,7 +344,7 @@ export function TrackingScreen() {
               ))}
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="px-4 py-6 text-center text-sm text-[#697586]">لا توجد شحنات مطابقة.</td>
+                  <td colSpan={12} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">لا توجد شحنات مطابقة.</td>
                 </tr>
               )}
             </tbody>

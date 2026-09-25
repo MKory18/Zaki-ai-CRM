@@ -95,8 +95,8 @@ export function FinanceProfitScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#121926]">{t.finance}</h1>
-            <p className="text-xs text-[#697586] mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.finance}</h1>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               الربح من الموصَّل فقط — ناقص كلفة البضاعة والشحن والعمولات والمصاريف
             </p>
           </div>
@@ -152,33 +152,33 @@ export function FinanceProfitScreen() {
           />
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-center">
-              <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-xs text-[#9ca3af] block">إيراد الموصَّل</span>
-                <span className="text-lg font-bold text-[#00c853] mt-1 block">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+                <span className="text-xs text-[var(--sys-muted)] block">إيراد الموصَّل</span>
+                <span className="text-lg font-bold text-[var(--sys-success)] mt-1 block">
                   +${summary.totalRevenue.toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-xs text-[#9ca3af] block">كلفة البضاعة</span>
-                <span className="text-lg font-bold text-[#fb323f] mt-1 block">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+                <span className="text-xs text-[var(--sys-muted)] block">كلفة البضاعة</span>
+                <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
                   -${summary.totalCOGS.toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-xs text-[#9ca3af] block">شحن وعمولات</span>
-                <span className="text-lg font-bold text-[#fb323f] mt-1 block">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+                <span className="text-xs text-[var(--sys-muted)] block">شحن وعمولات</span>
+                <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
                   -${(summary.totalShipping + summary.totalCommissions).toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#f8fafc] p-3 rounded-xl">
-                <span className="text-xs text-[#9ca3af] block">مصاريف</span>
-                <span className="text-lg font-bold text-[#fb323f] mt-1 block">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+                <span className="text-xs text-[var(--sys-muted)] block">مصاريف</span>
+                <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
                   -${summary.totalOperationalExpenses.toFixed(2)}
                 </span>
               </div>
-              <div className="bg-[#b8256e] p-3 rounded-xl">
-                <span className="text-xs text-white/80 block font-bold">الصافي</span>
-                <span className="text-xl font-black text-white mt-1 block">
+              <div className="bg-[var(--sys-primary)] p-3 rounded-xl">
+                <span className="text-xs text-[var(--sys-primary-foreground)]/80 block font-bold">الصافي</span>
+                <span className="text-xl font-black text-[var(--sys-primary-foreground)] mt-1 block">
                   ${summary.netProfit.toFixed(2)}
                 </span>
               </div>
@@ -195,7 +195,7 @@ export function FinanceProfitScreen() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[#f8fafc] border-b border-[#e3e8ef] text-[#697586] font-semibold uppercase tracking-wider">
+                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">التاريخ</th>
                     <th className="px-6 py-3.5">البند</th>
@@ -204,20 +204,20 @@ export function FinanceProfitScreen() {
                     <th className="px-6 py-3.5">ملاحظات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e3e8ef]">
+                <tbody className="divide-y divide-[var(--sys-border)]">
                   {data?.expenses?.map((e: any) => (
-                    <tr key={e.id} className="hover:bg-[#f8fafc] transition-colors">
-                      <td className="px-6 py-3.5 text-[#697586] font-mono">
+                    <tr key={e.id} className="hover:bg-[var(--sys-surface)] transition-colors">
+                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)] font-mono">
                         {format(new Date(e.expenseDate), 'MMM d, yyyy')}
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#121926]">{e.title}</td>
+                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">{e.title}</td>
                       <td className="px-6 py-3.5">
                         <Badge variant="purple">{e.category}</Badge>
                       </td>
-                      <td className="px-6 py-3.5 font-bold text-[#fb323f]">
+                      <td className="px-6 py-3.5 font-bold text-[var(--sys-destructive)]">
                         ${e.amount.toFixed(2)}
                       </td>
-                      <td className="px-6 py-3.5 text-[#697586] max-w-sm truncate">
+                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)] max-w-sm truncate">
                         {e.notes || '—'}
                       </td>
                     </tr>
@@ -235,26 +235,26 @@ export function FinanceProfitScreen() {
           <CardHeader title="ربحية المنتجات" subtitle="من الطلبات المسلَّمة — الإيراد ناقص كلفة البضاعة والشحن" />
           <CardContent className="p-0">
             {profitability === null ? (
-              <p className="p-6 text-sm text-[#9aa4b2] text-center">جارٍ التحميل…</p>
+              <p className="p-6 text-sm text-[var(--sys-muted)] text-center">جارٍ التحميل…</p>
             ) : profitability.length === 0 ? (
-              <p className="p-6 text-sm text-[#9aa4b2] text-center">لا مبيعات مسلَّمة بعد.</p>
+              <p className="p-6 text-sm text-[var(--sys-muted)] text-center">لا مبيعات مسلَّمة بعد.</p>
             ) : (
-              <ul className="divide-y divide-[#e3e8ef]">
+              <ul className="divide-y divide-[var(--sys-border)]">
                 {profitability.map((p: any) => (
                   <li key={p.id ?? p.name} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-xs">
-                    <span className="font-semibold text-[#121926] min-w-[150px] truncate">{p.name}</span>
-                    <span className="text-[#697586]">
-                      طلبات: <span className="tabular-nums text-[#121926] font-semibold">{p.ordersCount}</span>
+                    <span className="font-semibold text-[var(--sys-heading)] min-w-[150px] truncate">{p.name}</span>
+                    <span className="text-[var(--sys-muted-foreground)]">
+                      طلبات: <span className="tabular-nums text-[var(--sys-heading)] font-semibold">{p.ordersCount}</span>
                     </span>
-                    <span className="text-[#697586]">
-                      مسلَّم: <span className="tabular-nums text-[#121926] font-semibold">{p.deliveredOrders}</span>
+                    <span className="text-[var(--sys-muted-foreground)]">
+                      مسلَّم: <span className="tabular-nums text-[var(--sys-heading)] font-semibold">{p.deliveredOrders}</span>
                     </span>
-                    <span className="text-[#697586]">
-                      إيراد: <span className="tabular-nums text-[#121926] font-semibold">{Number(p.revenue).toFixed(2)}</span>
+                    <span className="text-[var(--sys-muted-foreground)]">
+                      إيراد: <span className="tabular-nums text-[var(--sys-heading)] font-semibold">{Number(p.revenue).toFixed(2)}</span>
                     </span>
-                    <span className="ms-auto tabular-nums font-bold text-[#00a344]">
+                    <span className="ms-auto tabular-nums font-bold text-[var(--sys-success)]">
                       {Number(p.netProfit).toFixed(2)}
-                      <span className="text-[10px] text-[#9aa4b2] font-normal">
+                      <span className="text-[10px] text-[var(--sys-muted)] font-normal">
                         {' '}صافي · {p.profitMargin ?? 0}%
                       </span>
                     </span>
