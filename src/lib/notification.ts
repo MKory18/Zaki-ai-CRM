@@ -2,6 +2,7 @@ import { db } from './db';
 import { resolveAudience, type Audience } from './notification-audience';
 import { canAccessRoute, findRoute } from './route-registry';
 import type { SessionUser } from '@/types/auth';
+import { can } from './authorization';
 
 /**
  * ANNOUNCING SOMETHING TO THE PEOPLE IT CONCERNS.
@@ -45,7 +46,7 @@ export type NotificationType =
 export function linkFor(user: SessionUser, links: readonly string[]): string | null {
   for (const link of links) {
     const route = findRoute(link.split('?')[0]);
-    if (route && canAccessRoute(user, route)) return link;
+    if (route && canAccessRoute(user, route, can)) return link;
   }
   return null;
 }

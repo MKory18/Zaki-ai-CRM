@@ -165,3 +165,31 @@ describe('what the courier owes', () => {
     expect(partial).toBeLessThan(whole);
   });
 });
+
+/**
+ * THE MOVEMENTS LOG IS DRAWN ONCE.
+ *
+ * `/inventory/balances` rendered the whole log — eight columns of it —
+ * while `/inventory/movements` existed as its own screen. The same record
+ * appeared twice under two names, and nobody could say which was THE
+ * record. Worse, the balances screen titled itself «المخزون والحركات»,
+ * promising the log the menu had sent people elsewhere for.
+ *
+ * One screen answers "how much is left". The other answers "what happened".
+ */
+describe('the stock log has one screen', () => {
+  it('the balances screen does not redraw it', () => {
+    const balances = read('src/components/screens/InventoryBalancesScreen.tsx');
+    expect(balances).not.toContain('سجل حركات المخزون\'');
+    // No table at all: the balances themselves are cards.
+    expect(balances).not.toContain('<table');
+  });
+
+  it('and points at the screen that owns it instead', () => {
+    expect(read('src/components/screens/InventoryBalancesScreen.tsx')).toContain('/inventory/movements');
+  });
+
+  it('the movements screen still draws it', () => {
+    expect(read('src/components/screens/InventoryMovementsScreen.tsx')).toContain('<table');
+  });
+});

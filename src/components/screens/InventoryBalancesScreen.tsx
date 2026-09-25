@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { Boxes, ArrowDownUp, Plus, History } from 'lucide-react';
 import { format } from 'date-fns';
+import { findRoute } from '@/lib/route-registry';
 
 export function InventoryBalancesScreen() {
   const { t } = useApp();
@@ -89,9 +90,11 @@ export function InventoryBalancesScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.inventory}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">
+              {findRoute('/inventory/balances')?.label}
+            </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              Section 6 Movement tracking: Production additions, delivery deductions, returns & adjustments
+              كم بقي من كل منتج، وكم منه محجوز لطلبات لم تخرج بعد.
             </p>
           </div>
 
@@ -164,69 +167,19 @@ export function InventoryBalancesScreen() {
           ))}
         </div>
 
-        {/* Inventory Movements Audit Table */}
-        <Card>
-          <CardHeader
-            title="سجل حركات المخزون"
-            subtitle="كل حركة: ما دخل، وما خرج مع تسليم، وما عاد مرتجعاً، وما صحّحه الجرد"
-          />
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3.5">التاريخ</th>
-                    <th className="px-6 py-3.5">المنتج</th>
-                    <th className="px-6 py-3.5">الدفعة</th>
-                    <th className="px-6 py-3.5">نوع الحركة</th>
-                    <th className="px-6 py-3.5">التغيير</th>
-                    <th className="px-6 py-3.5">الرصيد بعدها</th>
-                    <th className="px-6 py-3.5">السبب</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {movements.map((m) => (
-                    <tr key={m.id} className="hover:bg-[var(--sys-surface)] transition-colors">
-                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)] font-mono">
-                        {format(new Date(m.createdAt), 'MMM d, h:mm a')}
-                      </td>
-                      <td className="px-6 py-3.5 font-semibold text-[var(--sys-heading)]">
-                        {m.product?.name}
-                      </td>
-                      <td className="px-6 py-3.5 font-mono text-[var(--sys-muted-foreground)]">
-                        {m.batch?.batchNumber || '—'}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <Badge
-                          variant={
-                            m.type === 'PRODUCTION'
-                              ? 'success'
-                              : m.type === 'SALE'
-                              ? 'info'
-                              : 'purple'
-                          }
-                        >
-                          {m.type}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-3.5 font-bold">
-                        <span className={m.quantity > 0 ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-destructive)]'}>
-                          {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3.5 font-semibold text-[var(--sys-heading)]">
-                        {m.balanceAfter}
-                      </td>
-                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)] max-w-xs truncate">
-                        {m.reason}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        {/* THE MOVEMENTS LOG IS NOT REDRAWN HERE.
+            It was — the whole table, eight columns of it — while
+            /inventory/movements existed as its own screen. So the same log
+            appeared twice under two names, and nobody could tell which was
+            the record. This screen answers "how much is left"; that one
+            answers "what happened". */}
+        <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 text-sm text-[var(--sys-muted-foreground)]">
+          تبحث عمّا دخل وما خرج ومن سجّله؟{' '}
+          <a href="/inventory/movements" className="font-medium text-[var(--sys-primary)] hover:underline">
+            سجل حركات المخزون
+          </a>{' '}
+          — هذه الشاشة تقول كم بقي، وتلك تقول ماذا حدث.
+        </p>
       </div>
 
       {/* Stock count. Adding stock is not possible here — goods enter

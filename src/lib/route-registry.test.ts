@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { can } from './authorization';
 
 vi.mock('./db', () => ({ db: {} }));
 
@@ -79,47 +80,47 @@ describe('role visibility', () => {
   const moderator = () => userWith(['orders.view', 'orders.create', 'orders.edit', 'orders.claim', 'orders.confirm', 'customers.view', 'confirmation.issues']);
 
   it('a moderator is refused /confirmation/queue even with order claim/confirm grants', () => {
-    expect(canAccessRoute(moderator(), findRoute('/confirmation/queue')!)).toBe(false);
+    expect(canAccessRoute(moderator(), findRoute('/confirmation/queue')!, can)).toBe(false);
   });
 
   it('a moderator may open /confirmation/issues and /orders', () => {
-    expect(canAccessRoute(moderator(), findRoute('/confirmation/issues')!)).toBe(true);
-    expect(canAccessRoute(moderator(), findRoute('/orders')!)).toBe(true);
+    expect(canAccessRoute(moderator(), findRoute('/confirmation/issues')!, can)).toBe(true);
+    expect(canAccessRoute(moderator(), findRoute('/orders')!, can)).toBe(true);
   });
 
   it('a confirmation agent reaches queue, mine and postponed but not issues', () => {
     const agent = userWith(['confirmation.pull', 'confirmation.work'], 'CONFIRMATION_AGENT');
     const allowed = ['/confirmation/queue', '/confirmation/mine', '/confirmation/postponed'];
-    for (const p of allowed) expect(canAccessRoute(agent, findRoute(p)!)).toBe(true);
-    expect(canAccessRoute(agent, findRoute('/confirmation/issues')!)).toBe(false);
+    for (const p of allowed) expect(canAccessRoute(agent, findRoute(p)!, can)).toBe(true);
+    expect(canAccessRoute(agent, findRoute('/confirmation/issues')!, can)).toBe(false);
   });
 
   it('warehouse never reaches money or customer screens', () => {
     const wh = userWith(['ops.prepare', 'ops.labels', 'ops.returns', 'inventory.view', 'inventory.adjust'], 'WAREHOUSE');
     for (const p of ['/finance/profit', '/customers', '/ops/tracking']) {
-      expect(canAccessRoute(wh, findRoute(p)!), p).toBe(false);
+      expect(canAccessRoute(wh, findRoute(p)!, can), p).toBe(false);
     }
   });
 
   it('an inactive user opens nothing, not even the profile', () => {
     const pending = { ...userWith(['orders.view']), status: 'PENDING' };
-    expect(canAccessRoute(pending, findRoute('/admin/profile')!)).toBe(false);
+    expect(canAccessRoute(pending, findRoute('/admin/profile')!, can)).toBe(false);
   });
 
   it('sends a user without dashboard.view to the first screen he may open', () => {
     // A moderator scoped to his own orders holds no dashboard.view: landing
     // him on /dashboard is a 403 at login.
     const mod = userWith(['orders.view', 'customers.view', 'confirmation.issues']);
-    expect(landingRoute(mod)).toBe('/orders');
-    expect(canAccessRoute(mod, findRoute('/dashboard')!)).toBe(false);
+    expect(landingRoute(mod, can)).toBe('/orders');
+    expect(canAccessRoute(mod, findRoute('/dashboard')!, can)).toBe(false);
   });
 
   it('still sends everyone who holds dashboard.view to the dashboard', () => {
-    expect(landingRoute(userWith(['dashboard.view', 'orders.view']))).toBe('/dashboard');
+    expect(landingRoute(userWith(['dashboard.view', 'orders.view']), can)).toBe('/dashboard');
   });
 
   it('the visible navigation drops empty groups', () => {
-    const nav = visibleNav(userWith(['confirmation.pull', 'confirmation.work'], 'CONFIRMATION_AGENT'));
+    const nav = visibleNav(userWith(['confirmation.pull', 'confirmation.work'], 'CONFIRMATION_AGENT'), can);
     expect(nav.map((g) => g.key)).toEqual(['confirmation', 'admin']);
   });
 });

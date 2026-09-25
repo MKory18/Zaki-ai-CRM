@@ -1,5 +1,21 @@
 import type { SessionUser } from '@/types/auth';
-import { can } from './authorization';
+
+/**
+ * WHY THIS FILE IMPORTS NOTHING THAT RUNS ON THE SERVER.
+ *
+ * It is the one list of screens, and both sides read it: the sidebar and
+ * the page titles in the browser, the guard and the notifications on the
+ * server. It used to import `can` from authorization.ts, which imports
+ * auth.ts, which imports `next/headers` — so the moment a client component
+ * read a route's LABEL it dragged the session machinery into the bundle,
+ * and the build refused.
+ *
+ * So the permission CHECK arrives as an argument. The data stays readable
+ * from anywhere, which is the whole point of having one list.
+ */
+
+/** Does this user hold this permission? Supplied by the caller. */
+export type PermissionCheck = (user: SessionUser, permission: string) => boolean;
 
 /**
  * ROUTE REGISTRY — the navigation contract (references/architecture.md).
@@ -10,8 +26,14 @@ import { can } from './authorization';
  * its permissions (null = every active user). The API behind each screen
  * enforces the same permissions again.
  *
- * `stage` marks screens not rebuilt yet; they render an "under construction"
- * page until that stage ships. `null` = live.
+ * There is no "not built yet" marking any more. There was one — a `stage`
+ * number whose documentation promised an under-construction page — and
+ * nothing ever read it: the guard did not check it, the placeholder
+ * component it named was imported by no page, and the one screen still
+ * carrying a number (campaigns, seven hundred lines of working screen) wore
+ * a "under construction" badge in the sidebar for a year.
+ *
+ * A registry read as a contract must not contain a clause nobody enforces.
  */
 
 export interface RouteDef {
@@ -19,7 +41,6 @@ export interface RouteDef {
   label: string;
   icon: string; // lucide-react icon name
   permissions: string[] | null;
-  stage: number | null;
 }
 
 export interface NavGroup {
@@ -28,8 +49,8 @@ export interface NavGroup {
   routes: RouteDef[];
 }
 
-const r = (path: string, label: string, icon: string, permissions: string[] | null, stage: number | null = null): RouteDef => ({
-  path, label, icon, permissions, stage,
+const r = (path: string, label: string, icon: string, permissions: string[] | null): RouteDef => ({
+  path, label, icon, permissions,
 });
 
 export const NAV: NavGroup[] = [
@@ -108,7 +129,7 @@ export const NAV: NavGroup[] = [
     label: 'النمو',
     routes: [
       r('/growth/performance', 'لوحة الأداء', 'Gauge', ['reports.view', 'analytics.view']),
-      r('/growth/campaigns', 'الحملات', 'Megaphone', ['reports.view'], 8),
+      r('/growth/campaigns', 'الحملات', 'Megaphone', ['reports.view']),
       r('/growth/intelligence', 'مركز الذكاء', 'Lightbulb', ['growth.intelligence']),
       r('/growth/single-product-stores', 'متجر Single Product', 'Store', ['geo.manage']),
       r('/growth/landing-pages', 'صفحات الهبوط', 'PanelsTopLeft', ['landing_pages.view']),
@@ -183,15 +204,15 @@ export function findRoute(path: string): RouteDef | undefined {
 }
 
 /** Whether the user may open this route (server truth; the sidebar reuses it). */
-export function canAccessRoute(user: SessionUser, route: RouteDef): boolean {
+export function canAccessRoute(user: SessionUser, route: RouteDef, can: PermissionCheck): boolean {
   if (user.status !== 'ACTIVE') return false;
   if (route.permissions === null) return true;
   return route.permissions.some((p) => can(user, p));
 }
 
 /** The navigation as this user sees it: forbidden routes and empty groups removed. */
-export function visibleNav(user: SessionUser): NavGroup[] {
-  return NAV.map((g) => ({ ...g, routes: g.routes.filter((route) => canAccessRoute(user, route)) })).filter(
+export function visibleNav(user: SessionUser, can: PermissionCheck): NavGroup[] {
+  return NAV.map((g) => ({ ...g, routes: g.routes.filter((route) => canAccessRoute(user, route, can)) })).filter(
     (g) => g.routes.length > 0
   );
 }
@@ -205,7 +226,7 @@ export function visibleNav(user: SessionUser): NavGroup[] {
  * he logs in. He goes to the first screen he may actually open instead,
  * which is the first item of his own sidebar.
  */
-export function landingRoute(user: SessionUser): string {
-  const first = visibleNav(user)[0]?.routes[0];
+export function landingRoute(user: SessionUser, can: PermissionCheck): string {
+  const first = visibleNav(user, can)[0]?.routes[0];
   return first?.path ?? '/no-access';
 }

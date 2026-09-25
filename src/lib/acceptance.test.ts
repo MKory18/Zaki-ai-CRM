@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { ALL_ROUTES } from './route-registry';
 import { BANDS } from './performance-score';
@@ -116,14 +116,19 @@ describe('the score is a measurement, not a contract', () => {
 });
 
 describe('every screen in the menu is a screen', () => {
-  it('nothing in the registry renders "under construction"', () => {
-    // A menu entry that opens a placeholder teaches people the menu lies.
-    const shell = read('src/components/shell/UnderConstruction.tsx');
-    expect(shell).toBeTruthy();
-    const users = walk(join(process.cwd(), 'src/app'), '.tsx').filter((f) =>
-      readFileSync(f, 'utf8').includes('UnderConstruction')
-    );
-    expect(users.map((f) => f.replace(process.cwd(), '')), 'شاشة قيد الإنشاء في القائمة').toEqual([]);
+  it('there is no "under construction" placeholder left to render', () => {
+    // There was one, and a `stage` number in the registry whose own
+    // documentation promised it would be shown. Nothing read that number:
+    // the guard ignored it, no page imported the placeholder, and the one
+    // screen still carrying a stage — seven hundred working lines of
+    // campaigns — wore a "under construction" badge in the sidebar.
+    //
+    // A registry read as a contract must not carry a clause nobody
+    // enforces, so the clause and its placeholder are both gone.
+    expect(existsSync(join(process.cwd(), 'src/components/shell/UnderConstruction.tsx'))).toBe(false);
+    // The field, not the paragraph explaining why it is gone.
+    const registry = readFileSync(join(process.cwd(), 'src/lib/route-registry.ts'), 'utf8');
+    expect(registry).not.toMatch(/stage:\s*(?:number|null|\d)/);
   });
 
   it('and only a person’s own profile is open to everybody', () => {
@@ -234,5 +239,38 @@ describe('every screen names itself', () => {
     }
 
     expect(offenders, ['عنوان يخالف القائمة:', ...offenders].join(' | ')).toEqual([]);
+  });
+});
+
+/**
+ * THE LIST OF SCREENS IS READABLE FROM BOTH SIDES.
+ *
+ * `route-registry.ts` is the one list, and both sides read it: the sidebar
+ * and the page titles in the browser, the guard and the notifications on
+ * the server. It imported `can` from authorization.ts, which imports
+ * auth.ts, which imports `next/headers` — so the moment a client component
+ * read a route's LABEL it dragged the session machinery into the bundle and
+ * the production build refused.
+ *
+ * The tests did not catch it; the build did, after the code was written.
+ * This is the test that would have.
+ */
+describe('the route registry stays free of server-only code', () => {
+  it('imports nothing that reaches next/headers', () => {
+    const src = readFileSync(join(process.cwd(), 'src/lib/route-registry.ts'), 'utf8');
+    const imports = [...src.matchAll(/^import\s+(?:type\s+)?.*?from\s+'([^']+)'/gm)]
+      .filter((m) => !m[0].startsWith('import type'))
+      .map((m) => m[1]);
+
+    // The chain that broke the build. `import type` is erased and harmless.
+    for (const forbidden of ['./authorization', './auth', './db', 'next/headers']) {
+      expect(imports, `route-registry imports ${forbidden}`).not.toContain(forbidden);
+    }
+  });
+
+  it('and the permission check arrives as an argument instead', () => {
+    const src = readFileSync(join(process.cwd(), 'src/lib/route-registry.ts'), 'utf8');
+    expect(src).toContain('PermissionCheck');
+    expect(src).toContain('can: PermissionCheck');
   });
 });

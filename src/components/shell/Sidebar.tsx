@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { Hammer, ChevronDown, ListTree, List } from 'lucide-react';
+import { ChevronDown, ListTree, List } from 'lucide-react';
 import type { NavGroup } from '@/lib/route-registry';
 import { iconFor } from './icons';
 
@@ -175,15 +175,6 @@ export function Sidebar({
                       </span>
                       <span>{route.label}</span>
                     </span>
-                    {route.stage !== null && (
-                      <span
-                        title={`قيد البناء — المرحلة ${route.stage}`}
-                        className="flex items-center gap-1 text-[10px] text-[var(--sys-muted-foreground)]"
-                      >
-                        <Hammer className="w-3 h-3" />
-                        {route.stage}
-                      </span>
-                    )}
                   </Link>
                 );
               })}

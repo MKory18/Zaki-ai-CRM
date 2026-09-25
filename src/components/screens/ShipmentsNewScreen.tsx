@@ -312,7 +312,11 @@ export function ShipmentsNewScreen() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">
+                  {/* Seven columns: the checkbox, order, customer, governorate, the
+                      collection breakdown, alerts, and the actions cell. Six
+                      left the empty message short of the table and the last
+                      column hanging off the end of the row. */}
+                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">
                     <Truck className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
                     لا توجد طلبات مؤكدة جاهزة للشحن بهذه الفلاتر.
                   </td>

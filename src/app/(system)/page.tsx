@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { requireActiveUser } from '@/lib/page-guard';
 import { landingRoute } from '@/lib/route-registry';
+import { can } from '@/lib/authorization';
 
 /**
  * Entry point: the dashboard for anyone who may open it, and for everyone
@@ -10,5 +11,5 @@ import { landingRoute } from '@/lib/route-registry';
  */
 export default async function Home() {
   const { user } = await requireActiveUser();
-  redirect(landingRoute(user));
+  redirect(landingRoute(user, can));
 }

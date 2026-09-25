@@ -21,7 +21,7 @@ export default async function ShellLayout({ children }: { children: React.ReactN
 
   return (
     <Shell
-      groups={visibleNav(user)}
+      groups={visibleNav(user, can)}
       userName={user.name}
       userRole={user.role}
       context={{

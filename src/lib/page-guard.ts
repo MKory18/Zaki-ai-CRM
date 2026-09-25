@@ -6,6 +6,7 @@ import { findRoute, canAccessRoute, type RouteDef } from './route-registry';
 import { CONTEXT_COOKIE, readSelection, validateSelection } from './geo-context';
 import { db } from './db';
 import type { SessionUser } from '@/types/auth';
+import { can } from './authorization';
 
 /**
  * Server-side guards for shell pages. The sidebar only hides links; these
@@ -59,6 +60,6 @@ export async function guardRoute(path: string): Promise<{ user: SessionUser; rou
   const route = findRoute(path);
   if (!route) notFound();
   const { user } = await requireShellContext();
-  if (!canAccessRoute(user, route)) forbidden();
+  if (!canAccessRoute(user, route, can)) forbidden();
   return { user, route };
 }
