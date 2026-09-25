@@ -9,6 +9,7 @@ import { proposePenalties, recordProposals } from '../penalty-service';
 import { blockingClosing } from '../wallets';
 import { adapterFor } from '../couriers';
 import { applyCourierEvent } from '../couriers/apply-event';
+import { clearMiss, missingHours, recordMiss } from '../couriers/missing-shipment';
 import { createNotification } from '../notification';
 import { resolveAudience } from '../notification-audience';
 
@@ -159,6 +160,7 @@ export const syncCourierStatus: JobDefinition = {
     });
 
     let applied = 0;
+    let missing = 0;
     const skipped: string[] = [];
 
     for (const provider of providers) {
@@ -172,7 +174,11 @@ export const syncCourierStatus: JobDefinition = {
           trackingNumber: { not: null },
           shippingStatus: { in: ['READY_FOR_PICKUP', 'SHIPPED', 'OUT_FOR_DELIVERY', 'FAILED_DELIVERY'] },
         },
-        select: { id: true, trackingNumber: true, shippingStatus: true, companyId: true },
+        select: {
+          id: true, trackingNumber: true, shippingStatus: true, companyId: true, storeId: true,
+          orderNumber: true, trackingMissCount: true, trackingMissingSince: true,
+          trackingMissingAlertedAt: true,
+        },
         take: 200,
       });
       if (inTransit.length === 0) continue;
@@ -182,7 +188,39 @@ export const syncCourierStatus: JobDefinition = {
 
       for (const order of inTransit) {
         const event = byBarcode.get(order.trackingNumber!);
-        if (!event) continue;
+
+        // NOTHING CAME BACK, OR AN ERROR DID.
+        //
+        // This used to be a `continue` — the parcel was asked about again
+        // in two minutes, and again, for ever, while it sat in SHIPPED and
+        // nobody knew. Three misses in a row, with every other barcode in
+        // the same sweep answering, is a parcel that is not there.
+        if (!event || event.rawStatus === 'ERROR') {
+          const outcome = await recordMiss(db, order);
+          if (outcome.alertNow) {
+            missing++;
+            const hours = missingHours(order.trackingMissingSince ?? new Date());
+            await createNotification({
+              companyId: order.companyId,
+              storeId: order.storeId,
+              audience: { permission: 'ops.track' },
+              type: 'SYSTEM_ALERT',
+              title: 'شحنة مفقودة عند شركة الشحن',
+              message:
+                `الطلب ${order.orderNumber} بباركود ${order.trackingNumber} — ` +
+                `${provider.name} لا تعرفه منذ ${hours} ساعة. لم تعد تُستعلَم بصمت.`,
+              link: `/ops/tracking?order=${order.id}`,
+            });
+          }
+          continue;
+        }
+
+        // It answered, so it is not missing — and a barcode that goes
+        // missing, comes back and goes again is two incidents, the second
+        // as worth shouting about as the first.
+        if (order.trackingMissCount > 0 || order.trackingMissingAlertedAt) {
+          await clearMiss(db, order);
+        }
 
         // The same gate the webhook goes through — see couriers/apply-event.
         const outcome = await applyCourierEvent({
@@ -196,14 +234,13 @@ export const syncCourierStatus: JobDefinition = {
       }
     }
 
-    return {
-      processed: applied,
-      detail: skipped.length
-        ? `حُدِّث ${applied} · ${skipped.length} حالة تحتاج قراراً بشرياً`
-        : applied
-          ? `حُدِّث ${applied} شحنة`
-          : 'لا تحديثات',
-    };
+    const notes = [
+      applied ? `حُدِّث ${applied} شحنة` : null,
+      skipped.length ? `${skipped.length} حالة تحتاج قراراً بشرياً` : null,
+      missing ? `${missing} شحنة مفقودة عند الشركة` : null,
+    ].filter(Boolean);
+
+    return { processed: applied, detail: notes.join(' · ') || 'لا تحديثات' };
   },
 };
 

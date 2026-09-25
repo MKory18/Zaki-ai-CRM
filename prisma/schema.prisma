@@ -641,6 +641,13 @@ model Order {
   // A split order's parent. Children carry a suffixed number (SY-0044-A).
   parentOrderId             String?
   labelPrintedAt            DateTime?
+  /// How many consecutive polls the courier had no record of this barcode.
+  /// Reset to zero the moment a real status comes back. Three in a row and
+  /// the system says "missing at the courier" out loud — once — instead of
+  /// asking for ever and telling nobody.
+  trackingMissCount         Int       @default(0) @map("tracking_miss_count")
+  trackingMissingSince      DateTime? @map("tracking_missing_since")
+  trackingMissingAlertedAt  DateTime? @map("tracking_missing_alerted_at")
   // Snapshot of the offer's delivery policy: if ANY line includes delivery the
   // whole order does, and the fee is deducted from revenue instead of added.
   priceIncludesDelivery     Boolean   @default(false)

@@ -1,4 +1,5 @@
 import type { ShippingStatus } from '@/lib/shipping-workflow';
+import { limitFor, paced } from '../outbound-limit';
 import type {
   CourierAdapter,
   CourierEvent,
@@ -222,17 +223,18 @@ export class LogesTechsAdapter implements CourierAdapter {
   }
 
   async fetchEvents(trackingNumbers: string[]): Promise<CourierEvent[]> {
-    const events: CourierEvent[] = [];
-
-    // Their status endpoint takes one barcode at a time.
-    for (const barcode of trackingNumbers) {
+    // Their status endpoint takes one barcode at a time, so a sweep of two
+    // hundred parcels is two hundred calls. Paced, because crossing their
+    // limit does not slow us down — it suspends the account, on a working
+    // day, for a business that cannot ship until somebody there replies.
+    return paced(`logestechs:${this.config.companyId}`, limitFor('LOGESTECHS'), trackingNumbers, async (barcode) => {
       try {
         const res = await this.call<{ status?: string; cod?: number; cost?: number; notes?: string }>(
           `/guests/packages/status?barcode=${encodeURIComponent(barcode)}`,
           { method: 'GET' }
         );
         const rawStatus = res.status ?? '';
-        events.push({
+        return {
           trackingNumber: barcode,
           rawStatus,
           occurredAt: new Date(),
@@ -241,19 +243,17 @@ export class LogesTechsAdapter implements CourierAdapter {
           collectedAmount: null,
           note: res.notes || LOGESTECHS_STATUS_AR[rawStatus] || null,
           raw: res,
-        });
+        };
       } catch (e) {
-        events.push({
+        return {
           trackingNumber: barcode,
           rawStatus: 'ERROR',
           occurredAt: new Date(),
           status: null,
           note: e instanceof Error ? e.message : 'تعذّر الاستعلام',
-        });
+        };
       }
-    }
-
-    return events;
+    });
   }
 
   /** Their AWB PDFs for a set of barcodes; returns the URL they hand back. */
