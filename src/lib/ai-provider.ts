@@ -1,3 +1,4 @@
+import { sanitizeScopes, type AiScope } from './ai-assistants';
 import { db } from './db';
 import { sanitizePromptOverrides, resolvePrompt, HOUSE_JOB } from './ai-prompts';
 import { decryptSecret, encryptSecret, encryptionAvailable, secretHint } from './secrets';
@@ -83,6 +84,14 @@ export interface AiSettings {
    * default that stops improving the day it is written.
    */
   prompts: Record<string, string>;
+  /**
+   * The fields the business-intelligence assistant is allowed to read.
+   *
+   * Empty by default, and it stays empty until the owner ticks a box: an
+   * assistant that reads the company's money because nobody turned it off
+   * is an assistant nobody decided on.
+   */
+  intelligenceScopes: AiScope[];
   hasKey: boolean;
   keyHint: string | null;
 }
@@ -99,6 +108,8 @@ interface StoredAi {
    */
   prompt?: string;
   prompts?: Record<string, string>;
+  /** See AiSettings.intelligenceScopes. */
+  intelligenceScopes?: string[];
   apiKeyEncrypted?: string;
   keyHint?: string;
 }
@@ -131,6 +142,9 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
     prompts,
     // The environment key still counts as configured, so an existing deploy
     // keeps working without anybody re-entering anything.
+    // Nothing until the owner ticks a box: an assistant reading the money
+    // because nobody turned it off is an assistant nobody decided on.
+    intelligenceScopes: sanitizeScopes(ai.intelligenceScopes),
     hasKey: !!ai.apiKeyEncrypted || !!process.env.OPENROUTER_API_KEY,
     keyHint: ai.keyHint ?? null,
   };
@@ -138,7 +152,13 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
 
 export async function saveAiSettings(
   companyId: string,
-  input: { provider: AiProvider; model: string; prompts?: Record<string, string>; apiKey?: string | null }
+  input: {
+    provider: AiProvider;
+    model: string;
+    prompts?: Record<string, string>;
+    intelligenceScopes?: string[];
+    apiKey?: string | null;
+  }
 ): Promise<AiSettings> {
   // Refused before anything is touched: a key stored in the clear is worse
   // than no AI at all.
@@ -155,6 +175,12 @@ export async function saveAiSettings(
       // Sanitised on the way in: unknown jobs are dropped, and an override
       // equal to the default is not stored at all.
       prompts: input.prompts !== undefined ? sanitizePromptOverrides(input.prompts) : current.prompts,
+      // Only names this system knows — an unknown one is dropped, never
+      // guessed at, so a typo can never widen what an assistant reads.
+      intelligenceScopes:
+        input.intelligenceScopes !== undefined
+          ? sanitizeScopes(input.intelligenceScopes)
+          : current.intelligenceScopes,
       // The editor was shown the legacy house prompt as `prompts.house`, so
       // what it sends back is the whole truth — keeping the legacy key would
       // bring a prompt the seller just cleared back to life.

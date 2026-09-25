@@ -26,9 +26,17 @@ const schema = z.object({
    * to nothing, stops being an override.
    */
   prompts: z.record(z.string(), z.string().max(MAX_PROMPT)).optional(),
+  /**
+   * What the business-intelligence assistant may read. Omitted leaves it
+   * alone; an unknown name is dropped rather than guessed at.
+   */
+  intelligenceScopes: z.array(z.string()).max(20).optional(),
   /** A new key, or null to clear it. Omitted leaves the stored one alone. */
   apiKey: z.string().trim().min(8).max(400).nullable().optional(),
 });
+
+/** The scopes alone — the boxes are ticked one at a time, not with the form. */
+const scopesSchema = z.object({ intelligenceScopes: z.array(z.string()).max(20) });
 
 export async function GET() {
   try {
@@ -93,6 +101,47 @@ export async function PUT(req: Request) {
         hasKey: saved.hasKey,
         keyChanged: parsed.data.apiKey !== undefined,
       },
+    });
+
+    return NextResponse.json({ settings: saved });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+}
+
+/**
+ * PATCH — what the business-intelligence assistant may read.
+ *
+ * Its own call because a box is ticked on its own: sending the whole form
+ * to change one scope would carry the provider, the model and the prompts
+ * along with it, and a half-filled form would quietly undo them.
+ */
+export async function PATCH(req: Request) {
+  try {
+    const { user, companyId } = await requireContext();
+    await requirePermission('settings.manage');
+
+    const parsed = scopesSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
+    }
+
+    const before = await aiSettings(companyId);
+    const saved = await saveAiSettings(companyId, {
+      provider: before.provider,
+      model: before.model,
+      intelligenceScopes: parsed.data.intelligenceScopes,
+    });
+
+    // Widening what an assistant may read is a decision worth a record.
+    await logAudit({
+      companyId,
+      userId: user.id,
+      action: 'AI_SCOPES_UPDATED',
+      entity: 'Company',
+      entityId: companyId,
+      previousData: { intelligenceScopes: before.intelligenceScopes },
+      newData: { intelligenceScopes: saved.intelligenceScopes },
     });
 
     return NextResponse.json({ settings: saved });

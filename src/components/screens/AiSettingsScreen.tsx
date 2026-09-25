@@ -1,7 +1,8 @@
 'use client';
 
+import { AssistantsTable } from '@/components/screens/ai/AssistantsTable';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Bot, Loader2, Check, RotateCcw, ChevronDown, KeyRound, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Bot, Check, ChevronDown, KeyRound, Loader2, Plug, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { MAX_PROMPT, missingSlots, type AiJob } from '@/lib/ai-prompts';
 
@@ -27,6 +28,8 @@ import { MAX_PROMPT, missingSlots, type AiJob } from '@/lib/ai-prompts';
 
 interface Provider { id: string; label: string; defaultModel: string; models: string[]; keyHelp: string }
 interface Settings {
+  /** What the business-intelligence assistant may read. */
+  intelligenceScopes?: string[];
   provider: string;
   model: string;
   prompt: string;
@@ -44,6 +47,28 @@ export function AiSettingsScreen() {
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [tab, setTab] = useState<'provider' | 'assistants' | 'prompts'>('provider');
+  /** The provider's own answer to one cheap question — not a green tick. */
+  const [testing, setTesting] = useState(false);
+  const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function testConnection() {
+    setTesting(true);
+    setTest(null);
+    try {
+      const res = await fetch('/api/settings/ai/test', { method: 'POST', credentials: 'same-origin' });
+      const r = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; reply?: string; model?: string };
+      setTest(
+        r.ok
+          ? { ok: true, text: `المزوّد ردّ${r.reply ? `: «${r.reply}»` : ''} — ${r.model ?? ''}` }
+          : { ok: false, text: r.error ?? 'تعذّر الاتصال' }
+      );
+    } catch (e) {
+      setTest({ ok: false, text: e instanceof Error ? e.message : 'تعذّر الاتصال' });
+    } finally {
+      setTesting(false);
+    }
+  }
 
   const load = useCallback(async () => {
     const res = await fetch('/api/settings/ai');
@@ -104,8 +129,37 @@ export function AiSettingsScreen() {
         </p>
       </div>
 
+      {/* Three questions, three places: which model, who may read what, and
+          in whose words. They were one long scroll, so the assistants — the
+          part that decides what leaves the company — had nowhere to live. */}
+      <div className="flex gap-1.5">
+        {([
+          ['provider', 'المزوّد والمفتاح'],
+          ['assistants', 'المساعدون'],
+          ['prompts', 'النصوص'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setTab(value)}
+            className={`h-9 flex-1 rounded-[8px] border text-xs font-medium ${
+              tab === value ? 'border-[#b8256e] bg-[#fdf2f8] text-[#b8256e]' : 'border-[#e3e8ef] text-[#364152]'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'assistants' && (
+        <AssistantsTable
+          enabled={settings.intelligenceScopes ?? []}
+          onSaved={(scopes) => setSettings({ ...settings, intelligenceScopes: scopes })}
+        />
+      )}
+
       {/* ── the vendor ── */}
-      <section className="rounded-xl border border-[#e3e8ef] bg-white p-4">
+      <section className={`rounded-xl border border-[#e3e8ef] bg-white p-4 ${tab === 'provider' ? '' : 'hidden'}`}>
         <h2 className="mb-3 text-sm font-bold text-[#121926]">المزوّد والنموذج</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -151,10 +205,29 @@ export function AiSettingsScreen() {
             المفتاح يُشفَّر ولا يُعرَض بعدها أبداً، ولا يُكتب في سجل التدقيق.
           </p>
         </div>
+
+        {/* A key is pasted and saved, and nothing says whether it works —
+            the assistant just quietly stops being an assistant. This asks
+            the provider one cheap question and repeats what came back. */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#e3e8ef] pt-3">
+          <button
+            type="button"
+            onClick={() => void testConnection()}
+            disabled={testing || !settings.hasKey}
+            className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[#e3e8ef] px-3 text-[11px] font-semibold text-[#364152] hover:border-[#b8256e] disabled:opacity-50"
+          >
+            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plug className="h-3.5 w-3.5" />}
+            اختبار الاتصال
+          </button>
+          {!settings.hasKey && <span className="text-[11px] text-[#9aa4b2]">احفظ المفتاح أولاً.</span>}
+          {test && (
+            <span className={`text-[11px] ${test.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>{test.text}</span>
+          )}
+        </div>
       </section>
 
       {/* ── the words ── */}
-      <section className="rounded-xl border border-[#e3e8ef] bg-white p-4">
+      <section className={`rounded-xl border border-[#e3e8ef] bg-white p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
         <h2 className="text-sm font-bold text-[#121926]">النصوص</h2>
         <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-[#697586]">
           كل وظيفة ونصّها. اترك الحقل فارغاً ليعود النص الأصلي — لا يُحفَظ إلا ما غيّرته أنت،
