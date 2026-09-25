@@ -362,10 +362,10 @@ export function OrdersScreen() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
-                className="w-full ps-9 pe-3 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
+                className="h-10 w-full ps-9 pe-3 text-sm bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
             </div>
-            <Button size="sm" onClick={runSearch} className="shrink-0">
+            <Button onClick={runSearch} className="shrink-0 gap-1.5">
               <Search className="w-3.5 h-3.5" />
               بحث
             </Button>
@@ -378,20 +378,19 @@ export function OrdersScreen() {
                 setSearchInput(code);
                 setSearch(code);
               }}
-              className="shrink-0 h-8 px-2.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+              className="shrink-0 h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
             />
             <Button
-              size="sm"
               variant={lateOnly ? undefined : 'outline'}
               onClick={() => setLateOnly((v) => !v)}
               title="شُحنت منذ 10 أيام أو أكثر ولم تُسلَّم بعد — من تاريخ الشحن"
-              className="shrink-0"
+              className="shrink-0 gap-1.5"
             >
               <Clock className="w-3.5 h-3.5" />
               متأخرة 10 أيام+ من الشحن
             </Button>
             {activeFilters > 0 && (
-              <Button size="sm" variant="outline" onClick={resetFilters} className="shrink-0 text-[var(--sys-destructive)]">
+              <Button variant="outline" onClick={resetFilters} className="shrink-0 gap-1.5 text-[var(--sys-destructive)]">
                 <RotateCcw className="w-3.5 h-3.5" />
                 إعادة تعيين ({activeFilters})
               </Button>

@@ -38,7 +38,7 @@ interface Rule {
 }
 
 const FIELD =
-  'h-9 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]';
+  'h-10 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]';
 
 export function PenaltyRulesCard() {
   const [kinds, setKinds] = useState<Kind[]>([]);
@@ -160,7 +160,7 @@ export function PenaltyRulesCard() {
                 type="button"
                 disabled={busy}
                 onClick={() => toggle(r)}
-                className="ms-auto rounded border border-[var(--sys-border)] px-2 py-0.5 text-[10px] text-[var(--sys-muted-foreground)]"
+                className="ms-auto rounded-lg border border-[var(--sys-border)] px-2 py-0.5 text-[10px] text-[var(--sys-muted-foreground)]"
               >
                 {r.isActive ? 'أوقفها' : 'شغّلها'}
               </button>

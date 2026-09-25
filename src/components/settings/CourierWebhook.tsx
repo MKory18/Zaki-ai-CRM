@@ -121,7 +121,7 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
           <div className="flex items-center gap-1.5">
             <code
               dir="ltr"
-              className="flex-1 truncate rounded border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 py-1.5 text-[10px] text-[var(--sys-foreground)]"
+              className="flex-1 truncate rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 py-1.5 text-[10px] text-[var(--sys-foreground)]"
             >
               {url}
             </code>

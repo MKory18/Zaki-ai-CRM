@@ -16,10 +16,24 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
+  /**
+   * A HEIGHT, NOT A GUESS AT ONE.
+   *
+   * These used to be padding alone, so the height came out of whatever font
+   * size the size carried — and a toolbar ended up with an input at 34px, a
+   * button at 30, a second button at 32 and a dropdown at 36, all in one
+   * row. Nobody chose four heights; four heights were arithmetic.
+   *
+   * So the height is stated. Three steps and no more:
+   *
+   *   sm  32px  a control inside a row — a row action, a chip
+   *   md  40px  everything else: toolbars, forms, dialogs
+   *   lg  48px  the one action a screen is for, big enough for a thumb
+   */
   const sizeStyles = {
-    sm: 'px-2.5 py-1.5 text-xs',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-5 py-2.5 text-base',
+    sm: 'h-8 px-3 text-xs',
+    md: 'h-10 px-4 text-sm',
+    lg: 'h-12 px-5 text-base',
   };
 
   const variantStyles = {
@@ -35,7 +49,10 @@ export function Button({
     <button
       disabled={disabled || loading}
       className={clsx(
-        'inline-flex items-center justify-center font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
+        // `rounded-lg` with no step is Tailwind's 4px, and it put the one
+        // pink button in a filter bar on tighter corners than every input
+        // beside it. Controls are surfaces too.
+        'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
         sizeStyles[size],
         variantStyles[variant],
         className

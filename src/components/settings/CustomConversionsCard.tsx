@@ -311,7 +311,7 @@ export function CustomConversionsCard() {
                   <span className="font-mono text-[10px] text-[var(--sys-muted)]" dir="ltr">••••{pixel?.capiTokenHint}</span>
                   <button
                     onClick={() => void removeToken()}
-                    className="mr-auto rounded p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
+                    className="mr-auto rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                     title="فصل"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -414,11 +414,11 @@ export function CustomConversionsCard() {
                       <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[var(--sys-heading)]">
                           {c.name}
-                          <span className="rounded bg-[var(--sys-surface-strong)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--sys-foreground)]" dir="ltr">
+                          <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--sys-foreground)]" dir="ltr">
                             {c.eventName}
                           </span>
                           {!c.enabled && (
-                            <span className="rounded bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-muted-foreground)]">
+                            <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-muted-foreground)]">
                               موقوف
                             </span>
                           )}
@@ -444,14 +444,14 @@ export function CustomConversionsCard() {
                       <div className="flex shrink-0 items-center gap-1">
                         <button
                           onClick={() => void toggle(c)}
-                          className="rounded px-2 py-1 text-[10px] font-semibold text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
+                          className="rounded-lg px-2 py-1 text-[10px] font-semibold text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
                         >
                           {c.enabled ? 'أوقف' : 'شغّل'}
                         </button>
                         <button
                           onClick={() => void remove(c)}
                           title="حذف"
-                          className="rounded p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
+                          className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -459,7 +459,7 @@ export function CustomConversionsCard() {
                     </div>
 
                     {c.stats.matchQuality !== null && c.stats.matchQuality < 0.4 && (
-                      <p className="mt-1.5 flex items-start gap-1 rounded bg-[var(--sys-warning-soft)] p-1.5 text-[10px] leading-relaxed text-[var(--sys-warning)]">
+                      <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-[var(--sys-warning-soft)] p-1.5 text-[10px] leading-relaxed text-[var(--sys-warning)]">
                         <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
                         جودة المطابقة منخفضة — الأحداث تصل لكن ميتا تربط قليلاً منها بأشخاص. تحقّق أن
                         أرقام الهواتف مخزّنة كاملة.

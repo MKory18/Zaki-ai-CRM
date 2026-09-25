@@ -94,7 +94,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
   }
 
   const inputClass =
-    'w-full h-9 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
+    'w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
   return (
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs space-y-3">

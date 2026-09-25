@@ -48,7 +48,21 @@ export function Watermark({ viewer }: { viewer: { name: string; id: string } }) 
         {Array.from({ length: TILES }, (_, i) => (
           <span
             key={i}
-            className="whitespace-nowrap text-[13px] font-semibold tracking-wide text-[var(--sys-heading)] opacity-[0.055]"
+            /*
+             * Faint to the point of being a texture rather than text.
+             *
+             * The first attempt was 5.5% at semibold, and on a real screen
+             * it read as a sentence written across the page — which fights
+             * the numbers somebody is trying to read all day, and a mark
+             * people resent is a mark that gets argued out of the product.
+             *
+             * At 2.8% the ink is about seven levels away from the page. The
+             * eye does not resolve it; a PNG screenshot keeps every one of
+             * those levels, and raising the contrast on a leaked image
+             * brings the name straight back. Invisible in use, recoverable
+             * when it matters, which is the whole shape of the thing.
+             */
+            className="whitespace-nowrap text-[13px] font-medium tracking-wide text-[var(--sys-heading)] opacity-[0.028]"
             dir="auto"
           >
             {text}

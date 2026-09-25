@@ -32,7 +32,7 @@ const DAYS = [
 ];
 
 const FIELD =
-  'h-9 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)] disabled:bg-[var(--sys-surface)]';
+  'h-10 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)] disabled:bg-[var(--sys-surface)]';
 
 export function UserShift({
   userId,
@@ -127,7 +127,7 @@ export function UserShift({
             type="button"
             onClick={save}
             disabled={busy || !changed || inverted}
-            className="h-9 rounded-lg bg-[var(--sys-primary)] px-3 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+            className="h-10 rounded-lg bg-[var(--sys-primary)] px-3 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
           >
             {busy ? 'جارٍ…' : 'احفظ'}
           </button>
@@ -146,7 +146,7 @@ export function UserShift({
               type="button"
               disabled={!canEdit}
               onClick={() => toggleDay(d.n)}
-              className={`rounded border px-1.5 py-0.5 text-[10px] ${
+              className={`rounded-lg border px-1.5 py-0.5 text-[10px] ${
                 rest?.includes(d.n)
                   ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
                   : 'border-[var(--sys-border)] bg-[var(--sys-card)] text-[var(--sys-muted-foreground)]'
@@ -159,7 +159,7 @@ export function UserShift({
             <button
               type="button"
               onClick={() => setRest(null)}
-              className="rounded px-1.5 py-0.5 text-[10px] text-[var(--sys-muted)] hover:text-[var(--sys-primary)]"
+              className="rounded-lg px-1.5 py-0.5 text-[10px] text-[var(--sys-muted)] hover:text-[var(--sys-primary)]"
             >
               أعد عطلة البلد
             </button>

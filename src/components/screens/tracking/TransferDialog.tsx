@@ -137,13 +137,13 @@ export function TransferDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !target}
-            className="h-9 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ التحويل…' : fromAgent ? 'استلام وتحويل' : 'سحب وإصدار بديل'}
           </button>

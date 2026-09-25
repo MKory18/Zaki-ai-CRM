@@ -299,11 +299,11 @@ function Row({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-bold text-[var(--sys-heading)]">{c.name}</span>
-            <span className="rounded bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-muted-foreground)]">
+            <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-muted-foreground)]">
               {platformLabel(c.platform)}
             </span>
             <span
-              className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${
+              className={`rounded-lg px-1.5 py-0.5 text-[9px] font-semibold ${
                 c.status === 'ACTIVE' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
                 : c.status === 'PAUSED' ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'
                 : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
@@ -340,10 +340,10 @@ function Row({
             {copied ? <Check className="h-3 w-3 text-[var(--sys-success)]" /> : <Link2 className="h-3 w-3" />}
             {copied ? 'نُسخ' : 'رابط الإعلان'}
           </button>
-          <button onClick={onEdit} title="تعديل" className="rounded p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+          <button onClick={onEdit} title="تعديل" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
             <Pencil className="h-3.5 w-3.5" />
           </button>
-          <button onClick={onRemove} title="حذف" className="rounded p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
+          <button onClick={onRemove} title="حذف" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -478,7 +478,7 @@ function Editor({
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-bold text-[var(--sys-heading)]">{campaign ? 'تعديل الحملة' : 'حملة جديدة'}</h2>
-          <button onClick={onClose} className="rounded p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+          <button onClick={onClose} className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -645,7 +645,7 @@ function LinkDialog({
       >
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-sm font-bold text-[var(--sys-heading)]">اربط «{campaign.name}» بحملة في ميتا</h2>
-          <button onClick={onClose} className="rounded p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+          <button onClick={onClose} className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -665,7 +665,7 @@ function LinkDialog({
           </div>
         )}
 
-        {error && <p className="mb-2 rounded bg-[var(--sys-destructive-soft)] p-2 text-[11px] text-[var(--sys-destructive)]">{error}</p>}
+        {error && <p className="mb-2 rounded-lg bg-[var(--sys-destructive-soft)] p-2 text-[11px] text-[var(--sys-destructive)]">{error}</p>}
 
         {remote === null && !error ? (
           <div className="flex h-24 items-center justify-center text-[var(--sys-muted-foreground)]">
@@ -690,7 +690,7 @@ function LinkDialog({
                   <span className="block truncate text-xs font-semibold text-[var(--sys-foreground)]">{r.name}</span>
                   <span className="block font-mono text-[9px] text-[var(--sys-muted)]" dir="ltr">{r.id}</span>
                 </span>
-                <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold ${
+                <span className={`shrink-0 rounded-lg px-1.5 py-0.5 text-[9px] font-semibold ${
                   r.status === 'ACTIVE' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
                 }`}>
                   {r.status === 'ACTIVE' ? 'تعمل' : 'متوقفة'}

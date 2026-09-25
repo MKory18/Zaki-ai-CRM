@@ -136,7 +136,7 @@ export default function LoginPage() {
                     type="checkbox"
                     checked={remember}
                     onChange={(e) => setRemember(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-[var(--sys-border)] bg-[var(--sys-card)] accent-[var(--sys-primary)]"
+                    className="w-3.5 h-3.5 rounded-lg border-[var(--sys-border)] bg-[var(--sys-card)] accent-[var(--sys-primary)]"
                   />
                   <span>تذكرني</span>
                 </label>

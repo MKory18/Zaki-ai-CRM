@@ -159,7 +159,7 @@ export function ProductDetailScreen() {
             </button>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{product.name}</h1>
             <div className="flex items-center space-x-2 rtl:space-x-reverse mt-1.5">
-              <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded">{product.sku}</span>
+              <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-lg">{product.sku}</span>
               <Badge variant={product.status === 'ACTIVE' ? 'success' : 'warning'}>{product.status}</Badge>
               <span className="text-xs text-[var(--sys-muted)]">{images.length} صورة</span>
             </div>
@@ -222,20 +222,20 @@ export function ProductDetailScreen() {
                       />
                       {canManage && (
                         <div className="absolute inset-0 bg-[var(--sys-sidebar)]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-1 rtl:space-x-reverse">
-                          <button onClick={() => setPrimary(img.id)} title="تعيين كرئيسية" className="p-1 bg-[var(--sys-card)]/90 rounded text-[var(--sys-warning)] hover:bg-[var(--sys-card)] cursor-pointer">
+                          <button onClick={() => setPrimary(img.id)} title="تعيين كرئيسية" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-warning)] hover:bg-[var(--sys-card)] cursor-pointer">
                             <Star className="w-3 h-3" />
                           </button>
                           {idx > 0 && !img.isPrimary && (
-                            <button onClick={() => moveImage(idx, -1)} title="تحريك يسار" className="p-1 bg-[var(--sys-card)]/90 rounded text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
+                            <button onClick={() => moveImage(idx, -1)} title="تحريك يسار" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
                               <ChevronUp className="w-3 h-3 rotate-[-90deg] rtl:rotate-[270deg]" />
                             </button>
                           )}
                           {idx < images.length - 1 && !img.isPrimary && (
-                            <button onClick={() => moveImage(idx, 1)} title="تحريك يمين" className="p-1 bg-[var(--sys-card)]/90 rounded text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
+                            <button onClick={() => moveImage(idx, 1)} title="تحريك يمين" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
                               <ChevronDown className="w-3 h-3 rotate-[-90deg] rtl:rotate-[270deg]" />
                             </button>
                           )}
-                          <button onClick={() => deleteImage(img.id)} title="حذف" className="p-1 bg-[var(--sys-card)]/90 rounded text-[var(--sys-destructive)] hover:bg-[var(--sys-card)] cursor-pointer">
+                          <button onClick={() => deleteImage(img.id)} title="حذف" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-destructive)] hover:bg-[var(--sys-card)] cursor-pointer">
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>

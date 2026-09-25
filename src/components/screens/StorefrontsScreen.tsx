@@ -203,7 +203,7 @@ function Card({
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-[var(--sys-heading)]">{shop.name}</p>
             <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-[var(--sys-muted-foreground)]">
-              <span className={`rounded px-1.5 py-0.5 font-semibold ${shop.live ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
+              <span className={`rounded-lg px-1.5 py-0.5 font-semibold ${shop.live ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
                 {shop.live ? 'مفتوح' : 'مغلق'}
               </span>
               {shop.domain && (
@@ -252,7 +252,7 @@ function Card({
             value={shop.frontPage?.id ?? ''}
             disabled={busy}
             onChange={(e) => onPick(e.target.value || null)}
-            className="h-9 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-heading)]"
+            className="h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-heading)]"
           >
             <option value="">— لم تُختر بعد —</option>
             {shop.pages.map((p) => (

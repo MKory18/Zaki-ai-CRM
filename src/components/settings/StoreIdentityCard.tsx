@@ -108,7 +108,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
           type="button"
           onClick={() => void save()}
           disabled={!changed || saving || name.trim().length < 2}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--sys-primary)] px-4 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
+          className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-[var(--sys-primary)] px-4 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
         >
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           حفظ

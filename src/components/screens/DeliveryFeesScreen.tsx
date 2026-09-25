@@ -193,13 +193,13 @@ export function DeliveryFeesScreen() {
                   <tr key={r.id} className={current ? '' : 'bg-[var(--sys-surface)]/60'}>
                     <td className="px-4 py-2 text-[var(--sys-heading)]">{r.name}</td>
                     <td className="px-4 py-2">
-                      <input value={d.fee} onChange={(e) => set({ fee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-9 px-2 rounded-lg border border-[var(--sys-border)] text-sm" />
+                      <input value={d.fee} onChange={(e) => set({ fee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm" />
                     </td>
                     <td className="px-4 py-2">
-                      <input value={d.lateThresholdDays} onChange={(e) => set({ lateThresholdDays: e.target.value })} type="number" min={0} max={90} dir="ltr" className="w-20 h-9 px-2 rounded-lg border border-[var(--sys-border)] text-sm" />
+                      <input value={d.lateThresholdDays} onChange={(e) => set({ lateThresholdDays: e.target.value })} type="number" min={0} max={90} dir="ltr" className="w-20 h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm" />
                     </td>
                     <td className="px-4 py-2">
-                      <input value={d.returnFee} onChange={(e) => set({ returnFee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-9 px-2 rounded-lg border border-[var(--sys-border)] text-sm" />
+                      <input value={d.returnFee} onChange={(e) => set({ returnFee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm" />
                     </td>
                     {/* Read-only: their id, not ours to invent. A blank one
                         means their API will refuse the shipment, and that is
@@ -367,12 +367,12 @@ function BulkFillDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit" disabled={saving || !fee}
-            className="h-9 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ…' : `عبّئ ${regions.length}`}
           </button>
@@ -416,10 +416,10 @@ function ReasonDialog({
           />
         </label>
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
-          <button type="submit" className="h-9 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
+          <button type="submit" className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
             حفظ التعديل
           </button>
         </div>

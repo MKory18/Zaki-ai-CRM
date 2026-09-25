@@ -719,7 +719,7 @@ export function LandingPageEditorScreen() {
               <div className="mt-2 space-y-3 text-[10px] leading-relaxed text-[#697586]" dir="ltr">
                 <div>
                   <p className="font-bold text-[#364152]">Actions</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`<button data-zaki-action="order">
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`<button data-zaki-action="order">
   اطلب الآن
 </button>
 <button data-zaki-action="scroll-order">…</button>
@@ -729,13 +729,13 @@ export function LandingPageEditorScreen() {
                 </div>
                 <div>
                   <p className="font-bold text-[#364152]">Fixed Button</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`data-zaki-position="fixed-bottom"
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`data-zaki-position="fixed-bottom"
   | "fixed-top" | "floating"`}</pre>
                   <p>position فقط — لا لون ولا خط إلا إن طلبتها.</p>
                 </div>
                 <div>
                   <p className="font-bold text-[#364152]">Styling (اختياري)</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`data-zaki-bg="#16a34a"
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`data-zaki-bg="#16a34a"
 data-zaki-color="#fff"
 data-zaki-font-size="20px"
 data-zaki-font-weight="700"
@@ -749,7 +749,7 @@ data-zaki-z-index="9999"`}</pre>
                 </div>
                 <div>
                   <p className="font-bold text-[#364152]">Placeholders</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`<div data-zaki-product></div>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-[10px] text-[#c9d1d9]">{`<div data-zaki-product></div>
 <div data-zaki-offers></div>
 <div data-zaki-recommendations></div>
 <div data-zaki-order-form></div>
@@ -771,13 +771,13 @@ data-zaki-z-index="9999"`}</pre>
               <div className="flex items-center gap-1 border-b border-[#202939] bg-[#121926] px-2 py-1.5">
                 <button
                   onClick={() => setTab('html')}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold ${tab === 'html' ? 'bg-[#1a2232] text-white' : 'text-[#697586] hover:text-white'}`}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'html' ? 'bg-[#1a2232] text-white' : 'text-[#697586] hover:text-white'}`}
                 >
                   <Code2 className="h-3.5 w-3.5" /> HTML
                 </button>
                 <button
                   onClick={() => setTab('css')}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold ${tab === 'css' ? 'bg-[#1a2232] text-white' : 'text-[#697586] hover:text-white'}`}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'css' ? 'bg-[#1a2232] text-white' : 'text-[#697586] hover:text-white'}`}
                 >
                   <Palette className="h-3.5 w-3.5" /> CSS
                 </button>
@@ -788,7 +788,7 @@ data-zaki-z-index="9999"`}</pre>
                 <button
                   onClick={() => setFull((f) => !f)}
                   title={full ? 'تصغير المحرر' : 'ملء الشاشة'}
-                  className="cursor-pointer rounded p-1 text-[#697586] hover:text-white"
+                  className="cursor-pointer rounded-lg p-1 text-[#697586] hover:text-white"
                 >
                   {full ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                 </button>
@@ -823,7 +823,7 @@ data-zaki-z-index="9999"`}</pre>
                       key={d}
                       onClick={() => setDevice(d)}
                       title={d}
-                      className={`cursor-pointer rounded p-1.5 ${device === d ? 'bg-[#fdf2f7] text-[#b8256e]' : 'text-[#697586] hover:bg-[#f8fafc]'}`}
+                      className={`cursor-pointer rounded-lg p-1.5 ${device === d ? 'bg-[#fdf2f7] text-[#b8256e]' : 'text-[#697586] hover:bg-[#f8fafc]'}`}
                     >
                       <Icon className="h-4 w-4" />
                     </button>
@@ -878,7 +878,7 @@ data-zaki-z-index="9999"`}</pre>
                     type="color"
                     value={settings.background || '#ffffff'}
                     onChange={(e) => { setSettings({ ...settings, background: e.target.value }); setDirty(true); }}
-                    className="h-8 w-10 cursor-pointer rounded border border-[#e3e8ef]"
+                    className="h-8 w-10 cursor-pointer rounded-lg border border-[#e3e8ef]"
                   />
                   <Input
                     dir="ltr"

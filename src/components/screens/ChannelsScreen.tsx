@@ -53,7 +53,7 @@ interface Channel {
 }
 
 const INPUT =
-  'w-full h-9 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
+  'w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
 export function ChannelsScreen() {
   const [channels, setChannels] = useState<Channel[] | null>(null);
@@ -244,13 +244,13 @@ export function ChannelsScreen() {
                 <button
                   onClick={() => patch(c.id, { name: editDraft.name.trim(), kind: editDraft.kind })}
                   disabled={busy === c.id}
-                  className="h-9 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                  className="h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setEditing(null)}
-                  className="h-9 px-3 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
+                  className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

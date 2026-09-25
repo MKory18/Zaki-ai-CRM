@@ -96,7 +96,7 @@ export function AuditScreen() {
 
                         <td className="px-6 py-3.5 text-[var(--sys-foreground)] font-sans max-w-xs truncate text-[11px]">
                           {l.newData ? (
-                            <span title={l.newData} className="bg-[var(--sys-surface)] px-2 py-0.5 rounded">
+                            <span title={l.newData} className="bg-[var(--sys-surface)] px-2 py-0.5 rounded-lg">
                               {l.newData.slice(0, 60)}...
                             </span>
                           ) : (

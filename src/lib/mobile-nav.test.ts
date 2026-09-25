@@ -189,3 +189,47 @@ describe('the screens worked from a phone', () => {
     expect(rows).toContain('canSelect');
   });
 });
+
+/**
+ * THE SIDEWAYS SCROLL THE SOURCE-PATTERN TESTS COULD NOT SEE.
+ *
+ * The rule above looks for an over-wide column written into a screen. Two
+ * things made every screen scroll 95px sideways on a phone and neither was
+ * in any screen's source:
+ *
+ *   The menu drawer stayed mounted when closed and slid out past the right
+ *   edge. A `fixed` box beyond the edge still counts towards how wide the
+ *   document is, and no `overflow` on any ancestor can clip it — a fixed
+ *   element's containing block is the viewport itself.
+ *
+ *   The header's store chip would not give way. The row does not wrap, the
+ *   chip held its full width, and the header simply did not fit.
+ *
+ * Both are found by measuring, which needs a browser. What CAN be pinned
+ * here is the property each fix rests on, so neither quietly comes back.
+ */
+describe('nothing is parked outside the screen', () => {
+  const read = (rel: string) => readFileSync(join(process.cwd(), rel), 'utf8');
+
+  it('the closed drawer takes up no width — it is not merely slid away', () => {
+    const src = read('src/components/shell/Sidebar.tsx');
+    expect(
+      /translate-x-full/.test(src),
+      'الدرج المغلق عاد ليُزاح خارج الشاشة بدل أن يُخفى'
+    ).toBe(false);
+    expect(src).toContain("mobileOpen ? 'flex");
+    expect(src).toContain("'hidden'");
+    // And it is still there on a desk, where there is room for it.
+    expect(src).toContain('md:flex');
+  });
+
+  it('and the header can give way rather than push the page wide', () => {
+    const src = read('src/components/shell/Header.tsx');
+    // The chip that carries the store name is the one that must shrink:
+    // it is the widest thing in the row and the only one with text to cut.
+    expect(src).toMatch(/className="flex min-w-0 shrink items-center[^"]*"/);
+    // And the cluster of icons on the other end must NOT shrink, or the
+    // bell and the avatar squash into each other instead.
+    expect(src).toContain('flex shrink-0 items-center gap-3 mr-auto');
+  });
+});

@@ -90,7 +90,7 @@ export function ProductLinesEditor({
 
   const total = lines.reduce((sum, l) => sum + (Number(l.price) || 0), 0);
   const inputClass =
-    'w-full h-9 px-2 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)] disabled:bg-[var(--sys-surface)]';
+    'w-full h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)] disabled:bg-[var(--sys-surface)]';
 
   return (
     <div className="space-y-2">

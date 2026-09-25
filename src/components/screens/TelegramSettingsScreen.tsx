@@ -104,7 +104,7 @@ export function TelegramSettingsScreen() {
                 <div className="pt-3">
                   <p className="text-xs text-[var(--sys-muted-foreground)] mb-1">Webhook URL:</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-[11px] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded px-3 py-2 font-mono break-all" dir="ltr">
+                    <code className="flex-1 text-[11px] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg px-3 py-2 font-mono break-all" dir="ltr">
                       {status?.webhookUrl || '— لم يتم ضبط APP_URL —'}
                     </code>
                     {status?.webhookUrl && (

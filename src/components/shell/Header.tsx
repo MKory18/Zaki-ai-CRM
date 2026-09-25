@@ -49,7 +49,12 @@ export function Header({
       </button>
 
       {/* Country + store context, always visible: every request carries it */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)]">
+      {/* `min-w-0 shrink` is what lets this give way on a phone. Without
+          it the chip holds its full width, the header cannot fit, and the
+          whole document grows 95px wider than the screen — so every page
+          scrolls sideways into grey. The name already truncates; it just
+          had no room in which to. */}
+      <div className="flex min-w-0 shrink items-center gap-2 px-3 py-2 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)]">
         <Store className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
         <div className="leading-tight min-w-0">
           <p className="text-xs font-semibold text-[var(--sys-heading)] truncate max-w-[160px]">{context.storeName}</p>
@@ -86,7 +91,7 @@ export function Header({
       </form>
       )}
 
-      <div className="flex items-center gap-3 mr-auto">
+      <div className="flex shrink-0 items-center gap-3 mr-auto">
         {/* Am I on shift, and how long since my last order. It lives here
             rather than above a queue: same place on every screen, beside
             the name, and never in the path of somebody clicking fast. The

@@ -330,7 +330,7 @@ export function StoreThemeScreen() {
               <span className="flex items-center gap-2">
                 {store?.logo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={store.logo} alt="" className="h-7 w-7 rounded object-contain" />
+                  <img src={store.logo} alt="" className="h-7 w-7 rounded-lg object-contain" />
                 ) : (
                   <ImageIcon className="h-4 w-4" />
                 )}
@@ -418,7 +418,7 @@ export function StoreThemeScreen() {
                 aria-label="اللون الأساسي"
                 value={isValidHex(theme.accent) ? theme.accent : DEFAULT_STORE_THEME.accent}
                 onChange={(e) => set('accent', e.target.value)}
-                className="h-8 w-10 cursor-pointer rounded border border-[#e3e8ef]"
+                className="h-8 w-10 cursor-pointer rounded-lg border border-[#e3e8ef]"
               />
               <Select
                 className="text-xs"
@@ -447,7 +447,7 @@ export function StoreThemeScreen() {
                         aria-label={label}
                         value={value && isValidHex(value) ? value : '#ffffff'}
                         onChange={(e) => setPart('colors', { [key]: e.target.value })}
-                        className="h-7 w-9 cursor-pointer rounded border border-[#e3e8ef]"
+                        className="h-7 w-9 cursor-pointer rounded-lg border border-[#e3e8ef]"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[11px] font-semibold text-[#364152]">{label}</p>
@@ -494,7 +494,7 @@ export function StoreThemeScreen() {
                     aria-label="لون الترويسة"
                     value={theme.header?.background && isValidHex(theme.header.background) ? theme.header.background : '#ffffff'}
                     onChange={(e) => setPart('header', { background: e.target.value })}
-                    className="h-9 w-12 cursor-pointer rounded border border-[#e3e8ef]"
+                    className="h-10 w-12 cursor-pointer rounded-lg border border-[#e3e8ef]"
                   />
                   <button
                     type="button"
@@ -635,7 +635,7 @@ export function StoreThemeScreen() {
                           [next[i - 1], next[i]] = [next[i], next[i - 1]];
                           setPart('checkout', { fieldOrder: next });
                         }}
-                        className="rounded px-1.5 text-xs text-[#697586] hover:bg-[#eef2f6] disabled:opacity-30"
+                        className="rounded-lg px-1.5 text-xs text-[#697586] hover:bg-[#eef2f6] disabled:opacity-30"
                         aria-label="حرّكه لأعلى"
                       >
                         ↑
@@ -648,7 +648,7 @@ export function StoreThemeScreen() {
                           [next[i + 1], next[i]] = [next[i], next[i + 1]];
                           setPart('checkout', { fieldOrder: next });
                         }}
-                        className="rounded px-1.5 text-xs text-[#697586] hover:bg-[#eef2f6] disabled:opacity-30"
+                        className="rounded-lg px-1.5 text-xs text-[#697586] hover:bg-[#eef2f6] disabled:opacity-30"
                         aria-label="حرّكه لأسفل"
                       >
                         ↓
@@ -679,7 +679,7 @@ export function StoreThemeScreen() {
                     aria-label="لون زر التأكيد"
                     value={theme.checkout?.buttonColor && isValidHex(theme.checkout.buttonColor) ? theme.checkout.buttonColor : '#ffffff'}
                     onChange={(e) => setPart('checkout', { buttonColor: e.target.value })}
-                    className="h-9 w-12 cursor-pointer rounded border border-[#e3e8ef]"
+                    className="h-10 w-12 cursor-pointer rounded-lg border border-[#e3e8ef]"
                   />
                   <button
                     type="button"

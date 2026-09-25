@@ -212,7 +212,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 <CheckCircle2 className="w-4 h-4 text-[var(--sys-destructive)]" />
                 <span>2. تأكيد البيانات المستخرجة (قابلة للتعديل)</span>
               </h4>
-              <span className="text-[10px] font-mono text-[var(--sys-muted)] bg-[var(--sys-card)] px-2 py-0.5 rounded border">
+              <span className="text-[10px] font-mono text-[var(--sys-muted)] bg-[var(--sys-card)] px-2 py-0.5 rounded-lg border">
                 {result.engine === 'ai' ? 'OpenRouter AI' : 'Smart Parser'}
               </span>
             </div>

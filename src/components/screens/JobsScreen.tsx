@@ -83,7 +83,7 @@ export function JobsScreen() {
 
       <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
         المهام تعمل في عملية مستقلة عن المتصفح:{' '}
-        <code className="font-mono text-[11px] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded px-1.5 py-0.5" dir="ltr">
+        <code className="font-mono text-[11px] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg px-1.5 py-0.5" dir="ltr">
           npx tsx scripts/worker.ts
         </code>
         . إن لم تكن تعمل، ستظهر المهام هنا «متأخرة».
@@ -151,7 +151,7 @@ export function JobsScreen() {
                         because the thing a person needs to know is that it
                         has STOPPED — not that it is unwell. */}
                     {job.parked && (
-                      <p className="mt-1 rounded bg-[var(--sys-destructive-soft)] px-2 py-1 text-[var(--sys-destructive)]">
+                      <p className="mt-1 rounded-lg bg-[var(--sys-destructive-soft)] px-2 py-1 text-[var(--sys-destructive)]">
                         توقّفت عن المحاولة بعد فشل متكرّر. لن تعمل حتى تُعيد تفعيلها — أصلح السبب
                         أولاً، فإعادة التفعيل بلا إصلاح تعيدها إلى الحائط نفسه.
                       </p>

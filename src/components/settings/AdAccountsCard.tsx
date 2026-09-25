@@ -150,7 +150,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
         <Megaphone className="h-4 w-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">حسابات الإعلانات</h2>
         {storeName && (
-          <span className="rounded bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--sys-foreground)]">
+          <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--sys-foreground)]">
             متجر {storeName}
           </span>
         )}
@@ -172,11 +172,11 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[var(--sys-heading)]">
                     {a.accountName ?? a.accountId}
-                    <span className="rounded bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-foreground)]">
+                    <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-foreground)]">
                       {labelOf(a.platform)}
                     </span>
                     <span
-                      className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${
+                      className={`rounded-lg px-1.5 py-0.5 text-[9px] font-semibold ${
                         a.status === 'CONNECTED' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
                       }`}
                     >
@@ -194,7 +194,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                 <button
                   onClick={() => void disconnect(a)}
                   title="فصل"
-                  className="rounded p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
+                  className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -204,7 +204,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   reads "token has expired" can fix it; one who reads "sync
                   failed" cannot. */}
               {a.status !== 'CONNECTED' && a.lastError && (
-                <p className="mt-1.5 flex items-start gap-1 rounded bg-[var(--sys-destructive-soft)] p-1.5 text-[10px] leading-relaxed text-[var(--sys-destructive)]">
+                <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-[var(--sys-destructive-soft)] p-1.5 text-[10px] leading-relaxed text-[var(--sys-destructive)]">
                   <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
                   {a.lastError}
                 </p>

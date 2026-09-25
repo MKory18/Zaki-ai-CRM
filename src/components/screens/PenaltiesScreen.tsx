@@ -146,7 +146,7 @@ export function PenaltiesScreen() {
               <li key={row.id} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm font-semibold text-[var(--sys-heading)]">{row.user.name}</span>
-                  <span className={`rounded border px-1.5 py-0.5 text-[10px] ${st.cls}`}>{st.ar}</span>
+                  <span className={`rounded-lg border px-1.5 py-0.5 text-[10px] ${st.cls}`}>{st.ar}</span>
                 </div>
 
                 <p className="mt-1 text-xs text-[var(--sys-foreground)]">
@@ -167,7 +167,7 @@ export function PenaltiesScreen() {
                 </p>
 
                 {row.decisionNote && (
-                  <p className="mt-1 rounded bg-[var(--sys-surface)] px-2 py-1 text-[11px] text-[var(--sys-muted-foreground)]">
+                  <p className="mt-1 rounded-lg bg-[var(--sys-surface)] px-2 py-1 text-[11px] text-[var(--sys-muted-foreground)]">
                     السبب: {row.decisionNote}
                   </p>
                 )}

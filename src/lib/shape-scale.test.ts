@@ -54,7 +54,13 @@ function systemFiles(): { path: string; rel: string; src: string }[] {
   return out;
 }
 
-const RADIUS = /rounded(?:-[tbrlse]{1,2})?-(\[[^\]]+\]|none|sm|md|lg|xl|2xl|3xl|full)(?![\w-])/g;
+// The leading guard matters: without it this finds the "rounded" inside
+// "backgrounded" and "Grounded on real data", and reports a screen for a
+// corner that is a word in a sentence.
+const RADIUS = /(?<![\w-])rounded(?:-[tbrlse]{1,2})?(?:-(\[[^\]]+\]|none|sm|md|lg|xl|2xl|3xl|full))?(?![\w-])/g;
+
+/** A bare `rounded` is Tailwind's 4px, and a step nobody chose. */
+const BARE = 'bare';
 
 /** The four that mean something, plus `none`, which is a deliberate square. */
 const ALLOWED = new Set(['sm', 'md', 'lg', 'full', 'none']);
@@ -64,7 +70,7 @@ describe('the corners of the dashboard', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
       for (const m of src.matchAll(RADIUS)) {
-        if (m[1].startsWith('[')) offenders.push(`${rel}: ${m[0]}`);
+        if ((m[1] ?? BARE).startsWith('[')) offenders.push(`${rel}: ${m[0]}`);
       }
     }
     expect(offenders, `زاوية مقاسة باليد بدل السلّم:\n${offenders.slice(0, 20).join('\n')}`).toEqual([]);
@@ -74,7 +80,7 @@ describe('the corners of the dashboard', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
       for (const m of src.matchAll(RADIUS)) {
-        if (!ALLOWED.has(m[1])) offenders.push(`${rel}: ${m[0]}`);
+        if (!ALLOWED.has(m[1] ?? BARE)) offenders.push(`${rel}: ${m[0]}`);
       }
     }
     expect(offenders, `درجة خارج السلّم:\n${offenders.slice(0, 20).join('\n')}`).toEqual([]);
@@ -85,7 +91,10 @@ describe('the corners of the dashboard', () => {
     // radius does the surfaces, and it is the common one.
     const counts = new Map<string, number>();
     for (const { src } of systemFiles()) {
-      for (const m of src.matchAll(RADIUS)) counts.set(m[1], (counts.get(m[1]) ?? 0) + 1);
+      for (const m of src.matchAll(RADIUS)) {
+        const step = m[1] ?? BARE;
+        counts.set(step, (counts.get(step) ?? 0) + 1);
+      }
     }
     const sized = [...counts.entries()].filter(([k]) => k !== 'full' && k !== 'none');
     const total = sized.reduce((s, [, n]) => s + n, 0);
@@ -104,5 +113,65 @@ describe('a seller’s own pages', () => {
     // Not an assertion about a particular class — an assertion that the
     // sweep did not reach in here at all. Their corners are their own.
     expect(shop.includes('--sys-'), 'متغيّر لوحة التحكم تسرّب إلى صفحة بائع').toBe(false);
+  });
+});
+
+/**
+ * ONE SET OF HEIGHTS.
+ *
+ * Measured on the orders screen before this: an input at 34px, a button at
+ * 30, a second button at 32 and a dropdown at 36 - four heights in one row.
+ * Nobody chose four. The height was padding plus whatever font size the
+ * size happened to carry, so it was arithmetic, and arithmetic drifts.
+ *
+ *   sm  32px  a control inside a row
+ *   md  40px  everything else: toolbars, forms, dialogs
+ *   lg  48px  the one action a screen is for
+ *
+ * A chip or a badge is not a control and has no stated height - it is as
+ * tall as its text, which is what makes it read as a label rather than as
+ * something to press.
+ */
+describe('the height of a control', () => {
+  const read = (rel: string) => readFileSync(join(process.cwd(), rel), 'utf8');
+
+  it('is stated by the shared button, not left to arithmetic', () => {
+    const src = read('src/components/ui/Button.tsx');
+    expect(src).toMatch(/sm:\s*'h-8/);
+    expect(src).toMatch(/md:\s*'h-10/);
+    expect(src).toMatch(/lg:\s*'h-12/);
+  });
+
+  it('and by the shared field, so a field matches the button beside it', () => {
+    const src = read('src/components/ui/Input.tsx');
+    // The input and the select. A textarea is multi-line and is not one.
+    expect((src.match(/'h-10 w-full/g) ?? []).length).toBe(2);
+  });
+
+  it('and 36px is gone - the step that fit nothing', () => {
+    const offenders: string[] = [];
+    for (const { rel, src } of systemFiles()) {
+      for (const m of src.matchAll(/(?<![\w.-])h-9(?![\d.])/g)) {
+        const at = m.index ?? 0;
+        const around = src.slice(Math.max(0, at - 90), at + 90);
+        // A matching width, or an image fit: a square icon button, an
+        // avatar, a logo box. Their height belongs to the shape.
+        if (/\bw-9\b/.test(around) || /object-(?:contain|cover)/.test(around)) continue;
+        offenders.push(rel + ': ' + around.replace(/\s+/g, ' ').trim().slice(0, 70));
+      }
+    }
+    expect(offenders, 'ارتفاع ٣٦ عاد:\n' + offenders.slice(0, 10).join('\n')).toEqual([]);
+  });
+
+  it('and a square stayed square', () => {
+    // The sweep that gave every control a stated height reached the icon
+    // buttons and the avatars too, and a 36x36 avatar came out 40x36.
+    const offenders: string[] = [];
+    for (const { rel, src } of systemFiles()) {
+      for (const m of src.matchAll(/class[nN]ame=\{?[`"']([^`"']*)[`"']/g)) {
+        if (/\bw-9\b/.test(m[1]) && /\bh-10\b/.test(m[1])) offenders.push(rel + ': ' + m[1].slice(0, 60));
+      }
+    }
+    expect(offenders, 'شكل مربّع صار مستطيلاً:\n' + offenders.join('\n')).toEqual([]);
   });
 });

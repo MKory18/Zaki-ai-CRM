@@ -150,7 +150,7 @@ export function AiDock() {
               type="button"
               onClick={() => setMsgs([])}
               title="ابدأ محادثة جديدة"
-              className="rounded p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
+              className="rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -159,7 +159,7 @@ export function AiDock() {
             type="button"
             onClick={() => setOpen(false)}
             title="تصغير"
-            className="rounded p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
+            className="rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
           >
             <Minus className="h-3.5 w-3.5" />
           </button>
@@ -167,7 +167,7 @@ export function AiDock() {
             type="button"
             onClick={() => { setMsgs([]); setOpen(false); }}
             title="إغلاق ومسح"
-            className="rounded p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
+            className="rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
           >
             <X className="h-3.5 w-3.5" />
           </button>

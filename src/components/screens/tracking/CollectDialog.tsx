@@ -182,13 +182,13 @@ export function CollectDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !walletId}
-            className="h-9 px-4 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+            className="h-10 px-4 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             <HandCoins className="w-4 h-4" />
             {saving ? 'جارٍ التسجيل…' : 'استلمت منه'}

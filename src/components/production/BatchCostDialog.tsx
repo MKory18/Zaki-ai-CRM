@@ -39,7 +39,7 @@ export interface BatchForCost {
 }
 
 const INPUT =
-  'w-full h-9 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]';
+  'w-full h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]';
 
 const BUCKETS = [
   { key: 'rawMaterialCost', label: 'المواد الخام' },

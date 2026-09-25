@@ -155,7 +155,7 @@ export function WhatsAppSettingsScreen() {
               ['WHATSAPP_ENCRYPTION_KEY', 'مفتاح تشفير (32 حرفًا على الأقل)'],
             ].map(([k, desc]) => (
               <div key={k} className="flex items-center gap-2 text-xs">
-                <code className="px-2 py-1 rounded bg-[var(--sys-surface-strong)] text-[var(--sys-heading)] font-semibold" dir="ltr">{k}</code>
+                <code className="px-2 py-1 rounded-lg bg-[var(--sys-surface-strong)] text-[var(--sys-heading)] font-semibold" dir="ltr">{k}</code>
                 <span className="text-[var(--sys-muted-foreground)]">{desc}</span>
               </div>
             ))}
@@ -164,7 +164,7 @@ export function WhatsAppSettingsScreen() {
               <span>
                 لا تُدخل أي بيانات سرية هنا في الواجهة — كل البيانات من متغيرات بيئة الخادم فقط، ولا يتم عرض Access Token مطلقًا.
                 بعد إضافة البيانات: أعد تشغيل الخادم، اضغط [إعادة الاتصال]، ثم سجّل رابط الويبهوك في تطبيق Meta:
-                <code className="mx-1 px-1.5 py-0.5 rounded bg-[var(--sys-surface-strong)]" dir="ltr">/api/webhooks/whatsapp</code>
+                <code className="mx-1 px-1.5 py-0.5 rounded-lg bg-[var(--sys-surface-strong)]" dir="ltr">/api/webhooks/whatsapp</code>
               </span>
             </div>
           </CardContent>

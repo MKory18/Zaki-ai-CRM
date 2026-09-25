@@ -30,7 +30,7 @@ interface Weight {
 }
 
 const FIELD =
-  'h-9 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]';
+  'h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]';
 
 export function PerformanceSettingsCard() {
   const [settings, setSettings] = useState<PerformanceSettings | null>(null);

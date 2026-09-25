@@ -119,6 +119,7 @@ body {
   color: var(--sys-foreground);
   font-family: var(--font-public-sans), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+
 }
 
 /* Headings and key values use the darker primary text tone */

@@ -354,9 +354,9 @@ function Regions({ countryId }: { countryId: string }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="اسم المحافظة"
-          className="flex-1 h-9 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+          className="flex-1 h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
         />
-        <button type="submit" className="px-3 h-9 rounded-lg bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] text-xs">
+        <button type="submit" className="px-3 h-10 rounded-lg bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] text-xs">
           إضافة
         </button>
       </form>

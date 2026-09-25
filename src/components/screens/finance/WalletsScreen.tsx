@@ -164,7 +164,7 @@ export function WalletsScreen() {
         </p>
         <button
           onClick={() => setCreating(true)}
-          className="h-9 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 shrink-0"
+          className="h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 shrink-0"
         >
           <Plus className="w-3.5 h-3.5" /> محفظة جديدة
         </button>
@@ -501,13 +501,13 @@ function RecordDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end pt-1">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحفظ…' : 'تسجيل'}
           </button>
@@ -575,13 +575,13 @@ function ReverseDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-10 px-4 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ التسجيل…' : 'تسجيل القيد العكسي'}
           </button>
@@ -731,13 +731,13 @@ function CreateWalletDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !countryId}
-            className="h-9 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الإنشاء…' : 'إنشاء'}
           </button>

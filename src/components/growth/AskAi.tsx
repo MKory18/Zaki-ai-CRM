@@ -156,7 +156,7 @@ export function AskAi() {
             type="button"
             onClick={ask}
             disabled={busy || !question.trim() || picked.length === 0}
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-[11px] font-semibold hover:bg-[var(--sys-primary)] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-[11px] font-semibold hover:bg-[var(--sys-primary)] disabled:opacity-50"
           >
             {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             حلّل

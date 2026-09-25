@@ -86,7 +86,7 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
 
               {/* The real palette, not a name. */}
               <span
-                className="mt-2 flex h-12 items-end gap-1 rounded border p-1.5"
+                className="mt-2 flex h-12 items-end gap-1 rounded-lg border p-1.5"
                 style={{ background: theme.vars.background, borderColor: theme.vars.border }}
               >
                 <span

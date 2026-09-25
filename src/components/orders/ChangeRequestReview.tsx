@@ -135,7 +135,7 @@ export function ChangeRequestReview({
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="مثلاً: الطرد خرج مع المندوب، بلّغي الزبون أنه سيُسلَّم بالعنوان القديم"
                 maxLength={500}
-                className="w-full h-9 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
+                className="w-full h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
               />
             </label>
 

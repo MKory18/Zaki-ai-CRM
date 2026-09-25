@@ -145,7 +145,7 @@ export function ChangeRequestsScreen() {
           >
             {label}
             <span
-              className={`tabular-nums rounded px-1.5 text-[10px] ${
+              className={`tabular-nums rounded-lg px-1.5 text-[10px] ${
                 lists[key].length > 0 ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
               }`}
             >

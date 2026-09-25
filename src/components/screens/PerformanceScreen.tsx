@@ -283,7 +283,7 @@ export function PerformanceScreen() {
                         ${prod.netProfit.toFixed(2)}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="font-bold text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] px-2 py-0.5 rounded text-xs">
+                        <span className="font-bold text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] px-2 py-0.5 rounded-lg text-xs">
                           {prod.profitMargin}%
                         </span>
                       </td>

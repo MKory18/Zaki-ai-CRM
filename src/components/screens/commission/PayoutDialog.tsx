@@ -203,14 +203,14 @@ export function PayoutDialog({
           {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="h-9 rounded-lg border border-[var(--sys-border)] px-4 text-sm">
+            <button type="button" onClick={onClose} className="h-10 rounded-lg border border-[var(--sys-border)] px-4 text-sm">
               إلغاء
             </button>
             <button
               type="button"
               onClick={() => void pay()}
               disabled={saving || !wallet || (!sameCurrency && !(numericRate > 0))}
-              className="h-9 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+              className="h-10 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
             >
               {saving ? 'جارٍ الصرف…' : 'صرف'}
             </button>

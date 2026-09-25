@@ -293,7 +293,7 @@ export function LandingPageDetailScreen() {
               <CardContent className="p-4 space-y-3">
                 <h3 className="font-semibold text-[var(--sys-heading)]">نموذج الطلب</h3>
                 <div className="flex items-center gap-2 rounded-lg border border-[var(--sys-success)]/40 bg-[var(--sys-success-soft)] px-3 py-2.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-bold">✓</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-bold">✓</span>
                   <div>
                     <p className="text-sm font-semibold text-[var(--sys-heading)]">نموذج الطلب مفعل</p>
                     <p className="text-[11px] text-[var(--sys-muted-foreground)]">يظهر تلقائيًا أسفل الصفحة لكل زائر — بدون أي إعداد إضافي. المنتج والسعر يؤخذان من قاعدة البيانات.</p>
@@ -370,7 +370,7 @@ export function LandingPageDetailScreen() {
               <CardContent className="p-4 space-y-3">
                 <h3 className="font-semibold text-[var(--sys-heading)]">الرابط العام</h3>
                 <div className="flex items-center gap-2" dir="ltr">
-                  <code className="flex-1 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded px-3 py-2 truncate">{publicUrl}</code>
+                  <code className="flex-1 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg px-3 py-2 truncate">{publicUrl}</code>
                   <Button variant="secondary" size="sm" onClick={copyUrl}><Copy className="w-4 h-4" /> {copied ? 'تم' : 'نسخ'}</Button>
                   {lp.isPublished && (
                     <a href={`/lp/${lp.slug}`} target="_blank" rel="noopener noreferrer">

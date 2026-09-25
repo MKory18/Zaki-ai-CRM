@@ -46,14 +46,14 @@ export function PendingScreen() {
               setChecking(false);
               window.location.reload();
             }}
-            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[var(--sys-border)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded-lg bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[var(--sys-border)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
             <span>تحديث الحالة</span>
           </button>
           <button
             onClick={handleLogout}
-            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-destructive)]/85 transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-destructive)]/85 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>تسجيل الخروج</span>
@@ -83,7 +83,7 @@ export function BlockedScreen({ status }: { status: string }) {
         </div>
         <button
           onClick={handleLogout}
-          className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-destructive)]/85 transition-colors cursor-pointer"
+          className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-destructive)]/85 transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
           <span>تسجيل الخروج</span>

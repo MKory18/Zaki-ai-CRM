@@ -156,7 +156,7 @@ export function CustomersScreen() {
                   <a
                     href={`tel:${c.phone}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center space-x-1 rtl:space-x-reverse font-mono font-bold text-[var(--sys-heading)] bg-[var(--sys-surface)] px-2 py-1 rounded hover:bg-[var(--sys-border)]"
+                    className="inline-flex items-center space-x-1 rtl:space-x-reverse font-mono font-bold text-[var(--sys-heading)] bg-[var(--sys-surface)] px-2 py-1 rounded-lg hover:bg-[var(--sys-border)]"
                   >
                     <Phone className="w-3 h-3 text-[var(--sys-destructive)]" />
                     <span dir="ltr">{c.rawPhone || c.phone}</span>

@@ -172,16 +172,16 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
                   {canManage && (
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button disabled={busyId === s.id} onClick={() => void testSource(s)} title="اختبار" className="rounded p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"><FlaskConical className="h-4 w-4" /></button>
+                        <button disabled={busyId === s.id} onClick={() => void testSource(s)} title="اختبار" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"><FlaskConical className="h-4 w-4" /></button>
                         <button
                           disabled={busyId === s.id}
                           onClick={() => void act(s, () => crmApi(`/api/telegram/sources/${s.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: !s.isActive }) }), 'تعذر التحديث')}
                           title={s.isActive ? 'تعطيل' : 'تفعيل'}
-                          className="rounded p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
+                          className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                         >
                           <Power className="h-4 w-4" />
                         </button>
-                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded p-1.5 text-rose-500 hover:bg-[var(--sys-destructive-soft)]"><Trash2 className="h-4 w-4" /></button>
+                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded-lg p-1.5 text-rose-500 hover:bg-[var(--sys-destructive-soft)]"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </td>
                   )}

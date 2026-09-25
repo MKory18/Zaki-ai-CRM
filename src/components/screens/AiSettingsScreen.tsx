@@ -145,7 +145,7 @@ export function AiSettingsScreen() {
             key={value}
             type="button"
             onClick={() => setTab(value)}
-            className={`h-9 flex-1 rounded-lg border text-xs font-medium ${
+            className={`h-10 flex-1 rounded-lg border text-xs font-medium ${
               tab === value ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] text-[var(--sys-foreground)]'
             }`}
           >
@@ -254,7 +254,7 @@ export function AiSettingsScreen() {
                     <span className="flex items-center gap-1.5">
                       <span className="text-xs font-semibold text-[var(--sys-foreground)]">{job.label}</span>
                       {overridden && (
-                        <span className="rounded bg-[var(--sys-primary-soft)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-primary)]">
+                        <span className="rounded-lg bg-[var(--sys-primary-soft)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sys-primary)]">
                           معدّل
                         </span>
                       )}
@@ -272,7 +272,7 @@ export function AiSettingsScreen() {
                       <p className="mb-2 text-[10px] text-[var(--sys-muted-foreground)]">
                         يستبدل النظام:{' '}
                         {job.slots.map((s) => (
-                          <code key={s} className="mx-0.5 rounded bg-[var(--sys-surface-strong)] px-1 font-mono text-[9px]">{s}</code>
+                          <code key={s} className="mx-0.5 rounded-lg bg-[var(--sys-surface-strong)] px-1 font-mono text-[9px]">{s}</code>
                         ))}
                       </p>
                     )}
@@ -338,7 +338,7 @@ export function AiSettingsScreen() {
                         summary prompt with no {context} summarises nothing
                         and fails silently otherwise. */}
                     {missing.length > 0 && (
-                      <p className="mt-1.5 flex items-start gap-1 rounded bg-[var(--sys-warning-soft)] p-1.5 text-[10px] leading-relaxed text-[var(--sys-warning)]">
+                      <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-[var(--sys-warning-soft)] p-1.5 text-[10px] leading-relaxed text-[var(--sys-warning)]">
                         <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
                         <span>
                           نصّك لا يحتوي {missing.join('، ')} — لن تصل الأرقام إلى النموذج، وسيجيب من

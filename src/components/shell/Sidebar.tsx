@@ -104,10 +104,27 @@ export function Sidebar({
     <>
       {mobileOpen && <div className="fixed inset-0 z-40 bg-[var(--sys-sidebar)]/50 md:hidden" onClick={onClose} />}
 
+      {/*
+        THE SIDEWAYS SCROLL NOBODY COULD FIND.
+
+        This used to stay mounted when closed and slide out past the right
+        edge, which is how it slid back in. But a `fixed` box 280px beyond
+        the edge still counts towards how wide the document is, and no
+        `overflow` on any ancestor can clip it — a fixed element's
+        containing block is the viewport itself. So EVERY screen on EVERY
+        phone scrolled 280px sideways into an empty grey field. It reads as
+        a broken screen rather than as a menu, and it survived both the rule
+        against sideways scrolling and the test for it, because both look
+        for over-wide columns in a screen's source and this is in no
+        screen's source at all.
+
+        Closed it is now `display: none`, which takes up no width anywhere.
+        Open it slides in — the entrance is the half anybody sees.
+      */}
       <aside
         className={clsx(
-          'fixed top-0 bottom-0 right-0 z-40 flex flex-col w-[280px] bg-[var(--sys-heading)] text-[var(--sys-muted-foreground)] transition-transform duration-200 md:translate-x-0',
-          mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+          'fixed top-0 bottom-0 right-0 z-40 flex-col w-[280px] bg-[var(--sys-heading)] text-[var(--sys-muted-foreground)] md:flex',
+          mobileOpen ? 'flex animate-in slide-in-from-right duration-200' : 'hidden'
         )}
       >
         <div className="flex items-center h-[72px] px-5 border-b border-[var(--sys-heading)] shrink-0">

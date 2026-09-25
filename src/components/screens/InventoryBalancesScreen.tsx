@@ -128,7 +128,7 @@ export function InventoryBalancesScreen() {
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded">
+                    <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-lg">
                       {s.sku}
                     </span>
                     <a

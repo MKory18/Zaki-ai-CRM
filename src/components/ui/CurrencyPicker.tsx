@@ -14,7 +14,7 @@ import { CURRENCIES, minorUnitFor } from '@/lib/currencies';
  *
  * Picking a listed currency fills in its official decimals. They stay
  * editable, and the control says so when they differ from the official ones
- * — this number decides how every amount in the country is rounded.
+ * — this number decides how every amount in the country is rounded-lg.
  */
 
 export interface CurrencyChoice {

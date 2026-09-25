@@ -491,7 +491,7 @@ export function ProductsScreen() {
                       className="w-full h-20 object-cover"
                     />
                     {primaryIndex === idx && (
-                      <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center space-x-0.5">
+                      <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-[9px] font-bold px-1.5 py-0.5 rounded-lg flex items-center space-x-0.5">
                         <Star className="w-2.5 h-2.5" />
                         <span>رئيسية</span>
                       </span>
@@ -507,7 +507,7 @@ export function ProductsScreen() {
                       <button
                         type="button"
                         onClick={() => setPrimaryIndex(idx)}
-                        className="absolute bottom-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-sidebar)]/60 text-[var(--sys-primary-foreground)] text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        className="absolute bottom-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-sidebar)]/60 text-[var(--sys-primary-foreground)] text-[9px] px-1.5 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
                         رئيسية
                       </button>

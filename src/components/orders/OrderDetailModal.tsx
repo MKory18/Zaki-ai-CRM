@@ -771,7 +771,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 <select
                   value={channelDraft}
                   onChange={(e) => setChannelDraft(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+                  className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
                 >
                   <option value="">— بلا قناة —</option>
                   {channels.map((c) => (

@@ -95,7 +95,7 @@ export function DateRange({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full h-9 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] inline-flex items-center gap-2 hover:border-[var(--sys-primary)]/50"
+        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] inline-flex items-center gap-2 hover:border-[var(--sys-primary)]/50"
       >
         <CalendarDays className="w-3.5 h-3.5 text-[var(--sys-muted)] shrink-0" />
         <span className="truncate flex-1 text-start">{summary}</span>

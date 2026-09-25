@@ -42,7 +42,7 @@ interface Loaded {
 }
 
 const INPUT =
-  'h-9 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]';
+  'h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]';
 
 /** Nothing to fill from — said plainly rather than previewed against a lie. */
 const NO_SAMPLE = 'لا طلبات في هذا المتجر بعد، فلا معاينة بطلب حقيقي.';
@@ -244,14 +244,14 @@ export function MessageTemplatesCard() {
                           type="button"
                           title={v.label}
                           onClick={() => insertVar(t.id, v.key)}
-                          className="rounded border border-[var(--sys-border)] bg-[var(--sys-surface)] px-1.5 py-0.5 text-[10px] text-[var(--sys-primary)] hover:border-[var(--sys-primary)]"
+                          className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-1.5 py-0.5 text-[10px] text-[var(--sys-primary)] hover:border-[var(--sys-primary)]"
                         >
                           {v.label}
                         </button>
                       ))}
                     </div>
 
-                    <p className="rounded bg-[var(--sys-surface)] px-2 py-1.5 text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
+                    <p className="rounded-lg bg-[var(--sys-surface)] px-2 py-1.5 text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
                       {data.sample ? fillTemplate(t.body, data.sample) || '—' : NO_SAMPLE}
                     </p>
                   </div>
