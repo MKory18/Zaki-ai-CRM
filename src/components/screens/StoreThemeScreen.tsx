@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Palette, Loader2, Check, PanelTop, ShoppingBag, CreditCard,
   PanelBottom, LayoutTemplate, ExternalLink, Image as ImageIcon, ListTree,
+  LayoutGrid, Download, Upload, Loader2 as Spinner,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
@@ -40,9 +41,10 @@ const SWATCHES = [
   '#7c3aed', '#0f172a', '#8b5a2b', '#be123c',
 ];
 
-type TabKey = 'general' | 'chrome' | 'product' | 'checkout' | 'cart' | 'home';
+type TabKey = 'gallery' | 'general' | 'chrome' | 'product' | 'checkout' | 'cart' | 'home';
 
 const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'gallery', label: 'معرض القوالب', icon: LayoutGrid },
   { key: 'general', label: 'عام', icon: Palette },
   { key: 'chrome', label: 'الترويسة والتذييل', icon: PanelTop },
   { key: 'product', label: 'إعدادات المنتج', icon: ShoppingBag },
@@ -88,7 +90,9 @@ export function StoreThemeScreen() {
   const [store, setStore] = useState<StoreInfo | null>(null);
   const [theme, setTheme] = useState<StoreTheme>(DEFAULT_STORE_THEME);
   const [saved, setSaved] = useState<StoreTheme>(DEFAULT_STORE_THEME);
-  const [tab, setTab] = useState<TabKey>('general');
+  const [tab, setTab] = useState<TabKey>('gallery');
+  const [templates, setTemplates] = useState<{ key: string; label: string; hint: string; swatch: string }[]>([]);
+  const [installing, setInstalling] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -96,10 +100,14 @@ export function StoreThemeScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiJson<{ store: StoreInfo; theme: StoreTheme }>('/api/store/theme');
+      const [data, gallery] = await Promise.all([
+        apiJson<{ store: StoreInfo; theme: StoreTheme }>('/api/store/theme'),
+        apiJson<{ templates: { key: string; label: string; hint: string; swatch: string }[] }>('/api/store/templates'),
+      ]);
       setStore(data.store);
       setTheme(data.theme);
       setSaved(data.theme);
+      setTemplates(gallery.templates);
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر تحميل القالب' });
     } finally {
@@ -130,6 +138,37 @@ export function StoreThemeScreen() {
     key: K,
     patch: Partial<NonNullable<StoreTheme[K]>>
   ) => setTheme((t) => ({ ...t, [key]: { ...(t[key] as object), ...patch } } as StoreTheme));
+
+  /**
+   * Install a template. It writes the DRAFT — the seller looks at it before
+   * any customer does — so this reloads rather than pretending to know what
+   * the server decided.
+   */
+  async function install(source: 'builtin' | 'file', payload: string | unknown) {
+    setInstalling(typeof payload === 'string' ? payload : 'file');
+    setMsg(null);
+    try {
+      const body = source === 'builtin' ? { source, key: payload } : { source, file: payload };
+      const res = await apiJson<{ installed: string }>('/api/store/templates', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      await load();
+      setMsg({ ok: true, text: `ثُبِّت «${res.installed}» كمسوّدة — عاينه في «التصميم» ثم انشره` });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر التثبيت' });
+    } finally {
+      setInstalling(null);
+    }
+  }
+
+  async function importFile(file: File) {
+    try {
+      await install('file', JSON.parse(await file.text()));
+    } catch {
+      setMsg({ ok: false, text: 'الملف ليس ملف قالب صالحاً' });
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -202,6 +241,73 @@ export function StoreThemeScreen() {
           </button>
         ))}
       </nav>
+
+      {/* ── معرض القوالب ── */}
+      {tab === 'gallery' && (
+        <div className="space-y-4">
+          <div className={CARD}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-bold text-[#121926]">قالبك الحالي</p>
+                <p className="mt-0.5 text-[11px] text-[#697586]">
+                  احفظه كملف لتنقله إلى متجر آخر، أو ثبّت ملفاً جاهزاً.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <a href="/api/store/templates?export=1" download>
+                  <Button variant="secondary" size="sm">
+                    <Download className="h-3.5 w-3.5" /> صدّر قالبي
+                  </Button>
+                </a>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] border border-[#e3e8ef] px-3 py-1.5 text-xs font-bold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]">
+                  <Upload className="h-3.5 w-3.5" /> استورد ملفاً
+                  <input
+                    type="file"
+                    accept="application/json,.json"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (file) void importFile(file);
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+            <p className="mt-2 text-[10.5px] leading-relaxed text-[#9aa4b2]">
+              القالب ينقل الشكل والأقسام ونصوصها. لا ينقل الصور — كل صورة تخصّ المتجر الذي رُفعت فيه
+              ولا تُعرض من متجر آخر — ولا الأسعار ولا البكسلات ولا النطاق.
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {templates.map((t) => (
+              <div key={t.key} className={`${CARD} flex flex-col gap-2`}>
+                <div className="flex items-center gap-2">
+                  <span className="h-8 w-8 shrink-0 rounded-lg" style={{ background: t.swatch }} aria-hidden />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-[#121926]">{t.label}</p>
+                  </div>
+                </div>
+                <p className="flex-1 text-[11px] leading-relaxed text-[#697586]">{t.hint}</p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!!installing}
+                  onClick={() => void install('builtin', t.key)}
+                >
+                  {installing === t.key && <Spinner className="h-3.5 w-3.5 animate-spin" />}
+                  ثبّته كمسوّدة
+                </Button>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10.5px] leading-relaxed text-[#9aa4b2]">
+            التثبيت يكتب المسوّدة فقط: تعاينها في «التصميم» وتنشرها حين ترضى عنها. لا شيء يتغيّر عند
+            الزبون قبل النشر.
+          </p>
+        </div>
+      )}
 
       {/* ── أ. عام: الخطوط والألوان ── */}
       {tab === 'general' && (
