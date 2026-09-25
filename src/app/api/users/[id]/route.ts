@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
 import { ASSIGNABLE_ROLES, UserRole, UserStatus } from '@/types/auth';
 import { logAudit } from '@/lib/audit';
-import { requirePermission } from '@/lib/authorization';
+import { can, requirePermission } from '@/lib/authorization';
 import { isPrivilegedRoleName } from '@/lib/role-names';
 import { canConferRole } from '@/lib/user-permissions';
 import { parseHhMm, parseRestDays } from '@/lib/employee-shift';
@@ -234,6 +234,44 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
       if ('restDays' in body) updateData.restDays = parseRestDays(body.restDays);
 
+      // WHAT THIS PERSON IS PAID.
+      //
+      // Empty clears it, and no salary on file is the normal state: a
+      // salary is a deliberate entry, and a default one would pay somebody
+      // a number nobody chose. The currency is its own field rather than
+      // the store's, for the same reason the commission currency is — an
+      // Egyptian employee told a figure in Syrian pounds has been told
+      // nothing.
+      if ('salaryAmount' in body || 'salaryCurrency' in body) {
+        // Its own key. Whoever may edit a colleague's phone number has no
+        // business setting what the business pays them.
+        if (!can(admin, 'payroll.pay')) {
+          return NextResponse.json(
+            { error: 'Forbidden: missing required permission payroll.pay' },
+            { status: 403 }
+          );
+        }
+      }
+      if ('salaryAmount' in body) {
+        const raw = body.salaryAmount;
+        if (raw === null || raw === '') {
+          updateData.salaryAmount = null;
+        } else {
+          const amount = Number(raw);
+          if (!Number.isFinite(amount) || amount < 0 || amount > 100_000_000) {
+            return NextResponse.json({ error: 'الراتب رقم موجب' }, { status: 400 });
+          }
+          updateData.salaryAmount = amount;
+        }
+      }
+      if ('salaryCurrency' in body) {
+        const raw = typeof body.salaryCurrency === 'string' ? body.salaryCurrency.trim().toUpperCase() : '';
+        if (raw && !/^[A-Z]{3}$/.test(raw)) {
+          return NextResponse.json({ error: 'رمز العملة ثلاثة أحرف (ISO)' }, { status: 400 });
+        }
+        updateData.salaryCurrency = raw || null;
+      }
+
       auditAction = 'USER_CONTACT_UPDATED';
     } else if (action === 'delete') {
       if (target.id === admin.id) {
@@ -289,6 +327,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
               shiftStart: target.shiftStart,
               shiftEnd: target.shiftEnd,
               restDays: target.restDays,
+              // The amount is in the audit on purpose: a salary changed
+              // quietly is the one change nobody can reconstruct later.
+              salaryAmount: target.salaryAmount === null ? null : Number(target.salaryAmount),
+              salaryCurrency: target.salaryCurrency,
             }
           : {}),
       },

@@ -34,7 +34,7 @@ interface Row {
   note: string | null;
   decisionNote: string | null;
   decidedAt: string | null;
-  payoutId: string | null;
+  payslipId: string | null;
   reversesId: string | null;
   user: { id: string; name: string; role: string };
 }
@@ -194,7 +194,7 @@ export function PenaltiesScreen() {
                         </button>
                       </>
                     )}
-                    {row.status === 'APPLIED' && !row.payoutId && (
+                    {row.status === 'APPLIED' && !row.payslipId && (
                       <button
                         type="button"
                         disabled={busy === row.id}
@@ -204,7 +204,7 @@ export function PenaltiesScreen() {
                         <RotateCcw className="h-3 w-3" /> ارتجاع
                       </button>
                     )}
-                    {row.status === 'APPLIED' && row.payoutId && (
+                    {row.status === 'APPLIED' && row.payslipId && (
                       <span className="text-[10px] text-[#9aa4b2]">
                         سُوّي مع صرفية — تصحيحه حركة جديدة لا تعديل للماضي.
                       </span>

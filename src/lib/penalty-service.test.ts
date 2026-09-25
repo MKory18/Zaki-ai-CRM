@@ -159,7 +159,7 @@ describe('early leaving', () => {
 });
 
 describe('deciding', () => {
-  const PROPOSED = { id: 'p1', status: 'PROPOSED', payoutId: null, amount: { negated: () => -60 }, companyId: 'c1', storeId: 's1', userId: 'u1', ruleId: 'r1', kind: 'LATE', occurredOn: new Date(), units: 40, chargedUnits: 30, currencyCode: 'SYP' };
+  const PROPOSED = { id: 'p1', status: 'PROPOSED', payslipId: null, amount: { negated: () => -60 }, companyId: 'c1', storeId: 's1', userId: 'u1', ruleId: 'r1', kind: 'LATE', occurredOn: new Date(), units: 40, chargedUnits: 30, currencyCode: 'SYP' };
 
   it('applying stamps who decided it — money never moves anonymously', async () => {
     db.penalty.findUnique.mockResolvedValue(PROPOSED);
@@ -202,7 +202,7 @@ describe('deciding', () => {
 
 describe('undoing money that was taken', () => {
   const APPLIED = {
-    id: 'p1', status: 'APPLIED', payoutId: null, amount: { negated: () => -60 },
+    id: 'p1', status: 'APPLIED', payslipId: null, amount: { negated: () => -60 },
     companyId: 'c1', storeId: 's1', userId: 'u1', ruleId: 'r1', kind: 'LATE',
     occurredOn: new Date('2026-09-23T00:00:00Z'), units: 40, chargedUnits: 30, currencyCode: 'SYP',
   };
@@ -229,7 +229,7 @@ describe('undoing money that was taken', () => {
   });
 
   it('and refuses one already settled against a payout — that money has left', async () => {
-    db.penalty.findUnique.mockResolvedValue({ ...APPLIED, payoutId: 'pay1' });
+    db.penalty.findUnique.mockResolvedValue({ ...APPLIED, payslipId: 'pay1' });
     await expect(
       reversePenalty(db as never, { penaltyId: 'p1', decidedById: 'boss', note: 'خطأ' })
     ).rejects.toMatchObject({ reason: 'ALREADY_PAID' });
@@ -249,6 +249,6 @@ describe('what is owed', () => {
       { currencyCode: 'SYP', amount: 100, ids: ['a', 'b'] },
       { currencyCode: 'EGP', amount: 10, ids: ['c'] },
     ]);
-    expect(db.penalty.findMany.mock.calls[0][0].where).toMatchObject({ status: 'APPLIED', payoutId: null });
+    expect(db.penalty.findMany.mock.calls[0][0].where).toMatchObject({ status: 'APPLIED', payslipId: null });
   });
 });

@@ -14,6 +14,7 @@ import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { ScoreCard } from '@/components/performance/ScoreCard';
 import { UserShift } from '@/components/screens/users/UserShift';
+import { UserSalary } from '@/components/screens/users/UserSalary';
 import {
   PERMISSION_MODULES,
   MODULE_LABELS,
@@ -228,6 +229,21 @@ export function UserDetailScreen() {
               {/* When they start and when they hand over. Lateness — and
                   anything deducted for it — is measured against these, not
                   against the country's nine o'clock. */}
+              {/* What they are paid, and the button that pays it — where
+                  the deductions finally land. Its own permission: whoever
+                  may edit a colleague's phone has no business setting what
+                  the business pays them. */}
+              {userId && userCan(currentUser, 'payroll.view') && (
+                <UserSalary
+                  userId={userId}
+                  initial={{
+                    salaryAmount: user.salaryAmount ?? null,
+                    salaryCurrency: user.salaryCurrency ?? null,
+                  }}
+                  canEdit={userCan(currentUser, 'payroll.pay')}
+                  canPay={userCan(currentUser, 'payroll.pay')}
+                />
+              )}
               {userId && (
                 <UserShift
                   userId={userId}

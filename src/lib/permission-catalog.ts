@@ -171,6 +171,19 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     ],
   },
   {
+    module: 'payroll',
+    items: [
+      // A salary is not covered by `users.view`. That key exists so people
+      // can find a colleague and see who does what; it would hand every
+      // supervisor who holds it the whole company's pay.
+      { key: 'payroll.view', ar: 'عرض الرواتب', en: 'View salaries' },
+      // Setting a salary and paying it are one authority, because the
+      // payslip snapshots the salary AT payment: whoever can hand the money
+      // over can already decide the amount at the moment of handing it.
+      { key: 'payroll.pay', ar: 'تحديد الرواتب وصرفها', en: 'Set and pay salaries' },
+    ],
+  },
+  {
     module: 'penalties',
     items: [
       // Seeing what the system PROPOSED is not deciding it. Two keys,
@@ -292,6 +305,7 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   ops: { ar: 'التشغيل', en: 'Operations' },
   control: { ar: 'الرقابة', en: 'Control' },
   team: { ar: 'الفريق', en: 'Team' },
+  payroll: { ar: 'الرواتب', en: 'Payroll' },
   penalties: { ar: 'الخصومات', en: 'Deductions' },
   growth: { ar: 'النمو', en: 'Growth' },
   apps: { ar: 'التطبيقات', en: 'Apps' },

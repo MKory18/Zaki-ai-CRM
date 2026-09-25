@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { roundMinor } from './money';
+import { checkWallet, recordSpend } from './pay-from-wallet';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -91,12 +92,6 @@ export async function payCommission(tx: Tx, input: PayoutInput): Promise<PayoutR
   if (input.entryIds.length === 0) throw new PayoutRefused('NO_ENTRIES');
   if (!(input.exchangeRate > 0)) throw new PayoutRefused('BAD_RATE');
 
-  const wallet = await tx.wallet.findFirst({
-    where: { id: input.walletId, companyId: input.companyId, isActive: true },
-    select: { id: true, currencyCode: true, name: true, country: { select: { minorUnit: true } } },
-  });
-  if (!wallet) throw new PayoutRefused('WALLET_NOT_FOUND');
-
   const entries = await tx.commissionEntry.findMany({
     where: { id: { in: input.entryIds }, companyId: input.companyId },
     select: { id: true, userId: true, status: true, amount: true, currencyCode: true, payoutId: true },
@@ -116,13 +111,23 @@ export async function payCommission(tx: Tx, input: PayoutInput): Promise<PayoutR
   const amount = roundMinor(entries.reduce((sum, e) => sum + Number(e.amount), 0), 3);
   if (amount <= 0) throw new PayoutRefused('NOTHING_OWED');
 
-  const paidAmount = roundMinor(amount * input.exchangeRate, wallet.country.minorUnit);
+  // The wallet, the rate and what would actually leave it — worked out by
+  // the one function that knows how money leaves a wallet to pay a person,
+  // so a payslip and a commission payout can never round differently.
+  const wallet = await checkWallet(tx, {
+    companyId: input.companyId,
+    walletId: input.walletId,
+    amount,
+    exchangeRate: input.exchangeRate,
+  });
+  if (typeof wallet === 'string') throw new PayoutRefused(wallet);
+  const paidAmount = wallet.paidAmount;
 
   const payout = await tx.commissionPayout.create({
     data: {
       companyId: input.companyId,
       userId: input.userId,
-      walletId: wallet.id,
+      walletId: wallet.walletId,
       amount,
       currencyCode: currency,
       paidAmount,
@@ -142,24 +147,23 @@ export async function payCommission(tx: Tx, input: PayoutInput): Promise<PayoutR
 
   // The money leaving, in the wallet's own currency — an expense of the
   // business, in the one place every other movement is recorded.
-  await tx.walletMovement.create({
-    data: {
+  await recordSpend(
+    tx,
+    {
       companyId: input.companyId,
-      walletId: wallet.id,
-      direction: 'OUT',
-      amount: paidAmount,
-      currencyCode: wallet.currencyCode,
-      party: person?.name ?? 'موظف',
+      walletId: wallet.walletId,
+      amount,
+      currencyCode: currency,
+      exchangeRate: input.exchangeRate,
+      personName: person?.name ?? 'موظف',
       category: 'COMMISSION',
-      note:
-        currency === wallet.currencyCode
-          ? `صرف عمولة — ${entries.length} قيد`
-          : `صرف عمولة — ${amount} ${currency} بسعر ${input.exchangeRate}`,
       referenceType: 'COMMISSION_PERIOD',
       referenceId: payout.id,
+      note: `صرف عمولة — ${entries.length} قيد`,
       createdById: input.createdById,
     },
-  });
+    wallet
+  );
 
   return {
     payoutId: payout.id,

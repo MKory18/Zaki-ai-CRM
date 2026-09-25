@@ -60,6 +60,7 @@ model Company {
   adAccounts            AdAccount[]
   customConversions     CustomConversion[]
   penaltyRules          PenaltyRule[]
+  payslips              Payslip[]
   penalties             Penalty[]
 
   @@map("companies")
@@ -229,6 +230,11 @@ model User {
   /// Lateness, early leaving and every penalty built on them are measured
   /// against THESE. Measuring a noon shift against a nine o'clock country
   /// makes somebody three hours late every day of their life.
+  /// What this person is paid, and in what. Null = no salary on file,
+  /// which is every employee until somebody enters one: a salary is a
+  /// deliberate entry and never a default.
+  salaryAmount      Decimal?  @map("salary_amount") @db.Decimal(12, 2)
+  salaryCurrency    String?   @map("salary_currency")
   shiftStart        String?   @map("shift_start") @db.VarChar(5)
   shiftEnd          String?   @map("shift_end") @db.VarChar(5)
   /// Their rest days as comma-separated weekday numbers (0 = Sunday).
@@ -274,6 +280,7 @@ model User {
   countryAccess                 UserCountryAccess[]
   storeAccess                   UserStoreAccess[]
   penalties                     Penalty[]
+  payslips                      Payslip[]
   notifications                 Notification[]
   customerBlocks                CustomerBlock[]        @relation("CustomerBlockedBy")
   customerBlockReleases         CustomerBlock[]        @relation("CustomerBlockReleasedBy")
@@ -1875,6 +1882,7 @@ model Wallet {
   closings  DailyClosing[]
   receipts  StatementReceipt[]
   commissionPayouts CommissionPayout[]
+  payslips          Payslip[]
 
   @@unique([companyId, storeId, name])
   @@index([companyId, countryId, isActive])
@@ -2259,20 +2267,69 @@ model Penalty {
   decisionNote String?   @map("decision_note")
   /// Reversing entries only, linked to the original — never a delete.
   reversesId   String?   @unique @map("reverses_id")
-  payoutId     String?   @map("payout_id")
+  /// The payslip that settled it. Null while it is still owed.
+  payslipId    String?   @map("payslip_id")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   user       User         @relation(fields: [userId], references: [id], onDelete: Restrict)
   rule       PenaltyRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  payslip    Payslip?     @relation(fields: [payslipId], references: [id], onDelete: Restrict)
   reverses   Penalty?     @relation("PenaltyReversal", fields: [reversesId], references: [id], onDelete: Restrict)
   reversedBy Penalty?     @relation("PenaltyReversal")
 
   @@index([companyId, userId, status])
   @@index([companyId, status, occurredOn])
-  @@index([payoutId])
+  @@index([payslipId])
   @@map("penalties")
+}
+
+/**
+ * ONE MONTH'S PAY, AND WHAT WAS TAKEN OUT OF IT.
+ *
+ * The salary is a SNAPSHOT. Reading it from the employee later would
+ * rewrite last March every time somebody gets a rise, and a payslip that
+ * changes is not a record of anything.
+ *
+ * `carriedOver` is the guard that matters: deductions larger than the
+ * salary do not produce a negative payment. What did not fit stays owed
+ * and is offered against the next payslip — a person is never handed a bill
+ * instead of wages.
+ */
+model Payslip {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  storeId      String   @map("store_id")
+  userId       String   @map("user_id")
+  periodStart  DateTime @map("period_start") @db.Date
+  periodEnd    DateTime @map("period_end") @db.Date
+  /// The salary as it stood when this was paid.
+  salaryAmount Decimal  @map("salary_amount") @db.Decimal(12, 2)
+  currencyCode String   @map("currency_code")
+  penaltyTotal Decimal  @default(0) @map("penalty_total") @db.Decimal(12, 2)
+  netAmount    Decimal  @map("net_amount") @db.Decimal(12, 2)
+  /// Deductions that exceeded the salary and were NOT settled here.
+  carriedOver  Decimal  @default(0) @map("carried_over") @db.Decimal(12, 2)
+  walletId     String   @map("wallet_id")
+  /// What actually left, in the WALLET's currency, at the rate the owner
+  /// wrote at payment. Stored and never recalculated.
+  paidAmount   Decimal  @map("paid_amount") @db.Decimal(14, 3)
+  paidCurrency String   @map("paid_currency")
+  exchangeRate Decimal  @map("exchange_rate") @db.Decimal(14, 6)
+  note         String?
+  createdById  String   @map("created_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  wallet    Wallet    @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  penalties Penalty[]
+
+  @@unique([companyId, userId, periodStart], map: "payslips_one_per_period")
+  @@index([companyId, createdAt])
+  @@index([walletId])
+  @@map("payslips")
 }
 
 model CommissionPayout {

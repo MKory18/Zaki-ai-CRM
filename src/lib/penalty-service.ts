@@ -268,7 +268,7 @@ export async function reversePenalty(tx: Tx, input: Decision) {
   if (!row) throw new PenaltyRefused('NOT_FOUND');
   if (!mayMove(row.status, 'REVERSED')) throw new PenaltyRefused('BAD_TRANSITION');
   if (!input.note?.trim()) throw new PenaltyRefused('REASON_REQUIRED');
-  if (row.payoutId) throw new PenaltyRefused('ALREADY_PAID');
+  if (row.payslipId) throw new PenaltyRefused('ALREADY_PAID');
 
   const now = new Date();
   await tx.penalty.update({
@@ -305,7 +305,7 @@ export async function penaltiesOwed(
   params: { companyId: string; userId: string }
 ): Promise<{ currencyCode: string; amount: number; ids: string[] }[]> {
   const rows = await tx.penalty.findMany({
-    where: { companyId: params.companyId, userId: params.userId, status: 'APPLIED', payoutId: null },
+    where: { companyId: params.companyId, userId: params.userId, status: 'APPLIED', payslipId: null },
     select: { id: true, amount: true, currencyCode: true },
   });
 

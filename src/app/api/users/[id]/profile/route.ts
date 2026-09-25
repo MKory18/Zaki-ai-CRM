@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requirePermission } from '@/lib/authorization';
+import { can, requirePermission } from '@/lib/authorization';
 
 
 /**
@@ -11,7 +11,8 @@ import { requirePermission } from '@/lib/authorization';
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { companyId } = await requirePermission('users.view');
+    const viewer = await requirePermission('users.view');
+    const { companyId } = viewer;
 
     const user = await db.user.findFirst({
       where: {
@@ -31,6 +32,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         // the country's — and the screen says so rather than showing 09:00
         // as though somebody had chosen it.
         shiftStart: true, shiftEnd: true, restDays: true,
+        salaryAmount: true, salaryCurrency: true,
         assignedBy: { select: { name: true } },
       },
     });
@@ -52,7 +54,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       db.order.count({ where: { ...tenantWhere, moderatorId: id } }),
     ]);
 
-    return NextResponse.json({ ...user, workload: { assigned, claimed, created } });
+    // A SALARY IS NOT COVERED BY users.view.
+    //
+    // That key exists so people can find a colleague and see who does what.
+    // Returning pay with it would hand every supervisor who holds it the
+    // whole company's salaries — and once it is in the response it is in
+    // the browser, whatever the screen chooses to draw.
+    const maySeePay = can(viewer, 'payroll.view');
+    const { salaryAmount, salaryCurrency, ...rest } = user;
+
+    return NextResponse.json({
+      ...rest,
+      ...(maySeePay
+        ? { salaryAmount: salaryAmount === null ? null : Number(salaryAmount), salaryCurrency }
+        : {}),
+      workload: { assigned, claimed, created },
+    });
   } catch (error: any) {
     return apiErrorResponse(error);
   }

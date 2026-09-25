@@ -51,7 +51,7 @@ export async function GET(req: Request) {
       select: {
         id: true, kind: true, occurredOn: true, units: true, chargedUnits: true,
         amount: true, currencyCode: true, status: true, note: true, decisionNote: true,
-        decidedAt: true, payoutId: true, reversesId: true,
+        decidedAt: true, payslipId: true, reversesId: true,
         user: { select: { id: true, name: true, role: true } },
         decidedById: true,
       },
