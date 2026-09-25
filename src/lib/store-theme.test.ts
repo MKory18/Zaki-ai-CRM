@@ -174,35 +174,6 @@ describe('every colour is a variable', () => {
   });
 });
 
-describe('a footer link cannot point anywhere it likes', () => {
-  it.each([
-    ['javascript:alert(1)'],
-    ['data:text/html,x'],
-    // A path as far as a regex is concerned, another origin as far as a
-    // browser is concerned.
-    ['//evil.example'],
-    ['/\\evil.example'],
-    ['ftp://x.example'],
-  ])(
-    '%s is refused',
-    (href) => {
-      const parsed = storeThemeSchema.safeParse({
-        ...DEFAULT_THEME,
-        footer: { links: [{ label: 'x', href }], copyright: '' },
-      });
-      expect(parsed.success, href).toBe(false);
-    }
-  );
-
-  it('accepts an internal path and an absolute https link', () => {
-    const parsed = storeThemeSchema.safeParse({
-      ...DEFAULT_THEME,
-      footer: { links: [{ label: 'من نحن', href: '/pages/about' }, { label: 'x', href: 'https://e.example/x' }], copyright: '' },
-    });
-    expect(parsed.success).toBe(true);
-  });
-});
-
 describe('the cover image is same-origin, like the page image', () => {
   it('refuses somewhere we do not control', () => {
     expect(

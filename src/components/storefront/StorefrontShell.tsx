@@ -32,6 +32,11 @@ export function StorefrontShell({
   const home = `/s/${store.slug}`;
   const header = store.theme.header;
   const footer = store.theme.footer;
+  // The links are a menu now, with an order and a visibility flag; the
+  // theme keeps only the copyright line. getStorefront has already dropped
+  // the hidden items.
+  const headerMenu = store.menus.HEADER ?? [];
+  const footerMenu = store.menus.FOOTER ?? [];
 
   return (
     <div dir="rtl" className="lp-root sf-root" style={vars as React.CSSProperties}>
@@ -52,6 +57,14 @@ export function StorefrontShell({
               {store.tagline && <em>{store.tagline}</em>}
             </span>
           </Link>
+
+          {headerMenu.length > 0 && (
+            <nav className="sf-header-menu">
+              {headerMenu.map((link, i) => (
+                <a key={i} href={link.href}>{link.label}</a>
+              ))}
+            </nav>
+          )}
 
           {store.supportPhone && (
             <a className="sf-phone" href={`tel:${store.supportPhone.replace(/[^\d+]/g, '')}`} dir="ltr">
@@ -75,16 +88,16 @@ export function StorefrontShell({
 
       <footer className="lp-footer">
         {store.about && <p className="sf-about">{store.about}</p>}
-        {footer?.links?.length ? (
+        {footerMenu.length > 0 && (
           <nav className="sf-footer-links">
-            {footer.links.map((link, i) => (
-              // Plain anchors: a footer link may point outside the shop, and
+            {footerMenu.map((link, i) => (
+              // Plain anchors: a menu link may point outside the shop, and
               // the schema has already refused anything that is not an
               // internal path or an http(s) address.
               <a key={i} href={link.href}>{link.label}</a>
             ))}
           </nav>
-        ) : null}
+        )}
         {store.supportPhone && (
           <a className="lp-footer-phone" href={`tel:${store.supportPhone.replace(/[^\d+]/g, '')}`} dir="ltr">
             <Phone size={14} />

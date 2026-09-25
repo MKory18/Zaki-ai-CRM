@@ -87,10 +87,13 @@ describe('what it refuses to store', () => {
     expect(db.store.update).not.toHaveBeenCalled();
   });
 
-  it('a footer link that walks the shopper off to another origin', async () => {
+  it('a footer object it does not recognise — the links moved to the menus', async () => {
+    // footer.links left the theme when «التذييل» became one of the five
+    // menus; the theme keeps only the copyright line. The rule that a link
+    // cannot point off-site now lives with the menus, and is tested there.
     const res = await patch({
       ...DEFAULT_STORE_THEME,
-      footer: { links: [{ label: 'x', href: '//evil.example' }], copyright: '' },
+      footer: { copyright: 12 as unknown as string },
     });
     expect(res.status).toBe(400);
     expect(db.store.update).not.toHaveBeenCalled();

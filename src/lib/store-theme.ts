@@ -78,26 +78,17 @@ export const storeHeaderSchema = z.object({
   sticky: z.boolean().default(true),
 });
 
-const footerLinkSchema = z.object({
-  label: z.string().trim().min(1).max(60),
-  /**
-   * An internal path or an absolute http(s) URL; nothing else.
-   *
-   * The internal branch refuses a SECOND slash (and a backslash) after the
-   * first: `//evil.example` is a path as far as a regex is concerned and an
-   * off-site address as far as a browser is concerned, so a footer link
-   * could have walked the shop's customers somewhere else entirely.
-   */
-  href: z
-    .string()
-    .trim()
-    .min(1)
-    .max(300)
-    .regex(/^(\/(?![/\\])[^\s]*|https?:\/\/[^\s]+)$/, 'رابط غير صالح'),
-});
-
+/**
+ * The footer's COPYRIGHT — a line of text, and nothing else.
+ *
+ * Its LINKS used to be here too. The contract named «روابط التذييل» in the
+ * template tab and «التذييل» among the five menus, which is one field with
+ * two owners — the thing this whole section exists to stop. The links moved
+ * to /store/menus (the FOOTER menu), where they gain an order and a
+ * visibility flag; migration 20260925130000_store_menus carried over the
+ * ones already saved and removed the key from the theme.
+ */
 export const storeFooterSchema = z.object({
-  links: z.array(footerLinkSchema).max(12).default([]),
   copyright: z.string().trim().max(160).default(''),
 });
 

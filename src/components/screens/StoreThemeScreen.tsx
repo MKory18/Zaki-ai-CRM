@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Palette, Loader2, Check, PanelTop, ShoppingBag, CreditCard,
-  PanelBottom, LayoutTemplate, ExternalLink, Image as ImageIcon,
+  PanelBottom, LayoutTemplate, ExternalLink, Image as ImageIcon, ListTree,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
@@ -409,53 +409,20 @@ export function StoreThemeScreen() {
 
           <div className={CARD}>
             <p className="mb-3 text-sm font-bold text-[#121926]">التذييل</p>
-            <div className="space-y-2">
-              {(theme.footer?.links ?? []).map((link, i) => (
-                <div key={i} className="flex flex-wrap items-center gap-2">
-                  <Input
-                    className="max-w-[180px]"
-                    placeholder="العنوان"
-                    value={link.label}
-                    maxLength={60}
-                    onChange={(e) => {
-                      const links = [...(theme.footer?.links ?? [])];
-                      links[i] = { ...links[i], label: e.target.value };
-                      setPart('footer', { links });
-                    }}
-                  />
-                  <Input
-                    className="max-w-[260px]"
-                    dir="ltr"
-                    placeholder="/pages/about أو https://…"
-                    value={link.href}
-                    maxLength={300}
-                    onChange={(e) => {
-                      const links = [...(theme.footer?.links ?? [])];
-                      links[i] = { ...links[i], href: e.target.value };
-                      setPart('footer', { links });
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setPart('footer', { links: (theme.footer?.links ?? []).filter((_, j) => j !== i) })}
-                    className="text-xs text-[#fb323f] hover:underline"
-                  >
-                    حذف
-                  </button>
-                </div>
-              ))}
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={(theme.footer?.links?.length ?? 0) >= 12}
-                onClick={() => setPart('footer', { links: [...(theme.footer?.links ?? []), { label: '', href: '/' }] })}
-              >
-                أضف رابطاً
-              </Button>
-              <p className={HINT}>
-                مسار داخلي يبدأ بشرطة مائلة واحدة، أو رابط كامل بـ https. أي شيء آخر مرفوض.
-              </p>
-            </div>
+            {/* The links are a MENU — with an order and a visibility flag —
+                and they have one editor. They lived here too for one part,
+                because the contract named them in this tab and named
+                «التذييل» among the five menus. */}
+            <a
+              href="/store/menus"
+              className="flex items-center justify-between gap-2 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2.5 text-xs text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+            >
+              <span className="flex items-center gap-1.5">
+                <ListTree className="h-3.5 w-3.5" />
+                روابط التذييل
+              </span>
+              <span className="font-semibold">في «القوائم» ←</span>
+            </a>
             <label className="mt-3 block">
               <span className={LABEL}>حقوق النشر</span>
               <Input

@@ -36,6 +36,20 @@ export const STOREFRONT_CSS = `
   justify-content: space-between;
   gap: 16px;
 }
+.sf-header-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+  margin-inline-start: auto;
+}
+.sf-header-menu a {
+  color: var(--lp-text);
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sf-header-menu a:hover { color: var(--lp-accent); }
 .sf-footer-links {
   display: flex;
   flex-wrap: wrap;

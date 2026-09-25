@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { db } from './db';
 import { type LandingTheme } from './landing-theme';
 import { DEFAULT_STORE_THEME, parseStoreTheme, type StoreTheme } from './store-theme';
+import { parseMenuItems, visibleItems, type MenuItem, type MenuKey } from './store-menus';
 import { publicizeMedia } from './public-media';
 
 /**
@@ -64,7 +65,24 @@ export interface Storefront {
   companyId: string;
   /** A Single Product store's front page, when one is picked. */
   landingPageId: string | null;
+  /** The shop's menus, already filtered to what a shopper may see. */
+  menus: Partial<Record<MenuKey, MenuItem[]>>;
 }
+
+/**
+ * A shop's menus, as a shopper sees them: hidden items removed, order kept.
+ *
+ * Cached per request like the storefront itself — the shell draws the
+ * header and the footer from the same read.
+ */
+export const getStoreMenus = cache(async function getStoreMenus(
+  storeId: string
+): Promise<Partial<Record<MenuKey, MenuItem[]>>> {
+  const rows = await db.storeMenu.findMany({ where: { storeId }, select: { key: true, items: true } });
+  const out: Partial<Record<MenuKey, MenuItem[]>> = {};
+  for (const row of rows) out[row.key as MenuKey] = visibleItems(parseMenuItems(row.items));
+  return out;
+});
 
 /**
  * The stored theme, or the house one when it is missing or corrupt.
@@ -121,6 +139,7 @@ export const getStorefront = cache(async function getStorefront(slug: string): P
     countryId: store.countryId,
     companyId: store.companyId,
     landingPageId: store.type === 'SINGLE_PRODUCT' ? store.landingPageId : null,
+    menus: await getStoreMenus(store.id),
   };
 });
 

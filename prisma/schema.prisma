@@ -1502,6 +1502,7 @@ model Store {
   customers       Customer[]
   notifications   Notification[]
   pages           StorePage[]
+  menus           StoreMenu[]
 
   @@unique([companyId, slug])
   @@unique([domain])
@@ -1517,6 +1518,30 @@ model Store {
 /// may want. The three legal ones are created with every store, because
 /// their absence stops an advertising account's review — a shop cannot
 /// discover on the day of the campaign that it has no privacy policy.
+/// One of a shop's five menus: the header bar, the main menu, the footer,
+/// "about", and the policies.
+///
+/// The items are JSON because a menu is read whole, written whole and
+/// ordered by hand — never queried by item. A table would buy nothing and
+/// cost a join on every public page render. The landing page's sections are
+/// stored the same way for the same reason.
+model StoreMenu {
+  id        String   @id @default(uuid())
+  companyId String
+  storeId   String
+  /// HEADER | MAIN | FOOTER | ABOUT | POLICIES
+  key       String
+  /// JSON: [{ label, href, visible }] — see src/lib/store-menus.ts.
+  items     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, key])
+  @@map("store_menus")
+}
+
 model StorePage {
   id          String   @id @default(uuid())
   companyId   String
