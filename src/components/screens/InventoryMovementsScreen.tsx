@@ -66,7 +66,7 @@ export function InventoryMovementsScreen() {
           e.preventDefault();
           void load();
         }}
-        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end"
+        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex flex-wrap gap-3 items-end"
       >
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">بحث</span>
@@ -76,7 +76,7 @@ export function InventoryMovementsScreen() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="اسم المنتج، الرمز، رقم الدفعة أو السبب"
-              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+              className="w-full h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
             />
           </div>
         </label>
@@ -85,7 +85,7 @@ export function InventoryMovementsScreen() {
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="all">الكل</option>
             {(data?.types ?? []).map((t) => (
@@ -95,21 +95,21 @@ export function InventoryMovementsScreen() {
             ))}
           </select>
         </label>
-        <button type="submit" className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
+        <button type="submit" className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
       </form>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : data.movements.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           لا حركات مطابقة.
         </p>
       ) : (
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>

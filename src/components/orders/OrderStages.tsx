@@ -23,7 +23,7 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
   const withFacts = stages.filter((s) => s.status !== 'PENDING' && (s.who || s.facts.length > 0));
 
   return (
-    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs">
       <h4 className="text-xs font-black text-[var(--sys-foreground)] mb-4">مسار الطلب</h4>
 
       {/* The steps. The connecting line sits behind them so it never pushes

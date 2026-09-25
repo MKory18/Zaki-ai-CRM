@@ -655,7 +655,7 @@ export function LandingPageEditorScreen() {
         /* ─── 3-column workspace ─── */
         <div className="flex flex-1 flex-col gap-3 bg-[#f1f5f9] p-3 lg:grid lg:grid-cols-[1fr_300px] lg:items-start">
           {/* RIGHT COLUMN (second on a phone): the tools, folded away. */}
-          <div className="order-2 space-y-3 rounded-xl border border-[#e3e8ef] bg-white p-3 lg:order-2">
+          <div className="order-2 space-y-3 rounded-lg border border-[#e3e8ef] bg-white p-3 lg:order-2">
             <div>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">
                 اكتب الـHTML بالذكاء الاصطناعي
@@ -767,7 +767,7 @@ data-zaki-z-index="9999"`}</pre>
           {/* The code and the preview, with the whole width to themselves. */}
           <div className="order-1 flex min-w-0 flex-col gap-3 lg:order-1">
             {/* Code editors */}
-            <div className="overflow-hidden rounded-xl border border-[#e3e8ef]">
+            <div className="overflow-hidden rounded-lg border border-[#e3e8ef]">
               <div className="flex items-center gap-1 border-b border-[#202939] bg-[#121926] px-2 py-1.5">
                 <button
                   onClick={() => setTab('html')}
@@ -812,7 +812,7 @@ data-zaki-z-index="9999"`}</pre>
             </div>
 
             {/* Live preview */}
-            <div className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-xl border border-[#e3e8ef] bg-white">
+            <div className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-lg border border-[#e3e8ef] bg-white">
               <div className="flex items-center justify-between border-b border-[#e3e8ef] px-3 py-2">
                 <span className="text-xs font-semibold text-[#364152]">معاينة مباشرة</span>
                 <div className="flex items-center gap-1">
@@ -850,7 +850,7 @@ data-zaki-z-index="9999"`}</pre>
           </div>
 
           {/* Page settings — beneath the tools, same column. */}
-          <div className="order-3 rounded-xl border border-[#e3e8ef] bg-white p-4 lg:order-3">
+          <div className="order-3 rounded-lg border border-[#e3e8ef] bg-white p-4 lg:order-3">
             <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-[#697586]">إعدادات الصفحة</p>
             <div className="space-y-4">
               <div>

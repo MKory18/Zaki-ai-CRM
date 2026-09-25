@@ -139,7 +139,7 @@ export function StoreDesignScreen() {
           <LayoutTemplate className="h-5 w-5 text-[#b8256e]" />
           تصميم الواجهة
         </h1>
-        <div className="rounded-xl border border-[#e3e8ef] bg-white p-4">
+        <div className="rounded-lg border border-[#e3e8ef] bg-white p-4">
           <p className="text-sm font-bold text-[#121926]">واجهة هذا المتجر هي صفحة الهبوط المرتبطة به</p>
           <p className="mt-1.5 text-xs leading-relaxed text-[#697586]">
             متجر Single Product لا يملك صفحة رئيسية منفصلة: عنوانه يعرض صفحة الهبوط التي اخترتَها،

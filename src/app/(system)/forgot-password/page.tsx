@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
                   <span>{success}</span>
                 </p>
                 {devToken && (
-                  <div className="bg-[var(--sys-surface)] rounded-[8px] p-2.5 border border-[var(--sys-border)]">
+                  <div className="bg-[var(--sys-surface)] rounded-lg p-2.5 border border-[var(--sys-border)]">
                     <p className="text-[10px] text-[var(--sys-muted-foreground)] mb-1">وضع التطوير — رابط إعادة التعيين:</p>
                     <Link
                       href={`/reset-password?token=${devToken}`}

@@ -292,7 +292,7 @@ export function LandingPageDetailScreen() {
             <Card>
               <CardContent className="p-4 space-y-3">
                 <h3 className="font-semibold text-[var(--sys-heading)]">نموذج الطلب</h3>
-                <div className="flex items-center gap-2 rounded-xl border border-[var(--sys-success)]/40 bg-[var(--sys-success-soft)] px-3 py-2.5">
+                <div className="flex items-center gap-2 rounded-lg border border-[var(--sys-success)]/40 bg-[var(--sys-success-soft)] px-3 py-2.5">
                   <span className="flex h-5 w-5 items-center justify-center rounded bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-bold">✓</span>
                   <div>
                     <p className="text-sm font-semibold text-[var(--sys-heading)]">نموذج الطلب مفعل</p>
@@ -353,7 +353,7 @@ export function LandingPageDetailScreen() {
                 ) : (
                   <div className="space-y-1.5">
                     {recs.map((r: any, i: number) => (
-                      <div key={r.id} className="flex items-center gap-2 rounded-xl border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2">
+                      <div key={r.id} className="flex items-center gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2">
                         <span className="text-xs text-[var(--sys-muted)]">{i + 1}.</span>
                         <span className="flex-1 truncate text-sm text-[var(--sys-heading)]">{r.product?.name}</span>
                         <span className="text-xs font-bold text-[var(--sys-primary)]" dir="ltr">{r.product?.basePrice ?? '—'}</span>

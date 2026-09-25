@@ -197,7 +197,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-xs" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-xs" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
@@ -228,49 +228,49 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'ANSWERED' })}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-info)]/50 text-[var(--sys-info)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border-2 border-[var(--sys-info)]/50 text-[var(--sys-info)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <Phone className="w-3.5 h-3.5" />{ar ? '📞 العميل أجاب' : '📞 Answered'}
           </button>
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'NO_ANSWER' })}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <PhoneOff className="w-3.5 h-3.5" />{ar ? '☎️ لم يجب' : '☎️ No Answer'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('call_later'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-purple-300 text-purple-700 hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border-2 border-purple-300 text-purple-700 hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <Clock className="w-3.5 h-3.5" />{ar ? '⏰ الاتصال لاحقاً' : '⏰ Call Later'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('followup'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className="w-3.5 h-3.5" />{ar ? '🔄 متابعة' : '🔄 Follow Up'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('confirm'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-green-400 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border-2 border-green-400 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <Check className="w-3.5 h-3.5" />{ar ? '✅ تأكيد الطلب' : '✅ Confirm Order'}
           </button>
           <button
             onClick={() => { setNote(''); setRejectionReason(''); setOpenForm('reject'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)] transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border-2 border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <XCircle className="w-3.5 h-3.5" />{ar ? '❌ العميل رفض' : '❌ Rejected'}
           </button>
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'WRONG_NUMBER' })}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <PhoneOff className="w-3.5 h-3.5" />{ar ? '🚫 رقم خاطئ' : '🚫 Wrong Number'}
           </button>
@@ -280,7 +280,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
       {/* Feedback banner */}
       {feedback && (
         <div
-          className={`mb-3 rounded-xl border p-2.5 text-xs flex items-center justify-between gap-2 ${
+          className={`mb-3 rounded-lg border p-2.5 text-xs flex items-center justify-between gap-2 ${
             feedback.type === 'success'
               ? 'border-[var(--sys-success)]/60 bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
               : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
@@ -296,7 +296,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
         <div className="space-y-3" dir={isRtl ? 'rtl' : 'ltr'}>
           {openForm === 'confirm' && (
             <>
-              <p className="text-xs text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/40 rounded-xl p-2.5">
+              <p className="text-xs text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/40 rounded-lg p-2.5">
                 {ar
                   ? 'سيتم تسجيل تأكيد العميل للطلب ونقله لمرحلة ما بعد التأكيد.'
                   : 'The order will be confirmed and prepared for the next operational stage.'}
@@ -324,7 +324,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
 
           {(openForm === 'followup' || openForm === 'call_later') && (
             <>
-              <p className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-xl p-2.5">
+              <p className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg p-2.5">
                 {ar ? 'تحديد موعد المتابعة إلزامي لهذا الإجراء.' : 'A next follow-up date is required for this action.'}
               </p>
               <Input label={ar ? 'موعد المتابعة *' : 'Next Follow-Up *'} type="datetime-local" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />

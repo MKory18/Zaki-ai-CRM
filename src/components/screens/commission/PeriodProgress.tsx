@@ -45,7 +45,7 @@ export function PeriodProgress() {
   if (rows !== null && rows.length === 0) return null;
 
   return (
-    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
       <div className="flex items-center gap-1.5 px-4 py-3 border-b border-[var(--sys-border)]">
         <Target className="w-3.5 h-3.5 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-medium text-[var(--sys-heading)]">الفترة الجارية</h2>

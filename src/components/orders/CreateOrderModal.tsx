@@ -209,14 +209,14 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     >
       <form onSubmit={handleSubmit} className="space-y-4" dir={isRtl ? 'rtl' : 'ltr'}>
         {error && (
-          <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-xl flex items-center gap-2">
+          <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* ─── 1. Customer ─── */}
-        <div className="border border-[var(--sys-border)] rounded-2xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
+        <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <SectionTitle icon={UserCheck} title="1. بيانات العميل" color="bg-red-100 text-[var(--sys-destructive)]" />
             {existingCustomerAlert?.exists && (
@@ -240,7 +240,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                   onBlur={handlePhoneBlur}
                   required
                   dir="ltr"
-                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-[var(--sys-destructive)] transition-colors"
+                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-[var(--sys-destructive)] transition-colors"
                 />
               </div>
               {existingCustomerAlert && (
@@ -288,7 +288,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                   value={customerAddress}
                   onChange={(e) => setCustomerAddress(e.target.value)}
                   required
-                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-[var(--sys-destructive)]"
+                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-[var(--sys-destructive)]"
                 />
               </div>
             </div>
@@ -296,7 +296,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         </div>
 
         {/* ─── 2. المنتجات ─── */}
-        <div className="border border-[var(--sys-border)] rounded-2xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
+        <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
           <SectionTitle icon={Package} title="2. المنتجات" color="bg-[var(--sys-surface-strong)] text-blue-600" />
           {/* The same editor the order screen uses, so a line means the same
               thing whether it is typed here or corrected later. */}
@@ -310,7 +310,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         </div>
 
         {/* ─── 3. Assignment & Source ─── */}
-        <div className="border border-[var(--sys-border)] rounded-2xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
+        <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
           <SectionTitle icon={UserCog} title="3. التعيين والمصدر" color="bg-purple-100 text-purple-600" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -341,7 +341,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         </div>
 
         {/* ─── 4. Notes ─── */}
-        <div className="border border-[var(--sys-border)] rounded-2xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
+        <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
           <SectionTitle icon={StickyNote} title="4. الملاحظات" color="bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

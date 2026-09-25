@@ -58,7 +58,7 @@ export function ReturnsScreen() {
           e.preventDefault();
           void load();
         }}
-        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex gap-3 items-end"
+        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex gap-3 items-end"
       >
         <label className="flex-1">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">امسح الباركود أو اكتب المرجع</span>
@@ -69,12 +69,12 @@ export function ReturnsScreen() {
               onChange={(e) => setTerm(e.target.value)}
               autoFocus
               placeholder="امسح الباركود هنا"
-              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+              className="w-full h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
           </div>
         </label>
-        <button type="submit" className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
+        <button type="submit" className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
         {/* A phone is the scanner a warehouse already owns. It keeps
             scanning: a returned pallet is twenty parcels, not one. */}
         <ScanButton
@@ -90,20 +90,20 @@ export function ReturnsScreen() {
         />
       </form>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
       {!rows ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           <PackageOpen className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا توجد مرتجعات بانتظار الاستلام.
         </p>
       ) : (
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
@@ -200,9 +200,9 @@ function ReceiveDialog({
   return (
     <Modal isOpen onClose={onClose} title="استلام مرتجع" subtitle={order.merchantRef ?? order.orderNumber} maxWidth="sm">
       <form onSubmit={submit} className="space-y-3">
-        {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-2">{error}</p>}
+        {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-2">{error}</p>}
 
-        <ul className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] rounded-[8px] p-2 space-y-0.5">
+        <ul className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] rounded-lg p-2 space-y-0.5">
           {order.items.map((i, idx) => (
             <li key={idx}>
               {i.productName} × {i.quantity + i.freeQuantity}
@@ -215,7 +215,7 @@ function ReceiveDialog({
           <Num label="تالف" value={damaged} onChange={setDamaged} max={order.expectedQty} />
           <div>
             <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ناقص (محسوب)</span>
-            <p className={`h-10 flex items-center px-3 rounded-[8px] border text-sm tabular-nums ${missing > 0 ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-foreground)]'}`} dir="ltr">
+            <p className={`h-10 flex items-center px-3 rounded-lg border text-sm tabular-nums ${missing > 0 ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-foreground)]'}`} dir="ltr">
               {missing}
             </p>
           </div>
@@ -228,19 +228,19 @@ function ReceiveDialog({
 
         <label className="block">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختياري)</span>
-          <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm" />
+          <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm" />
         </label>
 
-        <label className="flex items-start gap-2 text-sm text-[var(--sys-heading)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-[8px] p-2">
+        <label className="flex items-start gap-2 text-sm text-[var(--sys-heading)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2">
           <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-1" />
           <span>أقرّ بأنني عددت البضاعة وفحصتها. لا تدخل البضاعة للمخزون قبل هذا الإقرار.</span>
         </label>
 
         <div className="flex gap-2 pt-1">
-          <button type="submit" disabled={busy || !acknowledged} className="px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50">
+          <button type="submit" disabled={busy || !acknowledged} className="px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50">
             {busy ? 'جارٍ الحفظ…' : 'تأكيد الاستلام'}
           </button>
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-[8px] border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">إلغاء</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">إلغاء</button>
         </div>
       </form>
     </Modal>
@@ -258,7 +258,7 @@ function Num({ label, value, onChange, max }: { label: string; value: number; on
         value={value}
         onChange={(e) => onChange(Math.max(0, Math.min(max, Number(e.target.value))))}
         dir="ltr"
-        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
       />
     </label>
   );

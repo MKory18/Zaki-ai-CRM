@@ -74,13 +74,13 @@ export function MatchingScreen() {
 
   return (
     <div className="max-w-6xl space-y-3">
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex flex-wrap gap-3 items-end">
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الكشف</span>
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر كشفاً…</option>
             {(statements ?? []).map((s) => (
@@ -105,21 +105,21 @@ export function MatchingScreen() {
               setBusy(false);
             }
           }}
-          className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
+          className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitCompare className="w-4 h-4" />}
           تشغيل المطابقة
         </button>
       </div>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
       {!selected ? null : !matches ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : matches.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           لم تُشغَّل المطابقة على هذا الكشف بعد.
         </p>
       ) : (
@@ -180,7 +180,7 @@ function Queue({
   const [open, setOpen] = useState(rows.length > 0 && tone !== 'emerald');
 
   return (
-    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
       <ScreenTitle />
 
       <button

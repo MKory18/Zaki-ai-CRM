@@ -266,7 +266,7 @@ export function WhatsAppInboxScreen() {
     return (
       <>
         <div className="p-8">
-          <div className="max-w-md mx-auto mt-20 text-center p-8 bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)]">
+          <div className="max-w-md mx-auto mt-20 text-center p-8 bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]">
             <ShieldAlert className="w-10 h-10 mx-auto text-[var(--sys-primary)]" />
             <h2 className="mt-4 font-bold text-[var(--sys-heading)]">ليس لديك صلاحية لعرض واتساب</h2>
             <p className="mt-2 text-xs text-[var(--sys-muted-foreground)]">تواصل مع مدير الشركة لمنحك صلاحية whatsapp.view</p>
@@ -296,7 +296,7 @@ export function WhatsAppInboxScreen() {
         {/* No connection state */}
         {!loading && conn && conn.status !== 'CONNECTED' ? (
           <div className="flex-1 flex items-center justify-center px-6">
-            <div className="text-center p-10 bg-[var(--sys-card)] rounded-2xl border border-[var(--sys-border)] max-w-md">
+            <div className="text-center p-10 bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] max-w-md">
               <div className="w-14 h-14 mx-auto rounded-full bg-[var(--sys-surface)] flex items-center justify-center">
                 <MessageCircle className="w-7 h-7 text-[var(--sys-muted-foreground)]" />
               </div>
@@ -318,7 +318,7 @@ export function WhatsAppInboxScreen() {
           /* 3-pane inbox */
           <div className="flex-1 min-h-0 px-4 md:px-6 pb-4 grid grid-cols-1 lg:grid-cols-[320px_1fr_300px] gap-4 overflow-hidden">
             {/* ── Column 1: conversations list ── */}
-            <div className={`bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)] flex flex-col min-h-0 ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
+            <div className={`bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] flex flex-col min-h-0 ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
               <div className="p-3 border-b border-[var(--sys-surface-strong)] space-y-2">
                 <div className="relative">
                   <Search className="absolute top-2.5 left-3 w-4 h-4 text-[var(--sys-muted)] rtl:right-3 rtl:left-auto" />
@@ -381,7 +381,7 @@ export function WhatsAppInboxScreen() {
             </div>
 
             {/* ── Column 2: conversation ── */}
-            <div className={`bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)] flex flex-col min-h-0 ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}`}>
+            <div className={`bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] flex flex-col min-h-0 ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}`}>
               {!selected ? (
                 <div className="flex-1 flex items-center justify-center text-xs text-[var(--sys-muted-foreground)]">اختر محادثة لعرضها</div>
               ) : (
@@ -425,7 +425,7 @@ export function WhatsAppInboxScreen() {
                     ) : (
                       messages.map((m) => (
                         <div key={m.id} className={`flex ${m.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${m.direction === 'OUTBOUND' ? 'bg-[#d9fdd3] text-[var(--sys-heading)]' : 'bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[#eef1f5]'}`}>
+                          <div className={`max-w-[75%] rounded-lg px-3.5 py-2 text-sm shadow-sm ${m.direction === 'OUTBOUND' ? 'bg-[#d9fdd3] text-[var(--sys-heading)]' : 'bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[#eef1f5]'}`}>
                             {m.messageType !== 'TEXT' && !m.text && (
                               <span className="text-[10px] font-semibold text-[var(--sys-muted-foreground)]">[{m.messageType}]</span>
                             )}
@@ -466,7 +466,7 @@ export function WhatsAppInboxScreen() {
                           }}
                           rows={1}
                           placeholder="اكتب رسالة..."
-                          className="flex-1 resize-none max-h-32 px-3 py-2.5 text-sm rounded-xl border border-[var(--sys-border)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
+                          className="flex-1 resize-none max-h-32 px-3 py-2.5 text-sm rounded-lg border border-[var(--sys-border)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                         />
                         <button onClick={sendMessage} disabled={sending || !composing.trim()}
                           className="shrink-0 w-10 h-10 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center disabled:opacity-40 hover:opacity-90">
@@ -486,7 +486,7 @@ export function WhatsAppInboxScreen() {
             </div>
 
             {/* ── Column 3: customer panel ── */}
-            <div className={`bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)] overflow-y-auto min-h-0 hidden lg:block`}>
+            <div className={`bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] overflow-y-auto min-h-0 hidden lg:block`}>
               {!selected ? (
                 <div className="flex items-center justify-center h-full text-xs text-[var(--sys-muted-foreground)]">لوحة العميل</div>
               ) : (

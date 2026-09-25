@@ -154,15 +154,15 @@ export function AgentCustodyScreen() {
       </div>
 
       {error && (
-        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>
       )}
 
       {agents.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           لا مندوبين بعد — يُضافون من الإعدادات ← شركات الشحن بنوع «مندوب».
         </p>
       ) : (
-        <ul className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] divide-y divide-[var(--sys-border)]">
+        <ul className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
           {agents.map(({ agent, totals }) => (
             <li key={agent.id}>
               <button
@@ -210,7 +210,7 @@ function Balance({ value, money }: { value: number; money: (n: number) => string
   const weOwe = value < 0;
   return (
     <span
-      className={`ms-auto text-xs font-bold tabular-nums px-2.5 py-1 rounded-[6px] border ${
+      className={`ms-auto text-xs font-bold tabular-nums px-2.5 py-1 rounded-md border ${
         owesUs
           ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]'
           : weOwe
@@ -231,7 +231,7 @@ function Summary({ totals, money }: { totals: Totals; money: (n: number) => stri
       <Tile label="حصّله" value={money(totals.collected)} />
       <Tile label="أجوره علينا" value={money(totals.fees)} />
       <div
-        className={`rounded-xl border p-3 ${
+        className={`rounded-lg border p-3 ${
           totals.balance > 0
             ? 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]'
             : totals.balance < 0
@@ -252,7 +252,7 @@ function Summary({ totals, money }: { totals: Totals; money: (n: number) => stri
 
 function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
       <p className="text-[10px] text-[var(--sys-muted-foreground)]">{label}</p>
       <p className="text-sm font-black text-[var(--sys-heading)] tabular-nums mt-0.5" dir="ltr">{value}</p>
       {hint && <p className="text-[10px] text-[var(--sys-muted)] tabular-nums" dir="ltr">{hint}</p>}
@@ -271,7 +271,7 @@ function Section({
   showFee: boolean;
 }) {
   return (
-    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px]">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg">
       <div className="px-4 py-3 border-b border-[var(--sys-border)]">
         <h4 className="text-xs font-black text-[var(--sys-heading)] flex items-center gap-2">
           <Icon className="w-4 h-4 text-[var(--sys-primary)]" />

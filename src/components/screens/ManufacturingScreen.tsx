@@ -301,7 +301,7 @@ export function ManufacturingScreen() {
           />
 
           {/* Cost Items Grid */}
-          <div className="border border-[var(--sys-border)] rounded-xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
+          <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">
               تفصيل الكلفة المباشرة
             </h4>
@@ -417,7 +417,7 @@ export function ManufacturingScreen() {
           </div>
 
           {/* Section 5 Live Real-time Calculator Box */}
-          <div className="p-4 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-xl flex items-center justify-between text-xs">
+          <div className="p-4 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2">
               <Calculator className="w-5 h-5 text-[var(--sys-destructive)]" />
               <div>

@@ -157,7 +157,7 @@ export function ShipmentsNewScreen() {
     <div className="max-w-5xl space-y-3">
       <ScreenTitle />
 
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 grid gap-3 md:grid-cols-5">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 grid gap-3 md:grid-cols-5">
         <Select label="شركة الشحن (للشحنة)" value={filters.courier} onChange={(v) => setFilters({ ...filters, courier: v })} options={providers.map((p) => ({ value: p.id, label: p.name }))} />
         <Select label="المحافظة" value={filters.region} onChange={(v) => setFilters({ ...filters, region: v })} options={regions.map((r) => ({ value: r.id, label: r.name }))} />
         <DateField label="من" value={filters.from} onChange={(v) => setFilters({ ...filters, from: v })} />
@@ -166,18 +166,18 @@ export function ShipmentsNewScreen() {
           <button
             onClick={create}
             disabled={busy || selectedCount === 0}
-            className="w-full h-10 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="w-full h-10 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {busy ? 'جارٍ الإنشاء…' : `إنشاء شحنة (${selectedCount})`}
           </button>
         </div>
       </div>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
       {exceptions.length > 0 && (
-        <section className="bg-[var(--sys-card)] border border-[var(--sys-destructive-border)] rounded-[8px] p-4">
+        <section className="bg-[var(--sys-card)] border border-[var(--sys-destructive-border)] rounded-lg p-4">
           <h3 className="text-sm font-bold text-[var(--sys-destructive)] mb-2">طلبات لم تُشحن ({exceptions.length})</h3>
           <ul className="text-xs text-[var(--sys-foreground)] space-y-1">
             {exceptions.map((e) => (
@@ -211,7 +211,7 @@ export function ShipmentsNewScreen() {
           </button>
         ))}
       </div>
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
@@ -348,7 +348,7 @@ function Select({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
       >
         <option value="">الكل</option>
         {options.map((o) => (
@@ -370,7 +370,7 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
         value={value}
         onChange={(e) => onChange(e.target.value)}
         dir="ltr"
-        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
       />
     </label>
   );

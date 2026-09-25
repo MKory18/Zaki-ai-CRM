@@ -242,7 +242,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
   const actions = NEXT_ACTIONS[order?.shippingStatus] ?? [];
 
   return (
-    <div className="rounded-2xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-xs" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-xs" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
@@ -266,14 +266,14 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
 
       {/* Failure/return reasons */}
       {order.shippingStatus === 'FAILED_DELIVERY' && order.deliveryFailureReason && (
-        <p className="mb-3 text-[11px] text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-xl px-2.5 py-1.5">
+        <p className="mb-3 text-[11px] text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1.5">
           ⚠️ {ar ? 'سبب الفشل:' : 'Failure reason:'}{' '}
           {(FAILURE_REASONS as any)[order.deliveryFailureReason]?.[ar ? 'ar' : 'en'] ?? order.deliveryFailureReason}
           {order.deliveryNote ? ` — ${order.deliveryNote}` : ''}
         </p>
       )}
       {order.returnReason && ['RETURN_REQUESTED', 'RETURNED'].includes(order.shippingStatus) && (
-        <p className="mb-3 text-[11px] text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-orange-200 rounded-xl px-2.5 py-1.5">
+        <p className="mb-3 text-[11px] text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-orange-200 rounded-lg px-2.5 py-1.5">
           ↩️ {ar ? 'سبب الإرجاع:' : 'Return reason:'}{' '}
           {(RETURN_REASONS as any)[order.returnReason]?.[ar ? 'ar' : 'en'] ?? order.returnReason}
         </p>
@@ -298,7 +298,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
                 transition(a.to);
               }}
               disabled={actionLoading !== null}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 transition-colors cursor-pointer disabled:opacity-50 ${a.cls}`}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border-2 transition-colors cursor-pointer disabled:opacity-50 ${a.cls}`}
             >
               {a.to === 'DELIVERED' ? <PackageCheck className="w-3.5 h-3.5" /> : a.to === 'FAILED_DELIVERY' ? <XCircle className="w-3.5 h-3.5" /> : a.to === 'RETURNED' || a.to === 'RETURN_REQUESTED' ? <Undo2 className="w-3.5 h-3.5" /> : <Ship className="w-3.5 h-3.5" />}
               {ar ? a.labelAr : a.labelEn}
@@ -308,7 +308,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
             <button
               onClick={() => { setTrackingNumber(order.trackingNumber || ''); setDeliveryFee(order.deliveryFee ? String(order.deliveryFee) : ''); setOpenForm('tracking'); }}
               disabled={actionLoading !== null}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
             >
               <Hash className="w-3.5 h-3.5" />{ar ? 'رقم التتبع' : 'Tracking'}
             </button>
@@ -318,7 +318,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
 
       {/* Feedback */}
       {feedback && (
-        <div className={`mb-3 rounded-xl border p-2.5 text-xs flex items-center justify-between gap-2 ${
+        <div className={`mb-3 rounded-lg border p-2.5 text-xs flex items-center justify-between gap-2 ${
           feedback.type === 'success' ? 'border-[var(--sys-success)]/60 bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
         }`}>
           <span>{feedback.text}</span>
@@ -328,7 +328,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
 
       {/* Inline load error (providers / attempts) */}
       {listError && (
-        <div className="mb-3 rounded-xl border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] p-2.5 text-xs flex items-center justify-between gap-2">
+        <div className="mb-3 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] p-2.5 text-xs flex items-center justify-between gap-2">
           <span>{listError}</span>
           <button onClick={() => setListError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
         </div>
@@ -346,7 +346,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
         ) : (
           <div className="space-y-1.5">
             {attempts.map((att: any) => (
-              <div key={att.id} className={`p-2 rounded-xl border text-[11px] ${
+              <div key={att.id} className={`p-2 rounded-lg border text-[11px] ${
                 att.result === 'DELIVERED' ? 'bg-[var(--sys-success-soft)]/60 border-[var(--sys-success)]/40' : att.result === 'FAILED' ? 'bg-[var(--sys-destructive-soft)]/60 border-[var(--sys-destructive-border)]' : 'bg-[var(--sys-surface)] border-[var(--sys-border)]'
               }`}>
                 <div className="flex items-center justify-between flex-wrap gap-1">
@@ -477,7 +477,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
 
 function Info({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="rounded-xl bg-[var(--sys-surface)] px-2.5 py-2">
+    <div className="rounded-lg bg-[var(--sys-surface)] px-2.5 py-2">
       <p className="text-[10px] text-[var(--sys-muted)]">{label}</p>
       <p className={`text-xs font-bold text-[var(--sys-foreground)] truncate ${mono ? 'font-mono' : ''}`} dir={mono ? 'ltr' : undefined}>{value}</p>
     </div>

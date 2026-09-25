@@ -27,7 +27,7 @@ interface PageRow {
   sortOrder: number;
 }
 
-const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
+const CARD = 'rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
 const LABEL = 'mb-1.5 block text-xs font-medium text-[var(--sys-heading)]';
 
 export function StorePagesScreen() {
@@ -164,7 +164,7 @@ export function StorePagesScreen() {
 
       {/* The thing that stops a campaign, said in words. */}
       {missing.length > 0 && (
-        <div className="flex items-start gap-2 rounded-xl border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3">
+        <div className="flex items-start gap-2 rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sys-warning)]" />
           <div className="text-xs leading-relaxed text-[var(--sys-warning)]">
             <p className="font-bold">
@@ -255,7 +255,7 @@ export function StorePagesScreen() {
                     maxLength={20000}
                     value={draft.body}
                     onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-                    className="w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm leading-7 focus:border-[var(--sys-primary)] focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm leading-7 focus:border-[var(--sys-primary)] focus:outline-none"
                   />
                   <span className="mt-1 block text-[10.5px] text-[var(--sys-muted)]">
                     نصّ فقط — سطر فارغ يفصل فقرة عن فقرة. لا وسوم ولا سكربتات: صفحة كلام، لا صفحة تصميم.

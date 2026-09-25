@@ -134,7 +134,7 @@ export function ProductDetailScreen() {
   if (error || !product) {
     return (
       <>
-        <div className="p-6 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-sm rounded-xl text-center">
+        <div className="p-6 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-sm rounded-lg text-center">
           {error || 'المنتج غير موجود'}
         </div>
       </>
@@ -184,7 +184,7 @@ export function ProductDetailScreen() {
             <CardContent className="space-y-4">
               {/* Primary large */}
               <div
-                className="relative w-full h-72 bg-[var(--sys-surface)] rounded-xl overflow-hidden border border-[var(--sys-border)] cursor-zoom-in"
+                className="relative w-full h-72 bg-[var(--sys-surface)] rounded-lg overflow-hidden border border-[var(--sys-border)] cursor-zoom-in"
                 onClick={() => primary && setLightbox(primary.url)}
               >
                 {primary ? (
@@ -393,7 +393,7 @@ export function ProductDetailScreen() {
       <Modal isOpen={!!lightbox} onClose={() => setLightbox(null)} title="معاينة الصورة" maxWidth="4xl">
         {lightbox && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={lightbox} alt="معاينة" className="w-full max-h-[70vh] object-contain rounded-xl" />
+          <img src={lightbox} alt="معاينة" className="w-full max-h-[70vh] object-contain rounded-lg" />
         )}
       </Modal>
     </>

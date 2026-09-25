@@ -112,7 +112,7 @@ export function AppStoreScreen() {
       </div>
 
       {error && (
-        <p className="rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 text-sm text-[var(--sys-destructive)]">{error}</p>
+        <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 text-sm text-[var(--sys-destructive)]">{error}</p>
       )}
 
       <section>
@@ -121,7 +121,7 @@ export function AppStoreScreen() {
           {shelf.builtIn.map((a) => (
             <div
               key={a.code}
-              className={`rounded-xl border p-4 ${
+              className={`rounded-lg border p-4 ${
                 a.installed && a.enabled ? 'border-[var(--sys-primary)]/40 bg-[var(--sys-primary-soft)]' : 'border-[var(--sys-border)] bg-[var(--sys-card)]'
               }`}
             >
@@ -191,14 +191,14 @@ export function AppStoreScreen() {
           تطبيقات مسجَّلة عندك
         </h2>
         {shelf.external.length === 0 ? (
-          <p className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+          <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             لا تطبيقات مسجَّلة بعد. سجّل واحداً ليصله ويبهوك موقَّع عند كل حدث تختاره —
             طلب جديد، تأكيد، شحن، تسليم، إرجاع.
           </p>
         ) : (
           <div className="space-y-2">
             {shelf.external.map((a) => (
-              <div key={a.id} className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+              <div key={a.id} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-[var(--sys-heading)]">

@@ -77,7 +77,7 @@ export function TransferDialog({
         className="space-y-3"
       >
         <div
-          className={`text-xs rounded-[8px] p-3 border ${
+          className={`text-xs rounded-lg p-3 border ${
             fromAgent
               ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
               : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]'
@@ -106,7 +106,7 @@ export function TransferDialog({
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {providers.map((p) => (
@@ -130,20 +130,20 @@ export function TransferDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="سبب التحويل"
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !target}
-            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ التحويل…' : fromAgent ? 'استلام وتحويل' : 'سحب وإصدار بديل'}
           </button>

@@ -37,7 +37,7 @@ export function ConfirmationPostponedScreen() {
   }, []);
 
   if (error) {
-    return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>;
+    return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>;
   }
   if (!data) {
     return (
@@ -54,7 +54,7 @@ export function ConfirmationPostponedScreen() {
       <p className="text-sm text-[var(--sys-muted-foreground)]">
         القابل للعمل عليه: المستحق خلال {data.leadDays} يوم أو المتأخر. الباقي للعرض فقط.
       </p>
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
             <tr>

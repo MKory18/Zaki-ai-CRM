@@ -138,7 +138,7 @@ export function AiDock() {
       // A panel, not an overlay. It has a width and a height and sits in
       // the corner — the CRM behind it stays readable and clickable, which
       // is the whole difference between an assistant and an interruption.
-      className="fixed bottom-4 start-4 z-40 flex h-[min(32rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-2xl"
+      className="fixed bottom-4 start-4 z-40 flex h-[min(32rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-2xl"
     >
       <header className="flex items-center justify-between border-b border-[var(--sys-border)] bg-[var(--sys-heading)] px-3 py-2">
         <span className="flex items-center gap-2 text-xs font-bold text-[var(--sys-primary-foreground)]">
@@ -199,7 +199,7 @@ export function AiDock() {
           msgs.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
               <div
-                className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] leading-relaxed ${
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-[11px] leading-relaxed ${
                   m.role === 'user'
                     ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]'
                     : 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)]'
@@ -215,7 +215,7 @@ export function AiDock() {
         )}
         {busy && (
           <div className="flex justify-end">
-            <span className="flex items-center gap-1 rounded-2xl bg-[var(--sys-surface-strong)] px-3 py-2 text-[10px] text-[var(--sys-muted-foreground)]">
+            <span className="flex items-center gap-1 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-[10px] text-[var(--sys-muted-foreground)]">
               <Loader2 className="h-3 w-3 animate-spin" /> يقرأ أرقامك…
             </span>
           </div>

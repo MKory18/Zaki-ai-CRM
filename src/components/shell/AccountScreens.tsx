@@ -15,8 +15,8 @@ export function PendingScreen() {
 
   return (
     <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
-        <div className="mx-auto w-16 h-16 rounded-[8px] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
+      <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
+        <div className="mx-auto w-16 h-16 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
           <Clock className="w-8 h-8 text-[var(--sys-destructive)]" />
         </div>
 
@@ -30,7 +30,7 @@ export function PendingScreen() {
           </p>
         </div>
 
-        <div className="bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-4 text-xs text-[var(--sys-muted-foreground)] space-y-1">
+        <div className="bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-4 text-xs text-[var(--sys-muted-foreground)] space-y-1">
           <p className="flex items-center justify-center space-x-2 rtl:space-x-reverse text-[var(--sys-heading)]">
             <MailCheck className="w-4 h-4 text-[var(--sys-warning)]" />
             <span>حالتك الحالية: قيد المراجعة (PENDING)</span>
@@ -69,8 +69,8 @@ export function BlockedScreen({ status }: { status: string }) {
 
   return (
     <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
-        <div className="mx-auto w-16 h-16 rounded-[8px] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
+      <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-8 text-center space-y-6">
+        <div className="mx-auto w-16 h-16 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
           <ShieldX className="w-8 h-8 text-[var(--sys-destructive)]" />
         </div>
         <div>

@@ -82,7 +82,7 @@ export function PreparationScreen() {
     void load();
   }, [load]);
 
-  if (error) return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>;
+  if (error) return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>;
   if (!data) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
@@ -105,18 +105,18 @@ export function PreparationScreen() {
       {data.groups.length > 0 && <PickingAssistant />}
 
       {data.groups.length === 0 && (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           لا توجد طلبات مؤكدة بانتظار التجهيز.
         </p>
       )}
 
       {data.groups.map((g) => (
-        <section key={g.productId} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <section key={g.productId} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <button
             onClick={() => setOpen((o) => ({ ...o, [g.productId]: !o[g.productId] }))}
             className="w-full flex items-center gap-3 p-4 text-right hover:bg-[var(--sys-surface)]"
           >
-            <span className="w-9 h-9 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
+            <span className="w-9 h-9 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
               <PackageCheck className="w-4 h-4 text-[var(--sys-primary)]" />
             </span>
             <span className="flex-1 min-w-0">
@@ -251,7 +251,7 @@ export function PreparationScreen() {
 
 function Kpi({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
   return (
-    <div className={`px-4 py-2 rounded-[8px] border ${danger ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' : 'bg-[var(--sys-card)] border-[var(--sys-border)]'}`}>
+    <div className={`px-4 py-2 rounded-lg border ${danger ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' : 'bg-[var(--sys-card)] border-[var(--sys-border)]'}`}>
       <ScreenTitle />
 
       <p className="text-xs text-[var(--sys-muted-foreground)]">{label}</p>

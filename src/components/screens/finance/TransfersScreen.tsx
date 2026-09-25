@@ -158,7 +158,7 @@ export function TransfersScreen() {
             setSaving(false);
           }
         }}
-        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3"
+        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-3"
       >
         <div className="grid gap-3 md:grid-cols-2">
           <label>
@@ -167,7 +167,7 @@ export function TransfersScreen() {
               value={fromId}
               onChange={(e) => setFromId(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               <option value="">اختر…</option>
               {options(toId)}
@@ -180,7 +180,7 @@ export function TransfersScreen() {
               value={toId}
               onChange={(e) => setToId(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               <option value="">اختر…</option>
               {options(fromId)}
@@ -200,7 +200,7 @@ export function TransfersScreen() {
               value={amountOut}
               onChange={(e) => setAmountOut(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
           </label>
@@ -217,7 +217,7 @@ export function TransfersScreen() {
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
                 required
-                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
                 dir="ltr"
               />
             </label>
@@ -225,7 +225,7 @@ export function TransfersScreen() {
         </div>
 
         {from && to && amountOut && (
-          <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3 flex items-center gap-2 flex-wrap">
+          <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 flex items-center gap-2 flex-wrap">
             <span className="tabular-nums">{amountOut} {from.currencyCode}</span>
             <ArrowLeft className="w-4 h-4 text-[var(--sys-muted)]" />
             <span className="tabular-nums font-medium">
@@ -242,7 +242,7 @@ export function TransfersScreen() {
             required
             minLength={3}
             placeholder="سبب التحويل"
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
@@ -272,7 +272,7 @@ export function TransfersScreen() {
           <button
             type="submit"
             disabled={saving || !!refusal}
-            className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
+            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Repeat className="w-4 h-4" />}
             تحويل
@@ -280,7 +280,7 @@ export function TransfersScreen() {
         </div>
       </form>
 
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
         <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">آخر التحويلات</h2>
         {!rows ? (
           <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-12">

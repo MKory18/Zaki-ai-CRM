@@ -506,7 +506,7 @@ export function PermissionsScreen() {
                 const open = openModules[m.module] ?? false;
                 const moduleActive = m.items.filter((i) => draft[i.key]).length;
                 return (
-                  <div key={m.module} className="rounded-xl border border-[var(--sys-border)] overflow-hidden">
+                  <div key={m.module} className="rounded-lg border border-[var(--sys-border)] overflow-hidden">
                     <button
                       onClick={() => setOpenModules((p) => ({ ...p, [m.module]: !p[m.module] }))}
                       className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-[var(--sys-surface)] hover:bg-[var(--sys-border)]/60 transition-colors cursor-pointer text-start"

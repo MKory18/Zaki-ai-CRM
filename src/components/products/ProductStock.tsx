@@ -153,7 +153,7 @@ function Tile({
   } as const;
 
   return (
-    <div className={`rounded-xl border p-3 ${tones[tone]}`}>
+    <div className={`rounded-lg border p-3 ${tones[tone]}`}>
       <p className="flex items-center gap-1 text-[10px] font-medium text-[var(--sys-muted-foreground)]">
         {icon} {label}
       </p>

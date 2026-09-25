@@ -73,7 +73,7 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
               type="button"
               disabled={busy}
               onClick={() => pick(theme.key)}
-              className={`rounded-[8px] border p-2.5 text-right transition disabled:opacity-60 ${
+              className={`rounded-lg border p-2.5 text-right transition disabled:opacity-60 ${
                 active
                   ? 'border-[var(--sys-primary)] ring-1 ring-[var(--sys-primary)]'
                   : 'border-[var(--sys-border)] hover:border-[var(--sys-border-strong)]'

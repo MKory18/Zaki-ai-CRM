@@ -90,7 +90,7 @@ export function ProductLinesEditor({
 
   const total = lines.reduce((sum, l) => sum + (Number(l.price) || 0), 0);
   const inputClass =
-    'w-full h-9 px-2 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)] disabled:bg-[var(--sys-surface)]';
+    'w-full h-9 px-2 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)] disabled:bg-[var(--sys-surface)]';
 
   return (
     <div className="space-y-2">
@@ -100,7 +100,7 @@ export function ProductLinesEditor({
         const lockedByOffer = !!line.offerId;
 
         return (
-          <div key={line.key} className="rounded-[8px] border border-[var(--sys-border)] p-2.5 space-y-2">
+          <div key={line.key} className="rounded-lg border border-[var(--sys-border)] p-2.5 space-y-2">
             <div className="flex items-center gap-2">
               <ProductThumb src={product?.image} alt={product?.name ?? ''} size="sm" />
               <select
@@ -120,7 +120,7 @@ export function ProductLinesEditor({
                   onClick={() => onChange(lines.filter((l) => l.key !== line.key))}
                   disabled={disabled}
                   title="احذف هذا المنتج من الطلب"
-                  className="h-9 w-9 rounded-[8px] bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] shrink-0 disabled:opacity-40"
+                  className="h-9 w-9 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] shrink-0 disabled:opacity-40"
                 >
                   <Trash2 className="w-4 h-4 mx-auto" />
                 </button>
@@ -149,7 +149,7 @@ export function ProductLinesEditor({
                   type="button"
                   onClick={() => patch(line.key, { quantity: Math.max(1, line.quantity - 1), offerId: null })}
                   disabled={disabled || lockedByOffer}
-                  className="h-9 w-9 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
+                  className="h-9 w-9 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
                 >
                   <Minus className="w-3.5 h-3.5 mx-auto" />
                 </button>
@@ -164,7 +164,7 @@ export function ProductLinesEditor({
                   type="button"
                   onClick={() => patch(line.key, { quantity: line.quantity + 1, offerId: null })}
                   disabled={disabled || lockedByOffer}
-                  className="h-9 w-9 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
+                  className="h-9 w-9 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
                 >
                   <Plus className="w-3.5 h-3.5 mx-auto" />
                 </button>
@@ -200,7 +200,7 @@ export function ProductLinesEditor({
           type="button"
           onClick={() => onChange([...lines, newLine()])}
           disabled={disabled}
-          className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-dashed border-[var(--sys-primary)] text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+          className="text-[11px] px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--sys-primary)] text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
         >
           <Plus className="w-3.5 h-3.5" />
           أضف منتجاً آخر

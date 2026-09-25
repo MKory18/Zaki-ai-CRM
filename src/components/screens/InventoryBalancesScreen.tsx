@@ -110,12 +110,12 @@ export function InventoryBalancesScreen() {
 
         {/* Every product and what it holds. 105 cards need a way in, so the
             search comes before them rather than after the scroll. */}
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-3">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-3">
           <input
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder="ابحث باسم المنتج أو رمزه…"
-            className="w-full min-w-0 h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full min-w-0 h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
           <p className="mt-1.5 text-[10.5px] text-[var(--sys-muted-foreground)]">
             {visible.length} من {stockSummary.length} منتج
@@ -173,7 +173,7 @@ export function InventoryBalancesScreen() {
             appeared twice under two names, and nobody could tell which was
             the record. This screen answers "how much is left"; that one
             answers "what happened". */}
-        <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 text-sm text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 text-sm text-[var(--sys-muted-foreground)]">
           تبحث عمّا دخل وما خرج ومن سجّله؟{' '}
           <a href="/inventory/movements" className="font-medium text-[var(--sys-primary)] hover:underline">
             سجل حركات المخزون
@@ -207,7 +207,7 @@ export function InventoryBalancesScreen() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">رصيد النظام</label>
-              <div className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-sm font-bold tabular-nums text-[var(--sys-muted-foreground)]" dir="ltr">
+              <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-sm font-bold tabular-nums text-[var(--sys-muted-foreground)]" dir="ltr">
                 {systemQty}
               </div>
             </div>
@@ -225,7 +225,7 @@ export function InventoryBalancesScreen() {
           {/* The difference is shown, not typed: it is the number that will
               actually be written, so it should be read before it is. */}
           <div
-            className={`rounded-xl border p-3 text-center ${
+            className={`rounded-lg border p-3 text-center ${
               difference === 0
                 ? 'border-[var(--sys-border)] bg-[var(--sys-surface)]'
                 : difference > 0

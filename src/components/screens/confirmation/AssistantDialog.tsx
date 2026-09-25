@@ -107,7 +107,7 @@ export function AssistantDialog({
       <div className="space-y-4">
         {/* The record first. What the model was told is what she can check it against. */}
         {answer && (
-          <section className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] px-4 py-2">
+          <section className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-4 py-2">
             <h4 className="text-xs font-medium text-[var(--sys-foreground)] mb-1">ما أُعطي للمساعد</h4>
             <div className="divide-y divide-[var(--sys-border)]">
               {customer && (
@@ -177,7 +177,7 @@ export function AssistantDialog({
                 {copied ? 'نُسخ' : 'انسخ'}
               </button>
             </div>
-            <p className="whitespace-pre-wrap text-sm text-[var(--sys-heading)] leading-7 rounded-[8px] border border-[var(--sys-border)] px-4 py-3">
+            <p className="whitespace-pre-wrap text-sm text-[var(--sys-heading)] leading-7 rounded-lg border border-[var(--sys-border)] px-4 py-3">
               {answer.suggestion}
             </p>
           </section>

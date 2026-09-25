@@ -22,8 +22,8 @@ export function ProductThumb({
   const sizeStyles = {
     xs: 'w-8 h-8 rounded-lg',
     sm: 'w-10 h-10 rounded-lg',
-    md: 'w-12 h-12 rounded-xl',
-    lg: 'w-full h-full rounded-xl',
+    md: 'w-12 h-12 rounded-lg',
+    lg: 'w-full h-full rounded-lg',
   };
 
   if (!src) {

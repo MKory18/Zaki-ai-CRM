@@ -414,7 +414,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     return (
       <Modal isOpen={isOpen} onClose={onClose} title={t.orders} maxWidth="md">
         <div className="py-6 text-center space-y-4" dir={isRtl ? 'rtl' : 'ltr'}>
-          <p className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-xl px-3 py-2.5 inline-block">
+          <p className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-3 py-2.5 inline-block">
             {loadError}
           </p>
           <div className="flex justify-center gap-2">
@@ -514,7 +514,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       {/* Action feedback (status update / call log) */}
       {actionFeedback && (
         <div
-          className={`mb-4 rounded-xl border p-2.5 text-xs flex items-center justify-between gap-2 ${
+          className={`mb-4 rounded-lg border p-2.5 text-xs flex items-center justify-between gap-2 ${
             actionFeedback.type === 'success'
               ? 'border-[var(--sys-success)]/60 bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
               : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
@@ -544,7 +544,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {/* The state, and the facts that travel with it. No button: the
               edit lock is taken by whichever card you actually edit, and a
               standalone "تعديل" here neither advanced nor stopped anything. */}
-          <div className="rounded-2xl border border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3 shadow-xs">
+          <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3 shadow-xs">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <span className="text-[11px] font-semibold text-[var(--sys-muted)]">حالة الطلب</span>
               <OrderStateBadge state={order.state} />
@@ -647,13 +647,13 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         {/* ─── Right column ─── */}
         <div className="space-y-5">
           {/* Financial overview */}
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs space-y-3">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-[var(--sys-destructive)]" />
               الملخص المالي
             </h4>
 
-            <div className="flex items-center gap-3 p-2.5 bg-[var(--sys-surface)] rounded-xl">
+            <div className="flex items-center gap-3 p-2.5 bg-[var(--sys-surface)] rounded-lg">
               <ProductThumb
                 src={order.productImageSnapshot || order.product?.image}
                 alt={order.productNameSnapshot || order.product?.name}
@@ -685,8 +685,8 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
               {/* What the customer pays. The figures come from the one COD
                   function on the server — a screen never adds up money. */}
-              <div className="mt-2 rounded-xl border border-[var(--sys-border)] divide-y divide-slate-100">
-                <p className="text-[11px] font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-xl">
+              <div className="mt-2 rounded-lg border border-[var(--sys-border)] divide-y divide-slate-100">
+                <p className="text-[11px] font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-lg">
                   ما يدفعه العميل
                 </p>
                 <div className="flex justify-between px-2.5 py-1.5">
@@ -715,7 +715,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                     <span className="text-[var(--sys-foreground)]" dir="ltr">{money(cod?.deliveryFee ?? order.shippingCost)}</span>
                   )}
                 </div>
-                <div className="flex justify-between px-2.5 py-2 bg-[var(--sys-surface)] rounded-b-xl">
+                <div className="flex justify-between px-2.5 py-2 bg-[var(--sys-surface)] rounded-b-lg">
                   <span className="font-bold">المحصَّل عند الباب:</span>
                   <span className="font-black text-[var(--sys-destructive)] text-sm" dir="ltr">
                     {money(cod?.cod ?? order.totalAmount)}
@@ -725,8 +725,8 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
               {/* Costs are ours, not the customer's — kept apart so the column
                   above never reads as a sum that includes them. */}
-              <div className="mt-2 rounded-xl border border-[var(--sys-border)] divide-y divide-slate-100">
-                <p className="text-[11px] font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-xl">
+              <div className="mt-2 rounded-lg border border-[var(--sys-border)] divide-y divide-slate-100">
+                <p className="text-[11px] font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-lg">
                   تكاليفنا على هذا الطلب
                 </p>
                 <div className="flex justify-between px-2.5 py-1.5">
@@ -744,7 +744,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {/* Where the order came from. Editable, because the numbers are
               counted per channel and an order filed under the wrong one is a
               wrong number rather than a wrong label. */}
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs space-y-2">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs space-y-2">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-[var(--sys-primary)]" />
@@ -758,7 +758,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               {mayChangeChannel && (
                 <button
                   onClick={() => { setChannelOpen((v) => !v); setChannelDraft(order.channelId ?? ''); }}
-                  className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+                  className="text-[11px] px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   {channelOpen ? 'إغلاق' : 'تعديل'}
@@ -771,7 +771,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 <select
                   value={channelDraft}
                   onChange={(e) => setChannelDraft(e.target.value)}
-                  className="w-full h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+                  className="w-full h-9 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
                 >
                   <option value="">— بلا قناة —</option>
                   {channels.map((c) => (
@@ -780,7 +780,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 </select>
                 <button
                   onClick={saveChannel}
-                  className="text-xs px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium"
+                  className="text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium"
                 >
                   حفظ القناة
                 </button>
@@ -800,7 +800,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
           {/* Timeline — merged from every event table (src/lib/order-timeline.ts),
               not just the activity log, so it always matches the state above. */}
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-2xl p-4 shadow-xs">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs">
             <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4 text-[var(--sys-muted)]" />
               سجل الأحداث ({timeline.length})
@@ -869,7 +869,7 @@ function OrderRegionField({
             {order.regionId ? (
               <p className="text-[var(--sys-foreground)] text-xs font-medium">{current?.name ?? order.customer?.city}</p>
             ) : (
-              <p className="text-[11px] text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-[6px] px-2 py-0.5">
+              <p className="text-[11px] text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-md px-2 py-0.5">
                 لم تُحدَّد — لا يمكن حساب أجرة التوصيل
               </p>
             )}

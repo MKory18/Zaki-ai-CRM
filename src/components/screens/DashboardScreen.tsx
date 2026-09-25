@@ -158,7 +158,7 @@ export function DashboardScreen() {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Period selector */}
-            <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-xl p-1 flex text-xs font-medium text-[var(--sys-foreground)] shadow-xs">
+            <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-1 flex text-xs font-medium text-[var(--sys-foreground)] shadow-xs">
               {PERIODS.map((p) => (
                 <button
                   key={p.key}
@@ -190,10 +190,10 @@ export function DashboardScreen() {
 
         {/* ─── AI Executive Banner ─── */}
         {canFinance && (
-          <div className="relative overflow-hidden bg-gradient-to-l rtl:bg-gradient-to-r from-[var(--sys-primary)] to-[var(--sys-heading)] rounded-2xl p-5 text-[var(--sys-primary-foreground)] shadow-md">
+          <div className="relative overflow-hidden bg-gradient-to-l rtl:bg-gradient-to-r from-[var(--sys-primary)] to-[var(--sys-heading)] rounded-lg p-5 text-[var(--sys-primary-foreground)] shadow-md">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-[var(--sys-card)]/10 border border-[var(--sys-card)]/15 shrink-0">
+                <div className="p-2.5 rounded-lg bg-[var(--sys-card)]/10 border border-[var(--sys-card)]/15 shrink-0">
                   <Sparkles className="w-5 h-5 text-[var(--sys-warning)]" />
                 </div>
                 <div>
@@ -237,10 +237,10 @@ export function DashboardScreen() {
         {/* ─── KPI Cards ─── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {canFinance && (
-            <div className="bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+            <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.netProfit}</span>
-                <div className="h-14 w-14 rounded-[8px] bg-[var(--sys-success-soft)] text-[var(--sys-success)] flex items-center justify-center">
+                <div className="h-14 w-14 rounded-lg bg-[var(--sys-success-soft)] text-[var(--sys-success)] flex items-center justify-center">
                   <Wallet className="w-6 h-6" />
                 </div>
               </div>
@@ -255,10 +255,10 @@ export function DashboardScreen() {
           )}
 
           {canFinance && (
-            <div className="bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+            <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.deliveredRevenue}</span>
-                <div className="h-14 w-14 rounded-[8px] bg-[var(--sys-surface-strong)] text-[var(--sys-primary)] flex items-center justify-center">
+                <div className="h-14 w-14 rounded-lg bg-[var(--sys-surface-strong)] text-[var(--sys-primary)] flex items-center justify-center">
                   <TrendingUp className="w-6 h-6" />
                 </div>
               </div>
@@ -269,10 +269,10 @@ export function DashboardScreen() {
             </div>
           )}
 
-          <div className="bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+          <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.confirmationRate}</span>
-              <div className="h-14 w-14 rounded-[8px] bg-[var(--sys-info)]/10 text-[var(--sys-info)] flex items-center justify-center">
+              <div className="h-14 w-14 rounded-lg bg-[var(--sys-info)]/10 text-[var(--sys-info)] flex items-center justify-center">
                 <Percent className="w-6 h-6" />
               </div>
             </div>
@@ -282,10 +282,10 @@ export function DashboardScreen() {
             </p>
           </div>
 
-          <div className="bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+          <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.deliveryRate}</span>
-              <div className="h-14 w-14 rounded-[8px] bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] flex items-center justify-center">
+              <div className="h-14 w-14 rounded-lg bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] flex items-center justify-center">
                 <Truck className="w-6 h-6" />
               </div>
             </div>
@@ -316,7 +316,7 @@ export function DashboardScreen() {
               <div className="flex flex-wrap items-center gap-2">
                 {profitFlow.map((f, i) => (
                   <React.Fragment key={f.label}>
-                    <div className={`flex-1 min-w-[110px] px-3 py-2.5 rounded-xl border text-center ${f.cls}`}>
+                    <div className={`flex-1 min-w-[110px] px-3 py-2.5 rounded-lg border text-center ${f.cls}`}>
                       <span className="block text-[10px] font-semibold opacity-75">{f.label}</span>
                       <span className="block text-sm font-black mt-0.5" dir="ltr">{f.value}</span>
                     </div>
@@ -326,7 +326,7 @@ export function DashboardScreen() {
                   </React.Fragment>
                 ))}
                 <Equal className="w-4 h-4 text-[var(--sys-muted)] shrink-0" />
-                <div className="px-4 py-2.5 rounded-xl bg-[var(--sys-primary)] text-center">
+                <div className="px-4 py-2.5 rounded-lg bg-[var(--sys-primary)] text-center">
                   <span className="block text-[10px] font-bold text-[var(--sys-primary-foreground)]/80">
                     {locale === 'ar' ? 'صافي الربح' : 'NET PROFIT'}
                   </span>
@@ -340,7 +340,7 @@ export function DashboardScreen() {
         {/* ─── Order Status Tiles ─── */}
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
           {statusTiles.map((s) => (
-            <div key={s.label} className="bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)]/80 p-3.5 text-center shadow-xs">
+            <div key={s.label} className="bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]/80 p-3.5 text-center shadow-xs">
               <span className={`inline-block w-2 h-2 rounded-full ${s.dot} mb-1.5`} />
               <span className="block text-[10px] font-semibold text-[var(--sys-muted-foreground)] leading-tight">{s.label}</span>
               <span className={`block text-xl font-black mt-1 ${s.value > 0 ? s.color : 'text-[var(--sys-border-strong)]'}`}>
@@ -368,7 +368,7 @@ export function DashboardScreen() {
             />
             <CardContent className="space-y-2.5">
               {rankings.map((r) => (
-                <div key={r.label} className={`flex items-center justify-between p-3 rounded-xl border ${r.tint}`}>
+                <div key={r.label} className={`flex items-center justify-between p-3 rounded-lg border ${r.tint}`}>
                   <div className="flex items-center gap-3">
                     <span className="text-lg">{r.icon}</span>
                     <div>

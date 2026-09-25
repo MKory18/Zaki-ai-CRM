@@ -77,7 +77,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+    <div className="space-y-4 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
@@ -136,7 +136,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
             host nobody had checked while the customer met an error page. */}
         <div>
           <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">نطاق خاص</span>
-          <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+          <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             {store.domain ? (
               <span dir="ltr" className="font-medium text-[var(--sys-foreground)]">{store.domain}</span>
             ) : (
@@ -158,7 +158,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           value={form.about}
           onChange={(e) => setForm({ ...form, about: e.target.value })}
           placeholder="نوصّل لكل المحافظات، والدفع عند الاستلام."
-          className="w-full min-w-0 resize-y rounded-[8px] border border-[var(--sys-border)] px-3 py-2 text-sm outline-none focus:border-[var(--sys-primary)]"
+          className="w-full min-w-0 resize-y rounded-lg border border-[var(--sys-border)] px-3 py-2 text-sm outline-none focus:border-[var(--sys-primary)]"
         />
       </div>
 

@@ -36,7 +36,7 @@ interface Payload {
   publicPath: string;
 }
 
-const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
+const CARD = 'rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -46,7 +46,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
       <div className="flex items-center gap-1">
         <code
           dir="ltr"
-          className="min-w-0 flex-1 truncate rounded-[6px] border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-1.5 text-[11px] text-[var(--sys-heading)]"
+          className="min-w-0 flex-1 truncate rounded-md border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-1.5 text-[11px] text-[var(--sys-heading)]"
           title={value}
         >
           {value}
@@ -59,7 +59,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
               setTimeout(() => setCopied(false), 1500);
             });
           }}
-          className="shrink-0 rounded-[6px] border border-[var(--sys-border)] p-1.5 text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+          className="shrink-0 rounded-md border border-[var(--sys-border)] p-1.5 text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
           aria-label={`انسخ ${label}`}
         >
           {copied ? <Check className="h-3.5 w-3.5 text-[var(--sys-success)]" /> : <Copy className="h-3.5 w-3.5" />}

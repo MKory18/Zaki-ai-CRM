@@ -103,7 +103,7 @@ export function CollectDialog({
         }}
         className="space-y-3"
       >
-        <div className="text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3 space-y-1">
+        <div className="text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 space-y-1">
           <p className="text-[var(--sys-foreground)]">
             المتوقَّع منه: <b className="tabular-nums">{expected} {currency}</b>
           </p>
@@ -112,7 +112,7 @@ export function CollectDialog({
           </p>
         </div>
 
-        <div className="max-h-32 overflow-y-auto border border-[var(--sys-border)] rounded-[8px] divide-y divide-[var(--sys-border)]">
+        <div className="max-h-32 overflow-y-auto border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
           {orders.map((o) => (
             <div key={o.id} className="flex items-center justify-between px-3 py-1.5 text-xs">
               <span className="text-[var(--sys-foreground)]">{o.orderNumber} · {o.customer.fullName}</span>
@@ -132,7 +132,7 @@ export function CollectDialog({
             value={walletId}
             onChange={(e) => setWalletId(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {wallets.map((w) => (
@@ -157,7 +157,7 @@ export function CollectDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder={String(expected)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           {difference !== 0 && (
@@ -175,20 +175,20 @@ export function CollectDialog({
             required
             minLength={3}
             placeholder="مثال: استلمت نقداً من المندوب"
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !walletId}
-            className="h-9 px-4 rounded-[8px] bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+            className="h-9 px-4 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             <HandCoins className="w-4 h-4" />
             {saving ? 'جارٍ التسجيل…' : 'استلمت منه'}

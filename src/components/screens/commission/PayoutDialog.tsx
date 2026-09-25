@@ -116,7 +116,7 @@ export function PayoutDialog({
               <select
                 value={pick}
                 onChange={(e) => setPick(Number(e.target.value))}
-                className="h-10 w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+                className="h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
               >
                 {owed.map((o, i) => (
                   <option key={o.currencyCode} value={i}>
@@ -130,7 +130,7 @@ export function PayoutDialog({
             </label>
           )}
 
-          <div className="rounded-[8px] bg-[var(--sys-surface)] px-3 py-2.5">
+          <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
             <p className="text-[11px] text-[var(--sys-muted-foreground)]">المستحق</p>
             <p className="text-lg font-black text-[var(--sys-heading)] tabular-nums" dir="ltr">
               {row?.amount} {row?.currencyCode}
@@ -143,7 +143,7 @@ export function PayoutDialog({
             <select
               value={walletId}
               onChange={(e) => setWalletId(e.target.value)}
-              className="h-10 w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+              className="h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
             >
               <option value="">— اختر المحفظة —</option>
               {wallets.map((w) => (
@@ -166,7 +166,7 @@ export function PayoutDialog({
                 min="0"
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
-                className="h-10 w-full rounded-[8px] border border-[var(--sys-border)] px-3 text-sm"
+                className="h-10 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm"
                 dir="ltr"
               />
               <span className="mt-1 block text-[10.5px] text-[var(--sys-muted)]">
@@ -176,7 +176,7 @@ export function PayoutDialog({
           )}
 
           {wallet && leaving !== null && (
-            <div className="rounded-[8px] border border-[var(--sys-border)] px-3 py-2.5">
+            <div className="rounded-lg border border-[var(--sys-border)] px-3 py-2.5">
               <p className="flex items-center gap-1.5 text-[11px] text-[var(--sys-muted-foreground)]">
                 <WalletIcon className="h-3 w-3" /> سيخرج من «{wallet.name}»
               </p>
@@ -196,21 +196,21 @@ export function PayoutDialog({
               onChange={(e) => setNote(e.target.value)}
               maxLength={200}
               placeholder="تحويل بنكي، نقداً باليد…"
-              className="h-10 w-full rounded-[8px] border border-[var(--sys-border)] px-3 text-sm"
+              className="h-10 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm"
             />
           </label>
 
           {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="h-9 rounded-[8px] border border-[var(--sys-border)] px-4 text-sm">
+            <button type="button" onClick={onClose} className="h-9 rounded-lg border border-[var(--sys-border)] px-4 text-sm">
               إلغاء
             </button>
             <button
               type="button"
               onClick={() => void pay()}
               disabled={saving || !wallet || (!sameCurrency && !(numericRate > 0))}
-              className="h-9 rounded-[8px] bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+              className="h-9 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
             >
               {saving ? 'جارٍ الصرف…' : 'صرف'}
             </button>

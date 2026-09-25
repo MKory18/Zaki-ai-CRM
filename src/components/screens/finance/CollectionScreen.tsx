@@ -121,20 +121,20 @@ export function CollectionScreen() {
         }}
       />
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
       {!rows ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           <FileSpreadsheet className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا توجد كشوف مستوردة بعد.
         </p>
       ) : (
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
@@ -300,7 +300,7 @@ function ImportCard({
           setFile(null);
         }
       }}
-      className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 grid gap-3 md:grid-cols-4 items-end"
+      className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 grid gap-3 md:grid-cols-4 items-end"
     >
       <label>
         <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">شركة الشحن</span>
@@ -308,7 +308,7 @@ function ImportCard({
           value={providerId}
           onChange={(e) => setProviderId(e.target.value)}
           required
-          className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+          className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
         >
           <option value="">اختر…</option>
           {providers.map((p) => (
@@ -325,7 +325,7 @@ function ImportCard({
           required
           minLength={2}
           placeholder="ST-2026-09"
-          className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+          className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
         />
       </label>
 
@@ -348,14 +348,14 @@ function ImportCard({
               setFile({ name: picked.name, content: await picked.text(), encoding: 'text' });
             }
           }}
-          className="w-full text-xs file:h-8 file:px-3 file:rounded-[6px] file:border-0 file:bg-[var(--sys-surface)] file:text-[var(--sys-foreground)] file:ml-2"
+          className="w-full text-xs file:h-8 file:px-3 file:rounded-md file:border-0 file:bg-[var(--sys-surface)] file:text-[var(--sys-foreground)] file:ml-2"
         />
       </label>
 
       <button
         type="submit"
         disabled={busy || !file || !providerId}
-        className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50"
+        className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
         استيراد
@@ -411,7 +411,7 @@ function ReceiptDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
+        <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
           أقرّت الشركة {statement.gap.claimed} {statement.currencyCode} ووصل حتى الآن {statement.gap.received}.
           يمكن تسجيل أكثر من إيصال لنفس الكشف (نقد + حوالة).
         </p>
@@ -422,7 +422,7 @@ function ReceiptDialog({
             value={walletId}
             onChange={(e) => setWalletId(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {wallets.map((w) => (
@@ -440,7 +440,7 @@ function ReceiptDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
@@ -457,7 +457,7 @@ function ReceiptDialog({
               value={rate}
               onChange={(e) => setRate(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
           </label>
@@ -468,20 +468,20 @@ function ReceiptDialog({
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end pt-1">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحفظ…' : 'حفظ الإيصال'}
           </button>
@@ -535,18 +535,18 @@ function ExplainDialog({
           required
           minLength={5}
           rows={3}
-          className="w-full p-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+          className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
           placeholder="مثال: خصمت الشركة رسوم إرجاع شحنتين"
         />
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             حفظ التفسير
           </button>

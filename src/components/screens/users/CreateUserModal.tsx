@@ -197,12 +197,12 @@ export function CreateUserModal({
             anybody any more: commission comes from the rules — per store,
             with effective dates — and accrues on delivery. Asking for a
             number here that changes nothing is worse than not asking. */}
-        <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
             العمولة لا تُضبط من هنا. تُحسب من <span className="font-bold text-[var(--sys-foreground)]">قواعد العمولة</span>
             {' '}لكل متجر، بتواريخ سريان، وتُستحق عند التسليم.
         </p>
 
-        <div className="rounded-[8px] border border-[var(--sys-border)] p-3 space-y-3">
+        <div className="rounded-lg border border-[var(--sys-border)] p-3 space-y-3">
           <p className="text-xs font-bold text-[var(--sys-heading)] flex items-center gap-1.5">
             <Globe className="w-4 h-4 text-[var(--sys-primary)]" />
             الدول التي يعمل فيها
@@ -236,7 +236,7 @@ export function CreateUserModal({
                 اتركها فارغة ليصل إلى كل متاجر الدولة، أو اختر متاجر بعينها.
               </p>
               {selectedCountries.map((c) => (
-                <div key={c.id} className="rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] p-2.5">
+                <div key={c.id} className="rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-2.5">
                   <p className="text-[11px] font-bold text-[var(--sys-foreground)] mb-1.5">{c.name}</p>
                   {c.stores.length === 0 ? (
                     <p className="text-[11px] text-[var(--sys-muted)]">لا متاجر في هذه الدولة بعد.</p>

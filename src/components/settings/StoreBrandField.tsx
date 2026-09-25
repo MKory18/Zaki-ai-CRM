@@ -98,7 +98,7 @@ export function StoreBrandField({
     <div className="flex items-center gap-3">
       <div
         className={`flex shrink-0 items-center justify-center overflow-hidden border border-[var(--sys-border)] bg-[var(--sys-card)] ${
-          kind === 'favicon' ? 'h-10 w-10 rounded-lg' : 'h-14 w-14 rounded-xl'
+          kind === 'favicon' ? 'h-10 w-10 rounded-lg' : 'h-14 w-14 rounded-lg'
         }`}
       >
         {value ? (

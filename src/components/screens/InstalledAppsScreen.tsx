@@ -86,17 +86,17 @@ export function InstalledAppsScreen() {
         <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">ما هو موصول بشركتك الآن، وسجلّ ما أُرسل إليه.</p>
       </div>
 
-      {error && <p className="rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 text-sm text-[var(--sys-destructive)]">{error}</p>}
+      {error && <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 text-sm text-[var(--sys-destructive)]">{error}</p>}
 
       {nothing ? (
-        <p className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
           لا تطبيقات مثبتة.{' '}
           <Link href="/apps/store" className="font-bold text-[var(--sys-primary)] hover:underline">افتح متجر التطبيقات</Link>
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {installedBuiltIn.map((a) => (
-            <div key={a.code} className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+            <div key={a.code} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-[var(--sys-heading)]">{a.name}</p>
@@ -119,7 +119,7 @@ export function InstalledAppsScreen() {
           ))}
 
           {installedExternal.map((a) => (
-            <div key={a.id} className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+            <div key={a.id} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-[var(--sys-heading)]">{a.name}</p>
@@ -169,11 +169,11 @@ export function InstalledAppsScreen() {
         </div>
 
         {deliveries.length === 0 ? (
-          <p className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-xs text-[var(--sys-muted-foreground)]">
+          <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-xs text-[var(--sys-muted-foreground)]">
             لا إرساليات بعد — تظهر هنا عند أول حدث بعد تثبيت تطبيق يستمع إليه.
           </p>
         ) : (
-          <ul className="divide-y divide-[var(--sys-border)] rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)]">
+          <ul className="divide-y divide-[var(--sys-border)] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
             {deliveries.map((d) => (
               <li key={d.id}>
                 <button

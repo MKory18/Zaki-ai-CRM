@@ -53,7 +53,7 @@ interface Channel {
 }
 
 const INPUT =
-  'w-full h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
+  'w-full h-9 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
 export function ChannelsScreen() {
   const [channels, setChannels] = useState<Channel[] | null>(null);
@@ -156,7 +156,7 @@ export function ChannelsScreen() {
         {!adding && (
           <button
             onClick={() => { setAdding(true); setError(null); }}
-            className="px-3 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
+            className="px-3 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             قناة جديدة
@@ -165,11 +165,11 @@ export function ChannelsScreen() {
       </div>
 
       {error && (
-        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>
       )}
 
       {adding && (
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="block">
               <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">اسم القناة</span>
@@ -197,13 +197,13 @@ export function ChannelsScreen() {
             <button
               onClick={create}
               disabled={busy === 'new'}
-              className="px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
             >
               {busy === 'new' ? 'جارٍ الإضافة…' : 'أضف القناة'}
             </button>
             <button
               onClick={() => { setAdding(false); setError(null); }}
-              className="px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
+              className="px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
             >
               إلغاء
             </button>
@@ -211,7 +211,7 @@ export function ChannelsScreen() {
         </div>
       )}
 
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] divide-y divide-[var(--sys-border)]">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
         {channels.length === 0 && (
           <p className="p-6 text-sm text-[var(--sys-muted-foreground)] text-center">لا قنوات بعد — أضف أول واحدة.</p>
         )}
@@ -244,20 +244,20 @@ export function ChannelsScreen() {
                 <button
                   onClick={() => patch(c.id, { name: editDraft.name.trim(), kind: editDraft.kind })}
                   disabled={busy === c.id}
-                  className="h-9 px-3 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                  className="h-9 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setEditing(null)}
-                  className="h-9 px-3 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
+                  className="h-9 px-3 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`text-[11px] px-2 py-0.5 rounded-[6px] border ${KIND_TONE[c.kind] ?? KIND_TONE.OTHER}`}>
+                <span className={`text-[11px] px-2 py-0.5 rounded-md border ${KIND_TONE[c.kind] ?? KIND_TONE.OTHER}`}>
                   {KIND_AR[c.kind] ?? c.kind}
                 </span>
                 <span className={`text-sm font-medium ${c.isActive ? 'text-[var(--sys-heading)]' : 'text-[var(--sys-muted)] line-through'}`}>
@@ -271,7 +271,7 @@ export function ChannelsScreen() {
                 <div className="ms-auto flex items-center gap-1">
                   <button
                     onClick={() => { setEditing(c.id); setEditDraft({ name: c.name, kind: c.kind }); setError(null); }}
-                    className="p-1.5 rounded-[6px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)]"
+                    className="p-1.5 rounded-md text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)]"
                     title="تعديل"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -279,7 +279,7 @@ export function ChannelsScreen() {
                   <button
                     onClick={() => patch(c.id, { isActive: !c.isActive })}
                     disabled={busy === c.id}
-                    className="text-[11px] px-2 py-1 rounded-[6px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
+                    className="text-[11px] px-2 py-1 rounded-md border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
                   >
                     {c.isActive ? 'إيقاف' : 'تفعيل'}
                   </button>
@@ -287,7 +287,7 @@ export function ChannelsScreen() {
                     <button
                       onClick={() => remove(c)}
                       disabled={busy === c.id}
-                      className="p-1.5 rounded-[6px] text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+                      className="p-1.5 rounded-md text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       title="حذف — لا طلبات عليها"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

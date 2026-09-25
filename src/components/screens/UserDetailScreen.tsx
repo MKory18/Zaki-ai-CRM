@@ -185,7 +185,7 @@ export function UserDetailScreen() {
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-[var(--sys-destructive-soft)] border-2 border-[var(--sys-destructive-border)] flex items-center justify-center shrink-0">
+              <div className="w-14 h-14 rounded-lg bg-[var(--sys-destructive-soft)] border-2 border-[var(--sys-destructive-border)] flex items-center justify-center shrink-0">
                 <UserIcon className="w-7 h-7 text-[var(--sys-destructive)]" />
               </div>
               <div className="flex-1 min-w-0">
@@ -201,17 +201,17 @@ export function UserDetailScreen() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-5 text-xs">
-              <div className="rounded-xl bg-[var(--sys-surface)] px-3 py-2.5">
+              <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
                 <p className="text-[10px] text-[var(--sys-muted)] flex items-center gap-1"><ShieldCheck className="w-3 h-3" />{ar ? 'الرتبة' : 'Role'}</p>
                 <p className="font-bold text-[var(--sys-heading)]">{user.role}</p>
               </div>
-              <div className="rounded-xl bg-[var(--sys-surface)] px-3 py-2.5">
+              <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
                 <p className="text-[10px] text-[var(--sys-muted)] flex items-center gap-1"><Clock className="w-3 h-3" />{ar ? 'آخر دخول' : 'Last Login'}</p>
                 <p className="font-bold text-[var(--sys-heading)]">
                   {user.lastLoginAt ? format(new Date(user.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—'}
                 </p>
               </div>
-              <div className="rounded-xl bg-[var(--sys-surface)] px-3 py-2.5">
+              <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
                 <p className="text-[10px] text-[var(--sys-muted)]">{ar ? 'تاريخ التسجيل' : 'Created'}</p>
                 <p className="font-bold text-[var(--sys-heading)]">{format(new Date(user.createdAt), 'yyyy-MM-dd')}</p>
               </div>
@@ -341,15 +341,15 @@ export function UserDetailScreen() {
               {ar ? 'حجم العمل الحالي' : 'Current Workload'}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-              <div className="rounded-xl border border-[var(--sys-border)] px-3 py-4">
+              <div className="rounded-lg border border-[var(--sys-border)] px-3 py-4">
                 <p className="text-2xl font-black text-[var(--sys-destructive)]">{user.workload?.assigned ?? 0}</p>
                 <p className="text-[11px] text-[var(--sys-muted-foreground)] mt-1">{ar ? 'طلبات مسندة' : 'Assigned Orders'}</p>
               </div>
-              <div className="rounded-xl bg-[var(--sys-surface)] px-3 py-4">
+              <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-4">
                 <p className="text-2xl font-black text-[var(--sys-heading)]">{user.workload?.claimed ?? 0}</p>
                 <p className="text-[11px] text-[var(--sys-muted-foreground)] mt-1">{ar ? 'طلبات مستلمة' : 'Claimed Orders'}</p>
               </div>
-              <div className="rounded-xl bg-[var(--sys-surface)] px-3 py-4">
+              <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-4">
                 <p className="text-2xl font-black text-[var(--sys-heading)]">{user.workload?.created ?? 0}</p>
                 <p className="text-[11px] text-[var(--sys-muted-foreground)] mt-1">{ar ? 'طلبات منشأة' : 'Created Orders'}</p>
               </div>
@@ -674,7 +674,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
           {payload && (
             <>
               {/* Summary line */}
-              <div className="rounded-xl bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] mb-3 flex flex-wrap gap-x-3 gap-y-1">
+              <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] mb-3 flex flex-wrap gap-x-3 gap-y-1">
                 <span className="font-bold text-[var(--sys-heading)]">
                   {ar ? `الدور: ${payload.role.name}` : `Role: ${payload.role.name}`}
                 </span>
@@ -704,7 +704,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                       className="ps-8 text-xs"
                     />
                   </div>
-                  <div className="overflow-x-auto rounded-xl border border-[var(--sys-border)]">
+                  <div className="overflow-x-auto rounded-lg border border-[var(--sys-border)]">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-[var(--sys-surface)] text-[var(--sys-foreground)]">
@@ -803,7 +803,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                   : 'No overrides — permissions come from the role as-is.'}
               </p>
             ) : (
-              <ul className="divide-y divide-[var(--sys-surface)] rounded-xl border border-[var(--sys-border)]">
+              <ul className="divide-y divide-[var(--sys-surface)] rounded-lg border border-[var(--sys-border)]">
                 {payload.overrides.map((o) => {
                   const item = catalogItem(o.permission);
                   const scopeLabel = o.scope
@@ -819,7 +819,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span
-                          className={`text-[10px] font-bold rounded-[8px] px-2 py-0.5 border ${
+                          className={`text-[10px] font-bold rounded-lg px-2 py-0.5 border ${
                             o.effect === 'DENY'
                               ? 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]'
                               : 'text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-[var(--sys-success-soft)]'

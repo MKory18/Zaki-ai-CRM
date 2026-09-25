@@ -172,19 +172,19 @@ export function FinanceProfitScreen() {
           />
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-center">
-              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-xs text-[var(--sys-muted)] block">إيراد الموصَّل</span>
                 <span className="text-lg font-bold text-[var(--sys-success)] mt-1 block">
                   +{summary.totalRevenue.toFixed(2)} {data?.currency ?? ''}
                 </span>
               </div>
-              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-xs text-[var(--sys-muted)] block">كلفة البضاعة</span>
                 <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
                   -{summary.totalCOGS.toFixed(2)} {data?.currency ?? ''}
                 </span>
               </div>
-              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-xs text-[var(--sys-muted)] block">شحن وعمولات</span>
                 <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
                   {/* Read, not computed. A total assembled in the browser
@@ -192,13 +192,13 @@ export function FinanceProfitScreen() {
                   -{summary.shippingAndCommissions.toFixed(2)} {data?.currency ?? ''}
                 </span>
               </div>
-              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-xs text-[var(--sys-muted)] block">مصاريف</span>
                 <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
                   -{summary.totalOperationalExpenses.toFixed(2)} {data?.currency ?? ''}
                 </span>
               </div>
-              <div className="bg-[var(--sys-primary)] p-3 rounded-xl">
+              <div className="bg-[var(--sys-primary)] p-3 rounded-lg">
                 <span className="text-xs text-[var(--sys-primary-foreground)]/80 block font-bold">الصافي</span>
                 <span className="text-xl font-black text-[var(--sys-primary-foreground)] mt-1 block">
                   {summary.netProfit.toFixed(2)} {data?.currency ?? ''}
@@ -352,7 +352,7 @@ export function FinanceProfitScreen() {
           </Select>
 
           {expenseError && (
-            <p className="rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">
+            <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">
               {expenseError}
             </p>
           )}

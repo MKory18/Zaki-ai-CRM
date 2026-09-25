@@ -81,7 +81,7 @@ export function JobsScreen() {
     <div className="max-w-5xl space-y-3">
       <ScreenTitle />
 
-      <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
+      <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
         المهام تعمل في عملية مستقلة عن المتصفح:{' '}
         <code className="font-mono text-[11px] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded px-1.5 py-0.5" dir="ltr">
           npx tsx scripts/worker.ts
@@ -90,14 +90,14 @@ export function JobsScreen() {
       </p>
 
       {overdue.length > 0 && (
-        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3 flex items-center gap-2">
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           {overdue.length} مهمة تجاوزت موعدها — تحقّق من أن المجدول يعمل.
         </p>
       )}
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
@@ -109,7 +109,7 @@ export function JobsScreen() {
             {data.jobs.map((job) => (
               <div
                 key={job.name}
-                className={`bg-[var(--sys-card)] border rounded-[8px] p-4 ${
+                className={`bg-[var(--sys-card)] border rounded-lg p-4 ${
                   job.parked
                     ? 'border-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)]'
                     : job.alerting
@@ -177,7 +177,7 @@ export function JobsScreen() {
                         await load();
                       }
                     }}
-                    className="h-8 px-3 rounded-[8px] border border-[var(--sys-border)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+                    className="h-8 px-3 rounded-lg border border-[var(--sys-border)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
                   >
                     {running === job.name ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
                     شغّلها الآن
@@ -203,7 +203,7 @@ export function JobsScreen() {
                           await load();
                         }
                       }}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 text-xs font-medium text-[var(--sys-destructive)] disabled:opacity-50"
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 text-xs font-medium text-[var(--sys-destructive)] disabled:opacity-50"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                       أعد تفعيلها
@@ -214,7 +214,7 @@ export function JobsScreen() {
             ))}
           </div>
 
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
             <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">آخر التشغيلات</h2>
             {data.recent.length === 0 ? (
               <p className="text-sm text-[var(--sys-muted-foreground)] py-8 text-center">لم تعمل أي مهمة بعد.</p>

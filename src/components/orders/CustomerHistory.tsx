@@ -62,7 +62,7 @@ export function CustomerHistoryButton({
           setOpen(true);
         }}
         title={previousOrders > 0 ? `${previousOrders} طلب سابق لهذا العميل` : 'عميل جديد — لا طلبات سابقة'}
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] border text-[11px] ${
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] ${
           previousOrders > 0
             ? 'bg-[var(--sys-surface)] border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)]'
             : 'bg-[var(--sys-card)] border-[var(--sys-border)] text-[var(--sys-muted)] hover:border-[var(--sys-primary)]'
@@ -102,11 +102,11 @@ export function CustomerHistoryModal({
 
   return (
     <Modal isOpen onClose={onClose} title="طلبات العميل السابقة" subtitle={history?.customer.fullName} maxWidth="2xl">
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3 mb-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3 mb-3">{error}</p>}
 
       {history && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className={`text-[11px] px-2 py-0.5 rounded-[6px] border ${RISK[history.risk.tier].cls}`}>
+          <span className={`text-[11px] px-2 py-0.5 rounded-md border ${RISK[history.risk.tier].cls}`}>
             {RISK[history.risk.tier].text} · {Math.round(history.risk.returnRate * 100)}% مرتجع من {history.risk.orders} طلب
           </span>
           <span className="text-xs text-[var(--sys-muted-foreground)]">
@@ -131,7 +131,7 @@ export function CustomerHistoryModal({
             <p className="text-sm text-[var(--sys-muted-foreground)]">لا توجد طلبات سابقة لهذا العميل.</p>
           )}
           {history?.orders.map((o) => (
-            <article key={o.id} className="border border-[var(--sys-border)] rounded-[8px] p-3">
+            <article key={o.id} className="border border-[var(--sys-border)] rounded-lg p-3">
               <header className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
                 <OrderStateBadge state={o.state} />

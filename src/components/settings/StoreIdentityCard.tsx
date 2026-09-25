@@ -68,7 +68,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+    <div className="space-y-4 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
       <div>
         <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
           <BadgeCheck className="h-4 w-4 text-[var(--sys-primary)]" />
@@ -86,7 +86,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
-            className="mt-1 block h-10 w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm focus:border-[var(--sys-primary)] focus:outline-none"
+            className="mt-1 block h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm focus:border-[var(--sys-primary)] focus:outline-none"
           />
         </label>
         <label className="block text-xs font-medium text-[var(--sys-foreground)]">
@@ -98,7 +98,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
             inputMode="tel"
             maxLength={24}
             placeholder="0999 000 000"
-            className="mt-1 block h-10 w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-left text-sm focus:border-[var(--sys-primary)] focus:outline-none"
+            className="mt-1 block h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-left text-sm focus:border-[var(--sys-primary)] focus:outline-none"
           />
           <span className="mt-1 block text-[10.5px] text-[var(--sys-muted)]">يظهر للزبون في المتجر وتذييل الصفحات، ويُطبع على البوليصة.</span>
         </label>
@@ -108,7 +108,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
           type="button"
           onClick={() => void save()}
           disabled={!changed || saving || name.trim().length < 2}
-          className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-[var(--sys-primary)] px-4 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--sys-primary)] px-4 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
         >
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           حفظ

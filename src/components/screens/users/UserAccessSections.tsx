@@ -187,7 +187,7 @@ export function UserPhoneField({ userId, initial, canEdit }: { userId: string; i
   }
 
   return (
-    <div className="rounded-xl bg-[var(--sys-surface)] px-3 py-2.5">
+    <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
       <p className="flex items-center gap-1 text-[10px] text-[var(--sys-muted)]"><Phone className="h-3 w-3" /> الهاتف</p>
       {canEdit ? (
         <div className="mt-1 flex items-center gap-1.5">

@@ -68,7 +68,7 @@ export interface RowsProps<T> {
 export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, selection, alert }: RowsProps<T>) {
   if (rows.length === 0) {
     return (
-      <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
+      <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
         {empty ?? 'لا شيء هنا.'}
       </p>
     );
@@ -81,7 +81,7 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
   return (
     <>
       {/* The desk. */}
-      <div className="hidden overflow-hidden rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] md:block">
+      <div className="hidden overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] md:block">
         <table className="w-full text-sm">
           <thead className="bg-[var(--sys-surface)] text-xs text-[var(--sys-muted-foreground)]">
             <tr>
@@ -139,7 +139,7 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
           <li
             key={keyOf(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
-            className={`rounded-[8px] border bg-[var(--sys-card)] p-3 ${
+            className={`rounded-lg border bg-[var(--sys-card)] p-3 ${
               alert?.(row)
                 ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]/40'
                 : 'border-[var(--sys-border)]'

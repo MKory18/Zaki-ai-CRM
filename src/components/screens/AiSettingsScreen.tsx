@@ -145,7 +145,7 @@ export function AiSettingsScreen() {
             key={value}
             type="button"
             onClick={() => setTab(value)}
-            className={`h-9 flex-1 rounded-[8px] border text-xs font-medium ${
+            className={`h-9 flex-1 rounded-lg border text-xs font-medium ${
               tab === value ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] text-[var(--sys-foreground)]'
             }`}
           >
@@ -162,7 +162,7 @@ export function AiSettingsScreen() {
       )}
 
       {/* ── the vendor ── */}
-      <section className={`rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'provider' ? '' : 'hidden'}`}>
+      <section className={`rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'provider' ? '' : 'hidden'}`}>
         <h2 className="mb-3 text-sm font-bold text-[var(--sys-heading)]">المزوّد والنموذج</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -217,7 +217,7 @@ export function AiSettingsScreen() {
             type="button"
             onClick={() => void testConnection()}
             disabled={testing || !settings.hasKey}
-            className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[var(--sys-border)] px-3 text-[11px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-[11px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
           >
             {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plug className="h-3.5 w-3.5" />}
             اختبار الاتصال
@@ -230,7 +230,7 @@ export function AiSettingsScreen() {
       </section>
 
       {/* ── the words ── */}
-      <section className={`rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
+      <section className={`rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">النصوص</h2>
         <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           كل وظيفة ونصّها. اترك الحقل فارغاً ليعود النص الأصلي — لا يُحفَظ إلا ما غيّرته أنت،
@@ -360,7 +360,7 @@ export function AiSettingsScreen() {
           holds which half of it. Its own save button, because these are
           stored apart and one form saving both would be a form where half
           of it silently did nothing. */}
-      <section className={`rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
+      <section className={`rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'prompts' ? '' : 'hidden'}`}>
         <h2 className="mb-3 text-sm font-bold text-[var(--sys-heading)]">قوالب رسائل الزبائن</h2>
         <MessageTemplatesCard />
       </section>

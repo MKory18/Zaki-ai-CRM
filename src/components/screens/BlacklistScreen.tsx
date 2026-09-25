@@ -63,7 +63,7 @@ export function BlacklistScreen() {
     <div className="max-w-5xl space-y-3">
       <ScreenTitle />
 
-      <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
+      <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
         الحظر على <b>رقم الهاتف</b> وعلى مستوى الشركة كلها — لأن الرقم هو الهوية، والشخص نفسه هو الشخص
         نفسه في كل متجر. الطلبات القائمة لا تتأثر؛ الحظر يمنع الطلب <b>القادم</b>. وفكّ الحظر يبقي السجل.
       </p>
@@ -73,7 +73,7 @@ export function BlacklistScreen() {
           e.preventDefault();
           void load();
         }}
-        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end"
+        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex flex-wrap gap-3 items-end"
       >
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">بحث</span>
@@ -83,7 +83,7 @@ export function BlacklistScreen() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="رقم الهاتف، الاسم أو السبب"
-              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+              className="w-full h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
             />
           </div>
         </label>
@@ -94,26 +94,26 @@ export function BlacklistScreen() {
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5"
+          className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5"
         >
           <Plus className="w-4 h-4" /> حظر رقم
         </button>
       </form>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
       {!blocks ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           <Ban className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           {activeCount === 0 ? 'لا أرقام محظورة.' : 'لا نتائج مطابقة.'}
         </p>
       ) : (
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
@@ -230,7 +230,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
             required
             autoFocus
             placeholder="0790123456"
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
@@ -243,7 +243,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
@@ -256,20 +256,20 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
             minLength={3}
             rows={3}
             placeholder="مثال: رفض الاستلام ٣ مرات متتالية"
-            className="w-full p-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحظر…' : 'حظر'}
           </button>
@@ -313,7 +313,7 @@ function ReleaseDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
+        <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
           سبب الحظر الأصلي: <b>{block.reason}</b>
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
             يبقى السجل بعد فك الحظر — لا يُحذف شيء.
@@ -329,20 +329,20 @@ function ReleaseDialog({
             minLength={3}
             rows={3}
             placeholder="مثال: تواصل واعتذر والتزم بالاستلام"
-            className="w-full p-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             فك الحظر
           </button>

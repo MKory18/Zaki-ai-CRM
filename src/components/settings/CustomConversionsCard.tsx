@@ -266,7 +266,7 @@ export function CustomConversionsCard() {
   const labelOf = (t: string) => options?.triggers.find((x) => x.value === t)?.label ?? t;
 
   return (
-    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
       <div className="mb-1 flex items-center gap-2">
         <Target className="h-4 w-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">التحويلات المخصّصة</h2>

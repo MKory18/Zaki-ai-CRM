@@ -75,13 +75,13 @@ export function DiscountAlertsScreen() {
     <div className="max-w-6xl space-y-3">
       <ScreenTitle />
 
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex flex-wrap gap-3 items-end">
         <label>
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">المدة</span>
           <select
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
-            className="h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value={7}>آخر ٧ أيام</option>
             <option value={30}>آخر ٣٠ يوماً</option>
@@ -101,20 +101,20 @@ export function DiscountAlertsScreen() {
         )}
       </div>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : data.totals.orders === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           <BadgePercent className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا خصومات في هذه المدة.
         </p>
       ) : (
         <>
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4">
             <p className="text-sm text-[var(--sys-foreground)] tabular-nums">
               <b>{data.totals.orders}</b> طلباً بخصم، بإجمالي{' '}
               <b className="text-[var(--sys-destructive)]">{data.totals.discount} {data.currency}</b>

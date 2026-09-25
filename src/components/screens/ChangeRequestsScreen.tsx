@@ -126,7 +126,7 @@ export function ChangeRequestsScreen() {
     <div className="max-w-4xl space-y-3">
       <ScreenTitle />
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
       <div className="flex gap-1 rounded-lg bg-[var(--sys-surface-strong)] p-0.5 w-fit">
         {(
@@ -156,7 +156,7 @@ export function ChangeRequestsScreen() {
       </div>
 
       {rows.length === 0 && (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           {tab === 'PENDING' ? 'لا توجد طلبات تعديل قيد المراجعة.' : 'لا تعديلات معتمدة بانتظار التطبيق.'}
         </p>
       )}
@@ -165,9 +165,9 @@ export function ChangeRequestsScreen() {
         const role = ROLE_LABELS[r.requestedRole as UserRole]?.ar ?? r.requestedRole;
         const state = STATE_LABEL_AR[deriveCoreState(r.order)];
         return (
-          <article key={r.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3">
+          <article key={r.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-3">
             <header className="flex flex-wrap items-center gap-2">
-              <span className="w-8 h-8 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
+              <span className="w-8 h-8 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
                 {tab === 'PENDING' ? (
                   <FilePen className="w-4 h-4 text-[var(--sys-primary)]" />
                 ) : (
@@ -175,14 +175,14 @@ export function ChangeRequestsScreen() {
                 )}
               </span>
               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{r.order.orderNumber}</span>
-              <span className="text-[11px] px-2 py-0.5 rounded-[6px] bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">{state}</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">{state}</span>
               {tab === 'PENDING' && r.blocking && (
-                <span className="text-[11px] px-2 py-0.5 rounded-[6px] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]">
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]">
                   يوقف تقدّم الطلب
                 </span>
               )}
               {tab === 'PENDING' && r.overdue && (
-                <span className="text-[11px] px-2 py-0.5 rounded-[6px] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
                   تجاوز مهلة المراجعة
                 </span>
               )}
@@ -224,7 +224,7 @@ export function ChangeRequestsScreen() {
               {tab === 'PENDING' ? (
                 <button
                   onClick={() => setReviewing(r.id)}
-                  className="px-4 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium"
+                  className="px-4 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium"
                 >
                   مراجعة واتخاذ القرار
                 </button>
@@ -232,7 +232,7 @@ export function ChangeRequestsScreen() {
                 <button
                   onClick={() => void apply(r)}
                   disabled={applying === r.id}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-[8px] bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                 >
                   {applying === r.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   طبّق التعديل على الطلب

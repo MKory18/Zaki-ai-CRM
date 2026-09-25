@@ -217,18 +217,18 @@ export function ConfirmationIssuesScreen() {
   }
 
   const inputClass =
-    'w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
+    'w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
   const flaggedClass =
-    'w-full h-10 px-3 rounded-[8px] border-2 border-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] text-sm focus:outline-none';
+    'w-full h-10 px-3 rounded-lg border-2 border-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] text-sm focus:outline-none';
 
   return (
     <div className="max-w-4xl space-y-3">
       <ScreenTitle />
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
       {issues.length === 0 && (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           لا توجد إشكالات مفتوحة.
         </p>
       )}
@@ -239,13 +239,13 @@ export function ConfirmationIssuesScreen() {
         const isVoiding = voiding === issue.id;
 
         return (
-          <article key={issue.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-2">
+          <article key={issue.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-2">
             <header className="flex flex-wrap items-center gap-2">
-              <span className="w-8 h-8 rounded-[8px] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
+              <span className="w-8 h-8 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
                 <AlertTriangle className="w-4 h-4 text-[var(--sys-destructive)]" />
               </span>
               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{issue.order.orderNumber}</span>
-              <span className="text-xs px-2 py-0.5 rounded-[6px] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] font-medium">
+              <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] font-medium">
                 {REASON_LABEL[issue.reason] ?? issue.reason}
               </span>
               <span className="mr-auto text-xs text-[var(--sys-muted-foreground)]">
@@ -270,14 +270,14 @@ export function ConfirmationIssuesScreen() {
             )}
 
             {issue.note && (
-              <p className="text-sm text-[var(--sys-heading)] bg-[var(--sys-surface)] rounded-[8px] p-2">
+              <p className="text-sm text-[var(--sys-heading)] bg-[var(--sys-surface)] rounded-lg p-2">
                 <span className="text-[var(--sys-muted-foreground)]">ملاحظة موظف التأكيد: </span>
                 {issue.note}
               </p>
             )}
 
             {isEditing && draft && (
-              <div className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 space-y-3">
+              <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 space-y-3">
                 <p className="text-xs text-[var(--sys-muted-foreground)]">
                   صحّح البيانات هنا — الحقل المؤشَّر بالأحمر هو ما أبلغ عنه موظف التأكيد.
                 </p>
@@ -341,7 +341,7 @@ export function ConfirmationIssuesScreen() {
                 </div>
 
                 {changeSummary(issue, draft).length > 0 && (
-                  <div className="text-[11px] text-[var(--sys-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-2 space-y-0.5">
+                  <div className="text-[11px] text-[var(--sys-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-2 space-y-0.5">
                     <p className="text-[var(--sys-muted-foreground)]">سيُسجَّل في الطلب:</p>
                     {changeSummary(issue, draft).map((line) => (
                       <p key={line} dir="rtl">• {line}</p>
@@ -353,13 +353,13 @@ export function ConfirmationIssuesScreen() {
                   <button
                     onClick={() => saveCorrection(issue)}
                     disabled={busy === issue.id}
-                    className="px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                   >
                     {busy === issue.id ? 'جارٍ الحفظ…' : 'احفظ التصحيح وأعده للطابور'}
                   </button>
                   <button
                     onClick={() => { setEditing(null); setDraft(null); setError(null); }}
-                    className="px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
+                    className="px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                   >
                     إلغاء
                   </button>
@@ -368,7 +368,7 @@ export function ConfirmationIssuesScreen() {
             )}
 
             {isVoiding && (
-              <div className="rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 space-y-2">
+              <div className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 space-y-2">
                 <label className="block">
                   <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">سبب الإبطال</span>
                   <input
@@ -383,13 +383,13 @@ export function ConfirmationIssuesScreen() {
                   <button
                     onClick={() => confirmVoid(issue)}
                     disabled={busy === issue.id}
-                    className="px-3 py-1.5 rounded-[8px] bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                   >
                     تأكيد الإبطال
                   </button>
                   <button
                     onClick={() => { setVoiding(null); setVoidReason(''); setError(null); }}
-                    className="px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
+                    className="px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                   >
                     تراجع
                   </button>
@@ -406,14 +406,14 @@ export function ConfirmationIssuesScreen() {
               <footer className="flex gap-2 pt-2 border-t border-[var(--sys-border)]">
                 <button
                   onClick={() => openCorrection(issue)}
-                  className="px-3 py-1.5 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
                 >
                   <PencilLine className="w-3.5 h-3.5" />
                   صحّح البيانات
                 </button>
                 <button
                   onClick={() => { setVoiding(issue.id); setVoidReason(''); setError(null); }}
-                  className="px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
                 >
                   <Ban className="w-3.5 h-3.5" />
                   إبطال الطلب (المالك فقط)

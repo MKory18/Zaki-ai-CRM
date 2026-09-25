@@ -250,10 +250,10 @@ export function ConfirmationMineScreen() {
   return (
     <div className="space-y-6 max-w-5xl">
       {error && (
-        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>
       )}
       {notice && (
-        <p className="text-sm text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-[8px] p-3">{notice}</p>
+        <p className="text-sm text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-3">{notice}</p>
       )}
 
       <section>
@@ -271,14 +271,14 @@ export function ConfirmationMineScreen() {
         />
         <div className="space-y-3">
           {inConfirmation.length === 0 && (
-            <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+            <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
               لا يوجد طلب بيدك الآن. اسحب طلباً من مركز التأكيد.
             </p>
           )}
           {inConfirmation.map((order) => {
             const remaining = Math.max(0, data.noAnswerLimit - order.noAnswerCount);
             return (
-              <article key={order.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 space-y-3">
+              <article key={order.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-3">
                 <header className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{order.orderNumber}</span>
                   <OrderStateBadge state={order.state} />
@@ -288,7 +288,7 @@ export function ConfirmationMineScreen() {
                     previousOrders={order.previousOrders}
                   />
                   {order.risk && (
-                    <span className={`text-[11px] px-2 py-0.5 rounded-[6px] border ${RISK_LABEL[order.risk.tier].cls}`}>
+                    <span className={`text-[11px] px-2 py-0.5 rounded-md border ${RISK_LABEL[order.risk.tier].cls}`}>
                       {RISK_LABEL[order.risk.tier].text} · {Math.round(order.risk.returnRate * 100)}% مرتجع من{' '}
                       {order.risk.orders} طلب
                     </span>
@@ -327,7 +327,7 @@ export function ConfirmationMineScreen() {
                 )}
 
                 {order.risk?.requiresPrepaymentOrApproval && (
-                  <p className="flex items-center gap-2 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-2">
+                  <p className="flex items-center gap-2 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-2">
                     <ShieldAlert className="w-4 h-4" /> عميل عالي الخطورة: يتطلب دفعاً مسبقاً أو موافقة المشرف.
                   </p>
                 )}
@@ -406,7 +406,7 @@ export function ConfirmationMineScreen() {
           value={findDone}
           onChange={setFindDone}
         />
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
               <tr>
@@ -547,7 +547,7 @@ function ResponseClock({
   if (firstActionAt && claimedAt) {
     const took = Math.max(0, Math.round((+new Date(firstActionAt) - +new Date(claimedAt)) / 60000));
     return (
-      <span className="text-[11px] px-2 py-0.5 rounded-[6px] border bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)] tabular-nums">
+      <span className="text-[11px] px-2 py-0.5 rounded-md border bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)] tabular-nums">
         رددت خلال {humanMinutes(took)}
       </span>
     );
@@ -558,7 +558,7 @@ function ResponseClock({
   const late = waiting >= 30;
   return (
     <span
-      className={`text-[11px] px-2 py-0.5 rounded-[6px] border tabular-nums ${
+      className={`text-[11px] px-2 py-0.5 rounded-md border tabular-nums ${
         late
           ? 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]'
           : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30'
@@ -640,7 +640,7 @@ function Action({
     <button
       onClick={onClick}
       disabled={busy}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-xs font-medium border disabled:opacity-50 ${
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border disabled:opacity-50 ${
         primary
           ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]'
           : danger

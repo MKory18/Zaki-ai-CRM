@@ -119,7 +119,7 @@ export function PenaltiesScreen() {
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={`h-8 flex-1 rounded-[8px] border text-xs font-medium ${
+            className={`h-8 flex-1 rounded-lg border text-xs font-medium ${
               tab === t.key ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] text-[var(--sys-foreground)]'
             }`}
           >
@@ -135,7 +135,7 @@ export function PenaltiesScreen() {
           <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
         </p>
       ) : data.penalties.length === 0 ? (
-        <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
           لا خصومات هنا.
         </p>
       ) : (
@@ -143,7 +143,7 @@ export function PenaltiesScreen() {
           {data.penalties.map((row) => {
             const st = STATUS_AR[row.status];
             return (
-              <li key={row.id} className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+              <li key={row.id} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm font-semibold text-[var(--sys-heading)]">{row.user.name}</span>
                   <span className={`rounded border px-1.5 py-0.5 text-[10px] ${st.cls}`}>{st.ar}</span>
@@ -180,7 +180,7 @@ export function PenaltiesScreen() {
                           type="button"
                           disabled={busy === row.id}
                           onClick={() => decide(row, 'apply')}
-                          className="flex items-center gap-1 rounded-[8px] border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--sys-destructive)] disabled:opacity-60"
+                          className="flex items-center gap-1 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--sys-destructive)] disabled:opacity-60"
                         >
                           <Check className="h-3 w-3" /> اعتمد الخصم
                         </button>
@@ -188,7 +188,7 @@ export function PenaltiesScreen() {
                           type="button"
                           disabled={busy === row.id}
                           onClick={() => setAsking({ row, action: 'waive' })}
-                          className="flex items-center gap-1 rounded-[8px] border border-[var(--sys-border)] px-2.5 py-1 text-[11px] text-[var(--sys-foreground)] disabled:opacity-60"
+                          className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-[11px] text-[var(--sys-foreground)] disabled:opacity-60"
                         >
                           <X className="h-3 w-3" /> ألغِ
                         </button>
@@ -199,7 +199,7 @@ export function PenaltiesScreen() {
                         type="button"
                         disabled={busy === row.id}
                         onClick={() => setAsking({ row, action: 'reverse' })}
-                        className="flex items-center gap-1 rounded-[8px] border border-[var(--sys-border)] px-2.5 py-1 text-[11px] text-[var(--sys-foreground)] disabled:opacity-60"
+                        className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-[11px] text-[var(--sys-foreground)] disabled:opacity-60"
                       >
                         <RotateCcw className="h-3 w-3" /> ارتجاع
                       </button>
@@ -248,7 +248,7 @@ export function PenaltiesScreen() {
                 type="button"
                 disabled={!reason.trim() || busy === asking.row.id}
                 onClick={() => decide(asking.row, asking.action, reason.trim())}
-                className="rounded-[8px] bg-[var(--sys-primary)] px-4 py-2 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+                className="rounded-lg bg-[var(--sys-primary)] px-4 py-2 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
               >
                 {busy === asking.row.id ? 'جارٍ…' : 'تأكيد'}
               </button>
@@ -258,7 +258,7 @@ export function PenaltiesScreen() {
                   setAsking(null);
                   setReason('');
                 }}
-                className="rounded-[8px] border border-[var(--sys-border)] px-4 py-2 text-xs text-[var(--sys-muted-foreground)]"
+                className="rounded-lg border border-[var(--sys-border)] px-4 py-2 text-xs text-[var(--sys-muted-foreground)]"
               >
                 تراجع
               </button>

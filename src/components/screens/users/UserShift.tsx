@@ -93,7 +93,7 @@ export function UserShift({
   };
 
   return (
-    <div className="col-span-full rounded-xl bg-[var(--sys-surface)] px-3 py-2.5">
+    <div className="col-span-full rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
       <p className="mb-1.5 flex items-center gap-1 text-[10px] text-[var(--sys-muted)]">
         <Clock4 className="h-3 w-3" /> الدوام
       </p>

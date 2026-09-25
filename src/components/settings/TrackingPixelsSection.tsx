@@ -148,7 +148,7 @@ export function TrackingPixelsSection() {
   }
 
   return (
-    <section id="tracking" dir="rtl" className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 sm:p-5">
+    <section id="tracking" dir="rtl" className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 sm:p-5">
       <div className="mb-1 flex items-center gap-2">
         <Radar className="h-4 w-4 text-[var(--sys-primary)]" />
         <h1 className="text-base font-bold text-[var(--sys-heading)]">بكسل التتبع والحملات</h1>

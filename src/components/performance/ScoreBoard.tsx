@@ -125,7 +125,7 @@ export function ScoreBoard() {
       </p>
 
       {data.roles.map((r) => (
-        <section key={r.role} className="overflow-hidden rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)]">
+        <section key={r.role} className="overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
           <h3 className="border-b border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs font-bold text-[var(--sys-foreground)]">
             {r.ar}
           </h3>
@@ -147,7 +147,7 @@ export function ScoreBoard() {
       ))}
 
       {data.roles.length === 0 && (
-        <p className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
           لا موظفين في الأدوار التي يقيسها هذا السكور بهذا المتجر.
         </p>
       )}

@@ -64,7 +64,7 @@ export function UserCommissionCurrency({
   }
 
   return (
-    <div className="rounded-xl bg-[var(--sys-surface)] px-3 py-2.5">
+    <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
       <p className="flex items-center gap-1 text-[10px] text-[var(--sys-muted)]">
         <Coins className="h-3 w-3" /> عملة العمولة
       </p>

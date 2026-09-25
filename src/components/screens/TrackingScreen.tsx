@@ -130,7 +130,7 @@ export function TrackingScreen() {
           e.preventDefault();
           void load();
         }}
-        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex flex-wrap gap-3 items-end"
+        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex flex-wrap gap-3 items-end"
       >
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">بحث</span>
@@ -140,13 +140,13 @@ export function TrackingScreen() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="رقم الطلب، المرجع، الباركود، اسم العميل أو الهاتف"
-              className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+              className="w-full h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
             />
           </div>
         </label>
         <label>
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الحالة</span>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm">
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm">
             <option value="">قيد الشحن</option>
             {Object.entries(STATUS_LABEL).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
@@ -154,19 +154,19 @@ export function TrackingScreen() {
             <option value="all">الكل</option>
           </select>
         </label>
-        <button type="submit" className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
+        <button type="submit" className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
         {data && data.lateCount > 0 && (
-          <span className="flex items-center gap-1 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] px-3 h-10">
+          <span className="flex items-center gap-1 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-3 h-10">
             <Clock className="w-4 h-4" /> {data.lateCount} شحنة متأخرة
           </span>
         )}
       </form>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
       {data && all.length > 0 && (
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-3 flex flex-wrap items-center gap-2">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-3 flex flex-wrap items-center gap-2">
           <button
             onClick={() => { setTask('all'); setSelected({}); }}
             className={`text-xs px-2.5 py-1 rounded-full border ${
@@ -198,7 +198,7 @@ export function TrackingScreen() {
           has no statement to import, so collection is done by naming the
           orders here. Only delivered, unsettled ones can be chosen. */}
       {collectable.length > 0 && (
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-3 flex flex-wrap items-center gap-3">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-3 flex flex-wrap items-center gap-3">
           <span className="text-xs text-[var(--sys-muted-foreground)]">
             {chosen.length > 0
               ? `مختار ${chosen.length} طلب · صافي ${netOfChosen}`
@@ -217,7 +217,7 @@ export function TrackingScreen() {
               </button>
               <button
                 onClick={() => setCollecting(true)}
-                className="h-8 px-3 rounded-[8px] bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
+                className="h-8 px-3 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
               >
                 <HandCoins className="w-3.5 h-3.5" /> استلمت منه
               </button>

@@ -158,7 +158,7 @@ export function ContactButtons({
              * exactly where an agent would be reading it from.
              * Desk: the ordinary dropdown under the button.
              */
-            className="fixed inset-x-2 bottom-2 z-40 max-h-[60vh] overflow-y-auto rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-xl p-1.5 sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-full sm:end-0 sm:z-30 sm:mt-1 sm:w-72 sm:max-h-none sm:shadow-lg"
+            className="fixed inset-x-2 bottom-2 z-40 max-h-[60vh] overflow-y-auto rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-xl p-1.5 sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-full sm:end-0 sm:z-30 sm:mt-1 sm:w-72 sm:max-h-none sm:shadow-lg"
           >
             {templates === null ? (
               <p className="p-2 text-[11px] text-[var(--sys-muted)]">جارٍ التحميل…</p>

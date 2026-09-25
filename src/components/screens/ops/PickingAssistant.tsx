@@ -40,7 +40,7 @@ export function PickingAssistant() {
   };
 
   return (
-    <section className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-3">
+    <section className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-[var(--sys-muted-foreground)]">
           اسأل المساعد عن ترتيب الجولة والنواقص. لا يرى اسم زبون ولا عنواناً، ولا يحجز ولا يحرّك مخزوناً.
@@ -48,7 +48,7 @@ export function PickingAssistant() {
         <button
           onClick={ask}
           disabled={busy}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] disabled:opacity-60 cursor-pointer"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] disabled:opacity-60 cursor-pointer"
         >
           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-[var(--sys-primary)]" />}
           {busy ? 'جارٍ…' : 'رتّب لي الجولة'}

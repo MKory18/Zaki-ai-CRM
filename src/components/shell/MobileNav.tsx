@@ -61,7 +61,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
         <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-label="كل الشاشات">
           <div className="absolute inset-0 bg-black/50" onClick={() => setSheet(false)} aria-hidden="true" />
           <div
-            className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-y-auto rounded-t-2xl border-t border-[var(--sys-border)] bg-[var(--sys-card)] pb-[env(safe-area-inset-bottom)]"
+            className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-y-auto rounded-t-lg border-t border-[var(--sys-border)] bg-[var(--sys-card)] pb-[env(safe-area-inset-bottom)]"
             dir="rtl"
           >
             <div className="sticky top-0 flex items-center justify-between border-b border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3">

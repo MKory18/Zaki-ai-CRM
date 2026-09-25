@@ -349,7 +349,7 @@ export function OrdersScreen() {
         {/* One bar, three rows that each answer a different question:
             which queue am I in, what am I looking for, and how do I narrow
             it. The old grid mixed all three into six equal cells. */}
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-xl shadow-xs divide-y divide-[var(--sys-border)]">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg shadow-xs divide-y divide-[var(--sys-border)]">
           {/* Search — pressing Enter or the button runs it; it no longer
               fires on every keystroke, which made a long phone number send
               a request per digit. */}
@@ -448,14 +448,14 @@ export function OrdersScreen() {
 
         {/* Load error banner */}
         {error && (
-          <div className="rounded-xl border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs flex items-center justify-between gap-2">
+          <div className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs flex items-center justify-between gap-2">
             <span>{error}</span>
             <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
           </div>
         )}
 
         {selected.size > 0 && (
-          <div className="flex flex-wrap items-center gap-2 bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] rounded-xl px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-2 bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] rounded-lg px-4 py-2.5">
             <span className="text-xs font-semibold text-[var(--sys-primary)]">
               محدَّد: {selected.size} طلب
             </span>

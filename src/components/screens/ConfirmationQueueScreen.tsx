@@ -80,8 +80,8 @@ export function ConfirmationQueueScreen() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-8 text-center">
-        <div className="mx-auto w-14 h-14 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-8 text-center">
+        <div className="mx-auto w-14 h-14 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
           <Inbox className="w-7 h-7 text-[var(--sys-primary)]" />
         </div>
         <p className="mt-4 text-4xl font-bold text-[var(--sys-heading)] tabular-nums">{data.waiting}</p>
@@ -90,13 +90,13 @@ export function ConfirmationQueueScreen() {
         <button
           onClick={pullNext}
           disabled={!data.canPull || pulling || data.waiting === 0}
-          className="mt-6 px-8 py-3 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold disabled:opacity-50"
+          className="mt-6 px-8 py-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold disabled:opacity-50"
         >
           {pulling ? 'جارٍ السحب…' : 'اسحب الطلب التالي'}
         </button>
 
         {(error || data.refusal) && (
-          <p className="mt-4 text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">
+          <p className="mt-4 text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">
             {error ?? data.refusal?.message}
           </p>
         )}
@@ -120,7 +120,7 @@ export function ConfirmationQueueScreen() {
       </div>
 
       {data.orders && (
-        <section className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+        <section className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <header className="px-4 py-3 border-b border-[var(--sys-border)] text-sm font-semibold text-[var(--sys-heading)]">
             عرض المشرف — نفس الطلبات المنتظرة ({data.orders.length})
           </header>
@@ -154,7 +154,7 @@ export function ConfirmationQueueScreen() {
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 p-3 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)]">
+    <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)]">
       <ScreenTitle />
 
       <span className="text-[var(--sys-muted-foreground)]">{icon}</span>

@@ -239,7 +239,7 @@ export function ProductOffers({
               return (
                 <li
                   key={o.id}
-                  className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border px-3 py-2.5 ${
+                  className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border px-3 py-2.5 ${
                     inactive
                       ? 'border-[var(--sys-border)] bg-[var(--sys-surface)] opacity-60'
                       : o.isDefault
@@ -339,7 +339,7 @@ export function ProductOffers({
         )}
 
         {draft && (
-          <div className="space-y-2 rounded-xl border border-[var(--sys-primary)]/30 bg-[var(--sys-primary-soft)] p-3">
+          <div className="space-y-2 rounded-lg border border-[var(--sys-primary)]/30 bg-[var(--sys-primary-soft)] p-3">
             <Input
               label="اسم العرض"
               placeholder="مثال: ثلاث قطع + واحدة هدية"

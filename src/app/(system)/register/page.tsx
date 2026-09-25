@@ -139,7 +139,7 @@ export default function RegisterPage() {
               </Button>
             </form>
 
-            <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] flex items-start space-x-2 rtl:space-x-reverse text-[11px] text-[var(--sys-foreground)]">
+            <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg flex items-start space-x-2 rtl:space-x-reverse text-[11px] text-[var(--sys-foreground)]">
               <Clock className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
               <span>
                 بعد التسجيل يكون حسابك بحالة <strong className="text-[var(--sys-heading)]">بانتظار الموافقة</strong>،

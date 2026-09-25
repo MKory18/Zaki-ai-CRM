@@ -30,7 +30,7 @@ interface RedirectRow {
   suggested: boolean;
 }
 
-const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3';
+const CARD = 'rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3';
 
 export function StoreRoutesScreen() {
   const confirm = useConfirm();
@@ -140,7 +140,7 @@ export function StoreRoutesScreen() {
 
       {/* The decision that is costing money while it waits. */}
       {suggestions.length > 0 && (
-        <section className="space-y-2 rounded-xl border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3">
+        <section className="space-y-2 rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3">
           <p className="flex items-center gap-1.5 text-xs font-bold text-[var(--sys-warning)]">
             <Sparkles className="h-3.5 w-3.5" />
             {suggestions.length === 1 ? 'اقتراح ينتظر قرارك' : `${suggestions.length} اقتراحات تنتظر قرارك`}
@@ -196,7 +196,7 @@ export function StoreRoutesScreen() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)]">
+      <div className="overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[var(--sys-surface)] text-xs text-[var(--sys-muted-foreground)]">

@@ -152,7 +152,7 @@ export function UserSalary({
   };
 
   return (
-    <div className="col-span-full rounded-xl bg-[var(--sys-surface)] px-3 py-2.5">
+    <div className="col-span-full rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
       <p className="mb-1.5 flex items-center gap-1 text-[10px] text-[var(--sys-muted)]">
         <Banknote className="h-3 w-3" /> الراتب
       </p>
@@ -315,14 +315,14 @@ export function UserSalary({
                   type="button"
                   disabled={busy || !walletId || !(effectiveRate > 0) || !!data.period.paid || data.preview.net <= 0}
                   onClick={pay}
-                  className="rounded-[8px] bg-[var(--sys-primary)] px-4 py-2 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+                  className="rounded-lg bg-[var(--sys-primary)] px-4 py-2 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
                 >
                   {busy ? 'جارٍ…' : 'اصرف'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaying(false)}
-                  className="rounded-[8px] border border-[var(--sys-border)] px-4 py-2 text-xs text-[var(--sys-muted-foreground)]"
+                  className="rounded-lg border border-[var(--sys-border)] px-4 py-2 text-xs text-[var(--sys-muted-foreground)]"
                 >
                   تراجع
                 </button>

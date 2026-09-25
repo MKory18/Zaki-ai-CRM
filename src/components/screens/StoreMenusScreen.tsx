@@ -30,7 +30,7 @@ interface PageOption {
   isPublished: boolean;
 }
 
-const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
+const CARD = 'rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
 
 export function StoreMenusScreen() {
   const [menus, setMenus] = useState<Record<MenuKey, MenuItem[]> | null>(null);

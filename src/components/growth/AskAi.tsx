@@ -82,7 +82,7 @@ export function AskAi() {
   };
 
   return (
-    <section className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)]">
+    <section className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
       <header className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-[var(--sys-border)]">
         <Brain className="w-4 h-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">اسأل الذكاء عن أرقامك</h2>

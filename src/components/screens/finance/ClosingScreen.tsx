@@ -60,7 +60,7 @@ export function ClosingScreen() {
     <div className="max-w-5xl space-y-3">
       <ScreenTitle />
 
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex gap-3 items-end">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex gap-3 items-end">
         <label>
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">يوم الإغلاق</span>
           <input
@@ -68,27 +68,27 @@ export function ClosingScreen() {
             value={date}
             max={today()}
             onChange={(e) => setDate(e.target.value)}
-            className="h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
       </div>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
-      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-3">{done}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
       {!rows ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           لا توجد محافظ نشطة.
         </p>
       ) : (
         <div className="space-y-3">
           {rows.map((r) => (
-            <div key={r.walletId} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4">
+            <div key={r.walletId} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-medium text-[var(--sys-heading)]">{r.walletName}</h3>
@@ -119,7 +119,7 @@ export function ClosingScreen() {
                       <button
                         disabled={!!r.blockedBy}
                         onClick={() => setCountFor(r)}
-                        className="h-8 px-3 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                        className="h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                       >
                         {r.closing ? 'تعديل الجرد' : 'تسجيل الجرد'}
                       </button>
@@ -144,7 +144,7 @@ export function ClosingScreen() {
                               setBusy(null);
                             }
                           }}
-                          className="h-8 px-3 rounded-[8px] border border-[var(--sys-border)] text-xs font-medium text-[var(--sys-success)] disabled:opacity-50"
+                          className="h-8 px-3 rounded-lg border border-[var(--sys-border)] text-xs font-medium text-[var(--sys-success)] disabled:opacity-50"
                         >
                           اعتماد
                         </button>
@@ -155,7 +155,7 @@ export function ClosingScreen() {
               </div>
 
               {r.blockedBy && (
-                <p className="mt-3 text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-[8px] p-2.5 flex items-start gap-2">
+                <p className="mt-3 text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg p-2.5 flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   إغلاق {new Date(r.blockedBy.date).toISOString().slice(0, 10)} فيه فرق{' '}
                   <b className="tabular-nums">{r.blockedBy.difference}</b> بلا تفسير — فسّره واعتمده قبل إغلاق هذا اليوم.
@@ -163,7 +163,7 @@ export function ClosingScreen() {
               )}
 
               {r.closing?.explanation && (
-                <p className="mt-3 text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-2.5">
+                <p className="mt-3 text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-2.5">
                   التفسير: {r.closing.explanation}
                 </p>
               )}
@@ -233,7 +233,7 @@ function CountDialog({
         }}
         className="space-y-3"
       >
-        <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3 tabular-nums">
+        <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 tabular-nums">
           رصيد الدفاتر: <b>{row.bookBalance}</b> {row.currencyCode}
         </p>
 
@@ -246,14 +246,14 @@ function CountDialog({
             onChange={(e) => setActual(e.target.value)}
             required
             autoFocus
-            className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
 
         {difference !== null && (
           <p
-            className={`text-sm rounded-[8px] p-3 border tabular-nums ${
+            className={`text-sm rounded-lg p-3 border tabular-nums ${
               needsExplanation
                 ? 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]'
                 : 'text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40'
@@ -272,7 +272,7 @@ function CountDialog({
               onChange={(e) => setExplanation(e.target.value)}
               required
               rows={3}
-              className="w-full p-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+              className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
               placeholder="مثال: سلفة نقدية لمندوب لم تُسجَّل بعد"
             />
           </label>
@@ -281,13 +281,13 @@ function CountDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-9 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-9 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحفظ…' : 'حفظ الجرد'}
           </button>

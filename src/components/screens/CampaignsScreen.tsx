@@ -278,7 +278,7 @@ function Stat({ label, value, tone, hint }: { label: string; value: string; tone
   const colour =
     tone === 'good' ? 'text-[var(--sys-success)]' : tone === 'bad' ? 'text-[var(--sys-destructive)]' : tone === 'warn' ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-heading)]';
   return (
-    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
       <p className="text-[10px] font-semibold text-[var(--sys-muted-foreground)]">{label}</p>
       <p className={`mt-0.5 text-base font-bold tabular-nums ${colour}`} dir="ltr">{value}</p>
       {hint && <p className="mt-0.5 text-[9px] text-[var(--sys-muted)]">{hint}</p>}
@@ -294,7 +294,7 @@ function Row({
 }) {
   const tone = roasTone(c.money.roas);
   return (
-    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -403,7 +403,7 @@ function Cell({ label, value, unit, tone, icon }: { label: string; value: string
 
 function Empty({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="rounded-xl border border-dashed border-[var(--sys-border-strong)] p-8 text-center">
+    <div className="rounded-lg border border-dashed border-[var(--sys-border-strong)] p-8 text-center">
       <Megaphone className="mx-auto h-8 w-8 text-[var(--sys-border-strong)]" />
       <p className="mt-2 text-sm font-semibold text-[var(--sys-foreground)]">لا حملات بعد</p>
       <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
@@ -474,7 +474,7 @@ function Editor({
       <div
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-[var(--sys-card)] p-4 sm:rounded-2xl"
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-lg bg-[var(--sys-card)] p-4 sm:rounded-lg"
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-bold text-[var(--sys-heading)]">{campaign ? 'تعديل الحملة' : 'حملة جديدة'}</h2>
@@ -641,7 +641,7 @@ function LinkDialog({
       <div
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-[var(--sys-card)] p-4 sm:rounded-2xl"
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-lg bg-[var(--sys-card)] p-4 sm:rounded-lg"
       >
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-sm font-bold text-[var(--sys-heading)]">اربط «{campaign.name}» بحملة في ميتا</h2>

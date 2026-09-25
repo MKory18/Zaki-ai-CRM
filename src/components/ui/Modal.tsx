@@ -68,7 +68,7 @@ export function Modal({
       />
       <div
         className={clsx(
-          'relative w-full bg-[var(--sys-card)] rounded-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1)] overflow-hidden z-10 max-h-[90vh] flex flex-col',
+          'relative w-full bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] overflow-hidden z-10 max-h-[90vh] flex flex-col',
           widthStyles[maxWidth]
         )}
       >

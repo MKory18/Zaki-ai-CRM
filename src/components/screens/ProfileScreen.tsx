@@ -73,7 +73,7 @@ export function ProfileScreen() {
 
         {message && (
           <div
-            className={`p-3 rounded-xl text-xs flex items-center space-x-2 rtl:space-x-reverse ${
+            className={`p-3 rounded-lg text-xs flex items-center space-x-2 rtl:space-x-reverse ${
               message.type === 'success'
                 ? 'bg-[var(--sys-success-soft)] border-0 text-[var(--sys-success)]'
                 : 'bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]'
@@ -93,7 +93,7 @@ export function ProfileScreen() {
             cannot be asked to improve it. */}
         {/* How the system looks, on the page about them. It applies the
             moment it is clicked — choosing a theme means looking at it. */}
-        <div className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
           <ThemePicker initial={currentUser?.systemTheme} />
         </div>
 
@@ -107,15 +107,15 @@ export function ProfileScreen() {
               subtitle="تُدار من قِبل مدير النظام — للقراءة فقط"
             />
             <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-[var(--sys-muted)] block">البريد الإلكتروني</span>
                 <span className="font-bold text-[var(--sys-heading)]">{currentUser?.email}</span>
               </div>
-              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-[var(--sys-muted)] block">الدور</span>
                 <Badge variant="info">{currentUser?.role}</Badge>
               </div>
-              <div className="bg-[var(--sys-surface)] p-3 rounded-xl">
+              <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-[var(--sys-muted)] block">حالة الحساب</span>
                 <Badge variant={currentUser?.status === 'ACTIVE' ? 'success' : 'warning'}>
                   {currentUser?.status}

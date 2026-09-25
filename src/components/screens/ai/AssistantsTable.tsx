@@ -59,13 +59,13 @@ export function AssistantsTable({
 
   return (
     <div className="space-y-3">
-      <p className="rounded-xl bg-[var(--sys-surface)] px-3 py-2.5 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
+      <p className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
         كل مساعد يقرأ ما هو مكتوب في سطره فقط — الخدمة ترفض جلب غيره، فالسطر وعدٌ يحفظه الكود لا وصفٌ
         على برومبت. ولا مساعد، مهما كان نطاقه، ينقل حالة طلب أو يسجّل حركة صندوق أو يغيّر سعراً أو
         يعتمد تسوية.
       </p>
 
-      <div className="overflow-hidden rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)]">
+      <div className="overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
         <table className="w-full text-xs">
           <thead className="border-b border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]">
             <tr>
@@ -118,7 +118,7 @@ export function AssistantsTable({
       </div>
 
       {/* The one assistant whose reach is a decision rather than a job. */}
-      <section className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+      <section className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
         <h3 className="text-sm font-bold text-[var(--sys-heading)]">ما يقرؤه مركز الذكاء</h3>
         <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
           يبدأ بلا مجال واحد. أشّر ما تسمح له بقراءته — وغير المؤشَّر لا يُجلَب أصلاً، فلا يمكن

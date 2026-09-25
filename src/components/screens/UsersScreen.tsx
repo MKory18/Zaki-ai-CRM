@@ -168,7 +168,7 @@ export function UsersScreen() {
         )}
 
         {/* Filters */}
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative sm:col-span-2">
             <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
             <input
@@ -323,14 +323,14 @@ export function UsersScreen() {
                 permissions on the old role. */}
             <a
               href={`/admin/users/${manageUser.id}`}
-              className="flex items-center justify-between rounded-xl border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+              className="flex items-center justify-between rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
             >
               <span>الدور الحالي: {ROLE_LABELS[manageUser.role] || manageUser.role}</span>
               <span>تغيير الدور والصلاحيات والوصول ←</span>
             </a>
 
             {/* Status actions */}
-            <div className="border border-[var(--sys-border)] rounded-xl p-4 space-y-3 bg-[var(--sys-surface)]">
+            <div className="border border-[var(--sys-border)] rounded-lg p-4 space-y-3 bg-[var(--sys-surface)]">
               <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">حالة الحساب</h4>
               <div className="flex flex-wrap gap-2">
                 {manageUser.status === 'PENDING' && (

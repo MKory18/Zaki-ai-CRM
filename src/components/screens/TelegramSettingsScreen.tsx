@@ -81,7 +81,7 @@ export function TelegramSettingsScreen() {
         </div>
 
         {error && (
-          <div className="rounded-xl border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs">{error}</div>
+          <div className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs">{error}</div>
         )}
 
         <Card>

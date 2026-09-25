@@ -206,15 +206,15 @@ export function CouriersScreen() {
           أجور التوصيل لكل محافظة تُضبط من{' '}
           <Link href="/settings/delivery-fees" className="text-[var(--sys-primary)] hover:underline">أجور التوصيل</Link>.
         </p>
-        <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
+        <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
           <Plus className="w-4 h-4" /> شركة شحن أو مندوب
         </button>
       </div>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
       {adding && (
-        <form onSubmit={create} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 grid gap-3 md:grid-cols-4">
+        <form onSubmit={create} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 grid gap-3 md:grid-cols-4">
           <Field label="الاسم" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
           <Field label="الرمز" value={form.code} onChange={(v) => setForm({ ...form, code: v })} dir="ltr" />
           <Field label="الهاتف" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} dir="ltr" required={false} />
@@ -223,7 +223,7 @@ export function CouriersScreen() {
             <select
               value={form.kind}
               onChange={(e) => setForm({ ...form, kind: e.target.value as 'COMPANY' | 'AGENT' })}
-              className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               <option value="COMPANY">شركة شحن</option>
               <option value="AGENT">مندوب</option>
@@ -241,7 +241,7 @@ export function CouriersScreen() {
               <select
                 value={form.adapterCode}
                 onChange={(e) => setForm({ ...form, adapterCode: e.target.value })}
-                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
               >
                 {COURIER_PLATFORMS.map((p) => (
                   <option key={p.code} value={p.code}>{p.name}</option>
@@ -254,8 +254,8 @@ export function CouriersScreen() {
           )}
 
           <div className="flex gap-2 items-end">
-            <button type="submit" disabled={busy} className="px-4 py-2 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm disabled:opacity-60">حفظ</button>
-            <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 rounded-[8px] border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">إلغاء</button>
+            <button type="submit" disabled={busy} className="px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm disabled:opacity-60">حفظ</button>
+            <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 rounded-lg border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">إلغاء</button>
           </div>
         </form>
       )}
@@ -282,7 +282,7 @@ export function CouriersScreen() {
               <button
                 onClick={() => placeHere(c)}
                 disabled={busy}
-                className="rounded-[8px] border border-[var(--sys-warning)]/40 bg-[var(--sys-card)] px-3 py-1 text-[11px] text-[var(--sys-warning)] hover:border-[var(--sys-warning)] disabled:opacity-50"
+                className="rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-card)] px-3 py-1 text-[11px] text-[var(--sys-warning)] hover:border-[var(--sys-warning)] disabled:opacity-50"
               >
                 أسنِدها لهذا المتجر
               </button>
@@ -291,7 +291,7 @@ export function CouriersScreen() {
         </div>
       )}
 
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
             <tr>
@@ -316,7 +316,7 @@ export function CouriersScreen() {
                     <input
                       value={edit.name}
                       onChange={(e) => setEdit({ ...edit, name: e.target.value })}
-                      className="h-8 w-40 rounded-[8px] border border-[var(--sys-border)] px-2 text-sm"
+                      className="h-8 w-40 rounded-lg border border-[var(--sys-border)] px-2 text-sm"
                     />
                   ) : (
                     c.name
@@ -348,7 +348,7 @@ export function CouriersScreen() {
                       onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
                       dir="ltr"
                       placeholder="—"
-                      className="h-8 w-32 rounded-[8px] border border-[var(--sys-border)] px-2 text-sm"
+                      className="h-8 w-32 rounded-lg border border-[var(--sys-border)] px-2 text-sm"
                     />
                   ) : c.phone ? (
                     <span className="inline-flex items-center gap-2">
@@ -364,7 +364,7 @@ export function CouriersScreen() {
                 </td>
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => toggle(c)} disabled={busy} className={`text-xs px-3 py-1 rounded-[8px] border ${c.isActive ? 'border-[var(--sys-border)] text-[var(--sys-success)]' : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'}`}>
+                    <button onClick={() => toggle(c)} disabled={busy} className={`text-xs px-3 py-1 rounded-lg border ${c.isActive ? 'border-[var(--sys-border)] text-[var(--sys-success)]' : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'}`}>
                       {c.isActive ? 'نشطة' : 'موقوفة'}
                     </button>
                     {/* An agent has no platform account: he is a person with a
@@ -372,7 +372,7 @@ export function CouriersScreen() {
                     {c.kind !== 'AGENT' && (
                       <button
                         onClick={() => setAccountFor(accountFor === c.id ? null : c.id)}
-                        className="rounded-[8px] border border-[var(--sys-border)] px-3 py-1 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+                        className="rounded-lg border border-[var(--sys-border)] px-3 py-1 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                       >
                         الحساب والتكامل
                       </button>
@@ -470,7 +470,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         dir={dir}
         required={required}
-        className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
       />
     </label>
   );

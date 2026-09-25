@@ -65,25 +65,25 @@ export function IntelligenceScreen() {
       {/* The AI sits under the rule-based findings, never instead of them:
           those carry their evidence and can be checked, and the numbers it
           is handed are the same numbers. */}
-      <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
+      <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
         تحليل مبني على طلباتك الفعلية — كل رقم هنا محسوب من طلبات موجودة، لا تقديرات. وما لا تكفي
         البيانات للإجابة عليه يُقال فيه «لا تكفي البيانات» بدل رقم يبدو معقولاً.
       </p>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
+      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحليل…
         </div>
       ) : data.totalOrders < data.minSample ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
           <Lightbulb className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا تكفي البيانات بعد — {data.totalOrders} طلباً فقط. التحليل يحتاج {data.minSample} على الأقل
           حتى لا تكون النسب مجرد ضجيج.
         </p>
       ) : data.findings.length === 0 ? (
-        <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-[8px] p-6 text-center">
+        <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-6 text-center">
           <CheckCircle2 className="w-5 h-5 mx-auto mb-2" />
           لا شيء يتجاوز حدود الإنذار في {data.totalOrders} طلباً. هذا صمت مقصود، لا تحليل فاشل.
         </p>
@@ -109,7 +109,7 @@ export function IntelligenceScreen() {
             {data.findings.map((f) => {
               const tone = TONE[f.severity];
               return (
-                <div key={f.key} className={`bg-[var(--sys-card)] border rounded-[8px] p-4 ${tone.border}`}>
+                <div key={f.key} className={`bg-[var(--sys-card)] border rounded-lg p-4 ${tone.border}`}>
                   <div className="flex items-start gap-2">
                     {f.severity === 'ALARM' ? (
                       <AlertTriangle className="w-4 h-4 text-[var(--sys-destructive)] shrink-0 mt-0.5" />
@@ -125,7 +125,7 @@ export function IntelligenceScreen() {
                       {/* The number it rests on, so the claim can be checked. */}
                       <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{f.evidence}</p>
 
-                      <p className="text-sm text-[var(--sys-foreground)] mt-2 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-2.5">
+                      <p className="text-sm text-[var(--sys-foreground)] mt-2 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-2.5">
                         {f.action}
                       </p>
                     </div>

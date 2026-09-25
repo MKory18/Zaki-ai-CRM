@@ -249,7 +249,7 @@ export function ProductsScreen() {
                 placeholder="بحث بالاسم (عربي/إنجليزي) أو SKU..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full ps-9 pe-4 py-2.5 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
+                className="w-full ps-9 pe-4 py-2.5 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
               {search && (
                 <button
@@ -376,7 +376,7 @@ export function ProductsScreen() {
           )}
 
           {/* Basic Information */}
-          <div className="border border-[var(--sys-border)] rounded-xl p-4 bg-[var(--sys-surface)] space-y-3">
+          <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)] space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">1. المعلومات الأساسية</h4>
             <Input
               label="اسم المنتج *"
@@ -423,7 +423,7 @@ export function ProductsScreen() {
                     key={key}
                     type="button"
                     onClick={() => setSourceType(key)}
-                    className={`cursor-pointer rounded-xl border p-3 text-start transition ${
+                    className={`cursor-pointer rounded-lg border p-3 text-start transition ${
                       sourceType === key
                         ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)]'
                         : 'border-[var(--sys-border)] bg-[var(--sys-card)] hover:border-[var(--sys-primary)]/40'
@@ -446,7 +446,7 @@ export function ProductsScreen() {
           </div>
 
           {/* Product Images */}
-          <div className="border border-[var(--sys-border)] rounded-xl p-4 bg-[var(--sys-surface)] space-y-3">
+          <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)] space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">
                 2. صور المنتج (الأولى = الصورة الرئيسية)
@@ -472,7 +472,7 @@ export function ProductsScreen() {
             </div>
 
             {selectedFiles.length === 0 ? (
-              <div className="border-2 border-dashed border-[var(--sys-border)] rounded-xl p-6 text-center text-xs text-[var(--sys-muted)]">
+              <div className="border-2 border-dashed border-[var(--sys-border)] rounded-lg p-6 text-center text-xs text-[var(--sys-muted)]">
                 JPG / PNG / WEBP — حتى 10 ميجابايت للصورة
               </div>
             ) : (
@@ -480,7 +480,7 @@ export function ProductsScreen() {
                 {selectedFiles.map((file, idx) => (
                   <div
                     key={idx}
-                    className={`relative group rounded-xl overflow-hidden border-2 ${
+                    className={`relative group rounded-lg overflow-hidden border-2 ${
                       primaryIndex === idx ? 'border-[var(--sys-primary)]' : 'border-[var(--sys-border)]'
                     }`}
                   >
@@ -519,7 +519,7 @@ export function ProductsScreen() {
           </div>
 
           {/* Inventory info hint */}
-          <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] rounded-xl text-[11px] text-[var(--sys-primary)]">
+          <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] rounded-lg text-[11px] text-[var(--sys-primary)]">
             بعد إنشاء المنتج أضف تشغيلات الإنتاج من صفحة <Link href="/manufacturing" className="underline font-semibold">تشغيلات الإنتاج</Link> لحساب تكلفة الوحدة والمخزون تلقائياً.
           </div>
 
@@ -544,7 +544,7 @@ export function ProductsScreen() {
       >
         <form onSubmit={handleEditSave} className="space-y-4">
           {editError && (
-            <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-xl">
+            <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg">
               {editError}
             </div>
           )}
@@ -568,7 +568,7 @@ export function ProductsScreen() {
           <Textarea label="الوصف بالإنجليزية" rows={2} dir="ltr" value={editForm.descriptionEn} onChange={(e) => setEditForm({ ...editForm, descriptionEn: e.target.value })} />
 
           {editProduct && (
-            <div className="flex items-center gap-3 p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] rounded-xl">
+            <div className="flex items-center gap-3 p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] rounded-lg">
               <ProductThumb
                 src={editProduct.images?.find((i: any) => i.isPrimary)?.url || editProduct.images?.[0]?.url}
                 size="md"

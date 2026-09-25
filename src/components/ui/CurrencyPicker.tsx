@@ -33,7 +33,7 @@ export function currencyChoiceReady(c: CurrencyChoice): boolean {
 
 const LABEL = 'block text-xs font-medium text-[var(--sys-foreground)]';
 const CONTROL =
-  'mt-1 block h-10 w-full rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm focus:outline-none focus:border-[var(--sys-primary)]';
+  'mt-1 block h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
 export function CurrencyPicker({
   value,

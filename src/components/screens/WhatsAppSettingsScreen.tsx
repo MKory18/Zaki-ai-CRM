@@ -59,7 +59,7 @@ export function WhatsAppSettingsScreen() {
     return (
       <>
         <div className="p-8">
-          <div className="max-w-md mx-auto mt-20 text-center p-8 bg-[var(--sys-card)] rounded-xl border border-[var(--sys-border)]">
+          <div className="max-w-md mx-auto mt-20 text-center p-8 bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]">
             <ShieldAlert className="w-10 h-10 mx-auto text-[var(--sys-primary)]" />
             <h2 className="mt-4 font-bold text-[var(--sys-heading)]">ليس لديك صلاحية لإدارة واتساب</h2>
           </div>
@@ -95,7 +95,7 @@ export function WhatsAppSettingsScreen() {
         </div>
 
         {/* Status */}
-        <div className={`p-4 rounded-xl border flex items-center gap-3 ${status === 'CONNECTED' ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success-soft)]' : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]'}`}>
+        <div className={`p-4 rounded-lg border flex items-center gap-3 ${status === 'CONNECTED' ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success-soft)]' : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]'}`}>
           <span className={`w-3 h-3 rounded-full ${status === 'CONNECTED' ? 'bg-[var(--sys-success)]' : 'bg-[var(--sys-warning)]'}`} />
           <div className="flex-1">
             <p className={`font-bold text-sm ${status === 'CONNECTED' ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>

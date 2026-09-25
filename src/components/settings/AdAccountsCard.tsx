@@ -145,7 +145,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
   const labelOf = (p: string) => platforms.find((x) => x.platform === p)?.short ?? p;
 
   return (
-    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
       <div className="mb-1 flex items-center gap-2">
         <Megaphone className="h-4 w-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">حسابات الإعلانات</h2>

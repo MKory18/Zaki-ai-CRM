@@ -86,7 +86,7 @@ export function ScanButton({ onScan, title = 'مسح الباركود', continuo
         onClick={() => setOpen(true)}
         className={
           className ??
-          'h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 shrink-0'
+          'h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 shrink-0'
         }
       >
         <Camera className="w-4 h-4" />
@@ -262,7 +262,7 @@ export function ScanSheet({
   return (
     <Modal isOpen onClose={close} title={title} maxWidth="sm">
       <div className="space-y-3">
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[8px] bg-black">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-black">
           <video ref={video} playsInline muted className="h-full w-full object-cover" />
           <canvas ref={canvas} className="hidden" />
 
@@ -270,7 +270,7 @@ export function ScanSheet({
               makes people hold the label too far back, every time. */}
           {state === 'scanning' && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="h-2/5 w-3/5 rounded-[8px] border-2 border-[var(--sys-primary)]/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+              <div className="h-2/5 w-3/5 rounded-lg border-2 border-[var(--sys-primary)]/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
             </div>
           )}
 
@@ -310,7 +310,7 @@ export function ScanSheet({
         {said && (
           <p
             data-testid="scan-said"
-            className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5 text-center text-sm text-[var(--sys-foreground)]"
+            className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5 text-center text-sm text-[var(--sys-foreground)]"
             dir="auto"
           >
             {said}
@@ -336,12 +336,12 @@ export function ScanSheet({
               onChange={(e) => setTyped(e.target.value)}
               placeholder="أو اكتب المرجع"
               dir="ltr"
-              className="h-10 w-full rounded-[8px] border border-[var(--sys-border)] ps-9 pe-3 text-sm"
+              className="h-10 w-full rounded-lg border border-[var(--sys-border)] ps-9 pe-3 text-sm"
             />
           </label>
           <button
             type="submit"
-            className="h-10 shrink-0 rounded-[8px] bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)]"
+            className="h-10 shrink-0 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)]"
           >
             إدخال
           </button>

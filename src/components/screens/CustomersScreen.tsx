@@ -194,7 +194,7 @@ export function CustomersScreen() {
           maxWidth="2xl"
         >
           <div className="space-y-4">
-            <div className="p-4 bg-[var(--sys-surface)] rounded-xl grid grid-cols-2 gap-3 text-xs">
+            <div className="p-4 bg-[var(--sys-surface)] rounded-lg grid grid-cols-2 gap-3 text-xs">
               <div>
                 <span className="text-[var(--sys-muted)]">رقم الهاتف:</span>
                 <p className="font-bold font-mono text-[var(--sys-heading)] text-sm" dir="ltr">

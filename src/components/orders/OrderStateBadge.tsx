@@ -50,7 +50,7 @@ export function OrderStateBadge({
   if (state === 'CANCELLED' && beforeShipping !== undefined) {
     return (
       <span
-        className={`inline-block text-[11px] px-2 py-0.5 rounded-[6px] border whitespace-nowrap ${
+        className={`inline-block text-[11px] px-2 py-0.5 rounded-md border whitespace-nowrap ${
           beforeShipping
             ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30'
             : 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]'
@@ -67,7 +67,7 @@ export function OrderStateBadge({
   }
   return (
     <span
-      className={`inline-block text-[11px] px-2 py-0.5 rounded-[6px] border whitespace-nowrap ${
+      className={`inline-block text-[11px] px-2 py-0.5 rounded-md border whitespace-nowrap ${
         cfg?.cls ?? 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
       }`}
     >

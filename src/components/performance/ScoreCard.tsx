@@ -122,7 +122,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
   const score = data.score;
 
   return (
-    <section className="rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
+    <section className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
       <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--sys-border)] pb-3">
         <div>
           <h3 className="text-sm font-bold text-[var(--sys-heading)]">{data.person.name}</h3>

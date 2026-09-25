@@ -160,14 +160,14 @@ export function Sidebar({
                     href={route.path}
                     onClick={onClose}
                     className={clsx(
-                      'flex items-center justify-between mx-3 px-2 py-2.5 rounded-[8px] text-sm font-medium transition-colors group',
+                      'flex items-center justify-between mx-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors group',
                       isActive ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-heading)]'
                     )}
                   >
                     <span className="flex items-center gap-3">
                       <span
                         className={clsx(
-                          'w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 transition-colors',
+                          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors',
                           isActive ? 'bg-[var(--sys-card)]/10 text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-heading)] text-[var(--sys-muted-foreground)] group-hover:text-[var(--sys-primary-foreground)]'
                         )}
                       >

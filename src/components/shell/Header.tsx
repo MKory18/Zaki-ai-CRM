@@ -44,12 +44,12 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 h-[72px] bg-[var(--sys-card)] border-b border-[var(--sys-border)] flex items-center gap-3 px-4 md:px-6">
-      <button onClick={onMenuClick} className="md:hidden p-2 rounded-[8px] hover:bg-[var(--sys-surface)]" aria-label="القائمة">
+      <button onClick={onMenuClick} className="md:hidden p-2 rounded-lg hover:bg-[var(--sys-surface)]" aria-label="القائمة">
         <Menu className="w-5 h-5 text-[var(--sys-foreground)]" />
       </button>
 
       {/* Country + store context, always visible: every request carries it */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)]">
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)]">
         <Store className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
         <div className="leading-tight min-w-0">
           <p className="text-xs font-semibold text-[var(--sys-heading)] truncate max-w-[160px]">{context.storeName}</p>
@@ -61,7 +61,7 @@ export function Header({
         {context.canSwitch && (
           <Link
             href="/entry?change=1"
-            className="mr-1 p-1.5 rounded-[6px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-card)]"
+            className="mr-1 p-1.5 rounded-md text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-card)]"
             title="تبديل البلد أو المتجر"
           >
             <Repeat className="w-4 h-4" />
@@ -81,7 +81,7 @@ export function Header({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="ابحث برقم الطلب أو اسم العميل أو الهاتف"
-          className="w-full h-10 pr-9 pl-3 rounded-[8px] border border-[var(--sys-border)] bg-[var(--sys-surface)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+          className="w-full h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
         />
       </form>
       )}
@@ -110,7 +110,7 @@ export function Header({
         </div>
         <button
           onClick={logout}
-          className="p-2 rounded-[8px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+          className="p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
           title="تسجيل الخروج"
         >
           <LogOut className="w-5 h-5" />

@@ -44,7 +44,7 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
   }, [dateQuery]);
 
   if (failed) {
-    return <p className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-xs text-[var(--sys-muted-foreground)]">تعذّر تحميل التحليلات.</p>;
+    return <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-xs text-[var(--sys-muted-foreground)]">تعذّر تحميل التحليلات.</p>;
   }
   if (!data) {
     return (
@@ -91,7 +91,7 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
 
 function Tile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
       <p className="flex items-center gap-1 text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{icon}{label}</p>
       <p className="mt-1 text-xl font-black tabular-nums text-[var(--sys-heading)]" dir="ltr">{value}</p>
     </div>
@@ -100,7 +100,7 @@ function Tile({ icon, label, value }: { icon: React.ReactNode; label: string; va
 
 function Table({ title, rows, empty, linkPages }: { title: string; rows: Row[]; empty: string; linkPages?: boolean }) {
   return (
-    <section className="rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)]">
+    <section className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
       <h3 className="border-b border-[var(--sys-surface-strong)] px-4 py-2.5 text-sm font-bold text-[var(--sys-heading)]">{title}</h3>
       {rows.length === 0 || rows.every((r) => !r.views && !r.orders) ? (
         <p className="p-4 text-center text-xs text-[var(--sys-muted)]">{empty}</p>

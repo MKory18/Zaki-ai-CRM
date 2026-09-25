@@ -99,7 +99,7 @@ export function DeliverDialog({
           <p className="text-sm text-[var(--sys-muted-foreground)] py-6 text-center">جارٍ التحميل…</p>
         ) : (
           <>
-            <div className="border border-[var(--sys-border)] rounded-[8px] divide-y divide-[var(--sys-border)]">
+            <div className="border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
               {lines.map((l) => {
                 const shipped = l.quantity + l.freeQuantity;
                 const value = taken[l.id] ?? 0;
@@ -116,7 +116,7 @@ export function DeliverDialog({
                       <button
                         type="button"
                         onClick={() => setTaken((t) => ({ ...t, [l.id]: 0 }))}
-                        className={`text-[11px] px-2 py-1 rounded-[6px] border ${
+                        className={`text-[11px] px-2 py-1 rounded-md border ${
                           value === 0 ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
                         }`}
                       >
@@ -130,7 +130,7 @@ export function DeliverDialog({
                         onChange={(e) =>
                           setTaken((t) => ({ ...t, [l.id]: Math.max(0, Math.min(shipped, Number(e.target.value))) }))
                         }
-                        className="w-16 h-8 px-2 rounded-[6px] border border-[var(--sys-border)] text-sm text-center tabular-nums"
+                        className="w-16 h-8 px-2 rounded-md border border-[var(--sys-border)] text-sm text-center tabular-nums"
                         dir="ltr"
                       />
                     </div>
@@ -139,7 +139,7 @@ export function DeliverDialog({
               })}
             </div>
 
-            <div className="text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3 space-y-1 tabular-nums">
+            <div className="text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 space-y-1 tabular-nums">
               <p className="flex justify-between text-[var(--sys-foreground)]">
                 <span>قيمة ما استُلم</span>
                 <span>{Math.round(goods * 100) / 100} {order.currency}</span>
@@ -178,7 +178,7 @@ export function DeliverDialog({
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="سبب رفض البنود مثلاً"
-                className="w-full h-10 px-3 rounded-[8px] border border-[var(--sys-border)] text-sm"
+                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
               />
             </label>
           </>
@@ -187,13 +187,13 @@ export function DeliverDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-[8px] border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !lines}
-            className="h-9 px-4 rounded-[8px] bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+            className="h-9 px-4 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             <PackageCheck className="w-4 h-4" />
             {saving ? 'جارٍ التسجيل…' : !anyTaken ? 'تسجيل كمرتجع' : allTaken ? 'تسليم كامل' : 'تسليم جزئي'}

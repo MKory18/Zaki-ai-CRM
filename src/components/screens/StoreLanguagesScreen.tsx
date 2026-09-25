@@ -19,7 +19,7 @@ import type { StoreLanguage } from '@/lib/store-languages';
  * system does not keep, and they would find out from a customer.
  */
 
-const CARD = 'rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
+const CARD = 'rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
 
 export function StoreLanguagesScreen() {
   const [available, setAvailable] = useState<StoreLanguage[]>([]);

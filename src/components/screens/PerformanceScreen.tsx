@@ -399,7 +399,7 @@ function Rank({
 }) {
   const tone = warn ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-primary)]';
   return (
-    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] p-3.5 rounded-xl">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] p-3.5 rounded-lg">
       <span className={`text-[10px] font-bold ${tone} inline-flex items-center gap-1.5`}>
         {icon}
         {label}

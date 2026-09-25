@@ -146,7 +146,7 @@ export function StorefrontsScreen() {
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       ) : shops.length === 0 && !loadFailed ? (
-        <div className="rounded-xl border border-dashed border-[var(--sys-border-strong)] p-8 text-center">
+        <div className="rounded-lg border border-dashed border-[var(--sys-border-strong)] p-8 text-center">
           <Store className="mx-auto h-8 w-8 text-[var(--sys-border-strong)]" />
           <p className="mt-2 text-sm font-semibold text-[var(--sys-foreground)]">لا متاجر {STORE_TYPE_LABEL.SINGLE_PRODUCT} في هذه الدولة</p>
           <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
@@ -189,7 +189,7 @@ function Card({
 }) {
   const url = shop.domain ? `https://${shop.domain}` : shop.path;
   return (
-    <div className={`rounded-xl border bg-[var(--sys-card)] p-3 ${shop.live ? 'border-[var(--sys-success-soft)]' : 'border-[var(--sys-border)]'}`}>
+    <div className={`rounded-lg border bg-[var(--sys-card)] p-3 ${shop.live ? 'border-[var(--sys-success-soft)]' : 'border-[var(--sys-border)]'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2.5">
           {shop.logo ? (

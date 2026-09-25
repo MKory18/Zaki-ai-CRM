@@ -84,7 +84,7 @@ interface StoreInfo {
 
 const LABEL = 'mb-1.5 block text-xs font-medium text-[#121926]';
 const HINT = 'mt-1 block text-[10.5px] leading-relaxed text-[#9aa4b2]';
-const CARD = 'rounded-xl border border-[#e3e8ef] bg-white p-4';
+const CARD = 'rounded-lg border border-[#e3e8ef] bg-white p-4';
 
 export function StoreThemeScreen() {
   const [store, setStore] = useState<StoreInfo | null>(null);
@@ -267,7 +267,7 @@ export function StoreThemeScreen() {
                     <Download className="h-3.5 w-3.5" /> صدّر قالبي
                   </Button>
                 </a>
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] border border-[#e3e8ef] px-3 py-1.5 text-xs font-bold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#e3e8ef] px-3 py-1.5 text-xs font-bold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]">
                   <Upload className="h-3.5 w-3.5" /> استورد ملفاً
                   <input
                     type="file"

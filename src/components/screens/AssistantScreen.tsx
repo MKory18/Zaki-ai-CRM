@@ -198,7 +198,7 @@ export function AssistantScreen() {
                 subtitle="Aggregated business intelligence summary calculated from real orders & production costs"
               />
               <CardContent className="space-y-4">
-                <p className="text-sm font-medium text-[var(--sys-heading)] leading-relaxed bg-[var(--sys-card)]/80 p-4 rounded-xl border border-[var(--sys-primary-soft)]/60 shadow-xs">
+                <p className="text-sm font-medium text-[var(--sys-heading)] leading-relaxed bg-[var(--sys-card)]/80 p-4 rounded-lg border border-[var(--sys-primary-soft)]/60 shadow-xs">
                   {summaryData.summaryText}
                 </p>
 
@@ -235,7 +235,7 @@ export function AssistantScreen() {
                 {/* 3 Pillars: Observations, Risks, Recommendations */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   {/* Key Observations */}
-                  <div className="bg-[var(--sys-info-soft)]/70 border border-[var(--sys-info)]/30 rounded-xl p-4">
+                  <div className="bg-[var(--sys-info-soft)]/70 border border-[var(--sys-info)]/30 rounded-lg p-4">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-info)] flex items-center space-x-1.5 mb-2.5">
                       <Lightbulb className="w-4 h-4 text-[var(--sys-info)]" />
                       <span>ملاحظات</span>
@@ -251,7 +251,7 @@ export function AssistantScreen() {
                   </div>
 
                   {/* Risks */}
-                  <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-xl p-4">
+                  <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-lg p-4">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
                       <ShieldAlert className="w-4 h-4 text-[var(--sys-destructive)]" />
                       <span>مخاطر تحتاج تدخّلاً</span>
@@ -267,7 +267,7 @@ export function AssistantScreen() {
                   </div>
 
                   {/* Recommendations */}
-                  <div className="bg-[var(--sys-success-soft)]/70 border border-[var(--sys-success)]/30 rounded-xl p-4">
+                  <div className="bg-[var(--sys-success-soft)]/70 border border-[var(--sys-success)]/30 rounded-lg p-4">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-success)] flex items-center space-x-1.5 mb-2.5">
                       <CheckCircle2 className="w-4 h-4 text-[var(--sys-success)]" />
                       <span>توصيات</span>
@@ -313,7 +313,7 @@ export function AssistantScreen() {
                 )}
 
                 <div
-                  className={`max-w-xl rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-xs ${
+                  className={`max-w-xl rounded-lg px-4 py-3 text-xs leading-relaxed shadow-xs ${
                     m.role === 'user'
                       ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] rounded-tr-none'
                       : 'bg-[var(--sys-surface)] text-[var(--sys-heading)] rounded-tl-none whitespace-pre-wrap'
@@ -373,7 +373,7 @@ export function AssistantScreen() {
                 placeholder="Ask about revenue, top profitable products, moderator performance, or production advice..."
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
-                className="flex-1 px-4 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
+                className="flex-1 px-4 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
               <Button type="submit" size="sm" loading={chatLoading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
                 <Send className="w-4 h-4" />
