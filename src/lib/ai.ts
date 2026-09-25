@@ -1,3 +1,5 @@
+import type { AiScope } from './ai-assistants';
+import { scopeNoteAr } from './ai-scope';
 import { aiChat, aiSettings, AiNotConfigured } from './ai-provider';
 import { resolvePrompt } from './ai-prompts';
 /**
@@ -164,16 +166,38 @@ Always format your response as valid JSON matching this schema:
   return { summary, observations, risks, recommendations };
 }
 
+export interface AskOptions {
+  companyId?: string;
+  /** What was taken out of the context, and why (see ai-scope.ts). */
+  removed?: AiScope[];
+  /** The currency the figures are in — never a dollar sign by default. */
+  currency?: string;
+}
+
+/**
+ * Ask the assistant, with only the facts this person may see.
+ *
+ * The context arrives ALREADY narrowed (ai-scope.ts): a fact they may not
+ * see is not in the request at all, rather than in it behind an instruction
+ * not to mention it. An instruction can be argued with; an absent number
+ * cannot be leaked.
+ */
 export async function askAiAssistant(
   question: string,
-  context: AiBusinessContext,
-  companyId?: string
+  context: Partial<AiBusinessContext>,
+  options: AskOptions | string = {}
 ): Promise<string> {
+  // The third argument used to be the company id alone.
+  const opts: AskOptions = typeof options === 'string' ? { companyId: options } : options;
+  const { companyId, removed = [], currency = '' } = opts;
+
   // The prompt is the COMPANY'S now, resolved at call time from settings.
   // It was written here, which meant the one person who knows whether "be
   // concise" suits their business, in their dialect, could not change a
   // word of it. `job` names it; ai-prompts holds the default.
   const job = 'advisor';
+
+  const note = scopeNoteAr(removed);
 
   // The vendor, the model and the key are the company's choice now, not a
   // deploy-time constant. A failure falls through to the grounded summary
@@ -187,37 +211,86 @@ export async function askAiAssistant(
         user: `Business Metrics Context:
 ${JSON.stringify(context, null, 2)}
 
-User Question: ${question}`,
+${note ? `NOTE: ${note}\n\n` : ''}User Question: ${question}`,
       });
-      if (answer) return answer;
+      if (answer) return note ? `${answer}\n\n_${note}_` : answer;
     } catch (e) {
       if (!(e instanceof AiNotConfigured)) console.warn('AI assistant call failed:', e);
     }
   }
 
-  // Context-aware intelligent fallback answer generator
-  const q = question.toLowerCase();
-  if (q.includes('profit') || q.includes('most profitable') || q.includes('ارباح') || q.includes('ربح')) {
-    return `Based on verified delivered orders, your most profitable product is **${context.top_profitable_product}**. Total delivered revenue is **$${context.revenue.toFixed(2)}**, generating a net profit of **$${context.net_profit.toFixed(2)}** with a net margin of **${context.profit_margin.toFixed(1)}%**. Net profit excludes rejected orders and deducts COGS, shipping ($${context.shipping_cost.toFixed(2)}), and commissions ($${context.commission.toFixed(2)}).`;
-  }
-
-  if (q.includes('moderator') || q.includes('agent') || q.includes('مسوق') || q.includes('مودريتور')) {
-    return `The top performing moderator is **${context.top_moderator}**. Overall team confirmation rate is **${context.confirmation_rate.toFixed(1)}%** across ${context.total_orders} total orders. Sara leads in confirmation consistency and value per call.`;
-  }
-
-  if (q.includes('rejection') || q.includes('reject') || q.includes('رفض') || q.includes('ملغي')) {
-    return `The product with the highest rejection rate is **${context.highest_rejection_product || 'Hair Serum'}**. Out of ${context.total_orders} orders, ${context.rejected_orders} were rejected (${((context.rejected_orders / (context.total_orders || 1)) * 100).toFixed(1)}%). Primary reasons cited in moderator call logs include impulsive click on social ads and shipping fee objections.`;
-  }
-
-  if (q.includes('production') || q.includes('batch') || q.includes('انتاج') || q.includes('تصنيع')) {
-    return `Yes, increasing production is recommended for **${context.top_profitable_product}**. Its healthy net margin (${context.profit_margin.toFixed(1)}%) and high delivery conversion (${context.delivery_rate.toFixed(1)}%) ensure low unsold inventory risk. Ensure packaging batches are ordered simultaneously to maintain the unit cost benchmark.`;
-  }
-
-  return `**SALESFLOW Business Summary:**
-* **Delivered Revenue:** $${context.revenue.toFixed(2)}
-* **Net Real Profit:** $${context.net_profit.toFixed(2)} (${context.profit_margin.toFixed(1)}% margin)
-* **Orders:** ${context.total_orders} total (${context.confirmed_orders} confirmed, ${context.delivered_orders} delivered, ${context.rejected_orders} rejected)
-* **Top Product:** ${context.top_demanded_product} (volume) / ${context.top_profitable_product} (profit)
-* **Top Moderator:** ${context.top_moderator}
-* **Confirmation Rate:** ${context.confirmation_rate.toFixed(1)}%`;
+  return groundedAnswer(question, context, currency, note);
 }
+
+/** A figure, or a plain sentence saying it is not there to give. */
+function figure(value: number | undefined, currency: string): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return currency ? `${value.toFixed(2)} ${currency}` : value.toFixed(2);
+}
+
+/**
+ * The answer when the model is not configured or did not reply.
+ *
+ * Built ONLY from the numbers passed in. The version before this one
+ * printed sentences nobody computed — a named person "leads in confirmation
+ * consistency and value per call", a product name written into the source —
+ * and dollar signs over whatever currency the business actually uses. An
+ * invented answer from a system of record is worse than no answer, because
+ * it is read as a fact the system knows.
+ */
+function groundedAnswer(
+  question: string,
+  c: Partial<AiBusinessContext>,
+  currency: string,
+  note: string | null
+): string {
+  const q = question.toLowerCase();
+  const lines: string[] = [];
+  const add = (label: string, value: string | number | null | undefined) => {
+    if (value !== null && value !== undefined && value !== '') lines.push(`* **${label}:** ${value}`);
+  };
+
+  const money = (v: number | undefined) => figure(v, currency);
+  const pct = (v: number | undefined) => (typeof v === 'number' ? `${v.toFixed(1)}%` : null);
+
+  const asksMoney = /profit|revenue|ربح|أرباح|ايراد|إيراد|دخل/.test(q);
+  const asksPeople = /moderator|agent|مسوق|مودريتور|موظف|فريق/.test(q);
+  const asksRejection = /reject|رفض|ملغي|مرفوض/.test(q);
+
+  if (asksMoney) {
+    if (c.revenue === undefined) {
+      return note ?? 'أرقام المال غير متاحة لصلاحيتك.';
+    }
+    add('الإيراد المسلَّم', money(c.revenue));
+    add('صافي الربح', money(c.net_profit));
+    add('هامش الربح', pct(c.profit_margin));
+    add('تكلفة البضاعة', money(c.production_cost));
+    add('أجور الشحن', money(c.shipping_cost));
+    add('العمولات', money(c.commission));
+    add('الأعلى ربحاً', c.top_profitable_product);
+  } else if (asksPeople) {
+    add('الأعلى أداءً', c.top_moderator);
+    add('نسبة التأكيد', pct(c.confirmation_rate));
+    add('الطلبات', c.total_orders);
+    if (lines.length === 0) return note ?? 'لا أرقام متاحة للإجابة عن هذا السؤال.';
+  } else if (asksRejection) {
+    add('الأعلى رفضاً', c.highest_rejection_product);
+    add('المرفوضة', c.rejected_orders);
+    add('من أصل', c.total_orders);
+  } else {
+    add('الطلبات', c.total_orders);
+    add('المؤكَّدة', c.confirmed_orders);
+    add('المسلَّمة', c.delivered_orders);
+    add('نسبة التأكيد', pct(c.confirmation_rate));
+    add('نسبة التسليم', pct(c.delivery_rate));
+    add('الأكثر طلباً', c.top_demanded_product);
+    add('الإيراد المسلَّم', money(c.revenue));
+    add('صافي الربح', money(c.net_profit));
+  }
+
+  if (lines.length === 0) return note ?? 'لا أرقام متاحة لهذه المدة.';
+
+  const head = `**ملخّص من أرقامك${c.period ? ` — ${c.period}` : ''}:**`;
+  return [head, ...lines, ...(note ? ['', `_${note}_`] : [])].join('\n');
+}
+
