@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Phone, PhoneOff, Search, ShieldAlert, X, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Phone, PhoneOff, Search, ShieldAlert, Sparkles, X, XCircle } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
@@ -14,6 +14,7 @@ import {
   RejectDialog,
   type PostponeValue,
 } from './confirmation/ActionDialogs';
+import { AssistantDialog } from './confirmation/AssistantDialog';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
@@ -73,7 +74,7 @@ const RISK_LABEL: Record<string, { text: string; cls: string }> = {
 };
 
 type DialogState =
-  | { kind: 'postpone' | 'issue' | 'change' | 'reject'; order: OrderRow }
+  | { kind: 'postpone' | 'issue' | 'change' | 'reject' | 'assist'; order: OrderRow }
   | null;
 
 export function ConfirmationMineScreen() {
@@ -379,6 +380,13 @@ export function ConfirmationMineScreen() {
                   <Action onClick={() => setDialog({ kind: 'issue', order })} busy={busyId === order.id} icon={<AlertTriangle className="w-3.5 h-3.5" />}>
                     إشكال إدخال
                   </Action>
+
+                  {/* Reads this order and this customer's history, and says
+                      what it would open with. It changes nothing — every
+                      button that does is on either side of it. */}
+                  <Action onClick={() => setDialog({ kind: 'assist', order })} icon={<Sparkles className="w-3.5 h-3.5" />}>
+                    مساعدة
+                  </Action>
                   <Action primary onClick={() => confirm(order)} busy={busyId === order.id} icon={<CheckCircle2 className="w-3.5 h-3.5" />}>
                     تأكيد الطلب
                   </Action>
@@ -483,6 +491,13 @@ export function ConfirmationMineScreen() {
           busy={busyId === dialog.order.id}
           onClose={() => setDialog(null)}
           onSubmit={(value) => submitReject(dialog.order, value)}
+        />
+      )}
+      {dialog?.kind === 'assist' && (
+        <AssistantDialog
+          orderId={dialog.order.id}
+          orderNumber={dialog.order.orderNumber}
+          onClose={() => setDialog(null)}
         />
       )}
       {dialog?.kind === 'change' && (

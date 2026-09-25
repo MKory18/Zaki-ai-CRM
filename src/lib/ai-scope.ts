@@ -98,3 +98,51 @@ export function scopeNoteAr(removed: AiScope[]): string | null {
   }
   return 'بعض المجالات غير متاحة لصلاحيتك، فالإجابة مبنية على ما هو متاح منها.';
 }
+
+/**
+ * THE PICKING PAYLOAD — the shelf, never the customer.
+ *
+ * `preparationGroups` carries a customer name and a region on every line,
+ * because the screen shows them to a person standing at a bench with the
+ * order in their hand. The model is not that person: it is asked what to
+ * pick and what is short, and a name and a town in that request would be
+ * customer data travelling somewhere nobody is accountable for it.
+ *
+ * So the lines are dropped entirely and only the product totals are built
+ * here, in one named function, rather than by whoever writes the next
+ * caller remembering to leave two fields out.
+ */
+export interface PickingProduct {
+  product: string;
+  sku: string | null;
+  /** The only proxy for a shelf this system has — products have no location. */
+  category: string | null;
+  orders: number;
+  required: number;
+  available: number;
+  shortage: number;
+}
+
+interface PreparationLike {
+  productId: string;
+  productName: string;
+  orders: number;
+  required: number;
+  available: number;
+  shortage: number;
+}
+
+export function pickingPayload(
+  groups: PreparationLike[],
+  shelf: Map<string, { sku: string | null; category: string | null }>
+): PickingProduct[] {
+  return groups.map((g) => ({
+    product: g.productName,
+    sku: shelf.get(g.productId)?.sku ?? null,
+    category: shelf.get(g.productId)?.category ?? null,
+    orders: g.orders,
+    required: g.required,
+    available: g.available,
+    shortage: g.shortage,
+  }));
+}

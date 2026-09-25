@@ -8,6 +8,7 @@ import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { RejectDialog } from '@/components/screens/confirmation/ActionDialogs';
 import { Pencil, XCircle } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { PickingAssistant } from '@/components/screens/ops/PickingAssistant';
 
 /**
  * /ops/preparation — grouped BY PRODUCT, collapsible. Orders, required,
@@ -99,6 +100,8 @@ export function PreparationScreen() {
           {data.allowNegativeStock ? 'المخزون السالب مسموح مع تنبيه' : 'المخزون السالب ممنوع — النقص يمنع الشحن'}
         </span>
       </div>
+
+      {data.groups.length > 0 && <PickingAssistant />}
 
       {data.groups.length === 0 && (
         <p className="text-sm text-[#697586] bg-white border border-[#e3e8ef] rounded-[8px] p-6 text-center">
