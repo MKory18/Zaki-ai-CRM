@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, Loader2, Search } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /inventory/movements — how the stock got to where it is.
@@ -58,6 +59,8 @@ export function InventoryMovementsScreen() {
 
   return (
     <div className="max-w-6xl space-y-3">
+      <ScreenTitle />
+
       <form
         onSubmit={(e) => {
           e.preventDefault();

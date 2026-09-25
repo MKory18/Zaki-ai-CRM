@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Loader2, Play, RotateCcw, XCircle } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /admin/jobs — is anything quietly not running?
@@ -78,6 +79,8 @@ export function JobsScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
+      <ScreenTitle />
+
       <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
         المهام تعمل في عملية مستقلة عن المتصفح:{' '}
         <code className="font-mono text-[11px] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded px-1.5 py-0.5" dir="ltr">

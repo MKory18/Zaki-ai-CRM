@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi, qs } from '@/lib/screen-api';
+import { findRoute } from '@/lib/route-registry';
 import {
   MessageCircle, Send, ChevronRight, Phone, ShoppingBag, User,
   RefreshCw, Settings, ShieldAlert, Check, X, Search, CheckCheck, AlertCircle,
@@ -281,7 +282,7 @@ export function WhatsAppInboxScreen() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">واتساب</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{findRoute('/growth/whatsapp/inbox')?.label}</h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">صندوق وارد مشترك لكل الموظفين — WhatsApp Business Cloud API</p>
           </div>
           {conn?.connection && (

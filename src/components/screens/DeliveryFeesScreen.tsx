@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Loader2, Save, Wand2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /settings/delivery-fees — one row per courier per region: the fee, the
@@ -114,6 +115,8 @@ export function DeliveryFeesScreen() {
 
   return (
     <div className="max-w-4xl space-y-3">
+      <ScreenTitle />
+
       <div className="flex flex-wrap items-end gap-3">
         <label>
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">شركة الشحن</span>

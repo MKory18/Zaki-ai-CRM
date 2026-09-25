@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { GitCompare, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /finance/matching — the outcome of matching, read as four queues: agreed,
@@ -180,6 +181,8 @@ function Queue({
 
   return (
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
+      <ScreenTitle />
+
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 text-right"

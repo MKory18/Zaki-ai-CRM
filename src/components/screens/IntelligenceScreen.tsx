@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Eye, Lightbulb, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { AskAi } from '@/components/growth/AskAi';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /growth/intelligence — what is bleeding, and what to do about it.
@@ -59,6 +60,8 @@ export function IntelligenceScreen() {
 
   return (
     <div className="max-w-4xl space-y-3">
+      <ScreenTitle />
+
       {/* The AI sits under the rule-based findings, never instead of them:
           those carry their evidence and can be checked, and the numbers it
           is handed are the same numbers. */}

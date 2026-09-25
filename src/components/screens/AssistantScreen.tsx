@@ -5,6 +5,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
+import { findRoute } from '@/lib/route-registry';
 import {
   Sparkles,
   RefreshCw,
@@ -159,7 +160,7 @@ export function AssistantScreen() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2">
               <Sparkles className="w-6 h-6 text-[var(--sys-destructive)]" />
-              <span>{t.aiAssistant}</span>
+              <span>{findRoute('/assistant')?.label}</span>
             </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               Section 23-26 OpenRouter AI Business Advisor grounded on verified database metrics & zero financial hallucinations

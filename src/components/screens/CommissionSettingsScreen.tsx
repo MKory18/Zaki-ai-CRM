@@ -5,6 +5,7 @@ import { userCan } from '@/lib/can';
 import { PayoutDialog } from '@/components/screens/commission/PayoutDialog';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { PeriodProgress } from '@/components/screens/commission/PeriodProgress';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import {
   COMMISSION_METRICS, COMMISSION_TYPES, METRIC_LABEL_AR, PERIOD_LABEL_AR, TYPE_LABEL_AR,
   isTarget, targetGoal, tiersProblem,
@@ -127,6 +128,8 @@ export function CommissionSettingsScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
+      <ScreenTitle />
+
       <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
         القاعدة لا تُعدَّل بعد كتابتها: لإنهاء العمل بها حدِّد لها تاريخ انتهاء واكتب قاعدة جديدة من اليوم التالي.
         العمولة تُحتسب بالقاعدة السارية يوم التسليم، وتصبح مستحقة عند اعتماد كشف التحصيل.

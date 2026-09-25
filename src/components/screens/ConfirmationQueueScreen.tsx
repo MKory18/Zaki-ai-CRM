@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Inbox, Loader2, PhoneOff, Timer } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /confirmation/queue — agents see NO list: one "pull next" button and a
@@ -154,6 +155,8 @@ export function ConfirmationQueueScreen() {
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 p-3 rounded-[8px] bg-[var(--sys-surface)] border border-[var(--sys-border)]">
+      <ScreenTitle />
+
       <span className="text-[var(--sys-muted-foreground)]">{icon}</span>
       <div className="min-w-0">
         <p className="text-xs text-[var(--sys-muted-foreground)] truncate">{label}</p>

@@ -8,6 +8,7 @@ import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { changeFieldLabel } from '@/lib/change-request-fields';
 import { deriveCoreState, STATE_LABEL_AR } from '@/lib/order-state';
 import { ROLE_LABELS, type UserRole } from '@/types/auth';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /control/change-requests — the review queue, in its two halves.
@@ -123,6 +124,8 @@ export function ChangeRequestsScreen() {
 
   return (
     <div className="max-w-4xl space-y-3">
+      <ScreenTitle />
+
       {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
 
       <div className="flex gap-1 rounded-lg bg-[var(--sys-surface-strong)] p-0.5 w-fit">

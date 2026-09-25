@@ -12,6 +12,7 @@ import { AttributionTable, type AttributionRow } from '@/components/performance/
 import { LandingAnalyticsTab } from '@/components/performance/LandingAnalyticsTab';
 import { userCan } from '@/lib/can';
 import { ScoreBoard } from '@/components/performance/ScoreBoard';
+import { findRoute } from '@/lib/route-registry';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -138,7 +139,7 @@ export function PerformanceScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.analytics}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{findRoute('/growth/performance')?.label}</h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               ربح كل منتج، وترتيب المنتجات، وأداء الفريق — للمدة المختارة
             </p>

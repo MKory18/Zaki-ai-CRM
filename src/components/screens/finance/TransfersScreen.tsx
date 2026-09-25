@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, Loader2, Repeat } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { readTransfer, transferRefusal, type TransferSide } from '@/lib/transfer-kind';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /finance/transfers — moving money between wallets. One transfer writes two
@@ -123,6 +124,8 @@ export function TransfersScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
+      <ScreenTitle />
+
       <form
         onSubmit={async (e) => {
           e.preventDefault();

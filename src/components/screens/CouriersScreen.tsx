@@ -9,6 +9,7 @@ import { CourierCredentials } from '@/components/settings/CourierCredentials';
 import { CourierWebhook } from '@/components/settings/CourierWebhook';
 import { ContactButtons } from '@/components/orders/ContactButtons';
 import { COURIER_PLATFORMS } from '@/lib/couriers';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /settings/couriers — the shipping companies themselves. Their per-region
@@ -198,6 +199,8 @@ export function CouriersScreen() {
 
   return (
     <div className="max-w-3xl space-y-3">
+      <ScreenTitle />
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-[var(--sys-muted-foreground)]">
           أجور التوصيل لكل محافظة تُضبط من{' '}

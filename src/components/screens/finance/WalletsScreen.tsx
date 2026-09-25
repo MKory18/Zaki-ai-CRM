@@ -5,6 +5,7 @@ import { Loader2, Plus, RotateCcw, Wallet as WalletIcon, Pencil, Trash2, Power, 
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { useConfirm } from '@/components/ui/Confirm';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /finance/wallets — balances and the movement ledger. A recorded movement is
@@ -154,6 +155,8 @@ export function WalletsScreen() {
 
   return (
     <div className="max-w-6xl space-y-3">
+      <ScreenTitle />
+
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-[var(--sys-muted-foreground)]">
           المحفظة تتبع متجراً واحداً وتحمل عملته. حركاتها سجل دائم: ما مرّ بها مبلغ يُوقَف

@@ -11,6 +11,7 @@ import { userCan } from '@/lib/can';
 import { CreateUserModal } from './users/CreateUserModal';
 import { useConfirm } from '@/components/ui/Confirm';
 import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '@/types/auth';
+import { findRoute } from '@/lib/route-registry';
 import {
   Users,
   Search,
@@ -143,7 +144,7 @@ export function UsersScreen() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2 rtl:space-x-reverse">
               <Users className="w-6 h-6 text-[var(--sys-destructive)]" />
-              <span>إدارة المستخدمين والأدوار</span>
+              <span>{findRoute('/admin/users')?.label}</span>
             </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               مراجعة طلبات التسجيل، تعيين الأدوار، تنشيط/إيقاف الحسابات — كل إجراء يُسجَّل في سجل التدقيق

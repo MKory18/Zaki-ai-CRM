@@ -5,6 +5,7 @@ import { useAsk } from '@/components/ui/Confirm';
 import { AlertTriangle, Loader2, PauseCircle, RotateCcw, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /ops/shipments/new — pick a courier, filter, review each row's COD and its
@@ -154,6 +155,8 @@ export function ShipmentsNewScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
+      <ScreenTitle />
+
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 grid gap-3 md:grid-cols-5">
         <Select label="شركة الشحن (للشحنة)" value={filters.courier} onChange={(v) => setFilters({ ...filters, courier: v })} options={providers.map((p) => ({ value: p.id, label: p.name }))} />
         <Select label="المحافظة" value={filters.region} onChange={(v) => setFilters({ ...filters, region: v })} options={regions.map((r) => ({ value: r.id, label: r.name }))} />

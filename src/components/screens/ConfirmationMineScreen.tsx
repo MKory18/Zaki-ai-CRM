@@ -7,6 +7,7 @@ import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import {
   ChangeRequestDialog,
   IssueDialog,
@@ -591,6 +592,8 @@ function SectionHead({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 mb-3">
+      <ScreenTitle />
+
       <h2 className="text-sm font-bold text-[var(--sys-heading)]">
         {title} ({value.trim() ? `${count} من ${total}` : total})
       </h2>

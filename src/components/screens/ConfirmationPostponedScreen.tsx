@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /confirmation/postponed — order, customer, due date, days remaining,
@@ -48,6 +49,8 @@ export function ConfirmationPostponedScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
+      <ScreenTitle />
+
       <p className="text-sm text-[var(--sys-muted-foreground)]">
         القابل للعمل عليه: المستحق خلال {data.leadDays} يوم أو المتأخر. الباقي للعرض فقط.
       </p>

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, Loader2, Upload } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /finance/collection — the three sequential steps, in order and visible as
@@ -94,6 +95,8 @@ export function CollectionScreen() {
 
   return (
     <div className="max-w-6xl space-y-3">
+      <ScreenTitle />
+
       <ImportCard
         providers={providers}
         busy={importing}

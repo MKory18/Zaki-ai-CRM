@@ -9,6 +9,7 @@ import { RejectDialog } from '@/components/screens/confirmation/ActionDialogs';
 import { Pencil, XCircle } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { PickingAssistant } from '@/components/screens/ops/PickingAssistant';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /ops/preparation — grouped BY PRODUCT, collapsible. Orders, required,
@@ -251,6 +252,8 @@ export function PreparationScreen() {
 function Kpi({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
   return (
     <div className={`px-4 py-2 rounded-[8px] border ${danger ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' : 'bg-[var(--sys-card)] border-[var(--sys-border)]'}`}>
+      <ScreenTitle />
+
       <p className="text-xs text-[var(--sys-muted-foreground)]">{label}</p>
       <p className={`text-lg font-bold tabular-nums ${danger ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-heading)]'}`}>{value}</p>
     </div>

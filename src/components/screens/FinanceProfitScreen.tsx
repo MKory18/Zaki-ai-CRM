@@ -7,6 +7,7 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
+import { findRoute } from '@/lib/route-registry';
 import {
   DollarSign,
   TrendingUp,
@@ -114,7 +115,7 @@ export function FinanceProfitScreen() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.finance}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{findRoute('/finance/profit')?.label}</h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
               الربح من الموصَّل فقط — ناقص كلفة البضاعة والشحن والعمولات والمصاريف
             </p>

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { History, Shield, User, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { findRoute } from '@/lib/route-registry';
 
 export function AuditScreen() {
   const { t } = useApp();
@@ -38,7 +39,7 @@ export function AuditScreen() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2">
             <History className="w-6 h-6 text-[var(--sys-foreground)]" />
-            <span>{t.auditLogs}</span>
+            <span>{findRoute('/control/audit')?.label}</span>
           </h1>
           <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
             Section 29 Complete immutable system audit trail: entity modifications, order mutations, batch creation & security actions

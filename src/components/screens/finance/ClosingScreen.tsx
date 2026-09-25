@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Lock, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /finance/closing — count each wallet at the end of the day against its book
@@ -57,6 +58,8 @@ export function ClosingScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
+      <ScreenTitle />
+
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] p-4 flex gap-3 items-end">
         <label>
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">يوم الإغلاق</span>

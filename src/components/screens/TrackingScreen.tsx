@@ -8,6 +8,7 @@ import { TransferDialog } from '@/components/screens/tracking/TransferDialog';
 import { CollectDialog } from '@/components/screens/tracking/CollectDialog';
 import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
 import { apiJson } from '@/lib/api-client';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /ops/tracking — search by order, reference, barcode, customer or phone.
@@ -121,6 +122,8 @@ export function TrackingScreen() {
 
   return (
     <div className="max-w-6xl space-y-3">
+      <ScreenTitle />
+
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Ban, Loader2, Plus, Search, Undo2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /control/blacklist — who may not order again.
@@ -60,6 +61,8 @@ export function BlacklistScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
+      <ScreenTitle />
+
       <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-[8px] p-3">
         الحظر على <b>رقم الهاتف</b> وعلى مستوى الشركة كلها — لأن الرقم هو الهوية، والشخص نفسه هو الشخص
         نفسه في كل متجر. الطلبات القائمة لا تتأثر؛ الحظر يمنع الطلب <b>القادم</b>. وفكّ الحظر يبقي السجل.

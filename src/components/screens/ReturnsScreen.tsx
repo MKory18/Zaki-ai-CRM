@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2, PackageOpen, ScanLine } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 /**
  * /ops/returns — scan or pick a returned shipment, then record the physical
@@ -48,6 +49,8 @@ export function ReturnsScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
+      <ScreenTitle />
+
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -158,3 +158,81 @@ describe('no screen is reachable without its key', () => {
     expect(missing, `صفحة بلا حارس:\n${missing.join('\n')}`).toEqual([]);
   });
 });
+
+/**
+ * A SCREEN SAYS ITS NAME, AND SAYS THE MENU'S NAME FOR IT.
+ *
+ * Seventeen screens rendered no heading at all — their only identity was a
+ * word in the sidebar, which is fine for somebody who walked there and
+ * useless for everybody else: a link from a notification, a bookmark, a
+ * phone where the sidebar is a drawer nobody has opened. A new confirmation
+ * agent lands on her own queue, because the system sends her straight
+ * there, and had nothing on screen telling her where she was.
+ *
+ * And five rendered a heading that CONTRADICTED the menu: the menu said
+ * «الأرباح» and the page said «المالية والأرباح الحقيقية». Two names for
+ * one screen is two screens, to anybody asking a colleague for help.
+ *
+ * The cure is that no screen writes its own title: it reads the one the
+ * sidebar draws from, so the two cannot disagree.
+ */
+describe('every screen names itself', () => {
+  const ROOT = join(process.cwd(), 'src/components/screens');
+
+  it('every screen renders a heading of some kind', () => {
+    const silent = walk(ROOT)
+      .filter((f) => f.endsWith('Screen.tsx'))
+      .filter((f) => {
+        const src = readFileSync(f, 'utf8');
+        return !src.includes('<h1') && !src.includes('<ScreenTitle');
+      })
+      .map((f) => f.split(/[\/]/).pop());
+
+    expect(silent, `شاشة بلا عنوان:\n${silent.join('\n')}`).toEqual([]);
+  });
+
+  it('and no heading contradicts the menu entry that opened it', () => {
+    // The real question — not "is the title read from the registry" but
+    // "does the screen call itself something the menu does not". Five did:
+    // the menu said «الأرباح» and the page said «المالية والأرباح
+    // الحقيقية». Two names for one screen is two screens, to anybody asking
+    // a colleague for help.
+    //
+    // The page files give the mapping: each calls guardRoute('/path') and
+    // imports exactly one screen, so the label the menu uses and the words
+    // the screen prints can be compared directly.
+    const shell = join(process.cwd(), 'src/app/(system)/(shell)');
+    const registry = readFileSync(join(process.cwd(), 'src/lib/route-registry.ts'), 'utf8');
+    const labels = new Map<string, string>();
+    for (const m of registry.matchAll(/r\('([^']+)', '([^']+)'/g)) labels.set(m[1], m[2]);
+
+    const screens = walk(join(process.cwd(), 'src/components/screens'));
+    const offenders: string[] = [];
+
+    for (const page of walk(shell).filter((f) => f.endsWith('page.tsx'))) {
+      const src = readFileSync(page, 'utf8');
+      const path = src.match(/guardRoute\('([^']+)'\)/)?.[1];
+      const comp = src.match(/import \{ (\w+Screen) \}/)?.[1];
+      const label = path ? labels.get(path) : undefined;
+      if (!path || !comp || !label) continue;
+
+      const file = screens.find((f) => f.endsWith(`${comp}.tsx`));
+      if (!file) continue;
+      const body = readFileSync(file, 'utf8');
+      const open = body.indexOf('<h1');
+      if (open === -1) continue;
+
+      // Literal Arabic printed inside the heading, if any.
+      const head = body.slice(open, body.indexOf('</h1>', open)) + '<';
+      const printed = [...head.matchAll(new RegExp('>([^<>{}\n]*[\u0600-\u06FF][^<>{}\n]*)<', 'g'))]
+        .map((m) => m[1].trim())
+        .filter(Boolean);
+
+      if (printed.length > 0 && !printed.includes(label)) {
+        offenders.push(`${comp}: القائمة «${label}» والشاشة «${printed[0]}»`);
+      }
+    }
+
+    expect(offenders, ['عنوان يخالف القائمة:', ...offenders].join(' | ')).toEqual([]);
+  });
+});
