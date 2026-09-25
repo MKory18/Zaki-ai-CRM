@@ -13,6 +13,7 @@ import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { parseSections, ensureForm } from '@/lib/landing-sections';
 import { paletteFor, paletteVars, DEFAULT_THEME } from '@/lib/landing-theme';
 import { parseStoreTheme, themeForPage } from '@/lib/store-theme';
+import { directionOf } from '@/lib/store-languages';
 import { loadStoreFonts } from '@/lib/fonts/load-store-fonts';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref } from '@/components/landing/blocks/styles';
@@ -126,7 +127,7 @@ const PAGE_SELECT = {
   storeId: true,
   store: {
     select: {
-      countryId: true, name: true, logo: true, favicon: true, supportPhone: true, theme: true,
+      countryId: true, name: true, logo: true, favicon: true, supportPhone: true, theme: true, language: true,
       country: { select: { code: true, currencyCode: true } },
     },
   },
@@ -284,7 +285,14 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
     }
 
     return (
-      <div dir="rtl" className="lp-root" style={paletteVars(palette) as React.CSSProperties}>
+      // Its store's language and direction, not a hard-coded rtl: a page
+      // selling in English was being mirrored.
+      <div
+        dir={directionOf(lp.store?.language)}
+        lang={lp.store?.language ?? 'ar'}
+        className="lp-root"
+        style={paletteVars(palette) as React.CSSProperties}
+      >
         {href && <link rel="stylesheet" href={href} />}
         <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
         {storeFonts.css && <style dangerouslySetInnerHTML={{ __html: storeFonts.css }} />}

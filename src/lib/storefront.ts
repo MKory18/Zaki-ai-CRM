@@ -3,6 +3,7 @@ import { db } from './db';
 import { type LandingTheme } from './landing-theme';
 import { DEFAULT_STORE_THEME, parseStoreTheme, type StoreTheme } from './store-theme';
 import { parseMenuItems, visibleItems, type MenuItem, type MenuKey } from './store-menus';
+import { directionOf } from './store-languages';
 import { publicizeMedia } from './public-media';
 
 /**
@@ -75,6 +76,9 @@ export interface Storefront {
    * front of a customer.
    */
   homeLive: string | null;
+  /** What the shop is written in, and which way it reads. */
+  language: string;
+  dir: 'rtl' | 'ltr';
 }
 
 /**
@@ -123,7 +127,7 @@ export const getStorefront = cache(async function getStorefront(slug: string): P
     orderBy: { createdAt: 'asc' },
     select: {
       id: true, name: true, slug: true, logo: true, favicon: true, tagline: true, about: true,
-      supportPhone: true, domain: true, type: true, theme: true, homeLive: true,
+      supportPhone: true, domain: true, type: true, theme: true, homeLive: true, language: true,
       companyId: true, countryId: true, landingPageId: true,
       country: { select: { code: true, currencyCode: true } },
     },
@@ -149,6 +153,8 @@ export const getStorefront = cache(async function getStorefront(slug: string): P
     landingPageId: store.type === 'SINGLE_PRODUCT' ? store.landingPageId : null,
     menus: await getStoreMenus(store.id),
     homeLive: store.homeLive,
+    language: store.language,
+    dir: directionOf(store.language),
   };
 });
 

@@ -1,0 +1,12 @@
+-- What language a shop's public pages are written in.
+--
+-- Every public page has carried dir="rtl" and lang="ar" in the markup since
+-- there was only ever one kind of shop. A seller selling in English got
+-- their page mirrored — heading, price and arrows all on the wrong side.
+--
+-- The DIRECTION is not stored: it is derived from the language, because two
+-- fields that can disagree eventually will.
+--
+-- Additive, and defaulted to 'ar': every existing shop keeps exactly the
+-- direction it renders with today.
+ALTER TABLE "stores" ADD COLUMN IF NOT EXISTS "language" TEXT NOT NULL DEFAULT 'ar';

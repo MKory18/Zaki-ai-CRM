@@ -39,7 +39,9 @@ export function StorefrontShell({
   const footerMenu = store.menus.FOOTER ?? [];
 
   return (
-    <div dir="rtl" className="lp-root sf-root" style={vars as React.CSSProperties}>
+    // The shop's own language and direction. This was written as rtl, so a
+    // shop selling in English had its heading, price and arrows mirrored.
+    <div dir={store.dir} lang={store.language} className="lp-root sf-root" style={vars as React.CSSProperties}>
       {href && <link rel="stylesheet" href={href} />}
       <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS + STOREFRONT_CSS }} />
 

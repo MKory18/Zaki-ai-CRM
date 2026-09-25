@@ -25,7 +25,7 @@ const DRAFT = JSON.stringify([
 const ROW = {
   id: 's1', name: 'صحة بلس', slug: 'seha', logo: null, favicon: null, tagline: null, about: null,
   supportPhone: null, domain: null, type: 'MULTI_PRODUCT', theme: null,
-  homeLive: null as string | null,
+  homeLive: null as string | null, language: 'ar',
   companyId: 'c1', countryId: 'cy1', landingPageId: null,
   country: { code: 'SY', currencyCode: 'USD' },
 };
@@ -65,6 +65,27 @@ describe('what the storefront reads', () => {
       storefrontEnabled: true,
       status: 'ACTIVE',
     });
+  });
+});
+
+describe('the shop reads the way its language reads', () => {
+  it('a shop selling in English is not mirrored', async () => {
+    // The public pages carried dir="rtl" in their markup, so an English
+    // shop had its heading, price and arrows on the wrong side.
+    db.store.findFirst.mockResolvedValue({ ...ROW, language: 'en' });
+    const store = await getStorefront('en-shop');
+    expect(store!.dir).toBe('ltr');
+    expect(store!.language).toBe('en');
+  });
+
+  it('and an Arabic one still reads right to left, as every shop did', async () => {
+    db.store.findFirst.mockResolvedValue({ ...ROW, language: 'ar' });
+    expect((await getStorefront('ar-shop'))!.dir).toBe('rtl');
+  });
+
+  it('a language the build does not know does not mirror a working shop', async () => {
+    db.store.findFirst.mockResolvedValue({ ...ROW, language: 'zz' });
+    expect((await getStorefront('odd'))!.dir).toBe('rtl');
   });
 });
 

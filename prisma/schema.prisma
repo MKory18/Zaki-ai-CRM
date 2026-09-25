@@ -1477,6 +1477,11 @@ model Store {
   /// against landing page domains too — the proxy must never find two
   /// answers for one host.
   domain                String?
+  /// What language the shop's public pages are written in. The direction
+  /// (rtl/ltr) is DERIVED from it, never stored beside it: two fields that
+  /// can disagree will, and «العربية · LTR» is not a thing anybody meant.
+  /// NOT translation — see src/lib/store-languages.ts.
+  language              String       @default("ar")
   /// The shop's HOME PAGE, as LandingSection[] JSON — the same shape, the
   /// same block library and the same renderer as a landing page. There is
   /// one page builder in this system and this is it; a second one would be

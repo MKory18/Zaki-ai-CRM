@@ -130,6 +130,7 @@ export const NAV: NavGroup[] = [
       r('/store/themes', 'القوالب', 'Palette', ['storefront.view', 'storefront.manage']),
       r('/store/menus', 'القوائم', 'ListTree', ['storefront.view', 'storefront.manage']),
       r('/store/pages', 'الصفحات', 'FileText', ['storefront.view', 'storefront.manage']),
+      r('/store/languages', 'اللغات', 'Languages', ['storefront.view', 'storefront.manage']),
       r('/store/routes', 'المسارات', 'Signpost', ['storefront.view', 'storefront.manage']),
       r('/store/domain', 'الدومين', 'Globe', ['storefront.view', 'storefront.domain']),
     ],
