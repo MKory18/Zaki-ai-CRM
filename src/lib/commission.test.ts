@@ -125,6 +125,20 @@ describe('accrueForOrder', () => {
     expect((await accrueForOrder(db as never, { companyId: 'c1', orderId: 'o1', minorUnit: 3 })).skipped).toBe('NOT_DELIVERED');
   });
 
+  it('pays nothing on a PARTIAL delivery — decided, not incidental', async () => {
+    // Everything else about a partial was deliberately widened to include it
+    // this way round: stock consumes the whole parcel, settlement chases the
+    // money, the returns desk counts the refused units back in. Commission
+    // is the one that does NOT, and the rule holds only because the check
+    // spells DELIVERED exactly. This test is what keeps it that way.
+    db.order.findFirst.mockResolvedValue({ ...delivered, shippingStatus: 'PARTIALLY_DELIVERED' });
+    db.commissionRule.findMany.mockResolvedValue([rule()]);
+    const result = await accrueForOrder(db as never, { companyId: 'c1', orderId: 'o1', minorUnit: 3 });
+    expect(result.skipped).toBe('NOT_DELIVERED');
+    expect(result.created).toBe(0);
+    expect(db.commissionEntry.create).not.toHaveBeenCalled();
+  });
+
   it('never pays twice for the same order and person', async () => {
     db.order.findFirst.mockResolvedValue(delivered);
     db.commissionRule.findMany.mockResolvedValue([rule()]);

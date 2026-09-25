@@ -94,6 +94,17 @@ export async function accrueForOrder(
   if (['RETURNED', 'RETURN_REQUESTED', 'FAILED_DELIVERY'].includes(order.shippingStatus)) {
     return { created: 0, skipped: 'RETURNED' };
   }
+  // DELIVERED, AND ONLY DELIVERED — A PARTIAL DELIVERY EARNS NOTHING.
+  //
+  // This is a decision, not an oversight, and it does not follow from the
+  // line below: `!== 'DELIVERED'` happens to exclude PARTIALLY_DELIVERED,
+  // and somebody widening it to `['DELIVERED', 'PARTIALLY_DELIVERED']` for
+  // consistency with the stock, settlement and returns paths — which were
+  // all deliberately widened — would start paying commission on partials
+  // without anybody deciding to.
+  //
+  // The profit line does count a partial's revenue, so the two are
+  // asymmetric on purpose: the money came in, and nobody earns on it.
   if (order.shippingStatus !== 'DELIVERED') return { created: 0, skipped: 'NOT_DELIVERED' };
 
   const at = order.deliveredAt ?? new Date();
