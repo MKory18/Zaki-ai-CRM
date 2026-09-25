@@ -1,7 +1,11 @@
 'use client';
 
+import {
+  METRIC_LABEL_AR, PERIOD_LABEL_AR,
+  type CommissionMetric, type CommissionPeriod, type CommissionType, type Tier,
+} from '@/lib/commission-rules';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Percent, Plus } from 'lucide-react';
+import { AlertTriangle, Loader2, Percent, Plus } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 
@@ -12,17 +16,30 @@ import { Modal } from '@/components/ui/Modal';
  * in force on its delivery day.
  */
 
+
+/** A rule's single value, said the way its type means it. */
+function valueLabel(type: CommissionType, value: number): string {
+  if (type === 'PERCENT') return `${value}%`;
+  return type === 'PER_ORDER' ? `${value} لكل طلب` : `${value} ثابت`;
+}
+
 interface Rule {
   id: string;
   name: string;
   appliesToRole: string | null;
   appliesToUserId: string | null;
   appliesToUserName: string | null;
-  type: 'PERCENT' | 'FIXED';
+  type: CommissionType;
   value: number;
+  metric: CommissionMetric;
+  period: CommissionPeriod;
+  tiers: Tier[] | null;
+  minOrders: number | null;
   effectiveFrom: string;
   effectiveTo: string | null;
   isActive: boolean;
+  /** In force right now — not merely active with a future or past date. */
+  inForce: boolean;
   minSampleOrders: number;
 }
 
@@ -46,6 +63,8 @@ const period = () => new Date().toISOString().slice(0, 7);
 
 export function CommissionSettingsScreen() {
   const [rules, setRules] = useState<Rule[] | null>(null);
+  /** No rule governs this store today: nothing accrues, and it must be said. */
+  const [noRuleInForce, setNoRuleInForce] = useState(false);
   const [totals, setTotals] = useState<Totals[] | null>(null);
   const [currency, setCurrency] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -56,10 +75,11 @@ export function CommissionSettingsScreen() {
   const load = useCallback(async () => {
     try {
       const [r, c] = await Promise.all([
-        apiJson<{ rules: Rule[] }>('/api/settings/commission'),
+        apiJson<{ rules: Rule[]; noRuleInForce: boolean }>('/api/settings/commission'),
         apiJson<{ totals: Totals[]; currencyCode: string }>(`/api/finance/commission?period=${period()}`).catch(() => null),
       ]);
       setRules(r.rules);
+      setNoRuleInForce(!!r.noRuleInForce);
       if (c) {
         setTotals(c.totals);
         setCurrency(c.currencyCode);
@@ -94,6 +114,19 @@ export function CommissionSettingsScreen() {
           </button>
         </div>
 
+        {/* A store with no rule in force earns nobody anything. That is
+            correct arithmetic and reads on a payslip as a quiet month, so
+            the screen says which it is instead of showing a silent zero. */}
+        {noRuleInForce && rules && rules.length > 0 && (
+          <div className="mb-3 flex items-start gap-2 rounded-[8px] border border-[#fde68a] bg-[#fffbeb] px-3 py-2.5 text-xs leading-relaxed text-[#92400e]">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              لا قاعدة سارية على هذا المتجر اليوم — القواعد الموجودة إمّا منتهية أو معطّلة، فلا تُحتسب أي
+              عمولة. أضف قاعدة سارية ليبدأ الاحتساب.
+            </span>
+          </div>
+        )}
+
         {!rules ? (
           <div className="flex items-center justify-center gap-2 text-[#697586] text-sm py-12">
             <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
@@ -109,6 +142,7 @@ export function CommissionSettingsScreen() {
               <tr>
                 <th className="text-right font-medium px-3 py-2">القاعدة</th>
                 <th className="text-right font-medium px-3 py-2">تنطبق على</th>
+                <th className="text-right font-medium px-3 py-2">يُحتسب على</th>
                 <th className="text-right font-medium px-3 py-2">القيمة</th>
                 <th className="text-right font-medium px-3 py-2">من</th>
                 <th className="text-right font-medium px-3 py-2">إلى</th>
@@ -126,8 +160,18 @@ export function CommissionSettingsScreen() {
                         ? r.appliesToUserName
                         : ROLES.find((x) => x.value === r.appliesToRole)?.label ?? r.appliesToRole ?? '—'}
                     </td>
+                    <td className="px-3 py-2 text-[11px] text-[#697586]">
+                      {METRIC_LABEL_AR[r.metric] ?? r.metric}
+                      {r.period !== 'PER_ORDER' && ` · ${PERIOD_LABEL_AR[r.period] ?? r.period}`}
+                    </td>
                     <td className="px-3 py-2 tabular-nums">
-                      {r.type === 'PERCENT' ? `${r.value}%` : `${r.value} ثابت`}
+                      {r.tiers && r.tiers.length > 0 ? (
+                        <span title={r.tiers.map((t) => `${t.from}${t.to === null ? '+' : `–${t.to}`}: ${t.value}`).join(' · ')}>
+                          {r.tiers.length} شرائح
+                        </span>
+                      ) : (
+                        valueLabel(r.type, r.value)
+                      )}
                     </td>
                     <td className="px-3 py-2 text-xs tabular-nums" dir="ltr">
                       {String(r.effectiveFrom).slice(0, 10)}

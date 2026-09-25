@@ -1,3 +1,4 @@
+import { SPANS, accrueForPeriod, lastClosedSpan } from '../commission-period';
 import { db } from '../db';
 import { dueDeliveries, deliverOne } from '../apps/events';
 import { dueConversions, deliverConversion } from '../conversions/emit';
@@ -27,6 +28,9 @@ const SKIP_AR: Record<string, string> = {
   RETURNED: 'مرتجعة',
   NOT_DELIVERED: 'غير مسلَّمة',
   ALREADY_ACCRUED: 'محتسَبة مسبقاً',
+  BELOW_MINIMUM: 'دون الحد الأدنى لعدد الطلبات',
+  NO_TIER: 'خارج شرائح القاعدة',
+  NOTHING_EARNED: 'لم تستحق شيئاً',
 };
 
 /** Every active store, with the country facts its rules depend on. */
@@ -39,7 +43,7 @@ async function activeStores() {
       countryId: true,
       country: {
         select: {
-          id: true, name: true, code: true, minorUnit: true,
+          id: true, name: true, code: true, minorUnit: true, currencyCode: true,
           workHoursStart: true, workHoursEnd: true, weekendDays: true, timezone: true,
         },
       },
@@ -474,6 +478,62 @@ export const deliverConversions: JobDefinition = {
   },
 };
 
+
+/**
+ * Commission that only a closed span can answer.
+ *
+ * "150 confirmed in a day" is not a fact about any one order, so it cannot
+ * be accrued at delivery like the rest. This runs after each span has
+ * closed and writes one entry per person per rule, carrying the span it
+ * covers and what was counted in it.
+ *
+ * It always works on the span that has ENDED, never the running one: a
+ * figure that the next order changes is not a record of anything. Running
+ * twice is safe — the database holds one entry per person, rule and span.
+ */
+export const accruePeriodCommission: JobDefinition = {
+  name: 'accrue-period-commission',
+  everySeconds: 3_600,
+  description: 'احتساب عمولات الشرائح للفترات المنتهية',
+  async run(): Promise<JobResult> {
+    let created = 0;
+    let amount = 0;
+    const skipped: Record<string, number> = {};
+    const now = new Date();
+
+    for (const store of await activeStores()) {
+      for (const span of SPANS) {
+        const { start, end } = lastClosedSpan(span, now);
+        const result = await db.$transaction((tx) =>
+          accrueForPeriod(tx, {
+            companyId: store.companyId,
+            storeId: store.id,
+            span,
+            start,
+            end,
+            minorUnit: store.country.minorUnit,
+            currencyCode: store.country.currencyCode,
+          })
+        );
+        created += result.created;
+        amount += result.amount;
+        for (const [why, n] of Object.entries(result.skipped)) skipped[why] = (skipped[why] ?? 0) + n;
+      }
+    }
+
+    const reasons = Object.entries(skipped)
+      .map(([reason, count]) => `${count} ${SKIP_AR[reason] ?? reason}`)
+      .join(' · ');
+
+    return {
+      processed: created,
+      detail: created
+        ? `احتُسبت ${created} عمولة فترة بمجموع ${amount.toFixed(2)}${reasons ? ` · ${reasons}` : ''}`
+        : reasons || 'لا قواعد فترات مستحقة',
+    };
+  },
+};
+
 export const JOBS: JobDefinition[] = [
   syncCourierStatus,
   releaseClaims,
@@ -481,6 +541,7 @@ export const JOBS: JobDefinition[] = [
   staleReturns,
   closingReminder,
   accrueCommission,
+  accruePeriodCommission,
   deliverAppEvents,
   deliverConversions,
 ];

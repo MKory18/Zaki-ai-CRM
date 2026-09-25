@@ -1,3 +1,4 @@
+import { earnedBy, parseTiers, type CommissionType } from './commission-rules';
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { roundMinor } from './money';
@@ -32,6 +33,18 @@ export interface RuleLike {
   effectiveFrom: Date;
   effectiveTo: Date | null;
   isActive: boolean;
+  /** What it counts. Absent on a rule written before metrics existed. */
+  metric?: string | null;
+  /** Over what span. PER_ORDER accrues here; the rest are the scheduler's. */
+  period?: string | null;
+  tiers?: unknown;
+  minOrders?: number | null;
+  productId?: string | null;
+}
+
+/** A rule that pays as each order is delivered — what this file accrues. */
+export function isPerOrderRule(rule: { metric?: string | null; period?: string | null }): boolean {
+  return (rule.period ?? 'PER_ORDER') === 'PER_ORDER' && (rule.metric ?? 'ORDER_DELIVERED') === 'ORDER_DELIVERED';
 }
 
 /**
@@ -59,9 +72,25 @@ export function ruleFor(
   })[0];
 }
 
+/**
+ * What one delivered order earns under a per-order rule.
+ *
+ * A per-order rule has no count to band on — the count is one — so its tiers
+ * are read against the SALE VALUE instead: "an order over 200 pays more".
+ * A rule with no tiers keeps its single value, exactly as before.
+ */
 export function commissionAmount(rule: RuleLike, orderRevenue: number, minorUnit: number): number {
-  const value = Number(rule.value);
-  return roundMinor(rule.type === 'PERCENT' ? (orderRevenue * value) / 100 : value, minorUnit);
+  const tiers = parseTiers(rule.tiers);
+  const earned = earnedBy({
+    type: (rule.type as CommissionType) ?? 'FIXED',
+    value: Number(rule.value),
+    tiers,
+    count: tiers ? orderRevenue : 1,
+    sample: 1,
+    amount: orderRevenue,
+    minorUnit,
+  });
+  return earned.amount;
 }
 
 export interface AccrualResult {
@@ -119,9 +148,12 @@ export async function accrueForOrder(
    * has not been placed yet and pays nothing: allowing it everywhere is the
    * same leak in a different shape.
    */
-  const rules = (await tx.commissionRule.findMany({
+  // ONLY the rules that pay per order. A rule counting a day's confirmed
+  // orders cannot be answered from one order — the day has not closed —
+  // and it is accrued by the scheduler instead (commission-period.ts).
+  const rules = ((await tx.commissionRule.findMany({
     where: { companyId: params.companyId, storeId: order.storeId, isActive: true },
-  })) as unknown as RuleLike[];
+  })) as unknown as RuleLike[]).filter(isPerOrderRule);
 
   // Commission is earned on the sale, not on the courier's fee. `totalAmount`
   // holds the COD figure from computeCod, and COD minus the fee is the sale

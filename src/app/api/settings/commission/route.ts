@@ -1,3 +1,6 @@
+import {
+  COMMISSION_METRICS, COMMISSION_PERIODS, COMMISSION_TYPES, tiersProblem,
+} from '@/lib/commission-rules';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
@@ -19,12 +22,25 @@ import { zodMessage } from '@/lib/zod-message';
  * from a date keeps every closed period exactly as it was.
  */
 
+const tierSchema = z.object({
+  from: z.number().min(0),
+  to: z.number().min(0).nullable(),
+  value: z.number().min(0).max(1_000_000),
+  label: z.string().trim().max(40).optional(),
+});
+
 const createSchema = z.object({
   name: z.string().trim().min(2).max(80),
   appliesToRole: z.string().trim().max(40).optional().nullable(),
   appliesToUserId: z.string().uuid().optional().nullable(),
-  type: z.enum(['PERCENT', 'FIXED']),
-  value: z.number().min(0).max(1_000_000),
+  type: z.enum(COMMISSION_TYPES),
+  value: z.number().min(0).max(1_000_000).default(0),
+  metric: z.enum(COMMISSION_METRICS).default('ORDER_DELIVERED'),
+  period: z.enum(COMMISSION_PERIODS).default('PER_ORDER'),
+  /** Bands. Absent means the single `value` above, as every older rule is. */
+  tiers: z.array(tierSchema).max(20).optional().nullable(),
+  productId: z.string().uuid().optional().nullable(),
+  minOrders: z.number().int().min(0).max(100_000).optional().nullable(),
   effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   minSampleOrders: z.number().int().min(0).max(1000).default(30),
 });
@@ -51,12 +67,24 @@ export async function GET() {
       : [];
     const nameOf = new Map(users.map((u) => [u.id, u.name]));
 
+    // A store with no rule in force earns nobody anything — which is
+    // correct, and reads on the screen as a quiet month rather than as a
+    // rule somebody forgot to write. The screen says it plainly instead.
+    const now = new Date();
+    const inForce = rules.filter(
+      (r) => r.isActive && r.effectiveFrom <= now && (!r.effectiveTo || r.effectiveTo >= now)
+    );
+
     return NextResponse.json({
       rules: rules.map((r) => ({
         ...r,
         value: Number(r.value),
+        tiers: r.tiers ?? null,
         appliesToUserName: r.appliesToUserId ? nameOf.get(r.appliesToUserId) ?? null : null,
+        inForce: r.isActive && r.effectiveFrom <= now && (!r.effectiveTo || r.effectiveTo >= now),
       })),
+      /** No rule in force: nothing accrues, and the screen must say why. */
+      noRuleInForce: inForce.length === 0,
     });
   } catch (error) {
     return apiErrorResponse(error);
@@ -77,6 +105,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'حدّد الدور أو الموظف الذي تنطبق عليه القاعدة' }, { status: 400 });
     }
 
+    // Bands that cannot be read two ways. Overlapping ones are not a
+    // formatting problem: somebody inside both earns whichever the code
+    // happens to check first, and that changes if the list is reordered.
+    if (input.tiers && input.tiers.length > 0) {
+      const problem = tiersProblem(input.tiers);
+      if (problem) return NextResponse.json({ error: problem }, { status: 400 });
+    } else if (input.value <= 0) {
+      return NextResponse.json({ error: 'أدخل قيمة القاعدة أو شرائحها' }, { status: 400 });
+    }
+
+    // A rate is a percentage: bands over 100 would never be reached.
+    if (input.metric === 'DELIVERY_RATE' && input.tiers?.some((t) => t.from > 100)) {
+      return NextResponse.json({ error: 'نسبة التسليم من ٠ إلى ١٠٠ — راجع الشرائح' }, { status: 400 });
+    }
+
+    // A span nobody can close pays nothing: a metric counted per order has
+    // no day to add up, and a daily count is not a fact about one order.
+    if ((input.period === 'PER_ORDER') !== (input.metric === 'ORDER_DELIVERED')) {
+      return NextResponse.json(
+        { error: 'المقياس «كل طلب مسلَّم» يُحتسب مع كل طلب، وبقية المقاييس تحتاج فترة (يومي أو أسبوعي أو شهري)' },
+        { status: 400 }
+      );
+    }
+
     const rule = await db.commissionRule.create({
       data: {
         companyId,
@@ -88,6 +140,11 @@ export async function POST(req: Request) {
         basis: 'ORDER_DELIVERED', // accrual point per contract
         type: input.type,
         value: input.value,
+        metric: input.metric,
+        period: input.period,
+        tiers: input.tiers && input.tiers.length > 0 ? input.tiers : undefined,
+        productId: input.productId ?? null,
+        minOrders: input.minOrders ?? null,
         minSampleOrders: input.minSampleOrders,
         effectiveFrom: new Date(`${input.effectiveFrom}T00:00:00.000Z`),
         createdById: user.id,
