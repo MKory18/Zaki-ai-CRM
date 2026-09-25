@@ -216,6 +216,36 @@ describe('runMatching', () => {
     expect(outcome.mismatched).toBe(0);
   });
 
+  it('lists a PARTIALLY delivered order the courier never mentioned', async () => {
+    // The customer took some lines and paid for them, so this is money owed
+    // exactly like a full delivery. Sweeping only the full ones let a
+    // courier drop every partial from their statement unremarked — from the
+    // one check whose whole job is to catch what they left out.
+    db.statementLine.findMany.mockResolvedValue([]);
+    db.order.findMany.mockResolvedValue([
+      { id: 'o8', shippingStatus: 'PARTIALLY_DELIVERED', totalAmount: 100, collectedAmount: 60, deliveryFee: 5 },
+    ]);
+
+    const outcome = await runMatching(db as never, scope);
+    expect(outcome.missingInStatement).toBe(1);
+    expect(db.settlementMatch.create.mock.calls[0][0].data).toMatchObject({
+      result: 'MISSING_IN_STATEMENT',
+      orderId: 'o8',
+      // What was actually collected at the door, net of the fee — not the
+      // order's full value, which was never handed over.
+      expectedAmount: 55,
+    });
+  });
+
+  it('asks for both delivered shapes, so neither can slip past the sweep', async () => {
+    db.statementLine.findMany.mockResolvedValue([]);
+    db.order.findMany.mockResolvedValue([]);
+    await runMatching(db as never, scope);
+    expect(db.order.findMany.mock.calls[0][0].where.shippingStatus).toEqual({
+      in: ['DELIVERED', 'PARTIALLY_DELIVERED'],
+    });
+  });
+
   it('lists a delivered order the courier never mentioned', async () => {
     db.statementLine.findMany.mockResolvedValue([]);
     db.order.findMany.mockResolvedValue([{ id: 'o9', shippingStatus: 'DELIVERED', totalAmount: 20 }]);

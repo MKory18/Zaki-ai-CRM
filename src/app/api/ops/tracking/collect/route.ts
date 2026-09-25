@@ -9,6 +9,7 @@ import { recordMovement } from '@/lib/wallets';
 import { markPayableForOrders } from '@/lib/commission';
 import { roundMinor } from '@/lib/money';
 import { zodMessage } from '@/lib/zod-message';
+import { expectedAmountFor } from '@/lib/settlement';
 
 /**
  * POST /api/ops/tracking/collect — settle by hand.
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
       where: { id: { in: parsed.data.orderIds }, companyId, storeId },
       select: {
         id: true, orderNumber: true, currency: true, shippingStatus: true, settlementStatus: true,
-        totalAmount: true, deliveryFee: true,
+        totalAmount: true, deliveryFee: true, collectedAmount: true,
         deliveryProvider: { select: { id: true, name: true, kind: true } },
       },
     });
@@ -72,7 +73,15 @@ export async function POST(req: Request) {
 
     // Only a delivered parcel owes anything. A returned one owes nothing, and
     // one still in transit has not been collected yet.
-    const notDelivered = orders.filter((o) => o.shippingStatus !== 'DELIVERED');
+    //
+    // A PARTIAL delivery owes too, and this refused it. The customer took
+    // some lines and paid for them at the door — `collectedAmount` holds the
+    // exact figure, and the agent-custody report already counts it among
+    // what the courier is holding. But the money could never be recorded as
+    // arrived: the one endpoint that takes cash in refused the order, so it
+    // sat in the courier's owing list for ever with no way to clear it.
+    const DELIVERED = ['DELIVERED', 'PARTIALLY_DELIVERED'];
+    const notDelivered = orders.filter((o) => !DELIVERED.includes(o.shippingStatus));
     if (notDelivered.length > 0) {
       return NextResponse.json(
         {
@@ -99,7 +108,13 @@ export async function POST(req: Request) {
 
     // The net: what the courier hands over after keeping their fee.
     const expected = roundMinor(
-      orders.reduce((sum, o) => sum + (Number(o.totalAmount) - Number(o.deliveryFee ?? 0)), 0),
+      // `expectedAmountFor` is the settlement matcher's own rule, reused
+      // rather than restated: what the customer actually handed over, net of
+      // the courier's fee. On a PARTIAL delivery that is `collectedAmount`,
+      // not the order's full value — computing it from `totalAmount` would
+      // make every partial look like the courier came up short, and accuse
+      // him of a shortfall that only exists in the arithmetic.
+      orders.reduce((sum, o) => sum + expectedAmountFor(o), 0),
       country.minorUnit
     );
     const amount = roundMinor(parsed.data.amount ?? expected, country.minorUnit);

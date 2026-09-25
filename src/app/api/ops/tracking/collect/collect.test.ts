@@ -121,6 +121,34 @@ describe('what it refuses', () => {
     expect(recordMovement).not.toHaveBeenCalled();
   });
 
+  it('ACCEPTS a partially delivered order — the customer paid at the door', async () => {
+    // The refusal here was money with nowhere to go. The customer took some
+    // lines and paid for them, `collectedAmount` holds the figure, and the
+    // agent-custody report already counts it among what the courier is
+    // holding — but this is the only endpoint that takes cash in, and it
+    // turned the order away. The debt sat in his owing list with no way to
+    // clear it.
+    db.order.findMany.mockResolvedValue([order({ shippingStatus: 'PARTIALLY_DELIVERED' })]);
+
+    const res = await POST(post({ orderIds: [ORDER_A], walletId: WALLET, note: 'استلمت منه' }));
+    expect(res.status).toBe(200);
+    expect(recordMovement).toHaveBeenCalled();
+  });
+
+  it('expects what the customer PAID on a partial, not the order’s full value', async () => {
+    // Otherwise every partial reads as the courier coming up short, and the
+    // screen accuses him of a shortfall that exists only in the arithmetic.
+    db.order.findMany.mockResolvedValue([
+      order({ shippingStatus: 'PARTIALLY_DELIVERED', totalAmount: 100, collectedAmount: 60, deliveryFee: 5 }),
+    ]);
+
+    const res = await POST(post({ orderIds: [ORDER_A], walletId: WALLET, note: 'استلمت منه' }));
+    const body = await res.json();
+    // 60 taken at the door, less his 5 fee.
+    expect(body.expected ?? body.amount).toBe(55);
+    expect(body.difference).toBe(0);
+  });
+
   it('refuses a returned order, which owes nothing', async () => {
     db.order.findMany.mockResolvedValue([order({ shippingStatus: 'RETURNED' })]);
     expect((await POST(post({ orderIds: [ORDER_A], walletId: WALLET, note: 'استلمت منه' }))).status).toBe(409);

@@ -95,7 +95,11 @@ export function TrackingScreen() {
 
   // Only a delivered parcel owes anything, and only once. A returned one
   // owes nothing; one still in transit has not been collected yet.
-  const canCollect = (o: Row) => o.shippingStatus === 'DELIVERED' && o.settlementStatus !== 'SETTLED';
+  // A partial delivery owes money too — the customer took some lines and paid
+  // for them at the door. Leaving it out hid the only button that records the
+  // cash arriving, so the debt stayed in the courier's list unclearable.
+  const canCollect = (o: Row) =>
+    ['DELIVERED', 'PARTIALLY_DELIVERED'].includes(o.shippingStatus) && o.settlementStatus !== 'SETTLED';
 
   // The work waiting in this screen, each one a thing somebody must do.
   const all = data?.orders ?? [];

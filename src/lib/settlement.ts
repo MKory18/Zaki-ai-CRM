@@ -335,12 +335,18 @@ export async function runMatching(
   }
 
   // Orders we delivered in the period that the courier did not list at all.
+  //
+  // PARTIALLY_DELIVERED counts as delivered here. It is money: the customer
+  // took some lines and paid for them, and `collectedAmount` holds exactly
+  // what was handed over. Sweeping only the full deliveries meant a courier
+  // could leave every partial off their statement and nothing would say so
+  // — the one check whose whole job is to catch what they did not mention.
   const delivered = await tx.order.findMany({
     where: {
       companyId,
       storeId,
       deliveryProviderId: statement.deliveryProviderId,
-      shippingStatus: 'DELIVERED',
+      shippingStatus: { in: ['DELIVERED', 'PARTIALLY_DELIVERED'] },
       ...(statement.periodFrom || statement.periodTo
         ? {
             deliveredAt: {
