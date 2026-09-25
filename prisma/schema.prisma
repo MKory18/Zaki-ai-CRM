@@ -212,6 +212,11 @@ model User {
   passwordHash      String
   role              String    @default("PENDING_USER") // SUPER_ADMIN, COMPANY_ADMIN, MANAGER, MODERATOR, CONFIRMATION_AGENT, FOLLOW_UP_AGENT, SETTLEMENT_OFFICER, ACCOUNTANT, DELIVERY_MANAGER, PENDING_USER
   phone             String?
+  /// The currency this person's commission is counted in. Null = the store's,
+  /// which is how it always worked. An Egyptian moderator is paid in pounds
+  /// even where there is no pound wallet: the money leaves a wallet of
+  /// another currency at a rate the owner writes when they pay it.
+  commissionCurrency String? @map("commission_currency")
   avatar            String?
   commissionRate    Float     @default(0.0)
   status            String    @default("PENDING") // PENDING, ACTIVE, SUSPENDED, DISABLED
@@ -1854,6 +1859,7 @@ model Wallet {
   movements WalletMovement[]
   closings  DailyClosing[]
   receipts  StatementReceipt[]
+  commissionPayouts CommissionPayout[]
 
   @@unique([companyId, storeId, name])
   @@index([companyId, countryId, isActive])
@@ -2129,6 +2135,8 @@ model CommissionEntry {
   periodEnd      DateTime? @map("period_end")
   counted        Int?
   tierLabel      String?   @map("tier_label")
+  /// The payment that settled it. Null until it is paid.
+  payoutId       String?  @map("payout_id")
   reversalOfId   String?  @unique
   reversalReason String?
   createdAt      DateTime @default(now())
@@ -2136,17 +2144,51 @@ model CommissionEntry {
 
   order      Order?           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   rule       CommissionRule?  @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  payout     CommissionPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
   reversalOf CommissionEntry? @relation("CommissionReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
   reversedBy CommissionEntry? @relation("CommissionReversal")
 
   @@unique([orderId, userId, status])
   @@index([companyId, periodMonth, status])
   @@index([userId, periodMonth])
+  @@index([payoutId], map: "commission_entries_payout_idx")
   @@map("commission_entries")
 }
 
 /// Monthly commission statement per user: locked after approval, corrections
 /// are reversing entries in the next period.
+/// ONE PAYMENT OF COMMISSION, AND WHERE THE MONEY CAME FROM.
+///
+/// An entry used to reach PAYABLE and stop: nothing turned it into money.
+/// A payout closes the loop — it names the wallet the cash actually left,
+/// what left it in THAT wallet's currency, and the rate the owner used.
+///
+/// The rate is entered, stored, and never recalculated — the same rule as a
+/// wallet transfer. A month already paid must read the same next year.
+model CommissionPayout {
+  id           String   @id @default(uuid())
+  companyId    String
+  userId       String
+  walletId     String
+  /// What the person earned, in THEIR currency.
+  amount       Decimal  @db.Decimal(14, 3)
+  currencyCode String
+  /// What actually left the wallet, in the WALLET's currency.
+  paidAmount   Decimal  @db.Decimal(14, 3)
+  paidCurrency String
+  exchangeRate Decimal  @db.Decimal(14, 6)
+  note         String?
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  wallet  Wallet            @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  entries CommissionEntry[]
+
+  @@index([companyId, userId, createdAt], map: "commission_payouts_company_user_idx")
+  @@index([walletId], map: "commission_payouts_wallet_idx")
+  @@map("commission_payouts")
+}
+
 model CommissionPeriod {
   id           String    @id @default(uuid())
   companyId    String

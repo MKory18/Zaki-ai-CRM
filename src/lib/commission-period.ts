@@ -80,18 +80,22 @@ export interface PeriodAccrualResult {
 }
 
 /** Everyone a rule applies to: one named person, or everyone in a role. */
-async function peopleFor(tx: Tx, companyId: string, rule: PeriodRule): Promise<{ id: string; role: string }[]> {
+async function peopleFor(
+  tx: Tx,
+  companyId: string,
+  rule: PeriodRule
+): Promise<{ id: string; role: string; commissionCurrency: string | null }[]> {
   if (rule.appliesToUserId) {
     const one = await tx.user.findFirst({
       where: { id: rule.appliesToUserId, companyId },
-      select: { id: true, role: true },
+      select: { id: true, role: true, commissionCurrency: true },
     });
     return one ? [one] : [];
   }
   if (!rule.appliesToRole) return [];
   return tx.user.findMany({
     where: { companyId, role: rule.appliesToRole, status: 'ACTIVE' },
-    select: { id: true, role: true },
+    select: { id: true, role: true, commissionCurrency: true },
   });
 }
 
@@ -181,7 +185,9 @@ export async function accrueForPeriod(
           role: person.role,
           ruleId: rule.id,
           amount: earned.amount,
-          currencyCode: params.currencyCode,
+          // The person's own currency where they have one — they are paid
+          // in it, from whatever wallet holds the money.
+          currencyCode: person.commissionCurrency || params.currencyCode,
           status: 'ACCRUED',
           // The month the span ENDED in: that is when the work was finished.
           periodMonth: periodOf(params.end),

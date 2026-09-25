@@ -189,6 +189,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ error: 'رقم الهاتف غير صالح — أرقام فقط، ويمكن أن يبدأ بـ +' }, { status: 400 });
       }
       updateData.phone = phone || null;
+
+      // WHAT THIS PERSON'S COMMISSION IS COUNTED IN.
+      //
+      // An Egyptian moderator working a Syrian store's orders earns in
+      // pounds, and is told a figure in pounds. Where the money comes from
+      // is a separate question answered when it is paid: there may be no
+      // pound wallet at all, and the cash leaves another one at a rate the
+      // owner writes then (commission-payout.ts).
+      if ('commissionCurrency' in body) {
+        const raw = typeof body.commissionCurrency === 'string' ? body.commissionCurrency.trim().toUpperCase() : '';
+        if (raw && !/^[A-Z]{3}$/.test(raw)) {
+          return NextResponse.json({ error: 'رمز العملة ثلاثة أحرف (ISO)' }, { status: 400 });
+        }
+        // Empty means the store's own currency, which is how it always was.
+        updateData.commissionCurrency = raw || null;
+      }
       auditAction = 'USER_CONTACT_UPDATED';
     } else if (action === 'delete') {
       if (target.id === admin.id) {
@@ -237,14 +253,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         email: target.email,
         role: target.role,
         status: target.status,
-        ...(action === 'updateContact' ? { phone: target.phone } : {}),
+        ...(action === 'updateContact' ? { phone: target.phone, commissionCurrency: target.commissionCurrency } : {}),
       },
       newData: {
         user: updated.name,
         email: updated.email,
         role: updated.role,
         status: updated.status,
-        ...(action === 'updateContact' ? { phone: updateData.phone } : {}),
+        ...(action === 'updateContact'
+          ? { phone: updateData.phone, commissionCurrency: updateData.commissionCurrency }
+          : {}),
         changedBy: admin.name,
         changedAt: new Date().toISOString(),
       },

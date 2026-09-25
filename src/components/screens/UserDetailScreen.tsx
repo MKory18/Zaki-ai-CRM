@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { UserGeoAccessSection, UserPhoneField } from '@/components/screens/users/UserAccessSections';
+import { UserCommissionCurrency } from '@/components/screens/users/UserCommissionCurrency';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { format } from 'date-fns';
 import {
@@ -212,6 +213,16 @@ export function UserDetailScreen() {
                 <p className="font-bold text-[#121926]">{format(new Date(user.createdAt), 'yyyy-MM-dd')}</p>
               </div>
               {userId && <UserPhoneField userId={userId} initial={user.phone ?? null} canEdit={userCan(currentUser, 'users.edit')} />}
+              {/* Counting is one question, paying another: this names the
+                  currency they earn in, not a wallet the business may not
+                  have. The wallet is chosen when the money is handed over. */}
+              {userId && (
+                <UserCommissionCurrency
+                  userId={userId}
+                  initial={user.commissionCurrency ?? null}
+                  canEdit={userCan(currentUser, 'users.edit')}
+                />
+              )}
             </div>
           </CardContent>
         </Card>

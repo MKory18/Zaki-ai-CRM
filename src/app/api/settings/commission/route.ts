@@ -1,3 +1,4 @@
+import { ASSIGNABLE_ROLES } from '@/types/auth';
 import {
   COMMISSION_METRICS, COMMISSION_PERIODS, COMMISSION_TYPES, tiersProblem,
 } from '@/lib/commission-rules';
@@ -103,6 +104,23 @@ export async function POST(req: Request) {
     const input = parsed.data;
     if (!input.appliesToRole && !input.appliesToUserId) {
       return NextResponse.json({ error: 'حدّد الدور أو الموظف الذي تنطبق عليه القاعدة' }, { status: 400 });
+    }
+
+    // A rule for a role nobody holds never fires, and the screen shows it as
+    // active — so it is refused at the door. The screen listed two role
+    // names the system does not use, and every rule written for them paid
+    // nothing while looking correct.
+    if (input.appliesToRole && !(ASSIGNABLE_ROLES as string[]).includes(input.appliesToRole)) {
+      return NextResponse.json({ error: 'هذا الدور غير موجود في النظام' }, { status: 400 });
+    }
+
+    // A rule for one person: they must be in this company.
+    if (input.appliesToUserId) {
+      const person = await db.user.findFirst({
+        where: { id: input.appliesToUserId, companyId },
+        select: { id: true },
+      });
+      if (!person) return NextResponse.json({ error: 'الموظف غير موجود' }, { status: 404 });
     }
 
     // Bands that cannot be read two ways. Overlapping ones are not a

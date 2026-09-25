@@ -113,8 +113,12 @@ export async function accrueForOrder(
       id: true, storeId: true, shippingStatus: true, deliveredAt: true, currency: true,
       totalAmount: true, deliveryFee: true, priceIncludesDelivery: true,
       moderatorId: true, claimedById: true, confirmedById: true,
-      moderator: { select: { id: true, role: true } },
-      confirmer: { select: { id: true, role: true } },
+      // commissionCurrency: what this person's commission is counted in.
+      // An Egyptian moderator earns in pounds even in a Syrian store's
+      // order — and is paid from whatever wallet has the money, at a rate
+      // the owner writes when they pay it (commission-payout.ts).
+      moderator: { select: { id: true, role: true, commissionCurrency: true } },
+      confirmer: { select: { id: true, role: true, commissionCurrency: true } },
     },
   });
   if (!order) throw new Error('Order not found');
@@ -163,11 +167,13 @@ export async function accrueForOrder(
   const revenue = Number(order.totalAmount) - Number(order.deliveryFee ?? 0);
 
   const parties = [
-    order.moderator ? { userId: order.moderator.id, role: order.moderator.role } : null,
-    order.confirmer && order.confirmer.id !== order.moderator?.id
-      ? { userId: order.confirmer.id, role: order.confirmer.role }
+    order.moderator
+      ? { userId: order.moderator.id, role: order.moderator.role, currency: order.moderator.commissionCurrency }
       : null,
-  ].filter(Boolean) as { userId: string; role: string }[];
+    order.confirmer && order.confirmer.id !== order.moderator?.id
+      ? { userId: order.confirmer.id, role: order.confirmer.role, currency: order.confirmer.commissionCurrency }
+      : null,
+  ].filter(Boolean) as { userId: string; role: string; currency: string | null }[];
 
   let created = 0;
   let total = 0;
@@ -192,7 +198,9 @@ export async function accrueForOrder(
         role: party.role,
         ruleId: rule.id,
         amount,
-        currencyCode: order.currency,
+        // Theirs where they have one; the order's where they do not, which
+        // is how it always worked and stays right for everybody local.
+        currencyCode: party.currency || order.currency,
         status: 'ACCRUED',
         periodMonth: period,
       },

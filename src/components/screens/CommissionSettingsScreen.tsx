@@ -1,5 +1,6 @@
 'use client';
 
+import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { PeriodProgress } from '@/components/screens/commission/PeriodProgress';
 import {
   COMMISSION_METRICS, COMMISSION_TYPES, METRIC_LABEL_AR, PERIOD_LABEL_AR, TYPE_LABEL_AR,
@@ -63,12 +64,23 @@ interface Totals {
   reversed: number;
 }
 
-const ROLES = [
-  { value: 'MODERATOR', label: 'مسوّق' },
-  { value: 'CONFIRMER', label: 'مؤكِّد طلبات' },
-  { value: 'SHIPPING', label: 'شحن' },
-  { value: 'ACCOUNTANT', label: 'محاسب' },
-];
+/**
+ * The roles a rule may name — read from the system's own list.
+ *
+ * This was a hand-written list of four, and two of its values named roles
+ * that do not exist: CONFIRMER where the system says CONFIRMATION_AGENT,
+ * and SHIPPING where it says DELIVERY_MANAGER. A rule written for either of
+ * them matched nobody, so it quietly never paid — the worst way for a
+ * commission rule to be wrong, because the screen showed it as active.
+ *
+ * Taken from ASSIGNABLE_ROLES now, minus the ones nobody earns commission
+ * in, so it cannot drift from the roles people are actually given.
+ */
+const NO_COMMISSION: string[] = ['PENDING_USER', 'SUPER_ADMIN', 'COMPANY_ADMIN'];
+const ROLES = ASSIGNABLE_ROLES.filter((r) => !NO_COMMISSION.includes(r)).map((value) => ({
+  value,
+  label: ROLE_LABELS[value]?.ar ?? value,
+}));
 
 const period = () => new Date().toISOString().slice(0, 7);
 
@@ -284,6 +296,9 @@ export function CommissionSettingsScreen() {
 function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState('');
   const [role, setRole] = useState('MODERATOR');
+  /** One named person instead of a whole role — their rule beats the role's. */
+  const [userId, setUserId] = useState('');
+  const [people, setPeople] = useState<{ id: string; name: string; role: string }[]>([]);
   const [metric, setMetric] = useState<CommissionMetric>('ORDER_DELIVERED');
   const [period, setPeriod] = useState<CommissionPeriod>('DAILY');
   const [type, setType] = useState<CommissionType>('PERCENT');
@@ -299,6 +314,15 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
   const [saving, setSaving] = useState(false);
 
   const perOrder = metric === 'ORDER_DELIVERED';
+
+  // The people who could earn under this rule, so a rule for one person is
+  // picked by name rather than by pasting an id.
+  useEffect(() => {
+    apiJson<{ users: { id: string; name: string; role: string }[] }>(`/api/users?role=${role}`)
+      .then((d) => setPeople(d.users ?? []))
+      .catch(() => setPeople([]));
+    setUserId('');
+  }, [role]);
   const isRate = metric === 'DELIVERY_RATE';
 
   /** A target is one band opening at the goal, paid once. */
@@ -351,7 +375,9 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               method: 'POST',
               body: JSON.stringify({
                 name: name.trim(),
-                appliesToRole: role,
+                // A named person, or everyone in the role.
+                appliesToRole: userId ? null : role,
+                appliesToUserId: userId || null,
                 metric,
                 period: perOrder ? 'PER_ORDER' : period,
                 type,
@@ -382,18 +408,39 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
           />
         </label>
 
-        <label className="block">
-          <span className="block text-xs font-medium text-[#364152] mb-1">تنطبق على دور</span>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
-          >
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </select>
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label>
+            <span className="block text-xs font-medium text-[#364152] mb-1">تنطبق على دور</span>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white"
+            >
+              {ROLES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="block text-xs font-medium text-[#364152] mb-1">أو موظف بعينه</span>
+            <select
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              disabled={people.length === 0}
+              className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm bg-white disabled:bg-[#f8fafc]"
+            >
+              <option value="">كل من في هذا الدور</option>
+              {people.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </label>
+          {userId && (
+            <p className="col-span-2 -mt-1 text-[10.5px] text-[#697586]">
+              قاعدة باسم موظف تتجاوز قاعدة دوره.
+            </p>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <label>
