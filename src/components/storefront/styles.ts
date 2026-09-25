@@ -49,6 +49,26 @@ export const STOREFRONT_CSS = `
   text-decoration: none;
 }
 .sf-footer-links a:hover { color: var(--lp-accent); }
+/* A page of the shop's own words: measured for reading, not for selling. */
+.sf-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+.sf-page h1 {
+  font-size: 26px;
+  line-height: 1.35;
+  font-weight: var(--lp-heading-weight, 800);
+  color: var(--lp-text);
+  margin-bottom: 18px;
+}
+.sf-page p {
+  color: var(--lp-text);
+  font-size: 15px;
+  line-height: 1.9;
+  margin-bottom: 14px;
+  white-space: pre-line;
+}
 .sf-brand {
   display: flex;
   align-items: center;

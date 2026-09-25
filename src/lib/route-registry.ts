@@ -127,6 +127,7 @@ export const NAV: NavGroup[] = [
     label: 'واجهة المتجر',
     routes: [
       r('/store/themes', 'القوالب', 'Palette', ['storefront.view', 'storefront.manage']),
+      r('/store/pages', 'الصفحات', 'FileText', ['storefront.view', 'storefront.manage']),
     ],
   },
   {

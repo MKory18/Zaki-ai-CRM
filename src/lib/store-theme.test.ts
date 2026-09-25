@@ -47,7 +47,7 @@ describe('the store owns the colour, and the page inherits it', () => {
 
   it('carries through nothing that is not a theme field', () => {
     const page = themeForPage(of({ accent: '#123456' }), { evil: 'x' } as never);
-    expect((page as Record<string, unknown>).evil).toBeUndefined();
+    expect((page as unknown as Record<string, unknown>).evil).toBeUndefined();
   });
 });
 

@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { firstIssue, storeCreateSchema } from '@/lib/geo-schemas';
+import { seedPagesFor } from '@/lib/store-pages';
 
 /**
  *   GET  /api/geo/stores?countryId=  (geo.view)
@@ -49,7 +50,20 @@ export async function POST(req: Request) {
     const clash = await db.store.findFirst({ where: { slug: parsed.data.slug }, select: { id: true } });
     if (clash) return NextResponse.json({ error: 'هذا المعرّف مستخدم لمتجر آخر' }, { status: 409 });
 
-    const store = await db.store.create({ data: { companyId, ...parsed.data } });
+    // The store and its three legal pages are one act. A seller who finds
+    // out on the morning of a campaign that the shop has no privacy policy
+    // has lost the morning — an ad platform's review asks for it. They are
+    // created as DRAFTS with the shop's name in a skeleton text: publishing
+    // a policy the seller has not read would be putting words in their
+    // mouth, and the pages screen says which are still drafts.
+    const store = await db.$transaction(async (tx) => {
+      const created = await tx.store.create({ data: { companyId, ...parsed.data } });
+      await tx.storePage.createMany({
+        data: seedPagesFor(created.name).map((seed) => ({ ...seed, companyId, storeId: created.id })),
+        skipDuplicates: true,
+      });
+      return created;
+    });
     await logAudit({ companyId, userId: user.id, action: 'STORE_CREATED', entity: 'Store', entityId: store.id, newData: store });
     return NextResponse.json({ store }, { status: 201 });
   } catch (error) {

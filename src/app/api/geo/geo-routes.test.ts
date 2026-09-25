@@ -11,6 +11,7 @@ const { db, requireCompanyTenant, requirePermission, can, logAudit } = vi.hoiste
     country: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
     region: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     store: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
+    storePage: { createMany: vi.fn() },
     user: { findFirst: vi.fn() },
     userCountryAccess: { findMany: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn() },
     userStoreAccess: { findMany: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn(), count: vi.fn() },
@@ -55,6 +56,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   requireCompanyTenant.mockResolvedValue({ user: admin, companyId: COMPANY });
   requirePermission.mockResolvedValue(admin);
+  // The interactive form: the handler is handed a client and its work runs
+  // against the same mocks, so what it wrote is visible to the assertions.
+  db.$transaction.mockImplementation(async (fn: any) => (typeof fn === 'function' ? fn(db) : fn));
   can.mockReturnValue(false);
   db.userStoreAccess.findMany.mockResolvedValue([]); // no narrowing: every store of the country
 });
@@ -158,6 +162,28 @@ describe('POST /api/geo/stores — a store cannot exist outside a country', () =
     const res = await storesRoute.POST(req(body));
     expect(res.status).toBe(201);
     expect(db.store.create.mock.calls[0][0].data).toMatchObject({ companyId: COMPANY, countryId: JO, status: 'ACTIVE' });
+  });
+
+  it('gives the new store its three legal pages, as drafts, in the same transaction', async () => {
+    // A seller who finds out on the morning of a campaign that the shop has
+    // no privacy policy has lost the morning: an ad review asks for it. They
+    // are DRAFTS — publishing a policy nobody has read puts words in the
+    // seller's mouth — and they are created with the store or not at all.
+    db.country.findFirst.mockResolvedValue({ id: JO });
+    db.store.findFirst.mockResolvedValue(null);
+    db.store.create.mockImplementation(async ({ data }: any) => ({ id: STORE_JO, ...data }));
+    await storesRoute.POST(req(body));
+
+    const seeded = db.storePage.createMany.mock.calls[0][0].data;
+    expect(seeded.map((p: any) => p.kind).sort()).toEqual(['PRIVACY', 'REFUND', 'TERMS']);
+    for (const page of seeded) {
+      expect(page.isPublished, page.kind).toBe(false);
+      expect(page.storeId).toBe(STORE_JO);
+      expect(page.companyId).toBe(COMPANY);
+      // The skeleton carries the shop's own name, not a placeholder.
+      expect(page.body).toContain(body.name);
+      expect(page.body).not.toContain('{{store}}');
+    }
   });
 });
 
