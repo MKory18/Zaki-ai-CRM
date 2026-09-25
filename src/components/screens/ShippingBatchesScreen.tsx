@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock, Download, Plus } from 'lucide-react';
+import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock, Download, Plus, ScanLine } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import type { DispatchSummary } from '@/lib/courier-dispatch';
 import { arDateShort } from '@/lib/format';
@@ -9,6 +9,7 @@ import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
 import { describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
 import { useTell } from '@/components/ui/Confirm';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
+import { ScanSheet } from '@/components/scan/ScanButton';
 
 /**
  * /ops/batches — the handovers to the couriers.
@@ -58,6 +59,10 @@ export function ShippingBatchesScreen() {
   // the confirmation — so the order goes straight to the packing line.
   const [addingOrder, setAddingOrder] = useState(false);
   const [addNotice, setAddNotice] = useState<string | null>(null);
+  // Checking parcels against a batch. Only the REFERENCES are held — the
+  // endpoint also returns names and phones, and a verification screen has no
+  // business keeping those anywhere, in memory or otherwise.
+  const [verify, setVerify] = useState<{ batch: Batch; refs: Set<string>; seen: Set<string> } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -147,6 +152,42 @@ export function ShippingBatchesScreen() {
           e instanceof Error ? e.message : ''
         } — أكّده من شاشة الطلبات.`
       );
+    }
+  }
+
+  /**
+   * THE PARCEL IN YOUR HAND, AND THE BATCH ON THE FLOOR.
+   *
+   * A courier takes twenty parcels and signs for twenty. The one that was
+   * never in the batch — picked off the next pallet, or printed for a batch
+   * that shipped yesterday — leaves with them, and is discovered a week
+   * later as a delivery nobody can account for.
+   *
+   * The check is a lookup inside a batch the SERVER has already decided this
+   * account may read. The camera adds no reach: somebody who cannot open the
+   * batch cannot scan against it either, because there is nothing loaded to
+   * scan against.
+   */
+  async function openVerify(batch: Batch) {
+    setBusy(batch.id);
+    setError(null);
+    try {
+      const data = await apiJson<{
+        batch: { orders: { orderNumber: string; merchantRef: string | null; trackingNumber: string | null }[] };
+      }>(`/api/shipping-batches/${batch.id}`);
+      const refs = new Set<string>();
+      for (const o of data.batch.orders) {
+        // Our QR carries the merchant reference; the courier's barcode is
+        // printed beside it. Either one identifies the same parcel.
+        for (const value of [o.orderNumber, o.merchantRef, o.trackingNumber]) {
+          if (value) refs.add(value.trim().toUpperCase());
+        }
+      }
+      setVerify({ batch, refs, seen: new Set() });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر قراءة محتوى الدفعة');
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -327,6 +368,16 @@ export function ShippingBatchesScreen() {
                   </button>
 
                   <button
+                    onClick={() => void openVerify(b)}
+                    disabled={busy === b.id || b._count.orders === 0}
+                    title="امسح كل طرد قبل تسليمه — يقول لك إن كان من هذه الدفعة"
+                    className="text-[11px] px-2.5 py-1.5 rounded-[8px] border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+                  >
+                    <ScanLine className="w-3.5 h-3.5" />
+                    تحقّق من الطرود
+                  </button>
+
+                  <button
                     onClick={() => printBatch(b, 'pdf')}
                     disabled={busy === b.id || b._count.orders === 0}
                     title="نفس البوالص كملف PDF — الحفظ لا يعلّم الطلبات مطبوعة"
@@ -409,6 +460,23 @@ export function ShippingBatchesScreen() {
         onClose={() => setAddingOrder(false)}
         onSuccess={addConfirmedOrder}
       />
+
+      {verify && (
+        <ScanSheet
+          title={`تحقّق من طرود ${verify.batch.batchNumber}`}
+          continuous
+          onClose={() => setVerify(null)}
+          onScan={(code) => {
+            if (!verify.refs.has(code)) {
+              return `⚠ ${code} ليس من هذه الدفعة — لا تسلّمه معها.`;
+            }
+            // Counting is what turns twenty checks into a handover: the
+            // twentieth scan should say twenty, not just "yes" again.
+            verify.seen.add(code);
+            return `✓ ${code} — ${verify.seen.size} من ${verify.batch._count.orders}`;
+          }}
+        />
+      )}
     </div>
   );
 }

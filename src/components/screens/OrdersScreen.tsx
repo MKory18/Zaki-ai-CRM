@@ -8,6 +8,7 @@ import { DateRange } from '@/components/ui/DateRange';
 import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
 import { describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
 import { useTell } from '@/components/ui/Confirm';
+import { ScanButton } from '@/components/scan/ScanButton';
 import { userCan } from '@/lib/can';
 import { useRegions } from '@/hooks/useRegions';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
@@ -357,7 +358,7 @@ export function OrdersScreen() {
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
               <input
                 type="text"
-                placeholder="ابحث برقم الطلب، اسم العميل، أو الهاتف…"
+                placeholder="ابحث برقم الطلب، الباركود، اسم العميل، أو الهاتف…"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
@@ -368,6 +369,17 @@ export function OrdersScreen() {
               <Search className="w-3.5 h-3.5" />
               بحث
             </Button>
+            {/* The camera fills the same box a person types into, and the
+                same request goes out. A scan is a search — it sees exactly
+                the orders this account may see, and nothing more. */}
+            <ScanButton
+              title="امسح بوليصة الطلب"
+              onScan={(code) => {
+                setSearchInput(code);
+                setSearch(code);
+              }}
+              className="shrink-0 h-8 px-2.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+            />
             <Button
               size="sm"
               variant={lateOnly ? undefined : 'outline'}

@@ -119,6 +119,14 @@ export async function GET(req: Request) {
       const normalizedSearch = normalizePhoneNumber(search);
       whereClause.OR = [
         { orderNumber: { contains: search } },
+        // The two references a LABEL carries. Our QR holds the merchant
+        // reference and the courier's barcode sits beside it, so a parcel
+        // scanned on this screen used to find nothing at all — the one
+        // search in the system that could not answer the one question
+        // somebody holding a parcel actually has. Returns and tracking have
+        // matched all three since they were written; this caught up.
+        { merchantRef: { contains: search } },
+        { trackingNumber: { contains: search } },
         { customer: { fullName: { contains: search } } },
         { customer: { phone: { contains: normalizedSearch || search } } },
         { customer: { rawPhone: { contains: search } } },

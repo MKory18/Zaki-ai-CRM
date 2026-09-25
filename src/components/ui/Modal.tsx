@@ -79,6 +79,7 @@ export function Modal({
           </div>
           <button
             onClick={onClose}
+            aria-label="إغلاق"
             className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-heading)] hover:bg-[var(--sys-border)] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />

@@ -5,6 +5,7 @@ import { Loader2, PackageOpen, ScanLine } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { ScanButton } from '@/components/scan/ScanButton';
 
 /**
  * /ops/returns — scan or pick a returned shipment, then record the physical
@@ -35,7 +36,8 @@ export function ReturnsScreen() {
 
   const load = useCallback(async () => {
     try {
-      const q = term.trim() ? `?q=${encodeURIComponent(term.trim())}` : '';
+      const raw = term.trim();
+      const q = raw ? `?q=${encodeURIComponent(raw)}` : '';
       const data = await apiJson<{ orders: Row[] }>(`/api/ops/returns${q}`);
       setRows(data.orders);
     } catch (e) {
@@ -73,6 +75,19 @@ export function ReturnsScreen() {
           </div>
         </label>
         <button type="submit" className="h-10 px-4 rounded-[8px] bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
+        {/* A phone is the scanner a warehouse already owns. It keeps
+            scanning: a returned pallet is twenty parcels, not one. */}
+        <ScanButton
+          title="امسح بوليصة المرتجع"
+          continuous
+          onScan={(code) => {
+            // Putting it in the box IS the search — the effect below
+            // already reloads whenever the term changes, so there is one
+            // request and one code path, the same one a typed search takes.
+            setTerm(code);
+            return code;
+          }}
+        />
       </form>
 
       {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-[8px] p-3">{error}</p>}
