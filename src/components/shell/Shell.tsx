@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import type { NavGroup } from '@/lib/route-registry';
 import { Sidebar } from './Sidebar';
 import { Header, type ShellContextInfo } from './Header';
+import { MobileNav } from './MobileNav';
 
 /** Frame for every contract screen: fixed RTL sidebar + context header. */
 export function Shell({
@@ -31,8 +32,15 @@ export function Shell({
           userRole={userRole}
           context={context}
         />
-        <main className="flex-1 p-4 md:p-6 w-full">{children}</main>
+        {/* The bar at the bottom is fixed, so the page needs room under it
+            or the last row of every screen sits behind the thumb that is
+            trying to read it. */}
+        <main className="w-full flex-1 p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-6">
+          {children}
+        </main>
       </div>
+
+      <MobileNav groups={groups} />
     </div>
   );
 }

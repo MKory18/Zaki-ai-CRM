@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, BadgePercent, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /control/discount-alerts — what was given away, and by whom.
@@ -154,48 +155,67 @@ export function DiscountAlertsScreen() {
             </table>
           </div>
 
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-[8px] overflow-hidden">
-            <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">
+          <section>
+            <h2 className="mb-2 px-1 text-sm font-medium text-[var(--sys-heading)]">
               الطلبات ({rows.length})
             </h2>
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-                <tr>
-                  <th className="text-right font-medium px-3 py-2">الطلب</th>
-                  <th className="text-right font-medium px-3 py-2">العميل</th>
-                  <th className="text-right font-medium px-3 py-2">الخصم</th>
-                  <th className="text-right font-medium px-3 py-2">النسبة</th>
-                  <th className="text-right font-medium px-3 py-2">الإجمالي بعده</th>
-                  <th className="text-right font-medium px-3 py-2">منحه</th>
-                  <th className="text-right font-medium px-3 py-2">التاريخ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--sys-border)]">
-                {rows.map((r) => (
-                  <tr key={r.id} className={r.notable ? 'bg-[var(--sys-destructive-soft)]/40' : undefined}>
-                    <td className="px-3 py-2">
-                      <a href={`/orders?highlight=${r.id}`} className="text-[var(--sys-primary)] hover:underline" dir="ltr">
-                        {r.merchantRef ?? r.orderNumber}
-                      </a>
-                    </td>
-                    <td className="px-3 py-2 text-[var(--sys-foreground)]">{r.customerName ?? '—'}</td>
-                    <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)] font-medium">
+            {/* Seven columns is a table on a desk and a sideways scroll on a
+                phone, where the order number is off-screen by the time you
+                reach the discount. One description, read two ways. */}
+            <Rows
+              rows={rows}
+              keyOf={(r) => r.id}
+              empty="لا طلبات تحمل خصماً في هذه المدة."
+              columns={[
+                {
+                  key: 'order',
+                  label: 'الطلب',
+                  primary: true,
+                  render: (r) => (
+                    <a href={`/orders?highlight=${r.id}`} className="text-[var(--sys-primary)] hover:underline" dir="ltr">
+                      {r.merchantRef ?? r.orderNumber}
+                    </a>
+                  ),
+                },
+                { key: 'customer', label: 'العميل', primary: true, render: (r) => r.customerName ?? '—' },
+                {
+                  key: 'discount',
+                  label: 'الخصم',
+                  render: (r) => (
+                    <span className="font-medium tabular-nums text-[var(--sys-destructive)]">
                       {r.discount} {r.currency}
-                    </td>
-                    <td className={`px-3 py-2 tabular-nums ${r.notable ? 'text-[var(--sys-destructive)] font-semibold' : 'text-[var(--sys-muted-foreground)]'}`}>
-                      {r.notable && <AlertTriangle className="w-3 h-3 inline ml-1 align-[-1px]" />}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'share',
+                  label: 'النسبة',
+                  render: (r) => (
+                    <span
+                      className={`tabular-nums ${r.notable ? 'font-semibold text-[var(--sys-destructive)]' : 'text-[var(--sys-muted-foreground)]'}`}
+                    >
+                      {r.notable && <AlertTriangle className="ml-1 inline h-3 w-3 align-[-1px]" />}
                       {r.share}%
-                    </td>
-                    <td className="px-3 py-2 tabular-nums text-[var(--sys-foreground)]">{r.total}</td>
-                    <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{r.byName ?? '—'}</td>
-                    <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
+                    </span>
+                  ),
+                },
+                { key: 'total', label: 'الإجمالي بعده', render: (r) => <span className="tabular-nums">{r.total}</span> },
+                { key: 'by', label: 'منحه', render: (r) => r.byName ?? '—' },
+                {
+                  key: 'at',
+                  label: 'التاريخ',
+                  // On a desk it is a column; on a card it is one more line
+                  // between the agent's name and the number that matters.
+                  hideOnPhone: true,
+                  render: (r) => (
+                    <span className="whitespace-nowrap text-xs text-[var(--sys-muted-foreground)]">
                       {new Date(r.createdAt).toLocaleDateString('ar', { dateStyle: 'short' })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </span>
+                  ),
+                },
+              ]}
+            />
+          </section>
         </>
       )}
     </div>
