@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
+import { ScoreCard } from '@/components/performance/ScoreCard';
 import {
   PERMISSION_MODULES,
   MODULE_LABELS,
@@ -226,6 +227,11 @@ export function UserDetailScreen() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Their performance, in their file, for whoever may watch the
+            team. The same numbers they see on their own profile — two
+            figures for one month is an argument nobody can settle. */}
+        {userId && userCan(currentUser, 'team.monitor') && <ScoreCard userId={userId} />}
 
         {/* Role assignment (roleId-based) */}
         <Card>

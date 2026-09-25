@@ -5,6 +5,7 @@ import { Building2, Check, Loader2, Settings } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PerformanceSettingsCard } from '@/components/settings/PerformanceSettingsCard';
 
 /**
  * SYSTEM SETTINGS — what belongs to the company as a whole, and only that.
@@ -104,6 +105,11 @@ export function SystemSettingsScreen() {
           )}
         </CardContent>
       </Card>
+
+      {/* How people are measured belongs with what the company is, not on a
+          reports screen: these are the bars the business judges by, and
+          they are a decision rather than a reading. */}
+      <PerformanceSettingsCard />
 
     </div>
   );

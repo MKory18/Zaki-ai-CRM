@@ -11,6 +11,7 @@ import { TeamPerformanceTable } from '@/components/performance/TeamPerformanceTa
 import { AttributionTable, type AttributionRow } from '@/components/performance/AttributionTable';
 import { LandingAnalyticsTab } from '@/components/performance/LandingAnalyticsTab';
 import { userCan } from '@/lib/can';
+import { ScoreBoard } from '@/components/performance/ScoreBoard';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -22,7 +23,7 @@ function lastThirtyDays() {
   return { from: iso(from), to: iso(to) };
 }
 
-type Tab = 'team' | 'landing';
+type Tab = 'team' | 'landing' | 'scores';
 
 export function PerformanceScreen() {
   const { t, currentUser } = useApp();
@@ -30,17 +31,22 @@ export function PerformanceScreen() {
   // pages brought. The second is marketing data and needs its own
   // permission; the tab is simply absent without it (the API refuses too).
   const canLanding = userCan(currentUser, 'landing_pages.view');
+  // The score board is its own decision: these are people's numbers, not
+  // the shop's, and the key that opens the reports does not open them.
+  const canScores = userCan(currentUser, 'team.monitor');
   const [tab, setTab] = useState<Tab>('team');
   // Opened from a link (?tab=landing) — read after mount, so the server
   // render and the first client render agree.
   useEffect(() => {
-    if (canLanding && new URLSearchParams(window.location.search).get('tab') === 'landing') setTab('landing');
-  }, [canLanding]);
+    const asked = new URLSearchParams(window.location.search).get('tab');
+    if (canLanding && asked === 'landing') setTab('landing');
+    if (canScores && asked === 'scores') setTab('scores');
+  }, [canLanding, canScores]);
   const pickTab = (next: Tab) => {
     setTab(next);
     const url = new URL(window.location.href);
-    if (next === 'landing') url.searchParams.set('tab', 'landing');
-    else url.searchParams.delete('tab');
+    if (next === 'team') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', next);
     window.history.replaceState(null, '', url);
   };
   // ONE date filter for the whole screen. There used to be an English
@@ -155,9 +161,13 @@ export function PerformanceScreen() {
           </div>
         </div>
 
-        {canLanding && (
+        {(canLanding || canScores) && (
           <div className="flex gap-6 border-b border-[#e3e8ef] text-sm" role="tablist">
-            {([['team', 'المنتجات والفريق والقنوات'], ['landing', 'تحليلات صفحات الهبوط']] as [Tab, string][]).map(([key, label]) => (
+            {([
+              ['team', 'المنتجات والفريق والقنوات'],
+              ...(canScores ? [['scores', 'سكور الموظفين'] as [Tab, string]] : []),
+              ...(canLanding ? [['landing', 'تحليلات صفحات الهبوط'] as [Tab, string]] : []),
+            ] as [Tab, string][]).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
@@ -174,7 +184,13 @@ export function PerformanceScreen() {
           </div>
         )}
 
-        {tab === 'landing' && canLanding ? (
+        {tab === 'scores' && canScores ? (
+          // Its OWN window — the week or month the owner set in the score
+          // settings — not the date range above. The score is comparable
+          // across months only if everybody's is measured over the same
+          // span, which a free-hand date picker would quietly break.
+          <ScoreBoard />
+        ) : tab === 'landing' && canLanding ? (
           <LandingAnalyticsTab dateQuery={dateQuery} from={range.from} />
         ) : (
         <>

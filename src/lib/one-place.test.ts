@@ -33,7 +33,11 @@ describe('landing-page analytics are read on the performance screen', () => {
 
   it('and that screen actually opens on that tab', () => {
     const perf = read('src/components/screens/PerformanceScreen.tsx');
-    expect(perf).toContain("get('tab') === 'landing'");
+    // The link carries ?tab=, the screen reads it and lands on that tab.
+    // Asserted as the pair rather than as one exact line, so adding a third
+    // tab does not read as the link being broken.
+    expect(perf).toContain("URLSearchParams(window.location.search).get('tab')");
+    expect(perf).toContain("=== 'landing'");
     expect(perf).toContain('تحليلات صفحات الهبوط');
   });
 });

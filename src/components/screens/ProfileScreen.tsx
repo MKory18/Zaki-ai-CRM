@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { User, Lock, Image as ImageIcon, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ScoreCard } from '@/components/performance/ScoreCard';
 
 export function ProfileScreen() {
   const { currentUser, refreshUser } = useApp();
@@ -85,6 +86,11 @@ export function ProfileScreen() {
             <span>{message.text}</span>
           </div>
         )}
+
+        {/* Their own numbers, on their own page, without anybody having to
+            grant them anything. A person who cannot see where they stand
+            cannot be asked to improve it. */}
+        <ScoreCard />
 
         <form onSubmit={handleSave} className="space-y-6">
           {/* Account info (read-only) */}

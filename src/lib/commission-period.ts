@@ -55,6 +55,32 @@ export function lastClosedSpan(span: Span, now: Date): { start: Date; end: Date 
   return { start, end: monthEnd };
 }
 
+/**
+ * The span being worked RIGHT NOW, from its start up to this moment.
+ *
+ * The opposite decision from `lastClosedSpan`, and for the opposite reason.
+ * Money must be final, so it accrues only on a closed span. A SCORE is a
+ * measuring tool: a person shown last month's number in the middle of this
+ * one cannot act on it, and everybody in a role is compared over the same
+ * partial days anyway.
+ *
+ * Same week — starting Saturday — and same company day, because two
+ * calendars in one system is how a Saturday becomes two different weeks.
+ */
+export function currentSpan(span: Span, now: Date): { start: Date; end: Date } {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+
+  if (span === 'WEEKLY') {
+    const daysSinceSaturday = (start.getDay() + 1) % 7;
+    start.setDate(start.getDate() - daysSinceSaturday);
+  } else if (span === 'MONTHLY') {
+    start.setDate(1);
+  }
+  // Exclusive end, as every window in this system is.
+  return { start, end: new Date(now) };
+}
+
 export interface PeriodRule {
   id: string;
   storeId: string | null;

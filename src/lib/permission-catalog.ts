@@ -161,6 +161,15 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     ],
   },
   {
+    module: 'team',
+    items: [
+      // Seeing your OWN card needs nothing: they are your numbers. This is
+      // the key that lets somebody see their TEAM's — a different decision,
+      // and one the owner grants deliberately.
+      { key: 'team.monitor', ar: 'متابعة أداء الفريق', en: 'Monitor team performance' },
+    ],
+  },
+  {
     module: 'growth',
     items: [{ key: 'growth.intelligence', ar: 'مركز الذكاء', en: 'Business intelligence' }],
   },
@@ -270,6 +279,7 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   confirmation: { ar: 'مركز التأكيد', en: 'Confirmation' },
   ops: { ar: 'التشغيل', en: 'Operations' },
   control: { ar: 'الرقابة', en: 'Control' },
+  team: { ar: 'الفريق', en: 'Team' },
   growth: { ar: 'النمو', en: 'Growth' },
   apps: { ar: 'التطبيقات', en: 'Apps' },
   audit: { ar: 'سجل التدقيق', en: 'Audit Logs' },
