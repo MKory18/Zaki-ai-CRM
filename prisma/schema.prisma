@@ -1477,6 +1477,14 @@ model Store {
   /// against landing page domains too — the proxy must never find two
   /// answers for one host.
   domain                String?
+  /// When this store's domain last passed BOTH checks: a TXT token only this
+  /// installation can compute (ownership) and DNS actually resolving here
+  /// (routing). Null means never — a badge is never set by a button.
+  domainVerifiedAt      DateTime?
+  /// The last check's result as JSON (see src/lib/domain-verify.ts). Kept so
+  /// the screen can say WHY it is not verified without re-querying DNS on
+  /// every render.
+  domainCheck           String?      @db.Text
   /// A Single Product store's front: one of its own landing pages, which its
   /// link and its domain render — every block, template, pixel and upsell
   /// the page has. The store is the address; the page is the shop. Null

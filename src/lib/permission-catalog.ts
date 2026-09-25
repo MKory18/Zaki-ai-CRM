@@ -190,11 +190,13 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     items: [
       { key: 'storefront.view', ar: 'عرض واجهة المتجر', en: 'View storefront' },
       { key: 'storefront.manage', ar: 'تصميم واجهة المتجر ومحتواها', en: 'Design storefront & content' },
-      // storefront.publish and storefront.domain belong here too, and are
-      // deliberately NOT declared yet: the screens that would enforce them
-      // are not built. A permission on the matrix that nothing checks is a
-      // promise to an owner that the system does not keep, which is why
-      // permission-catalog.test refuses one.
+      // A domain points the outside world at this shop, and a wrong one
+      // takes the shop off the air. Its own authority, like apps.manage.
+      { key: 'storefront.domain', ar: 'ربط نطاق المتجر', en: 'Connect the store domain' },
+      // storefront.publish belongs here too and is deliberately NOT declared
+      // yet: the screen that would enforce it is not built, and a permission
+      // on the matrix that nothing checks is a promise the system does not
+      // keep — which is why permission-catalog.test refuses one.
     ],
   },
   {
