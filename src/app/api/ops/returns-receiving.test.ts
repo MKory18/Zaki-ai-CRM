@@ -47,7 +47,13 @@ beforeEach(() => {
   db.returnReceipt.create.mockImplementation(async ({ data }: any) => ({ id: 'rr1', ...data }));
   // No RETURN movement for this order yet — receiving one twice must not
   // restore the goods twice.
-  db.inventoryMovement.findFirst.mockResolvedValue(null);
+  // The ledger answers TWO different questions here, and one stub cannot
+  // tell them apart: "was this already returned?" (RETURN) and "did it ever
+  // leave the shelf?" (SALE). The default order in these tests is one that
+  // WAS delivered and has not come back yet.
+  db.inventoryMovement.findFirst.mockImplementation(async ({ where }: any) =>
+    where?.type === 'SALE' ? { id: 'sale-1' } : null
+  );
   db.productionBatch.findFirst.mockResolvedValue({ costPerUnit: 4 });
   db.productionBatch.create.mockResolvedValue({ id: 'b-ret' });
   db.productionBatch.aggregate.mockResolvedValue({ _sum: { quantityRemaining: 12 } });
@@ -133,5 +139,43 @@ describe('return receiving', () => {
   it('does not write the retired per-order commission column at all', async () => {
     await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
     expect(db.order.update.mock.calls[0][0].data).not.toHaveProperty('moderatorCommission');
+  });
+});
+
+/**
+ * NOTHING COMES BACK THAT NEVER LEFT.
+ *
+ * Stock is consumed at DELIVERY, not at dispatch. So a parcel refused at the
+ * door never took its units out of any batch — and "restoring" them then
+ * does not put stock back, it INVENTS it: a fresh batch of units the shelf
+ * already holds. The figure climbs by a whole parcel every time one comes
+ * back undelivered, which on a refusal-heavy week is most of them.
+ */
+describe('a return of goods that never left', () => {
+  beforeEach(() => {
+    // No SALE on this order: it was refused at the door, so nothing was ever
+    // consumed for it.
+    db.inventoryMovement.findFirst.mockResolvedValue(null);
+  });
+
+  it('creates no batch and no ledger line', async () => {
+    await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
+    expect(db.productionBatch.create).not.toHaveBeenCalled();
+    expect(db.inventoryMovement.create).not.toHaveBeenCalled();
+  });
+
+  it('still records the receipt — the count happened and is the record of it', async () => {
+    // Refusing to restore stock is not refusing the return. The parcel was
+    // counted and inspected; that fact is kept whatever the ledger says.
+    const res = await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
+    expect(res.status).toBe(201);
+    expect(db.returnReceipt.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks the ledger, not the order’s status', async () => {
+    // A status can be rewritten by a later path; the movement rows cannot.
+    await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
+    const asked = db.inventoryMovement.findFirst.mock.calls.map((c: any) => c[0].where.type);
+    expect(asked).toContain('SALE');
   });
 });

@@ -139,10 +139,25 @@ export async function restoreOrderStock(
     receivedQty: number;
     userId?: string | null;
   }
-): Promise<{ restored: number; alreadyDone: boolean }> {
+): Promise<{ restored: number; alreadyDone: boolean; neverConsumed?: boolean }> {
   if (input.receivedQty <= 0) return { restored: 0, alreadyDone: false };
   if (await alreadyMoved(tx, input.orderId, RETURN)) {
     return { restored: 0, alreadyDone: true };
+  }
+
+  // NOTHING COMES BACK THAT NEVER LEFT.
+  //
+  // Consumption happens at DELIVERY, not at dispatch — so an order refused
+  // at the door, or cancelled in transit, never took its units out of any
+  // batch. Putting them "back" then does not restore stock, it INVENTS it:
+  // a brand-new batch of units the shelf already holds, and the figure
+  // climbs by the whole parcel every time one comes back undelivered.
+  //
+  // The ledger is the authority, not the order's status, for the same
+  // reason `alreadyMoved` is: a status can be rewritten by a later path,
+  // and then nobody can tell which of the two is lying.
+  if (!(await alreadyMoved(tx, input.orderId, SALE))) {
+    return { restored: 0, alreadyDone: false, neverConsumed: true };
   }
 
   const order = await tx.order.findFirst({

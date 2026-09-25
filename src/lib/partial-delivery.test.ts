@@ -9,7 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * unexplained in the settlement.
  */
 
-const { db } = vi.hoisted(() => ({
+const { db, consumeOrderStock } = vi.hoisted(() => ({
+  consumeOrderStock: vi.fn(async (..._a: unknown[]) => ({ taken: 0, short: 0, alreadyDone: false })),
   db: {
     order: { findFirst: vi.fn(), update: vi.fn() },
     orderItem: { update: vi.fn() },
@@ -17,6 +18,7 @@ const { db } = vi.hoisted(() => ({
   },
 }));
 vi.mock('./db', () => ({ db }));
+vi.mock('./stock-consumption', () => ({ consumeOrderStock }));
 
 import { PartialDeliveryRefused, recordPartialDelivery } from './partial-delivery';
 
@@ -163,5 +165,53 @@ describe('what it refuses', () => {
 
   it('refuses a line from another order', async () => {
     await expect(run([{ itemId: 'not-ours', deliveredQty: 1 }])).rejects.toThrow(/لا ينتمي/);
+  });
+});
+
+/**
+ * THE GOODS LEAVE THE SHELF AT THE DOOR.
+ *
+ * This path wrote the order, the lines and the money and touched no batch,
+ * so a parcel handed over stayed in stock for ever. Nothing caught it later:
+ * the courier-statement sweep only promotes orders still in flight, and an
+ * order settled here is past all of those states.
+ */
+describe('stock leaves when the parcel does', () => {
+  it('consumes on a full delivery', async () => {
+    await recordPartialDelivery(db as never, {
+      companyId: 'c1', orderId: ORDER, minorUnit: 2, userId: 'u1',
+      lines: [{ itemId: 'i1', deliveredQty: 2 }, { itemId: 'i2', deliveredQty: 1 }],
+    });
+    expect(consumeOrderStock).toHaveBeenCalledTimes(1);
+    expect(consumeOrderStock.mock.calls[0][1]).toMatchObject({ orderId: ORDER, companyId: 'c1' });
+  });
+
+  it('consumes on a PARTIAL delivery too — the refused units also left the warehouse', async () => {
+    // They are in the courier's van, not on the shelf. They come back when
+    // the returns desk counts them in, which is what restores them.
+    await recordPartialDelivery(db as never, {
+      companyId: 'c1', orderId: ORDER, minorUnit: 2, userId: 'u1',
+      lines: [{ itemId: 'i1', deliveredQty: 2 }, { itemId: 'i2', deliveredQty: 0 }],
+    });
+    expect(consumeOrderStock).toHaveBeenCalledTimes(1);
+  });
+
+  it('consumes NOTHING when the customer took nothing', async () => {
+    // The parcel is coming back whole and was never consumed, so there is
+    // nothing to take off — and nothing for the returns desk to put back.
+    await recordPartialDelivery(db as never, {
+      companyId: 'c1', orderId: ORDER, minorUnit: 2, userId: 'u1',
+      lines: [{ itemId: 'i1', deliveredQty: 0 }, { itemId: 'i2', deliveredQty: 0 }],
+    });
+    expect(consumeOrderStock).not.toHaveBeenCalled();
+  });
+
+  it('carries the country’s negative-stock rule through rather than deciding it here', async () => {
+    await recordPartialDelivery(db as never, {
+      companyId: 'c1', orderId: ORDER, minorUnit: 2, userId: 'u1',
+      lines: [{ itemId: 'i1', deliveredQty: 2 }, { itemId: 'i2', deliveredQty: 1 }],
+      allowNegativeStock: true,
+    });
+    expect(consumeOrderStock.mock.calls[0][1]).toMatchObject({ allowNegativeStock: true });
   });
 });

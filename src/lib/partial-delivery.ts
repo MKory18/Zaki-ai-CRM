@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { roundMinor } from './money';
+import { consumeOrderStock } from './stock-consumption';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -74,6 +75,8 @@ export async function recordPartialDelivery(
     minorUnit: number;
     userId: string;
     note?: string | null;
+    /** The country's rule when a batch cannot cover what went out the door. */
+    allowNegativeStock?: boolean;
   }
 ): Promise<PartialOutcome> {
   const order = await tx.order.findFirst({
@@ -193,6 +196,34 @@ export async function recordPartialDelivery(
       version: { increment: 1 },
     },
   });
+
+  // THE GOODS LEAVE THE SHELF HERE.
+  //
+  // This is the door-side settlement, and until now it was the one delivery
+  // path that never drew stock down. The manual transition
+  // (`/api/orders/[id]/shipping`) consumes; this one wrote the order, the
+  // lines and the money and left every batch untouched — so a parcel handed
+  // over at the door stayed on the shelf for ever. Nothing caught it later
+  // either: the statement sweep only promotes orders still in flight
+  // (`SHIPPED`, `OUT_FOR_DELIVERY`, `READY_FOR_PICKUP`), and an order
+  // settled here is past all three.
+  //
+  // The FULL ordered quantity is consumed, not the delivered quantity —
+  // every unit left the warehouse, including the refused ones, which are in
+  // the courier's van. They come back onto the shelf when the returns desk
+  // counts them in, never before. That is the same arithmetic the manual
+  // path uses, so the two agree.
+  //
+  // Nothing taken is the one case that consumes nothing: the parcel is
+  // coming back whole, and it was never consumed to begin with.
+  if (!nothingTaken) {
+    await consumeOrderStock(tx, {
+      orderId: order.id,
+      companyId: input.companyId,
+      allowNegativeStock: input.allowNegativeStock ?? false,
+      userId: input.userId,
+    });
+  }
 
   await tx.orderActivity.create({
     data: {

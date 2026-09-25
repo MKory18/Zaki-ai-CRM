@@ -116,10 +116,24 @@ describe('delivering an order', () => {
 });
 
 describe('receiving a return', () => {
+  /**
+   * Every case here is a return of goods that WERE delivered — the ledger
+   * holds a SALE for the order. That is the premise, not a detail: goods
+   * that never left the shelf are a different case entirely, below.
+   */
+  const delivered = (over: Record<string, unknown> = {}) =>
+    makeTx({
+      inventoryMovement: {
+        findFirst: vi.fn(async ({ where }: any) => (where?.type === 'SALE' ? { id: 'sale-1' } : null)),
+        create: vi.fn(),
+      },
+      ...over,
+    });
+
   it('puts the units into a real batch, not only into the ledger', async () => {
     // The whole bug: a ledger line moves nothing, and the shipment screen
     // keeps reporting a shortage for stock the ledger says is back.
-    const tx = makeTx();
+    const tx = delivered();
     await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 3 });
     expect((tx as any).productionBatch.create).toHaveBeenCalled();
     const data = (tx as any).productionBatch.create.mock.calls[0][0].data;
@@ -128,7 +142,7 @@ describe('receiving a return', () => {
   });
 
   it('returns them at the cost they left at', async () => {
-    const tx = makeTx();
+    const tx = delivered();
     await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 2 });
     const data = (tx as any).productionBatch.create.mock.calls[0][0].data;
     expect(data.costPerUnit).toBe(4);
@@ -137,14 +151,14 @@ describe('receiving a return', () => {
 
   it('restores only what was counted, never what was shipped', async () => {
     // Three went out, one came back sound. Two are gone.
-    const tx = makeTx();
+    const tx = delivered();
     await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 1 });
     expect((tx as any).productionBatch.create.mock.calls[0][0].data.quantityRemaining).toBe(1);
     expect((tx as any).productionBatch.create).toHaveBeenCalledTimes(1);
   });
 
   it('does nothing when nothing came back sound', async () => {
-    const tx = makeTx();
+    const tx = delivered();
     const res = await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 0 });
     expect(res.restored).toBe(0);
     expect((tx as any).productionBatch.create).not.toHaveBeenCalled();
@@ -157,5 +171,40 @@ describe('receiving a return', () => {
     const res = await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 3 });
     expect(res.alreadyDone).toBe(true);
     expect((tx as any).productionBatch.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('a return of goods that never left the shelf', () => {
+  /**
+   * Consumption happens at DELIVERY, not at dispatch. An order refused at
+   * the door never took its units out of a batch, so "restoring" them
+   * creates stock that was never removed — a fresh batch of units the shelf
+   * already holds. The figure climbs by a whole parcel each time.
+   */
+  const neverDelivered = () =>
+    makeTx({ inventoryMovement: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() } });
+
+  it('restores nothing, and says why', async () => {
+    const tx = neverDelivered();
+    const res = await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 3 });
+    expect(res).toMatchObject({ restored: 0, neverConsumed: true });
+    expect((tx as any).productionBatch.create).not.toHaveBeenCalled();
+    expect((tx as any).inventoryMovement.create).not.toHaveBeenCalled();
+  });
+
+  it('is not the same answer as "already returned"', async () => {
+    // Both restore nothing, and a caller that cannot tell them apart cannot
+    // report either one honestly.
+    const tx = neverDelivered();
+    const res = await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 3 });
+    expect(res.alreadyDone).toBe(false);
+  });
+
+  it('asks the LEDGER whether it left, never the order’s status', async () => {
+    // A status can be rewritten by a later path; a movement row cannot.
+    const tx = neverDelivered();
+    await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 3 });
+    const asked = (tx as any).inventoryMovement.findFirst.mock.calls.map((c: any) => c[0].where.type);
+    expect(asked).toContain('SALE');
   });
 });
