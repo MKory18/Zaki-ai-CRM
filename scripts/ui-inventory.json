@@ -1,0 +1,1412 @@
+{
+  "src/components/ai/AiDock.tsx": {
+    "buttons": 6,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 8,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/attendance/ShiftChip.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/growth/AskAi.tsx": {
+    "buttons": 2,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/labels/LabelSize.tsx": {
+    "buttons": 0,
+    "inputs": 5,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/AiOrderModal.tsx": {
+    "buttons": 4,
+    "inputs": 9,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/ChangeRequestReview.tsx": {
+    "buttons": 3,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/ConfirmationActions.tsx": {
+    "buttons": 10,
+    "inputs": 2,
+    "columns": 8,
+    "cards": 0,
+    "modals": 1,
+    "icons": 9,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/ContactButtons.tsx": {
+    "buttons": 3,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/CreateOrderModal.tsx": {
+    "buttons": 3,
+    "inputs": 7,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 8,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/CustomerCard.tsx": {
+    "buttons": 4,
+    "inputs": 5,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/CustomerHistory.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/OrderDetailModal.tsx": {
+    "buttons": 10,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 3,
+    "icons": 11,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/OrderLinesCard.tsx": {
+    "buttons": 3,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/OrderNotes.tsx": {
+    "buttons": 1,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/OrderResponsibility.tsx": {
+    "buttons": 4,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/OrderStages.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/ProductLinesEditor.tsx": {
+    "buttons": 4,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/ShippingSection.tsx": {
+    "buttons": 10,
+    "inputs": 5,
+    "columns": 0,
+    "cards": 0,
+    "modals": 3,
+    "icons": 7,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/performance/AttributionTable.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 1,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/performance/LandingAnalyticsTab.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 4,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/performance/ScoreBoard.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 3,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/performance/ScoreCard.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/performance/TeamPerformanceTable.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 15,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/production/BatchCostDialog.tsx": {
+    "buttons": 4,
+    "inputs": 4,
+    "columns": 4,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/products/ProductOffers.tsx": {
+    "buttons": 10,
+    "inputs": 7,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 14,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/products/ProductStock.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 3,
+    "modals": 0,
+    "icons": 6,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/scan/ScanButton.tsx": {
+    "buttons": 3,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/AgentCustodyScreen.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ai/AssistantsTable.tsx": {
+    "buttons": 0,
+    "inputs": 1,
+    "columns": 4,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/AiSettingsScreen.tsx": {
+    "buttons": 6,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 11,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/AppStoreScreen.tsx": {
+    "buttons": 11,
+    "inputs": 6,
+    "columns": 0,
+    "cards": 0,
+    "modals": 2,
+    "icons": 12,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/screens/AssistantScreen.tsx": {
+    "buttons": 3,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 2,
+    "modals": 0,
+    "icons": 10,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/AuditScreen.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 6,
+    "cards": 1,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/BlacklistScreen.tsx": {
+    "buttons": 6,
+    "inputs": 6,
+    "columns": 6,
+    "cards": 0,
+    "modals": 2,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/CampaignsScreen.tsx": {
+    "buttons": 16,
+    "inputs": 9,
+    "columns": 4,
+    "cards": 0,
+    "modals": 0,
+    "icons": 20,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ChangeRequestsScreen.tsx": {
+    "buttons": 3,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ChannelsScreen.tsx": {
+    "buttons": 8,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 7,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/commission/PayoutDialog.tsx": {
+    "buttons": 2,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/commission/PeriodProgress.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/CommissionSettingsScreen.tsx": {
+    "buttons": 10,
+    "inputs": 15,
+    "columns": 13,
+    "cards": 0,
+    "modals": 2,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/confirmation/ActionDialogs.tsx": {
+    "buttons": 4,
+    "inputs": 11,
+    "columns": 0,
+    "cards": 0,
+    "modals": 4,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/confirmation/AssistantDialog.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ConfirmationIssuesScreen.tsx": {
+    "buttons": 6,
+    "inputs": 5,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ConfirmationMineScreen.tsx": {
+    "buttons": 3,
+    "inputs": 1,
+    "columns": 5,
+    "cards": 0,
+    "modals": 0,
+    "icons": 13,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ConfirmationPostponedScreen.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 8,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ConfirmationQueueScreen.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 4,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/CouriersScreen.tsx": {
+    "buttons": 10,
+    "inputs": 5,
+    "columns": 6,
+    "cards": 0,
+    "modals": 0,
+    "icons": 8,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/screens/CustomersScreen.tsx": {
+    "buttons": 3,
+    "inputs": 7,
+    "columns": 0,
+    "cards": 1,
+    "modals": 2,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/DashboardScreen.tsx": {
+    "buttons": 5,
+    "inputs": 0,
+    "columns": 11,
+    "cards": 4,
+    "modals": 0,
+    "icons": 15,
+    "links": 4,
+    "tabs": 0
+  },
+  "src/components/screens/DeliveryFeesScreen.tsx": {
+    "buttons": 6,
+    "inputs": 8,
+    "columns": 6,
+    "cards": 0,
+    "modals": 2,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/DiscountAlertsScreen.tsx": {
+    "buttons": 0,
+    "inputs": 2,
+    "columns": 11,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/ClosingScreen.tsx": {
+    "buttons": 4,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/CollectionScreen.tsx": {
+    "buttons": 9,
+    "inputs": 8,
+    "columns": 7,
+    "cards": 0,
+    "modals": 2,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/MatchingScreen.tsx": {
+    "buttons": 2,
+    "inputs": 1,
+    "columns": 7,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/TransfersScreen.tsx": {
+    "buttons": 1,
+    "inputs": 5,
+    "columns": 8,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/WalletsScreen.tsx": {
+    "buttons": 16,
+    "inputs": 10,
+    "columns": 7,
+    "cards": 0,
+    "modals": 3,
+    "icons": 10,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/FinanceProfitScreen.tsx": {
+    "buttons": 3,
+    "inputs": 5,
+    "columns": 5,
+    "cards": 3,
+    "modals": 1,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/GeoSettingsScreen.tsx": {
+    "buttons": 12,
+    "inputs": 12,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/InstalledAppsScreen.tsx": {
+    "buttons": 3,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 8,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/screens/IntelligenceScreen.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/InventoryBalancesScreen.tsx": {
+    "buttons": 3,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 1,
+    "modals": 1,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/InventoryMovementsScreen.tsx": {
+    "buttons": 1,
+    "inputs": 2,
+    "columns": 8,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/InventoryReceivingScreen.tsx": {
+    "buttons": 3,
+    "inputs": 5,
+    "columns": 3,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/JobsScreen.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 5,
+    "cards": 0,
+    "modals": 0,
+    "icons": 8,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/LandingPageDetailScreen.tsx": {
+    "buttons": 10,
+    "inputs": 6,
+    "columns": 0,
+    "cards": 7,
+    "modals": 0,
+    "icons": 16,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/LandingPageEditorScreen.tsx": {
+    "buttons": 21,
+    "inputs": 8,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 18,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/LandingPagesScreen.tsx": {
+    "buttons": 11,
+    "inputs": 3,
+    "columns": 6,
+    "cards": 1,
+    "modals": 2,
+    "icons": 14,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ManufacturingScreen.tsx": {
+    "buttons": 6,
+    "inputs": 10,
+    "columns": 9,
+    "cards": 1,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ops/PickingAssistant.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/OrdersScreen.tsx": {
+    "buttons": 16,
+    "inputs": 8,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 15,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/PenaltiesScreen.tsx": {
+    "buttons": 6,
+    "inputs": 1,
+    "columns": 3,
+    "cards": 0,
+    "modals": 1,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/PerformanceScreen.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 10,
+    "cards": 5,
+    "modals": 0,
+    "icons": 8,
+    "links": 0,
+    "tabs": 1
+  },
+  "src/components/screens/PermissionsScreen.tsx": {
+    "buttons": 16,
+    "inputs": 9,
+    "columns": 0,
+    "cards": 3,
+    "modals": 3,
+    "icons": 16,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/PreparationScreen.tsx": {
+    "buttons": 4,
+    "inputs": 0,
+    "columns": 6,
+    "cards": 0,
+    "modals": 0,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ProductDetailScreen.tsx": {
+    "buttons": 7,
+    "inputs": 1,
+    "columns": 12,
+    "cards": 6,
+    "modals": 1,
+    "icons": 12,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/screens/ProductsScreen.tsx": {
+    "buttons": 15,
+    "inputs": 11,
+    "columns": 8,
+    "cards": 1,
+    "modals": 2,
+    "icons": 11,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/screens/ProfileScreen.tsx": {
+    "buttons": 1,
+    "inputs": 5,
+    "columns": 0,
+    "cards": 3,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ReturnsScreen.tsx": {
+    "buttons": 4,
+    "inputs": 5,
+    "columns": 6,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ShipmentsNewScreen.tsx": {
+    "buttons": 3,
+    "inputs": 7,
+    "columns": 7,
+    "cards": 0,
+    "modals": 0,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/ShippingBatchesScreen.tsx": {
+    "buttons": 9,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 15,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/StoreDesignScreen.tsx": {
+    "buttons": 5,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 9,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/StoreDomainScreen.tsx": {
+    "buttons": 6,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 12,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/StorefrontsScreen.tsx": {
+    "buttons": 2,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 15,
+    "links": 3,
+    "tabs": 0
+  },
+  "src/components/screens/StoreLanguagesScreen.tsx": {
+    "buttons": 3,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/StoreMenusScreen.tsx": {
+    "buttons": 7,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 10,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/StorePagesScreen.tsx": {
+    "buttons": 5,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 8,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/StoreRoutesScreen.tsx": {
+    "buttons": 7,
+    "inputs": 3,
+    "columns": 6,
+    "cards": 0,
+    "modals": 0,
+    "icons": 7,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/StoreThemeScreen.tsx": {
+    "buttons": 11,
+    "inputs": 23,
+    "columns": 15,
+    "cards": 0,
+    "modals": 0,
+    "icons": 10,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/SystemSettingsScreen.tsx": {
+    "buttons": 1,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/TelegramOrdersScreen.tsx": {
+    "buttons": 4,
+    "inputs": 1,
+    "columns": 12,
+    "cards": 3,
+    "modals": 0,
+    "icons": 4,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/screens/TelegramSettingsScreen.tsx": {
+    "buttons": 4,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 3,
+    "modals": 0,
+    "icons": 5,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/screens/tracking/CollectDialog.tsx": {
+    "buttons": 2,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/tracking/DeliverDialog.tsx": {
+    "buttons": 3,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/tracking/TransferDialog.tsx": {
+    "buttons": 2,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/TrackingScreen.tsx": {
+    "buttons": 8,
+    "inputs": 2,
+    "columns": 16,
+    "cards": 0,
+    "modals": 0,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/UserDetailScreen.tsx": {
+    "buttons": 10,
+    "inputs": 9,
+    "columns": 5,
+    "cards": 5,
+    "modals": 1,
+    "icons": 12,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/users/CreateUserModal.tsx": {
+    "buttons": 2,
+    "inputs": 7,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/users/UserAccessSections.tsx": {
+    "buttons": 2,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/users/UserCommissionCurrency.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/users/UserSalary.tsx": {
+    "buttons": 4,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/users/UserShift.tsx": {
+    "buttons": 3,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/UsersScreen.tsx": {
+    "buttons": 13,
+    "inputs": 5,
+    "columns": 7,
+    "cards": 1,
+    "modals": 2,
+    "icons": 13,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/WhatsAppInboxScreen.tsx": {
+    "buttons": 7,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 17,
+    "links": 3,
+    "tabs": 0
+  },
+  "src/components/screens/WhatsAppSettingsScreen.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 3,
+    "modals": 0,
+    "icons": 8,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/settings/AdAccountsCard.tsx": {
+    "buttons": 4,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 8,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/CourierCredentials.tsx": {
+    "buttons": 5,
+    "inputs": 9,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 13,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/CourierWebhook.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/CustomConversionsCard.tsx": {
+    "buttons": 11,
+    "inputs": 8,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 12,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/MessageTemplatesCard.tsx": {
+    "buttons": 5,
+    "inputs": 6,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/PenaltyRulesCard.tsx": {
+    "buttons": 2,
+    "inputs": 6,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/PerformanceSettingsCard.tsx": {
+    "buttons": 1,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/StoreBrandField.tsx": {
+    "buttons": 2,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/StorefrontSettings.tsx": {
+    "buttons": 2,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/StoreIdentityCard.tsx": {
+    "buttons": 1,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/TelegramSourcesCard.tsx": {
+    "buttons": 6,
+    "inputs": 4,
+    "columns": 7,
+    "cards": 1,
+    "modals": 1,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/ThemePicker.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/TrackingPixelsSection.tsx": {
+    "buttons": 5,
+    "inputs": 3,
+    "columns": 4,
+    "cards": 0,
+    "modals": 0,
+    "icons": 7,
+    "links": 0,
+    "tabs": 1
+  },
+  "src/components/shell/AccountScreens.tsx": {
+    "buttons": 3,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/shell/ConfirmationCounter.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/shell/EntryPicker.tsx": {
+    "buttons": 7,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/shell/Header.tsx": {
+    "buttons": 2,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/shell/IdleGuard.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/shell/MobileNav.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/shell/NotificationBell.tsx": {
+    "buttons": 3,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/shell/OfflineWatch.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/shell/Sidebar.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/storefront/StorefrontShell.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/ui/Button.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/Confirm.tsx": {
+    "buttons": 3,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/CurrencyPicker.tsx": {
+    "buttons": 0,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/DateRange.tsx": {
+    "buttons": 5,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/Input.tsx": {
+    "buttons": 0,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/Modal.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/ProductThumb.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/Rows.tsx": {
+    "buttons": 0,
+    "inputs": 2,
+    "columns": 3,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/app/(system)/forgot-password/page.tsx": {
+    "buttons": 1,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 3,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/app/(system)/login/page.tsx": {
+    "buttons": 1,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 3,
+    "links": 3,
+    "tabs": 0
+  },
+  "src/app/(system)/register/page.tsx": {
+    "buttons": 1,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 4,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/app/(system)/reset-password/page.tsx": {
+    "buttons": 1,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 2,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/app/forbidden.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/app/not-found.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 1,
+    "tabs": 0
+  }
+}
