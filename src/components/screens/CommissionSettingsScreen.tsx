@@ -1,7 +1,9 @@
 'use client';
 
+import { PeriodProgress } from '@/components/screens/commission/PeriodProgress';
 import {
-  COMMISSION_METRICS, COMMISSION_TYPES, METRIC_LABEL_AR, PERIOD_LABEL_AR, TYPE_LABEL_AR, tiersProblem,
+  COMMISSION_METRICS, COMMISSION_TYPES, METRIC_LABEL_AR, PERIOD_LABEL_AR, TYPE_LABEL_AR,
+  isTarget, targetGoal, tiersProblem,
   type CommissionMetric, type CommissionPeriod, type CommissionType, type Tier,
 } from '@/lib/commission-rules';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -112,6 +114,10 @@ export function CommissionSettingsScreen() {
       {error && <p className="text-sm text-[#fb323f] bg-[#feecee] border border-[#fecdd1] rounded-[8px] p-3">{error}</p>}
       {done && <p className="text-sm text-[#00a344] bg-emerald-50 border border-emerald-100 rounded-[8px] p-3">{done}</p>}
 
+      {/* A period rule only becomes money once its span closes, so without
+          this there was nothing to see while it could still be changed. */}
+      <PeriodProgress />
+
       <div className="bg-white border border-[#e3e8ef] rounded-[8px] overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#e3e8ef]">
           <h2 className="text-sm font-medium text-[#121926]">قواعد العمولة</h2>
@@ -174,7 +180,11 @@ export function CommissionSettingsScreen() {
                       {r.period !== 'PER_ORDER' && ` · ${PERIOD_LABEL_AR[r.period] ?? r.period}`}
                     </td>
                     <td className="px-3 py-2 tabular-nums">
-                      {r.tiers && r.tiers.length > 0 ? (
+                      {isTarget(r) ? (
+                        <span title={`مكافأة ${r.tiers![0].value} عند بلوغ ${targetGoal(r.tiers)}`}>
+                          هدف {targetGoal(r.tiers)} ← {r.tiers![0].value}
+                        </span>
+                      ) : r.tiers && r.tiers.length > 0 ? (
                         <span title={r.tiers.map((t) => `${t.from}${t.to === null ? '+' : `–${t.to}`}: ${t.value}`).join(' · ')}>
                           {r.tiers.length} شرائح
                         </span>
@@ -278,8 +288,11 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
   const [period, setPeriod] = useState<CommissionPeriod>('DAILY');
   const [type, setType] = useState<CommissionType>('PERCENT');
   const [value, setValue] = useState('');
-  const [banded, setBanded] = useState(false);
+  const [shape, setShape] = useState<'single' | 'tiers' | 'target'>('single');
   const [tiers, setTiers] = useState<TierDraft[]>([{ from: '0', to: '', value: '', label: '' }]);
+  const [goal, setGoal] = useState('');
+  const [bonus, setBonus] = useState('');
+  const banded = shape !== 'single';
   const [minOrders, setMinOrders] = useState('');
   const [from, setFrom] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
@@ -287,6 +300,12 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
 
   const perOrder = metric === 'ORDER_DELIVERED';
   const isRate = metric === 'DELIVERY_RATE';
+
+  /** A target is one band opening at the goal, paid once. */
+  function pickShape(next: 'single' | 'tiers' | 'target') {
+    setShape(next);
+    if (next === 'target') setType('FIXED');
+  }
 
   /** The metric decides the span: the two may never disagree. */
   function pickMetric(next: CommissionMetric) {
@@ -298,7 +317,11 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
   }
 
   const parsedTiers = () =>
-    tiers
+    shape === 'target'
+      ? goal !== '' && bonus !== ''
+        ? [{ from: Number(goal), to: null, value: Number(bonus) }]
+        : []
+      : tiers
       .filter((t) => t.from !== '' && t.value !== '')
       .map((t) => ({
         from: Number(t.from),
@@ -406,10 +429,31 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             : `تُحتسب بعد انتهاء ${PERIOD_LABEL_AR[period]} — لأن العدد لا يُعرف قبل أن ينتهي.`}
         </p>
 
-        <label className="flex items-center gap-2 text-sm text-[#364152]">
-          <input type="checkbox" checked={banded} onChange={(e) => setBanded(e.target.checked)} />
-          شرائح حسب العدد
-        </label>
+        {/* A target is not a fourth kind of rule — it is a rule with one
+            band opening at the goal. Offered as its own shape because that
+            is how a seller thinks of it, and because it pays BESIDE the
+            tiers rather than instead of them. */}
+        <div className="flex gap-1.5">
+          {([
+            ['single', 'قيمة واحدة'],
+            ['tiers', 'شرائح'],
+            ['target', 'هدف ومكافأة'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => pickShape(value)}
+              disabled={value !== 'single' && perOrder}
+              className={`h-8 flex-1 rounded-[8px] border text-xs font-medium disabled:opacity-40 ${
+                shape === value
+                  ? 'border-[#b8256e] bg-[#fdf2f8] text-[#b8256e]'
+                  : 'border-[#e3e8ef] text-[#364152]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         {!banded ? (
           <div className="grid grid-cols-2 gap-3">
@@ -440,6 +484,42 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                 dir="ltr"
               />
             </label>
+          </div>
+        ) : shape === 'target' ? (
+          <div className="grid grid-cols-2 gap-3">
+            <label>
+              <span className="block text-xs font-medium text-[#364152] mb-1">
+                الهدف {isRate ? '(نسبة %)' : '(عدد)'}
+              </span>
+              <input
+                type="number"
+                min="0"
+                max={isRate ? 100 : undefined}
+                value={goal}
+                onChange={(e) => setGoal(e.target.value)}
+                required
+                placeholder={isRate ? '70' : '150'}
+                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+                dir="ltr"
+              />
+            </label>
+            <label>
+              <span className="block text-xs font-medium text-[#364152] mb-1">المكافأة</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={bonus}
+                onChange={(e) => setBonus(e.target.value)}
+                required
+                className="w-full h-10 px-3 rounded-[8px] border border-[#e3e8ef] text-sm"
+                dir="ltr"
+              />
+            </label>
+            <p className="col-span-2 rounded-[8px] bg-[#f8fafc] px-2.5 py-2 text-[11px] leading-relaxed text-[#697586]">
+              مكافأة واحدة عند بلوغ الهدف، مهما زاد العدد عليه — وتُدفع فوق أي قاعدة شرائح أخرى، لا بدلاً
+              منها.
+            </p>
           </div>
         ) : (
           <div className="space-y-2">

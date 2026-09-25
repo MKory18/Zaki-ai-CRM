@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { earnedBy, parseTiers, tierFor, tiersProblem, type Tier } from './commission-rules';
+import { earnedBy, isTarget, parseTiers, targetGoal, tierFor, tiersProblem, type Tier } from './commission-rules';
 
 /**
  * THE SIX ARRANGEMENTS THE OWNER ACTUALLY USES.
@@ -138,5 +138,25 @@ describe('what is never paid', () => {
   it('rounded to the currency, not to two decimals by habit', () => {
     // A three-decimal currency (JOD) keeps its fils.
     expect(earnedBy({ type: 'PERCENT', value: 1.5, tiers: null, count: 1, amount: 33.333, minorUnit: 3 }).amount).toBe(0.5);
+  });
+});
+
+describe('a target', () => {
+  it('is a rule with one band opening at the goal — not a second engine', () => {
+    const t = tiers([150, null, 50, 'هدف ١٥٠']);
+    expect(isTarget({ type: 'FIXED', tiers: t })).toBe(true);
+    expect(targetGoal(t)).toBe(150);
+    // One bonus for reaching it, however far past it they go.
+    expect(earnedBy({ type: 'FIXED', value: 0, tiers: t, count: 150, minorUnit: 2 }).amount).toBe(50);
+    expect(earnedBy({ type: 'FIXED', value: 0, tiers: t, count: 900, minorUnit: 2 }).amount).toBe(50);
+    expect(earnedBy({ type: 'FIXED', value: 0, tiers: t, count: 149, minorUnit: 2 }).amount).toBe(0);
+  });
+
+  it('is told apart from a tier rule, which is neither fixed nor single-banded', () => {
+    expect(isTarget({ type: 'PER_ORDER', tiers: tiers([150, null, 1]) })).toBe(false);
+    expect(isTarget({ type: 'FIXED', tiers: tiers([100, 149, 1], [150, null, 2]) })).toBe(false);
+    expect(isTarget({ type: 'FIXED', tiers: tiers([100, 200, 1]) })).toBe(false); // has a ceiling
+    expect(isTarget({ type: 'FIXED', tiers: null })).toBe(false);
+    expect(targetGoal(null)).toBeNull();
   });
 });

@@ -89,6 +89,41 @@ describe('what the span earned', () => {
   });
 });
 
+describe('a target beside its tiers', () => {
+  it('pays ON TOP of them — a target is a one-band rule, not a replacement', async () => {
+    // The owner's words: every target has a bonus INDEPENDENT of the tier
+    // rules. A target needed no engine of its own: it is a rule whose single
+    // band starts at the goal, and the accrual walks every matching rule.
+    db.commissionRule.findMany.mockResolvedValue([
+      rule(),
+      rule({
+        id: 'target', name: 'هدف المئة والخمسين', type: 'FIXED',
+        tiers: [{ from: 150, to: null, value: 50, label: 'هدف ١٥٠' }],
+      }),
+    ]);
+    const r = await accrue();
+    expect(r.created).toBe(2);
+    expect(r.amount).toBe(210); // 160 from the bands, 50 for reaching the goal
+
+    const entries = db.commissionEntry.create.mock.calls.map((c) => c[0].data);
+    expect(entries.map((e) => e.amount).sort((a, b) => a - b)).toEqual([50, 160]);
+    // Each entry names the rule that earned it, so a payslip can be read.
+    expect(entries.find((e) => e.amount === 50)?.tierLabel).toBe('هدف ١٥٠');
+  });
+
+  it('pays nothing for a goal that was not reached, while the bands still pay', async () => {
+    db.order.findMany.mockResolvedValue(confirmed(120));
+    db.commissionRule.findMany.mockResolvedValue([
+      rule(),
+      rule({ id: 'target', type: 'FIXED', tiers: [{ from: 150, to: null, value: 50 }] }),
+    ]);
+    const r = await accrue();
+    expect(r.created).toBe(1);
+    expect(r.amount).toBe(60); // 120 × 0.5, and no bonus
+    expect(r.skipped.NO_TIER).toBe(1);
+  });
+});
+
 describe('running the job twice', () => {
   it('does not pay twice — the second run finds the entry', async () => {
     db.commissionEntry.findFirst.mockResolvedValue({ id: 'existing' });

@@ -137,6 +137,26 @@ export function tiersProblem(tiers: Tier[]): string | null {
   return null;
 }
 
+/**
+ * A TARGET: reach this many, earn this bonus — once.
+ *
+ * It needed no engine of its own. A target is a rule whose single band opens
+ * at the goal and pays a fixed amount, and the period accrual walks EVERY
+ * rule that matches, so it lands beside the tier rule rather than instead of
+ * it — which is what "a bonus independent of the tier rules" means.
+ *
+ * Recognised rather than stored as a flag: a flag would be a second thing to
+ * keep true, and this is simply what the shape already says.
+ */
+export function isTarget(rule: { type: string; tiers: Tier[] | null }): boolean {
+  return rule.type === 'FIXED' && rule.tiers?.length === 1 && rule.tiers[0].to === null;
+}
+
+/** The number a target asks for. */
+export function targetGoal(tiers: Tier[] | null): number | null {
+  return tiers && tiers.length === 1 ? tiers[0].from : null;
+}
+
 /** The band a count falls in, or null when it reaches none of them. */
 export function tierFor(tiers: Tier[], count: number): Tier | null {
   return tiers.find((t) => count >= t.from && (t.to === null || count <= t.to)) ?? null;
