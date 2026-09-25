@@ -98,6 +98,7 @@ export const NAV: NavGroup[] = [
     routes: [
       r('/control/change-requests', 'طلبات التعديل', 'FilePen', ['control.change_requests']),
       r('/control/discount-alerts', 'تنبيهات الخصم', 'BadgePercent', ['control.discount_alerts']),
+      r('/control/penalties', 'الخصومات', 'ShieldQuestion', ['penalties.view']),
       r('/control/audit', 'سجل التدقيق', 'ScrollText', ['audit.view']),
       r('/control/blacklist', 'القائمة السوداء', 'Ban', ['control.blacklist']),
     ],

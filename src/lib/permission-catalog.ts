@@ -167,6 +167,18 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       // the key that lets somebody see their TEAM's — a different decision,
       // and one the owner grants deliberately.
       { key: 'team.monitor', ar: 'متابعة أداء الفريق', en: 'Monitor team performance' },
+
+    ],
+  },
+  {
+    module: 'penalties',
+    items: [
+      // Seeing what the system PROPOSED is not deciding it. Two keys,
+      // because reading a list of other people's lateness and taking money
+      // off somebody are not the same authority — and one key for both
+      // would hand the second to everybody who needed the first.
+      { key: 'penalties.view', ar: 'عرض الخصومات المقترحة', en: 'View proposed deductions' },
+      { key: 'penalties.decide', ar: 'اعتماد الخصومات أو إلغاؤها', en: 'Apply or waive deductions' },
     ],
   },
   {
@@ -280,6 +292,7 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   ops: { ar: 'التشغيل', en: 'Operations' },
   control: { ar: 'الرقابة', en: 'Control' },
   team: { ar: 'الفريق', en: 'Team' },
+  penalties: { ar: 'الخصومات', en: 'Deductions' },
   growth: { ar: 'النمو', en: 'Growth' },
   apps: { ar: 'التطبيقات', en: 'Apps' },
   audit: { ar: 'سجل التدقيق', en: 'Audit Logs' },

@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PerformanceSettingsCard } from '@/components/settings/PerformanceSettingsCard';
+import { PenaltyRulesCard } from '@/components/settings/PenaltyRulesCard';
 
 /**
  * SYSTEM SETTINGS — what belongs to the company as a whole, and only that.
@@ -110,6 +111,11 @@ export function SystemSettingsScreen() {
           reports screen: these are the bars the business judges by, and
           they are a decision rather than a reading. */}
       <PerformanceSettingsCard />
+
+      {/* Beside the score on purpose. One measures and the other charges,
+          and an owner setting a deduction should be looking at the bars
+          they judge by on the same screen. */}
+      <PenaltyRulesCard />
 
     </div>
   );

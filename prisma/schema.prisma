@@ -59,6 +59,8 @@ model Company {
   campaigns             Campaign[]
   adAccounts            AdAccount[]
   customConversions     CustomConversion[]
+  penaltyRules          PenaltyRule[]
+  penalties             Penalty[]
 
   @@map("companies")
 }
@@ -271,6 +273,7 @@ model User {
   whatsappAssignedConversations WhatsAppConversation[] @relation("WhatsAppAssignee")
   countryAccess                 UserCountryAccess[]
   storeAccess                   UserStoreAccess[]
+  penalties                     Penalty[]
   notifications                 Notification[]
   customerBlocks                CustomerBlock[]        @relation("CustomerBlockedBy")
   customerBlockReleases         CustomerBlock[]        @relation("CustomerBlockReleasedBy")
@@ -2177,6 +2180,101 @@ model CommissionEntry {
 ///
 /// The rate is entered, stored, and never recalculated — the same rule as a
 /// wallet transfer. A month already paid must read the same next year.
+/**
+ * A RULE THAT PROPOSES A DEDUCTION — it never applies one.
+ *
+ * Grace and a cap are not softness. A rule with no grace charges somebody
+ * every day traffic exists, and a deduction that happens every day stops
+ * being a signal about anything. A rule with no cap can eat a salary over
+ * one illness.
+ */
+model PenaltyRule {
+  id           String    @id @default(uuid())
+  companyId    String    @map("company_id")
+  /// Null = every store of the company.
+  storeId      String?   @map("store_id")
+  /// Null = every role.
+  role         String?
+  /// See PENALTY_KINDS in src/lib/penalties.ts.
+  kind         String
+  /// What ONE unit costs: a minute late, an absent day, an untouched order.
+  perUnit      Decimal   @map("per_unit") @db.Decimal(12, 4)
+  /// Units forgiven before anything is charged.
+  grace        Int       @default(0)
+  /// The most this rule may take from one person in one period.
+  periodCap    Decimal?  @map("period_cap") @db.Decimal(12, 2)
+  currencyCode String    @map("currency_code")
+  effectiveFrom DateTime @map("effective_from")
+  effectiveTo   DateTime? @map("effective_to")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdById  String    @map("created_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  penalties Penalty[]
+
+  @@index([companyId, kind])
+  @@index([companyId, isActive])
+  @@map("penalty_rules")
+}
+
+/**
+ * ONE PROPOSED OR APPLIED DEDUCTION.
+ *
+ * Nothing here becomes money on its own. The system can measure that
+ * somebody arrived at 09:40; it cannot know there was a funeral, a closed
+ * road, or a shift swapped by phone. And an arrival taken from the first
+ * order somebody touched is an UPPER BOUND — taking money on an upper
+ * bound is not a policy, it is an error with a receipt.
+ *
+ * So: PROPOSED by the system, APPLIED or WAIVED by a person, and REVERSED
+ * by a linked opposite row rather than by a delete — the same rule every
+ * financial record in this system lives by.
+ */
+model Penalty {
+  id           String    @id @default(uuid())
+  companyId    String    @map("company_id")
+  storeId      String    @map("store_id")
+  userId       String    @map("user_id")
+  ruleId       String?   @map("rule_id")
+  kind         String
+  /// The day it happened, so one day can never be charged twice.
+  occurredOn   DateTime  @map("occurred_on") @db.Date
+  /// The raw measurement kept beside the money: 40 minutes, 1 day, 3 orders.
+  /// Without it nobody can check the arithmetic a month later.
+  units        Int
+  /// What was charged after grace and cap.
+  chargedUnits Int       @map("charged_units")
+  amount       Decimal   @db.Decimal(12, 2)
+  currencyCode String    @map("currency_code")
+  /// PROPOSED | APPLIED | WAIVED | REVERSED
+  status       String    @default("PROPOSED")
+  note         String?
+  proposedAt   DateTime  @default(now()) @map("proposed_at")
+  decidedById  String?   @map("decided_by_id")
+  decidedAt    DateTime? @map("decided_at")
+  /// Why it was waived or reversed. The service requires it: a deduction
+  /// cancelled with no reason is indistinguishable from a favour.
+  decisionNote String?   @map("decision_note")
+  /// Reversing entries only, linked to the original — never a delete.
+  reversesId   String?   @unique @map("reverses_id")
+  payoutId     String?   @map("payout_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  rule       PenaltyRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  reverses   Penalty?     @relation("PenaltyReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversedBy Penalty?     @relation("PenaltyReversal")
+
+  @@index([companyId, userId, status])
+  @@index([companyId, status, occurredOn])
+  @@index([payoutId])
+  @@map("penalties")
+}
+
 model CommissionPayout {
   id           String   @id @default(uuid())
   companyId    String
