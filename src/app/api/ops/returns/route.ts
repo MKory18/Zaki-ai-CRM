@@ -24,6 +24,18 @@ import { reverseForOrder } from '@/lib/commission';
  * (expected - received - damaged), never typed by the receiver.
  */
 
+/**
+ * How many units are actually coming back.
+ *
+ * The whole parcel, LESS whatever the customer kept at the door. Counting
+ * the full ordered quantity made every partial return read as a shortage —
+ * two units "missing" that the customer is holding and paid for — and put a
+ * shortfall on the courier's record for goods he delivered correctly.
+ */
+function expectedBack(items: { quantity: number; freeQuantity: number; deliveredQty?: number | null }[]): number {
+  return items.reduce((sum, i) => sum + i.quantity + i.freeQuantity - (i.deliveredQty ?? 0), 0);
+}
+
 const receiveSchema = z.object({
   orderId: z.string().uuid(),
   receivedQty: z.number().int().min(0).max(10_000),
@@ -46,7 +58,12 @@ export async function GET(req: Request) {
       where: {
         companyId,
         storeId,
-        shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED', 'FAILED_DELIVERY'] },
+        // PARTIALLY_DELIVERED belongs here. The customer refused some lines
+        // and those units are on their way back — but the desk never listed
+        // the order, so nobody counted them in and they never reached a
+        // shelf. Now that the door consumes the whole parcel, leaving it out
+        // would understate stock by every refused unit, for ever.
+        shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED', 'FAILED_DELIVERY', 'PARTIALLY_DELIVERED'] },
         returnReceipt: null,
         ...(term
           ? { OR: [{ orderNumber: { contains: term } }, { merchantRef: { contains: term } }, { trackingNumber: { contains: term } }] }
@@ -60,7 +77,7 @@ export async function GET(req: Request) {
         customer: { select: { fullName: true, phone: true } },
         region: { select: { id: true, name: true } },
         deliveryProvider: { select: { id: true, name: true } },
-        items: { select: { productName: true, quantity: true, freeQuantity: true, productId: true } },
+        items: { select: { productName: true, quantity: true, freeQuantity: true, deliveredQty: true, productId: true } },
       },
     });
 
@@ -69,7 +86,7 @@ export async function GET(req: Request) {
       orders: orders.map((o) => ({
         ...o,
         customer: redactCustomerForWarehouse(o.customer, maySeeContact),
-        expectedQty: o.items.reduce((s, i) => s + i.quantity + i.freeQuantity, 0),
+        expectedQty: expectedBack(o.items),
       })),
     });
   } catch (error) {
@@ -93,7 +110,7 @@ export async function POST(req: Request) {
       select: {
         id: true, orderNumber: true, shippingStatus: true, regionId: true, deliveryProviderId: true,
         returnReceipt: { select: { id: true } },
-        items: { select: { id: true, productId: true, productName: true, quantity: true, freeQuantity: true } },
+        items: { select: { id: true, productId: true, productName: true, quantity: true, freeQuantity: true, deliveredQty: true } },
       },
     });
     if (!order) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
@@ -101,7 +118,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'تم استلام هذا المرتجع مسبقاً', code: 'ALREADY_RECEIVED' }, { status: 409 });
     }
 
-    const expectedQty = order.items.reduce((s, i) => s + i.quantity + i.freeQuantity, 0);
+    const expectedQty = expectedBack(order.items);
     if (input.receivedQty + input.damagedQty > expectedQty) {
       return NextResponse.json(
         { error: `الكمية المستلمة أكبر من المشحونة (${expectedQty})`, code: 'OVER_RECEIVED' },
@@ -157,13 +174,21 @@ export async function POST(req: Request) {
       await tx.orderItem.updateMany({ where: { orderId: order.id, reservedQty: { gt: 0 } }, data: { reservedQty: 0 } });
       await tx.order.update({
         where: { id: order.id },
-        data: {
-          shippingStatus: 'RETURNED',
-          status: 'RETURNED',
-          returnedAt: new Date(),
-          settlementStatus: 'NOT_APPLICABLE',
-          version: { increment: 1 },
-        },
+        // A PARTIAL delivery is not turned into a return by the refused
+        // units coming back. It was partly delivered, and the customer paid
+        // for what they kept: rewriting it to RETURNED would erase the
+        // delivery, and `NOT_APPLICABLE` would drop money the courier is
+        // still holding out of everything that chases it.
+        data:
+          order.shippingStatus === 'PARTIALLY_DELIVERED'
+            ? { version: { increment: 1 } }
+            : {
+                shippingStatus: 'RETURNED',
+                status: 'RETURNED',
+                returnedAt: new Date(),
+                settlementStatus: 'NOT_APPLICABLE',
+                version: { increment: 1 },
+              },
       });
 
       // A RETURNED ORDER GENERATES NO COMMISSION.

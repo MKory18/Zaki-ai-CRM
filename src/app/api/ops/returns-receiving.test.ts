@@ -179,3 +179,63 @@ describe('a return of goods that never left', () => {
     expect(asked).toContain('SALE');
   });
 });
+
+/**
+ * A PARTIAL DELIVERY'S REFUSED UNITS ARE A RETURN TOO.
+ *
+ * They left the warehouse with the parcel and the customer handed them back
+ * to the courier. Until the desk could list the order, nobody counted them
+ * in — and now that the door consumes the whole parcel, every refused unit
+ * would be missing from stock permanently.
+ */
+describe('receiving what a partial delivery sent back', () => {
+  const partial = (items: unknown[]) => {
+    db.order.findFirst.mockResolvedValue({
+      id: ORDER_ID, orderNumber: 'ORD-1', shippingStatus: 'PARTIALLY_DELIVERED',
+      returnReceipt: null, regionId: 'r1', deliveryProviderId: 'dp1', items,
+    });
+  };
+
+  it('expects only what the customer refused, not the whole parcel', async () => {
+    // Three shipped, the customer kept two. One is coming back — and asking
+    // for three would record two "missing" units the customer is holding and
+    // has paid for, then put that shortfall on the courier's record.
+    partial([{ id: 'i1', productId: 'p1', productName: 'X', quantity: 3, freeQuantity: 0, deliveredQty: 2 }]);
+    const res = await POST(body({ orderId: ORDER_ID, receivedQty: 1, countedAndInspected: true }));
+    expect(res.status).toBe(201);
+    expect(db.returnReceipt.create.mock.calls[0][0].data).toMatchObject({ expectedQty: 1, missingQty: 0 });
+  });
+
+  it('refuses more units than were refused at the door', async () => {
+    partial([{ id: 'i1', productId: 'p1', productName: 'X', quantity: 3, freeQuantity: 0, deliveredQty: 2 }]);
+    const res = await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
+    expect((await res.json()).code).toBe('OVER_RECEIVED');
+  });
+
+  it('does NOT rewrite the order into a return', async () => {
+    // It was partly delivered and the customer paid for what they kept.
+    // Stamping RETURNED erases the delivery; NOT_APPLICABLE drops money the
+    // courier is still holding out of everything that chases it.
+    partial([{ id: 'i1', productId: 'p1', productName: 'X', quantity: 3, freeQuantity: 0, deliveredQty: 2 }]);
+    await POST(body({ orderId: ORDER_ID, receivedQty: 1, countedAndInspected: true }));
+    const data = db.order.update.mock.calls[0][0].data;
+    expect(data.shippingStatus).toBeUndefined();
+    expect(data.status).toBeUndefined();
+    expect(data.settlementStatus).toBeUndefined();
+  });
+
+  it('still puts the refused units back on the shelf', async () => {
+    partial([{ id: 'i1', productId: 'p1', productName: 'X', quantity: 3, freeQuantity: 0, deliveredQty: 2 }]);
+    await POST(body({ orderId: ORDER_ID, receivedQty: 1, countedAndInspected: true }));
+    // The door consumed the whole parcel, so a SALE exists and the restore
+    // guard lets these through.
+    expect(db.productionBatch.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('a full return still becomes RETURNED, as it always did', async () => {
+    await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
+    expect(db.order.update.mock.calls[0][0].data).toMatchObject({
+      shippingStatus: 'RETURNED', status: 'RETURNED', settlementStatus: 'NOT_APPLICABLE',
+    });
+  });
+});
