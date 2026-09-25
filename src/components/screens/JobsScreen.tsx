@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Loader2, Play, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Loader2, Play, RotateCcw, XCircle } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 
 /**
@@ -31,6 +31,8 @@ interface JobRow {
   overdue: boolean;
   consecutiveFailures: number;
   alerting: boolean;
+  /** It stopped trying. Only a person starts it again. */
+  parked: boolean;
 }
 
 interface RunRow {
@@ -105,7 +107,13 @@ export function JobsScreen() {
               <div
                 key={job.name}
                 className={`bg-white border rounded-[8px] p-4 ${
-                  job.alerting ? 'border-[#fb323f]' : job.overdue ? 'border-amber-300' : 'border-[#e3e8ef]'
+                  job.parked
+                    ? 'border-[#fb323f] bg-[#fffafa]'
+                    : job.alerting
+                      ? 'border-[#fb323f]'
+                      : job.overdue
+                        ? 'border-amber-300'
+                        : 'border-[#e3e8ef]'
                 }`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -136,6 +144,15 @@ export function JobsScreen() {
                         {job.alerting && ' — تحتاج تدخّلاً'}
                       </p>
                     )}
+                    {/* Parked. Said as a sentence rather than a red border,
+                        because the thing a person needs to know is that it
+                        has STOPPED — not that it is unwell. */}
+                    {job.parked && (
+                      <p className="mt-1 rounded bg-[#feecee] px-2 py-1 text-[#fb323f]">
+                        توقّفت عن المحاولة بعد فشل متكرّر. لن تعمل حتى تُعيد تفعيلها — أصلح السبب
+                        أولاً، فإعادة التفعيل بلا إصلاح تعيدها إلى الحائط نفسه.
+                      </p>
+                    )}
                   </div>
 
                   <button
@@ -162,6 +179,33 @@ export function JobsScreen() {
                     {running === job.name ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
                     شغّلها الآن
                   </button>
+
+                  {job.parked && (
+                    <button
+                      disabled={running === job.name}
+                      onClick={async () => {
+                        setRunning(job.name);
+                        setError(null);
+                        setDone(null);
+                        try {
+                          await apiJson('/api/admin/jobs', {
+                            method: 'POST',
+                            body: JSON.stringify({ job: job.name, action: 'unpark' }),
+                          });
+                          setDone(`${job.name}: أُعيد تفعيلها`);
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : 'تعذّر إعادة التفعيل');
+                        } finally {
+                          setRunning(null);
+                          await load();
+                        }
+                      }}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[#fecdd1] bg-[#feecee] px-3 text-xs font-medium text-[#fb323f] disabled:opacity-50"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      أعد تفعيلها
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

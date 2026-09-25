@@ -37,6 +37,7 @@ import {
   JobSkipped,
   backoffSeconds,
   consecutiveFailures,
+  isParked,
   lastRun,
   runJob,
   type JobDefinition,
@@ -124,6 +125,12 @@ async function main() {
     for (const job of jobs) {
       if (stopping) break;
       if ((retryAfter.get(job.name) ?? 0) > now) continue;
+
+      // Parked after too many consecutive failures. It stays parked until
+      // a person presses "try again" on the jobs screen — retrying for ever
+      // hammers a provider that is plainly not coming back, and buries every
+      // other job's history under four thousand identical errors.
+      if (await isParked(job.name)) continue;
 
       const last = await lastRun(job.name);
       if (!isDue(job, last?.startedAt ?? null, new Date())) continue;

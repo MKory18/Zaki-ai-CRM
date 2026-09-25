@@ -21,7 +21,7 @@ import { overdueBy, type Schedule } from './schedule';
  *    dashboard.
  */
 
-export type JobStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+export type JobStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'GAVE_UP';
 
 export interface JobResult {
   /** How many things were acted on. Zero is a perfectly good run. */
@@ -139,10 +139,15 @@ export async function runJob(
     });
     return { ...result, runId: run.id };
   } catch (error) {
+    // Counted BEFORE this run is written down, then compared inclusive of
+    // it: the twelfth consecutive failure is the one that parks it.
+    const before = await consecutiveFailures(job.name);
+    const parking = before + 1 >= PARK_AFTER_FAILURES;
+
     await db.jobRun.update({
       where: { id: run.id },
       data: {
-        status: 'FAILED',
+        status: parking ? 'GAVE_UP' : 'FAILED',
         finishedAt: new Date(),
         error: (error instanceof Error ? error.message : String(error)).slice(0, 1000),
       },
@@ -159,5 +164,56 @@ export function backoffSeconds(failures: number, baseSeconds: number): number {
 
 /** After this many consecutive failures the job is shouted about, not logged. */
 export const ALERT_AFTER_FAILURES = 3;
+
+/**
+ * After this many, it stops trying.
+ *
+ * The dead letter, and the reason it exists: a job failing every minute for
+ * three days writes four thousand identical failures, buries every other
+ * job's history under them, and hammers a provider that is plainly not
+ * coming back. Stopping is not giving up on the work — the record stays,
+ * the screen says so in red, and a person presses "try again" when they
+ * have fixed whatever it was.
+ *
+ * Deliberately well above ALERT_AFTER_FAILURES: the alert comes first and
+ * has plenty of time to be acted on before anything is parked.
+ */
+export const PARK_AFTER_FAILURES = 12;
+
+/**
+ * Has this job been parked — and not been asked to try again since?
+ *
+ * Asked of the log rather than a flag, so it survives a restart the same
+ * way the schedule does.
+ */
+export async function isParked(jobName: string): Promise<boolean> {
+  const last = await db.jobRun.findFirst({
+    where: { jobName, status: { in: ['SUCCEEDED', 'FAILED', 'GAVE_UP'] } },
+    orderBy: { startedAt: 'desc' },
+    select: { status: true },
+  });
+  return last?.status === 'GAVE_UP';
+}
+
+/**
+ * Let a parked job run again.
+ *
+ * It writes a row rather than editing one: the parking happened, and a
+ * record that can be erased is a record nobody can rely on. The new row is
+ * SUCCEEDED with nothing processed — an honest "a person cleared this at
+ * this time", and it is what `isParked` then reads.
+ */
+export async function unpark(jobName: string, byUserId: string): Promise<void> {
+  await db.jobRun.create({
+    data: {
+      jobName,
+      status: 'SUCCEEDED',
+      startedAt: new Date(),
+      finishedAt: new Date(),
+      processed: 0,
+      detail: `أُعيد تفعيلها يدوياً (${byUserId})`,
+    },
+  });
+}
 
 export type Tx = Prisma.TransactionClient | typeof db;

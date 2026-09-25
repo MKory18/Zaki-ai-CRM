@@ -6,6 +6,7 @@ import type { JobDefinition, JobResult } from './runner';
 import { releaseStaleClaims } from '../confirmation-queue';
 import { accrueForOrder } from '../commission';
 import { proposePenalties, recordProposals } from '../penalty-service';
+import { syncAdSpend } from '../ads/sync';
 import { blockingClosing } from '../wallets';
 import { adapterFor } from '../couriers';
 import { applyCourierEvent } from '../couriers/apply-event';
@@ -660,6 +661,94 @@ export const proposePenaltiesJob: JobDefinition = {
   },
 };
 
+/**
+ * A change request nobody has answered past its deadline.
+ *
+ * The deadline column and the escalation column were both built and nothing
+ * ever wrote to either: a request could sit PENDING for a week, blocking
+ * the order it was raised on, and the only sign was a red row on a screen
+ * somebody had to think to open.
+ *
+ * It escalates. It NEVER decides — silence is not consent, and a change to
+ * a customer's order approved because a manager was on holiday is a change
+ * nobody made.
+ */
+export const escalateChangeRequests: JobDefinition = {
+  name: 'escalate-change-requests',
+  everySeconds: 60,
+  description: 'تصعيد طلبات التعديل التي تجاوزت مهلتها بلا قرار',
+  async run({ now }): Promise<JobResult> {
+    const due = await db.orderChangeRequest.findMany({
+      where: { status: 'PENDING', escalatedAt: null, slaDueAt: { not: null, lt: now } },
+      select: {
+        id: true, companyId: true, reason: true, slaDueAt: true,
+        order: { select: { id: true, orderNumber: true, storeId: true } },
+      },
+      take: 100,
+    });
+    if (due.length === 0) return { processed: 0, detail: 'لا طلبات تجاوزت مهلتها' };
+
+    for (const request of due) {
+      // Stamped BEFORE the notification: a failure to send must not make
+      // this fire again every minute for the rest of the day.
+      await db.orderChangeRequest.update({ where: { id: request.id }, data: { escalatedAt: now } });
+
+      await createNotification({
+        companyId: request.companyId,
+        storeId: request.order.storeId,
+        audience: { permission: 'control.change_requests' },
+        type: 'SYSTEM_ALERT',
+        title: 'طلب تعديل تجاوز مهلته',
+        message:
+          `الطلب ${request.order.orderNumber} — طلب تعديل بلا قرار بعد انتهاء المهلة. ` +
+          'لا يُعتمَد تلقائياً: الصمت ليس موافقة.',
+        link: '/control/change-requests',
+      });
+    }
+
+    return { processed: due.length, detail: `${due.length} طلب تعديل صُعِّد` };
+  },
+};
+
+/**
+ * Yesterday's ad spend, pulled before anybody arrives.
+ *
+ * It used to happen only when somebody opened the campaigns screen, so a
+ * shop whose owner did not look for a week showed a week of campaigns whose
+ * profit was computed from a cost of zero — the single number the system
+ * cannot witness for itself, missing, while every number beside it was
+ * exact.
+ */
+export const pullAdSpend: JobDefinition = {
+  name: 'pull-ad-spend',
+  everySeconds: 86_400,
+  // Early, so the morning's first look at profit is a true one.
+  at: '06:00',
+  description: 'سحب الإنفاق الإعلاني من المنصات المربوطة',
+  async run(): Promise<JobResult> {
+    let updated = 0;
+    const errors: string[] = [];
+
+    for (const store of await activeStores()) {
+      const result = await syncAdSpend({ companyId: store.companyId, storeId: store.id });
+      updated += result.updated;
+      for (const account of result.accounts) {
+        // One account's expired token must not hide behind a green run.
+        if (account.error) errors.push(`${account.account}: ${account.error}`);
+      }
+    }
+
+    return {
+      processed: updated,
+      detail: errors.length
+        ? `حُدِّثت ${updated} حملة · ${errors.length} حساب بخطأ: ${errors.slice(0, 2).join(' · ')}`
+        : updated
+          ? `حُدِّثت ${updated} حملة`
+          : 'لا تغيير في الإنفاق',
+    };
+  },
+};
+
 export const JOBS: JobDefinition[] = [
   syncCourierStatus,
   releaseClaims,
@@ -671,6 +760,8 @@ export const JOBS: JobDefinition[] = [
   deliverAppEvents,
   deliverConversions,
   proposePenaltiesJob,
+  escalateChangeRequests,
+  pullAdSpend,
 ];
 
 export function jobByName(name: string): JobDefinition | undefined {

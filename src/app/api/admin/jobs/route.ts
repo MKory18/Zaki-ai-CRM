@@ -6,7 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { JOBS, jobByName } from '@/lib/jobs/definitions';
-import { JobSkipped, consecutiveFailures, isOverdue, runJob, ALERT_AFTER_FAILURES } from '@/lib/jobs/runner';
+import { JobSkipped, consecutiveFailures, isOverdue, runJob, unpark, ALERT_AFTER_FAILURES } from '@/lib/jobs/runner';
 import { scheduleAr } from '@/lib/jobs/schedule';
 
 /**
@@ -22,7 +22,11 @@ import { scheduleAr } from '@/lib/jobs/schedule';
  * refused, because double-processing is the thing the lock exists to stop.
  */
 
-const runSchema = z.object({ job: z.string().trim().min(1).max(80) });
+const runSchema = z.object({
+  job: z.string().trim().min(1).max(80),
+  /** 'unpark' lets a job that gave up try again; anything else runs it now. */
+  action: z.enum(['run', 'unpark']).optional(),
+});
 
 export async function GET() {
   try {
@@ -60,6 +64,8 @@ export async function GET() {
           overdue: isOverdue(job, lastSuccess?.startedAt ?? null),
           consecutiveFailures: failures,
           alerting: failures >= ALERT_AFTER_FAILURES,
+          // Parked: it stopped trying, and only a person starts it again.
+          parked: last?.status === 'GAVE_UP',
         };
       })
     );
@@ -91,6 +97,19 @@ export async function POST(req: Request) {
 
     const job = jobByName(parsed.data.job);
     if (!job) return NextResponse.json({ error: 'لا توجد مهمة بهذا الاسم' }, { status: 404 });
+
+    // A parked job starts again only because a person said so — after they
+    // fixed whatever it was. Written to the audit, because "who turned this
+    // back on" is the first question asked when it fails again.
+    if (parsed.data.action === 'unpark') {
+      await unpark(job.name, user.id);
+      await logAudit({
+        companyId, userId: user.id, action: 'JOB_UNPARKED',
+        entity: 'JobRun', entityId: job.name,
+        newData: { job: job.name },
+      });
+      return NextResponse.json({ job: job.name, unparked: true });
+    }
 
     try {
       const result = await runJob(job);

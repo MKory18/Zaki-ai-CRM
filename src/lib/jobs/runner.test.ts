@@ -15,6 +15,9 @@ vi.mock('../db', () => ({ db }));
 
 import {
   ALERT_AFTER_FAILURES,
+  PARK_AFTER_FAILURES,
+  isParked,
+  unpark,
   JobSkipped,
   backoffSeconds,
   consecutiveFailures,
@@ -36,6 +39,9 @@ const job = (run: JobDefinition['run']): JobDefinition => ({
 beforeEach(() => {
   vi.clearAllMocks();
   db.jobRun.findFirst.mockResolvedValue(null);
+  // The failure path reads the recent runs to decide whether this one is
+  // the straw that parks the job.
+  db.jobRun.findMany.mockResolvedValue([]);
   db.jobRun.create.mockImplementation(async ({ data }: any) => ({ id: 'run1', ...data }));
   db.jobRun.update.mockResolvedValue({});
 });
@@ -143,5 +149,71 @@ describe('backoff', () => {
 
   it('alerts after three in a row, not on the first blip', () => {
     expect(ALERT_AFTER_FAILURES).toBe(3);
+  });
+});
+
+
+/**
+ * THE DEAD LETTER.
+ *
+ * A job failing every minute for three days writes four thousand identical
+ * failures, buries every other job's history under them, and hammers a
+ * provider that is plainly not coming back. Stopping is not abandoning the
+ * work: the record stays, the screen says so, and a person restarts it when
+ * they have fixed whatever it was.
+ */
+describe('giving up', () => {
+  const failing = job(async () => {
+    throw new Error('الشركة لا تستجيب');
+  });
+
+  const failures = (n: number) =>
+    db.jobRun.findMany.mockResolvedValue(Array.from({ length: n }, () => ({ status: 'FAILED' })));
+
+  it('an ordinary failure is FAILED and will be tried again', async () => {
+    failures(1);
+    await expect(runJob(failing, { now: NOW })).rejects.toThrow();
+    expect(db.jobRun.update.mock.calls[0][0].data.status).toBe('FAILED');
+  });
+
+  it('the straw that breaks it is written as GAVE_UP', async () => {
+    failures(PARK_AFTER_FAILURES - 1);
+    await expect(runJob(failing, { now: NOW })).rejects.toThrow();
+    expect(db.jobRun.update.mock.calls[0][0].data.status).toBe('GAVE_UP');
+  });
+
+  it('and the error is still written down — parking is not forgetting', async () => {
+    failures(PARK_AFTER_FAILURES - 1);
+    await expect(runJob(failing, { now: NOW })).rejects.toThrow();
+    expect(db.jobRun.update.mock.calls[0][0].data.error).toContain('لا تستجيب');
+  });
+
+  it('it parks well after the alert, so somebody has time to act first', () => {
+    expect(PARK_AFTER_FAILURES).toBeGreaterThan(ALERT_AFTER_FAILURES);
+  });
+});
+
+describe('a parked job', () => {
+  it('is parked while its last run says it gave up', async () => {
+    db.jobRun.findFirst.mockResolvedValue({ status: 'GAVE_UP' });
+    expect(await isParked('test-job')).toBe(true);
+  });
+
+  it('and is not parked once something newer succeeded', async () => {
+    db.jobRun.findFirst.mockResolvedValue({ status: 'SUCCEEDED' });
+    expect(await isParked('test-job')).toBe(false);
+  });
+
+  it('starting it again WRITES a row rather than editing one', async () => {
+    // The parking happened. A record that can be erased is a record nobody
+    // can rely on.
+    await unpark('test-job', 'boss');
+    expect(db.jobRun.update).not.toHaveBeenCalled();
+    expect(db.jobRun.create.mock.calls[0][0].data).toMatchObject({
+      jobName: 'test-job',
+      status: 'SUCCEEDED',
+      processed: 0,
+    });
+    expect(db.jobRun.create.mock.calls[0][0].data.detail).toContain('boss');
   });
 });
