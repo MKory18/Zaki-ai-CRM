@@ -99,3 +99,32 @@ describe('who may compute commission', () => {
     expect(financial).not.toMatch(/commissionRate|\/\s*100/);
   });
 });
+
+describe('which column says an order was delivered', () => {
+  it('every commission read scopes on shippingStatus, never on the legacy status', () => {
+    // The ledger accrues on `shippingStatus === 'DELIVERED'`. The legacy
+    // combined `status` is NOT synced by every path that delivers an order:
+    // `src/lib/couriers/apply-event.ts` writes `shippingStatus` alone, and
+    // `src/lib/partial-delivery.ts` never touches the legacy column at all.
+    //
+    // So a commission read filtered on `status: 'DELIVERED'` silently drops
+    // every order a courier feed delivered — the entries exist, the query
+    // does not see them, and the profit line reads too little commission
+    // with nothing on screen to say so.
+    const offenders: string[] = [];
+    for (const { path, text } of FILES) {
+      for (const raw of text.split('\n')) {
+        const line = raw.trim();
+        if (line.startsWith('//') || line.startsWith('*')) continue;
+        if (!/commission(Cost|ByUser)ForOrders/.test(line)) continue;
+        if (/[^g]status:\s*'DELIVERED'/.test(line)) offenders.push(`${path}: ${line}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('and the accrual is what defines that, in one place', () => {
+    const commission = readFileSync(join(SRC, 'lib', 'commission.ts'), 'utf8');
+    expect(commission).toContain("order.shippingStatus !== 'DELIVERED'");
+  });
+});

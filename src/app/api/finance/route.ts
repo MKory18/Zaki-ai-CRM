@@ -35,7 +35,12 @@ export async function GET(req: Request) {
     // From the LEDGER — the one commission source. Summing
     // Order.moderatorCommission here gave this screen a different total
     // from the commission screen for the same orders.
-    const totalCommissions = await commissionCostForOrders({ companyId, storeId, status: 'DELIVERED' });
+    // NOTE: the delivered-order query above still selects on the legacy
+    // `status` column, so revenue and commission here are computed over
+    // slightly different sets of orders. That mismatch predates this change
+    // and is reported, not silently repaired — correcting it moves the
+    // revenue figure on this screen.
+    const totalCommissions = await commissionCostForOrders({ companyId, storeId, shippingStatus: 'DELIVERED' });
     const totalOperationalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
 
     const netProfit =

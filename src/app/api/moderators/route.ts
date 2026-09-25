@@ -31,7 +31,13 @@ export async function GET() {
     });
 
     // One grouped read for everybody, rather than a query per moderator.
-    const commissionByUser = await commissionByUserForOrders({ companyId, status: 'DELIVERED' });
+    // Scoped on `shippingStatus`, which is the column the ledger itself
+    // accrues on (`accrueForOrder` refuses anything but DELIVERED there).
+    // The legacy combined `status` is NOT synced by every path that
+    // delivers an order — the courier webhook writes `shippingStatus` alone
+    // — so filtering on it here would silently drop the commission on every
+    // order a courier feed delivered.
+    const commissionByUser = await commissionByUserForOrders({ companyId, shippingStatus: 'DELIVERED' });
 
     const enriched = moderators.map((mod) => {
       const orders = mod.assignedOrders;

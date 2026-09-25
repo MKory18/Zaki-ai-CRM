@@ -398,7 +398,13 @@ export async function getCompanyAnalytics(
   // per-user rate that knew nothing about the commission rules; grouping it
   // here produced a leaderboard that disagreed with the commission screen
   // for the same people in the same month.
-  const commissionByUser = await commissionByUserForOrders({ ...baseWhere, status: 'DELIVERED' });
+    // Scoped on `shippingStatus`, which is the column the ledger itself
+    // accrues on (`accrueForOrder` refuses anything but DELIVERED there).
+    // The legacy combined `status` is NOT synced by every path that
+    // delivers an order — the courier webhook writes `shippingStatus` alone
+    // — so filtering on it here would silently drop the commission on every
+    // order a courier feed delivered.
+  const commissionByUser = await commissionByUserForOrders({ ...baseWhere, shippingStatus: 'DELIVERED' });
 
   const moderatorIds = Array.from(
     new Set(moderatorGroups.map((g) => g.moderatorId).filter((id): id is string => !!id))
