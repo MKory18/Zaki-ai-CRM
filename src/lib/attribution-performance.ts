@@ -1,3 +1,4 @@
+import { CONFIRMATION_REFUSED, DELIVERED_SHIPPING, rateOf } from './order-state';
 import { db } from './db';
 
 /**
@@ -23,10 +24,12 @@ import { db } from './db';
  * formula here is how two screens end up disagreeing about one week.
  */
 
-/** Shipping states in which the goods reached the customer. */
-const DELIVERED = ['DELIVERED', 'PARTIALLY_DELIVERED'];
+// The three definitions live in order-state.ts, beside the state machine —
+// this file held the correct copy of each, which is exactly why they had to
+// stop being copies.
+const DELIVERED = [...DELIVERED_SHIPPING];
 const CONFIRMED_ONWARDS = ['CONFIRMED'];
-const REFUSED = ['REJECTED', 'CANCELLED'];
+const REFUSED = [...CONFIRMATION_REFUSED];
 
 export interface AttributionRow {
   id: string;
@@ -44,6 +47,39 @@ export interface AttributionRow {
   revenue: number;
   /** What one brought order is worth on average, after everything. */
   revenuePerOrder: number | null;
+}
+
+/**
+ * The totals line of an attribution table.
+ *
+ * Its rates are NOT the average of the rows' rates, and they are not the
+ * UI's to work out: the screen recomputed both denominators from the row
+ * list, so a change to what "decided" means here would leave the total
+ * saying something its own rows no longer said. Frontend code computing a
+ * displayed rate is also what the contract forbids.
+ */
+export function attributionTotals(rows: AttributionRow[]): AttributionRow {
+  const sum = (pick: (r: AttributionRow) => number) => rows.reduce((t, r) => t + pick(r), 0);
+  const confirmed = sum((r) => r.confirmed);
+  const delivered = sum((r) => r.delivered);
+  const decided = sum((r) => r.decided);
+  const brought = sum((r) => r.brought);
+  const revenue = Number(sum((r) => r.revenue).toFixed(2));
+  return {
+    id: '—',
+    name: 'الإجمالي',
+    kind: null,
+    brought,
+    confirmed,
+    rejected: sum((r) => r.rejected),
+    decided,
+    delivered,
+    returned: sum((r) => r.returned),
+    confirmationRate: rateOf(confirmed, decided),
+    deliveryRate: rateOf(delivered, confirmed),
+    revenue,
+    revenuePerOrder: brought > 0 ? Number((revenue / brought).toFixed(2)) : null,
+  };
 }
 
 interface Scope {
@@ -148,11 +184,11 @@ async function attribution(scope: Scope, key: GroupKey): Promise<AttributionRow[
       decided,
       delivered: got,
       returned: count(returned, id),
-      confirmationRate: decided > 0 ? Math.round((ok / decided) * 100) : null,
+      confirmationRate: rateOf(ok, decided),
       // Out of what was confirmed: an order never confirmed was never the
       // courier's to deliver, and counting it against delivery blames the
       // wrong step.
-      deliveryRate: ok > 0 ? Math.round((got / ok) * 100) : null,
+      deliveryRate: rateOf(got, ok),
       revenue: Number(revenue.toFixed(2)),
       revenuePerOrder: total > 0 ? Number((revenue / total).toFixed(2)) : null,
     };

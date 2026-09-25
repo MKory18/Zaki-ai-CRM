@@ -278,7 +278,7 @@ export function DashboardScreen() {
             </div>
             <div className="mt-2.5 text-2xl font-black text-[#121926]">{rates.confirmationRate}%</div>
             <p className="mt-1.5 text-[11px] text-[#9ca3af]">
-              {counts.confirmed} / {counts.total} {t.totalOrders}
+              {counts.confirmed} / {counts.decided ?? counts.total} {t.decidedOrders}
             </p>
           </div>
 

@@ -106,10 +106,26 @@ describe('a transfer stays within the same job', () => {
     expect(db.order.updateMany).not.toHaveBeenCalled();
   });
 
-  it('still refuses a delivered order', async () => {
-    assertOrderAccess.mockResolvedValue({ allowed: true, order: { ...order, status: 'DELIVERED' } });
-    const res = await post({ targetUserId: PEER.id, reason: 'تصحيح' });
-    expect((await res.json()).code).toBe('TERMINAL_STATUS');
+  it('still refuses a closed order — read from the state, not the legacy column', async () => {
+    // The legacy `status` is not written by the courier feed or by the
+    // door-side recorder, so an order delivered either way stayed
+    // transferable. Both of these carry the legacy column of an OPEN order.
+    for (const shippingStatus of ['DELIVERED', 'PARTIALLY_DELIVERED', 'RETURNED']) {
+      assertOrderAccess.mockResolvedValue({
+        allowed: true,
+        order: { ...order, status: 'CONFIRMED', shippingStatus },
+      });
+      const res = await post({ targetUserId: PEER.id, reason: 'تصحيح' });
+      expect((await res.json()).code, shippingStatus).toBe('TERMINAL_STATUS');
+    }
+  });
+
+  it('still allows transferring an order that is still open', async () => {
+    assertOrderAccess.mockResolvedValue({
+      allowed: true,
+      order: { ...order, confirmationStatus: 'CONFIRMED', shippingStatus: 'NOT_READY' },
+    });
+    expect((await post({ targetUserId: PEER.id, reason: 'تصحيح' })).status).toBe(200);
   });
 
   it('still refuses a stale version', async () => {

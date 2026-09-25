@@ -1,3 +1,4 @@
+import { whereDelivered } from '@/lib/order-state';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -87,7 +88,9 @@ export async function GET(req: Request) {
       db.order.count({ where: { companyId, storeId, shippingStatus: 'SHIPPED' } }),
       db.order.count({ where: { companyId, storeId, shippingStatus: 'OUT_FOR_DELIVERY' } }),
       db.order.count({ where: { companyId, storeId, shippingStatus: 'FAILED_DELIVERY', failedAt: { gte: startOfToday } } }),
-      db.order.count({ where: { companyId, storeId, shippingStatus: 'DELIVERED', deliveredAt: { gte: startOfToday } } }),
+      // A partial delivery is a delivery: the tile under-counted on exactly
+      // the days partials happened.
+      db.order.count({ where: { companyId, storeId, ...whereDelivered(), deliveredAt: { gte: startOfToday } } }),
       db.order.count({ where: { companyId, storeId, shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED'] } } }),
       db.order.count({ where: { companyId, storeId, shippingStatus: { in: ['READY_FOR_SHIPPING', 'PACKING', 'READY_FOR_PICKUP'] }, deliveryProviderId: null } }),
     ]);

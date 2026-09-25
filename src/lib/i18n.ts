@@ -60,6 +60,7 @@ export const translations = {
     // KPIs
     totalOrders: 'Total Orders',
     confirmedOrders: 'Confirmed Orders',
+    decidedOrders: 'decided orders',
     deliveredOrders: 'Delivered Orders',
     confirmationRate: 'Confirmation Rate',
     deliveryRate: 'Delivery Rate',
@@ -235,6 +236,7 @@ export const translations = {
     // KPIs
     totalOrders: 'إجمالي الطلبات',
     confirmedOrders: 'الطلبات المؤكدة',
+    decidedOrders: 'طلباً محسوماً',
     deliveredOrders: 'الطلبات المستلمة',
     confirmationRate: 'نسبة التأكيد',
     deliveryRate: 'نسبة التوصيل',

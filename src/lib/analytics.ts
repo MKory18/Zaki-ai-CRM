@@ -1,3 +1,6 @@
+import {
+  CONFIRMATION_REFUSED, DELIVERED_SHIPPING, SHIPPING_GONE, rateOf, whereDelivered,
+} from './order-state';
 import { db } from './db';
 import { calculateRealProfit } from './financial';
 import { commissionByUserForOrders, commissionCostForOrders } from './commission';
@@ -15,10 +18,23 @@ export interface DateFilter {
 // clamped internally to 90 days too (the frontend keeps sending 'all').
 const MAX_WINDOW_DAYS = 90;
 
-const CONFIRMED_STATUSES = ['CONFIRMED', 'READY_FOR_SHIPPING', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
-const REJECTED_STATUSES = ['REJECTED', 'CANCELLED', 'RETURNED', 'FAILED_DELIVERY'];
-const PRODUCT_REJECTED_STATUSES = ['REJECTED', 'CANCELLED', 'RETURNED'];
-const SHIPPED_STATUSES = ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+/**
+ * These counts used to be read from the LEGACY merged `status` column, with
+ * a whitelist per number. Two things were wrong with that, and they made
+ * every figure on this screen quietly smaller than the truth:
+ *
+ *   1. Neither the courier feed nor the door-side partial-delivery recorder
+ *      writes that column, so an order delivered either way was invisible to
+ *      every count that read it — while the revenue beside it, read from
+ *      shippingStatus, could see it. That is how a delivery rate came to
+ *      divide one column by another and pass 100%.
+ *   2. The whitelists disagreed with each other inside this one file: the
+ *      company-wide "rejected" counted a failed delivery as a confirmation
+ *      refusal; the per-product one did not.
+ *
+ * Every count below now reads the two real columns, through the shared
+ * definitions in order-state.ts.
+ */
 
 /** The earliest moment any analytics query may reach back to. */
 function windowStart(): Date {
@@ -140,38 +156,43 @@ export async function getCompanyAnalytics(
 
   const baseWhere = { companyId, ...(storeId ? { storeId } : {}), ...dateFilter };
 
-  // ─── 1. Status breakdown: single GROUP BY instead of fetching all rows ───
-  const statusGroups = await db.order.groupBy({
-    by: ['status'],
-    where: baseWhere,
-    _count: { _all: true },
-  });
+  // ─── 1. Status breakdown: two GROUP BYs over the two real columns ───
+  const [confirmationGroups, shippingGroups] = await Promise.all([
+    db.order.groupBy({ by: ['confirmationStatus'], where: baseWhere, _count: { _all: true } }),
+    db.order.groupBy({ by: ['shippingStatus'], where: baseWhere, _count: { _all: true } }),
+  ]);
 
-  const statusCount = new Map<string, number>();
+  const confirmationCount = new Map<string, number>();
   let totalOrders = 0;
-  for (const g of statusGroups) {
-    const c = g._count._all;
-    statusCount.set(g.status, c);
-    totalOrders += c;
+  for (const g of confirmationGroups) {
+    confirmationCount.set(g.confirmationStatus, g._count._all);
+    totalOrders += g._count._all;
   }
-  const countOf = (statuses: string[]) =>
-    statuses.reduce((sum, s) => sum + (statusCount.get(s) || 0), 0);
+  const shippingCount = new Map<string, number>();
+  for (const g of shippingGroups) shippingCount.set(g.shippingStatus, g._count._all);
 
-  const newOrders = statusCount.get('NEW') || 0;
-  const contactingOrders = statusCount.get('CONTACTING') || 0;
-  const noAnswerOrders = statusCount.get('NO_ANSWER') || 0;
-  const confirmedOrders = countOf(CONFIRMED_STATUSES);
-  const postponedOrders = statusCount.get('POSTPONED') || 0;
-  const rejectedOrders = countOf(REJECTED_STATUSES);
-  const shippedOrders = countOf(SHIPPED_STATUSES);
-  // Counted from the shipping status for the same reason the money is: the
-  // legacy column is not written by every path that delivers an order.
-  const deliveredOrders = await db.order.count({
-    where: { ...baseWhere, shippingStatus: { in: ['DELIVERED', 'PARTIALLY_DELIVERED'] } },
-  });
+  const sumOf = (counts: Map<string, number>, keys: readonly string[]) =>
+    keys.reduce((sum, k) => sum + (counts.get(k) || 0), 0);
 
-  const confirmationRate = totalOrders > 0 ? (confirmedOrders / totalOrders) * 100 : 0;
-  const deliveryRate = confirmedOrders > 0 ? (deliveredOrders / confirmedOrders) * 100 : 0;
+  const newOrders = confirmationCount.get('NEW') || 0;
+  const contactingOrders = confirmationCount.get('IN_PROGRESS') || 0;
+  const noAnswerOrders = sumOf(confirmationCount, ['NO_ANSWER', 'FOLLOW_UP_REQUIRED']);
+  // Ever confirmed: it stays true after the warehouse packs it and after the
+  // courier delivers it, which is what a delivery rate must be measured against.
+  const confirmedOrders = confirmationCount.get('CONFIRMED') || 0;
+  const postponedOrders = confirmationCount.get('POSTPONED') || 0;
+  // A confirmation refusal only. A parcel that came back is not a moderator
+  // refusing to confirm, and counting it as one blames the wrong step.
+  const rejectedOrders = sumOf(confirmationCount, CONFIRMATION_REFUSED);
+  const shippedOrders = sumOf(shippingCount, SHIPPING_GONE);
+  const deliveredOrders = sumOf(shippingCount, DELIVERED_SHIPPING);
+
+  // Out of what was DECIDED. Dividing by every order counts the ones nobody
+  // has looked at yet as failures, so the rate fell whenever intake sped up
+  // — it measured the size of the queue, not the quality of the work.
+  const decidedOrders = confirmedOrders + rejectedOrders;
+  const confirmationRate = rateOf(confirmedOrders, decidedOrders) ?? 0;
+  const deliveryRate = rateOf(deliveredOrders, confirmedOrders) ?? 0;
 
   // ─── 2. Delivered-order financial aggregates + expenses (SUM in PostgreSQL) ───
   //
@@ -185,8 +206,7 @@ export async function getCompanyAnalytics(
   // Revenue is what was COLLECTED where that is known. A partial delivery is
   // exactly the case where the order's total and the money taken differ, and
   // it is the money taken that is revenue.
-  const DELIVERED_SHIPPING = ['DELIVERED', 'PARTIALLY_DELIVERED'];
-  const deliveredWhere = { ...baseWhere, shippingStatus: { in: DELIVERED_SHIPPING } };
+  const deliveredWhere = { ...baseWhere, ...whereDelivered() };
 
   const [deliveredAgg, collectedAgg, expensesAgg, commissionCost] = await Promise.all([
     db.order.aggregate({
@@ -268,7 +288,8 @@ export async function getCompanyAnalytics(
     ? await db.order.findMany({
         where: { id: { in: orderIds } },
         select: {
-          id: true, status: true, totalAmount: true,
+          id: true, confirmationStatus: true, shippingStatus: true,
+          totalAmount: true, collectedAmount: true,
           estimatedCostOfGoods: true, shippingCost: true,
         },
       })
@@ -290,10 +311,15 @@ export async function getCompanyAnalytics(
     })();
     return {
       productId: g.productId,
-      status: order?.status ?? 'NEW',
+      confirmationStatus: order?.confirmationStatus ?? 'NEW',
+      shippingStatus: order?.shippingStatus ?? 'NOT_READY',
       _count: { _all: 1 },
       _sum: {
-        totalAmount: (Number(order?.totalAmount ?? 0)) * share,
+        // What was actually collected where the door recorded it — the same
+        // rule the headline revenue uses. A partial delivery is exactly the
+        // case where the two differ, so the product table could never add
+        // back up to the number above it.
+        totalAmount: Number(order?.collectedAmount ?? order?.totalAmount ?? 0) * share,
         estimatedCostOfGoods: (Number(order?.estimatedCostOfGoods ?? 0)) * share,
         shippingCost: (Number(order?.shippingCost ?? 0)) * share,
       },
@@ -349,9 +375,9 @@ export async function getCompanyAnalytics(
     }
     const p = productsMap.get(g.productId)!;
     p.totalOrders += g._count._all;
-    if (CONFIRMED_STATUSES.includes(g.status)) p.confirmedOrders += g._count._all;
-    if (PRODUCT_REJECTED_STATUSES.includes(g.status)) p.rejectedOrders += g._count._all;
-    if (g.status === 'DELIVERED') {
+    if (g.confirmationStatus === 'CONFIRMED') p.confirmedOrders += g._count._all;
+    if ((CONFIRMATION_REFUSED as readonly string[]).includes(g.confirmationStatus)) p.rejectedOrders += g._count._all;
+    if ((DELIVERED_SHIPPING as readonly string[]).includes(g.shippingStatus)) {
       p.deliveredOrders += g._count._all;
       p.revenue += g._sum.totalAmount || 0;
       p.cogs += g._sum.estimatedCostOfGoods || 0;
@@ -385,7 +411,7 @@ export async function getCompanyAnalytics(
 
   // ─── 4. Moderator leaderboard: GROUP BY (moderatorId, status) ───
   const moderatorGroups = await db.order.groupBy({
-    by: ['moderatorId', 'status'],
+    by: ['moderatorId', 'confirmationStatus', 'shippingStatus'],
     where: { ...baseWhere, moderatorId: { not: null } },
     _count: { _all: true },
     _sum: {
@@ -454,9 +480,9 @@ export async function getCompanyAnalytics(
     }
     const m = moderatorsMap.get(g.moderatorId)!;
     m.totalOrders += g._count._all;
-    if (CONFIRMED_STATUSES.includes(g.status)) m.confirmedOrders += g._count._all;
-    if (PRODUCT_REJECTED_STATUSES.includes(g.status)) m.rejectedOrders += g._count._all;
-    if (g.status === 'DELIVERED') {
+    if (g.confirmationStatus === 'CONFIRMED') m.confirmedOrders += g._count._all;
+    if ((CONFIRMATION_REFUSED as readonly string[]).includes(g.confirmationStatus)) m.rejectedOrders += g._count._all;
+    if ((DELIVERED_SHIPPING as readonly string[]).includes(g.shippingStatus)) {
       m.deliveredOrders += g._count._all;
       m.sales += g._sum.totalAmount || 0;
     }
@@ -521,6 +547,9 @@ export async function getCompanyAnalytics(
       confirmed: confirmedOrders,
       postponed: postponedOrders,
       rejected: rejectedOrders,
+      // What the confirmation rate is actually out of — so the caption under
+      // it can say the truth instead of the order total.
+      decided: decidedOrders,
       shipped: shippedOrders,
       delivered: deliveredOrders,
     },

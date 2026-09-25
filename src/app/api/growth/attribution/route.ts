@@ -3,7 +3,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { getDateRange, type DateFilter } from '@/lib/analytics';
-import { channelPerformance, moderatorPerformance } from '@/lib/attribution-performance';
+import { attributionTotals, channelPerformance, moderatorPerformance } from '@/lib/attribution-performance';
 
 /**
  * GET /api/growth/attribution?period=&startDate=&endDate=
@@ -34,6 +34,12 @@ export async function GET(req: Request) {
     return NextResponse.json({
       moderators,
       channels,
+      // The totals line is a row like any other — and its two rates have
+      // denominators the rows cannot be added up to produce.
+      totals: {
+        moderators: attributionTotals(moderators),
+        channels: attributionTotals(channels),
+      },
       window: { start: start?.toISOString() ?? null, end: end?.toISOString() ?? null },
       definitions: {
         brought: 'الطلبات المنسوبة إليه والتي أُنشئت خلال المدة',

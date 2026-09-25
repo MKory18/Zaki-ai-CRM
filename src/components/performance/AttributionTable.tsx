@@ -70,26 +70,17 @@ const HEADS = [
 
 export function AttributionTable({
   rows,
+  totals,
   empty,
 }: {
   rows: AttributionRow[] | null;
+  /** The totals line, computed on the server beside the rows. */
+  totals?: AttributionRow | null;
   empty: string;
 }) {
   if (rows === null) return <p className="p-6 text-sm text-[#9aa4b2] text-center">جارٍ التحميل…</p>;
   if (rows.length === 0) return <p className="p-6 text-sm text-[#9aa4b2] text-center">{empty}</p>;
 
-  const totals = rows.reduce(
-    (a, r) => ({
-      brought: a.brought + r.brought,
-      confirmed: a.confirmed + r.confirmed,
-      rejected: a.rejected + r.rejected,
-      delivered: a.delivered + r.delivered,
-      returned: a.returned + r.returned,
-      revenue: a.revenue + r.revenue,
-    }),
-    { brought: 0, confirmed: 0, rejected: 0, delivered: 0, returned: 0, revenue: 0 }
-  );
-  const decided = totals.confirmed + totals.rejected;
 
   return (
     <div className="overflow-x-auto">
@@ -137,21 +128,21 @@ export function AttributionTable({
         <tfoot className="border-t-2 border-[#e3e8ef] bg-[#f8fafc]">
           <tr>
             <td className="px-4 py-3 font-bold text-[#121926]">الإجمالي</td>
-            <Num value={totals.brought} bold />
-            <Num value={totals.confirmed} bold tone="text-[#00a344]" />
-            <Num value={totals.rejected} bold />
-            <Rate value={decided > 0 ? Math.round((totals.confirmed / decided) * 100) : null} bold />
-            <Num value={totals.delivered} bold tone="text-[#00a344]" />
-            <Num value={totals.returned} bold />
-            <Rate
-              value={totals.confirmed > 0 ? Math.round((totals.delivered / totals.confirmed) * 100) : null}
-              bold
-            />
+            <Num value={totals?.brought ?? 0} bold />
+            <Num value={totals?.confirmed ?? 0} bold tone="text-[#00a344]" />
+            <Num value={totals?.rejected ?? 0} bold />
+            {/* Both rates come from the server (attributionTotals): the
+                screen recomputed their denominators from the row list, and
+                a displayed rate is not frontend code's to work out. */}
+            <Rate value={totals?.confirmationRate ?? null} bold />
+            <Num value={totals?.delivered ?? 0} bold tone="text-[#00a344]" />
+            <Num value={totals?.returned ?? 0} bold />
+            <Rate value={totals?.deliveryRate ?? null} bold />
             <td className="px-4 py-3 text-center tabular-nums font-black text-[#121926]" dir="ltr">
-              {totals.revenue.toFixed(2)}
+              {(totals?.revenue ?? 0).toFixed(2)}
             </td>
             <td className="px-4 py-3 text-center tabular-nums font-bold text-[#b8256e]" dir="ltr">
-              {totals.brought > 0 ? (totals.revenue / totals.brought).toFixed(2) : '—'}
+              {totals?.revenuePerOrder != null ? totals.revenuePerOrder.toFixed(2) : '—'}
             </td>
           </tr>
         </tfoot>

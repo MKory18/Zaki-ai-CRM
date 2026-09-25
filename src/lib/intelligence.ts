@@ -1,3 +1,4 @@
+import { whereDelivered } from './order-state';
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { roundMinor } from './money';
@@ -222,15 +223,24 @@ export async function thinMarginRegions(tx: Tx, scope: Scope): Promise<Finding[]
     where: {
       companyId: scope.companyId,
       storeId: scope.storeId,
-      shippingStatus: 'DELIVERED',
+      // A partial delivery is the thinnest margin there is — the full
+      // delivery fee was paid against a reduced collected amount — and it
+      // was the one case this finding could not see.
+      ...whereDelivered(),
       regionId: { not: null },
     },
-    select: { regionId: true, totalAmount: true, deliveryFee: true, region: { select: { name: true } } },
+    select: {
+      regionId: true, totalAmount: true, collectedAmount: true, deliveryFee: true,
+      region: { select: { name: true } },
+    },
   });
 
   const byRegion = new Map<string, { name: string; orders: number; thin: number; fees: number; revenue: number }>();
   for (const o of orders) {
-    const total = Number(o.totalAmount);
+    // Against what was actually collected where the door recorded it: on a
+    // partial delivery the fee was paid in full and less money came back,
+    // which is the whole point of looking at this.
+    const total = Number(o.collectedAmount ?? o.totalAmount);
     const fee = Number(o.deliveryFee ?? 0);
     if (total <= 0) continue;
 

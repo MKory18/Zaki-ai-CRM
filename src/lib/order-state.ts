@@ -114,9 +114,25 @@ export interface GuardResult {
   message?: string;
 }
 
-const SHIPPED_ONWARDS = new Set([
-  'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED_DELIVERY', 'RETURN_REQUESTED', 'RETURNED',
-]);
+/**
+ * Shipping states in which the parcel is out of our hands.
+ *
+ * PARTIALLY_DELIVERED was missing, and it is the state of an order a customer
+ * has ALREADY taken part of: the guards below therefore let it be cancelled
+ * and voided, which puts goods back on the shelf that are in the customer's
+ * hands. The two facts that were supposed to catch it do not: the courier
+ * feed writes a status without ever setting shippedAt, and the door-side
+ * recorder writes PARTIALLY_DELIVERED directly.
+ *
+ * Exported because order-seal.ts held its own copy of the same list — the
+ * correct one — and two lists for one idea is how this drift happened.
+ */
+export const SHIPPING_GONE = [
+  'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PARTIALLY_DELIVERED',
+  'FAILED_DELIVERY', 'RETURN_REQUESTED', 'RETURNED',
+] as const;
+
+const SHIPPED_ONWARDS = new Set<string>(SHIPPING_GONE);
 
 /** Has this order ever left the warehouse? (shippedAt is authoritative) */
 /**
@@ -276,6 +292,55 @@ export function whereForState(state: CoreState): Record<string, unknown> | null 
 
   if (!branches.length) return null; // a state nothing can currently be in
   return branches.length === 1 ? branches[0] : { OR: branches };
+}
+
+/**
+ * WHAT "DELIVERED" AND "CONFIRMED" MEAN IN A NUMBER.
+ *
+ * whereForState() answers "which orders are in this state NOW", which is
+ * what a LIST wants. A rate wants something else, and confusing the two is
+ * why the dashboard's delivery rate could pass 100%:
+ *
+ *   delivered  — the goods reached the customer. A partial delivery counts:
+ *                part of the parcel was handed over and paid for. Read from
+ *                shippingStatus, never from the legacy merged column, which
+ *                neither the courier feed nor the door-side recorder writes.
+ *   everConfirmed — the order was confirmed at some point. It stays true
+ *                after the warehouse packs it and after the courier delivers
+ *                it, so it is the only honest denominator for a delivery
+ *                rate. whereForState('CONFIRMED') CANNOT serve this: it
+ *                means "confirmed and not yet shipped", which empties as
+ *                soon as work progresses.
+ *   decided    — confirmed or refused. The denominator of a confirmation
+ *                rate: an order still being worked is neither a success nor
+ *                a failure, and dividing by every order measures the size of
+ *                the queue instead of the quality of the work.
+ *
+ * A refusal here is a CONFIRMATION refusal only. A delivery that failed or
+ * came back is not a moderator refusing to confirm, and counting it as one
+ * blames the wrong step.
+ */
+export const DELIVERED_SHIPPING = ['DELIVERED', 'PARTIALLY_DELIVERED'] as const;
+export const CONFIRMATION_REFUSED = ['REJECTED', 'CANCELLED'] as const;
+
+/** Prisma clause: the goods reached the customer. */
+export const whereDelivered = () => ({ shippingStatus: { in: [...DELIVERED_SHIPPING] } });
+
+/** Prisma clause: this order was confirmed, whatever happened to it after. */
+export const whereEverConfirmed = () => ({ confirmationStatus: 'CONFIRMED' });
+
+/** Prisma clause: confirmation refused it. */
+export const whereConfirmationRefused = () => ({ confirmationStatus: { in: [...CONFIRMATION_REFUSED] } });
+
+/**
+ * A percentage, or null when nothing was decided yet.
+ *
+ * Null rather than zero on purpose: "no orders were decided" and "none of
+ * the decided orders succeeded" are different facts, and a screen that
+ * prints 0% for the first one is lying about a quiet day.
+ */
+export function rateOf(part: number, whole: number): number | null {
+  return whole > 0 ? Math.round((part / whole) * 100) : null;
 }
 
 /** The core states an order can actually be in today, for a filter dropdown. */

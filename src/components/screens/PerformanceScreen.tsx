@@ -61,6 +61,7 @@ export function PerformanceScreen() {
   // everything else on this screen.
   const [moderators, setModerators] = useState<AttributionRow[] | null>(null);
   const [channels, setChannels] = useState<AttributionRow[] | null>(null);
+  const [attrTotals, setAttrTotals] = useState<{ moderators: AttributionRow; channels: AttributionRow } | null>(null);
 
   /** Empty dates mean "the whole window"; the server clamps it to 90 days. */
   const dateQuery = range.from && range.to ? `startDate=${range.from}&endDate=${range.to}` : 'period=all';
@@ -74,7 +75,7 @@ export function PerformanceScreen() {
     apiJson<{ employees: any[]; totals: any }>(`/api/orders/confirmation/team?${dateQuery}`)
       .then((d) => {
         setTeam(d.employees ?? []);
-        setTotals(d.totals ?? null);
+        setAttrTotals(d.totals ?? null);
       })
       .catch(() => setTeam([]));
   }, [dateQuery]);
@@ -82,16 +83,21 @@ export function PerformanceScreen() {
   useEffect(() => {
     setModerators(null);
     setChannels(null);
-    apiJson<{ moderators: AttributionRow[]; channels: AttributionRow[] }>(
-      `/api/growth/attribution?${dateQuery}`
-    )
+    setAttrTotals(null);
+    apiJson<{
+      moderators: AttributionRow[];
+      channels: AttributionRow[];
+      totals?: { moderators: AttributionRow; channels: AttributionRow };
+    }>(`/api/growth/attribution?${dateQuery}`)
       .then((d) => {
         setModerators(d.moderators ?? []);
         setChannels(d.channels ?? []);
+        setTotals(d.totals ?? null);
       })
       .catch(() => {
         setModerators([]);
         setChannels([]);
+        setAttrTotals(null);
       });
   }, [dateQuery]);
 
@@ -290,7 +296,7 @@ export function PerformanceScreen() {
             subtitle="ما جلبه كلٌّ منهم وما بقي منه — النسب من الخطوة التي قبلها، لا من أعلى القمع"
           />
           <CardContent className="p-0">
-            <AttributionTable rows={moderators} empty="لا طلبات منسوبة لمودريتر في هذه المدة." />
+            <AttributionTable rows={moderators} totals={attrTotals?.moderators} empty="لا طلبات منسوبة لمودريتر في هذه المدة." />
           </CardContent>
         </Card>
 
@@ -301,7 +307,7 @@ export function PerformanceScreen() {
             subtitle="الباب الذي جاء منه الطلب — وعمود «للطلب الواحد» يفرّق بين مصدر كبير ومصدر جيد"
           />
           <CardContent className="p-0">
-            <AttributionTable rows={channels} empty="لا طلبات مرتبطة بقناة في هذه المدة." />
+            <AttributionTable rows={channels} totals={attrTotals?.channels} empty="لا طلبات مرتبطة بقناة في هذه المدة." />
           </CardContent>
         </Card>
 

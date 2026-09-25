@@ -1,3 +1,5 @@
+import { SHIPPING_GONE } from './order-state';
+
 /**
  * WHEN AN ORDER STOPS BEING OURS TO CHANGE.
  *
@@ -55,8 +57,8 @@ export interface SealSource {
   labelPrintedAt?: Date | string | null;
 }
 
-/** Shipping states in which the parcel is out of our hands. */
-const GONE = ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PARTIALLY_DELIVERED', 'FAILED_DELIVERY', 'RETURN_REQUESTED', 'RETURNED'];
+/** Shipping states in which the parcel is out of our hands — one list. */
+const GONE: readonly string[] = SHIPPING_GONE;
 
 export interface Seal {
   sealed: boolean;

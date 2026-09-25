@@ -1,3 +1,4 @@
+import { SHIPPING_GONE, rateOf, whereDelivered } from '@/lib/order-state';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -38,20 +39,25 @@ export async function GET(req: Request) {
         const base = { companyId, storeId, deliveryProviderId: p.id };
         const [assigned, shipped, delivered, failed, returned] = await Promise.all([
           db.order.count({ where: base }),
-          db.order.count({ where: { ...base, shippingStatus: { in: ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED_DELIVERY', 'RETURN_REQUESTED', 'RETURNED'] } } }),
-          db.order.count({ where: { ...base, shippingStatus: 'DELIVERED' } }),
+          db.order.count({ where: { ...base, shippingStatus: { in: [...SHIPPING_GONE] } } }),
+          // A partial delivery counted in none of the three terms below, so
+          // it fell out of the denominator too: every rate was computed over
+          // a silently smaller population than "what this courier finished",
+          // and a courier who got most of the parcel to the door scored
+          // nothing for it.
+          db.order.count({ where: { ...base, ...whereDelivered() } }),
           db.order.count({ where: { ...base, shippingStatus: 'FAILED_DELIVERY' } }),
           db.order.count({ where: { ...base, shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED'] } } }),
         ]);
 
         const decided = delivered + failed + returned;
-        const successRate = decided > 0 ? Number(((delivered / decided) * 100).toFixed(1)) : null;
-        const failureRate = decided > 0 ? Number(((failed / decided) * 100).toFixed(1)) : null;
-        const returnRate = decided > 0 ? Number(((returned / decided) * 100).toFixed(1)) : null;
+        const successRate = rateOf(delivered, decided);
+        const failureRate = rateOf(failed, decided);
+        const returnRate = rateOf(returned, decided);
 
         // avg delivery time over recent delivered orders (bounded sample)
         const sample = await db.order.findMany({
-          where: { ...base, shippingStatus: 'DELIVERED', shippedAt: { not: null }, deliveredAt: { not: null } },
+          where: { ...base, ...whereDelivered(), shippedAt: { not: null }, deliveredAt: { not: null } },
           select: { shippedAt: true, deliveredAt: true },
           orderBy: { deliveredAt: 'desc' },
           take: 300,

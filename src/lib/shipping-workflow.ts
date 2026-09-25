@@ -49,6 +49,11 @@ export const STATUS_TIMESTAMP: Partial<Record<ShippingStatus, string>> = {
   SHIPPED: 'shippedAt',
   OUT_FOR_DELIVERY: 'outForDeliveryAt',
   DELIVERED: 'deliveredAt',
+  // A partial delivery IS a delivery — the customer took part of the parcel
+  // and paid for it. Without this it had no deliveredAt, so the courier
+  // statement sweep (settlement.ts, which filters on deliveredAt) never saw
+  // the money, and the parcel stayed on the courier's debt list for ever.
+  PARTIALLY_DELIVERED: 'deliveredAt',
   FAILED_DELIVERY: 'failedAt',
   RETURNED: 'returnedAt',
 };

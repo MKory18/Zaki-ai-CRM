@@ -1,3 +1,4 @@
+import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -64,10 +65,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const order = access.order;
     const isReassigner = authorize(user, 'orders.assign', order).allowed;
 
-    // Terminal orders are finalized — they can no longer be transferred
-    if (['DELIVERED', 'RETURNED', 'CANCELLED', 'REJECTED'].includes(order.status)) {
+    // Terminal orders are finalized — they can no longer be transferred.
+    // Read from the DERIVED state, not the legacy merged column: that column
+    // is never written by the courier feed or by the door-side recorder, so
+    // a delivered order was still being handed from one employee to another.
+    const state = deriveCoreState(order as StateSource);
+    if (getZone(state) === 'CLOSED') {
       return NextResponse.json(
-        { error: `Cannot transfer an order in terminal status ${order.status}`, code: 'TERMINAL_STATUS' },
+        { error: `Cannot transfer an order in terminal status ${state}`, code: 'TERMINAL_STATUS' },
         { status: 409 }
       );
     }

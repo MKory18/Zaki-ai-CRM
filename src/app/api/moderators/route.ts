@@ -1,4 +1,5 @@
-﻿import { NextResponse } from 'next/server';
+﻿import { CONFIRMATION_REFUSED, DELIVERED_SHIPPING, rateOf } from '@/lib/order-state';
+import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireCompanyTenant, hashPassword } from '@/lib/auth';
@@ -21,8 +22,14 @@ export async function GET() {
           select: {
             id: true,
             orderNumber: true,
-            status: true,
+            // The two real columns. The legacy merged `status` is not written
+            // by the courier feed or by the door-side partial-delivery
+            // recorder, so every count below read from it was blind to the
+            // orders those two paths finished.
+            confirmationStatus: true,
+            shippingStatus: true,
             totalAmount: true,
+            collectedAmount: true,
             createdAt: true,
           },
         },
@@ -42,30 +49,37 @@ export async function GET() {
     const enriched = moderators.map((mod) => {
       const orders = mod.assignedOrders;
       const totalOrders = orders.length;
-      const confirmedOrders = orders.filter((o) =>
-        ['CONFIRMED', 'READY_FOR_SHIPPING', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(
-          o.status
-        )
-      ).length;
+      // Ever confirmed — it stays true after the parcel ships, which is what
+      // a delivery rate has to be measured against.
+      const confirmedOrders = orders.filter((o) => o.confirmationStatus === 'CONFIRMED').length;
+      // A confirmation refusal only: a parcel that came back is not this
+      // person refusing to confirm, and RETURNED here blamed them for it.
       const rejectedOrders = orders.filter((o) =>
-        ['REJECTED', 'CANCELLED', 'RETURNED'].includes(o.status)
+        (CONFIRMATION_REFUSED as readonly string[]).includes(o.confirmationStatus)
       ).length;
-      const postponedOrders = orders.filter((o) => o.status === 'POSTPONED').length;
-      const deliveredOrders = orders.filter((o) => o.status === 'DELIVERED').length;
+      const postponedOrders = orders.filter((o) =>
+        ['POSTPONED', 'FOLLOW_UP_REQUIRED'].includes(o.confirmationStatus)
+      ).length;
+      const delivered = orders.filter((o) =>
+        (DELIVERED_SHIPPING as readonly string[]).includes(o.shippingStatus)
+      );
+      const deliveredOrders = delivered.length;
 
-      const sales = orders
-        .filter((o) => o.status === 'DELIVERED')
-        .reduce((sum, o) => sum + o.totalAmount, 0);
+      // What was actually collected where the door recorded it — the same
+      // rule the profit screen uses. A partial delivery is the case where
+      // the collected figure and the order total differ.
+      const sales = delivered.reduce((sum, o) => sum + Number(o.collectedAmount ?? o.totalAmount), 0);
 
       // The ledger's figure for this person, not a sum of the legacy column.
       const commissions = Number((commissionByUser.get(mod.id) ?? 0).toFixed(2));
 
-      const confirmationRate =
-        totalOrders > 0 ? Number(((confirmedOrders / totalOrders) * 100).toFixed(1)) : 0;
-      const rejectionRate =
-        totalOrders > 0 ? Number(((rejectedOrders / totalOrders) * 100).toFixed(1)) : 0;
-      const deliveryRate =
-        confirmedOrders > 0 ? Number(((deliveredOrders / confirmedOrders) * 100).toFixed(1)) : 0;
+      // Out of what was DECIDED. Dividing by everything assigned counted the
+      // orders still sitting in this person's queue as failures, so the rate
+      // fell as the queue grew — it measured the backlog, not the work.
+      const decidedOrders = confirmedOrders + rejectedOrders;
+      const confirmationRate = rateOf(confirmedOrders, decidedOrders) ?? 0;
+      const rejectionRate = rateOf(rejectedOrders, decidedOrders) ?? 0;
+      const deliveryRate = rateOf(deliveredOrders, confirmedOrders) ?? 0;
 
       return {
         id: mod.id,
