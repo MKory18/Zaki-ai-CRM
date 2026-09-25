@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useSyncExternalStore } from 'react';
 import { LABEL_SIZES } from '@/lib/labels';
 
 /**
@@ -73,33 +73,80 @@ export function dimsOf(stored: Stored): LabelDims {
 }
 
 /**
- * The remembered size, and a setter that every other open screen hears.
+ * ONE ANSWER, HOWEVER MANY COMPONENTS ASK.
  *
- * Rendering starts from the default and reads storage after mount: the
- * server has no localStorage, and rendering one size then another would
- * mismatch the markup it sent.
+ * This was a hook over localStorage with a `useState` inside it, and that
+ * is why choosing a size did nothing. A screen calls it once for the size
+ * it will print at, and renders `<LabelSizePicker />`, which calls it again
+ * for the dropdown — two calls, two independent pieces of React state, and
+ * nothing connecting them:
+ *
+ *   `setItem` does not notify the document that called it. The `storage`
+ *   event fires in OTHER tabs, by specification, never in this one.
+ *
+ * So the dropdown changed, storage changed, and the print button went on
+ * sending the size that was in storage when the screen mounted. It started
+ * working after a reload, which is why it read as "sometimes" and why
+ * nobody could pin it down.
+ *
+ * `useSyncExternalStore` is the cure: one store, every subscriber told at
+ * once, in this tab and in the others. The snapshot is cached because the
+ * hook compares snapshots by identity — parsing fresh JSON on every render
+ * returns a new object each time and spins for ever.
  */
-export function useLabelSize() {
-  const [stored, setStored] = useState<Stored>(FALLBACK);
 
-  useEffect(() => {
-    setStored(read());
-    // Changing the printer on one tab must not leave another tab printing
-    // the old size.
-    const sync = (e: StorageEvent) => {
-      if (e.key === KEY) setStored(read());
-    };
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
+type Listener = () => void;
+const listeners = new Set<Listener>();
+let snapshot: Stored | null = null;
+
+function currentSnapshot(): Stored {
+  if (snapshot === null) snapshot = read();
+  return snapshot;
+}
+
+function publish(next: Stored) {
+  snapshot = next;
+  for (const l of listeners) l();
+}
+
+function subscribe(listener: Listener): () => void {
+  listeners.add(listener);
+  // Another TAB changing the printer must not leave this one printing the
+  // old size either. Same store, both directions.
+  const fromOtherTab = (e: StorageEvent) => {
+    if (e.key === KEY) publish(read());
+  };
+  window.addEventListener('storage', fromOtherTab);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener('storage', fromOtherTab);
+  };
+}
+
+/**
+ * The server has no localStorage. Rendering the stored size there and the
+ * default here would mismatch the markup the server sent, so the server
+ * snapshot is always the fallback and the real one arrives on hydration.
+ */
+const serverSnapshot = (): Stored => FALLBACK;
+
+/** Only for tests: forget what this process has cached. */
+export function forgetLabelSize(): void {
+  snapshot = null;
+}
+
+export function useLabelSize() {
+  const stored = useSyncExternalStore(subscribe, currentSnapshot, serverSnapshot);
 
   const update = useCallback((next: Stored) => {
-    setStored(next);
     try {
       localStorage.setItem(KEY, JSON.stringify(next));
     } catch {
       /* a printer choice is not worth failing a print over */
     }
+    // Published even if the write threw: the person chose, and this tab
+    // must print what they chose whether or not the choice outlives it.
+    publish(next);
   }, []);
 
   return {
@@ -201,7 +248,64 @@ export function LabelSizePicker({
           />
         </div>
       )}
+      {/* WHAT IT WILL LOOK LIKE.
+          A dropdown reading «A5 على ورقة A4» tells somebody the words; it
+          does not tell them the waybill will come out lying on its side.
+          Drawn to the real proportions, and to real millimetres where the
+          screen can (`mm` is a CSS unit), so choosing is looking. */}
+      <SizePreview />
       <p className="text-[10px] text-[#9aa4b2] mt-1">يُحفظ على هذا الجهاز ويُستعمل في كل شاشات الطباعة.</p>
     </div>
+  );
+}
+
+/**
+ * The chosen size, drawn.
+ *
+ * Scaled down by a fixed factor rather than stretched to fit: a preview
+ * that fills its box whatever the size teaches nothing, because 100×150
+ * and 210×297 then look identical. At this scale the difference between a
+ * thermal label and a sheet of A4 is the difference you can see.
+ *
+ * The sheet is drawn too when the label shares one, with the labels that
+ * fit on it — "4 لكل ورقة" is a claim, and this is the claim shown.
+ */
+function SizePreview() {
+  const { dims, label } = useLabelSize();
+  const sheetW = dims.sheetWidth ?? dims.width;
+  const sheetH = dims.sheetHeight ?? dims.height;
+  const across = Math.max(1, Math.floor(sheetW / dims.width));
+  const down = Math.max(1, Math.floor(sheetH / dims.height));
+
+  // 0.35mm of screen per mm of paper: A4 fits in a card, a thermal label
+  // stays visibly smaller than it.
+  const SCALE = 0.35;
+
+  return (
+    <figure className="mt-2 flex items-center gap-3">
+      <div
+        className="shrink-0 border border-[#cdd5df] bg-white"
+        style={{ width: `${sheetW * SCALE}mm`, height: `${sheetH * SCALE}mm` }}
+      >
+        <div
+          className="grid h-full w-full"
+          style={{
+            gridTemplateColumns: `repeat(${across}, 1fr)`,
+            gridTemplateRows: `repeat(${down}, 1fr)`,
+          }}
+        >
+          {Array.from({ length: across * down }, (_, i) => (
+            <span key={i} className="border border-dashed border-[#b8256e]/40" />
+          ))}
+        </div>
+      </div>
+      <figcaption className="text-[10px] leading-relaxed text-[#697586]">
+        {label}
+        <span className="block" dir="ltr" data-testid="preview-mm">
+          {dims.width}×{dims.height} mm
+        </span>
+        {across * down > 1 && <span className="block">{across * down} لكل ورقة</span>}
+      </figcaption>
+    </figure>
   );
 }

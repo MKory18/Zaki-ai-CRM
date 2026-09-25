@@ -273,6 +273,10 @@ export function renderLabelSheet(labels: LabelView[], size: SheetSize, opts: She
                 background: #fff; color: #121926; cursor: pointer; }
   .bar .primary { margin-inline-start: auto; }
   .bar .muted { opacity: .72; font-size: 12px; }
+  .setup { margin: 0; padding: 10px 16px; background: #fff7e6; color: #6b4d12;
+           font-size: 13px; line-height: 1.7; border-bottom: 1px solid #e8d9b5; }
+  .setup strong { color: #4a350b; }
+  @media print { .setup { display: none; } }
   .bar .run { padding: 6px 12px; background: #364152; color: #fff; font-weight: normal; }
   .bar .run.done { background: #00994d; }
   .bar .runs { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -361,6 +365,32 @@ export function renderLabelSheet(labels: LabelView[], size: SheetSize, opts: She
   }
   <button type="button" class="primary" data-print-run="all">${pdf ? 'حفظ PDF' : chunked ? 'اطبع الكل' : 'اطبع'}</button>
 </div>
+${
+  pdf
+    ? ''
+    : `
+<!--
+  THE PART OF THE SETUP THIS PAGE CANNOT DO ITSELF.
+
+  The sheet declares its own @page size, and a browser still prints it onto
+  whatever paper the dialog has selected — and a thermal printer still needs
+  the roll size set in its driver. Nothing here can reach either.
+
+  So it is said where the person is standing, at the moment they press
+  print, instead of in a help page nobody opens. Once, above the button,
+  not a dialog they have to dismiss on every batch.
+-->
+<div class="setup">
+  <strong>قبل أن تضغط «اطبع»:</strong>
+  في نافذة الطباعة اختر حجم الورق <strong>${pageW}×${pageH} مم</strong> أو «افتراضي»، واضبط الهوامش على
+  <strong>بلا</strong> (None) ومقياس الطباعة على <strong>١٠٠٪</strong>.
+  ${
+    pageW <= 110 && pageH <= 160
+      ? 'وللطابعة الحرارية: مقاس الرول يُضبط في تعريف الطابعة نفسها — لا تستطيع هذه الصفحة ضبطه.'
+      : ''
+  }
+</div>`
+}
 ${
   skipped.length
     ? `<div class="skipped">لم تُطبع ${skipped.length}: ${skipped

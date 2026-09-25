@@ -20,7 +20,7 @@
  * later is not.
  */
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = `shell-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
@@ -72,9 +72,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: cache first, because a font that arrives late is a page
-  // that reflows under somebody's finger.
-  if (url.origin === self.location.origin && /\.(?:css|js|woff2?|png|svg|ico)$/.test(url.pathname)) {
+  /**
+   * Cache first ONLY for what can never change under its own URL.
+   *
+   * This used to cover every .js and .css by extension, and that was wrong
+   * in a way that broke the app: a chunk whose NAME stays the same while
+   * its contents change — which is every chunk in development, and any
+   * unhashed file in production — was then served from yesterday. The page
+   * asked for a module the old chunk knew about, the new build no longer
+   * had it, and the screen died with "module factory is not available".
+   *
+   * `/_next/static/` is content-hashed by the framework: a changed file has
+   * a changed URL, so a hit is always the right bytes. Fonts under /fonts/
+   * are versioned by hand and never edited in place. Everything else goes
+   * to the network first, because being one request slower is nothing and
+   * being one deploy stale is a white screen.
+   */
+  const immutable =
+    url.origin === self.location.origin &&
+    (url.pathname.startsWith('/_next/static/') ||
+      url.pathname.startsWith('/fonts/') ||
+      url.pathname.startsWith('/icons/') ||
+      /\.(?:woff2?|png|svg|ico)$/.test(url.pathname));
+
+  if (immutable) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>
