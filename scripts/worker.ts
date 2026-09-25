@@ -37,9 +37,11 @@ import {
   JobSkipped,
   backoffSeconds,
   consecutiveFailures,
+  lastRun,
   runJob,
   type JobDefinition,
 } from '../src/lib/jobs/runner';
+import { isDue, scheduleAr } from '../src/lib/jobs/schedule';
 
 const args = process.argv.slice(2);
 const once = args.includes('--once');
@@ -48,15 +50,21 @@ const only = args.find((a) => a.startsWith('--job='))?.slice('--job='.length);
 const stamp = () => new Date().toISOString().replace('T', ' ').slice(0, 19);
 const log = (msg: string) => console.log(`[${stamp()}] ${msg}`);
 
+/**
+ * Run it once. Returns how many seconds to WAIT BEFORE TRYING AGAIN, which
+ * is zero on success — the schedule decides when it is next due, and this
+ * only decides how long to leave a failing provider alone.
+ */
 async function attempt(job: JobDefinition): Promise<number> {
   try {
     const result = await runJob(job);
     log(`✓ ${job.name} — ${result.detail ?? `${result.processed}`}`);
-    return job.everySeconds;
+    return 0;
   } catch (error) {
     if (error instanceof JobSkipped) {
+      // Another worker holds it. Not a failure, so no backoff.
       log(`· ${job.name} — يعمل بالفعل، تُخطّي`);
-      return job.everySeconds;
+      return 0;
     }
 
     const failures = await consecutiveFailures(job.name);
@@ -88,9 +96,19 @@ async function main() {
   }
 
   log(`بدأ المجدول — ${jobs.length} مهمة`);
-  for (const job of jobs) log(`   ${job.name} كل ${job.everySeconds}s — ${job.description}`);
+  for (const job of jobs) log(`   ${job.name} ${scheduleAr(job)} — ${job.description}`);
 
-  const dueAt = new Map<string, number>(jobs.map((j) => [j.name, 0]));
+  /**
+   * When a FAILING job may be tried again — backoff only, held in memory
+   * because it is about this process's patience with a provider that is
+   * down, not about the schedule.
+   *
+   * Whether a job is DUE is asked of the run log in the database instead of
+   * a variable starting at zero. That variable meant every deploy re-ran
+   * every job: the idempotent ones shrugged and the ones that message a
+   * person messaged them twice.
+   */
+  const retryAfter = new Map<string, number>();
   let stopping = false;
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
@@ -105,9 +123,14 @@ async function main() {
     const now = Date.now();
     for (const job of jobs) {
       if (stopping) break;
-      if ((dueAt.get(job.name) ?? 0) > now) continue;
+      if ((retryAfter.get(job.name) ?? 0) > now) continue;
+
+      const last = await lastRun(job.name);
+      if (!isDue(job, last?.startedAt ?? null, new Date())) continue;
+
       const wait = await attempt(job);
-      dueAt.set(job.name, Date.now() + wait * 1000);
+      // Only a failure parks it; a success leaves the schedule to decide.
+      if (wait > 0) retryAfter.set(job.name, Date.now() + wait * 1000);
     }
     await new Promise((r) => setTimeout(r, 1000));
   }

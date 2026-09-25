@@ -91,6 +91,9 @@ export const releaseClaims: JobDefinition = {
 export const accrueCommission: JobDefinition = {
   name: 'accrue-commission',
   everySeconds: 86_400,
+  // After the day's deliveries have settled, not at whatever hour the
+  // server last restarted at.
+  at: '23:00',
   description: 'احتساب عمولات الطلبات المسلَّمة',
   async run(): Promise<JobResult> {
     let created = 0;
@@ -220,6 +223,9 @@ export const syncCourierStatus: JobDefinition = {
 export const surfacePostponed: JobDefinition = {
   name: 'surface-postponed',
   everySeconds: 86_400,
+  // First thing, so a postponed order is on somebody's desk when they
+  // sit down rather than discovered at four in the afternoon.
+  at: '08:00',
   description: 'تنبيه بالطلبات المؤجَّلة التي حان موعدها',
   async run({ now }): Promise<JobResult> {
     const horizon = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
@@ -299,6 +305,7 @@ export const surfacePostponed: JobDefinition = {
 export const staleReturns: JobDefinition = {
   name: 'stale-returns',
   everySeconds: 86_400,
+  at: '09:00',
   description: 'تنبيه بالمرتجعات المعلنة ولم تُستلم فعلياً',
   async run({ now }): Promise<JobResult> {
     const threshold = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
@@ -358,6 +365,9 @@ export const staleReturns: JobDefinition = {
 export const closingReminder: JobDefinition = {
   name: 'closing-reminder',
   everySeconds: 86_400,
+  // Before people leave. A reminder to count the drawer that arrives
+  // after everyone has gone home is a reminder about tomorrow.
+  at: '16:45',
   description: 'تذكير بالإغلاق اليومي لكل محفظة',
   async run({ now }): Promise<JobResult> {
     const day = new Date(`${now.toISOString().slice(0, 10)}T00:00:00.000Z`);
@@ -547,6 +557,9 @@ export const accruePeriodCommission: JobDefinition = {
 export const proposePenaltiesJob: JobDefinition = {
   name: 'propose-penalties',
   everySeconds: 86_400,
+  // Early, and about YESTERDAY — a day still being worked has no
+  // departure time, so everybody would read as having left early.
+  at: '07:00',
   description: 'اقتراح خصومات الأمس على التأخير والغياب — بلا اعتماد',
   async run({ now }): Promise<JobResult> {
     let proposed = 0;

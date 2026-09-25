@@ -17,6 +17,8 @@ interface JobRow {
   name: string;
   description: string;
   everySeconds: number;
+  /** The schedule in words, written by the server that owns it. */
+  schedule: string;
   last: {
     status: string;
     startedAt: string;
@@ -40,12 +42,6 @@ interface RunRow {
   processed: number;
   detail: string | null;
   error: string | null;
-}
-
-function every(seconds: number): string {
-  if (seconds >= 86_400) return `كل ${Math.round(seconds / 86_400)} يوم`;
-  if (seconds >= 3600) return `كل ${Math.round(seconds / 3600)} ساعة`;
-  return `كل ${Math.round(seconds / 60)} دقيقة`;
 }
 
 function ago(iso: string | null): string {
@@ -123,7 +119,7 @@ export function JobsScreen() {
                         <CheckCircle2 className="w-4 h-4 text-[#00a344]" />
                       )}
                       <span className="text-sm font-medium text-[#121926]" dir="ltr">{job.name}</span>
-                      <span className="text-[11px] text-[#9aa4b2]">{every(job.everySeconds)}</span>
+                      <span className="text-[11px] text-[#9aa4b2]">{job.schedule}</span>
                     </div>
                     <p className="text-xs text-[#697586] mt-1">{job.description}</p>
                   </div>

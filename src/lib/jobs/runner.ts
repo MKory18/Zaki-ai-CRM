@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { db } from '../db';
+import { overdueBy, type Schedule } from './schedule';
 
 /**
  * Running a scheduled job, once.
@@ -34,10 +35,8 @@ export interface JobContext {
   db: typeof db;
 }
 
-export interface JobDefinition {
+export interface JobDefinition extends Schedule {
   name: string;
-  /** How often it should run, in seconds. Used to judge "overdue". */
-  everySeconds: number;
   /** What it does, in Arabic, for the jobs screen. */
   description: string;
   run: (ctx: JobContext) => Promise<JobResult>;
@@ -83,14 +82,13 @@ export async function consecutiveFailures(jobName: string): Promise<number> {
  * grace period, because a job firing every 2 minutes is not "late" the
  * second it passes 2 minutes.
  */
-export function isOverdue(
-  job: { everySeconds: number },
-  lastSuccessAt: Date | null,
-  now = new Date()
-): boolean {
-  if (!lastSuccessAt) return true;
-  const grace = Math.max(60, job.everySeconds) * 2;
-  return (now.getTime() - lastSuccessAt.getTime()) / 1000 > grace;
+export function isOverdue(job: Schedule, lastSuccessAt: Date | null, now = new Date()): boolean {
+  // Answered by the schedule, which knows the difference between "an
+  // interval elapsed" and "its hour passed and it did not run". Judging a
+  // daily job by its interval made it look red every morning before it was
+  // due, and a screen that is red when nothing is wrong is a screen nobody
+  // reads when something is.
+  return overdueBy(job, lastSuccessAt, now) > 0;
 }
 
 /**

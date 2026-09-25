@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { JOBS, jobByName } from '@/lib/jobs/definitions';
 import { JobSkipped, consecutiveFailures, isOverdue, runJob, ALERT_AFTER_FAILURES } from '@/lib/jobs/runner';
+import { scheduleAr } from '@/lib/jobs/schedule';
 
 /**
  * GET  /api/admin/jobs   what each job did last, and whether it is overdue
@@ -43,6 +44,10 @@ export async function GET() {
           name: job.name,
           description: job.description,
           everySeconds: job.everySeconds,
+          // The schedule in words. Seconds on a screen is a number the
+          // reader has to divide before they know whether it is wrong.
+          schedule: scheduleAr(job),
+          at: job.at ?? null,
           last: last && {
             status: last.status,
             startedAt: last.startedAt,
