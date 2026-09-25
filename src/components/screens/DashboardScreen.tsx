@@ -103,7 +103,7 @@ export function DashboardScreen() {
 
   const fin = analytics?.financials ?? {
     deliveredRevenue: 0, costOfGoodsSold: 0, shippingCosts: 0,
-    moderatorCommissions: 0, operationalExpenses: 0, netProfit: 0, profitMargin: 0,
+    commission: 0, operationalExpenses: 0, netProfit: 0, profitMargin: 0,
   };
   const counts = analytics?.ordersCount ?? {
     total: 0, new: 0, contacting: 0, confirmed: 0,
@@ -138,7 +138,7 @@ export function DashboardScreen() {
     { label: locale === 'ar' ? 'إيراد التوصيل' : 'Delivered Revenue', value: `+${fmt(fin.deliveredRevenue)}`, cls: 'text-[#00c853] bg-emerald-100 border-0' },
     { label: locale === 'ar' ? 'تكلفة البضاعة' : 'COGS', value: `-${fmt(fin.costOfGoodsSold)}`, cls: 'text-[#fb323f] bg-[#feecee] border-[#f5c6cb]' },
     { label: locale === 'ar' ? 'الشحن' : 'Shipping', value: `-${fmt(fin.shippingCosts)}`, cls: 'text-[#fb323f] bg-[#feecee] border-[#f5c6cb]' },
-    { label: locale === 'ar' ? 'العمولات' : 'Commissions', value: `-${fmt(fin.moderatorCommissions)}`, cls: 'text-[#fb323f] bg-[#feecee] border-[#f5c6cb]' },
+    { label: locale === 'ar' ? 'العمولات' : 'Commissions', value: `-${fmt(fin.commission)}`, cls: 'text-[#fb323f] bg-[#feecee] border-[#f5c6cb]' },
     { label: locale === 'ar' ? 'المصروفات' : 'Expenses', value: `-${fmt(fin.operationalExpenses)}`, cls: 'text-[#fb323f] bg-[#feecee] border-[#f5c6cb]' },
   ];
 

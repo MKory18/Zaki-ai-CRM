@@ -35,7 +35,7 @@ const analytics = (over: Record<string, unknown> = {}) => ({
     deliveredRevenue: 2321.48,
     costOfGoodsSold: 0,
     shippingCosts: 432,
-    moderatorCommissions: 0,
+    commission: 0,
     operationalExpenses: 0,
     grossProfit: 2321.48,
     netProfit: 1889.48,

@@ -201,6 +201,56 @@ export async function reverseForOrder(
 }
 
 /**
+ * WHAT THE COMMISSION ON A SET OF ORDERS ACTUALLY COST.
+ *
+ * The one number the profit line may subtract. Read from the LEDGER, so it
+ * is the same money the commission screen shows and the same money a payout
+ * would pay — rather than a second figure computed another way, which is
+ * what `Order.moderatorCommission` was.
+ *
+ * EVERY status is summed, REVERSED included, because a reversal is a
+ * NEGATIVE entry: the original and its reversal cancel, which is exactly
+ * what a returned order should do to the month's cost. Filtering them out
+ * would leave the profit line carrying commission on an order that came
+ * back.
+ *
+ * Scoped by the ORDERS, not by the entry's period: profit is asked about a
+ * window of orders, and an entry belongs to the order that generated it.
+ */
+export async function commissionCostForOrders(
+  orderWhere: Record<string, unknown>
+): Promise<number> {
+  const agg = await db.commissionEntry.aggregate({
+    where: { order: orderWhere },
+    _sum: { amount: true },
+  });
+  return Number(agg._sum.amount ?? 0);
+}
+
+/**
+ * WHAT EACH PERSON EARNED ON A SET OF ORDERS.
+ *
+ * The leaderboard's commission column, read from the same ledger the profit
+ * line and the payout read, so the three agree by construction.
+ *
+ * Keyed on the ENTRY's userId, not the order's `moderatorId`: an order can
+ * earn commission for somebody who is not the moderator of record (a
+ * confirmer, a second party on a rule), and the money belongs to whoever
+ * the rule named. REVERSED entries are summed with the rest — a reversal is
+ * a negative entry, so a returned order nets to nothing.
+ */
+export async function commissionByUserForOrders(
+  orderWhere: Record<string, unknown>
+): Promise<Map<string, number>> {
+  const groups = await db.commissionEntry.groupBy({
+    by: ['userId'],
+    where: { order: orderWhere },
+    _sum: { amount: true },
+  });
+  return new Map(groups.map((g) => [g.userId, Number(g._sum.amount ?? 0)]));
+}
+
+/**
  * Settlement approval is what makes commission payable: before the money is
  * in, nobody is owed anything.
  */

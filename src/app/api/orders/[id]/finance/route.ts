@@ -7,6 +7,7 @@ import { isValidSettlementTransition, computeFinancials, TRANSACTION_TYPES } fro
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can } from '@/lib/authorization';
+import { commissionCostForOrders } from '@/lib/commission';
 
 const D = (v: any) => new Prisma.Decimal(v ?? 0);
 const toMoney = (v: any) => (v === null || v === undefined ? null : new Prisma.Decimal(v));
@@ -42,7 +43,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       select: {
         id: true, companyId: true, currency: true,
         sellingPrice: true, quantity: true, totalAmount: true,
-        estimatedCostOfGoods: true, moderatorCommission: true, shippingCost: true,
+        estimatedCostOfGoods: true, shippingCost: true,
         subtotal: true, discount: true, shippingRevenue: true, totalRevenue: true,
         productCost: true, packagingCost: true, advertisingCost: true, otherCost: true,
         refundAmount: true, grossProfit: true, netProfit: true,
@@ -199,7 +200,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         shippingCost: order.shippingCost,
         advertisingCost: updateData.advertisingCost ?? order.advertisingCost ?? 0,
         otherCost: updateData.otherCost ?? order.otherCost ?? 0,
-        moderatorCommission: order.moderatorCommission,
+        // From the LEDGER, so this order's net profit subtracts the same
+        // commission the commission screen and the payout show for it.
+        commission: await commissionCostForOrders({ id }),
       });
       updateData.subtotal = fin.subtotal;
       updateData.totalRevenue = fin.totalRevenue;

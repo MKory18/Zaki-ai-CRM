@@ -734,8 +734,8 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                   <span className="text-slate-700" dir="ltr">{money(order.estimatedCostOfGoods)}</span>
                 </div>
                 <div className="flex justify-between px-2.5 py-1.5">
-                  <span className="text-slate-500">عمولة المودريتور:</span>
-                  <span className="text-slate-700" dir="ltr">{money(order.moderatorCommission)}</span>
+                  <span className="text-slate-500">العمولة:</span>
+                  <span className="text-slate-700" dir="ltr">{money(order.commission ?? 0)}</span>
                 </div>
               </div>
             </div>

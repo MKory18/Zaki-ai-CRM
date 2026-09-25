@@ -75,7 +75,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             status: 'VOIDED',
             rejectionReason: 'FAKE_ORDER',
             rejectionNote: parsed.data.note ?? 'إبطال بعد إشكال إدخال',
-            moderatorCommission: 0,
             version: { increment: 1 },
           },
         });

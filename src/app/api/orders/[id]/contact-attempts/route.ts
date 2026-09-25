@@ -138,7 +138,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             status: 'CANCELLED',
             rejectionReason: 'NO_ANSWER_3_ATTEMPTS',
             rejectionNote: `إغلاق تلقائي بعد ${noAnswers} محاولات بلا رد`,
-            moderatorCommission: 0,
             followUpStatus: order.nextFollowUpAt ? 'CANCELLED' : order.followUpStatus,
             version: { increment: 1 },
           },

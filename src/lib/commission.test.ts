@@ -6,12 +6,24 @@ const { db } = vi.hoisted(() => ({
   db: {
     order: { findFirst: vi.fn() },
     commissionRule: { findMany: vi.fn() },
-    commissionEntry: { findFirst: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
+    commissionEntry: {
+      findFirst: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(),
+      updateMany: vi.fn(), aggregate: vi.fn(), groupBy: vi.fn(),
+    },
   },
 }));
 vi.mock('./db', () => ({ db }));
 
-import { accrueForOrder, commissionAmount, periodOf, reverseForOrder, ruleFor, type RuleLike } from './commission';
+import {
+  accrueForOrder,
+  commissionAmount,
+  commissionByUserForOrders,
+  commissionCostForOrders,
+  periodOf,
+  reverseForOrder,
+  ruleFor,
+  type RuleLike,
+} from './commission';
 
 const rule = (over: Partial<RuleLike> = {}): RuleLike => ({
   id: 'r1',
@@ -181,5 +193,78 @@ describe("a rule pays only on its own store's deliveries", () => {
     const result = await accrueForOrder(db as never, { companyId: 'c1', orderId: 'o1', minorUnit: 3 });
     expect(result.created).toBe(0);
     expect(db.commissionEntry.create).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * WHAT THE PROFIT LINE IS ALLOWED TO SUBTRACT.
+ *
+ * These two are the only doors between the ledger and the rest of the app.
+ * Both are scoped by the ORDERS asked about rather than by the entry's
+ * period, because profit is asked about a window of orders and an entry
+ * belongs to the order that generated it — an order delivered on the 31st
+ * and reversed on the 2nd belongs to the same question both times.
+ */
+describe('commissionCostForOrders', () => {
+  beforeEach(() => {
+    db.commissionEntry.aggregate.mockResolvedValue({ _sum: { amount: null } });
+  });
+
+  it('sums the ledger for the orders asked about, not for a period', async () => {
+    db.commissionEntry.aggregate.mockResolvedValue({ _sum: { amount: 42.5 } });
+    expect(await commissionCostForOrders({ companyId: 'c1', status: 'DELIVERED' })).toBe(42.5);
+    // The where nests under `order`, so the caller's order filter — country,
+    // store, date window — carries through untouched.
+    expect(db.commissionEntry.aggregate.mock.calls[0][0].where).toEqual({
+      order: { companyId: 'c1', status: 'DELIVERED' },
+    });
+  });
+
+  it('counts REVERSED entries too, because a reversal is a NEGATIVE entry', async () => {
+    // Filtering them out is the bug this guards: the profit line would carry
+    // commission on an order whose goods are back on the shelf. The accrual
+    // and its reversal are both in the sum and cancel.
+    await commissionCostForOrders({ companyId: 'c1' });
+    const where = db.commissionEntry.aggregate.mock.calls[0][0].where;
+    expect(JSON.stringify(where)).not.toContain('status');
+  });
+
+  it('no entries is zero, not null — the profit line subtracts a number', async () => {
+    expect(await commissionCostForOrders({ companyId: 'c1' })).toBe(0);
+  });
+
+  it('turns a Prisma Decimal into a number', async () => {
+    // A Decimal reaches JSON as a string and the profit arithmetic would
+    // silently concatenate instead of subtracting.
+    db.commissionEntry.aggregate.mockResolvedValue({ _sum: { amount: { toString: () => '7.25' } } });
+    expect(await commissionCostForOrders({ companyId: 'c1' })).toBe(7.25);
+  });
+});
+
+describe('commissionByUserForOrders', () => {
+  beforeEach(() => {
+    db.commissionEntry.groupBy.mockResolvedValue([]);
+  });
+
+  it('keys on the ENTRY’s userId, not on the order’s moderator', async () => {
+    // An order can earn commission for somebody who is not its moderator of
+    // record. The money belongs to whoever the RULE named.
+    db.commissionEntry.groupBy.mockResolvedValue([
+      { userId: 'u1', _sum: { amount: 10 } },
+      { userId: 'u2', _sum: { amount: 4 } },
+    ]);
+    const map = await commissionByUserForOrders({ companyId: 'c1' });
+    expect(map.get('u1')).toBe(10);
+    expect(map.get('u2')).toBe(4);
+    expect(db.commissionEntry.groupBy.mock.calls[0][0].by).toEqual(['userId']);
+  });
+
+  it('a person with no entries is absent, so the caller decides what zero looks like', async () => {
+    expect((await commissionByUserForOrders({ companyId: 'c1' })).get('nobody')).toBeUndefined();
+  });
+
+  it('is one grouped read, not a query per person', async () => {
+    await commissionByUserForOrders({ companyId: 'c1' });
+    expect(db.commissionEntry.groupBy).toHaveBeenCalledTimes(1);
   });
 });

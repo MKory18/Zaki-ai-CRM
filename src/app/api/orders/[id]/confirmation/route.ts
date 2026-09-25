@@ -239,7 +239,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       updateData.confirmedById = user.id;
     } else if (target === 'REJECTED') {
       updateData.status = 'REJECTED';
-      updateData.moderatorCommission = 0;
     } else if (target === 'CANCELLED') {
       updateData.status = 'CANCELLED';
     }

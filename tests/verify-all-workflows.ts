@@ -210,7 +210,7 @@ async function runVerification() {
         totalAmount: deliveredOrder.totalAmount,
         quantity: deliveredOrder.quantity,
         shippingCost: deliveredOrder.shippingCost,
-        moderatorCommission: deliveredOrder.moderatorCommission,
+        commission: deliveredOrder.moderatorCommission,
         estimatedCostOfGoods: deliveredOrder.estimatedCostOfGoods,
       },
     ],

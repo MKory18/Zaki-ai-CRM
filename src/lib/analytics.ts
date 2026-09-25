@@ -1,5 +1,6 @@
 import { db } from './db';
 import { calculateRealProfit } from './financial';
+import { commissionByUserForOrders, commissionCostForOrders } from './commission';
 import { AiBusinessContext } from './ai';
 
 export interface DateFilter {
@@ -187,14 +188,13 @@ export async function getCompanyAnalytics(
   const DELIVERED_SHIPPING = ['DELIVERED', 'PARTIALLY_DELIVERED'];
   const deliveredWhere = { ...baseWhere, shippingStatus: { in: DELIVERED_SHIPPING } };
 
-  const [deliveredAgg, collectedAgg, expensesAgg] = await Promise.all([
+  const [deliveredAgg, collectedAgg, expensesAgg, commissionCost] = await Promise.all([
     db.order.aggregate({
       where: deliveredWhere,
       _sum: {
         totalAmount: true,
         estimatedCostOfGoods: true,
         shippingCost: true,
-        moderatorCommission: true,
       },
       _count: { _all: true },
     }),
@@ -217,6 +217,13 @@ export async function getCompanyAnalytics(
       },
       _sum: { amount: true },
     }),
+    // ── The commission the profit line subtracts, read from the LEDGER ──
+    // It used to be the sum of Order.moderatorCommission: a figure written
+    // at ORDER CREATION from a per-user rate, on the selling price, knowing
+    // nothing about the rules, their dates or their store. Two engines were
+    // live and the wrong one was on the dashboard. This is the same money
+    // the commission screen shows and a payout would pay.
+    commissionCostForOrders(deliveredWhere),
   ]);
 
   const totalExpenses = expensesAgg._sum.amount || 0;
@@ -233,7 +240,7 @@ export async function getCompanyAnalytics(
         totalAmount: deliveredRevenue,
         quantity: deliveredAgg._count._all || 1,
         shippingCost: deliveredAgg._sum.shippingCost || 0,
-        moderatorCommission: deliveredAgg._sum.moderatorCommission || 0,
+        commission: commissionCost,
         estimatedCostOfGoods: deliveredAgg._sum.estimatedCostOfGoods || 0,
       },
     ],
@@ -383,9 +390,15 @@ export async function getCompanyAnalytics(
     _count: { _all: true },
     _sum: {
       totalAmount: true,
-      moderatorCommission: true,
     },
   });
+
+  // Commission per person comes from the LEDGER, not from a sum of
+  // Order.moderatorCommission. The column was written at creation from a
+  // per-user rate that knew nothing about the commission rules; grouping it
+  // here produced a leaderboard that disagreed with the commission screen
+  // for the same people in the same month.
+  const commissionByUser = await commissionByUserForOrders({ ...baseWhere, status: 'DELIVERED' });
 
   const moderatorIds = Array.from(
     new Set(moderatorGroups.map((g) => g.moderatorId).filter((id): id is string => !!id))
@@ -440,7 +453,6 @@ export async function getCompanyAnalytics(
     if (g.status === 'DELIVERED') {
       m.deliveredOrders += g._count._all;
       m.sales += g._sum.totalAmount || 0;
-      m.commissions += g._sum.moderatorCommission || 0;
     }
   }
 
@@ -448,7 +460,7 @@ export async function getCompanyAnalytics(
     .map((m) => ({
       ...m,
       sales: round2(m.sales),
-      commissions: round2(m.commissions),
+      commissions: round2(commissionByUser.get(m.id) ?? 0),
       confirmationRate: m.totalOrders > 0 ? round1((m.confirmedOrders / m.totalOrders) * 100) : 0,
       deliveryRate:
         m.confirmedOrders > 0 ? round1((m.deliveredOrders / m.confirmedOrders) * 100) : 0,
@@ -483,7 +495,7 @@ export async function getCompanyAnalytics(
     revenue: profitBreakdown.deliveredRevenue,
     production_cost: profitBreakdown.costOfGoodsSold,
     shipping_cost: profitBreakdown.shippingCosts,
-    moderator_commission: profitBreakdown.moderatorCommissions,
+    commission: profitBreakdown.commission,
     operational_expenses: profitBreakdown.operationalExpenses,
     net_profit: profitBreakdown.netProfit,
     profit_margin: profitBreakdown.profitMargin,

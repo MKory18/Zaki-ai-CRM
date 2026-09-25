@@ -419,16 +419,26 @@ export async function POST(req: Request) {
 
     // Moderator assignment — Phase S: moderator must belong to THIS company
     const assignedModeratorId = moderatorId || (user.role === 'MODERATOR' ? user.id : null);
-    let moderatorCommission = 0;
     if (assignedModeratorId) {
       const mod = await db.user.findFirst({ where: { id: assignedModeratorId, companyId } });
       if (!mod) {
         return NextResponse.json({ error: 'الموديريتور غير موجود في شركتك' }, { status: 404 });
       }
-      if (mod.commissionRate > 0) {
-        moderatorCommission = Number(((price * mod.commissionRate) / 100).toFixed(2));
-      }
     }
+
+    // NO COMMISSION IS COMPUTED HERE ANY MORE.
+    //
+    // This used to write `price × user.commissionRate` into the order the
+    // moment it was created — a number that knew nothing about the
+    // commission RULES, their dates or their store, and that was fixed
+    // before anybody knew whether the order would ever be delivered. It
+    // then fed the profit line, so the dashboard and the commission screen
+    // reported two different commissions for the same month.
+    //
+    // Commission is the LEDGER's, and the ledger accrues on DELIVERY
+    // (`accrueForOrder`, which refuses a non-delivered order outright). The
+    // moderator is still resolved here, because who owns the order is this
+    // route's business; what they earn is not.
 
     // 3. Create Order (with product snapshot for historical accuracy).
     // Workflow defaults (Step 4): NEW + unowned → lands in the claimable
@@ -459,7 +469,6 @@ export async function POST(req: Request) {
               totalAmount,
               currency: country.currencyCode,
               moderatorId: assignedModeratorId,
-              moderatorCommission,
               estimatedCostOfGoods,
               productNameSnapshot: product.name,
               productImageSnapshot: product.image || null,

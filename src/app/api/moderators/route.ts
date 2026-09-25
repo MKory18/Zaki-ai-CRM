@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
+import { commissionByUserForOrders } from '@/lib/commission';
 
 export async function GET() {
   try {
@@ -22,13 +23,15 @@ export async function GET() {
             orderNumber: true,
             status: true,
             totalAmount: true,
-            moderatorCommission: true,
             createdAt: true,
           },
         },
       },
       orderBy: { name: 'asc' },
     });
+
+    // One grouped read for everybody, rather than a query per moderator.
+    const commissionByUser = await commissionByUserForOrders({ companyId, status: 'DELIVERED' });
 
     const enriched = moderators.map((mod) => {
       const orders = mod.assignedOrders;
@@ -48,9 +51,8 @@ export async function GET() {
         .filter((o) => o.status === 'DELIVERED')
         .reduce((sum, o) => sum + o.totalAmount, 0);
 
-      const commissions = orders
-        .filter((o) => o.status === 'DELIVERED')
-        .reduce((sum, o) => sum + o.moderatorCommission, 0);
+      // The ledger's figure for this person, not a sum of the legacy column.
+      const commissions = Number((commissionByUser.get(mod.id) ?? 0).toFixed(2));
 
       const confirmationRate =
         totalOrders > 0 ? Number(((confirmedOrders / totalOrders) * 100).toFixed(1)) : 0;

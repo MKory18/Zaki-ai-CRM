@@ -164,7 +164,6 @@ export async function POST(req: Request) {
               productNameSnapshot: order.productNameSnapshot,
               productImageSnapshot: order.productImageSnapshot,
               moderatorId: order.moderatorId,
-              moderatorCommission: 0,
               estimatedCostOfGoods: order.estimatedCostOfGoods,
               // Already confirmed once — it re-enters at preparation, not intake.
               status: 'CONFIRMED',

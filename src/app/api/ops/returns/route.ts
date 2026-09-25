@@ -10,6 +10,7 @@ import { logAudit } from '@/lib/audit';
 import { resolveDeliveryFee } from '@/lib/delivery-fees';
 import { roundMinor } from '@/lib/money';
 import { zodMessage } from '@/lib/zod-message';
+import { reverseForOrder } from '@/lib/commission';
 
 /**
  * Return receiving.
@@ -161,9 +162,27 @@ export async function POST(req: Request) {
           status: 'RETURNED',
           returnedAt: new Date(),
           settlementStatus: 'NOT_APPLICABLE',
-          moderatorCommission: 0, // a returned order generates no commission
           version: { increment: 1 },
         },
+      });
+
+      // A RETURNED ORDER GENERATES NO COMMISSION.
+      //
+      // It was delivered, so the ledger accrued on it; it then came back, so
+      // that accrual has to come off. This used to be `moderatorCommission:
+      // 0` on the row above — which zeroed the legacy column while the
+      // LEDGER, the one the commission screen and the payout read, went on
+      // holding the full amount. The month paid commission on goods that
+      // are back on the shelf.
+      //
+      // Reversing writes a NEGATIVE entry rather than deleting the
+      // original: the accrual and its reversal both stay visible, which is
+      // what «لا حذف مالي» means and what lets somebody see that it
+      // happened.
+      await reverseForOrder(tx, {
+        companyId,
+        orderId: order.id,
+        reason: `مرتجع مستلم: ${input.receivedQty} وصل، ${input.damagedQty} تالف`,
       });
       await tx.orderNote.create({
         data: {

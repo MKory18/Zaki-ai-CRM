@@ -239,7 +239,6 @@ export async function createPublicOrder(
             totalAmount,
             currency: store.country.currencyCode,
             moderatorId: null, // anonymous source — no user may be assigned from the browser
-            moderatorCommission: 0,
             estimatedCostOfGoods: Number((unitCost * qty).toFixed(2)),
             productNameSnapshot: product.name,
             productImageSnapshot: product.image || null,

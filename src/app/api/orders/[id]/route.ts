@@ -168,6 +168,13 @@ export async function GET(
         landingPage: { select: { id: true, name: true, slug: true } },
         addOns: { orderBy: { createdAt: 'asc' } },
         moderator: { select: { id: true, name: true, email: true, phone: true } },
+        // What this order actually cost in commission, from the LEDGER.
+        // `Order.moderatorCommission` is the retired column: it was written
+        // at creation from a per-user rate that knew nothing about the
+        // commission rules, so the detail screen showed a figure the
+        // commission screen disagreed with. Reversals are included — they
+        // are negative entries, so a returned order nets to zero here.
+        commissions: { select: { id: true, userId: true, role: true, amount: true, status: true } },
         claimer: { select: { id: true, name: true } },
         owner: { select: { id: true, name: true } },
         lockHolder: { select: { id: true, name: true } },
@@ -266,8 +273,14 @@ export async function GET(
       minorUnit: country.minorUnit,
     });
 
+    // Decimal never leaves as a Decimal: the browser would receive a string
+    // and `money()` would render it as NaN.
+    const commission = Number(
+      order.commissions.reduce((sum, e) => sum + Number(e.amount), 0).toFixed(country.minorUnit)
+    );
+
     return NextResponse.json({
-      order: { ...order, state, zone: getZone(state) },
+      order: { ...order, state, zone: getZone(state), commission },
       // The store's own currency, so the detail screen shows the same money
       // the list does instead of a hard-coded dollar sign.
       currency: { code: country.currencyCode, minorUnit: country.minorUnit },
@@ -472,7 +485,6 @@ export async function PATCH(
             { status: 409 }
           );
         }
-        updateData.moderatorCommission = 0; // No commission for rejected orders
         updateData.confirmationStatus = 'CANCELLED';
       }
     }

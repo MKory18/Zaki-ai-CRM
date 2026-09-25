@@ -68,7 +68,7 @@ export const translations = {
     profitMargin: 'Profit Margin',
     cogs: 'Cost of Goods Sold',
     shippingCost: 'Shipping Cost',
-    moderatorCommissions: 'Moderator Commissions',
+    commissions: 'Commissions',
     operationalExpenses: 'Operational Expenses',
     // Sections
     quickCreateOrder: 'Quick Create Order',
@@ -243,7 +243,7 @@ export const translations = {
     profitMargin: 'هامش الربح',
     cogs: 'تكلفة البضاعة المباعة',
     shippingCost: 'تكاليف الشحن',
-    moderatorCommissions: 'عمولات المودريتورز',
+    commissions: 'العمولات',
     operationalExpenses: 'المصروفات التشغيلية',
     // Sections
     quickCreateOrder: 'إدخال طلب سريع',

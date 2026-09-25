@@ -52,7 +52,7 @@ async function main() {
     const fin = fw.computeFinancials({
       sellingPrice: 19.99, quantity: 3, discount: 5, shippingRevenue: 2,
       productCost: 8, packagingCost: 0.5, shippingCost: 1, advertisingCost: 0.25, otherCost: 0.25,
-      moderatorCommission: 2,
+      commission: 2,
     });
     ok('subtotal = 19.99*3 = 59.97', D(fin.subtotal).toString() === '59.97', D(fin.subtotal).toString());
     ok('totalRevenue = subtotal - discount + shippingRevenue = 56.97', D(fin.totalRevenue).toString() === '56.97', D(fin.totalRevenue).toString());

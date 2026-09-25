@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
+import { commissionCostForOrders } from '@/lib/commission';
 
 export async function GET(req: Request) {
   try {
@@ -23,7 +24,6 @@ export async function GET(req: Request) {
         totalAmount: true,
         shippingCost: true,
         estimatedCostOfGoods: true,
-        moderatorCommission: true,
         deliveredAt: true,
       },
       orderBy: { deliveredAt: 'desc' },
@@ -32,7 +32,10 @@ export async function GET(req: Request) {
     const totalRevenue = deliveredOrders.reduce((s, o) => s + o.totalAmount, 0);
     const totalCOGS = deliveredOrders.reduce((s, o) => s + o.estimatedCostOfGoods, 0);
     const totalShipping = deliveredOrders.reduce((s, o) => s + o.shippingCost, 0);
-    const totalCommissions = deliveredOrders.reduce((s, o) => s + o.moderatorCommission, 0);
+    // From the LEDGER — the one commission source. Summing
+    // Order.moderatorCommission here gave this screen a different total
+    // from the commission screen for the same orders.
+    const totalCommissions = await commissionCostForOrders({ companyId, storeId, status: 'DELIVERED' });
     const totalOperationalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
 
     const netProfit =

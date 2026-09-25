@@ -73,7 +73,7 @@ export async function GET(req: Request) {
         costs: {
           product: f.costOfGoodsSold,
           shipping: f.shippingCosts,
-          commissions: f.moderatorCommissions,
+          commissions: f.commission,
           operational: f.operationalExpenses,
         },
         settlement: { settled, pending, refunded },

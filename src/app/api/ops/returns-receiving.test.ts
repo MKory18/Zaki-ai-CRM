@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /** Nothing enters stock before the count-and-inspect acknowledgement. */
 
-const { db, requireContext, requirePermission, logAudit } = vi.hoisted(() => ({
+const { db, requireContext, requirePermission, logAudit, reverseForOrder } = vi.hoisted(() => ({
+  reverseForOrder: vi.fn(async (..._a: unknown[]) => 1),
   db: {
     order: { findFirst: vi.fn(), update: vi.fn() },
     returnReceipt: { create: vi.fn() },
@@ -22,6 +23,7 @@ vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/authorization', () => ({ can: () => true, requirePermission: (...a: unknown[]) => requirePermission(...a) }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
+vi.mock('@/lib/commission', () => ({ reverseForOrder }));
 
 import { POST } from '@/app/api/ops/returns/route';
 
@@ -108,8 +110,28 @@ describe('return receiving', () => {
     expect(res.status).toBe(409);
   });
 
-  it('leaves a returned order with zero commission', async () => {
+  it('takes the commission back off, in the LEDGER', async () => {
+    // The order was delivered, so the ledger accrued on it. Zeroing the
+    // legacy `moderatorCommission` column — which is what this used to do —
+    // left the ledger holding the full amount, so the month still paid
+    // commission on goods that are back on the shelf.
     await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
-    expect(db.order.update.mock.calls[0][0].data).toMatchObject({ shippingStatus: 'RETURNED', moderatorCommission: 0 });
+    expect(db.order.update.mock.calls[0][0].data).toMatchObject({ shippingStatus: 'RETURNED' });
+    expect(reverseForOrder).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ orderId: ORDER_ID })
+    );
+  });
+
+  it('reverses inside the same transaction as the receipt, so neither can land alone', async () => {
+    await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
+    // `db` is what $transaction hands the callback in this mock; being
+    // called with it is what says the reversal is inside.
+    expect(reverseForOrder.mock.calls[0][0]).toBe(db);
+  });
+
+  it('does not write the retired per-order commission column at all', async () => {
+    await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
+    expect(db.order.update.mock.calls[0][0].data).not.toHaveProperty('moderatorCommission');
   });
 });

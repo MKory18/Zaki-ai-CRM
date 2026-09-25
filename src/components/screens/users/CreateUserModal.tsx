@@ -46,7 +46,6 @@ export function CreateUserModal({
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [roleId, setRoleId] = useState('');
-  const [commissionRate, setCommissionRate] = useState('');
   const [countryIds, setCountryIds] = useState<string[]>([]);
   const [storeIds, setStoreIds] = useState<string[]>([]);
 
@@ -58,7 +57,7 @@ export function CreateUserModal({
   useEffect(() => {
     if (!isOpen) return;
     setName(''); setEmail(''); setPassword(''); setPhone('');
-    setRoleId(''); setCommissionRate('');
+    setRoleId('');
     setCountryIds([]); setStoreIds([]); setError(null);
 
     fetch('/api/roles')
@@ -104,7 +103,6 @@ export function CreateUserModal({
           phone: phone.trim() || undefined,
           roleId: roleId || undefined,
           role: roleName || undefined,
-          commissionRate: commissionRate ? Number(commissionRate) : undefined,
           countryIds,
           storeIds,
         }),
@@ -192,17 +190,17 @@ export function CreateUserModal({
               ...roles.map((r) => ({ value: r.id, label: ROLE_LABELS[r.name] ?? r.name })),
             ]}
           />
-          <Input
-            label="نسبة العمولة % (اختياري)"
-            type="number"
-            min={0}
-            max={50}
-            step="0.5"
-            dir="ltr"
-            value={commissionRate}
-            onChange={(e) => setCommissionRate(e.target.value)}
-          />
         </div>
+
+        {/* The per-user rate used to be asked for HERE, and it fed the order's
+            own commission column at creation time. It is not what pays
+            anybody any more: commission comes from the rules — per store,
+            with effective dates — and accrues on delivery. Asking for a
+            number here that changes nothing is worse than not asking. */}
+        <p className="rounded-[8px] border border-[#e3e8ef] bg-[#f8fafc] p-3 text-[11px] leading-relaxed text-[#697586]">
+            العمولة لا تُضبط من هنا. تُحسب من <span className="font-bold text-[#364152]">قواعد العمولة</span>
+            {' '}لكل متجر، بتواريخ سريان، وتُستحق عند التسليم.
+        </p>
 
         <div className="rounded-[8px] border border-[#e3e8ef] p-3 space-y-3">
           <p className="text-xs font-bold text-[#121926] flex items-center gap-1.5">

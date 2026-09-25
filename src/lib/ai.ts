@@ -18,7 +18,7 @@ export interface AiBusinessContext {
   revenue: number;
   production_cost: number;
   shipping_cost: number;
-  moderator_commission: number;
+  commission: number;
   operational_expenses: number;
   net_profit: number;
   profit_margin: number;
@@ -198,7 +198,7 @@ User Question: ${question}`,
   // Context-aware intelligent fallback answer generator
   const q = question.toLowerCase();
   if (q.includes('profit') || q.includes('most profitable') || q.includes('ارباح') || q.includes('ربح')) {
-    return `Based on verified delivered orders, your most profitable product is **${context.top_profitable_product}**. Total delivered revenue is **$${context.revenue.toFixed(2)}**, generating a net profit of **$${context.net_profit.toFixed(2)}** with a net margin of **${context.profit_margin.toFixed(1)}%**. Net profit excludes rejected orders and deducts COGS, shipping ($${context.shipping_cost.toFixed(2)}), and moderator commissions ($${context.moderator_commission.toFixed(2)}).`;
+    return `Based on verified delivered orders, your most profitable product is **${context.top_profitable_product}**. Total delivered revenue is **$${context.revenue.toFixed(2)}**, generating a net profit of **$${context.net_profit.toFixed(2)}** with a net margin of **${context.profit_margin.toFixed(1)}%**. Net profit excludes rejected orders and deducts COGS, shipping ($${context.shipping_cost.toFixed(2)}), and commissions ($${context.commission.toFixed(2)}).`;
   }
 
   if (q.includes('moderator') || q.includes('agent') || q.includes('مسوق') || q.includes('مودريتور')) {

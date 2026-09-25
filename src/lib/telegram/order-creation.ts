@@ -162,7 +162,6 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
               totalAmount,
               currency: store.country.currencyCode,
               moderatorId: null,
-              moderatorCommission: 0,
               estimatedCostOfGoods,
               productNameSnapshot: productRow.name,
               productImageSnapshot: productRow.image || null,

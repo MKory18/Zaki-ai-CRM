@@ -161,7 +161,7 @@ export async function POST(
             ...(mappedStatus === 'CONFIRMED'
               ? { confirmedAt: new Date(), confirmationStatus: 'CONFIRMED', confirmedById: user.id, version: { increment: 1 } }
               : mappedStatus === 'REJECTED'
-              ? { confirmationStatus: 'REJECTED', rejectionReason: 'OTHER', rejectionNote: notes?.trim() || null, moderatorCommission: 0, version: { increment: 1 } }
+              ? { confirmationStatus: 'REJECTED', rejectionReason: 'OTHER', rejectionNote: notes?.trim() || null, version: { increment: 1 } }
               : mappedStatus === 'POSTPONED' && nextFollowUp
               ? { confirmationStatus: 'POSTPONED', postponedUntil: nextFollowUp, nextFollowUpAt: nextFollowUp, followUpStatus: 'SCHEDULED', followUpReason: 'POSTPONED', version: { increment: 1 } }
               : mappedStatus === 'NO_ANSWER'

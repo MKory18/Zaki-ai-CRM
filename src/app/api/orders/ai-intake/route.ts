@@ -159,16 +159,13 @@ export async function POST(req: Request) {
 
       // Moderator assignment — must belong to THIS company (same rule as POST /orders)
       const assignedModeratorId = p.moderatorId || (user.role === 'MODERATOR' ? user.id : null);
-      let moderatorCommission = 0;
       if (assignedModeratorId) {
         const mod = await db.user.findFirst({ where: { id: assignedModeratorId, companyId } });
         if (!mod) {
           return NextResponse.json({ error: 'الموديريتور غير موجود في شركتك' }, { status: 404 });
         }
-        if (mod.commissionRate > 0) {
-          moderatorCommission = Number(((price * mod.commissionRate) / 100).toFixed(2));
-        }
       }
+      // Commission is the ledger's and accrues on delivery — see POST /orders.
 
       const refs = await orderRefFields(db, companyId, country.orderPrefix);
       // ONE COD function (contract PART 5); no delivery fee at intake.
@@ -197,7 +194,6 @@ export async function POST(req: Request) {
           totalAmount: money.cod,
           currency: country.currencyCode,
         moderatorId: assignedModeratorId,
-        moderatorCommission,
         estimatedCostOfGoods: Number((unitCost * qty).toFixed(2)),
         productNameSnapshot: product.name,
         productImageSnapshot: product.image || null,

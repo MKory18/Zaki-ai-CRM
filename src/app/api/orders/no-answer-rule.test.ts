@@ -71,7 +71,10 @@ describe('no-answer counter', () => {
     const update = db.order.update.mock.calls[0][0].data;
     expect(update.rejectionReason).toBe('NO_ANSWER_3_ATTEMPTS');
     expect(update.confirmationStatus).toBe('CANCELLED');
-    expect(update.moderatorCommission).toBe(0);
+    // No commission to take off: the ledger accrues on DELIVERY, and this
+    // order never reached a door. The retired per-order column is not
+    // written either — it is not the commission source any more.
+    expect(update).not.toHaveProperty('moderatorCommission');
     // The reservation is released in the same transaction.
     expect(db.orderItem.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { orderId: 'o1', reservedQty: { gt: 0 } } })

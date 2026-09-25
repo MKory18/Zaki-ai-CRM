@@ -1,6 +1,13 @@
 // Frozen copy of the ORIGINAL src/lib/analytics.ts (pre-optimization).
 // Imports re-pointed relatively so it can run standalone via tsx for parity testing.
 // Do NOT modify its logic — it is the parity baseline.
+//
+// STALE ON ONE LINE, DELIBERATELY. This baseline reads commission from
+// Order.moderatorCommission, the legacy per-order column. The live engine
+// now reads the commission LEDGER, which is a different — and correct —
+// number, so the commission and net-profit lines are EXPECTED to differ and
+// the parity run is no longer a pass/fail on those two. Everything else it
+// compares still holds.
 import { db } from '../src/lib/db';
 import { calculateRealProfit } from '../src/lib/financial';
 import type { AiBusinessContext } from '../src/lib/ai';
@@ -123,7 +130,12 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
 
   // Real profit calculation (exclusively on delivered orders)
   const profitBreakdown = calculateRealProfit({
-    deliveredOrders: deliveredOrdersList,
+    // The legacy column, kept so this frozen baseline still describes what
+    // the old code did. The live path no longer reads it.
+    deliveredOrders: deliveredOrdersList.map((o: { moderatorCommission?: number | null }) => ({
+      ...(o as object),
+      commission: Number(o.moderatorCommission ?? 0),
+    })) as never,
     operationalExpenses: totalExpenses,
   });
 
@@ -298,7 +310,7 @@ export async function getCompanyAnalytics(companyId: string, filter: DateFilter 
     revenue: profitBreakdown.deliveredRevenue,
     production_cost: profitBreakdown.costOfGoodsSold,
     shipping_cost: profitBreakdown.shippingCosts,
-    moderator_commission: profitBreakdown.moderatorCommissions,
+    commission: profitBreakdown.commission,
     operational_expenses: profitBreakdown.operationalExpenses,
     net_profit: profitBreakdown.netProfit,
     profit_margin: profitBreakdown.profitMargin,

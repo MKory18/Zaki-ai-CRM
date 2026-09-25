@@ -48,7 +48,7 @@ export const TRANSACTION_TYPES = [
 export function computeFinancials(input: {
   sellingPrice: any; quantity?: any; discount?: any; shippingRevenue?: any;
   productCost?: any; packagingCost?: any; shippingCost?: any;
-  advertisingCost?: any; otherCost?: any; moderatorCommission?: any;
+  advertisingCost?: any; otherCost?: any; commission?: any;
 }): {
   subtotal: any; totalRevenue: any; totalCost: any;
   grossProfit: any; netProfit: any;
@@ -67,7 +67,7 @@ export function computeFinancials(input: {
     .add(D(input.shippingCost ?? 0))
     .add(D(input.advertisingCost ?? 0))
     .add(D(input.otherCost ?? 0))
-    .add(D(input.moderatorCommission ?? 0));
+    .add(D(input.commission ?? 0));
   const grossProfit = sub(totalRevenue, productCost);
   const netProfit = sub(totalRevenue, totalCost);
 

@@ -118,7 +118,7 @@ for (const r of data) {
       sellingPrice: collected, totalAmount: collected, deliveryFee: fee,
       shippingCost: fee, currency: 'USD', priceIncludesDelivery: true,
       productNameSnapshot: productName,
-      moderatorId: moderator?.id ?? null, moderatorCommission: 0,
+      moderatorId: moderator?.id ?? null,
       estimatedCostOfGoods: 0,
       status: isReturned ? 'RETURNED' : 'DELIVERED',
       confirmationStatus: 'CONFIRMED',
