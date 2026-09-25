@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { User, Pencil, History, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { useRegions } from '@/hooks/useRegions';
 
 /**
@@ -44,6 +45,8 @@ interface Props {
 }
 
 export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHistory }: Props) {
+  // Saves, and asks why when the server says this authority owes a reason.
+  const patchOrder = useOrderPatch();
   const { regions, countryName } = useRegions();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -80,18 +83,18 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
     setBusy(true);
     setError(null);
     try {
-      await apiJson(`/api/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          expectedVersion: order.version,
-          customerName: form.fullName,
-          customerPhone: form.phone,
-          customerAltPhone: form.altPhone.trim() || null,
-          customerAddress: form.address,
-          regionId: form.regionId || null,
-        }),
+      const res = await patchOrder(order.id, {
+        expectedVersion: order.version,
+        customerName: form.fullName,
+        customerPhone: form.phone,
+        customerAltPhone: form.altPhone.trim() || null,
+        customerAddress: form.address,
+        regionId: form.regionId || null,
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.errorAr || data.error || 'تعذر الحفظ');
+      }
       setOpen(false);
       onSaved();
     } catch (e) {

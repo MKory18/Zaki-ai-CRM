@@ -5,6 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { validateSlug, conversionRate } from '@/lib/landing-pages';
+import { standDownRedirectsTo } from '@/lib/store-redirects';
 import { buildTemplate } from '@/lib/page-templates';
 import { zodMessage } from '@/lib/zod-message';
 
@@ -117,6 +118,11 @@ export async function POST(req: Request) {
           createdById: user.id,
         },
       });
+      // A LIVE PAGE ALWAYS BEATS A REDIRECT. A slug can be free today
+      // because a redirect forwards away from it; the moment a page takes
+      // that address, the redirect would shadow the page it now names and
+      // the new page would be unreachable from its own link.
+      await standDownRedirectsTo(lp.slug);
       return NextResponse.json({ success: true, landingPage: lp }, { status: 201 });
     } catch (e: any) {
       if (e?.code === 'P2002') {

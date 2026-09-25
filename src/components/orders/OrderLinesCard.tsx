@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Package, Pencil, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { amount, type Currency } from '@/lib/format';
 import { ProductLinesEditor, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
@@ -58,6 +59,7 @@ interface Props {
 }
 
 export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSaved }: Props) {
+  const patchOrder = useOrderPatch();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,20 +129,20 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
     setBusy(true);
     setError(null);
     try {
-      await apiJson(`/api/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          expectedVersion: order.version,
-          items: draft.map((l) => ({
-            productId: l.productId,
-            quantity: l.quantity,
-            unitPrice: l.price,
-          })),
-          discountAmount: Number(form.discountAmount),
-          customerNotes: form.customerNotes.trim() || null,
-        }),
+      const res = await patchOrder(order.id, {
+        expectedVersion: order.version,
+        items: draft.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          unitPrice: l.price,
+        })),
+        discountAmount: Number(form.discountAmount),
+        customerNotes: form.customerNotes.trim() || null,
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.errorAr || data.error || 'تعذر الحفظ');
+      }
       setOpen(false);
       onSaved();
     } catch (e) {

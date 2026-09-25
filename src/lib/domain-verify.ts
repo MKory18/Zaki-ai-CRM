@@ -75,36 +75,72 @@ export function verifyRecordName(domain: string): string {
 }
 
 /**
- * Where a seller's domain must point.
+ * Where a seller's domain must point — BOTH ways it can.
  *
- * An A record needs an address, and only the deployment knows it, so
- * APP_DOMAIN is offered as a CNAME target when it is set — a CNAME survives
- * the server moving, which an address the seller typed does not. With
- * neither set the screen says it cannot tell them yet rather than inventing
- * a value that would take their shop off the air.
+ * A CNAME survives the server moving, which an address the seller typed does
+ * not, so it is offered first. But A CNAME CANNOT EXIST AT A ZONE APEX: a
+ * seller connecting `shop.com` rather than `www.shop.com` is refused the
+ * record by their registrar, and returning only the CNAME left them reading
+ * PENDING for ever while the screen told them to create something
+ * impossible. So both are returned when both are configured, and the check
+ * passes on EITHER.
+ *
+ * With neither set the screen says it cannot tell them yet rather than
+ * inventing a value that would take their shop off the air.
  */
-export function routingTarget(): { kind: 'CNAME'; value: string } | { kind: 'A'; value: string } | null {
-  const ip = process.env.APP_PUBLIC_IP?.trim();
+export interface RoutingTarget {
+  kind: 'CNAME' | 'A';
+  value: string;
+}
+
+export function routingTargets(): RoutingTarget[] {
+  const targets: RoutingTarget[] = [];
   const domain = normalizeHost(process.env.APP_DOMAIN) ?? null;
-  if (domain) return { kind: 'CNAME', value: domain };
-  if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return { kind: 'A', value: ip };
-  return null;
+  if (domain) targets.push({ kind: 'CNAME', value: domain });
+  const ip = process.env.APP_PUBLIC_IP?.trim();
+  if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) targets.push({ kind: 'A', value: ip });
+  return targets;
+}
+
+/** The one to lead with; a subdomain should use the CNAME where there is one. */
+export function routingTarget(): RoutingTarget | null {
+  return routingTargets()[0] ?? null;
+}
+
+/** Whether a hostname is a zone apex, where a CNAME is not allowed. */
+export function isApex(host: string): boolean {
+  // Two labels is an apex (shop.com); three or more is a subdomain. Good
+  // enough to ADVISE with — the check itself accepts either record, so a
+  // wrong guess here costs a hint and never a verification.
+  return host.split('.').length <= 2;
 }
 
 /** The records a seller must create, ready to show with a copy button. */
-export function requiredRecords(domain: string): { type: string; name: string; value: string; ttl: string }[] {
-  const target = routingTarget();
-  const records = [
-    { type: 'TXT', name: verifyRecordName(domain), value: verifyToken(domain), ttl: '300' },
-  ];
-  if (target) {
-    records.unshift({
+export function requiredRecords(domain: string): {
+  type: string; name: string; value: string; ttl: string; note?: string;
+}[] {
+  const host = normalizeHost(domain) ?? domain;
+  const apex = isApex(host);
+  const records: { type: string; name: string; value: string; ttl: string; note?: string }[] = [];
+
+  for (const target of routingTargets()) {
+    records.push({
       type: target.kind,
-      name: normalizeHost(domain) ?? domain,
+      name: host,
       value: target.value,
       ttl: '300',
+      note:
+        target.kind === 'CNAME'
+          ? apex
+            ? 'أغلب المُسجِّلين لا يقبلون CNAME على النطاق الجذري — استعمل سجل A أدناه'
+            : 'المفضّل: يبقى صالحاً إن تغيّر عنوان الخادم'
+          : apex
+            ? 'المناسب للنطاق الجذري'
+            : 'بديل عن CNAME',
     });
   }
+
+  records.push({ type: 'TXT', name: verifyRecordName(domain), value: verifyToken(domain), ttl: '300' });
   return records;
 }
 
@@ -171,12 +207,13 @@ export async function checkDomain(domain: string): Promise<DomainCheck> {
   const token = verifyToken(host);
   const ownership = txtRaw.some((value) => value.trim() === token);
 
-  const target = routingTarget();
-  const routing = !target
-    ? false
-    : target.kind === 'A'
-      ? a.includes(target.value)
-      : cname.some((c) => normalizeHost(c) === target.value);
+  // EITHER record counts. An apex domain cannot carry a CNAME at all, so
+  // insisting on the preferred one would leave a correctly-pointed shop
+  // reading PENDING for ever.
+  const targets = routingTargets();
+  const routing = targets.some((t) =>
+    t.kind === 'A' ? a.includes(t.value) : cname.some((c) => normalizeHost(c) === t.value)
+  );
 
   const { ssl, detail: sslDetail } = ownership && routing ? await checkSsl(host) : { ssl: 'UNKNOWN' as SslStatus, detail: undefined };
 
@@ -185,7 +222,7 @@ export async function checkDomain(domain: string): Promise<DomainCheck> {
   if (ownership && routing) {
     status = 'VERIFIED';
     detail = 'النطاق موجَّه إليك ومُتحقَّق منه.';
-  } else if (!target) {
+  } else if (targets.length === 0) {
     // Our own deployment has not been told where it lives. Not the seller's
     // fault, and not something they can fix by editing DNS.
     status = 'PENDING';
@@ -198,10 +235,8 @@ export async function checkDomain(domain: string): Promise<DomainCheck> {
     detail = `سجل TXT على ${verifyRecordName(host)} غير موجود أو قيمته مختلفة.`;
   } else {
     status = 'PENDING';
-    detail =
-      target.kind === 'CNAME'
-        ? `سجل CNAME للنطاق لا يشير إلى ${target.value}.`
-        : `سجل A للنطاق لا يشير إلى ${target.value}.`;
+    const wanted = targets.map((t) => `${t.kind} → ${t.value}`).join(' أو ');
+    detail = `سجل النطاق لا يشير إلينا بعد. المطلوب: ${wanted}.`;
   }
 
   return { status, detail, ownership, routing, ssl, sslDetail, found: { txt: txtRaw, a, cname }, checkedAt };

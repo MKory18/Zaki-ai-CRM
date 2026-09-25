@@ -9,8 +9,10 @@ vi.mock('node:dns', () => ({ promises: { resolveTxt, resolve4, resolveCname } })
 
 import {
   checkDomain,
+  isApex,
   requiredRecords,
   routingTarget,
+  routingTargets,
   verifyRecordName,
   verifyToken,
 } from './domain-verify';
@@ -76,6 +78,28 @@ describe('where the seller is told to point the domain', () => {
     expect(routingTarget()).toEqual({ kind: 'A', value: '203.0.113.9' });
   });
 
+  it('offers BOTH when both are configured — a CNAME cannot sit at a zone apex', () => {
+    process.env.APP_PUBLIC_IP = '203.0.113.9';
+    expect(routingTargets()).toEqual([
+      { kind: 'CNAME', value: 'zaki.app' },
+      { kind: 'A', value: '203.0.113.9' },
+    ]);
+  });
+
+  it('knows an apex from a subdomain, so the hint points at the right record', () => {
+    expect(isApex('shop.com')).toBe(true);
+    expect(isApex('www.shop.com')).toBe(false);
+    expect(isApex('a.b.shop.com')).toBe(false);
+  });
+
+  it('tells an apex domain to use the A record, in the record list itself', () => {
+    process.env.APP_PUBLIC_IP = '203.0.113.9';
+    const cname = requiredRecords('shop.com').find((r) => r.type === 'CNAME')!;
+    expect(cname.note).toContain('الجذري');
+    const a = requiredRecords('shop.com').find((r) => r.type === 'A')!;
+    expect(a.note).toContain('الجذري');
+  });
+
   it('says nothing rather than inventing a value that would take the shop off the air', () => {
     delete process.env.APP_DOMAIN;
     delete process.env.APP_PUBLIC_IP;
@@ -117,6 +141,8 @@ describe('what a lookup concludes', () => {
     expect(result.status).toBe('PENDING');
     expect(result.ownership).toBe(true);
     expect(result.routing).toBe(false);
+    // It names what is wanted, so somebody about to edit DNS knows what to
+    // type rather than only that something is wrong.
     expect(result.detail).toContain('zaki.app');
   });
 
@@ -147,6 +173,24 @@ describe('what a lookup concludes', () => {
     process.env.APP_PUBLIC_IP = '203.0.113.9';
     resolveTxt.mockResolvedValue([[verifyToken('shop.example.com')]]);
     resolve4.mockResolvedValue(['203.0.113.9']);
+    expect((await checkDomain('shop.example.com')).status).toBe('VERIFIED');
+  });
+
+  it('an apex domain on an A record verifies, though a CNAME is also offered', async () => {
+    // The bug: with APP_DOMAIN set, only the CNAME was checked. An apex
+    // domain cannot carry one, so a correctly-pointed shop read PENDING for
+    // ever while the screen told it to create an impossible record.
+    process.env.APP_PUBLIC_IP = '203.0.113.9';
+    resolveTxt.mockResolvedValue([[verifyToken('shop.com')]]);
+    resolve4.mockResolvedValue(['203.0.113.9']);
+    resolveCname.mockResolvedValue([]);
+    expect((await checkDomain('shop.com')).status).toBe('VERIFIED');
+  });
+
+  it('and a subdomain on the CNAME verifies just the same', async () => {
+    process.env.APP_PUBLIC_IP = '203.0.113.9';
+    resolveTxt.mockResolvedValue([[verifyToken('shop.example.com')]]);
+    resolveCname.mockResolvedValue(['zaki.app']);
     expect((await checkDomain('shop.example.com')).status).toBe('VERIFIED');
   });
 

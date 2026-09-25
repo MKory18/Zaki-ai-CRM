@@ -91,10 +91,17 @@ export function StorePagesScreen() {
     setSaving(true);
     setMsg(null);
     try {
-      const n = pages.length + 1;
+      // The first address nothing already holds. `page-${count + 1}` looked
+      // fine until a page was deleted or renamed: the count then pointed at
+      // a slug that already existed, the save was refused, and every retry
+      // was refused the same way — the seller could not add a page at all
+      // without renaming an old one by hand.
+      const taken = new Set(pages.map((p) => p.slug));
+      let n = pages.length + 1;
+      while (taken.has(`page-${n}`)) n += 1;
       const { page } = await apiJson<{ page: PageRow }>('/api/store/pages', {
         method: 'POST',
-        body: JSON.stringify({ slug: `page-${n}`, title: 'صفحة جديدة', body: '', sortOrder: n * 10 }),
+        body: JSON.stringify({ slug: `page-${n}`, title: 'صفحة جديدة', body: '', sortOrder: (pages.length + 1) * 10 }),
       });
       await load();
       open(page);

@@ -30,7 +30,7 @@ interface Payload {
   domain: string | null;
   verifiedAt: string | null;
   lastCheck: DomainCheck | null;
-  records: { type: string; name: string; value: string; ttl: string }[];
+  records: { type: string; name: string; value: string; ttl: string; note?: string }[];
   target: { kind: string; value: string } | null;
   storefrontEnabled: boolean;
   publicPath: string;
@@ -282,8 +282,9 @@ export function StoreDomainScreen() {
               <div className={CARD}>
                 <p className="text-sm font-bold text-[#121926]">السجلّات المطلوبة</p>
                 <p className="mb-3 mt-1 text-[11px] leading-relaxed text-[#697586]">
-                  أضف هذه السجلّات في لوحة إدارة النطاق عند المُسجِّل الذي اشتريت منه، ثم اضغط «تحقّق الآن».
-                  انتشار السجلّات قد يستغرق من دقائق إلى ساعات.
+                  أضف سجل TXT، <strong>وواحداً</strong> من سجلّي التوجيه (أيّهما يقبله مُسجِّلك لهذا
+                  النطاق)، في لوحة إدارة النطاق، ثم اضغط «تحقّق الآن». انتشار السجلّات قد يستغرق من
+                  دقائق إلى ساعات.
                 </p>
                 {data.records.length === 0 || !data.target ? (
                   <p className="rounded-lg border border-[#f59e0b]/40 bg-[#f59e0b]/10 p-3 text-[11px] leading-relaxed text-[#92400e]">
@@ -294,11 +295,20 @@ export function StoreDomainScreen() {
                 ) : (
                   <div className="space-y-3">
                     {data.records.map((record, i) => (
-                      <div key={i} className="grid gap-2 rounded-lg border border-[#e3e8ef] p-2.5 sm:grid-cols-4">
-                        <CopyField label="النوع" value={record.type} />
-                        <CopyField label="الاسم" value={record.name} />
-                        <CopyField label="القيمة" value={record.value} />
-                        <CopyField label="TTL" value={record.ttl} />
+                      <div key={i} className="rounded-lg border border-[#e3e8ef] p-2.5">
+                        <div className="grid gap-2 sm:grid-cols-4">
+                          <CopyField label="النوع" value={record.type} />
+                          <CopyField label="الاسم" value={record.name} />
+                          <CopyField label="القيمة" value={record.value} />
+                          <CopyField label="TTL" value={record.ttl} />
+                        </div>
+                        {/* A CNAME cannot exist at a zone apex, so the note
+                            says which of the two to use for THIS hostname
+                            rather than leaving the seller to find out from a
+                            registrar's refusal. */}
+                        {record.note && (
+                          <p className="mt-1.5 text-[10.5px] text-[#9aa4b2]">{record.note}</p>
+                        )}
                       </div>
                     ))}
                   </div>

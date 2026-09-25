@@ -149,12 +149,20 @@ export function StoreThemeScreen() {
     setMsg(null);
     try {
       const body = source === 'builtin' ? { source, key: payload } : { source, file: payload };
-      const res = await apiJson<{ installed: string }>('/api/store/templates', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
+      const res = await apiJson<{ installed: string; theme: StoreTheme; themeApplied: boolean }>(
+        '/api/store/templates',
+        { method: 'POST', body: JSON.stringify(body) }
+      );
       await load();
-      setMsg({ ok: true, text: `ثُبِّت «${res.installed}» كمسوّدة — عاينه في «التصميم» ثم انشره` });
+      // The palette comes back as a PROPOSAL, not something already saved:
+      // stores.theme is what every live page renders from, so installing
+      // must not repaint the shop. It lands here as an unsaved change the
+      // seller saves when they mean it — which is why the message says so.
+      setTheme(res.theme);
+      setMsg({
+        ok: true,
+        text: `ثُبِّت «${res.installed}»: الصفحة مسوّدة في «التصميم»، وألوانه معروضة هنا غير محفوظة — اضغط «حفظ» لتطبيقها على المتجر`,
+      });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر التثبيت' });
     } finally {

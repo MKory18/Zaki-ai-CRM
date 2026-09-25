@@ -108,9 +108,15 @@ export async function POST(req: Request) {
 
     await db.store.update({
       where: { id: store.id },
-      // Draft only. A template is a starting point, and the seller looks at
-      // it before any customer does.
-      data: { theme: JSON.stringify(theme), homeDraft: JSON.stringify(sections) },
+      // THE DRAFT, AND ONLY THE DRAFT.
+      //
+      // `stores.theme` is what every live storefront page and every
+      // published landing page renders from, so writing it here would
+      // repaint the whole shop the instant a seller pressed "try this one"
+      // — while this route and the screen both told them it was a draft.
+      // The template's palette is RETURNED instead, for the theme editor to
+      // hold as an unsaved change the seller saves deliberately.
+      data: { homeDraft: JSON.stringify(sections) },
     });
 
     await logAudit({
@@ -119,7 +125,10 @@ export async function POST(req: Request) {
       newData: { source: request.source, template: label, sections: sections.length },
     });
 
-    return NextResponse.json({ theme, sections, installed: label });
+    // `theme` is a proposal, not a saved value: the screen shows it as an
+    // unsaved change. `themeApplied: false` says so out loud, so no caller
+    // can read this response as "the shop is repainted".
+    return NextResponse.json({ theme, sections, installed: label, themeApplied: false });
   } catch (e) {
     return apiErrorResponse(e);
   }

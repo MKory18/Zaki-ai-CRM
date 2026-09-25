@@ -69,16 +69,23 @@ export function landingSlugOf(from: string): string | null {
 /**
  * Whether this store may claim this `from` path.
  *
- * WHY THIS EXISTS. The public space is shared: /lp/<slug> is one address for
- * every company. Without this, store A could add a redirect for
- * /lp/<store-B's-live-slug> and take B's paid traffic to A's shop. So:
+ * WHY THIS EXISTS, TWICE OVER. The public space is shared: /lp/<slug> is one
+ * address for every company.
  *
- *  - A path under this store's own /s/<slug>/ is always allowed.
- *  - /lp/<slug> is allowed while NO OTHER company's page holds that slug —
- *    which is exactly the case after a rename, when the old slug is free.
- *    A slug another company's page is live on is refused.
- *  - Anything else (a dashboard path, another store's /s/) is refused: a
- *    redirect is for the shop's own old addresses, not for the app's.
+ *  - Without a check, store A could add a redirect for store B's live slug
+ *    and take B's paid traffic to A's shop.
+ *  - And without the SAME check against its own company, a shop could
+ *    redirect away from its OWN published page and quietly take it off the
+ *    air — the paths differ, so the self-redirect guard never sees it.
+ *
+ * So the rule is one rule, and it is about the address rather than about who
+ * asks: A LIVE PAGE ALWAYS WINS. A slug that any page currently holds cannot
+ * be redirected away from, whoever owns it. A slug nobody holds can — which
+ * is exactly the case after a rename, when the old address is free and the
+ * advertisement is still pointing at it.
+ *
+ * A path under this store's own /s/<slug>/ is always allowed; anything else,
+ * including the app's own paths and another store's, is refused.
  */
 export async function mayClaimFrom(
   from: string,
@@ -94,12 +101,15 @@ export async function mayClaimFrom(
     };
   }
 
-  const live = await db.landingPage.findFirst({
-    where: { slug, companyId: { not: store.companyId } },
-    select: { id: true },
-  });
+  const live = await db.landingPage.findFirst({ where: { slug }, select: { id: true, companyId: true } });
   if (live) {
-    return { ok: false, error: 'هذا العنوان تستعمله صفحة تابعة لشركة أخرى — لا يمكن تحويله من هنا' };
+    return {
+      ok: false,
+      error:
+        live.companyId === store.companyId
+          ? 'هذا العنوان تستعمله صفحة عندك الآن — تحويله سيُخفيها عن الزبائن'
+          : 'هذا العنوان تستعمله صفحة تابعة لشركة أخرى — لا يمكن تحويله من هنا',
+    };
   }
   return { ok: true };
 }
@@ -169,6 +179,28 @@ export function countRedirectHit(id: string): void {
   void db.storeRedirect
     .update({ where: { id }, data: { hits: { increment: 1 } } })
     .catch(() => {});
+}
+
+/**
+ * A redirect whose `from` is now a live page's address is stood down.
+ *
+ * A LIVE PAGE ALWAYS WINS: an address that names a page must answer with
+ * that page, not forward past it. Deactivated rather than deleted, so the
+ * seller can see what happened and turn it back on if they meant it.
+ *
+ * NOT scoped to the company, deliberately. /lp/<slug> is one address for
+ * everybody, and a redirect claimed by another company while the slug was
+ * free would otherwise keep sending this page's visitors away — the page
+ * would be unreachable and its owner would have nothing to look at. The
+ * redirect was only ever allowed because nothing held the slug; something
+ * does now.
+ */
+export async function standDownRedirectsTo(slug: string) {
+  const stood = await db.storeRedirect.updateMany({
+    where: { from: `/lp/${slug}`, isActive: true },
+    data: { isActive: false },
+  });
+  if (stood.count > 0) forgetRedirects();
 }
 
 /**

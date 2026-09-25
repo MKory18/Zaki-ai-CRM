@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db } = vi.hoisted(() => ({
-  db: { landingPage: { findFirst: vi.fn() }, storeRedirect: { findMany: vi.fn(), upsert: vi.fn(), update: vi.fn() } },
+  db: {
+    landingPage: { findFirst: vi.fn() },
+    storeRedirect: { findMany: vi.fn(), upsert: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+  },
 }));
 vi.mock('./db', () => ({ db }));
 
 import {
   isSelfRedirect,
+  standDownRedirectsTo,
   landingSlugOf,
   mayClaimFrom,
   redirectCreateSchema,
@@ -29,14 +33,21 @@ describe('a shop cannot forward somebody else’s address', () => {
   it('refuses /lp/<slug> while another company’s page holds that slug', async () => {
     // Without this, store A adds a redirect for B's live address and takes
     // B's already-paid traffic to A's shop.
-    db.landingPage.findFirst.mockResolvedValue({ id: 'other-company-page' });
+    db.landingPage.findFirst.mockResolvedValue({ id: 'other-company-page', companyId: 'c2' });
     const verdict = await mayClaimFrom('/lp/their-offer', STORE);
     expect(verdict.ok).toBe(false);
-    // The check looks outside this company, which is the whole point.
-    expect(db.landingPage.findFirst.mock.calls[0][0].where).toMatchObject({
-      slug: 'their-offer',
-      companyId: { not: 'c1' },
-    });
+    // The lookup is about the ADDRESS, not about who asks: a live page wins
+    // whoever owns it.
+    expect(db.landingPage.findFirst.mock.calls[0][0].where).toMatchObject({ slug: 'their-offer' });
+  });
+
+  it('refuses one of the shop’s OWN live pages — that would take it off the air', async () => {
+    // The paths differ, so the self-redirect guard never sees this one.
+    db.landingPage.findFirst.mockResolvedValue({ id: 'my-own-page', companyId: 'c1' });
+    const verdict = await mayClaimFrom('/lp/my-live-offer', STORE);
+    expect(verdict.ok).toBe(false);
+    if (verdict.ok) return;
+    expect(verdict.error).toContain('صفحة عندك');
   });
 
   it('allows a slug nobody else holds — which is the case right after a rename', async () => {
@@ -58,6 +69,31 @@ describe('a shop cannot forward somebody else’s address', () => {
     for (const from of ['/orders', '/dashboard', '/admin/users', '/login', '/']) {
       expect((await mayClaimFrom(from, STORE)).ok, from).toBe(false);
     }
+  });
+});
+
+describe('a live page always beats a redirect', () => {
+  it('a page taking a slug stands down whatever forwards away from it', async () => {
+    db.storeRedirect.updateMany.mockResolvedValue({ count: 1 });
+    await standDownRedirectsTo('now-a-page');
+    const call = db.storeRedirect.updateMany.mock.calls[0][0];
+    expect(call.where).toMatchObject({ from: '/lp/now-a-page', isActive: true });
+    expect(call.data).toEqual({ isActive: false });
+  });
+
+  it('whoever owns it — the address is one space for every company', async () => {
+    // A redirect another company claimed while the slug was free would
+    // otherwise keep sending this page's visitors away, and its owner would
+    // have nothing to look at.
+    db.storeRedirect.updateMany.mockResolvedValue({ count: 1 });
+    await standDownRedirectsTo('x');
+    expect(db.storeRedirect.updateMany.mock.calls[0][0].where.companyId).toBeUndefined();
+  });
+
+  it('deactivated, not deleted, so the seller can see it happened', async () => {
+    db.storeRedirect.updateMany.mockResolvedValue({ count: 1 });
+    await standDownRedirectsTo('x');
+    expect(db.storeRedirect.updateMany.mock.calls[0][0].data).toEqual({ isActive: false });
   });
 });
 

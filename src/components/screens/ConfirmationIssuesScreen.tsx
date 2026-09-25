@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Loader2, PencilLine, Ban, X } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { useRegions } from '@/hooks/useRegions';
 import { arDateTime } from '@/lib/format';
 
@@ -86,6 +87,7 @@ const FIELD_LABEL: Record<keyof Draft, string> = {
 };
 
 export function ConfirmationIssuesScreen() {
+  const patchOrder = useOrderPatch();
   const [issues, setIssues] = useState<Issue[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -151,17 +153,17 @@ export function ConfirmationIssuesScreen() {
     try {
       // 1. The correction itself, through the ordinary order edit: phone rule,
       //    duplicate check and version guard all apply here and nowhere else.
-      await apiJson(`/api/orders/${issue.order.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          expectedVersion: issue.order.version,
-          customerName: draft.fullName,
-          customerPhone: draft.phone,
-          customerAddress: draft.address,
-          regionId: draft.regionId || null,
-        }),
+      const res = await patchOrder(issue.order.id, {
+        expectedVersion: issue.order.version,
+        customerName: draft.fullName,
+        customerPhone: draft.phone,
+        customerAddress: draft.address,
+        regionId: draft.regionId || null,
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.errorAr || data.error || 'تعذر حفظ التصحيح');
+      }
 
       // 2. Only once the data is actually fixed does the issue close. If this
       //    fails the correction still stands and the issue stays visible —

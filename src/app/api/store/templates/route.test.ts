@@ -44,20 +44,29 @@ beforeEach(() => {
 });
 
 describe('installing from the gallery', () => {
-  it('writes the draft and the theme, and never the live page', async () => {
+  it('writes the draft, and ONLY the draft', async () => {
+    // stores.theme is what every live storefront page and every published
+    // landing page renders from. Writing it here would repaint the whole
+    // shop the instant a seller pressed "try this one" — while the screen
+    // told them it was a draft.
     const res = await post({ source: 'builtin', key: PAGE_TEMPLATES[0].key });
     expect(res.status).toBe(200);
     const data = db.store.update.mock.calls[0][0].data;
-    expect(Object.keys(data).sort()).toEqual(['homeDraft', 'theme']);
+    expect(Object.keys(data)).toEqual(['homeDraft']);
     expect(JSON.parse(data.homeDraft).length).toBeGreaterThan(0);
   });
 
-  it('keeps the shop settings the template has no opinion about', async () => {
+  it('hands the palette back as a proposal, and says it is not applied', async () => {
+    const body = await (await post({ source: 'builtin', key: PAGE_TEMPLATES[0].key })).json();
+    expect(body.themeApplied).toBe(false);
+    expect(body.theme.accent).toBeTruthy();
+  });
+
+  it('and that proposal keeps the shop settings the template has no opinion about', async () => {
     // A template is a look. It must not empty the footer's copyright, the
     // header height or the checkout wording the seller set.
-    await post({ source: 'builtin', key: PAGE_TEMPLATES[0].key });
-    const theme = JSON.parse(db.store.update.mock.calls[0][0].data.theme);
-    expect(theme.footer.copyright).toBe('© صحة بلس');
+    const body = await (await post({ source: 'builtin', key: PAGE_TEMPLATES[0].key })).json();
+    expect(body.theme.footer.copyright).toBe('© صحة بلس');
   });
 
   it('refuses a key it does not know, rather than installing something else', async () => {
@@ -87,6 +96,7 @@ describe('installing from a file', () => {
     const written = db.store.update.mock.calls[0][0].data.homeDraft;
     expect(written).not.toContain('/api/media/');
     expect(written).toContain('مرحباً');
+    expect(Object.keys(db.store.update.mock.calls[0][0].data)).toEqual(['homeDraft']);
   });
 
   it('a file that is not one is refused, and nothing is written', async () => {

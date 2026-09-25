@@ -8,7 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { validateSlug, clampStoredHtml, conversionRate } from '@/lib/landing-pages';
 import { validateDomain, forgetHost, dashboardHosts } from '@/lib/landing-domain';
 import { zodMessage } from '@/lib/zod-message';
-import { forgetRedirects, suggestSlugRedirect } from '@/lib/store-redirects';
+import { standDownRedirectsTo, suggestSlugRedirect } from '@/lib/store-redirects';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -202,7 +202,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
         // slug that some old redirect forwards away from, that redirect would
         // shadow the page it now names — the address would answer with
         // somewhere else. Stand it down rather than let it win.
-        await standDownRedirectsTo(companyId, updated.slug);
+        await standDownRedirectsTo(updated.slug);
       }
       await logAudit({
         companyId,
@@ -231,22 +231,6 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const { body, status } = apiError(error);
     return NextResponse.json(body, { status });
   }
-}
-
-/**
- * A redirect whose `from` is now a live page's address is stood down.
- *
- * The page wins: an address that names a page must answer with that page.
- * Deactivated rather than deleted, so the seller can see what happened and
- * turn it back on if they meant it.
- */
-async function standDownRedirectsTo(companyId: string, slug: string) {
-  const from = `/lp/${slug}`;
-  const stood = await db.storeRedirect.updateMany({
-    where: { companyId, from, isActive: true },
-    data: { isActive: false },
-  });
-  if (stood.count > 0) forgetRedirects();
 }
 
 /** Forget the hosts that serve this page: its own domain and its store's. */

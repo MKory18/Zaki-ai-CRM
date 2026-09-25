@@ -38,6 +38,34 @@ describe('landing-page analytics are read on the performance screen', () => {
   });
 });
 
+describe('every order edit goes through the one that can answer «why»', () => {
+  it('no screen PATCHes an order directly', () => {
+    // An edit on company-wide authority is refused with REASON_REQUIRED, and
+    // useOrderPatch is what turns that into the question. A call site that
+    // skips it is a 400 the person can never get past — which is exactly
+    // what three of them were until the review found it.
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) { walk(full); continue; }
+        if (!/\.tsx?$/.test(entry.name) || entry.name.endsWith('.test.tsx') || entry.name.endsWith('.test.ts')) continue;
+        if (full.endsWith('useOrderPatch.ts')) continue;
+        const src = read(full);
+        if (!/api\/orders\/\$\{[^}]+\}`,\s*\{\s*\n?\s*method:\s*'PATCH'/m.test(src)) continue;
+        // Carrying out an APPROVED change request is the one exemption, and
+        // the server grants it: that door already wrote its own reason into
+        // the audit, and strayFields refuses anything sent beside the id —
+        // so a reason added here would turn a working apply into a 400.
+        if (src.includes('changeRequestId')) continue;
+        offenders.push(full);
+      }
+    };
+    walk('src/components');
+    expect(offenders, 'these must use useOrderPatch').toEqual([]);
+  });
+});
+
 describe('the store logo and favicon have one editor', () => {
   it('only the identity card writes them', () => {
     // Every other screen that shows a logo shows it; StoreBrandField is the
