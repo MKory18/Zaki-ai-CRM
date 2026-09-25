@@ -182,6 +182,22 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     ],
   },
   {
+    // The shop's own face: how it looks, what it says, and the address it
+    // answers on. Separate from geo.manage, which is about which countries
+    // and stores EXIST — a designer may lay out the storefront without
+    // being able to open or close a store.
+    module: 'storefront',
+    items: [
+      { key: 'storefront.view', ar: 'عرض واجهة المتجر', en: 'View storefront' },
+      { key: 'storefront.manage', ar: 'تصميم واجهة المتجر ومحتواها', en: 'Design storefront & content' },
+      // storefront.publish and storefront.domain belong here too, and are
+      // deliberately NOT declared yet: the screens that would enforce them
+      // are not built. A permission on the matrix that nothing checks is a
+      // promise to an owner that the system does not keep, which is why
+      // permission-catalog.test refuses one.
+    ],
+  },
+  {
     module: 'landing_pages',
     items: [
       { key: 'landing_pages.view', ar: 'عرض صفحات الهبوط', en: 'View landing pages' },
@@ -258,6 +274,7 @@ export const MODULE_LABELS: Record<string, { ar: string; en: string }> = {
   whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
   telegram: { ar: 'تيليجرام', en: 'Telegram' },
   landing_pages: { ar: 'صفحات الهبوط', en: 'Landing Pages' },
+  storefront: { ar: 'واجهة المتجر', en: 'Storefront' },
 };
 
 /** Scope display labels (ar/en). */

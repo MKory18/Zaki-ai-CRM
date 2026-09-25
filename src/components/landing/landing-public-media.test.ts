@@ -90,6 +90,35 @@ describe('a published block page', () => {
   });
 });
 
+describe('the store owns the look, and the page inherits it', () => {
+  it('a page with no theme of its own wears its store’s colour', async () => {
+    db.landingPage.findFirst.mockResolvedValue({
+      ...page,
+      theme: null,
+      store: { countryId: 'c', name: 'صحة بلس', logo: null, favicon: null, supportPhone: null,
+               theme: JSON.stringify({ accent: '#0a7d32', mood: 'calm', font: 'tajawal', corners: 'sharp', pageImage: '', pageVeil: 0.8 }),
+               country: { code: 'SY', currencyCode: 'USD' } },
+    });
+    const text = renderedProps(await LandingPageView({ target: { slug: 'offer' } })).join('\n');
+    expect(text).toContain('#0a7d32');
+  });
+
+  it('and a page that overrides departs from it, keeping what it did not touch', async () => {
+    db.landingPage.findFirst.mockResolvedValue({
+      ...page,
+      theme: JSON.stringify({ accent: '#ff00ff' }),
+      store: { countryId: 'c', name: 'صحة بلس', logo: null, favicon: null, supportPhone: null,
+               theme: JSON.stringify({ accent: '#0a7d32', mood: 'calm', font: 'tajawal', corners: 'sharp', pageImage: '', pageVeil: 0.8 }),
+               country: { code: 'SY', currencyCode: 'USD' } },
+    });
+    const text = renderedProps(await LandingPageView({ target: { slug: 'offer' } })).join('\n');
+    expect(text).toContain('#ff00ff');
+    expect(text).not.toContain('#0a7d32');
+    // corners came from the store, which the page never overrode
+    expect(text).toContain('"--lp-radius":"4px"');
+  });
+});
+
 describe('a preview of a draft', () => {
   it('keeps the private links: the signed-in seller can see them, and they never expire', async () => {
     db.landingPage.findFirst.mockResolvedValue({ ...page, isPublished: false });

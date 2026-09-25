@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Phone, ChevronLeft } from 'lucide-react';
 import type { Storefront } from '@/lib/storefront';
-import { paletteFor, paletteVars } from '@/lib/landing-theme';
+import { storeThemeVars } from '@/lib/store-theme';
 import { BLOCK_CSS, fontHref } from '@/components/landing/blocks/styles';
 import { STOREFRONT_CSS } from './styles';
 
@@ -24,16 +24,21 @@ export function StorefrontShell({
   /** Shown on inner pages; the home page has nowhere to go back to. */
   back?: { href: string; label: string };
 }) {
-  const palette = paletteFor(store.theme);
+  // Every variable the shop paints itself with, in one call: the palette
+  // derived from the accent, plus the eight the seller may name and the
+  // header's own height and colour. No component writes a hex.
+  const vars = storeThemeVars(store.theme);
   const href = fontHref(store.theme.font);
   const home = `/s/${store.slug}`;
+  const header = store.theme.header;
+  const footer = store.theme.footer;
 
   return (
-    <div dir="rtl" className="lp-root sf-root" style={paletteVars(palette) as React.CSSProperties}>
+    <div dir="rtl" className="lp-root sf-root" style={vars as React.CSSProperties}>
       {href && <link rel="stylesheet" href={href} />}
       <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS + STOREFRONT_CSS }} />
 
-      <header className="sf-header">
+      <header className={header?.sticky === false ? 'sf-header' : 'sf-header sf-header-sticky'}>
         <div className="sf-header-inner">
           <Link href={home} className="sf-brand">
             {store.logo && (
@@ -70,15 +75,23 @@ export function StorefrontShell({
 
       <footer className="lp-footer">
         {store.about && <p className="sf-about">{store.about}</p>}
+        {footer?.links?.length ? (
+          <nav className="sf-footer-links">
+            {footer.links.map((link, i) => (
+              // Plain anchors: a footer link may point outside the shop, and
+              // the schema has already refused anything that is not an
+              // internal path or an http(s) address.
+              <a key={i} href={link.href}>{link.label}</a>
+            ))}
+          </nav>
+        ) : null}
         {store.supportPhone && (
           <a className="lp-footer-phone" href={`tel:${store.supportPhone.replace(/[^\d+]/g, '')}`} dir="ltr">
             <Phone size={14} />
             {store.supportPhone}
           </a>
         )}
-        <p>
-          {store.name} — جميع الحقوق محفوظة
-        </p>
+        <p>{footer?.copyright?.trim() || `${store.name} — جميع الحقوق محفوظة`}</p>
       </footer>
     </div>
   );

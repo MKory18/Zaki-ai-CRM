@@ -15,19 +15,32 @@ function userWith(keys: string[], role = 'MODERATOR') {
 }
 
 describe('navigation contract', () => {
-  it('has the ten groups in contract order', () => {
+  it('has the eleven groups in contract order', () => {
+    // «واجهة المتجر» is the store section: how the shop looks and what it
+    // says, as against /settings, which is how the system runs.
     expect(NAV.map((g) => g.label)).toEqual([
       'الرئيسية', 'مركز التأكيد', 'التشغيل', 'المخزون', 'المال',
-      'الرقابة', 'النمو', 'التطبيقات', 'الإعدادات', 'الإدارة',
+      'الرقابة', 'النمو', 'واجهة المتجر', 'التطبيقات', 'الإعدادات', 'الإدارة',
     ]);
   });
 
-  it('lists 52 unique routes', () => {
+  it('lists 53 unique routes', () => {
     // 52 until /ops/labels was folded into the shipping batches screen:
     // printing, the sizes and the courier CSV all live where the batch is.
+    // 53 with /store/themes. A screen is registered when it is real — the
+    // store section's remaining screens join this count as they ship, and
+    // nothing here renders "قيد الإنشاء".
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(52);
-    expect(new Set(paths).size).toBe(52);
+    expect(paths).toHaveLength(53);
+    expect(new Set(paths).size).toBe(53);
+  });
+
+  it('the store section is its own group, and reads as one', () => {
+    const group = NAV.find((g) => g.key === 'storefront')!;
+    expect(group.label).toBe('واجهة المتجر');
+    // Not «المتجر»: «متجر التطبيقات» is a different thing one group below.
+    expect(group.label).not.toBe('المتجر');
+    for (const route of group.routes) expect(route.path.startsWith('/store/')).toBe(true);
   });
 
   it('no longer carries a separate labels page', () => {

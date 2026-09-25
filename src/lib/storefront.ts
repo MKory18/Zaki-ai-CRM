@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { db } from './db';
-import { DEFAULT_THEME, type LandingTheme } from './landing-theme';
+import { type LandingTheme } from './landing-theme';
+import { DEFAULT_STORE_THEME, parseStoreTheme, type StoreTheme } from './store-theme';
 import { publicizeMedia } from './public-media';
 
 /**
@@ -51,7 +52,12 @@ export interface Storefront {
   supportPhone: string | null;
   domain: string | null;
   type: 'SINGLE_PRODUCT' | 'MULTI_PRODUCT';
-  theme: LandingTheme;
+  /**
+   * The store's whole template — the palette AND the header, footer,
+   * product display, checkout and home order. A LandingTheme is a valid
+   * StoreTheme, so this stays assignable everywhere a palette was wanted.
+   */
+  theme: StoreTheme;
   currencyCode: string;
   countryCode: string;
   countryId: string;
@@ -60,16 +66,21 @@ export interface Storefront {
   landingPageId: string | null;
 }
 
-/** The stored theme, or the house one when it is missing or corrupt. */
-export function storeTheme(raw: string | null | undefined): LandingTheme {
-  if (!raw) return DEFAULT_THEME;
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? { ...DEFAULT_THEME, ...parsed } : DEFAULT_THEME;
-  } catch {
-    return DEFAULT_THEME;
-  }
+/**
+ * The stored theme, or the house one when it is missing or corrupt.
+ *
+ * One parser, in src/lib/store-theme.ts: it falls back part by part, so a
+ * header height this code refuses does not cost the shop its colour. This
+ * used to spread the raw JSON over the defaults with no validation at all,
+ * which meant a corrupt field reached the page as-is.
+ */
+export function storeTheme(raw: string | null | undefined): StoreTheme {
+  return parseStoreTheme(raw);
 }
+
+/** Re-exported so callers reaching for a default do not import two modules. */
+export { DEFAULT_STORE_THEME };
+export type { LandingTheme };
 
 /**
  * The storefront at this slug, or null.

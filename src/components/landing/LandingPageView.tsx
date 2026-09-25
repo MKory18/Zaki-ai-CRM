@@ -12,6 +12,7 @@ import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixe
 import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { parseSections, ensureForm } from '@/lib/landing-sections';
 import { paletteFor, paletteVars, DEFAULT_THEME } from '@/lib/landing-theme';
+import { parseStoreTheme, themeForPage } from '@/lib/store-theme';
 import { loadStoreFonts } from '@/lib/fonts/load-store-fonts';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref } from '@/components/landing/blocks/styles';
@@ -70,14 +71,21 @@ async function fetchOffers(companyId: string, productId: string | null) {
   }));
 }
 
-/** The stored theme, or the default when missing or corrupt — a page with bad theme JSON still sells. */
-function safeTheme(raw: string | null | undefined): Partial<typeof DEFAULT_THEME> {
-  if (!raw) return DEFAULT_THEME;
+/**
+ * A page's OVERRIDE of its store's theme, or nothing.
+ *
+ * The store owns the look now. A page that saved no theme of its own wears
+ * its store's template, which is why an absent value is `null` here rather
+ * than DEFAULT_THEME — returning the house theme would have every page
+ * silently overriding its store with the factory colours.
+ */
+function pageThemeOverride(raw: string | null | undefined): Partial<typeof DEFAULT_THEME> | null {
+  if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : DEFAULT_THEME;
+    return parsed && typeof parsed === 'object' ? parsed : null;
   } catch {
-    return DEFAULT_THEME;
+    return null;
   }
 }
 
@@ -118,7 +126,7 @@ const PAGE_SELECT = {
   storeId: true,
   store: {
     select: {
-      countryId: true, name: true, logo: true, favicon: true, supportPhone: true,
+      countryId: true, name: true, logo: true, favicon: true, supportPhone: true, theme: true,
       country: { select: { code: true, currencyCode: true } },
     },
   },
@@ -259,7 +267,9 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   // Nothing on it is untrusted, because nothing on it was written as
   // markup — the seller chose blocks and filled in text.
   if (sections.length > 0) {
-    const theme = forVisitors(safeTheme(lp.theme));
+    // The store is the template; the page may depart from it. One place
+    // decides, so a shop cannot end up with two answers to what colour it is.
+    const theme = forVisitors(themeForPage(parseStoreTheme(lp.store?.theme), pageThemeOverride(lp.theme)));
     const palette = paletteFor(theme);
     // The theme's font AND every font a block chose.
     const href = fontHref(theme.font ?? DEFAULT_THEME.font, ...sections.map((b) => b.look?.text?.font));

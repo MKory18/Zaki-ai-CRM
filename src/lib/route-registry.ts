@@ -116,6 +116,20 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    // The shop's own face. Named «واجهة المتجر» and not «المتجر», because
+    // «متجر التطبيقات» sits one group below and two menu entries that both
+    // read "store" are two entries nobody can tell apart.
+    //
+    // The rule that divides this group from /settings: anything about how
+    // the shop LOOKS or what it SAYS lives here; anything about how the
+    // system RUNS lives there. No field appears in both.
+    key: 'storefront',
+    label: 'واجهة المتجر',
+    routes: [
+      r('/store/themes', 'القوالب', 'Palette', ['storefront.view', 'storefront.manage']),
+    ],
+  },
+  {
     key: 'apps',
     label: 'التطبيقات',
     routes: [

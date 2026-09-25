@@ -52,10 +52,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       forgetHost(typeof data.domain === 'string' ? data.domain : null);
     }
 
-    // The theme is stored as JSON, like a landing page's.
-    if (parsed.data.theme !== undefined) {
-      data.theme = parsed.data.theme ? JSON.stringify(parsed.data.theme) : null;
-    }
+    // The theme is NOT written here. It has one editor
+    // (PATCH /api/store/theme), and `.strict()` on the schema means a body
+    // that carries one is refused rather than quietly ignored.
 
     // ── The storefront, as it would be after this save ──
     // A store with many products has no front page: turning a Single Product

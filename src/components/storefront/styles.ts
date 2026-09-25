@@ -12,21 +12,43 @@ export const STOREFRONT_CSS = `
 
 /* ── header ── */
 .sf-header {
-  background: var(--lp-card);
+  /* Both from the store's template (storeThemeVars), with the derived
+     palette as the fallback — a shop that set neither looks as it always
+     did, and no colour or height is written here as a literal. */
+  background: var(--lp-header-bg, var(--lp-card));
   border-bottom: 1px solid var(--lp-border);
+  z-index: 20;
+}
+/* Sticky is a setting, so it is a class the shell adds, not a rule that
+   always applies. */
+.sf-header-sticky {
   position: sticky;
   top: 0;
-  z-index: 20;
 }
 .sf-header-inner {
   max-width: 1100px;
   margin: 0 auto;
+  /* The seller's header height, less the padding the content needs. */
+  min-height: var(--lp-header-h, 72px);
   padding: 12px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
+.sf-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  margin-bottom: 10px;
+}
+.sf-footer-links a {
+  color: var(--lp-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+.sf-footer-links a:hover { color: var(--lp-accent); }
 .sf-brand {
   display: flex;
   align-items: center;

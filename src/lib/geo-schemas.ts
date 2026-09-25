@@ -83,7 +83,11 @@ export const storeUpdateSchema = z
     // ─── The store's public face ───
     // '' clears a field; the storefront then simply shows one thing less.
     storefrontEnabled: z.boolean(),
-    theme: landingThemeSchema.nullable(),
+    // `theme` is deliberately absent. The store's look has one editor —
+    // PATCH /api/store/theme, under storefront.manage — and it writes the
+    // WHOLE theme: the palette plus the header, footer, product display,
+    // checkout and home order. Accepting a theme here too meant a form that
+    // knew only the palette could write one back with the rest missing.
     tagline: z.string().trim().max(120).nullable(),
     about: z.string().trim().max(2000).nullable(),
     // Printed on the waybill and dialled from the storefront: a phone number,
