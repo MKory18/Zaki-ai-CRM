@@ -274,3 +274,29 @@ describe('the route registry stays free of server-only code', () => {
     expect(src).toContain('can: PermissionCheck');
   });
 });
+
+/**
+ * NO SCREEN INVENTS A BUSINESS FACT.
+ *
+ * Two were written into the browser and both were wrong for most of the
+ * company: a default governorate of «دمشق», in a system running Syrian,
+ * Jordanian and Egyptian stores — so a customer added in Amman was born in
+ * Damascus unless somebody noticed, and nobody notices a field that is
+ * already filled in. And a "$" beside every production cost, so a batch
+ * costing twelve thousand Syrian pounds read as twelve thousand dollars.
+ */
+describe('a screen does not invent a country', () => {
+  it('no hardcoded governorate as a default', () => {
+    const src = readFileSync(join(process.cwd(), 'src/components/screens/CustomersScreen.tsx'), 'utf8');
+    expect(src).not.toMatch(/useState\('دمشق'\)/);
+  });
+
+  it('and no hardcoded currency symbol where money is shown', () => {
+    const MONEY_SCREENS = ['ManufacturingScreen.tsx', 'FinanceProfitScreen.tsx'];
+    for (const name of MONEY_SCREENS) {
+      const src = readFileSync(join(process.cwd(), 'src/components/screens', name), 'utf8');
+      // A literal dollar printed into JSX, not a template expression.
+      expect(src.includes('>$') || src.includes('($)'), `${name} prints a hardcoded $`).toBe(false);
+    }
+  });
+});

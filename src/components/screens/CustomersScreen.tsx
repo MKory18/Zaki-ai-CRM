@@ -29,7 +29,11 @@ export function CustomersScreen() {
   const [phone, setPhone] = useState('');
   const [altPhone, setAltPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('دمشق');
+  // No default governorate. It was 'دمشق', in a system that runs Syrian,
+  // Jordanian and Egyptian stores — so a customer added in Amman was born
+  // in Damascus unless somebody noticed and changed it, and nobody notices
+  // a field that is already filled in.
+  const [city, setCity] = useState('');
   const [notes, setNotes] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [modalMsg, setModalMsg] = useState<string | null>(null);

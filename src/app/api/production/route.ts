@@ -9,7 +9,7 @@ import { requirePermission } from '@/lib/authorization';
 
 export async function GET(req: Request) {
   try {
-    const { user, companyId, storeId } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('production.view');
 
     const batches = await db.productionBatch.findMany({
@@ -24,7 +24,11 @@ export async function GET(req: Request) {
       orderBy: { productionDate: 'desc' },
     });
 
-    return NextResponse.json({ batches });
+    // The country's own currency. The screen printed "$" beside every
+    // production cost in a system that runs pounds and dinars side by side,
+    // so a batch costing 12,000 Syrian pounds read as twelve thousand
+    // dollars.
+    return NextResponse.json({ batches, currency: country.currencyCode });
   } catch (error: any) {
     return apiErrorResponse(error);
   }

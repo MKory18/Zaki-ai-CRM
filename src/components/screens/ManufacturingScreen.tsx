@@ -37,6 +37,7 @@ export function ManufacturingScreen() {
   const [batches, setBatches] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   // Form State
@@ -84,6 +85,9 @@ export function ManufacturingScreen() {
       if (bRes.ok) {
         const bData = await bRes.json();
         setBatches(bData.batches || []);
+        // The country's currency, from the server that knows which country
+        // this store is in.
+        if (bData.currency) setCurrency(bData.currency);
       }
       if (pRes.ok) {
         const pData = await pRes.json();
@@ -207,12 +211,12 @@ export function ManufacturingScreen() {
                         </span>
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
-                        ${b.totalProductionCost.toFixed(2)}
+                        {b.totalProductionCost.toFixed(2)} {currency}
                       </td>
                       <td className="px-6 py-3.5">
                         {b.costPerUnit > 0 ? (
                           <span className="font-black text-[var(--sys-heading)] bg-[var(--sys-surface)] px-2.5 py-1 rounded-md text-xs tabular-nums">
-                            ${b.costPerUnit.toFixed(2)}
+                            {b.costPerUnit.toFixed(2)} {currency}
                           </span>
                         ) : (
                           <button
@@ -299,7 +303,7 @@ export function ManufacturingScreen() {
           {/* Cost Items Grid */}
           <div className="border border-[var(--sys-border)] rounded-xl p-4 bg-[var(--sys-surface)]/60 space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">
-              Direct Cost Breakdown ($)
+              تفصيل الكلفة المباشرة
             </h4>
 
             <div className="grid grid-cols-2 gap-3">
@@ -419,7 +423,7 @@ export function ManufacturingScreen() {
               <div>
                 <p className="font-bold text-[var(--sys-heading)]">الكلفة الكلية: {totalProductionCost.toFixed(2)}</p>
                 <p className="text-[var(--sys-muted-foreground)]">
-                  Formula: Mfg (${manufacturingCost}) + Packaging (${packagingCost}) + Raw (${rawMaterialCost})
+                  المعادلة: تصنيع ({manufacturingCost}) + تغليف ({packagingCost}) + مواد خام ({rawMaterialCost})
                 </p>
               </div>
             </div>
@@ -433,7 +437,7 @@ export function ManufacturingScreen() {
           </div>
 
           <Textarea
-            label="Batch Notes & Quality Control"
+            label="ملاحظات الدفعة وفحص الجودة"
             placeholder="e.g. Amber glass vials, passed lab leak audit..."
             rows={2}
             value={notes}
@@ -445,7 +449,7 @@ export function ManufacturingScreen() {
               {t.cancel}
             </Button>
             <Button type="submit" loading={modalLoading}>
-              Save Batch & Add to Stock
+              احفظ الدفعة وأضفها للمخزون
             </Button>
           </div>
         </form>

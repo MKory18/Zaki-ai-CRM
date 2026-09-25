@@ -308,10 +308,19 @@ export function ConfirmationIssuesScreen() {
                       {FIELD_LABEL.regionId}
                       {countryName ? ` — ${countryName}` : ''}
                     </span>
+                    {/* NOT marked by an address complaint.
+                        It carried `flagged === 'address'`, copied from the
+                        field below, so one complaint lit up two fields —
+                        and the agent had pointed at one. The mark means
+                        "this is what she was looking at"; spreading it
+                        across a second field is the fastest way to teach
+                        somebody to ignore the mark. No reason maps to the
+                        governorate (see REASON_FIELD), so it is never the
+                        flagged field. */}
                     <select
                       value={draft.regionId}
                       onChange={(e) => setDraft({ ...draft, regionId: e.target.value })}
-                      className={flagged === 'address' ? flaggedClass : inputClass}
+                      className={inputClass}
                     >
                       <option value="">— اختر المحافظة —</option>
                       {regions.map((r) => (
