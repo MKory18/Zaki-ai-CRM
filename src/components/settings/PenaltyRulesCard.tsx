@@ -161,7 +161,7 @@ export function PenaltyRulesCard() {
                 type="button"
                 disabled={busy}
                 onClick={() => toggle(r)}
-                className="ms-auto rounded-lg border border-[var(--sys-border)] px-2 py-0.5 text-xs text-[var(--sys-muted-foreground)]"
+                className="min-h-11 md:min-h-0 inline-flex items-center ms-auto rounded-lg border border-[var(--sys-border)] px-2 py-0.5 text-xs text-[var(--sys-muted-foreground)]"
               >
                 {r.isActive ? 'أوقفها' : 'شغّلها'}
               </button>

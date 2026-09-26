@@ -211,7 +211,7 @@ export function MessageTemplatesCard() {
                           type="checkbox"
                           checked={t.active}
                           onChange={(e) => patch(t.id, { active: e.target.checked })}
-                          className="accent-[var(--sys-primary)]"
+                          className="h-5 w-5 accent-[var(--sys-primary)]"
                         />
                         مفعّل
                       </label>
@@ -219,7 +219,7 @@ export function MessageTemplatesCard() {
                         type="button"
                         onClick={() => setTemplates(templates.filter((x) => x.id !== t.id))}
                         aria-label="احذف القالب"
-                        className="rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
+                        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                       >
                         <RiDeleteBinLine className="h-4 w-4" />
                       </button>
@@ -245,7 +245,7 @@ export function MessageTemplatesCard() {
                           type="button"
                           title={v.label}
                           onClick={() => insertVar(t.id, v.key)}
-                          className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-1.5 py-0.5 text-xs text-[var(--sys-primary)] hover:border-[var(--sys-primary)]"
+                          className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-1.5 py-0.5 text-xs text-[var(--sys-primary)] hover:border-[var(--sys-primary)]"
                         >
                           {v.label}
                         </button>

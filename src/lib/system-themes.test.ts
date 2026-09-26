@@ -145,6 +145,45 @@ describe('legible in the theme it lives in', () => {
     }
   });
 
+  /**
+   * AND THE DIM TEXT, WHICH NOBODY WAS CHECKING.
+   *
+   * This file already asked about `foreground`, `heading`, the button's
+   * label and the sidebar — and never about the two tones that paint the
+   * SMALL text: a KPI's caption, a date under a row, «هامش الربح».
+   *
+   * A browser measured them at 4.06, 2.79 and 2.50 against the surface they
+   * sit on. Three themes, all failing, for a year, because a guard that
+   * covers four pairs reads as a guard that covers contrast.
+   *
+   * BOTH TONES, ON ALL THREE SURFACES a card can be. `--sys-muted` is the
+   * dimmer of the two and it is still TEXT — dim is a hierarchy, not a
+   * licence to be unreadable. Anything genuinely decorative uses an icon's
+   * colour or a border token, neither of which is asked about here.
+   */
+  it('the dim text, on every surface it is allowed to sit on', () => {
+    for (const theme of SYSTEM_THEMES) {
+      for (const tone of ['muted', 'muted-foreground'] as const) {
+        for (const on of ['card', 'surface', 'background'] as const) {
+          expect(
+            contrast(theme.vars[tone], theme.vars[on]),
+            `${theme.key}: ${tone} على ${on}`
+          ).toBeGreaterThan(READABLE);
+        }
+      }
+    }
+  });
+
+  /** And the dimmer tone stays visibly dimmer, or the hierarchy is a lie. */
+  it('and the two dim tones are still two', () => {
+    for (const theme of SYSTEM_THEMES) {
+      expect(
+        theme.vars.muted.toLowerCase(),
+        `${theme.key}: النبرتان الباهتتان صارتا واحدة`
+      ).not.toBe(theme.vars['muted-foreground'].toLowerCase());
+    }
+  });
+
   it('the label on the action button', () => {
     for (const theme of SYSTEM_THEMES) {
       expect(
@@ -192,6 +231,40 @@ describe('legible in the theme it lives in', () => {
     const surface = /bg-\[var\(--sys-sidebar\)\][^']*text-\[var\(--sys-sidebar-foreground\)\]/;
     expect(surface.test(src), 'القائمة لا تأخذ لونها من رمزَي القائمة').toBe(true);
     expect(src, 'لونُ نصٍّ يُستعمل خلفيةً للقائمة').not.toContain('bg-[var(--sys-heading)]');
+  });
+
+  /**
+   * AND THE SAME MISTAKE ONE LAYER IN: THE WORDMARK.
+   *
+   * `--sys-primary-foreground` is the colour of text that sits ON the
+   * accent — #04182B, a dark navy, so that cyan buttons are legible. The
+   * brand lockup used it while sitting on the SIDEBAR (#0a1a2e), which is
+   * 1.03:1. The product's own name was invisible, on every screen, in the
+   * default theme — and it reads as empty padding rather than as a bug,
+   * which is why a browser had to measure it.
+   *
+   * The rule is the general one: a foreground token belongs only on the
+   * surface it was made for. `primary-foreground` goes on `primary`.
+   */
+  it('and the wordmark takes the sidebar’s foreground, not the accent’s', () => {
+    const src = readFileSync(join(process.cwd(), 'src/components/shell/Sidebar.tsx'), 'utf8');
+    const stripped = src
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+      .replace(/^(\s*)\/\/.*$/gm, '$1');
+    // The lockup: a bold wordmark, in the sidebar's own foreground.
+    expect(
+      /font-bold text-\[var\(--sys-sidebar-foreground\)\]/.test(stripped),
+      'العلامة النصّيّة لا تأخذ لون القائمة'
+    ).toBe(true);
+    // `primary-foreground` may still appear — but only where a `primary`
+    // background is on the same element, which is the item you stand on.
+    for (const line of stripped.split('\n')) {
+      if (!line.includes('--sys-primary-foreground')) continue;
+      expect(
+        line,
+        `لونُ نصٍّ على اللون المميّز، بلا خلفيةٍ مميّزة:\n${line.trim().slice(0, 100)}`
+      ).toContain('bg-[var(--sys-primary)]');
+    }
   });
 
   it('and each semantic colour against the surface it is drawn on', () => {
@@ -338,7 +411,16 @@ describe('no new hardcoded colour in a system screen', () => {
     for (const root of ROOTS) {
       for (const file of walk(join(process.cwd(), root))) {
         if (ALLOWED.test(file)) continue;
-        const src = readFileSync(file, 'utf8');
+        /**
+         * COMMENTS STRIPPED FIRST — the fifth time this lesson has been
+         * learned in this redesign. A note explaining WHY a colour was
+         * wrong has to name the colour: «it was #04182B on #0a1a2e, which
+         * is 1.03:1». The guard then finds those two hexes and reports the
+         * fix as the defect.
+         */
+        const src = readFileSync(file, 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+          .replace(/^(\s*)\/\/.*$/gm, '$1');
         const hex = src.match(/#[0-9a-fA-F]{6}\b/g) ?? [];
         const palette =
           src.match(

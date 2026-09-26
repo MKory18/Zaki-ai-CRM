@@ -170,16 +170,16 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
               { key: 'c6', label: "إجراءات",
                 render: (s) => (
                   <><div className="flex items-center justify-end gap-1">
-                        <button disabled={busyId === s.id} onClick={() => void testSource(s)} title="اختبار" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"><RiFlaskLine className="h-4 w-4" /></button>
+                        <button disabled={busyId === s.id} onClick={() => void testSource(s)} aria-label="اختبار" title="اختبار" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"><RiFlaskLine className="h-4 w-4" /></button>
                         <button
                           disabled={busyId === s.id}
                           onClick={() => void act(s, () => crmApi(`/api/telegram/sources/${s.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: !s.isActive }) }), 'تعذر التحديث')}
                           title={s.isActive ? 'تعطيل' : 'تفعيل'}
-                          className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
+                          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                         >
                           <RiShutDownLine className="h-4 w-4" />
                         </button>
-                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"><RiDeleteBinLine className="h-4 w-4" /></button>
+                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} aria-label="حذف" title="حذف" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"><RiDeleteBinLine className="h-4 w-4" /></button>
                       </div></>
                 ) },
             ]}

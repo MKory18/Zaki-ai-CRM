@@ -253,7 +253,7 @@ export function ShippingBatchesScreen() {
           <button
             key={key}
             onClick={() => setFilter(key as typeof filter)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+            className={`min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
               filter === key
                 ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]'
                 : 'bg-[var(--sys-card)] text-[var(--sys-foreground)] border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
@@ -264,7 +264,7 @@ export function ShippingBatchesScreen() {
         ))}
         <button
           onClick={() => setAddingOrder(true)}
-          className="ms-auto inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:bg-[var(--sys-primary)]"
+          className="ms-auto inline-flex items-center gap-1.5 h-11 md:h-8 px-2.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:bg-[var(--sys-primary)]"
           title="زبون اتصل وطلب — يُنشأ مؤكداً ويذهب مباشرة إلى التجهيز"
         >
           <RiAddCircleLine className="w-4 h-4" />
@@ -356,7 +356,7 @@ export function ShippingBatchesScreen() {
                   <button
                     onClick={() => printBatch(b)}
                     disabled={busy === b.id || b._count.orders === 0}
-                    className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+                    className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
                     {busy === b.id ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiPrinterLine className="w-4 h-4" />}
                     طباعة بوالص الدفعة
@@ -366,7 +366,7 @@ export function ShippingBatchesScreen() {
                     onClick={() => void openVerify(b)}
                     disabled={busy === b.id || b._count.orders === 0}
                     title="امسح كل طرد قبل تسليمه — يقول لك إن كان من هذه الدفعة"
-                    className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+                    className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
                     <RiQrScan2Line className="w-4 h-4" />
                     تحقّق من الطرود
@@ -376,7 +376,7 @@ export function ShippingBatchesScreen() {
                     onClick={() => printBatch(b, 'pdf')}
                     disabled={busy === b.id || b._count.orders === 0}
                     title="نفس البوالص كملف PDF — الحفظ لا يعلّم الطلبات مطبوعة"
-                    className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+                    className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
                     <RiDownload2Line className="w-4 h-4" />
                     PDF
@@ -386,7 +386,7 @@ export function ShippingBatchesScreen() {
                     onClick={() => printBatch(b, 'csv')}
                     disabled={busy === b.id || b._count.orders === 0}
                     title="ملف للرفع الجماعي عند شركات الشحن التي تقبله بدل الورق"
-                    className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+                    className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
                     <RiDownload2Line className="w-4 h-4" />
                     CSV
@@ -406,7 +406,7 @@ export function ShippingBatchesScreen() {
                     <button
                       onClick={() => dispatch(b)}
                       disabled={busy === b.id || b._count.orders === 0}
-                      className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-primary)] text-[var(--sys-primary)] font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+                      className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-primary)] text-[var(--sys-primary)] font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
                     >
                       {busy === b.id ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiBarcodeLine className="w-4 h-4" />}
                       رحّل إلى الشركة واجلب الباركود
@@ -427,7 +427,7 @@ export function ShippingBatchesScreen() {
                     <button
                       onClick={() => setStatus(b, 'SHIPPED')}
                       disabled={busy === b.id}
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+                      className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <RiSendPlaneLine className="icon-mirror w-4 h-4" />
                       سُلّمت للشركة
@@ -438,7 +438,7 @@ export function ShippingBatchesScreen() {
                     <button
                       onClick={() => setStatus(b, 'CLOSED')}
                       disabled={busy === b.id}
-                      className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)] inline-flex items-center gap-1.5 disabled:opacity-50"
+                      className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)] inline-flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <RiLockLine className="w-4 h-4" />
                       أغلق الدفعة

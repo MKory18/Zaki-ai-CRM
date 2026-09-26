@@ -282,7 +282,7 @@ export function CouriersScreen() {
               <button
                 onClick={() => placeHere(c)}
                 disabled={busy}
-                className="rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-card)] px-3 py-1 text-xs text-[var(--sys-warning)] hover:border-[var(--sys-warning)] disabled:opacity-50"
+                className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-card)] px-3 py-1 text-xs text-[var(--sys-warning)] hover:border-[var(--sys-warning)] disabled:opacity-50"
               >
                 أسنِدها لهذا المتجر
               </button>
@@ -307,7 +307,7 @@ export function CouriersScreen() {
                     <input
                       value={edit.name}
                       onChange={(e) => setEdit({ ...edit, name: e.target.value })}
-                      className="h-8 w-40 rounded-lg border border-[var(--sys-border)] px-2 text-sm"
+                      className="h-11 md:h-8 w-40 rounded-lg border border-[var(--sys-border)] px-2 text-sm"
                     />
                   ) : (
                     c.name
@@ -342,7 +342,7 @@ export function CouriersScreen() {
                       onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
                       dir="ltr"
                       placeholder="—"
-                      className="h-8 w-32 rounded-lg border border-[var(--sys-border)] px-2 text-sm"
+                      className="h-11 md:h-8 w-32 rounded-lg border border-[var(--sys-border)] px-2 text-sm"
                     />
                   ) : c.phone ? (
                     <span className="inline-flex items-center gap-2">
@@ -359,7 +359,7 @@ export function CouriersScreen() {
             { key: 'c4', label: "الحالة",
               render: (c) => (
                   <><div className="flex items-center gap-2">
-                    <button onClick={() => toggle(c)} disabled={busy} className={`text-xs px-3 py-1 rounded-lg border ${c.isActive ? 'border-[var(--sys-border)] text-[var(--sys-success)]' : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'}`}>
+                    <button onClick={() => toggle(c)} disabled={busy} className={`min-h-11 md:min-h-0 inline-flex items-center text-xs px-3 py-1 rounded-lg border ${c.isActive ? 'border-[var(--sys-border)] text-[var(--sys-success)]' : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'}`}>
                       {c.isActive ? 'نشطة' : 'موقوفة'}
                     </button>
                     {/* An agent has no platform account: he is a person with a
@@ -367,7 +367,7 @@ export function CouriersScreen() {
                     {c.kind !== 'AGENT' && (
                       <button
                         onClick={() => setAccountFor(accountFor === c.id ? null : c.id)}
-                        className="rounded-lg border border-[var(--sys-border)] px-3 py-1 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+                        className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg border border-[var(--sys-border)] px-3 py-1 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                       >
                         الحساب والتكامل
                       </button>
@@ -391,15 +391,15 @@ export function CouriersScreen() {
                         <button
                           onClick={() => saveEdit(c.id)}
                           disabled={busy || !edit.name.trim()}
-                          title="احفظ"
-                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] disabled:opacity-40"
+                          aria-label="احفظ" title="احفظ"
+                          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] disabled:opacity-40"
                         >
                           <RiCheckLine className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setEditing(null)}
-                          title="ألغِ"
-                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
+                          aria-label="ألغِ" title="ألغِ"
+                          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
                         >
                           <RiCloseLine className="h-4 w-4" />
                         </button>
@@ -408,16 +408,16 @@ export function CouriersScreen() {
                       <>
                         <button
                           onClick={() => startEdit(c)}
-                          title="عدّل"
-                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
+                          aria-label="عدّل" title="عدّل"
+                          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
                         >
                           <RiPencilLine className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => remove(c)}
                           disabled={busy}
-                          title="احذف"
-                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-40"
+                          aria-label="احذف" title="احذف"
+                          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-40"
                         >
                           <RiDeleteBinLine className="h-4 w-4" />
                         </button>

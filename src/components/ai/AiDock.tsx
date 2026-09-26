@@ -159,8 +159,8 @@ export function AiDock() {
             <button
               type="button"
               onClick={() => setMsgs([])}
-              title="ابدأ محادثة جديدة"
-              className="rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
+              aria-label="ابدأ محادثة جديدة" title="ابدأ محادثة جديدة"
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
             >
               <RiDeleteBinLine className="h-4 w-4" />
             </button>
@@ -168,16 +168,16 @@ export function AiDock() {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            title="تصغير"
-            className="rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
+            aria-label="تصغير" title="تصغير"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
           >
             <RiSubtractLine className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={() => { setMsgs([]); setOpen(false); }}
-            title="إغلاق ومسح"
-            className="rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
+            aria-label="إغلاق ومسح" title="إغلاق ومسح"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
           >
             <RiCloseLine className="h-4 w-4" />
           </button>
@@ -198,7 +198,7 @@ export function AiDock() {
                   key={o}
                   type="button"
                   onClick={() => void ask(o)}
-                  className="block w-full rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-xs text-[var(--sys-foreground)] transition hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+                  className="min-h-11 md:min-h-0 inline-flex items-center block w-full rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-xs text-[var(--sys-foreground)] transition hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                 >
                   {o}
                 </button>
@@ -242,12 +242,12 @@ export function AiDock() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="اكتب سؤالك…"
-          className="flex-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-xs text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
+          className="min-h-11 md:min-h-0 inline-flex items-center flex-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-xs text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
         />
         <button aria-label="إرسال"
           type="submit"
           disabled={busy || !q.trim()}
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] transition disabled:opacity-40"
+          className="flex h-11 md:h-8 w-8 items-center justify-center rounded-lg bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] transition disabled:opacity-40"
         >
           <RiSendPlaneLine className="icon-mirror h-4 w-4" />
         </button>

@@ -165,7 +165,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
               onClick={clear}
               disabled={saving}
               title="حذف الحساب"
-              className="cursor-pointer rounded-lg p-2 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-2 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
             >
               <RiDeleteBinLine className="h-4 w-4" />
             </button>

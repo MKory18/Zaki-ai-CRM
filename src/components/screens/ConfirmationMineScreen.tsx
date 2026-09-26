@@ -599,7 +599,7 @@ function SectionHead({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="رقم الهاتف أو الطلب أو الاسم"
-          className="h-8 w-56 ps-2.5 pe-8 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
+          className="h-11 md:h-8 w-56 ps-2.5 pe-8 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
         />
         {value && (
           <button
@@ -635,7 +635,7 @@ function Action({
     <button
       onClick={onClick}
       disabled={busy}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border disabled:opacity-50 ${
+      className={`min-h-11 md:min-h-0 inline-flex items-center flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border disabled:opacity-50 ${
         primary
           ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]'
           : danger

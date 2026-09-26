@@ -578,7 +578,7 @@ export function LandingPageEditorScreen() {
                 <button
                   key={m}
                   onClick={() => { setMode(m); setDirty(true); }}
-                  className={`cursor-pointer rounded-md px-2.5 py-1 text-xs font-bold transition ${
+                  className={`min-h-11 md:min-h-0 inline-flex items-center cursor-pointer rounded-md px-2.5 py-1 text-xs font-bold transition ${
                     mode === m ? 'bg-[var(--sys-primary)] text-white' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]'
                   }`}
                 >
@@ -595,7 +595,7 @@ export function LandingPageEditorScreen() {
                   onClick={history.undo}
                   disabled={!history.canUndo}
                   title="تراجع — Ctrl+Z"
-                  className="cursor-pointer rounded-md p-1.5 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] disabled:cursor-default disabled:opacity-30"
+                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-md p-1.5 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] disabled:cursor-default disabled:opacity-30"
                 >
                   <RiArrowGoBackLine className="icon-mirror h-4 w-4" />
                 </button>
@@ -603,7 +603,7 @@ export function LandingPageEditorScreen() {
                   onClick={history.redo}
                   disabled={!history.canRedo}
                   title="إعادة — Ctrl+Shift+Z"
-                  className="cursor-pointer rounded-md p-1.5 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] disabled:cursor-default disabled:opacity-30"
+                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-md p-1.5 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] disabled:cursor-default disabled:opacity-30"
                 >
                   <RiArrowGoForwardLine className="icon-mirror h-4 w-4" />
                 </button>
@@ -691,7 +691,7 @@ export function LandingPageEditorScreen() {
                   {VARIABLES.map((v) => (
                     <button
                       key={v.value}
-                      className="block w-full cursor-pointer px-3 py-1.5 text-right text-xs text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]"
+                      className="min-h-11 md:min-h-0 inline-flex items-center block w-full cursor-pointer px-3 py-1.5 text-right text-xs text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]"
                       onClick={() => { insertAtCursor(v.value); setVarOpen(false); }}
                     >
                       {v.label} <span className="font-mono text-xs text-[var(--sys-muted)]" dir="ltr">{v.value}</span>
@@ -772,13 +772,13 @@ data-zaki-z-index="9999"`}</pre>
               <div className="flex items-center gap-1 border-b border-[var(--sys-border)] bg-[var(--sys-heading)] px-2 py-1.5">
                 <button
                   onClick={() => setTab('html')}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'html' ? 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)]' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'}`}
+                  className={`min-h-11 md:min-h-0 inline-flex items-center flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'html' ? 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)]' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'}`}
                 >
                   <RiCodeSLine className="h-4 w-4" /> HTML
                 </button>
                 <button
                   onClick={() => setTab('css')}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'css' ? 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)]' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'}`}
+                  className={`min-h-11 md:min-h-0 inline-flex items-center flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'css' ? 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)]' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'}`}
                 >
                   <RiPaletteLine className="h-4 w-4" /> CSS
                 </button>
@@ -789,7 +789,7 @@ data-zaki-z-index="9999"`}</pre>
                 <button
                   onClick={() => setFull((f) => !f)}
                   title={full ? 'تصغير المحرر' : 'ملء الشاشة'}
-                  className="cursor-pointer rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]"
+                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]"
                 >
                   {full ? <RiFullscreenExitLine className="h-4 w-4" /> : <RiFullscreenLine className="h-4 w-4" />}
                 </button>
@@ -827,7 +827,7 @@ data-zaki-z-index="9999"`}</pre>
                       key={d}
                       onClick={() => setDevice(d)}
                       title={d}
-                      className={`cursor-pointer rounded-lg p-1.5 ${device === d ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]'}`}
+                      className={`min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 ${device === d ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]'}`}
                     >
                       <Icon className="h-4 w-4" />
                     </button>
@@ -882,7 +882,7 @@ data-zaki-z-index="9999"`}</pre>
                     type="color"
                     value={settings.background || '#ffffff'}
                     onChange={(e) => { setSettings({ ...settings, background: e.target.value }); setDirty(true); }}
-                    className="h-8 w-10 cursor-pointer rounded-lg border border-[var(--sys-border)]"
+                    className="h-11 md:h-8 w-10 cursor-pointer rounded-lg border border-[var(--sys-border)]"
                   />
                   <Input
                     dir="ltr"

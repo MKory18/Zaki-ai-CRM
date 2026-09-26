@@ -164,7 +164,7 @@ export function BatchCostDialog({
                   <button
                     type="button"
                     onClick={() => setLines(lines.filter((_, n) => n !== i))}
-                    className="p-1.5 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                     aria-label="احذف البند"
                   >
                     <RiCloseLine className="w-4 h-4" />

@@ -142,7 +142,7 @@ export function DashboardScreen() {
                 ? 'متابعة المبيعات والتكاليف وأداء الفريق والأرباح الحقيقية — لحظة بلحظة'
                 : 'Real-time sales, cost analysis, team performance & real net profit'}
             actions={
-              <><div className="flex items-center gap-2 flex-wrap">
+              <><div className="flex min-w-0 items-center gap-2 flex-wrap">
             {/* Period selector */}
             <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-1 flex text-xs font-medium text-[var(--sys-foreground)] shadow-raised">
               {PERIODS.map((p) => (

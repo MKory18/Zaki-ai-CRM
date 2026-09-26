@@ -138,7 +138,7 @@ export function DateRange({
                 key={p.label}
                 type="button"
                 onClick={p.run}
-                className="px-2.5 py-1 text-xs rounded-lg border border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+                className="min-h-11 md:min-h-0 inline-flex items-center px-2.5 py-1 text-xs rounded-lg border border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
               >
                 {p.label}
               </button>
@@ -149,7 +149,7 @@ export function DateRange({
             <button
               type="button"
               onClick={() => setMonth(addMonths(month, -1))}
-              className="p-1.5 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
               aria-label="الشهر السابق"
             >
               <RiArrowRightSLine className="icon-mirror w-4 h-4" />
@@ -160,7 +160,7 @@ export function DateRange({
             <button
               type="button"
               onClick={() => setMonth(addMonths(month, 1))}
-              className="p-1.5 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
               aria-label="الشهر التالي"
             >
               <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
@@ -189,7 +189,7 @@ export function DateRange({
                   key={day.toISOString()}
                   type="button"
                   onClick={() => pick(day)}
-                  className={`h-8 text-xs tabular-nums rounded-lg transition-colors ${
+                  className={`h-11 md:h-8 text-xs tabular-nums rounded-lg transition-colors ${
                     edge
                       ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-bold'
                       : inside

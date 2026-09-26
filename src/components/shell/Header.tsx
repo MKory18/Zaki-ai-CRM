@@ -87,7 +87,7 @@ export function Header({
       <button
         type="button"
         onClick={onSearchClick}
-        className="hidden md:flex flex-1 max-w-md items-center gap-2 h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)]"
+        className="hidden md:flex flex-1 max-w-md items-center gap-2 h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)]"
       >
         <RiSearchLine className="w-4 h-4 shrink-0 text-[var(--sys-muted)]" aria-hidden />
         <span className="flex-1 text-start truncate">ابحث، انتقل، أو نفّذ</span>
@@ -107,7 +107,15 @@ export function Header({
         <RiSearchLine className="w-5 h-5" />
       </button>
 
-      <div className="flex shrink-0 items-center gap-3 md:mr-auto">
+      {/*
+        WRAPS INSTEAD OF PUSHING THE PAGE SIDEWAYS.
+        Measured at 768 — the width where the sidebar appears and takes 280
+        of it: this group is about 340px of shift chip, counter, bell and
+        avatar, and `shrink-0` meant it would rather overflow the document by
+        122px than give up a pixel. On a tablet a header that wraps to two
+        rows is ordinary; a page that scrolls sideways is not.
+      */}
+      <div className="flex min-w-0 flex-wrap items-center gap-3 md:mr-auto lg:flex-nowrap">
         {/* Am I on shift, and how long since my last order. It lives here
             rather than above a queue: same place on every screen, beside
             the name, and never in the path of somebody clicking fast. The
@@ -131,7 +139,7 @@ export function Header({
         </div>
         <button aria-label="تسجيل الخروج"
           onClick={logout}
-          className="hidden md:block p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 hidden md:block p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
           title="تسجيل الخروج"
         >
           <RiLogoutBoxLine className="icon-mirror w-5 h-5" />

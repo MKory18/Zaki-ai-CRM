@@ -161,6 +161,7 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
                         checked={selection.isSelected(row)}
                         onChange={(e) => selection.onToggle(row, e.target.checked)}
                         onClick={(e) => e.stopPropagation()}
+                        aria-label={selection.isSelected(row) ? 'ألغِ اختيار السجل' : 'اختر السجل'}
                       />
                     )}
                   </td>
@@ -184,9 +185,10 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
       {selection?.onToggleAll && selectable.length > 0 && (
         // There is no heading row on a phone, so the select-all sits above
         // the cards. Without it the only way to pick thirty is thirty taps.
-        <label className="mb-2 flex items-center gap-2 px-1 text-xs text-[var(--sys-muted-foreground)] md:hidden">
+        <label className="mb-2 flex min-h-11 items-center gap-2 px-1 text-xs text-[var(--sys-muted-foreground)] md:min-h-0 md:hidden">
           <input
             type="checkbox"
+            className="h-5 w-5"
             checked={allPicked}
             onChange={(e) => selection.onToggleAll!(e.target.checked)}
           />
@@ -208,13 +210,31 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--sys-border)] pb-1.5">
                 <span className="flex items-center gap-2">
                   {selection && selection.canSelect(row) && (
-                    <input
-                      type="checkbox"
-                      className="h-5 w-5"
-                      checked={selection.isSelected(row)}
-                      onChange={(e) => selection.onToggle(row, e.target.checked)}
+                    /**
+                     * A 44px TARGET AROUND A 20px BOX.
+                     *
+                     * A checkbox is a replaced element: `::before` and
+                     * `::after` never render on one, so the trick that grows
+                     * a button's hit area silently does nothing here — and it
+                     * was on this line, doing nothing, until the browser was
+                     * asked whether a press 21px away landed.
+                     *
+                     * A <label> works because pressing a label toggles the
+                     * input inside it. The box keeps its size; the label is
+                     * the thumb's target.
+                     */
+                    <label
+                      className="-m-2 flex h-11 w-11 shrink-0 items-center justify-center"
                       onClick={(e) => e.stopPropagation()}
-                    />
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-5 w-5"
+                        checked={selection.isSelected(row)}
+                        onChange={(e) => selection.onToggle(row, e.target.checked)}
+                        aria-label={selection.isSelected(row) ? 'ألغِ اختيار السجل' : 'اختر السجل'}
+                      />
+                    </label>
                   )}
                   {titles.map((c) => (
                     <span key={c.key} className="text-sm font-semibold text-[var(--sys-heading)]">

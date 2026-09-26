@@ -141,7 +141,7 @@ export function AiSettingsScreen() {
             key={value}
             type="button"
             onClick={() => setTab(value)}
-            className={`h-10 flex-1 rounded-lg border text-xs font-medium ${
+            className={`h-11 md:h-10 flex-1 rounded-lg border text-xs font-medium ${
               tab === value ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] text-[var(--sys-foreground)]'
             }`}
           >
@@ -213,7 +213,7 @@ export function AiSettingsScreen() {
             type="button"
             onClick={() => void testConnection()}
             disabled={testing || !settings.hasKey}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
+            className="inline-flex h-11 md:h-8 items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
           >
             {testing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiPlugLine className="h-4 w-4" />}
             اختبار الاتصال
@@ -278,7 +278,7 @@ export function AiSettingsScreen() {
                       onChange={(e) => setDrafts({ ...drafts, [job.key]: e.target.value.slice(0, MAX_PROMPT) })}
                       rows={8}
                       placeholder={job.default || 'لا نصّ افتراضي لهذه الوظيفة — اكتب تعليماتك.'}
-                      className="w-full rounded-lg border border-[var(--sys-border)] p-2 font-mono text-xs leading-relaxed text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 w-full rounded-lg border border-[var(--sys-border)] p-2 font-mono text-xs leading-relaxed text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
                     />
 
                     <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
@@ -299,7 +299,7 @@ export function AiSettingsScreen() {
                         box, and the wording that worked is otherwise gone. */}
                     {(settings.promptHistory?.[job.key]?.length ?? 0) > 0 && (
                       <details className="mt-2 rounded-lg border border-[var(--sys-border)]">
-                        <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--sys-muted-foreground)]">
+                        <summary className="min-h-11 md:min-h-0 inline-flex items-center cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--sys-muted-foreground)]">
                           النسخ السابقة ({settings.promptHistory![job.key].length})
                         </summary>
                         <ul className="divide-y divide-[var(--sys-surface-strong)] border-t border-[var(--sys-surface-strong)]">

@@ -159,7 +159,7 @@ export function ShipmentsNewScreen() {
           <button
             onClick={create}
             disabled={busy || selectedCount === 0}
-            className="w-full h-10 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="w-full h-11 md:h-10 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {busy ? 'جارٍ الإنشاء…' : `إنشاء شحنة (${selectedCount})`}
           </button>
@@ -194,7 +194,7 @@ export function ShipmentsNewScreen() {
             key={k}
             type="button"
             onClick={() => setView(k)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+            className={`min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
               view === k
                 ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]'
                 : 'bg-[var(--sys-card)] text-[var(--sys-foreground)] border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
@@ -312,7 +312,7 @@ export function ShipmentsNewScreen() {
                       ? 'أعِده إلى قائمة الشحن'
                       : 'أجّله — لن يدخل أي شحنة حتى تُفرج عنه، والبضاعة تبقى محجوزة له'
                   }
-                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border transition-colors disabled:opacity-50 ${
+                  className={`min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border transition-colors disabled:opacity-50 ${
                     view === 'held'
                       ? 'border-[var(--sys-border)] text-[var(--sys-success)] hover:border-[var(--sys-success)]'
                       : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)]'

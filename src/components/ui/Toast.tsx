@@ -132,7 +132,7 @@ function Line({ toast, onDone }: { toast: Toast; onDone: () => void }) {
       {/* A message that removes itself is fine. A REASON that removes itself
           is a reason nobody finished reading, so this is how it goes. */}
       {!leaves && (
-        <button type="button" onClick={onDone} aria-label="إغلاق" className="-me-1 shrink-0 p-1">
+        <button type="button" onClick={onDone} aria-label="إغلاق" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 -me-1 shrink-0 p-1">
           <RiCloseLine className="h-4 w-4" />
         </button>
       )}

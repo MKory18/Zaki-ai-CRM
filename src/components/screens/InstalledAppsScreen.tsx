@@ -150,7 +150,7 @@ export function InstalledAppsScreen() {
               <button
                 key={k}
                 onClick={() => setFilter(k)}
-                className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-semibold ${
+                className={`min-h-11 md:min-h-0 inline-flex items-center cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-semibold ${
                   filter === k ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
                 }`}
               >

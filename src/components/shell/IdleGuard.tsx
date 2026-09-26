@@ -159,7 +159,7 @@ export function IdleGuard() {
               <button
                 type="button"
                 onClick={touch}
-                className="h-10 shrink-0 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)]"
+                className="h-11 md:h-10 shrink-0 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)]"
               >
                 أنا هنا
               </button>

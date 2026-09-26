@@ -118,14 +118,14 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
         <div className="flex items-center gap-1.5">
           <button
             onClick={onOpenHistory}
-            className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+            className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
           >
             <RiHistoryLine className="w-4 h-4" />
             طلبات سابقة ({previous})
           </button>
           <button
             onClick={openForm}
-            className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+            className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
           >
             <RiPencilLine className="w-4 h-4" />
             {open ? 'إغلاق' : 'تعديل'}
@@ -176,12 +176,12 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
             <button
               onClick={save}
               disabled={busy}
-              className="text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
             >
               {busy && <RiLoader4Line className="w-4 h-4 animate-spin" />}
               حفظ بيانات العميل
             </button>
-            <button onClick={() => setOpen(false)} className="text-xs px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">
+            <button onClick={() => setOpen(false)} className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">
               إلغاء
             </button>
           </div>

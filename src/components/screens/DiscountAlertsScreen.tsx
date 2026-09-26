@@ -81,7 +81,7 @@ export function DiscountAlertsScreen() {
           <select
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
-            className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value={7}>آخر 7 أيام</option>
             <option value={30}>آخر 30 يوماً</option>

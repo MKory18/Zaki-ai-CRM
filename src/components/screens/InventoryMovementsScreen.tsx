@@ -78,7 +78,7 @@ export function InventoryMovementsScreen() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="اسم المنتج، الرمز، رقم الدفعة أو السبب"
-              className="w-full h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
             />
           </div>
         </label>
@@ -87,7 +87,7 @@ export function InventoryMovementsScreen() {
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="all">الكل</option>
             {(data?.types ?? []).map((t) => (
@@ -97,7 +97,7 @@ export function InventoryMovementsScreen() {
             ))}
           </select>
         </label>
-        <button type="submit" className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
+        <button type="submit" className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
       </form>
 
       {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}

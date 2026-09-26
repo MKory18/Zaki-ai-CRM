@@ -172,7 +172,7 @@ export function ContactButtons({
                   key={t.id}
                   type="button"
                   onClick={() => send(t)}
-                  className="w-full text-start p-2.5 sm:p-2 rounded-lg hover:bg-[var(--sys-primary-soft)] active:bg-[var(--sys-primary-soft)] transition-colors"
+                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 w-full text-start p-2.5 sm:p-2 rounded-lg hover:bg-[var(--sys-primary-soft)] active:bg-[var(--sys-primary-soft)] transition-colors"
                 >
                   <span className="block text-xs font-semibold text-[var(--sys-heading)]">{t.name}</span>
                   {/* The filled text, not the template: what the customer will

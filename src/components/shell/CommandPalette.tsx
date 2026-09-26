@@ -330,7 +330,7 @@ export function CommandPalette({
             type="button"
             onClick={onClose}
             aria-label="إغلاق"
-            className="md:hidden -mr-1 p-2 text-[var(--sys-muted-foreground)]"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:hidden -mr-1 p-2 text-[var(--sys-muted-foreground)]"
           >
             <RiCloseLine className="w-5 h-5" />
           </button>

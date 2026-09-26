@@ -167,7 +167,7 @@ export function CampaignsScreen() {
               <button
                 key={p.key}
                 onClick={() => setPeriod(p.key)}
-                className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                className={`min-h-11 md:min-h-0 inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                   period === p.key ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]'
                 }`}
               >
@@ -317,7 +317,7 @@ function Row({
             <button
               onClick={onLink}
               title={c.adAccount ? 'غيّر الربط بميتا' : 'اربطها بحملة في ميتا'}
-              className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-semibold transition ${
+              className={`min-h-11 md:min-h-0 inline-flex items-center flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-semibold transition ${
                 c.spendSource === 'SYNCED'
                   ? 'border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
                   : 'border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]'
@@ -330,15 +330,15 @@ function Row({
           <button
             onClick={onCopy}
             title="انسخ رابط الإعلان"
-            className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+            className="min-h-11 md:min-h-0 inline-flex items-center flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
           >
             {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiLinksLine className="h-4 w-4" />}
             {copied ? 'نُسخ' : 'رابط الإعلان'}
           </button>
-          <button aria-label="تعديل" onClick={onEdit} title="تعديل" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+          <button aria-label="تعديل" onClick={onEdit} title="تعديل" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
             <RiPencilLine className="h-4 w-4" />
           </button>
-          <button aria-label="حذف" onClick={onRemove} title="حذف" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
+          <button aria-label="حذف" onClick={onRemove} title="حذف" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
             <RiDeleteBinLine className="h-4 w-4" />
           </button>
         </div>
@@ -473,7 +473,7 @@ function Editor({
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-bold text-[var(--sys-heading)]">{campaign ? 'تعديل الحملة' : 'حملة جديدة'}</h2>
-          <button aria-label="إغلاق" onClick={onClose} className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+          <button aria-label="إغلاق" onClick={onClose} className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
             <RiCloseLine className="h-4 w-4" />
           </button>
         </div>
@@ -640,7 +640,7 @@ function LinkDialog({
       >
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-sm font-bold text-[var(--sys-heading)]">اربط «{campaign.name}» بحملة في ميتا</h2>
-          <button aria-label="إغلاق" onClick={onClose} className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+          <button aria-label="إغلاق" onClick={onClose} className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
             <RiCloseLine className="h-4 w-4" />
           </button>
         </div>

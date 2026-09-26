@@ -191,13 +191,13 @@ export function ChannelsScreen() {
             <button
               onClick={create}
               disabled={busy === 'new'}
-              className="px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+              className="min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
             >
               {busy === 'new' ? 'جارٍ الإضافة…' : 'أضف القناة'}
             </button>
             <button
               onClick={() => { setAdding(false); setError(null); }}
-              className="px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
+              className="min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
             >
               إلغاء
             </button>
@@ -237,14 +237,18 @@ export function ChannelsScreen() {
                 </label>
                 <button
                   onClick={() => patch(c.id, { name: editDraft.name.trim(), kind: editDraft.kind })}
+                  aria-label="احفظ التعديل"
+                  title="احفظ التعديل"
                   disabled={busy === c.id}
-                  className="h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                  className="h-11 md:h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                 >
                   <RiCheckLine className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setEditing(null)}
-                  className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
+                  aria-label="ألغِ التعديل"
+                  title="ألغِ التعديل"
+                  className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                 >
                   <RiCloseLine className="w-4 h-4" />
                 </button>
@@ -265,15 +269,15 @@ export function ChannelsScreen() {
                 <div className="ms-auto flex items-center gap-1">
                   <button
                     onClick={() => { setEditing(c.id); setEditDraft({ name: c.name, kind: c.kind }); setError(null); }}
-                    className="p-1.5 rounded-md text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)]"
-                    title="تعديل"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-md text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)]"
+                    aria-label="تعديل" title="تعديل"
                   >
                     <RiPencilLine className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => patch(c.id, { isActive: !c.isActive })}
                     disabled={busy === c.id}
-                    className="text-xs px-2 py-1 rounded-md border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
+                    className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2 py-1 rounded-md border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
                   >
                     {c.isActive ? 'إيقاف' : 'تفعيل'}
                   </button>
@@ -281,8 +285,8 @@ export function ChannelsScreen() {
                     <button
                       onClick={() => remove(c)}
                       disabled={busy === c.id}
-                      className="p-1.5 rounded-md text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
-                      title="حذف — لا طلبات عليها"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-md text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+                      aria-label="حذف — لا طلبات عليها" title="حذف — لا طلبات عليها"
                     >
                       <RiDeleteBinLine className="w-4 h-4" />
                     </button>

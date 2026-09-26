@@ -613,7 +613,7 @@ export function PermissionsScreen() {
                                         return (
                                           <span key={id} className="inline-flex items-center gap-1 text-xs font-medium bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5">
                                             {prod?.name ?? id}
-                                            <button onClick={() => toggleScopeId(item.key, id)} className="cursor-pointer hover:text-[var(--sys-destructive)]">
+                                            <button onClick={() => toggleScopeId(item.key, id)} aria-label="أزل من النطاق" title="أزل من النطاق" className="cursor-pointer hover:text-[var(--sys-destructive)]">
                                               <RiCloseLine className="w-4 h-4" />
                                             </button>
                                           </span>

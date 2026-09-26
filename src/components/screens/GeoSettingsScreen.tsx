@@ -183,7 +183,7 @@ export function GeoSettingsScreen() {
                             weekendDays: on ? c.weekendDays.filter((x) => x !== i) : [...c.weekendDays, i],
                           })
                         }
-                        className={`px-3 py-1.5 rounded-lg text-xs border ${
+                        className={`min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs border ${
                           on ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]' : 'bg-[var(--sys-card)] text-[var(--sys-foreground)] border-[var(--sys-border)]'
                         }`}
                       >
@@ -243,7 +243,7 @@ export function GeoSettingsScreen() {
                 </div>
                 <button
                   onClick={() => setStorefrontFor((cur) => (cur === s.id ? null : s.id))}
-                  className={`text-xs px-3 py-1.5 rounded-lg border ${
+                  className={`min-h-11 md:min-h-0 inline-flex items-center text-xs px-3 py-1.5 rounded-lg border ${
                     storefrontFor === s.id
                       ? 'border-[var(--sys-primary)] text-[var(--sys-primary)] bg-[var(--sys-primary-soft)]'
                       : 'border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]'
@@ -253,7 +253,7 @@ export function GeoSettingsScreen() {
                 </button>
                 <button
                   onClick={() => patchStore(s.id, { status: s.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' })}
-                  className={`text-xs px-3 py-1.5 rounded-lg border ${
+                  className={`min-h-11 md:min-h-0 inline-flex items-center text-xs px-3 py-1.5 rounded-lg border ${
                     s.status === 'ACTIVE'
                       ? 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)]'
                       : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
@@ -290,7 +290,7 @@ export function GeoSettingsScreen() {
               ) : (
                 <button
                   onClick={() => setAdding(c.id)}
-                  className="w-full flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 w-full flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                 >
                   <RiAddCircleLine className="w-4 h-4" /> متجر في {c.name}
                 </button>
@@ -359,9 +359,9 @@ function Regions({ countryId }: { countryId: string }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="اسم المحافظة"
-          className="flex-1 h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+          className="flex-1 h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
         />
-        <button type="submit" className="px-3 h-10 rounded-lg bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] text-xs">
+        <button type="submit" className="px-3 h-11 md:h-10 rounded-lg bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] text-xs">
           إضافة
         </button>
       </form>
@@ -597,7 +597,7 @@ function CurrencyField({
         type="button"
         disabled={!changed || !currencyChoiceReady(draft)}
         onClick={() => onSave(draft.code.trim().toUpperCase(), draft.minorUnit as number)}
-        className="mt-5 h-10 rounded-lg bg-[var(--sys-primary)] px-3 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
+        className="mt-5 h-11 md:h-10 rounded-lg bg-[var(--sys-primary)] px-3 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
       >
         حفظ العملة
       </button>

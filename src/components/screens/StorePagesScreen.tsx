@@ -213,8 +213,8 @@ export function StorePagesScreen() {
                   <button
                     type="button"
                     onClick={() => void remove(page)}
-                    className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10"
-                    title="حذف"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10"
+                    aria-label="حذف" title="حذف"
                   >
                     <RiDeleteBinLine className="h-4 w-4" />
                   </button>

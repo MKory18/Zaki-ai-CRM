@@ -194,7 +194,7 @@ export function StoreMenusScreen() {
                         next[i] = { ...next[i], visible: !next[i].visible };
                         edit(open, next);
                       }}
-                      className={`rounded-lg p-1.5 hover:bg-[var(--sys-surface-strong)] ${item.visible ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted)]'}`}
+                      className={`min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 hover:bg-[var(--sys-surface-strong)] ${item.visible ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted)]'}`}
                     >
                       {item.visible ? <RiEyeLine className="h-4 w-4" /> : <RiEyeOffLine className="h-4 w-4" />}
                     </button>
@@ -206,7 +206,7 @@ export function StoreMenusScreen() {
                         [next[i - 1], next[i]] = [next[i], next[i - 1]];
                         edit(open, next);
                       }}
-                      className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
                       aria-label="حرّكه لأعلى"
                     >
                       <RiArrowUpLine className="h-4 w-4" />
@@ -219,7 +219,7 @@ export function StoreMenusScreen() {
                         [next[i + 1], next[i]] = [next[i], next[i + 1]];
                         edit(open, next);
                       }}
-                      className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
                       aria-label="حرّكه لأسفل"
                     >
                       <RiArrowDownLine className="h-4 w-4" />
@@ -227,7 +227,7 @@ export function StoreMenusScreen() {
                     <button
                       type="button"
                       onClick={() => edit(open, items.filter((_, j) => j !== i))}
-                      className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10"
                       aria-label="حذف"
                     >
                       <RiDeleteBinLine className="h-4 w-4" />

@@ -354,7 +354,7 @@ export function LandingPageDetailScreen() {
                         <span className="flex-1 truncate text-sm text-[var(--sys-heading)]">{r.product?.name}</span>
                         <span className="text-xs font-bold text-[var(--sys-primary)]" dir="ltr">{r.product?.basePrice ?? '—'}</span>
                         {!r.isActive && <span className="text-xs text-[var(--sys-warning)]">معطّل</span>}
-                        <button title="حذف" onClick={() => deleteRecommendation(r.id)} className="p-1 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><RiDeleteBinLine className="w-4 h-4" /></button>
+                        <button aria-label="حذف" title="حذف" onClick={() => deleteRecommendation(r.id)} className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><RiDeleteBinLine className="w-4 h-4" /></button>
                       </div>
                     ))}
                   </div>

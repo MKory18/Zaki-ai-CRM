@@ -117,7 +117,7 @@ export function PayoutDialog({
               <select
                 value={pick}
                 onChange={(e) => setPick(Number(e.target.value))}
-                className="h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+                className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
               >
                 {owed.map((o, i) => (
                   <option key={o.currencyCode} value={i}>
@@ -144,7 +144,7 @@ export function PayoutDialog({
             <select
               value={walletId}
               onChange={(e) => setWalletId(e.target.value)}
-              className="h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
             >
               <option value="">— اختر المحفظة —</option>
               {wallets.map((w) => (
@@ -167,7 +167,7 @@ export function PayoutDialog({
                 min="0"
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
-                className="h-10 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm"
+                className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm"
                 dir="ltr"
               />
               <span className="mt-1 block text-xs text-[var(--sys-muted)]">
@@ -197,21 +197,21 @@ export function PayoutDialog({
               onChange={(e) => setNote(e.target.value)}
               maxLength={200}
               placeholder="تحويل بنكي، نقداً باليد…"
-              className="h-10 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm"
+              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm"
             />
           </label>
 
           {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="h-10 rounded-lg border border-[var(--sys-border)] px-4 text-sm">
+            <button type="button" onClick={onClose} className="h-11 md:h-10 rounded-lg border border-[var(--sys-border)] px-4 text-sm">
               إلغاء
             </button>
             <button
               type="button"
               onClick={() => void pay()}
               disabled={saving || !wallet || (!sameCurrency && !(numericRate > 0))}
-              className="h-10 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+              className="h-11 md:h-10 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
             >
               {saving ? 'جارٍ الصرف…' : 'صرف'}
             </button>

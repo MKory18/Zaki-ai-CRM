@@ -219,49 +219,49 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'ANSWERED' })}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-muted-foreground)]/50 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-muted-foreground)]/50 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RiPhoneLine className="w-4 h-4" />{ar ? 'العميل أجاب' : 'Answered'}
           </button>
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'NO_ANSWER' })}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RiPhoneLockLine className="w-4 h-4" />{ar ? 'لم يجب' : 'No Answer'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('call_later'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RiTimerLine className="w-4 h-4" />{ar ? '⏰ الاتصال لاحقاً' : '⏰ Call Later'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('followup'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RiRefreshLine className="w-4 h-4" />{ar ? 'متابعة' : 'Follow Up'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('confirm'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-success)]/60 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-success)]/60 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RiCheckLine className="w-4 h-4" />{ar ? 'تأكيد الطلب' : 'Confirm Order'}
           </button>
           <button
             onClick={() => { setNote(''); setRejectionReason(''); setOpenForm('reject'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)] transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RiCloseCircleLine className="w-4 h-4" />{ar ? 'العميل رفض' : 'Rejected'}
           </button>
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'WRONG_NUMBER' })}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RiPhoneLockLine className="w-4 h-4" />{ar ? 'رقم خاطئ' : 'Wrong Number'}
           </button>

@@ -124,7 +124,7 @@ export function AskAi() {
                   type="button"
                   onClick={() => toggle(s.id)}
                   title={s.detail}
-                  className={`px-2.5 py-1 text-xs rounded-lg border transition-colors ${
+                  className={`min-h-11 md:min-h-0 inline-flex items-center px-2.5 py-1 text-xs rounded-lg border transition-colors ${
                     on
                       ? 'bg-[var(--sys-primary-soft)] border-[var(--sys-primary-soft)] text-[var(--sys-primary)] font-semibold'
                       : 'bg-[var(--sys-card)] border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)]/40'
@@ -156,7 +156,7 @@ export function AskAi() {
             type="button"
             onClick={ask}
             disabled={busy || !question.trim() || picked.length === 0}
-            className="inline-flex items-center gap-1.5 h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:bg-[var(--sys-primary)] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 h-11 md:h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:bg-[var(--sys-primary)] disabled:opacity-50"
           >
             {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiSendPlaneLine className="icon-mirror w-4 h-4" />}
             حلّل

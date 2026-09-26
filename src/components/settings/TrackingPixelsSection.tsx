@@ -224,7 +224,7 @@ export function TrackingPixelsSection() {
                 onChange={(e) =>
                   void send(`/api/settings/tracking-pixels/${p.id}`, { method: 'PATCH', body: JSON.stringify({ scope: e.target.value }) }, 'حُفظ.')
                 }
-                className="h-8 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] disabled:bg-[var(--sys-surface)]"
+                className="h-11 md:h-8 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] disabled:bg-[var(--sys-surface)]"
               >
                 {SCOPE_CHOICES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
@@ -238,14 +238,14 @@ export function TrackingPixelsSection() {
                     onClick={() =>
                       void send(`/api/settings/tracking-pixels/${p.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !p.enabled }) }, p.enabled ? 'عُطّل البكسل.' : 'فُعّل البكسل.')
                     }
-                    className="rounded-md px-2 py-1 text-xs font-semibold text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] hover:text-[var(--sys-foreground)]"
+                    className="min-h-11 md:min-h-0 inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] hover:text-[var(--sys-foreground)]"
                   >
                     {p.enabled ? 'تعطيل' : 'تفعيل'}
                   </button>
-                  <button type="button" onClick={() => void rename(p)} title="تعديل الاسم" className="rounded-md p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+                  <button type="button" onClick={() => void rename(p)} aria-label="تعديل الاسم" title="تعديل الاسم" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-md p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
                     <RiPencilLine className="h-4 w-4" />
                   </button>
-                  <button type="button" onClick={() => void remove(p)} title="حذف" className="rounded-md p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
+                  <button type="button" onClick={() => void remove(p)} aria-label="حذف" title="حذف" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-md p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
                     <RiDeleteBinLine className="h-4 w-4" />
                   </button>
                 </div>
@@ -263,13 +263,13 @@ export function TrackingPixelsSection() {
                 maxLength={64}
                 disabled={busy}
                 aria-label={`رقم بكسل ${meta.label}`}
-                className="h-10 min-w-[200px] flex-1 rounded-lg border border-[var(--sys-border)] px-3 font-mono text-sm outline-none focus:border-[var(--sys-primary)]"
+                className="h-11 md:h-10 min-w-[200px] flex-1 rounded-lg border border-[var(--sys-border)] px-3 font-mono text-sm outline-none focus:border-[var(--sys-primary)]"
               />
               <select
                 aria-label="أين يعمل"
                 value={newScope}
                 onChange={(e) => setNewScope(e.target.value as TrackingScope)}
-                className="h-10 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)]"
+                className="h-11 md:h-10 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)]"
               >
                 {SCOPE_CHOICES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>

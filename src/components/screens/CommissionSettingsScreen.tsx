@@ -150,7 +150,7 @@ export function CommissionSettingsScreen() {
           <h2 className="text-sm font-medium text-[var(--sys-heading)]">قواعد العمولة</h2>
           <button
             onClick={() => setNewOpen(true)}
-            className="h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
+            className="h-11 md:h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
           >
             <RiAddCircleLine className="w-4 h-4" /> قاعدة جديدة
           </button>
@@ -321,7 +321,7 @@ export function CommissionSettingsScreen() {
               t.payable > 0 && canPay ? (
                 <button
                   onClick={() => setPaying({ id: t.userId, name: t.name })}
-                  className="h-7 rounded-md border border-[var(--sys-primary)] px-2.5 text-xs font-medium text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
+                  className="h-11 md:h-7 rounded-md border border-[var(--sys-primary)] px-2.5 text-xs font-medium text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
                 >
                   صرف
                 </button>
@@ -578,7 +578,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               type="button"
               onClick={() => pickShape(value)}
               disabled={value !== 'single' && perOrder}
-              className={`h-8 flex-1 rounded-lg border text-xs font-medium disabled:opacity-40 ${
+              className={`h-11 md:h-8 flex-1 rounded-lg border text-xs font-medium disabled:opacity-40 ${
                 shape === value
                   ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
                   : 'border-[var(--sys-border)] text-[var(--sys-foreground)]'
@@ -691,7 +691,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                       onChange={(e) =>
                         setTiers(tiers.map((row, j) => (j === i ? { ...row, [field]: e.target.value } : row)))
                       }
-                      className="h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm"
+                      className="h-11 md:h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm"
                       dir="ltr"
                     />
                   ))}
@@ -699,14 +699,14 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                     value={t.label}
                     onChange={(e) => setTiers(tiers.map((row, j) => (j === i ? { ...row, label: e.target.value } : row)))}
                     placeholder="اختياري"
-                    className="h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm"
+                    className="h-11 md:h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setTiers(tiers.filter((_, j) => j !== i))}
                     disabled={tiers.length === 1}
-                    title="حذف الشريحة"
-                    className="h-9 w-9 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] disabled:opacity-30"
+                    aria-label="حذف الشريحة" title="حذف الشريحة"
+                    className="h-11 md:h-9 w-9 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] disabled:opacity-30"
                   >
                     ×
                   </button>
@@ -760,13 +760,13 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحفظ…' : 'حفظ'}
           </button>
@@ -818,13 +818,13 @@ function EndRuleDialog({ rule, onClose, onSaved }: { rule: Rule; onClose: () => 
         </label>
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             إنهاء
           </button>

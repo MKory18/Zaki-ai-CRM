@@ -353,13 +353,13 @@ export function ConfirmationIssuesScreen() {
                   <button
                     onClick={() => saveCorrection(issue)}
                     disabled={busy === issue.id}
-                    className="px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                    className="min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                   >
                     {busy === issue.id ? 'جارٍ الحفظ…' : 'احفظ التصحيح وأعده للطابور'}
                   </button>
                   <button
                     onClick={() => { setEditing(null); setDraft(null); setError(null); }}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
+                    className="min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                   >
                     إلغاء
                   </button>
@@ -383,13 +383,13 @@ export function ConfirmationIssuesScreen() {
                   <button
                     onClick={() => confirmVoid(issue)}
                     disabled={busy === issue.id}
-                    className="px-3 py-1.5 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                    className="min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                   >
                     تأكيد الإبطال
                   </button>
                   <button
                     onClick={() => { setVoiding(null); setVoidReason(''); setError(null); }}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
+                    className="min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                   >
                     تراجع
                   </button>
@@ -406,14 +406,14 @@ export function ConfirmationIssuesScreen() {
               <footer className="flex gap-2 pt-2 border-t border-[var(--sys-border)]">
                 <button
                   onClick={() => openCorrection(issue)}
-                  className="px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
+                  className="min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
                 >
                   <RiPencilLine className="w-4 h-4" />
                   صحّح البيانات
                 </button>
                 <button
                   onClick={() => { setVoiding(issue.id); setVoidReason(''); setError(null); }}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
+                  className="min-h-11 md:min-h-0 inline-flex items-center px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
                 >
                   <RiForbidLine className="w-4 h-4" />
                   إبطال الطلب (المالك فقط)

@@ -189,7 +189,7 @@ export function UserSalary({
             type="button"
             onClick={save}
             disabled={busy || !changed}
-            className="h-10 rounded-lg bg-[var(--sys-primary)] px-3 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+            className="h-11 md:h-10 rounded-lg bg-[var(--sys-primary)] px-3 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
           >
             {busy ? 'جارٍ…' : 'احفظ'}
           </button>
@@ -199,7 +199,7 @@ export function UserSalary({
           <button
             type="button"
             onClick={openPay}
-            className="flex h-10 items-center gap-1 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-xs text-[var(--sys-foreground)]"
+            className="flex h-11 md:h-10 items-center gap-1 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-xs text-[var(--sys-foreground)]"
           >
             <RiWallet3Line className="h-4 w-4" /> اصرف الراتب
           </button>

@@ -193,8 +193,8 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                 </div>
                 <button
                   onClick={() => void disconnect(a)}
-                  title="فصل"
-                  className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
+                  aria-label="فصل" title="فصل"
+                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                 >
                   <RiDeleteBinLine className="h-4 w-4" />
                 </button>
@@ -225,7 +225,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   key={p.platform}
                   type="button"
                   onClick={() => pick(p.platform)}
-                  className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition ${
+                  className={`min-h-11 md:min-h-0 inline-flex items-center flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition ${
                     p.platform === active.platform
                       ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-raised'
                       : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'

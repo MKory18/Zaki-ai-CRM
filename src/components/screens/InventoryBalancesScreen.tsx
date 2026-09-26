@@ -110,7 +110,7 @@ export function InventoryBalancesScreen() {
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder="ابحث باسم المنتج أو رمزه…"
-            className="w-full min-w-0 h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full min-w-0 h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
           <p className="mt-1.5 text-xs text-[var(--sys-muted-foreground)]">
             {visible.length} من {stockSummary.length} منتج

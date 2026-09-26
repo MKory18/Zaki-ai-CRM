@@ -143,7 +143,7 @@ export function DeliveryFeesScreen() {
       <div className="flex flex-wrap items-end gap-3">
         <label>
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">شركة الشحن</span>
-          <select value={courier} onChange={(e) => setCourier(e.target.value)} className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm">
+          <select value={courier} onChange={(e) => setCourier(e.target.value)} className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm">
             {data.providers.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -156,7 +156,7 @@ export function DeliveryFeesScreen() {
         {missing.length > 0 && (
           <button
             onClick={() => setBulkOpen(true)}
-            className="h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
+            className="h-11 md:h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
           >
             <RiMagicLine className="w-4 h-4" /> عبّئ الفارغة ({missing.length})
           </button>
@@ -218,7 +218,7 @@ export function DeliveryFeesScreen() {
                     min={0}
                     step="0.001"
                     dir="ltr"
-                    className="w-24 h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+                    className="w-24 h-11 md:h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
                   />
                 ),
               },
@@ -234,7 +234,7 @@ export function DeliveryFeesScreen() {
                     min={0}
                     max={90}
                     dir="ltr"
-                    className="w-20 h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+                    className="w-20 h-11 md:h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
                   />
                 ),
               },
@@ -250,7 +250,7 @@ export function DeliveryFeesScreen() {
                     min={0}
                     step="0.001"
                     dir="ltr"
-                    className="w-24 h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+                    className="w-24 h-11 md:h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
                   />
                 ),
               },
@@ -427,12 +427,12 @@ function BulkFillDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit" disabled={saving || !fee}
-            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ…' : `عبّئ ${regions.length}`}
           </button>
@@ -476,10 +476,10 @@ function ReasonDialog({
           />
         </label>
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
-          <button type="submit" className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
+          <button type="submit" className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
             حفظ التعديل
           </button>
         </div>

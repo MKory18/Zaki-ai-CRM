@@ -70,7 +70,7 @@ export function ClosingScreen() {
             value={date}
             max={today()}
             onChange={(e) => setDate(e.target.value)}
-            className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
@@ -121,7 +121,7 @@ export function ClosingScreen() {
                       <button
                         disabled={!!r.blockedBy}
                         onClick={() => setCountFor(r)}
-                        className="h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+                        className="h-11 md:h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                       >
                         {r.closing ? 'تعديل الجرد' : 'تسجيل الجرد'}
                       </button>
@@ -282,13 +282,13 @@ function CountDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحفظ…' : 'حفظ الجرد'}
           </button>

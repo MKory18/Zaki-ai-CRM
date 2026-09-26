@@ -187,7 +187,7 @@ export function PreparationScreen() {
                         onClick={() => setOpenOrderId(l.orderId)}
                         title="افتح الطلب وعدّله — ما لم تكن بوليصته قد طُبعت"
                         aria-label="افتح الطلب"
-                        className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
+                        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
                       >
                         <RiPencilLine className="w-4 h-4" />
                       </button>
@@ -198,7 +198,7 @@ export function PreparationScreen() {
                         onClick={() => setCancelling({ id: l.orderId, orderNumber: l.orderNumber })}
                         title="ألغِ الطلب — يعود المحجوز من بضاعته إلى المخزون"
                         aria-label="ألغِ الطلب"
-                        className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+                        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       >
                         <RiCloseCircleLine className="w-4 h-4" />
                       </button>
@@ -208,7 +208,7 @@ export function PreparationScreen() {
                         type="button"
                         onClick={() => setReviewing(l.pendingChangeRequestId!)}
                         title="طلب تعديل بانتظار البتّ — راجعه قبل التغليف"
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] text-xs font-semibold text-[var(--sys-warning)] hover:border-[var(--sys-warning)]"
+                        className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] text-xs font-semibold text-[var(--sys-warning)] hover:border-[var(--sys-warning)]"
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-[var(--sys-warning)] animate-pulse" aria-hidden />
                         طلب تعديل

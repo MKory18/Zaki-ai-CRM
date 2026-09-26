@@ -79,7 +79,7 @@ export function UserCommissionCurrency({
               type="button"
               onClick={() => void save()}
               disabled={!changed || !valid || busy}
-              className="h-8 rounded-md bg-[var(--sys-primary)] px-3 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
+              className="h-11 md:h-8 rounded-md bg-[var(--sys-primary)] px-3 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
             >
               حفظ
             </button>

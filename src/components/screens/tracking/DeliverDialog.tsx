@@ -116,7 +116,7 @@ export function DeliverDialog({
                       <button
                         type="button"
                         onClick={() => setTaken((t) => ({ ...t, [l.id]: 0 }))}
-                        className={`text-xs px-2 py-1 rounded-md border ${
+                        className={`min-h-11 md:min-h-0 inline-flex items-center text-xs px-2 py-1 rounded-md border ${
                           value === 0 ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
                         }`}
                       >
@@ -130,7 +130,7 @@ export function DeliverDialog({
                         onChange={(e) =>
                           setTaken((t) => ({ ...t, [l.id]: Math.max(0, Math.min(shipped, Number(e.target.value))) }))
                         }
-                        className="w-16 h-8 px-2 rounded-md border border-[var(--sys-border)] text-sm text-center tabular-nums"
+                        className="w-16 h-11 md:h-8 px-2 rounded-md border border-[var(--sys-border)] text-sm text-center tabular-nums"
                         dir="ltr"
                       />
                     </div>
@@ -187,13 +187,13 @@ export function DeliverDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !lines}
-            className="h-10 px-4 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+            className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             <RiArchiveDrawerLine className="w-4 h-4" />
             {saving ? 'جارٍ التسجيل…' : !anyTaken ? 'تسجيل كمرتجع' : allTaken ? 'تسليم كامل' : 'تسليم جزئي'}

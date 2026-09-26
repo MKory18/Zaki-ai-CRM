@@ -120,7 +120,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => { setOpen(open === 'release' ? null : 'release'); }}
-              className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
+              className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
             >
               <RiUserUnfollowLine className="w-4 h-4" />
               سحبه منه
@@ -129,7 +129,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
               onClick={() => { setOpen(open === 'transfer' ? null : 'transfer'); }}
               disabled={candidates.length === 0}
               title={candidates.length === 0 ? 'لا يوجد زميل بنفس الرتبة' : undefined}
-              className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+              className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
             >
               <RiArrowLeftRightLine className="icon-mirror w-4 h-4" />
               تحويل لزميل
@@ -172,14 +172,14 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
             <button
               onClick={() => run(open)}
               disabled={busy}
-              className="text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
             >
               {busy && <RiLoader4Line className="w-4 h-4 animate-spin" />}
               {open === 'release' ? 'أعِده للطابور' : 'حوّل الطلب'}
             </button>
             <button
               onClick={() => { setOpen(null); }}
-              className="text-xs px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]"
+              className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]"
             >
               إلغاء
             </button>

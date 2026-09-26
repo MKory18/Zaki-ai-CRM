@@ -50,7 +50,14 @@ export function PageHeader({
           <p className="mt-1 max-w-2xl text-note text-[var(--sys-muted-foreground)]">{description}</p>
         )}
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      {/*
+        `min-w-0` beside `shrink-0`: the actions keep their own size when
+        there is room, and stop widening the page when there is not. At 768,
+        with the sidebar taking 280px, this row was 7px too wide — enough to
+        make every screen scroll sideways, which is how a one-line toolbar
+        becomes a layout bug.
+      */}
+      {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
     </header>
   );
 }

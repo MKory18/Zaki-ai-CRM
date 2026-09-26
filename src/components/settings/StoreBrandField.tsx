@@ -126,7 +126,7 @@ export function StoreBrandField({
           type="button"
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-1.5 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
+          className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-1.5 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
         >
           {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiImageAddLine className="h-4 w-4" />}
           {value ? 'تغيير' : copy.upload}
@@ -137,7 +137,7 @@ export function StoreBrandField({
             onClick={() => void remove()}
             disabled={busy}
             title={copy.removeTitle}
-            className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-50"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-50"
           >
             <RiDeleteBinLine className="h-4 w-4" />
           </button>

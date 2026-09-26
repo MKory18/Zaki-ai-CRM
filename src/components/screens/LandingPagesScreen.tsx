@@ -198,27 +198,27 @@ export function LandingPagesScreen() {
                     { key: 'c5', label: "إجراءات",
                       render: (lp: any) => (
                   <><div className="flex items-center gap-1">
-                            <button title="تحرير" onClick={() => (window.location.href = `/growth/landing-pages/${lp.id}`)}
-                              className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]"><RiPencilLine className="w-4 h-4" /></button>
+                            <button aria-label="تحرير" title="تحرير" onClick={() => (window.location.href = `/growth/landing-pages/${lp.id}`)}
+                              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]"><RiPencilLine className="w-4 h-4" /></button>
                             <button title={lp.isPublished ? 'إلغاء النشر' : 'نشر'} disabled={busyId === lp.id}
                               onClick={() => togglePublish(lp)}
-                              className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)] disabled:opacity-40">
+                              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)] disabled:opacity-40">
                               {lp.isPublished ? <RiEyeOffLine className="w-4 h-4" /> : <RiEyeLine className="w-4 h-4" />}
                             </button>
                             <button title="نسخ الرابط" onClick={() => copyUrl(lp)}
-                              className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">
+                              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">
                               {copiedId === lp.id ? <RiCursorLine className="w-4 h-4 text-[var(--sys-success)]" /> : <RiFileCopyLine className="w-4 h-4" />}
                             </button>
                             {/* A page that converts, wanted again for the next
                                 product. Rebuilding it by hand is how a working
                                 page gets copied wrong. */}
-                            <button title="انسخ الصفحة" disabled={busyId === lp.id}
+                            <button aria-label="انسخ الصفحة" title="انسخ الصفحة" disabled={busyId === lp.id}
                               onClick={() => duplicate(lp)}
-                              className="p-1.5 rounded-lg hover:bg-[var(--sys-primary-soft)] text-[var(--sys-foreground)] hover:text-[var(--sys-primary)] disabled:opacity-40">
+                              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg hover:bg-[var(--sys-primary-soft)] text-[var(--sys-foreground)] hover:text-[var(--sys-primary)] disabled:opacity-40">
                               <RiFileCopy2Line className="w-4 h-4" />
                             </button>
-                            <button title="حذف" onClick={() => setDeleting(lp)}
-                              className="p-1.5 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><RiDeleteBinLine className="w-4 h-4" /></button>
+                            <button aria-label="حذف" title="حذف" onClick={() => setDeleting(lp)}
+                              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><RiDeleteBinLine className="w-4 h-4" /></button>
                           </div></>
                 ) },
                   ]}

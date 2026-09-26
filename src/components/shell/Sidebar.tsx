@@ -153,7 +153,16 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="Zaki AI" className="w-11 h-9 shrink-0 object-contain" />
             <div className="rail-hide min-w-0">
-              <span className="font-bold text-[var(--sys-primary-foreground)] tracking-wide text-base leading-tight block" dir="ltr">
+              {/*
+                THE WORDMARK SITS ON THE SIDEBAR, NOT ON THE ACCENT.
+                It was `--sys-primary-foreground` — the colour of text that
+                sits ON the cyan, which in the default theme is #04182B. On
+                the sidebar's #0a1a2e that is 1.03:1: the product's own name
+                was invisible in the place it is most often read, and it took
+                measuring the contrast in a browser to see it, because a
+                near-invisible word looks like empty padding.
+              */}
+              <span className="font-bold text-[var(--sys-sidebar-foreground)] tracking-wide text-base leading-tight block" dir="ltr">
                 Zaki <span className="text-[var(--sys-primary)]">AI</span> Store
               </span>
               <span className="block text-xs text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-[0.18em]" dir="ltr">
@@ -169,7 +178,7 @@ export function Sidebar({
             aria-label={rail ? 'وسّع القائمة' : 'اطوِ القائمة إلى شريط'}
             title={rail ? 'وسّع القائمة' : 'اطوِ القائمة إلى شريط'}
             aria-pressed={rail}
-            className="rail-hide hidden md:flex mr-auto h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--sys-sidebar-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-heading)]"
+            className="rail-hide hidden md:flex mr-auto h-11 md:h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--sys-sidebar-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-heading)]"
           >
             <RiSideBarLine className="icon-mirror w-5 h-5" />
           </button>
@@ -182,7 +191,7 @@ export function Sidebar({
             onClick={toggleRail}
             aria-label="وسّع القائمة"
             title="وسّع القائمة"
-            className="hidden md:flex mx-auto mt-2 h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--sys-sidebar-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-heading)]"
+            className="hidden md:flex mx-auto mt-2 h-11 md:h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--sys-sidebar-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-heading)]"
           >
             <RiSideBarLine className="icon-mirror w-5 h-5" />
           </button>

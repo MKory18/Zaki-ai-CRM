@@ -302,7 +302,7 @@ function RegisterApp({
                   value: secret,
                 });
               }}
-              className="shrink-0 cursor-pointer rounded-lg p-2 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-card)]"
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 shrink-0 cursor-pointer rounded-lg p-2 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-card)]"
             >
               {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiFileCopyLine className="h-4 w-4" />}
             </button>

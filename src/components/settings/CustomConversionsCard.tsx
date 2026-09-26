@@ -309,8 +309,8 @@ export function CustomConversionsCard() {
                   <span className="font-mono text-xs text-[var(--sys-muted)]" dir="ltr">••••{pixel?.capiTokenHint}</span>
                   <button
                     onClick={() => void removeToken()}
-                    className="mr-auto rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
-                    title="فصل"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 mr-auto rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
+                    aria-label="فصل" title="فصل"
                   >
                     <RiDeleteBinLine className="h-4 w-4" />
                   </button>
@@ -442,14 +442,14 @@ export function CustomConversionsCard() {
                       <div className="flex shrink-0 items-center gap-1">
                         <button
                           onClick={() => void toggle(c)}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
+                          className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg px-2 py-1 text-xs font-semibold text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
                         >
                           {c.enabled ? 'أوقف' : 'شغّل'}
                         </button>
                         <button
                           onClick={() => void remove(c)}
-                          title="حذف"
-                          className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
+                          aria-label="حذف" title="حذف"
+                          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                         >
                           <RiDeleteBinLine className="h-4 w-4" />
                         </button>
@@ -486,7 +486,7 @@ export function CustomConversionsCard() {
                       key={t.value}
                       type="button"
                       onClick={() => pickTrigger(t.value)}
-                      className={`w-full rounded-lg border p-2 text-right transition ${
+                      className={`min-h-11 min-w-11 md:min-h-0 md:min-w-0 w-full rounded-lg border p-2 text-right transition ${
                         form.trigger === t.value
                           ? 'border-[var(--sys-primary)] bg-[var(--sys-card)]'
                           : 'border-[var(--sys-border)] bg-[var(--sys-card)] hover:border-[var(--sys-border-strong)]'

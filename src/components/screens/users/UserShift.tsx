@@ -127,7 +127,7 @@ export function UserShift({
             type="button"
             onClick={save}
             disabled={busy || !changed || inverted}
-            className="h-10 rounded-lg bg-[var(--sys-primary)] px-3 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+            className="h-11 md:h-10 rounded-lg bg-[var(--sys-primary)] px-3 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
           >
             {busy ? 'جارٍ…' : 'احفظ'}
           </button>
@@ -146,7 +146,7 @@ export function UserShift({
               type="button"
               disabled={!canEdit}
               onClick={() => toggleDay(d.n)}
-              className={`rounded-lg border px-1.5 py-0.5 text-xs ${
+              className={`min-h-11 md:min-h-0 inline-flex items-center rounded-lg border px-1.5 py-0.5 text-xs ${
                 rest?.includes(d.n)
                   ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
                   : 'border-[var(--sys-border)] bg-[var(--sys-card)] text-[var(--sys-muted-foreground)]'
@@ -159,7 +159,7 @@ export function UserShift({
             <button
               type="button"
               onClick={() => setRest(null)}
-              className="rounded-lg px-1.5 py-0.5 text-xs text-[var(--sys-muted)] hover:text-[var(--sys-primary)]"
+              className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg px-1.5 py-0.5 text-xs text-[var(--sys-muted)] hover:text-[var(--sys-primary)]"
             >
               أعد عطلة البلد
             </button>

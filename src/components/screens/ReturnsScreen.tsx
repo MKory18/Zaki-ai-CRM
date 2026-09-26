@@ -74,12 +74,12 @@ export function ReturnsScreen() {
               onChange={(e) => setTerm(e.target.value)}
               autoFocus
               placeholder="امسح الباركود هنا"
-              className="w-full h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
           </div>
         </label>
-        <button type="submit" className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
+        <button type="submit" className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
         {/* A phone is the scanner a warehouse already owns. It keeps
             scanning: a returned pallet is twenty parcels, not one. */}
         <ScanButton
@@ -245,7 +245,7 @@ function ReceiveDialog({
         </label>
 
         <label className="flex items-start gap-2 text-sm text-[var(--sys-heading)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2">
-          <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-1" />
+          <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="h-5 w-5 mt-1" />
           <span>أقرّ بأنني عددت البضاعة وفحصتها. لا تدخل البضاعة للمخزون قبل هذا الإقرار.</span>
         </label>
 

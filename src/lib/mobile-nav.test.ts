@@ -228,9 +228,20 @@ describe('nothing is parked outside the screen', () => {
     // The chip that carries the store name is the one that must shrink:
     // it is the widest thing in the row and the only one with text to cut.
     expect(src).toMatch(/className="flex min-w-0 shrink items-center[^"]*"/);
-    // And the cluster of icons on the other end must NOT shrink, or the
-    // bell and the avatar squash into each other instead.
-    expect(src).toMatch(/className="flex shrink-0 items-center gap-3[^"]*"/);
+    /**
+     * AND THE CLUSTER OF ICONS WRAPS INSTEAD OF SHRINKING.
+     *
+     * This asserted `shrink-0` on that cluster, for a good reason: squeezing
+     * it makes the bell and the avatar overlap. But `shrink-0` alone told it
+     * to overflow the DOCUMENT instead — measured at 768, where the sidebar
+     * takes 280 of the width, the cluster pushed the page 122px sideways on
+     * every screen.
+     *
+     * `min-w-0 flex-wrap` keeps every icon its own size and lets the row
+     * become two rows on a tablet, which is what a header should do. On a
+     * desk (`lg:`) there is room, and it stays one row.
+     */
+    expect(src).toMatch(/className="flex min-w-0 flex-wrap items-center gap-3[^"]*lg:flex-nowrap"/);
     // On a phone the thing that pushes that cluster to the far end is the
     // search icon, not the cluster itself — so `mr-auto` sits on whichever
     // of the two is drawn at that width. Both carrying it would leave a gap

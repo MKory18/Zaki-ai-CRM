@@ -398,7 +398,7 @@ export function StoreThemeScreen() {
                   onClick={() => set('accent', hex)}
                   title={hex}
                   style={{ background: hex }}
-                  className={`h-7 rounded-md border-2 transition ${
+                  className={`h-11 md:h-7 rounded-md border-2 transition ${
                     theme.accent.toLowerCase() === hex ? 'scale-105 border-[var(--sys-heading)]' : 'border-transparent'
                   }`}
                 />
@@ -410,7 +410,7 @@ export function StoreThemeScreen() {
                 aria-label="اللون الأساسي"
                 value={isValidHex(theme.accent) ? theme.accent : DEFAULT_STORE_THEME.accent}
                 onChange={(e) => set('accent', e.target.value)}
-                className="h-8 w-10 cursor-pointer rounded-lg border border-[var(--sys-border)]"
+                className="h-11 md:h-8 w-10 cursor-pointer rounded-lg border border-[var(--sys-border)]"
               />
               <Select
                 className="text-xs"
@@ -439,7 +439,7 @@ export function StoreThemeScreen() {
                         aria-label={label}
                         value={value && isValidHex(value) ? value : '#ffffff'}
                         onChange={(e) => setPart('colors', { [key]: e.target.value })}
-                        className="h-7 w-9 cursor-pointer rounded-lg border border-[var(--sys-border)]"
+                        className="h-11 md:h-7 w-9 cursor-pointer rounded-lg border border-[var(--sys-border)]"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-semibold text-[var(--sys-foreground)]">{label}</p>
@@ -486,7 +486,7 @@ export function StoreThemeScreen() {
                     aria-label="لون الترويسة"
                     value={theme.header?.background && isValidHex(theme.header.background) ? theme.header.background : '#ffffff'}
                     onChange={(e) => setPart('header', { background: e.target.value })}
-                    className="h-10 w-12 cursor-pointer rounded-lg border border-[var(--sys-border)]"
+                    className="h-11 md:h-10 w-12 cursor-pointer rounded-lg border border-[var(--sys-border)]"
                   />
                   <button
                     type="button"
@@ -614,7 +614,7 @@ export function StoreThemeScreen() {
                           if (e.target.checked) set.add(field); else set.delete(field);
                           setPart('checkout', { required: [...set] });
                         }}
-                        className="h-3.5 w-3.5 accent-[var(--sys-primary)] disabled:opacity-50"
+                        className="h-3.5 w-3.5 accent-[var(--sys-primary)] disabled:opacity-50 tap-safe"
                       />
                       إلزامي{mandatory && ' (دائماً)'}
                     </label>
@@ -671,7 +671,7 @@ export function StoreThemeScreen() {
                     aria-label="لون زر التأكيد"
                     value={theme.checkout?.buttonColor && isValidHex(theme.checkout.buttonColor) ? theme.checkout.buttonColor : '#ffffff'}
                     onChange={(e) => setPart('checkout', { buttonColor: e.target.value })}
-                    className="h-10 w-12 cursor-pointer rounded-lg border border-[var(--sys-border)]"
+                    className="h-11 md:h-10 w-12 cursor-pointer rounded-lg border border-[var(--sys-border)]"
                   />
                   <button
                     type="button"

@@ -331,7 +331,7 @@ export function WhatsAppInboxScreen() {
                 <div className="flex gap-1 text-xs font-semibold">
                   {(['OPEN', 'CLOSED'] as const).map((s) => (
                     <button key={s} onClick={() => setStatusFilter(s)}
-                      className={`px-3 py-1 rounded-full ${statusFilter === s ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]'}`}>
+                      className={`min-h-11 md:min-h-0 inline-flex items-center px-3 py-1 rounded-full ${statusFilter === s ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]'}`}>
                       {s === 'OPEN' ? 'مفتوحة' : 'مغلقة'}
                     </button>
                   ))}
@@ -385,7 +385,12 @@ export function WhatsAppInboxScreen() {
               ) : (
                 <>
                   <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--sys-surface-strong)]">
-                    <button className="lg:hidden text-[var(--sys-muted-foreground)]" onClick={() => setMobileView('list')}><RiArrowRightSLine className="icon-mirror w-5 h-5" /></button>
+                    <button
+                      className="lg:hidden text-[var(--sys-muted-foreground)]"
+                      onClick={() => setMobileView('list')}
+                      aria-label="عد إلى المحادثات"
+                      title="عد إلى المحادثات"
+                    ><RiArrowRightSLine className="icon-mirror w-5 h-5" /></button>
                     <div className="w-9 h-9 rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] flex items-center justify-center text-xs font-bold">
                       {(selected.customerName || selected.customerPhone).slice(0, 2)}
                     </div>
@@ -394,7 +399,7 @@ export function WhatsAppInboxScreen() {
                       <p className="text-xs text-[var(--sys-muted-foreground)] truncate" dir="ltr">{selected.customerPhone}</p>
                     </div>
                     <button onClick={toggleStatus}
-                      className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold ${selected.status === 'OPEN' ? 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]' : 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]'}`}>
+                      className={`min-h-11 md:min-h-0 inline-flex items-center shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold ${selected.status === 'OPEN' ? 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]' : 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]'}`}>
                       {selected.status === 'OPEN' ? 'إغلاق المحادثة' : 'إعادة فتح'}
                     </button>
                   </div>
@@ -406,7 +411,7 @@ export function WhatsAppInboxScreen() {
                         value={selected.assignedUserId || ''}
                         disabled={assigning}
                         onChange={(e) => assign(e.target.value || null)}
-                        className="text-xs border border-[var(--sys-border)] rounded-lg px-2 py-1 bg-[var(--sys-card)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
+                        className="min-h-11 md:min-h-0 inline-flex items-center text-xs border border-[var(--sys-border)] rounded-lg px-2 py-1 bg-[var(--sys-card)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                       >
                         <option value="">غير معين</option>
                         {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -470,7 +475,7 @@ export function WhatsAppInboxScreen() {
                           className="flex-1 resize-none max-h-32 px-3 py-2.5 text-sm rounded-lg border border-[var(--sys-border)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                         />
                         <button onClick={sendMessage} disabled={sending || !composing.trim()}
-                          className="shrink-0 w-10 h-10 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center disabled:opacity-40 hover:opacity-90">
+                          className="shrink-0 w-10 h-11 md:h-10 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center disabled:opacity-40 hover:opacity-90">
                           {sending ? <RiRefreshLine className="w-4 h-4 animate-spin" /> : <RiSendPlaneLine className="icon-mirror w-4 h-4" />}
                         </button>
                       </div>

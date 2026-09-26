@@ -130,7 +130,7 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
               type="button"
               onClick={copy}
               title="انسخ"
-              className="shrink-0 cursor-pointer rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-1.5 text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 shrink-0 cursor-pointer rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-1.5 text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
             >
               {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiFileCopyLine className="h-4 w-4" />}
             </button>

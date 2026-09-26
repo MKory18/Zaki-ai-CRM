@@ -57,7 +57,7 @@ export function FilterBar({
           <button
             type="button"
             onClick={onClear}
-            className="ms-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)]"
+            className="min-h-11 md:min-h-0 inline-flex items-center ms-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)]"
           >
             <RiCloseLine className="h-4 w-4" aria-hidden />
             امسح الفلاتر

@@ -62,7 +62,7 @@ export function CustomerHistoryButton({
           setOpen(true);
         }}
         title={previousOrders > 0 ? `${previousOrders} طلب سابق لهذا العميل` : 'عميل جديد — لا طلبات سابقة'}
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs ${
+        className={`min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs ${
           previousOrders > 0
             ? 'bg-[var(--sys-surface)] border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)]'
             : 'bg-[var(--sys-card)] border-[var(--sys-border)] text-[var(--sys-muted)] hover:border-[var(--sys-primary)]'

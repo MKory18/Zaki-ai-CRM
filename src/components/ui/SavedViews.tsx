@@ -102,7 +102,7 @@ export function SavedViews({
           <button
             type="button"
             onClick={() => onApply(v.query)}
-            className="max-w-[10rem] truncate px-2 py-1 text-[var(--sys-foreground)] hover:text-[var(--sys-primary)]"
+            className="min-h-11 md:min-h-0 inline-flex items-center max-w-[10rem] truncate px-2 py-1 text-[var(--sys-foreground)] hover:text-[var(--sys-primary)]"
           >
             {v.name}
           </button>
@@ -110,7 +110,7 @@ export function SavedViews({
             type="button"
             onClick={() => drop(v.name)}
             aria-label={`احذف «${v.name}»`}
-            className="px-1 py-1 text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
+            className="min-h-11 md:min-h-0 inline-flex items-center px-1 py-1 text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
           >
             <RiCloseLine className="h-4 w-4" />
           </button>
@@ -129,9 +129,9 @@ export function SavedViews({
             }}
             placeholder="سمِّ هذه الفلاتر"
             aria-label="اسم العرض المحفوظ"
-            className="h-8 w-40 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs outline-none focus:border-[var(--sys-primary)]"
+            className="h-11 md:h-8 w-40 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs outline-none focus:border-[var(--sys-primary)]"
           />
-          <button type="button" onClick={save} className="px-2 py-1 text-xs font-semibold text-[var(--sys-primary)]">
+          <button type="button" onClick={save} className="min-h-11 md:min-h-0 inline-flex items-center px-2 py-1 text-xs font-semibold text-[var(--sys-primary)]">
             احفظ
           </button>
         </span>
@@ -140,7 +140,7 @@ export function SavedViews({
           <button
             type="button"
             onClick={() => setNaming(true)}
-            className="inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
+            className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
           >
             <RiBookmarkLine className="h-4 w-4" aria-hidden />
             احفظ هذا العرض

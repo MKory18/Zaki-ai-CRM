@@ -226,7 +226,7 @@ export function StoreRoutesScreen() {
                       disabled={busy}
                       onClick={() => void toggle(row)}
                       title={row.isActive ? 'أوقفه' : 'شغّله'}
-                      className="rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-40"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-40"
                     >
                       <RiShutDownLine className="h-4 w-4" />
                     </button>
@@ -234,8 +234,8 @@ export function StoreRoutesScreen() {
                       type="button"
                       disabled={busy}
                       onClick={() => void dismiss(row)}
-                      title="حذف"
-                      className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10 disabled:opacity-40"
+                      aria-label="حذف" title="حذف"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10 disabled:opacity-40"
                     >
                       <RiDeleteBinLine className="h-4 w-4" />
                     </button>

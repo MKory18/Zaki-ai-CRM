@@ -137,7 +137,7 @@ export function AssistantsTable({
                 checked={enabled.includes(scope)}
                 disabled={busy}
                 onChange={() => void toggle(scope)}
-                className="mt-0.5"
+                className="h-5 w-5 mt-0.5"
               />
               <span>
                 <span className="block text-xs font-semibold text-[var(--sys-heading)]">{SCOPE_LABEL_AR[scope]}</span>

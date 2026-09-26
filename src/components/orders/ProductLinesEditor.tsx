@@ -119,8 +119,8 @@ export function ProductLinesEditor({
                   type="button"
                   onClick={() => onChange(lines.filter((l) => l.key !== line.key))}
                   disabled={disabled}
-                  title="احذف هذا المنتج من الطلب"
-                  className="h-9 w-9 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] shrink-0 disabled:opacity-40"
+                  aria-label="احذف هذا المنتج من الطلب" title="احذف هذا المنتج من الطلب"
+                  className="h-11 md:h-9 w-9 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] shrink-0 disabled:opacity-40"
                 >
                   <RiDeleteBinLine className="w-4 h-4 mx-auto" />
                 </button>
@@ -148,8 +148,10 @@ export function ProductLinesEditor({
                 <button
                   type="button"
                   onClick={() => patch(line.key, { quantity: Math.max(1, line.quantity - 1), offerId: null })}
+                  aria-label="أنقص الكمية"
+                  title="أنقص الكمية"
                   disabled={disabled || lockedByOffer}
-                  className="h-9 w-9 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
+                  className="h-11 md:h-9 w-9 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
                 >
                   <RiSubtractLine className="w-4 h-4 mx-auto" />
                 </button>
@@ -163,8 +165,10 @@ export function ProductLinesEditor({
                 <button
                   type="button"
                   onClick={() => patch(line.key, { quantity: line.quantity + 1, offerId: null })}
+                  aria-label="زد الكمية"
+                  title="زد الكمية"
                   disabled={disabled || lockedByOffer}
-                  className="h-9 w-9 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
+                  className="h-11 md:h-9 w-9 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
                 >
                   <RiAddCircleLine className="w-4 h-4 mx-auto" />
                 </button>
@@ -200,7 +204,7 @@ export function ProductLinesEditor({
           type="button"
           onClick={() => onChange([...lines, newLine()])}
           disabled={disabled}
-          className="text-xs px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--sys-primary)] text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+          className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--sys-primary)] text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
         >
           <RiAddCircleLine className="w-4 h-4" />
           أضف منتجاً آخر

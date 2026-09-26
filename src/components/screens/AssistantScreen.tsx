@@ -335,7 +335,7 @@ export function AssistantScreen() {
               <button
                 key={i}
                 onClick={() => handleSendMessage(sq)}
-                className="shrink-0 px-2.5 py-1 rounded-full bg-[var(--sys-card)] border border-[var(--sys-border)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] hover:border-[var(--sys-border)] transition-colors cursor-pointer"
+                className="min-h-11 md:min-h-0 inline-flex items-center shrink-0 px-2.5 py-1 rounded-full bg-[var(--sys-card)] border border-[var(--sys-border)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] hover:border-[var(--sys-border)] transition-colors cursor-pointer"
               >
                 {sq}
               </button>

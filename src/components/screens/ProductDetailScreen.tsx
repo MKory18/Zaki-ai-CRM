@@ -213,20 +213,20 @@ export function ProductDetailScreen() {
                       />
                       {canManage && (
                         <div className="absolute inset-0 bg-[var(--sys-sidebar)]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-1 rtl:space-x-reverse">
-                          <button onClick={() => setPrimary(img.id)} title="تعيين كرئيسية" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-warning)] hover:bg-[var(--sys-card)] cursor-pointer">
+                          <button onClick={() => setPrimary(img.id)} aria-label="تعيين كرئيسية" title="تعيين كرئيسية" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-warning)] hover:bg-[var(--sys-card)] cursor-pointer">
                             <RiStarLine className="w-4 h-4" />
                           </button>
                           {idx > 0 && !img.isPrimary && (
-                            <button onClick={() => moveImage(idx, -1)} title="تحريك يسار" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
+                            <button onClick={() => moveImage(idx, -1)} aria-label="تحريك يسار" title="تحريك يسار" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
                               <RiArrowUpSLine className="w-4 h-4 rotate-[-90deg] rtl:rotate-[270deg]" />
                             </button>
                           )}
                           {idx < images.length - 1 && !img.isPrimary && (
-                            <button onClick={() => moveImage(idx, 1)} title="تحريك يمين" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
+                            <button onClick={() => moveImage(idx, 1)} aria-label="تحريك يمين" title="تحريك يمين" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
                               <RiArrowDownSLine className="w-4 h-4 rotate-[-90deg] rtl:rotate-[270deg]" />
                             </button>
                           )}
-                          <button onClick={() => deleteImage(img.id)} title="حذف" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-destructive)] hover:bg-[var(--sys-card)] cursor-pointer">
+                          <button onClick={() => deleteImage(img.id)} aria-label="حذف" title="حذف" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-destructive)] hover:bg-[var(--sys-card)] cursor-pointer">
                             <RiDeleteBinLine className="w-4 h-4" />
                           </button>
                         </div>

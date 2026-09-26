@@ -363,12 +363,12 @@ export function ScanSheet({
               onChange={(e) => setTyped(e.target.value)}
               placeholder="أو اكتب المرجع"
               dir="ltr"
-              className="h-10 w-full rounded-lg border border-[var(--sys-border)] ps-9 pe-3 text-sm"
+              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] ps-9 pe-3 text-sm"
             />
           </label>
           <button
             type="submit"
-            className="h-10 shrink-0 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)]"
+            className="h-11 md:h-10 shrink-0 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)]"
           >
             إدخال
           </button>

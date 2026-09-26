@@ -166,7 +166,7 @@ export function WalletsScreen() {
         </p>
         <button
           onClick={() => setCreating(true)}
-          className="h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 shrink-0"
+          className="h-11 md:h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 shrink-0"
         >
           <RiAddCircleLine className="w-4 h-4" /> محفظة جديدة
         </button>
@@ -219,20 +219,20 @@ export function WalletsScreen() {
                   <input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="h-8 w-44 rounded-lg border border-[var(--sys-border)] px-2 text-sm"
+                    className="h-11 md:h-8 w-44 rounded-lg border border-[var(--sys-border)] px-2 text-sm"
                   />
                   <button
                     onClick={() => patchWallet({ name: newName.trim() }, 'تم تغيير الاسم')}
                     disabled={busy || newName.trim().length < 2}
-                    title="احفظ"
-                    className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] disabled:opacity-40"
+                    aria-label="احفظ" title="احفظ"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] disabled:opacity-40"
                   >
                     <RiCheckLine className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setRenaming(false)}
-                    title="ألغِ"
-                    className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
+                    aria-label="ألغِ" title="ألغِ"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
                   >
                     <RiCloseLine className="w-4 h-4" />
                   </button>
@@ -246,8 +246,8 @@ export function WalletsScreen() {
                   <>
                     <button
                       onClick={() => { setRenaming(true); setNewName(wallet.name); }}
-                      title="عدّل الاسم"
-                      className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
+                      aria-label="عدّل الاسم" title="عدّل الاسم"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
                     >
                       <RiPencilLine className="w-4 h-4" />
                     </button>
@@ -260,7 +260,7 @@ export function WalletsScreen() {
                       }
                       disabled={busy}
                       title={wallet.isActive ? 'أوقف المحفظة' : 'أعِد تشغيلها'}
-                      className={`cursor-pointer rounded-lg p-1.5 disabled:opacity-40 ${
+                      className={`min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 disabled:opacity-40 ${
                         wallet.isActive
                           ? 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-warning-soft)] hover:text-[var(--sys-warning)]'
                           : 'text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)]'
@@ -272,7 +272,7 @@ export function WalletsScreen() {
                       onClick={removeWallet}
                       disabled={busy}
                       title="احذف"
-                      className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-40"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-40"
                     >
                       <RiDeleteBinLine className="w-4 h-4" />
                     </button>
@@ -282,7 +282,7 @@ export function WalletsScreen() {
                 <button
                   disabled={!wallet?.isActive}
                   onClick={() => setRecordOpen(true)}
-                  className="h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+                  className="h-11 md:h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <RiAddCircleLine className="w-4 h-4" /> حركة جديدة
                 </button>
@@ -433,7 +433,7 @@ function RecordDialog({
               key={d}
               type="button"
               onClick={() => setDirection(d)}
-              className={`flex-1 h-10 rounded-lg border text-sm font-medium ${
+              className={`flex-1 h-11 md:h-10 rounded-lg border text-sm font-medium ${
                 direction === d
                   ? d === 'IN'
                     ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/60 text-[var(--sys-success)]'
@@ -502,13 +502,13 @@ function RecordDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end pt-1">
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الحفظ…' : 'تسجيل'}
           </button>
@@ -576,13 +576,13 @@ function ReverseDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="h-10 px-4 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ التسجيل…' : 'تسجيل القيد العكسي'}
           </button>
@@ -732,13 +732,13 @@ function CreateWalletDialog({
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm">
             إلغاء
           </button>
           <button
             type="submit"
             disabled={saving || !countryId}
-            className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
+            className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50"
           >
             {saving ? 'جارٍ الإنشاء…' : 'إنشاء'}
           </button>

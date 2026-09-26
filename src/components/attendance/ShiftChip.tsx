@@ -127,7 +127,7 @@ export function ShiftChip() {
           onClick={() => (confirming ? press('CHECK_OUT') : setConfirming(true))}
           onBlur={() => setConfirming(false)}
           title={`في الدوام منذ ${elapsed === null ? '—' : humanMinutes(elapsed)} · الدوام ${state.hours?.start}—${state.hours?.end}`}
-          className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-semibold tabular-nums transition-colors disabled:opacity-60 ${
+          className={`inline-flex items-center gap-1.5 h-11 md:h-8 px-2.5 rounded-lg border text-xs font-semibold tabular-nums transition-colors disabled:opacity-60 ${
             confirming
               ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
               : 'border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)]/50'
@@ -146,7 +146,7 @@ export function ShiftChip() {
           disabled={busy}
           onClick={() => press('CHECK_IN')}
           title={`سجّل بداية دوامك · الدوام ${state.hours?.start}—${state.hours?.end}`}
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-[var(--sys-border)] text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 h-11 md:h-8 px-2.5 rounded-lg border border-[var(--sys-border)] text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] transition-colors disabled:opacity-60"
         >
           {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiLoginBoxLine className="icon-mirror w-4 h-4" />}
           استلمت

@@ -242,6 +242,8 @@ export function ProductsScreen() {
               {search && (
                 <button
                   onClick={() => setSearch('')}
+                  aria-label="امسح البحث"
+                  title="امسح البحث"
                   className="absolute end-3 top-1/2 -translate-y-1/2 text-[var(--sys-muted)] hover:text-[var(--sys-foreground)] cursor-pointer"
                 >
                   <RiCloseLine className="w-4 h-4" />
@@ -498,6 +500,8 @@ export function ProductsScreen() {
                     <button
                       type="button"
                       onClick={() => removeFile(idx)}
+                      aria-label="أزل الصورة"
+                      title="أزل الصورة"
                       className="absolute top-1 right-1 rtl:right-auto rtl:left-1 bg-[var(--sys-card)]/90 text-[var(--sys-destructive)] rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     >
                       <RiCloseLine className="w-4 h-4" />
@@ -506,7 +510,7 @@ export function ProductsScreen() {
                       <button
                         type="button"
                         onClick={() => setPrimaryIndex(idx)}
-                        className="absolute bottom-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-sidebar)]/60 text-[var(--sys-primary-foreground)] text-xs px-1.5 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        className="min-h-11 md:min-h-0 inline-flex items-center absolute bottom-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-sidebar)]/60 text-[var(--sys-primary-foreground)] text-xs px-1.5 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
                         رئيسية
                       </button>

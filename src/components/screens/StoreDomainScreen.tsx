@@ -61,7 +61,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
               setTimeout(() => setCopied(false), 1500);
             });
           }}
-          className="shrink-0 rounded-md border border-[var(--sys-border)] p-1.5 text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 shrink-0 rounded-md border border-[var(--sys-border)] p-1.5 text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
           aria-label={`انسخ ${label}`}
         >
           {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiFileCopyLine className="h-4 w-4" />}
@@ -204,8 +204,8 @@ export function StoreDomainScreen() {
                     type="button"
                     disabled={busy}
                     onClick={() => void clear()}
-                    className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10 disabled:opacity-40"
-                    title="افصل النطاق"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10 disabled:opacity-40"
+                    aria-label="افصل النطاق" title="افصل النطاق"
                   >
                     <RiDeleteBinLine className="h-4 w-4" />
                   </button>

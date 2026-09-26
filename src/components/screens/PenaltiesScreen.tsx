@@ -115,7 +115,7 @@ export function PenaltiesScreen() {
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={`h-8 flex-1 rounded-lg border text-xs font-medium ${
+            className={`h-11 md:h-8 flex-1 rounded-lg border text-xs font-medium ${
               tab === t.key ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] text-[var(--sys-foreground)]'
             }`}
           >
@@ -176,7 +176,7 @@ export function PenaltiesScreen() {
                           type="button"
                           disabled={busy === row.id}
                           onClick={() => decide(row, 'apply')}
-                          className="flex items-center gap-1 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-2.5 py-1 text-xs font-medium text-[var(--sys-destructive)] disabled:opacity-60"
+                          className="min-h-11 md:min-h-0 inline-flex items-center flex items-center gap-1 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-2.5 py-1 text-xs font-medium text-[var(--sys-destructive)] disabled:opacity-60"
                         >
                           <RiCheckLine className="h-4 w-4" /> اعتمد الخصم
                         </button>
@@ -184,7 +184,7 @@ export function PenaltiesScreen() {
                           type="button"
                           disabled={busy === row.id}
                           onClick={() => setAsking({ row, action: 'waive' })}
-                          className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs text-[var(--sys-foreground)] disabled:opacity-60"
+                          className="min-h-11 md:min-h-0 inline-flex items-center flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs text-[var(--sys-foreground)] disabled:opacity-60"
                         >
                           <RiCloseLine className="h-4 w-4" /> ألغِ
                         </button>
@@ -195,7 +195,7 @@ export function PenaltiesScreen() {
                         type="button"
                         disabled={busy === row.id}
                         onClick={() => setAsking({ row, action: 'reverse' })}
-                        className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs text-[var(--sys-foreground)] disabled:opacity-60"
+                        className="min-h-11 md:min-h-0 inline-flex items-center flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs text-[var(--sys-foreground)] disabled:opacity-60"
                       >
                         <RiArrowGoBackLine className="icon-mirror h-4 w-4" /> ارتجاع
                       </button>

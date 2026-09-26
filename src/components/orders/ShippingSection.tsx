@@ -290,7 +290,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
                 transition(a.to);
               }}
               disabled={actionLoading !== null}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-colors cursor-pointer disabled:opacity-50 ${a.cls}`}
+              className={`min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-colors cursor-pointer disabled:opacity-50 ${a.cls}`}
             >
               {a.to === 'DELIVERED' ? <RiArchiveDrawerLine className="w-4 h-4" /> : a.to === 'FAILED_DELIVERY' ? <RiCloseCircleLine className="w-4 h-4" /> : a.to === 'RETURNED' || a.to === 'RETURN_REQUESTED' ? <RiArrowGoBackLine className="icon-mirror w-4 h-4" /> : <RiShipLine className="w-4 h-4" />}
               {ar ? a.labelAr : a.labelEn}
@@ -300,7 +300,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
             <button
               onClick={() => { setTrackingNumber(order.trackingNumber || ''); setDeliveryFee(order.deliveryFee ? String(order.deliveryFee) : ''); setOpenForm('tracking'); }}
               disabled={actionLoading !== null}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+              className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
             >
               <RiNumbersLine className="w-4 h-4" />{ar ? 'رقم التتبع' : 'Tracking'}
             </button>

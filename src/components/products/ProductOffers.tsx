@@ -253,7 +253,7 @@ export function ProductOffers({
                         onClick={() => move(i, -1)}
                         disabled={i === 0 || busy}
                         className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
-                        title="لأعلى"
+                        aria-label="لأعلى" title="لأعلى"
                       >
                         <RiArrowUpSLine className="w-4 h-4" />
                       </button>
@@ -261,7 +261,7 @@ export function ProductOffers({
                         onClick={() => move(i, 1)}
                         disabled={i === offers.length - 1 || busy}
                         className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
-                        title="لأسفل"
+                        aria-label="لأسفل" title="لأسفل"
                       >
                         <RiArrowDownSLine className="w-4 h-4" />
                       </button>
@@ -298,10 +298,10 @@ export function ProductOffers({
                     <div className="ms-auto flex shrink-0 items-center gap-1">
                       {!o.isDefault && o.status === 'ACTIVE' && (
                         <button
-                          title="اجعله الافتراضي"
+                          aria-label="اجعله الافتراضي" title="اجعله الافتراضي"
                           onClick={() => patch(o.id, { isDefault: true })}
                           disabled={busy}
-                          className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
+                          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                         >
                           <RiStarLine className="w-4 h-4" />
                         </button>
@@ -310,23 +310,23 @@ export function ProductOffers({
                         title={inactive ? 'تفعيل' : 'إيقاف'}
                         onClick={() => patch(o.id, { status: inactive ? 'ACTIVE' : 'INACTIVE' })}
                         disabled={busy}
-                        className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
+                        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                       >
                         <RiEyeOffLine className="w-4 h-4" />
                       </button>
                       <button
-                        title="تعديل"
+                        aria-label="تعديل" title="تعديل"
                         onClick={() => setDraft({ ...o })}
                         disabled={busy}
-                        className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)]"
+                        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)]"
                       >
                         <RiPencilLine className="w-4 h-4" />
                       </button>
                       <button
-                        title="حذف"
+                        aria-label="حذف" title="حذف"
                         onClick={() => remove(o.id)}
                         disabled={busy}
-                        className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+                        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       >
                         <RiDeleteBinLine className="w-4 h-4" />
                       </button>
@@ -383,7 +383,7 @@ export function ProductOffers({
               <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--sys-foreground)]">
                 <input
                   type="checkbox"
-                  className="accent-[var(--sys-primary)]"
+                  className="h-5 w-5 accent-[var(--sys-primary)]"
                   checked={!!draft.isDefault}
                   onChange={(e) => setDraft({ ...draft, isDefault: e.target.checked })}
                 />
@@ -392,7 +392,7 @@ export function ProductOffers({
               <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--sys-foreground)]">
                 <input
                   type="checkbox"
-                  className="accent-[var(--sys-primary)]"
+                  className="h-5 w-5 accent-[var(--sys-primary)]"
                   checked={draft.deliveryIncluded !== false}
                   onChange={(e) => setDraft({ ...draft, deliveryIncluded: e.target.checked })}
                 />

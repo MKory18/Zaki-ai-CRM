@@ -165,7 +165,7 @@ export function Modal({
           <button
             onClick={onClose}
             aria-label="إغلاق"
-            className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-heading)] hover:bg-[var(--sys-border)] transition-colors cursor-pointer"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-heading)] hover:bg-[var(--sys-border)] transition-colors cursor-pointer"
           >
             <RiCloseLine className="w-5 h-5" />
           </button>

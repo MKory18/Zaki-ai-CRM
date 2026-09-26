@@ -747,7 +747,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               {mayChangeChannel && (
                 <button
                   onClick={() => { setChannelOpen((v) => !v); setChannelDraft(order.channelId ?? ''); }}
-                  className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+                  className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
                 >
                   <RiPencilLine className="w-4 h-4" />
                   {channelOpen ? 'إغلاق' : 'تعديل'}
@@ -769,7 +769,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 </select>
                 <button
                   onClick={saveChannel}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium"
+                  className="min-h-11 md:min-h-0 inline-flex items-center text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium"
                 >
                   حفظ القناة
                 </button>
@@ -892,7 +892,7 @@ function OrderRegionField({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             disabled={loading || saving}
-            className="flex-1 h-8 px-2 rounded-lg border border-[var(--sys-border)] text-xs bg-[var(--sys-card)]"
+            className="flex-1 h-11 md:h-8 px-2 rounded-lg border border-[var(--sys-border)] text-xs bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {regions.map((r) => (
