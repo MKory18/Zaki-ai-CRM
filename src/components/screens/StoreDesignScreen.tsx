@@ -7,7 +7,9 @@ import { apiJson } from '@/lib/api-client';
 import { BlockBuilder } from '@/components/landing/blocks/BlockBuilder';
 import type { LandingSection } from '@/lib/landing-sections';
 import type { StoreTheme } from '@/lib/store-theme';
-import { RiCheckLine, RiExternalLinkLine, RiLayoutLine, RiLoader4Line, RiRocketLine, RiSaveLine } from '@remixicon/react';
+import { RiCheckLine, RiExternalLinkLine, RiLoader4Line, RiRocketLine, RiSaveLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { routeLabel } from '@/lib/route-registry';
 
 /**
  * THE SHOP'S HOME PAGE.
@@ -135,10 +137,7 @@ export function StoreDesignScreen() {
   if (data.store.singleProduct) {
     return (
       <div className="space-y-4 p-4 sm:p-6" dir="rtl">
-        <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-          <RiLayoutLine className="h-5 w-5 text-[var(--sys-primary)]" />
-          تصميم الواجهة
-        </h1>
+        <PageHeader title={routeLabel('/store/design')} />
         <div className="rounded-lg border border-[var(--sys-border)] bg-white p-4">
           <p className="text-sm font-bold text-[var(--sys-heading)]">واجهة هذا المتجر هي صفحة الهبوط المرتبطة به</p>
           <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
@@ -166,18 +165,15 @@ export function StoreDesignScreen() {
   return (
     <div className="flex h-full flex-col" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sys-border)] bg-white px-4 py-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-base font-bold text-[var(--sys-heading)]">
-            <RiLayoutLine className="h-4 w-4 text-[var(--sys-primary)]" />
-            الصفحة الرئيسية لـ«{data.store.name}»
-          </h1>
-          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-            {data.publishedAt
+        <PageHeader
+          title={`الصفحة الرئيسية لـ«${data.store.name}»`}
+          description={
+            (data.publishedAt
               ? `آخر نشر: ${new Date(data.publishedAt).toLocaleString('ar-u-nu-latn')}`
-              : 'لم تُنشر بعد — متجرك يعرض قائمة المنتجات العادية'}
-            {data.hasUnpublished && ' · فيها تغييرات غير منشورة'}
-          </p>
-        </div>
+              : 'لم تُنشر بعد — متجرك يعرض قائمة المنتجات العادية') +
+            (data.hasUnpublished ? ' · فيها تغييرات غير منشورة' : '')
+          }
+        />
         <div className="flex flex-wrap items-center gap-2">
           {msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>

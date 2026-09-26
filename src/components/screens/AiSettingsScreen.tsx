@@ -5,7 +5,8 @@ import { MessageTemplatesCard } from '@/components/settings/MessageTemplatesCard
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { MAX_PROMPT, missingSlots, type AiJob, type PromptVersion } from '@/lib/ai-prompts';
-import { RiAlertLine, RiArrowDownSLine, RiArrowGoBackLine, RiCheckLine, RiKey2Line, RiLoader4Line, RiPlugLine, RiRobot2Line } from '@remixicon/react';
+import { RiAlertLine, RiArrowDownSLine, RiArrowGoBackLine, RiCheckLine, RiKey2Line, RiLoader4Line, RiPlugLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * THE AI, AND EVERY WORD THE SYSTEM SAYS TO IT.
@@ -123,14 +124,9 @@ export function AiSettingsScreen() {
 
   return (
     <div className="max-w-3xl space-y-4" dir="rtl">
-      <div>
-        <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-          <RiRobot2Line className="h-5 w-5 text-[var(--sys-primary)]" /> الذكاء الاصطناعي والنصوص
-        </h1>
-        <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-          أي نموذج تستعمل، وبأي كلمات يخاطبه النظام.
-        </p>
-      </div>
+      <PageHeader title="الذكاء الاصطناعي والنصوص"
+          description="أي نموذج تستعمل، وبأي كلمات يخاطبه النظام."
+        />
 
       {/* Three questions, three places: which model, who may read what, and
           in whose words. They were one long scroll, so the assistants — the

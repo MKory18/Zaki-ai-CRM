@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PerformanceSettingsCard } from '@/components/settings/PerformanceSettingsCard';
 import { PenaltyRulesCard } from '@/components/settings/PenaltyRulesCard';
-import { RiBuildingLine, RiCheckLine, RiLoader4Line, RiSettings3Line } from '@remixicon/react';
+import { RiBuildingLine, RiCheckLine, RiLoader4Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * SYSTEM SETTINGS — what belongs to the company as a whole, and only that.
@@ -68,14 +69,9 @@ export function SystemSettingsScreen() {
 
   return (
     <div className="max-w-3xl space-y-4" dir="rtl">
-      <div>
-        <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-          <RiSettings3Line className="h-5 w-5 text-[var(--sys-primary)]" /> إعدادات النظام
-        </h1>
-        <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-          ما يخصّ الشركة كلها. العملة والبلد في «البلدان والمتاجر والمحافظ»، والذكاء الاصطناعي في شاشته.
-        </p>
-      </div>
+      <PageHeader title="إعدادات النظام"
+          description="ما يخصّ الشركة كلها. العملة والبلد في «البلدان والمتاجر والمحافظ»، والذكاء الاصطناعي في شاشته."
+        />
 
       <Card>
         <CardHeader

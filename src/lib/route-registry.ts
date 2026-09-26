@@ -201,6 +201,19 @@ export const NAV: NavGroup[] = [
 export const ALL_ROUTES: RouteDef[] = NAV.flatMap((g) => g.routes);
 
 /** Exact contract route for a path, or undefined (= 404). */
+/**
+ * The screen's name, as the menu says it.
+ *
+ * A page title and a menu item that disagree cost a moment every time
+ * somebody clicks one and lands on the other, so screens read their own
+ * name from the registry. `findRoute` returns `undefined` for a path the
+ * registry does not name — which is a bug, and a blank heading hides it.
+ * The path is shown instead: wrong, and impossible to miss.
+ */
+export function routeLabel(path: string): string {
+  return findRoute(path)?.label ?? path;
+}
+
 export function findRoute(path: string): RouteDef | undefined {
   return ALL_ROUTES.find((route) => route.path === path);
 }

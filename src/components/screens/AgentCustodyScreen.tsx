@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { amount, arDateShort, type Currency } from '@/lib/format';
 import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiWallet3Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * /finance/agents — what each agent is holding.
@@ -110,13 +111,9 @@ export function AgentCustodyScreen() {
           كل المندوبين
         </button>
 
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-            <RiEBike2Line className="w-6 h-6 text-[var(--sys-primary)]" />
-            عهدة {open.agent.name}
-          </h1>
-          <p className="text-xs text-[var(--sys-muted-foreground)] mt-1" dir="ltr">{open.agent.code}</p>
-        </div>
+        <PageHeader title={`عهدة ${open.agent.name}`}
+          description={open.agent.code}
+        />
 
         <Summary totals={open.totals} money={money} />
 
@@ -143,15 +140,9 @@ export function AgentCustodyScreen() {
 
   return (
     <div className="max-w-4xl space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-          <RiEBike2Line className="w-6 h-6 text-[var(--sys-primary)]" />
-          عهدة المندوبين
-        </h1>
-        <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-          ما بيد كل مندوب الآن: بضاعة لم تُغلق، ومال حصّله ولم يسلّمه.
-        </p>
-      </div>
+      <PageHeader title="عهدة المندوبين"
+          description="ما بيد كل مندوب الآن: بضاعة لم تُغلق، ومال حصّله ولم يسلّمه."
+        />
 
       {error && (
         <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>

@@ -8,11 +8,12 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { findRoute } from '@/lib/route-registry';
+import { findRoute, routeLabel } from '@/lib/route-registry';
 import { format } from 'date-fns';
 import { apiJson } from '@/lib/api-client';
 import { ZERO_SUMMARY, type ProfitSummary } from '@/lib/profit-summary';
-import { RiAddCircleLine, RiArrowRightDownLine, RiArrowUpCircleLine, RiFileList3Line, RiMoneyDollarCircleLine, RiPieChartLine, RiShieldCheckLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightDownLine, RiArrowUpCircleLine, RiFileList3Line, RiMoneyDollarCircleLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function FinanceProfitScreen() {
   const { t } = useApp();
@@ -102,23 +103,19 @@ export function FinanceProfitScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{findRoute('/finance/profit')?.label}</h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              الربح من الموصَّل فقط — ناقص كلفة البضاعة والشحن والعمولات والمصاريف
-            </p>
-          </div>
-
-          <Button
+        <PageHeader title={routeLabel('/finance/profit')}
+            description="الربح من الموصَّل فقط — ناقص كلفة البضاعة والشحن والعمولات والمصاريف"
+            actions={
+              <><Button
             size="sm"
             onClick={() => setExpenseModalOpen(true)}
             className="flex items-center space-x-1.5"
           >
             <RiAddCircleLine className="w-4 h-4" />
             <span>سجّل مصروفاً</span>
-          </Button>
-        </div>
+          </Button></>
+            }
+          />
 
         {/* Real Profit KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

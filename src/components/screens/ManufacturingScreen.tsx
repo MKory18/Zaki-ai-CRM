@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { BatchCostDialog, type BatchForCost } from '@/components/production/BatchCostDialog';
 import { format } from 'date-fns';
-import { RiAddCircleLine, RiBuilding4Line, RiCalculatorLine, RiCalendarLine, RiDeleteBinLine, RiStackLine } from '@remixicon/react';
+import { RiAddCircleLine, RiCalculatorLine, RiDeleteBinLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * The costs that keep coming back, offered instead of typed.
@@ -146,16 +147,11 @@ export function ManufacturingScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--sys-heading)]">تشغيلات الإنتاج</h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              الباب الذي تدخل منه بضاعة المنتجات التي تصنّعها — كل تشغيلة ببنود كلفتها،
-              ومنها تُحسب تكلفة الوحدة التي يقرأها الربح.
-            </p>
-          </div>
-
-          <Button
+        <PageHeader title="تشغيلات الإنتاج"
+            description="الباب الذي تدخل منه بضاعة المنتجات التي تصنّعها — كل تشغيلة ببنود كلفتها،
+              ومنها تُحسب تكلفة الوحدة التي يقرأها الربح."
+            actions={
+              <><Button
             size="sm"
             onClick={() => {
               setBatchNumber(`BATCH-${new Date().getFullYear()}-${String(batches.length + 1).padStart(3, '0')}`);
@@ -165,8 +161,9 @@ export function ManufacturingScreen() {
           >
             <RiAddCircleLine className="w-4 h-4" />
             <span>تشغيلة جديدة</span>
-          </Button>
-        </div>
+          </Button></>
+            }
+          />
 
         {/* Batch List Table */}
         <Card>

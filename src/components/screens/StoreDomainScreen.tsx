@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import type { DomainCheck } from '@/lib/domain-verify';
-import { RiCheckLine, RiDeleteBinLine, RiEarthLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiShieldFlashLine, RiShieldKeyholeLine } from '@remixicon/react';
+import { RiCheckLine, RiDeleteBinLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiShieldFlashLine, RiShieldKeyholeLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { routeLabel } from '@/lib/route-registry';
 
 /**
  * THE SHOP'S OWN ADDRESS.
@@ -139,15 +141,9 @@ export function StoreDomainScreen() {
   return (
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <RiEarthLine className="h-5 w-5 text-[var(--sys-primary)]" />
-            نطاق المتجر
-          </h1>
-          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-            عنوان المتجر الذي يراه الزبون. عنوانه الداخلي <code dir="ltr">{data.publicPath}</code> يبقى يعمل دائماً.
-          </p>
-        </div>
+        <PageHeader title={routeLabel('/store/domain')}
+          description={`عنوان المتجر الذي يراه الزبون. عنوانه الداخلي <code dir="ltr">${data.publicPath}</code> يبقى يعمل دائماً.`}
+        />
         {msg && (
           <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
             {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}

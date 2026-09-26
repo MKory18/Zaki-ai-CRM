@@ -13,8 +13,9 @@ import { apiFetch } from '@/lib/api-client';
 import { productName } from '@/lib/product-name';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { RiAddCircleLine, RiAlertLine, RiArchiveDrawerLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCheckboxCircleLine, RiCloseCircleLine, RiEqualLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiSendPlaneLine, RiShoppingBagLine, RiSparkling2Line, RiStackLine, RiSubtractLine, RiTimerLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiEqualLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiSubtractLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const PERIODS = [
   { key: 'today', ar: 'اليوم', en: 'Today' },
@@ -123,17 +124,12 @@ export function DashboardScreen() {
     <>
       <div className="space-y-6">
         {/* ─── Header ─── */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.dashboard}</h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              {locale === 'ar'
+        <PageHeader title={t.dashboard}
+            description={locale === 'ar'
                 ? 'متابعة المبيعات والتكاليف وأداء الفريق والأرباح الحقيقية — لحظة بلحظة'
                 : 'Real-time sales, cost analysis, team performance & real net profit'}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
+            actions={
+              <><div className="flex items-center gap-2 flex-wrap">
             {/* Period selector */}
             <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-1 flex text-xs font-medium text-[var(--sys-foreground)] shadow-raised">
               {PERIODS.map((p) => (
@@ -164,8 +160,9 @@ export function DashboardScreen() {
               <RiAddCircleLine className="w-4 h-4" />
               <span>طلب سريع</span>
             </Button>
-          </div>
-        </div>
+          </div></>
+            }
+          />
 
         {/* ─── AI Executive Banner ─── */}
         {canFinance && (

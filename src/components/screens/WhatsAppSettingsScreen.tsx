@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi } from '@/lib/screen-api';
-import { RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiRefreshLine, RiSettings3Line, RiShieldFlashLine } from '@remixicon/react';
+import { RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiRefreshLine, RiShieldFlashLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function WhatsAppSettingsScreen() {
   const { currentUser } = useApp();
@@ -84,15 +85,14 @@ export function WhatsAppSettingsScreen() {
   return (
     <>
       <div className="p-6 space-y-6 max-w-2xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--sys-heading)]">إعدادات واتساب</h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">ربط رقم WhatsApp Business واحد مشترك لكل الموظفين</p>
-          </div>
-          <Link href="/growth/whatsapp/inbox" className="text-xs font-semibold text-[var(--sys-primary)] hover:underline">
+        <PageHeader title="إعدادات واتساب"
+            description="ربط رقم WhatsApp Business واحد مشترك لكل الموظفين"
+            actions={
+              <><Link href="/growth/whatsapp/inbox" className="text-xs font-semibold text-[var(--sys-primary)] hover:underline">
             العودة للصندوق
-          </Link>
-        </div>
+          </Link></>
+            }
+          />
 
         {/* Status */}
         <div className={`p-4 rounded-lg border flex items-center gap-3 ${status === 'CONNECTED' ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success-soft)]' : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]'}`}>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
 import { CAMPAIGN_PLATFORMS, CAMPAIGN_STATUSES } from '@/lib/campaigns';
 import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLinksLine, RiLoader4Line, RiMegaphoneLine, RiPencilLine, RiPlugLine, RiRefreshLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * WHAT EACH AD COST, AND WHAT IT BROUGHT BACK.
@@ -155,16 +156,10 @@ export function CampaignsScreen() {
 
   return (
     <div className="space-y-4" dir="rtl">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <RiMegaphoneLine className="h-5 w-5 text-[var(--sys-primary)]" /> الحملات
-          </h1>
-          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-            تكتب ما أنفقت، والباقي محسوب من طلباتك الفعلية.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader title="الحملات"
+          description="تكتب ما أنفقت، والباقي محسوب من طلباتك الفعلية."
+          actions={
+            <><div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-[var(--sys-border)] p-0.5">
             {PERIODS.map((p) => (
               <button
@@ -187,8 +182,9 @@ export function CampaignsScreen() {
           <Button size="sm" onClick={() => setCreating(true)}>
             <RiAddCircleLine className="h-4 w-4" /> حملة جديدة
           </Button>
-        </div>
-      </div>
+        </div></>
+          }
+        />
 
       {syncMsg && (
         <p className="rounded-lg bg-[var(--sys-surface)] px-3 py-2 text-xs text-[var(--sys-foreground)]">{syncMsg}</p>

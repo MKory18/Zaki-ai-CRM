@@ -8,6 +8,7 @@ import { StorefrontSettings } from '@/components/settings/StorefrontSettings';
 import { StoreIdentityCard } from '@/components/settings/StoreIdentityCard';
 import { STORE_TYPE_LABEL, storeTypeLabel } from '@/lib/store-types';
 import { RiAddCircleLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * /settings/geo — countries, their stores and their regions in one screen.
@@ -109,18 +110,17 @@ export function GeoSettingsScreen() {
 
   return (
     <div className="space-y-4 max-w-4xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-[var(--sys-heading)]">البلدان والمتاجر</h1>
-          <p className="text-sm text-[var(--sys-muted-foreground)] mt-1">المتجر يرث كل الإعدادات من بلده.</p>
-        </div>
-        <button
+      <PageHeader title="البلدان والمتاجر"
+          description="المتجر يرث كل الإعدادات من بلده."
+          actions={
+            <><button
           onClick={() => setAdding('country')}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium"
         >
           <RiAddCircleLine className="w-4 h-4" /> بلد جديد
-        </button>
-      </div>
+        </button></>
+          }
+        />
 
       {error && (
         <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>

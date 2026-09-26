@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { ScoreCard } from '@/components/performance/ScoreCard';
 import { ThemePicker } from '@/components/settings/ThemePicker';
-import { RiCheckboxCircleLine, RiErrorWarningLine, RiImageLine, RiLockLine, RiShieldCheckLine, RiUserLine } from '@remixicon/react';
+import { RiCheckboxCircleLine, RiErrorWarningLine, RiShieldCheckLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function ProfileScreen() {
   const { currentUser, refreshUser } = useApp();
@@ -61,15 +62,9 @@ export function ProfileScreen() {
   return (
     <>
       <div className="space-y-6 max-w-3xl">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2 rtl:space-x-reverse">
-            <RiUserLine className="w-6 h-6 text-[var(--sys-destructive)]" />
-            <span>الملف الشخصي</span>
-          </h1>
-          <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-            تحديث بياناتك الشخصية وكلمة المرور — الدور والصلاحيات يديرها المدير فقط
-          </p>
-        </div>
+        <PageHeader title="الملف الشخصي"
+          description="تحديث بياناتك الشخصية وكلمة المرور — الدور والصلاحيات يديرها المدير فقط"
+        />
 
         {message && (
           <div

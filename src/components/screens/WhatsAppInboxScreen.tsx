@@ -4,8 +4,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi, qs } from '@/lib/screen-api';
-import { findRoute } from '@/lib/route-registry';
+import { findRoute, routeLabel } from '@/lib/route-registry';
 import { RiArrowRightSLine, RiChat3Line, RiCheckDoubleLine, RiCheckLine, RiCloseLine, RiErrorWarningLine, RiPhoneLine, RiRefreshLine, RiSearchLine, RiSendPlaneLine, RiSettings3Line, RiShieldFlashLine, RiShoppingBagLine, RiUserLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface Conversation {
   id: string;
@@ -277,18 +278,17 @@ export function WhatsAppInboxScreen() {
     <>
       <div className="flex flex-col h-[calc(100vh-72px)]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{findRoute('/growth/whatsapp/inbox')?.label}</h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">صندوق وارد مشترك لكل الموظفين — WhatsApp Business Cloud API</p>
-          </div>
-          {conn?.connection && (
+        <PageHeader title={routeLabel('/growth/whatsapp/inbox')}
+            description="صندوق وارد مشترك لكل الموظفين — WhatsApp Business Cloud API"
+            actions={
+              <>{conn?.connection && (
             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${STATUS_COLORS[conn.status] || STATUS_COLORS.NEEDS_SETUP}`}>
               <span className={`w-2 h-2 rounded-full ${conn.status === 'CONNECTED' ? 'bg-[var(--sys-success)]' : 'bg-[var(--sys-warning)]'}`} />
               {conn.status === 'CONNECTED' ? 'متصل' : 'يحتاج إعداد'}
             </span>
-          )}
-        </div>
+          )}</>
+            }
+          />
 
         {/* No connection state */}
         {!loading && conn && conn.status !== 'CONNECTED' ? (

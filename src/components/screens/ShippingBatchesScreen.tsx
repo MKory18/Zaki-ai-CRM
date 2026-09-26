@@ -9,7 +9,8 @@ import { describeRefused, openWaybills, WaybillError } from '@/components/labels
 import { useTell } from '@/components/ui/Confirm';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { ScanSheet } from '@/components/scan/ScanButton';
-import { RiAddCircleLine, RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader4Line, RiLockLine, RiPrinterLine, RiQrScan2Line, RiSendPlaneLine, RiStackLine, RiTruckLine } from '@remixicon/react';
+import { RiAddCircleLine, RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader4Line, RiLockLine, RiPrinterLine, RiQrScan2Line, RiSendPlaneLine, RiTruckLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * /ops/batches — the handovers to the couriers.
@@ -238,15 +239,9 @@ export function ShippingBatchesScreen() {
 
   return (
     <div className="max-w-4xl space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-          <RiStackLine className="w-6 h-6 text-[var(--sys-primary)]" />
-          دفعات الشحن
-        </h1>
-        <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-          ما يتسلّمه المندوب دفعةً واحدة — تُجمَّع، تُسلَّم، ثم تُغلق بعد التسوية.
-        </p>
-      </div>
+      <PageHeader title="دفعات الشحن"
+          description="ما يتسلّمه المندوب دفعةً واحدة — تُجمَّع، تُسلَّم، ثم تُغلق بعد التسوية."
+        />
 
       <div className="flex flex-wrap items-center gap-1.5">
         {([

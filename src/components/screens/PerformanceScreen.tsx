@@ -11,9 +11,10 @@ import { AttributionTable, type AttributionRow } from '@/components/performance/
 import { LandingAnalyticsTab } from '@/components/performance/LandingAnalyticsTab';
 import { userCan } from '@/lib/can';
 import { ScoreBoard } from '@/components/performance/ScoreBoard';
-import { findRoute } from '@/lib/route-registry';
+import { findRoute, routeLabel } from '@/lib/route-registry';
 import { RiAlertLine, RiCheckboxCircleLine, RiCopperCoinLine, RiDownload2Line, RiEBike2Line, RiTrophyLine, RiTruckLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -138,15 +139,10 @@ export function PerformanceScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{findRoute('/growth/performance')?.label}</h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              ربح كل منتج، وترتيب المنتجات، وأداء الفريق — للمدة المختارة
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap gap-y-2">
+        <PageHeader title={routeLabel('/growth/performance')}
+            description="ربح كل منتج، وترتيب المنتجات، وأداء الفريق — للمدة المختارة"
+            actions={
+              <><div className="flex items-center gap-2 flex-wrap gap-y-2">
             <div className="w-56">
               <DateRange value={range} onChange={setRange} label="كل المدة" />
             </div>
@@ -160,8 +156,9 @@ export function PerformanceScreen() {
               <RiDownload2Line className="w-4 h-4" />
               <span>تصدير CSV</span>
             </Button>
-          </div>
-        </div>
+          </div></>
+            }
+          />
 
         {(canLanding || canScores) && (
           <div className="flex gap-6 border-b border-[var(--sys-border)] text-sm" role="tablist">

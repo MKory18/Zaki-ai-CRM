@@ -13,7 +13,9 @@ import { formatDate } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
-import { RiAddCircleLine, RiCursorLine, RiDeleteBinLine, RiEarthLine, RiExternalLinkLine, RiEyeLine, RiEyeOffLine, RiFileCopy2Line, RiFileCopyLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
+import { RiAddCircleLine, RiCursorLine, RiDeleteBinLine, RiExternalLinkLine, RiEyeLine, RiEyeOffLine, RiFileCopy2Line, RiFileCopyLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { routeLabel } from '@/lib/route-registry';
 
 export function LandingPagesScreen() {
   const tell = useTell();
@@ -125,27 +127,22 @@ export function LandingPagesScreen() {
     <>
       <div className="p-6 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-              <RiEarthLine className="w-6 h-6 text-[var(--sys-primary)]" />
-              صفحات الهبوط
-            </h1>
-            <p className="text-sm text-[var(--sys-muted-foreground)] mt-1">
-              صفحات تسويق عامة تُنشئ طلبات حقيقية داخل CRM تلقائيًا
-            </p>
-            {/* The numbers in this list are lifetime totals; a period, by
-                device and by campaign, is read on the performance screen. */}
-            {canAnalytics && (
-              <a href="/growth/performance?tab=landing" className="mt-1 inline-block text-xs font-semibold text-[var(--sys-primary)] hover:underline">
-                تحليلات الصفحات حسب الفترة والجهاز والحملة ←
-              </a>
-            )}
-          </div>
-          <Button onClick={() => { setForm({ name: '', slug: '', productId: '', template: 'classic' }); setFormError(null); setCreateOpen(true); }}>
-            <RiAddCircleLine className="w-4 h-4" /> صفحة جديدة
-          </Button>
-        </div>
+        <PageHeader
+          title={routeLabel('/growth/landing-pages')}
+          description="صفحات تسويق عامة تُنشئ طلبات حقيقية داخل CRM تلقائيًا"
+          actions={
+            <Button onClick={() => { setForm({ name: '', slug: '', productId: '', template: 'classic' }); setFormError(null); setCreateOpen(true); }}>
+              <RiAddCircleLine className="w-4 h-4" /> صفحة جديدة
+            </Button>
+          }
+        />
+        {/* The numbers in this list are lifetime totals; a period, by
+            device and by campaign, is read on the performance screen. */}
+        {canAnalytics && (
+          <a href="/growth/performance?tab=landing" className="-mt-3 mb-6 inline-block text-xs font-semibold text-[var(--sys-primary)] hover:underline">
+            تحليلات الصفحات حسب الفترة والجهاز والحملة ←
+          </a>
+        )}
 
         {/* List */}
         <Card>

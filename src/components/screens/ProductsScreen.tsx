@@ -12,8 +12,9 @@ import { ProductThumb } from '@/components/ui/ProductThumb';
 import { useApp } from '@/context/AppContext';
 import { productName } from '@/lib/product-name';
 import Link from 'next/link';
-import { RiAddCircleLine, RiArchiveLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiPencilLine, RiPriceTag3Line, RiSearchLine, RiStarLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiPencilLine, RiSearchLine, RiStarLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function ProductsScreen() {
   const { t, locale } = useApp();
@@ -197,15 +198,10 @@ export function ProductsScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.products}</h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              كتالوج المنتجات مع الصور، تحليل تكاليف التصنيع متعدد التشغيلات والمخزون
-            </p>
-          </div>
-
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+        <PageHeader title={t.products}
+            description="كتالوج المنتجات مع الصور، تحليل تكاليف التصنيع متعدد التشغيلات والمخزون"
+            actions={
+              <><div className="flex items-center space-x-2 rtl:space-x-reverse">
             <Link href="/manufacturing">
               <Button variant="outline" size="sm" className="flex items-center space-x-1">
                 <RiFoldersLine className="w-4 h-4" />
@@ -220,8 +216,9 @@ export function ProductsScreen() {
               <RiAddCircleLine className="w-4 h-4" />
               <span>إضافة منتج</span>
             </Button>
-          </div>
-        </div>
+          </div></>
+            }
+          />
 
         {/* Products Table with Image Thumbnails */}
         <Card>

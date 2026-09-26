@@ -9,7 +9,8 @@ import { Input, Select } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
-import { RiAddCircleLine, RiArrowRightLine, RiComputerLine, RiDashboard3Line, RiDeleteBinLine, RiEarthLine, RiExternalLinkLine, RiFileCodeLine, RiFileCopyLine, RiGiftLine, RiLoader4Line, RiPencilLine, RiUpload2Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiComputerLine, RiDashboard3Line, RiDeleteBinLine, RiExternalLinkLine, RiFileCodeLine, RiFileCopyLine, RiGiftLine, RiLoader4Line, RiPencilLine, RiUpload2Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function LandingPageDetailScreen() {
   const tell = useTell();
@@ -188,13 +189,9 @@ export function LandingPageDetailScreen() {
           </Button>
           <Badge variant={lp.isPublished ? 'success' : 'warning'}>{lp.isPublished ? 'منشورة' : 'مسودة'}</Badge>
 
-          <div className="order-last min-w-0 basis-full sm:order-none sm:basis-auto">
-            <h1 className="text-lg sm:text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-              <RiEarthLine className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-[var(--sys-primary)]" />
-              تحرير صفحة الهبوط
-            </h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-0.5 truncate">{lp.name}</p>
-          </div>
+          <PageHeader title="تحرير صفحة الهبوط"
+          description={lp.name}
+        />
 
           <div className="flex flex-1 items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => (window.location.href = `/growth/landing-pages/${lpId}/editor`)}>

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { RiInboxArchiveLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * /inventory/receiving — put stock in.
@@ -66,13 +67,9 @@ export function InventoryReceivingScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--sys-heading)]">استلام بضاعة جاهزة</h1>
-        <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-          الباب الذي تدخل منه بضاعة المنتجات التي تشتريها جاهزة، بسعر شرائها.
-          ما تصنّعه بنفسك يدخل من «تشغيلات الإنتاج» ببنود كلفته — ولهذا لا يظهر هنا.
-        </p>
-      </div>
+      <PageHeader title="استلام بضاعة جاهزة"
+          description="الباب الذي تدخل منه بضاعة المنتجات التي تشتريها جاهزة، بسعر شرائها. ما تصنّعه بنفسك يدخل من «تشغيلات الإنتاج» ببنود كلفته — ولهذا لا يظهر هنا."
+        />
 
       {rows.length === 0 && (products?.length ?? 0) > 0 && !term && !onlyEmpty && (
         <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">

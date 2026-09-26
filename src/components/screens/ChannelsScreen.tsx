@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
-import { RiAddCircleLine, RiBroadcastLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
+import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * /settings/channels — where this shop's orders come from.
@@ -143,17 +144,10 @@ export function ChannelsScreen() {
 
   return (
     <div className="max-w-3xl space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-            <RiBroadcastLine className="w-6 h-6 text-[var(--sys-primary)]" />
-            قنوات الطلبات
-          </h1>
-          <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-            من أين تصل الطلبات — تُختار عند الإدخال وتُحسب عليها الأرقام.
-          </p>
-        </div>
-        {!adding && (
+      <PageHeader title="قنوات الطلبات"
+          description="من أين تصل الطلبات — تُختار عند الإدخال وتُحسب عليها الأرقام."
+          actions={
+            <>{!adding && (
           <button
             onClick={() => { setAdding(true); setError(null); }}
             className="px-3 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
@@ -161,8 +155,9 @@ export function ChannelsScreen() {
             <RiAddCircleLine className="w-4 h-4" />
             قناة جديدة
           </button>
-        )}
-      </div>
+        )}</>
+          }
+        />
 
       {error && (
         <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>

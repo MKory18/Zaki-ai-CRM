@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
-import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiLoader4Line, RiShutDownLine, RiSignpostLine, RiSparkling2Line } from '@remixicon/react';
+import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiLoader4Line, RiShutDownLine, RiSparkling2Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * OLD ADDRESSES THAT STILL ARRIVE.
@@ -116,15 +117,9 @@ export function StoreRoutesScreen() {
   return (
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <RiSignpostLine className="h-5 w-5 text-[var(--sys-primary)]" />
-            المسارات
-          </h1>
-          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-            عنوان قديم ما زال يأتيك منه زوّار — إلى أين تُرسلهم.
-          </p>
-        </div>
+        <PageHeader title="المسارات"
+          description="عنوان قديم ما زال يأتيك منه زوّار — إلى أين تُرسلهم."
+        />
         <div className="flex items-center gap-2">
           {msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>

@@ -29,7 +29,8 @@ import { UserGeoAccessSection, UserPhoneField } from '@/components/screens/users
 import { UserCommissionCurrency } from '@/components/screens/users/UserCommissionCurrency';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { format } from 'date-fns';
-import { RiAddCircleLine, RiArrowRightLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiShoppingBagLine, RiTimerLine, RiUserFollowLine, RiUserLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiTimerLine, RiUserLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /** A role picked by name (the fallback list), not by its row id. */
 const BY_NAME = 'name:';
@@ -175,13 +176,9 @@ export function UserDetailScreen() {
               <div className="w-14 h-14 rounded-lg bg-[var(--sys-destructive-soft)] border-2 border-[var(--sys-destructive-border)] flex items-center justify-center shrink-0">
                 <RiUserLine className="w-6 h-6 text-[var(--sys-destructive)]" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-lg font-bold text-[var(--sys-heading)] truncate">{user.name}</h1>
-                <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center gap-1.5 mt-0.5" dir="ltr">
-                  <RiMailLine className="w-4 h-4" />
-                  {user.email}
-                </p>
-              </div>
+              <PageHeader title={user.name}
+          description={`<RiMailLine className="w-4 h-4" /> ${user.email}`}
+        />
               <span className={`text-xs font-bold rounded-full border-2 px-3 py-1 ${statusCls[user.status] || ''}`}>
                 {user.status}
               </span>

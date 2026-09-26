@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { useApp } from '@/context/AppContext';
-import { RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiMessage3Line, RiRefreshLine, RiSendPlaneLine, RiSettings3Line, RiShoppingBagLine } from '@remixicon/react';
+import { RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiMessage3Line, RiRefreshLine, RiSettings3Line, RiShoppingBagLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface TelegramMsg {
   id: string;
@@ -114,22 +115,19 @@ export function TelegramOrdersScreen() {
     <>
       <div className="p-6 space-y-6 max-w-6xl mx-auto" dir="rtl">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-              <RiSendPlaneLine className="icon-mirror w-5 h-5 text-[#229ED9]" /> تكامل تيليجرام
-            </h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">تحويل رسائل مجموعات تيليجرام إلى طلبات تلقائيًا</p>
-          </div>
-          <div className="flex items-center gap-2">
+        <PageHeader title="طلبات تلجرام"
+            description="تحويل رسائل مجموعات تيليجرام إلى طلبات تلقائيًا"
+            actions={
+              <><div className="flex items-center gap-2">
             {canManage && (
               <Link href="/settings/telegram">
                 <Button variant="outline" size="sm"><RiSettings3Line className="w-4 h-4 ml-1" /> الإعدادات</Button>
               </Link>
             )}
             <Button variant="ghost" size="sm" onClick={() => loadAll()}><RiRefreshLine className="w-4 h-4" /></Button>
-          </div>
-        </div>
+          </div></>
+            }
+          />
 
         {error && (
           <div className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs flex items-center justify-between gap-2">

@@ -10,6 +10,8 @@ import {
   checkoutOrder, type CheckoutField, type StoreTheme,
 } from '@/lib/store-theme';
 import { RiBankCardLine, RiCheckLine, RiDownload2Line, RiExternalLinkLine, RiImageLine, RiLayoutBottomLine, RiLayoutGridLine, RiLayoutLine, RiLayoutTopLine, RiLoader4Line, RiPaletteLine, RiShoppingBagLine, RiTreeLine, RiUpload2Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { routeLabel } from '@/lib/route-registry';
 
 /**
  * THE STORE'S TEMPLATE — one screen, six tabs.
@@ -203,15 +205,9 @@ export function StoreThemeScreen() {
   return (
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <RiPaletteLine className="h-5 w-5 text-[var(--sys-primary)]" />
-            قالب المتجر
-          </h1>
-          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-            شكل «{store?.name}» ومحتواه. إعدادات تشغيل النظام مكانها «الإعدادات».
-          </p>
-        </div>
+        <PageHeader title={routeLabel('/store/themes')}
+          description={`شكل «${store?.name}» ومحتواه. إعدادات تشغيل النظام مكانها «الإعدادات».`}
+        />
         <div className="flex items-center gap-2">
           {msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>

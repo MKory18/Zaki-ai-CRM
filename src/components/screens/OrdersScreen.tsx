@@ -23,8 +23,9 @@ import { apiFetch } from '@/lib/api-client';
 import { format } from 'date-fns';
 import { ar as arLocale } from 'date-fns/locale';
 import { FILTERABLE_STATES, STATE_LABEL_AR } from '@/lib/order-state';
-import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiFilter3Line, RiMagicLine, RiPhoneLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiFilter3Line, RiMagicLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function OrdersScreen() {
   const { t, currentUser, locale } = useApp();
@@ -283,15 +284,10 @@ export function OrdersScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.orders}</h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              كل الطلبات بحالتها ومَن يحملها — الحالة والفلتر يقرآن نفس الشيء
-            </p>
-          </div>
-
-          <div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-y-2">
+        <PageHeader title={t.orders}
+            description="كل الطلبات بحالتها ومَن يحملها — الحالة والفلتر يقرآن نفس الشيء"
+            actions={
+              <><div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-y-2">
             <Button
               variant="outline"
               size="sm"
@@ -330,8 +326,9 @@ export function OrdersScreen() {
               <RiAddCircleLine className="w-4 h-4" />
               <span>{t.quickCreateOrder}</span>
             </Button>
-          </div>
-        </div>
+          </div></>
+            }
+          />
 
         {/* One bar, three rows that each answer a different question:
             which queue am I in, what am I looking for, and how do I narrow

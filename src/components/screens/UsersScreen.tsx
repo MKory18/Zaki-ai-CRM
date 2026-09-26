@@ -14,6 +14,7 @@ import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '
 import { findRoute } from '@/lib/route-registry';
 import { format } from 'date-fns';
 import { RiArrowLeftSLine, RiArrowRightSLine, RiForbidLine, RiGroupLine, RiKey2Line, RiLogoutBoxLine, RiPlayCircleLine, RiRefreshLine, RiSearchLine, RiShieldCheckLine, RiShieldCrossLine, RiUserAddLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /** One source for the Arabic role names — a screen with its own copy is how
  *  two of them ended up blank in the filter. */
@@ -127,17 +128,11 @@ export function UsersScreen() {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2 rtl:space-x-reverse">
-              <RiGroupLine className="w-6 h-6 text-[var(--sys-destructive)]" />
-              <span>{findRoute('/admin/users')?.label}</span>
-            </h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              مراجعة طلبات التسجيل، تعيين الأدوار، تنشيط/إيقاف الحسابات — كل إجراء يُسجَّل في سجل التدقيق
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+        <PageHeader title={`<RiGroupLine className="w-6 h-6 text-[var(--sys-destructive)]" />
+              <span>{findRoute('/admin/users')?.label}</span>`}
+            description="مراجعة طلبات التسجيل، تعيين الأدوار، تنشيط/إيقاف الحسابات — كل إجراء يُسجَّل في سجل التدقيق"
+            actions={
+              <><div className="flex items-center gap-2">
             {userCan(currentUser, 'users.create') && (
               <Button size="sm" onClick={() => setCreateOpen(true)}>
                 <RiUserAddLine className="w-4 h-4" />
@@ -147,8 +142,9 @@ export function UsersScreen() {
             <Button variant="outline" size="sm" onClick={() => loadUsers(pagination.page)} className="p-2">
               <RiRefreshLine className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
-          </div>
-        </div>
+          </div></>
+            }
+          />
 
         {error && (
           <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg">{error}</div>

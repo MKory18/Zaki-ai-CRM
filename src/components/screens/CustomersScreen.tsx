@@ -9,8 +9,9 @@ import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useRegions } from '@/hooks/useRegions';
 import { useApp } from '@/context/AppContext';
 import { format } from 'date-fns';
-import { RiAddCircleLine, RiCalendarLine, RiMapPinLine, RiPhoneLine, RiSearchLine, RiShoppingBagLine, RiUserLine } from '@remixicon/react';
+import { RiAddCircleLine, RiMapPinLine, RiPhoneLine, RiSearchLine, RiUserLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function CustomersScreen() {
   const { t } = useApp();
@@ -96,23 +97,19 @@ export function CustomersScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{t.customers}</h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              ملف العملاء مع توحيد أرقام الهاتݡ كشف التكرار وسجل الطلبات الكامل
-            </p>
-          </div>
-
-          <Button
+        <PageHeader title={t.customers}
+            description="ملف العملاء مع توحيد أرقام الهاتݡ كشف التكرار وسجل الطلبات الكامل"
+            actions={
+              <><Button
             size="sm"
             onClick={() => setCreateModalOpen(true)}
             className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
           >
             <RiAddCircleLine className="w-4 h-4" />
             <span>إضافة عميل</span>
-          </Button>
-        </div>
+          </Button></>
+            }
+          />
 
         {/* RiSearchLine */}
         <div className="relative max-w-md">

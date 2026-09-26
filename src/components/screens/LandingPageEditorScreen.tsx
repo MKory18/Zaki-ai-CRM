@@ -15,6 +15,7 @@ import {
 } from '@/lib/landing-sections';
 import { useHistory } from '@/lib/use-history';
 import { RiArchiveLine, RiArrowGoBackLine, RiArrowGoForwardLine, RiArrowRightLine, RiCodeSLine, RiComputerLine, RiCursorLine, RiEarthLine, RiEyeLine, RiFullscreenExitLine, RiFullscreenLine, RiGiftLine, RiImageLine, RiInputMethodLine, RiLoader4Line, RiPaletteLine, RiPlayListAddLine, RiSaveLine, RiSmartphoneLine, RiTabletLine, RiUpload2Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * CUSTOM LANDING PAGE EDITOR — Phase 1
@@ -555,12 +556,8 @@ export function LandingPageEditorScreen() {
             <Button variant="secondary" size="sm" onClick={() => router.push(`/growth/landing-pages/${lp.id}`)}>
               <RiArrowRightLine className="icon-mirror h-4 w-4" /> Landing Pages
             </Button>
-            <div>
-              <h1 className="flex items-center gap-2 text-base font-bold text-[var(--sys-heading)]">
-                <RiEarthLine className="h-4 w-4 text-[var(--sys-primary)]" /> {lp.name}
-                <span className="text-xs font-normal text-[var(--sys-muted-foreground)]" dir="ltr">/lp/{lp.slug}</span>
-              </h1>
-            </div>
+            <PageHeader title={`/lp/${lp.slug}`}
+        />
             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${lp.isPublished ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'}`}>
               {lp.isPublished ? 'منشورة' : 'مسودة'}
             </span>

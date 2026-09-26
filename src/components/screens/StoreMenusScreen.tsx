@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
 import { MENU_AR, MENU_KEYS, storePageHref, type MenuItem, type MenuKey } from '@/lib/store-menus';
-import { RiAddCircleLine, RiArrowDownLine, RiArrowUpLine, RiCheckLine, RiDeleteBinLine, RiEyeLine, RiEyeOffLine, RiLoader4Line, RiTreeLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowDownLine, RiArrowUpLine, RiCheckLine, RiDeleteBinLine, RiEyeLine, RiEyeOffLine, RiLoader4Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { routeLabel } from '@/lib/route-registry';
 
 /**
  * THE SHOP'S FIVE MENUS.
@@ -93,15 +95,9 @@ export function StoreMenusScreen() {
   return (
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <RiTreeLine className="h-5 w-5 text-[var(--sys-primary)]" />
-            قوائم المتجر
-          </h1>
-          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-            أين يذهب الزبون من كل صفحة. الوجهة تُختار من صفحات متجرك، أو تُكتب لرابط خارجي.
-          </p>
-        </div>
+        <PageHeader title={routeLabel('/store/menus')}
+          description="أين يذهب الزبون من كل صفحة. الوجهة تُختار من صفحات متجرك، أو تُكتب لرابط خارجي."
+        />
         {msg && (
           <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
             {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}

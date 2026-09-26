@@ -8,7 +8,8 @@ import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
 import { TelegramSourcesCard } from '@/components/settings/TelegramSourcesCard';
-import { RiCheckboxCircleLine, RiCloseCircleLine, RiFileCopyLine, RiRefreshLine, RiSendPlaneLine } from '@remixicon/react';
+import { RiCheckboxCircleLine, RiCloseCircleLine, RiFileCopyLine, RiRefreshLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function TelegramSettingsScreen() {
   const { currentUser } = useApp();
@@ -67,18 +68,15 @@ export function TelegramSettingsScreen() {
   return (
     <>
       <div className="p-6 space-y-6 max-w-3xl mx-auto" dir="rtl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-              <RiSendPlaneLine className="icon-mirror w-5 h-5 text-[#229ED9]" /> إعدادات تيليجرام
-            </h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">حالة اتصال البوت والويبهوك (لا تُعرض أي مفاتيح سرية هنا أبدًا)</p>
-          </div>
-          <div className="flex gap-2">
+        <PageHeader title="إعدادات تلجرام"
+            description="حالة اتصال البوت والويبهوك (لا تُعرض أي مفاتيح سرية هنا أبدًا)"
+            actions={
+              <><div className="flex gap-2">
             <Link href="/growth/telegram/orders"><Button variant="outline" size="sm">رجوع</Button></Link>
             <Button variant="ghost" size="sm" onClick={load}><RiRefreshLine className="w-4 h-4" /></Button>
-          </div>
-        </div>
+          </div></>
+            }
+          />
 
         {error && (
           <div className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs">{error}</div>

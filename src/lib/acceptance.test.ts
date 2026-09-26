@@ -189,7 +189,11 @@ describe('every screen names itself', () => {
       .filter((f) => f.endsWith('Screen.tsx'))
       .filter((f) => {
         const src = readFileSync(f, 'utf8');
-        return !src.includes('<h1') && !src.includes('<ScreenTitle');
+        // `<PageHeader>` renders the h1 now. The invariant is unchanged —
+        // a screen must name itself — but it no longer writes the tag.
+        return (
+          !src.includes('<h1') && !src.includes('<ScreenTitle') && !src.includes('<PageHeader')
+        );
       })
       .map((f) => f.split(/[\/]/).pop());
 
@@ -215,6 +219,12 @@ describe('every screen names itself', () => {
     const offenders: string[] = [];
 
     for (const page of walk(shell).filter((f) => f.endsWith('page.tsx'))) {
+      // A DETAIL page guards the list's route but is not the list: the
+      // landing-page editor lives under `[id]` and guards
+      // `/growth/landing-pages`, and calling itself «صفحات الهبوط» would be
+      // the opposite of helpful. Only a route's own page is compared.
+      if (/[\\/]\[[^\\/]+\][\\/]/.test(page)) continue;
+
       const src = readFileSync(page, 'utf8');
       const path = src.match(/guardRoute\('([^']+)'\)/)?.[1];
       const comp = src.match(/import \{ (\w+Screen) \}/)?.[1];
@@ -224,14 +234,25 @@ describe('every screen names itself', () => {
       const file = screens.find((f) => f.endsWith(`${comp}.tsx`));
       if (!file) continue;
       const body = readFileSync(file, 'utf8');
-      const open = body.indexOf('<h1');
-      if (open === -1) continue;
+      const printed: string[] = [];
 
-      // Literal Arabic printed inside the heading, if any.
-      const head = body.slice(open, body.indexOf('</h1>', open)) + '<';
-      const printed = [...head.matchAll(new RegExp('>([^<>{}\n]*[\u0600-\u06FF][^<>{}\n]*)<', 'g'))]
-        .map((m) => m[1].trim())
-        .filter(Boolean);
+      // The tag, for the screens that still write one.
+      const open = body.indexOf('<h1');
+      if (open !== -1) {
+        const head = body.slice(open, body.indexOf('</h1>', open)) + '<';
+        printed.push(
+          ...[...head.matchAll(new RegExp('>([^<>{}\n]*[\u0600-\u06FF][^<>{}\n]*)<', 'g'))]
+            .map((m) => m[1].trim())
+            .filter(Boolean)
+        );
+      }
+
+      // And the component, for the screens that use it. The title is a
+      // PROP now, so the words sit in an attribute rather than between two
+      // tags \u2014 and a guard that only read tags would pass every converted
+      // screen without looking at anything.
+      const ph = body.match(/<PageHeader[\s\S]{0,140}?title="([^"]+)"/);
+      if (ph && /[\u0600-\u06FF]/.test(ph[1])) printed.push(ph[1].trim());
 
       if (printed.length > 0 && !printed.includes(label)) {
         offenders.push(`${comp}: القائمة «${label}» والشاشة «${printed[0]}»`);

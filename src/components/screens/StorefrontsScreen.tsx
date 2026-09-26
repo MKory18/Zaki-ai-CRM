@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useConfirm } from '@/components/ui/Confirm';
 import { STORE_TYPE_LABEL } from '@/lib/store-types';
 import { RiAddCircleLine, RiAlertLine, RiBrushLine, RiCheckLine, RiEarthLine, RiEqualizer2Line, RiExternalLinkLine, RiInformationLine, RiLinksLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * متجر SINGLE PRODUCT — A STORE WHOSE FRONT IS ONE OF ITS LANDING PAGES.
@@ -121,15 +122,9 @@ export function StorefrontsScreen() {
 
   return (
     <div className="space-y-4" dir="rtl">
-      <div>
-        <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-          <RiStore2Line className="h-5 w-5 text-[var(--sys-primary)]" /> متجر {STORE_TYPE_LABEL.SINGLE_PRODUCT}
-        </h1>
-        <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-          متجر يبيع منتجاً واحداً. واجهته صفحة هبوط من صفحاتك — بكل أقسامها وقوالبها وبكسلاتها وعروض ما
-          بعد الطلب — على رابط المتجر ونطاقه. لا سلة ولا كتالوج.
-        </p>
-      </div>
+      <PageHeader title={`متجر ${STORE_TYPE_LABEL.SINGLE_PRODUCT}`}
+          description="متجر يبيع منتجاً واحداً. واجهته صفحة هبوط من صفحاتك — بكل أقسامها وقوالبها وبكسلاتها وعروض ما بعد الطلب — على رابط المتجر ونطاقه. لا سلة ولا كتالوج."
+        />
 
       {error && <p className="rounded-lg bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs font-medium text-[var(--sys-destructive)]" role="alert">{error}</p>}
 

@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { PAGE_KIND_AR, REQUIRED_FOR_ADS, type PageKind } from '@/lib/store-pages';
-import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiExternalLinkLine, RiFileTextLine, RiLoader4Line, RiShieldFlashLine } from '@remixicon/react';
+import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiShieldFlashLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { routeLabel } from '@/lib/route-registry';
 
 /**
  * THE SHOP'S OWN PAGES.
@@ -140,15 +142,9 @@ export function StorePagesScreen() {
   return (
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <RiFileTextLine className="h-5 w-5 text-[var(--sys-primary)]" />
-            صفحات المتجر
-          </h1>
-          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-            كلام المتجر عن نفسه: من نحن، الشروط، الخصوصية، الاستبدال، تواصل معنا.
-          </p>
-        </div>
+        <PageHeader title={routeLabel('/store/pages')}
+          description="كلام المتجر عن نفسه: من نحن، الشروط، الخصوصية، الاستبدال، تواصل معنا."
+        />
         <div className="flex items-center gap-2">
           {msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>

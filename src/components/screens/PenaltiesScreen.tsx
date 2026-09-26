@@ -5,7 +5,8 @@ import { apiJson } from '@/lib/api-client';
 import { userCan } from '@/lib/can';
 import { useApp } from '@/context/AppContext';
 import { Modal } from '@/components/ui/Modal';
-import { RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiLoader4Line, RiShieldKeyholeLine } from '@remixicon/react';
+import { RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * WHAT THE SYSTEM PROPOSED, AND WHAT A PERSON DECIDES.
@@ -103,15 +104,9 @@ export function PenaltiesScreen() {
 
   return (
     <div className="max-w-4xl space-y-3" dir="rtl">
-      <div>
-        <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-          <RiShieldKeyholeLine className="h-5 w-5 text-[var(--sys-primary)]" /> الخصومات
-        </h1>
-        <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-          النظام يقترح، وأنت تقرّر. لا خصم يصير مالاً بلا قرار إنسان — ولا يُقترح خصمٌ على وصولٍ
-          مُقدَّر من أول طلب لمسه الموظف، لأنه حدٌّ أعلى لا قياس.
-        </p>
-      </div>
+      <PageHeader title="الخصومات"
+          description="النظام يقترح، وأنت تقرّر. لا خصم يصير مالاً بلا قرار إنسان — ولا يُقترح خصمٌ على وصولٍ مُقدَّر من أول طلب لمسه الموظف، لأنه حدٌّ أعلى لا قياس."
+        />
 
       <div className="flex gap-1.5">
         {TABS.map((t) => (

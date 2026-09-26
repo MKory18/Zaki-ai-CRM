@@ -5,8 +5,9 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { format } from 'date-fns';
-import { findRoute } from '@/lib/route-registry';
-import { RiFileTextLine, RiHistoryLine, RiShieldLine, RiUserLine } from '@remixicon/react';
+import { routeLabel } from '@/lib/route-registry';
+import { RiUserLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function AuditScreen() {
   const { t } = useApp();
@@ -36,15 +37,9 @@ export function AuditScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2">
-            <RiHistoryLine className="w-6 h-6 text-[var(--sys-foreground)]" />
-            <span>{findRoute('/control/audit')?.label}</span>
-          </h1>
-          <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-            Section 29 Complete immutable system audit trail: entity modifications, order mutations, batch creation & security actions
-          </p>
-        </div>
+        <PageHeader title={routeLabel('/control/audit')}
+          description="Section 29 Complete immutable system audit trail: entity modifications, order mutations, batch creation & security actions"
+        />
 
         {/* Audit Log Table */}
         <Card>
@@ -53,12 +48,16 @@ export function AuditScreen() {
               <table className="w-full text-left rtl:text-right text-xs">
                 <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-3.5">Timestamp</th>
-                    <th className="px-6 py-3.5">RiUserLine</th>
-                    <th className="px-6 py-3.5">Action</th>
-                    <th className="px-6 py-3.5">Entity</th>
-                    <th className="px-6 py-3.5">Entity ID</th>
-                    <th className="px-6 py-3.5">Mutation Details</th>
+                    {/* The columns were English on an Arabic-only screen,
+                        and one of them was «RiUserLine» — an icon name a
+                        rename swept into the heading, printed to whoever
+                        opens the audit log. */}
+                    <th className="px-6 py-3.5">الوقت</th>
+                    <th className="px-6 py-3.5">مَن</th>
+                    <th className="px-6 py-3.5">الإجراء</th>
+                    <th className="px-6 py-3.5">الكيان</th>
+                    <th className="px-6 py-3.5">المعرّف</th>
+                    <th className="px-6 py-3.5">التفاصيل</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--sys-border)] font-mono">

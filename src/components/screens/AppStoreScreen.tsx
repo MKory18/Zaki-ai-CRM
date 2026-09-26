@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { apiJson } from '@/lib/api-client';
 import { copyText } from '@/lib/clipboard';
-import { RiAddCircleLine, RiAlertLine, RiCheckLine, RiCloseLine, RiEqualizer2Line, RiFileCopyLine, RiLayoutGridLine, RiLoader4Line, RiShieldCheckLine } from '@remixicon/react';
+import { RiAddCircleLine, RiAlertLine, RiCheckLine, RiCloseLine, RiEqualizer2Line, RiFileCopyLine, RiLoader4Line, RiShieldCheckLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * /apps/store — what this system can be connected to.
@@ -93,21 +94,15 @@ export function AppStoreScreen() {
 
   return (
     <div className="max-w-5xl space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-[var(--sys-heading)]">
-            <RiLayoutGridLine className="h-6 w-6 text-[var(--sys-primary)]" />
-            متجر التطبيقات
-          </h1>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-            ما يمكن وصل النظام به. الجاهزة يعرفها النظام مسبقاً ويكفي تفعيلها وإدخال
-            حسابها؛ والمسجَّلة من مطوّرين تُخبَر بما يحدث عبر ويبهوك موقَّع.
-          </p>
-        </div>
-        <Button size="sm" onClick={() => setRegistering(true)}>
+      <PageHeader title="متجر التطبيقات"
+          description="ما يمكن وصل النظام به. الجاهزة يعرفها النظام مسبقاً ويكفي تفعيلها وإدخال
+            حسابها؛ والمسجَّلة من مطوّرين تُخبَر بما يحدث عبر ويبهوك موقَّع."
+          actions={
+            <><Button size="sm" onClick={() => setRegistering(true)}>
           <RiAddCircleLine className="h-4 w-4" /> سجّل تطبيقاً
-        </Button>
-      </div>
+        </Button></>
+          }
+        />
 
       {error && (
         <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 text-sm text-[var(--sys-destructive)]">{error}</p>

@@ -20,6 +20,7 @@ import {
 } from '@/lib/permission-catalog';
 import { format } from 'date-fns';
 import { RiAddCircleLine, RiArrowDownSLine, RiArrowGoBackLine, RiArrowUpSLine, RiCloseLine, RiDeleteBinLine, RiFileCopyLine, RiGroupLine, RiKey2Line, RiPencilLine, RiSearchLine, RiShieldCheckLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface RolePerm { permission: string; scope: string; scopeIds?: unknown }
 interface RoleRow {
@@ -331,19 +332,13 @@ export function PermissionsScreen() {
   return (
     <>
       <div className="space-y-6" dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center gap-2">
-              <RiShieldCheckLine className="w-6 h-6 text-[var(--sys-primary)]" />
-              {ar ? 'الأدوار والصلاحيات' : 'Roles & Permissions'}
-            </h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              {ar
+        <PageHeader title={`<RiShieldCheckLine className="w-6 h-6 text-[var(--sys-primary)]" />
+              {ar ? 'الأدوار والصلاحيات' : 'Roles & Permissions'}`}
+            description={ar
                 ? 'إدارة أدوار الفريق وصلاحياتهم — تُطبق التغييرات فورًا على الخادم.'
                 : 'Manage team roles and their permissions — changes apply server-side immediately.'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+            actions={
+              <><div className="flex items-center gap-2">
             <div className="relative w-52">
               <RiSearchLine className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[var(--sys-muted)]" />
               <Input
@@ -359,8 +354,9 @@ export function PermissionsScreen() {
                 {ar ? 'دور جديد' : 'New Role'}
               </Button>
             )}
-          </div>
-        </div>
+          </div></>
+            }
+          />
 
         {savedFlash && (
           <div className="rounded-lg bg-[var(--sys-success-soft)] border border-[var(--sys-success-soft)] text-[var(--sys-success)] text-xs font-medium px-4 py-2.5">

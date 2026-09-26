@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
-import { RiAlertLine, RiArrowGoForwardLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLayoutMasonryLine, RiLoader4Line, RiShieldCheckLine, RiTimerLine } from '@remixicon/react';
+import { RiAlertLine, RiArrowGoForwardLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiShieldCheckLine, RiTimerLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * /apps/installed — what is connected, and whether it is hearing us.
@@ -76,13 +77,9 @@ export function InstalledAppsScreen() {
 
   return (
     <div className="max-w-5xl space-y-5">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-[var(--sys-heading)]">
-          <RiLayoutMasonryLine className="h-6 w-6 text-[var(--sys-primary)]" />
-          التطبيقات المثبتة
-        </h1>
-        <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">ما هو موصول بشركتك الآن، وسجلّ ما أُرسل إليه.</p>
-      </div>
+      <PageHeader title="التطبيقات المثبتة"
+          description="ما هو موصول بشركتك الآن، وسجلّ ما أُرسل إليه."
+        />
 
       {error && <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 text-sm text-[var(--sys-destructive)]">{error}</p>}
 

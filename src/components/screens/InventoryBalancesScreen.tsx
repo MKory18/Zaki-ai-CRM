@@ -8,8 +8,9 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { format } from 'date-fns';
-import { findRoute } from '@/lib/route-registry';
-import { RiAddCircleLine, RiArrowUpDownLine, RiHistoryLine, RiStackLine } from '@remixicon/react';
+import { findRoute, routeLabel } from '@/lib/route-registry';
+import { RiArrowUpDownLine } from '@remixicon/react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function InventoryBalancesScreen() {
   const { t } = useApp();
@@ -88,25 +89,19 @@ export function InventoryBalancesScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">
-              {findRoute('/inventory/balances')?.label}
-            </h1>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
-              كم بقي من كل منتج، وكم منه محجوز لطلبات لم تخرج بعد.
-            </p>
-          </div>
-
-          <Button
+        <PageHeader title={routeLabel('/inventory/balances')}
+            description="كم بقي من كل منتج، وكم منه محجوز لطلبات لم تخرج بعد."
+            actions={
+              <><Button
             size="sm"
             onClick={() => setAdjustModalOpen(true)}
             className="flex items-center space-x-1.5"
           >
             <RiArrowUpDownLine className="w-4 h-4" />
             <span>جرد مخزون</span>
-          </Button>
-        </div>
+          </Button></>
+            }
+          />
 
         {/* Every product and what it holds. 105 cards need a way in, so the
             search comes before them rather than after the scroll. */}
