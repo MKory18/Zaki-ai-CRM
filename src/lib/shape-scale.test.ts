@@ -57,6 +57,17 @@ function systemFiles(): { path: string; rel: string; src: string }[] {
 // The leading guard matters: without it this finds the "rounded" inside
 // "backgrounded" and "Grounded on real data", and reports a screen for a
 // corner that is a word in a sentence.
+/**
+ * Source with its comments removed.
+ *
+ * These guards look for utility classes, and a comment explaining why a
+ * class is forbidden contains that class. Reading the prose reports the
+ * prose — the guard's own documentation becomes its first offender.
+ */
+function code(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
 const RADIUS = /(?<![\w-])rounded(?:-[tbrlse]{1,2})?(?:-(\[[^\]]+\]|none|sm|md|lg|xl|2xl|3xl|full))?(?![\w-])/g;
 
 /** A bare `rounded` is Tailwind's 4px, and a step nobody chose. */
@@ -69,7 +80,7 @@ describe('the corners of the dashboard', () => {
   it('are drawn from the scale, never measured in pixels by hand', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
-      for (const m of src.matchAll(RADIUS)) {
+      for (const m of code(src).matchAll(RADIUS)) {
         if ((m[1] ?? BARE).startsWith('[')) offenders.push(`${rel}: ${m[0]}`);
       }
     }
@@ -79,7 +90,7 @@ describe('the corners of the dashboard', () => {
   it('and use no step outside it', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
-      for (const m of src.matchAll(RADIUS)) {
+      for (const m of code(src).matchAll(RADIUS)) {
         if (!ALLOWED.has(m[1] ?? BARE)) offenders.push(`${rel}: ${m[0]}`);
       }
     }
@@ -91,7 +102,7 @@ describe('the corners of the dashboard', () => {
     // radius does the surfaces, and it is the common one.
     const counts = new Map<string, number>();
     for (const { src } of systemFiles()) {
-      for (const m of src.matchAll(RADIUS)) {
+      for (const m of code(src).matchAll(RADIUS)) {
         const step = m[1] ?? BARE;
         counts.set(step, (counts.get(step) ?? 0) + 1);
       }
@@ -151,9 +162,13 @@ describe('the height of a control', () => {
   it('and 36px is gone - the step that fit nothing', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
-      for (const m of src.matchAll(/(?<![\w.-])h-9(?![\d.])/g)) {
+      // Match and slice the SAME text: indices from the stripped source
+      // point at the wrong place in the original, so the window that is
+      // supposed to see the matching width sees something else entirely.
+      const c = code(src);
+      for (const m of c.matchAll(/(?<![\w.-])h-9(?![\d.])/g)) {
         const at = m.index ?? 0;
-        const around = src.slice(Math.max(0, at - 90), at + 90);
+        const around = c.slice(Math.max(0, at - 90), at + 90);
         // A matching width, or an image fit: a square icon button, an
         // avatar, a logo box. Their height belongs to the shape.
         if (/\bw-9\b/.test(around) || /object-(?:contain|cover)/.test(around)) continue;
@@ -194,7 +209,7 @@ describe('the size of text', () => {
   it('is never measured by hand', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
-      for (const m of src.matchAll(SIZE)) {
+      for (const m of code(src).matchAll(SIZE)) {
         if (m[1].startsWith('[')) offenders.push(`${rel}: ${m[0]}`);
       }
     }
@@ -256,7 +271,7 @@ describe('depth', () => {
   it('comes in two steps and no more', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
-      for (const m of src.matchAll(SHADOW)) {
+      for (const m of code(src).matchAll(SHADOW)) {
         if (m[1] === 'raised' || m[1] === 'none') continue;
         // A 9999px spread is not depth: it is the trick that dims
         // everything outside a cut-out, over a camera viewfinder.
@@ -281,7 +296,7 @@ describe('depth', () => {
   it('and never a colour written by hand, which cannot follow the theme', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
-      for (const m of src.matchAll(SHADOW)) {
+      for (const m of code(src).matchAll(SHADOW)) {
         if (/rgba?\(/.test(m[1]) && !m[1].includes('9999px')) offenders.push(`${rel}: ${m[0]}`);
       }
     }
@@ -320,7 +335,7 @@ describe('the room inside a surface', () => {
   it('comes from the scale, with no half-steps invented along the way', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
-      for (const m of src.matchAll(CLASS)) {
+      for (const m of code(src).matchAll(CLASS)) {
         if (!isSurface(m[1])) continue;
         for (const pm of m[1].matchAll(PAD)) {
           if (!ALLOWED.has(pm[1])) offenders.push(`${rel}: p-${pm[1]}`);
@@ -336,7 +351,7 @@ describe('the room inside a surface', () => {
     // reads as two different products.
     const found = new Map<string, string[]>();
     for (const { rel, src } of systemFiles()) {
-      for (const m of src.matchAll(CLASS)) {
+      for (const m of code(src).matchAll(CLASS)) {
         const cls = m[1];
         if (!isSurface(cls) || !cls.includes('text-center')) continue;
         if (!cls.includes('--sys-muted-foreground')) continue;

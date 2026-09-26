@@ -20,6 +20,11 @@ const SELLERS = [
   '/app/(public)/', '/app/lp/', '/app/s/',
 ];
 
+/** Source without its comments: a guard that reads prose reports prose. */
+function code(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
 function dashboard(): { rel: string; src: string }[] {
   const out: { rel: string; src: string }[] = [];
   const walk = (dir: string) => {
@@ -55,7 +60,7 @@ describe('the size of an icon', () => {
   it('is 16, 20 or 24 — never 12, never 14, never 40', () => {
     const offenders: string[] = [];
     for (const { rel, src } of dashboard()) {
-      for (const m of src.matchAll(ICON)) {
+      for (const m of code(src).matchAll(ICON)) {
         const found: Record<string, number> = {};
         for (const s of m[2].matchAll(SIZE)) found[s[1]] = Number(s[2]) * 4;
         if (found.w === undefined || found.h === undefined) continue;
@@ -83,7 +88,7 @@ describe('which glyphs turn in RTL', () => {
   it('the directional ones carry the class', () => {
     const missing: string[] = [];
     for (const { rel, src } of dashboard()) {
-      for (const m of src.matchAll(TAG)) {
+      for (const m of code(src).matchAll(TAG)) {
         if (!DIRECTIONAL.test(m[1])) continue;
         // Up and down do not change under a left-right mirror.
         if (/^RiArrow(Up|Down)(?!.*(Left|Right))/.test(m[1])) continue;
@@ -96,7 +101,7 @@ describe('which glyphs turn in RTL', () => {
   it('and the ones that must never turn do not', () => {
     const wrong: string[] = [];
     for (const { rel, src } of dashboard()) {
-      for (const m of src.matchAll(TAG)) {
+      for (const m of code(src).matchAll(TAG)) {
         if (NEVER.test(m[1]) && m[2].includes('icon-mirror')) wrong.push(`${rel}: ${m[1]}`);
       }
     }
@@ -106,7 +111,7 @@ describe('which glyphs turn in RTL', () => {
   it('and nothing is turned twice, which is the same as not at all', () => {
     const doubled: string[] = [];
     for (const { rel, src } of dashboard()) {
-      for (const [i, line] of src.split('\n').entries()) {
+      for (const [i, line] of code(src).split('\n').entries()) {
         if (!line.includes('icon-mirror')) continue;
         if (/rotate-180|scale-x|isRtl/.test(line)) doubled.push(`${rel}:${i + 1}`);
       }
@@ -150,7 +155,7 @@ describe('an icon-only button', () => {
   it('always says what it is', () => {
     const nameless: string[] = [];
     for (const { rel, src } of dashboard()) {
-      for (const m of src.matchAll(/<button\b([\s\S]*?)<\/button>/g)) {
+      for (const m of code(src).matchAll(/<button\b([\s\S]*?)<\/button>/g)) {
         const whole = m[0];
         const tag = whole.slice(0, whole.indexOf('>') + 1);
         const inner = whole.slice(whole.indexOf('>') + 1);

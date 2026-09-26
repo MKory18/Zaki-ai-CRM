@@ -298,6 +298,104 @@ html[lang="ar"] td {
 }
 
 /*
+ * EVERY TOUCH ANSWERS — AND IT ANSWERS HERE, ONCE.
+ *
+ * Five hundred and eighty-one buttons, and six of them had a pressed state.
+ * A control that does nothing for the first two hundred milliseconds while
+ * a request flies is a control people press again, which on this system
+ * means a second shipment, a second payout, a second deduction.
+ *
+ * So the answer is not a prop somebody remembers to pass. It is a rule on
+ * the element itself: every button, link-as-button, summary and input of
+ * type button sinks slightly the moment it is touched, before any code
+ * runs and long before any server replies.
+ *
+ * 0.97 and 120ms are chosen to be felt and not seen. A bigger scale reads
+ * as a toy; a slower release reads as lag.
+ */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+summary {
+  transition: transform 120ms var(--ease-standard), background-color 120ms var(--ease-standard),
+    border-color 120ms var(--ease-standard), color 120ms var(--ease-standard);
+}
+
+button:not(:disabled):active,
+[role='button']:not([aria-disabled='true']):active,
+summary:active {
+  transform: scale(0.97);
+}
+
+/*
+ * THE RING IS FOR THE KEYBOARD, NOT FOR THE MOUSE.
+ *
+ * `:focus` paints a ring on every click, which people read as an error and
+ * designers then delete — taking the keyboard's only signal with it.
+ * `:focus-visible` is the browser's own judgement of "this person is
+ * navigating by keyboard", and it is the one that should be loud.
+ *
+ * The colour is the theme's own focus token: the brand glow on dark
+ * surfaces, petrol on light ones, each measured against its page.
+ */
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--sys-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
+}
+
+/* A control that is working is not a control that can be pressed again. */
+button:disabled,
+[aria-busy='true'] {
+  cursor: not-allowed;
+}
+
+/*
+ * THE ERROR SHAKE, AND WHY IT IS TWO PIXELS.
+ *
+ * A refusal needs to be felt where the person is looking — on the button
+ * they just pressed — not only in a line of text somewhere else. Two
+ * pixels is enough to register and small enough not to read as a fault in
+ * the page.
+ */
+@keyframes sys-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-2px); }
+  40%, 80% { transform: translateX(2px); }
+}
+
+.sys-shake {
+  animation: sys-shake 300ms var(--ease-standard);
+}
+
+/*
+ * AND ALL OF IT STOPS FOR ANYONE WHO ASKED IT TO.
+ *
+ * Ninety-six files animate something and not one of them asked. For a
+ * person with vestibular sensitivity, motion on a screen they work at all
+ * day is not a flourish, it is a symptom — and the operating system
+ * already carries their answer.
+ *
+ * Transitions are shortened rather than removed: at 1ms a state change is
+ * instant, and nothing depends on a transitionend that never fires.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  button:not(:disabled):active,
+  [role='button']:not([aria-disabled='true']):active,
+  summary:active {
+    transform: none;
+  }
+}
+
+/*
  * MIRRORING, BY LIST, NOT BY BLANKET.
  *
  * An arrow, a back, a send, a chevron and an undo all point somewhere, and
