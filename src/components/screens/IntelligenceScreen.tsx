@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiJson } from '@/lib/api-client';
 import { AskAi } from '@/components/growth/AskAi';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { Tabs } from '@/components/ui/Tabs';
 import { RiAlertLine, RiCheckboxCircleLine, RiEyeLine, RiLightbulbLine, RiLoader4Line } from '@remixicon/react';
 
 /**
@@ -20,6 +22,7 @@ import { RiAlertLine, RiCheckboxCircleLine, RiEyeLine, RiLightbulbLine, RiLoader
 
 interface Finding {
   key: string;
+  family: 'leak' | 'queue' | 'risk' | 'team';
   title: string;
   evidence: string;
   action: string;
@@ -33,7 +36,25 @@ interface Payload {
   totalOrders: number;
   minSample: number;
   counts: { alarm: number; watch: number };
+  byFamily: Record<string, { total: number; alarm: number }>;
 }
+
+/**
+ * THE FOUR QUESTIONS, AND WHY THEY ARE FOUR TABS.
+ *
+ * They are read by different people at different moments, and — this is
+ * the part that decides the layout — they FAIL differently. A rate needs
+ * history and is honestly silent without it. A queue is a count and is
+ * true on the first day. Mixing them in one list means a new store sees
+ * an empty screen and concludes the analysis is broken, when in fact it
+ * has nine orders nobody pulled.
+ */
+const TABS: { key: Finding['family']; label: string; blurb: string; needsHistory: boolean }[] = [
+  { key: 'queue', label: 'طوابير', blurb: 'عملٌ توقّف عن الحركة — عددٌ لا نسبة، فهو صحيحٌ من أوّل يوم.', needsHistory: false },
+  { key: 'risk', label: 'خطر', blurb: 'ما سينكسر قريباً: مخزونٌ لا يكفي طلباتٍ وُعد بها، ومالٌ لم يدخل الدفاتر.', needsHistory: false },
+  { key: 'leak', label: 'استنزاف', blurb: 'مالٌ يخرج بلا داعٍ. نِسَبٌ، فتحتاج تاريخاً قبل أن تعني شيئاً.', needsHistory: true },
+  { key: 'team', label: 'أداء', blurb: 'كلُّ مؤكِّدٍ مقابل متوسّط هذا المتجر نفسه، لا مقابل رقمٍ متخيَّل.', needsHistory: true },
+];
 
 const TONE: Record<string, { border: string; chip: string; label: string }> = {
   ALARM: { border: 'border-[var(--sys-destructive-border)]', chip: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]', label: 'يحتاج تدخّلاً' },
@@ -44,6 +65,22 @@ const TONE: Record<string, { border: string; chip: string; label: string }> = {
 export function IntelligenceScreen() {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Queues first by default — it is the tab with something to do TODAY.
+   *
+   * But `?tab=` wins, because the dashboard strip links straight to the
+   * family whose number the person just read. Landing them on a different
+   * tab from the one they tapped is the small betrayal that teaches people
+   * the number is decorative.
+   */
+  const params = useSearchParams();
+  const asked = params.get('tab');
+  const [tab, setTab] = useState<Finding['family']>(
+    TABS.some((t) => t.key === asked) ? (asked as Finding['family']) : 'queue'
+  );
+
+  const shown = (data?.findings ?? []).filter((f) => f.family === tab);
+  const needsHistory = TABS.find((t) => t.key === tab)?.needsHistory ?? false;
 
   const load = useCallback(async () => {
     setError(null);
@@ -76,19 +113,9 @@ export function IntelligenceScreen() {
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحليل…
         </div>
-      ) : data.totalOrders < data.minSample ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <RiLightbulbLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
-          لا تكفي البيانات بعد — {data.totalOrders} طلباً فقط. التحليل يحتاج {data.minSample} على الأقل
-          حتى لا تكون النسب مجرد ضجيج.
-        </p>
-      ) : data.findings.length === 0 ? (
-        <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-6 text-center">
-          <RiCheckboxCircleLine className="w-5 h-5 mx-auto mb-2" />
-          لا شيء يتجاوز حدود الإنذار في {data.totalOrders} طلباً. هذا صمت مقصود، لا تحليل فاشل.
-        </p>
       ) : (
         <>
+          {/* A count of what needs a person, before any of the detail. */}
           <div className="flex flex-wrap gap-2 text-xs">
             {data.counts.alarm > 0 && (
               <span className={`px-2.5 py-1 rounded-full border ${TONE.ALARM.chip}`}>
@@ -105,8 +132,41 @@ export function IntelligenceScreen() {
             </span>
           </div>
 
+          <Tabs
+            value={tab}
+            onChange={(k) => setTab(k as Finding['family'])}
+            tabs={TABS.map((t) => ({
+              key: t.key,
+              label: t.label,
+              count: data.byFamily?.[t.key]?.total || undefined,
+            }))}
+          />
+
+          {/* What this tab is for, in one line. A tab whose name is one
+              word needs it; «خطر» alone does not say what was measured. */}
+          <p className="text-xs text-[var(--sys-muted-foreground)]">
+            {TABS.find((t) => t.key === tab)?.blurb}
+          </p>
+
           <div className="space-y-2">
-            {data.findings.map((f) => {
+            {shown.length === 0 ? (
+              needsHistory && data.totalOrders < data.minSample ? (
+                /* A rate tab, with nothing to rate. Say the number and the
+                   threshold rather than «no results», which reads as a
+                   failure of the analysis. */
+                <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
+                  <RiLightbulbLine className="mx-auto mb-2 h-5 w-5 text-[var(--sys-muted)]" />
+                  هذا التبويب نِسَبٌ، و{data.totalOrders} طلباً لا تكفي — يحتاج {data.minSample} على الأقل
+                  حتى لا تكون النسبة ضجيجاً.
+                </p>
+              ) : (
+                <p className="rounded-lg border border-[var(--sys-success)]/30 bg-[var(--sys-success-soft)] p-6 text-center text-sm text-[var(--sys-success)]">
+                  <RiCheckboxCircleLine className="mx-auto mb-2 h-5 w-5" />
+                  لا شيء هنا يتجاوز الحدّ. هذا صمتٌ مقصود، لا تحليلٌ فشل.
+                </p>
+              )
+            ) : null}
+            {shown.map((f) => {
               const tone = TONE[f.severity];
               return (
                 <div key={f.key} className={`bg-[var(--sys-card)] border rounded-lg p-4 ${tone.border}`}>

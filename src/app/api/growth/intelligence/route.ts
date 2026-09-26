@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
-import { MIN_SAMPLE, allFindings } from '@/lib/intelligence';
+import { FAMILIES, MIN_SAMPLE, allFindings } from '@/lib/intelligence';
 
 /**
  * GET /api/growth/intelligence — what is bleeding, and what to do.
@@ -35,6 +35,17 @@ export async function GET() {
         alarm: findings.filter((f) => f.severity === 'ALARM').length,
         watch: findings.filter((f) => f.severity === 'WATCH').length,
       },
+      // Per tab, so the dashboard can say WHERE the trouble is without
+      // fetching twice or counting in two places.
+      byFamily: Object.fromEntries(
+        FAMILIES.map((f) => [
+          f.key,
+          {
+            total: findings.filter((x) => x.family === f.key).length,
+            alarm: findings.filter((x) => x.family === f.key && x.severity === 'ALARM').length,
+          },
+        ])
+      ),
     });
   } catch (error) {
     return apiErrorResponse(error);

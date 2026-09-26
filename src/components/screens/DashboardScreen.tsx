@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiEqualLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiSubtractLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { IntelligenceStrip } from '@/components/growth/IntelligenceStrip';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -222,6 +223,12 @@ export function DashboardScreen() {
             </div>
           </div>
         )}
+
+        {/* ─── What needs a person, before what merely happened ───
+             Above the KPIs on purpose: the tiles say how the month is
+             going, and this says what is stuck right now. A dashboard
+             that leads with the month is read once a month. */}
+        <IntelligenceStrip />
 
         {/* ─── KPI Cards ─── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
