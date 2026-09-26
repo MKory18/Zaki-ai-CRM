@@ -121,7 +121,7 @@ export function AiDock() {
         onClick={() => setOpen(true)}
         title="المساعد الذكي"
         aria-label="افتح المساعد الذكي"
-        className="fixed bottom-4 start-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] shadow-lg transition hover:bg-[var(--sys-heading)] active:scale-95"
+        className="fixed bottom-4 start-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] shadow-raised transition hover:bg-[var(--sys-heading)] active:scale-95"
       >
         <Bot className="h-5 w-5" />
         {/* A quiet mark that there is something to come back to. */}
@@ -138,7 +138,7 @@ export function AiDock() {
       // A panel, not an overlay. It has a width and a height and sits in
       // the corner — the CRM behind it stays readable and clickable, which
       // is the whole difference between an assistant and an interruption.
-      className="fixed bottom-4 start-4 z-40 flex h-[min(32rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-2xl"
+      className="fixed bottom-4 start-4 z-40 flex h-[min(32rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-raised"
     >
       <header className="flex items-center justify-between border-b border-[var(--sys-border)] bg-[var(--sys-heading)] px-3 py-2">
         <span className="flex items-center gap-2 text-xs font-bold text-[var(--sys-primary-foreground)]">

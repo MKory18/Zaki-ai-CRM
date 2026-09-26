@@ -177,7 +177,7 @@ export function NotificationBell() {
       {open && (
         <div
           dir="rtl"
-          className="absolute z-40 mt-1 end-0 w-[22rem] max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-lg overflow-hidden"
+          className="absolute z-40 mt-1 end-0 w-[22rem] max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-raised overflow-hidden"
         >
           <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-[var(--sys-border)] bg-[var(--sys-surface)]">
             <span className="text-xs font-bold text-[var(--sys-heading)]">الإشعارات</span>

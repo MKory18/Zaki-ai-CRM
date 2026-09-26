@@ -198,7 +198,7 @@ export function AssistantScreen() {
                 subtitle="Aggregated business intelligence summary calculated from real orders & production costs"
               />
               <CardContent className="space-y-4">
-                <p className="text-sm font-medium text-[var(--sys-heading)] leading-relaxed bg-[var(--sys-card)]/80 p-4 rounded-lg border border-[var(--sys-primary-soft)]/60 shadow-xs">
+                <p className="text-sm font-medium text-[var(--sys-heading)] leading-relaxed bg-[var(--sys-card)]/80 p-4 rounded-lg border border-[var(--sys-primary-soft)]/60 shadow-card">
                   {summaryData.summaryText}
                 </p>
 
@@ -307,13 +307,13 @@ export function AssistantScreen() {
                 }`}
               >
                 {m.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-8 h-8 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center shrink-0 shadow-card">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-xl rounded-lg px-4 py-3 text-xs leading-relaxed shadow-xs ${
+                  className={`max-w-xl rounded-lg px-4 py-3 text-xs leading-relaxed shadow-card ${
                     m.role === 'user'
                       ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] rounded-tr-none'
                       : 'bg-[var(--sys-surface)] text-[var(--sys-heading)] rounded-tl-none whitespace-pre-wrap'

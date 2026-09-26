@@ -140,7 +140,7 @@ export function ChangeRequestsScreen() {
             type="button"
             onClick={() => setTab(key)}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              tab === key ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-sm' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
+              tab === key ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-card' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
             }`}
           >
             {label}

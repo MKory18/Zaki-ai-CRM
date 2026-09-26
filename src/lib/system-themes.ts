@@ -75,6 +75,11 @@ export const SYS_VARS = [
   'sidebar-foreground',
   'scrollbar',
   'scrollbar-hover',
+  // Depth, per theme, because a shadow that works on white is
+  // invisible on black and a shadow that works on black is a bruise
+  // on white.
+  'shadow',
+  'shadow-raised',
 ] as const;
 
 export type SysVar = (typeof SYS_VARS)[number];
@@ -112,6 +117,8 @@ export const SYSTEM_THEMES: SystemTheme[] = [
       'sidebar-foreground': '#d5d8dc',
       scrollbar: '#cdd0d5',
       'scrollbar-hover': '#9aa0a8',
+      shadow: '0 1px 2px rgb(14 16 19 / 0.05), 0 1px 3px rgb(14 16 19 / 0.07)',
+      'shadow-raised': '0 2px 6px rgb(14 16 19 / 0.06), 0 10px 28px rgb(14 16 19 / 0.12)',
     },
   },
   {
@@ -146,6 +153,8 @@ export const SYSTEM_THEMES: SystemTheme[] = [
       'sidebar-foreground': '#c0c4ca',
       scrollbar: '#262a30',
       'scrollbar-hover': '#363b43',
+      shadow: '0 1px 2px rgb(0 0 0 / 0.55)',
+      'shadow-raised': '0 2px 8px rgb(0 0 0 / 0.45), 0 14px 36px rgb(0 0 0 / 0.65)',
     },
   },
   {
@@ -180,6 +189,8 @@ export const SYSTEM_THEMES: SystemTheme[] = [
       'sidebar-foreground': '#dde2e7',
       scrollbar: '#c8cfd6',
       'scrollbar-hover': '#9aa1a9',
+      shadow: '0 1px 2px rgb(27 31 36 / 0.04), 0 1px 3px rgb(27 31 36 / 0.06)',
+      'shadow-raised': '0 2px 6px rgb(27 31 36 / 0.05), 0 10px 28px rgb(27 31 36 / 0.10)',
     },
   },
 ];

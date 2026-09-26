@@ -156,7 +156,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
     'w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
   return (
-    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs space-y-3">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-card space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
           <Package className="w-4 h-4 text-[var(--sys-primary)]" />

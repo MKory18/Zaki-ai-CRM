@@ -544,7 +544,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {/* The state, and the facts that travel with it. No button: the
               edit lock is taken by whichever card you actually edit, and a
               standalone "تعديل" here neither advanced nor stopped anything. */}
-          <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3 shadow-xs">
+          <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3 shadow-card">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <span className="text-caption font-semibold text-[var(--sys-muted)]">حالة الطلب</span>
               <OrderStateBadge state={order.state} />
@@ -647,7 +647,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         {/* ─── Right column ─── */}
         <div className="space-y-5">
           {/* Financial overview */}
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs space-y-3">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-card space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-[var(--sys-destructive)]" />
               الملخص المالي
@@ -744,7 +744,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {/* Where the order came from. Editable, because the numbers are
               counted per channel and an order filed under the wrong one is a
               wrong number rather than a wrong label. */}
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs space-y-2">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-card space-y-2">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-[var(--sys-primary)]" />
@@ -800,7 +800,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
           {/* Timeline — merged from every event table (src/lib/order-timeline.ts),
               not just the activity log, so it always matches the state above. */}
-          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs">
+          <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-card">
             <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4 text-[var(--sys-muted)]" />
               سجل الأحداث ({timeline.length})

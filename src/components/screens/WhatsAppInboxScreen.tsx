@@ -425,7 +425,7 @@ export function WhatsAppInboxScreen() {
                     ) : (
                       messages.map((m) => (
                         <div key={m.id} className={`flex ${m.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[75%] rounded-lg px-3.5 py-2 text-sm shadow-sm ${m.direction === 'OUTBOUND' ? 'bg-[#d9fdd3] text-[var(--sys-heading)]' : 'bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[#eef1f5]'}`}>
+                          <div className={`max-w-[75%] rounded-lg px-3.5 py-2 text-sm shadow-card ${m.direction === 'OUTBOUND' ? 'bg-[#d9fdd3] text-[var(--sys-heading)]' : 'bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[#eef1f5]'}`}>
                             {m.messageType !== 'TEXT' && !m.text && (
                               <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">[{m.messageType}]</span>
                             )}

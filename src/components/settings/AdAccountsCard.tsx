@@ -227,7 +227,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   onClick={() => pick(p.platform)}
                   className={`flex-1 rounded-md px-2 py-1.5 text-caption font-semibold transition ${
                     p.platform === active.platform
-                      ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-sm'
+                      ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-card'
                       : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
                   }`}
                 >

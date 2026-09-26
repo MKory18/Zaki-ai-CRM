@@ -125,7 +125,7 @@ export function DateRange({
       {open && (
         <div
           dir="rtl"
-          className="absolute z-30 mt-1 w-[19rem] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-lg p-3 space-y-3"
+          className="absolute z-30 mt-1 w-[19rem] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-raised p-3 space-y-3"
         >
           <div className="flex flex-wrap gap-1.5">
             {[

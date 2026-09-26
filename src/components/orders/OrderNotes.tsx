@@ -94,7 +94,7 @@ export function OrderNotes({ orderId }: { orderId: string }) {
   }
 
   return (
-    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-xs">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-card">
       <div className="flex items-center gap-2 mb-4">
         <MessageSquareText className="w-4 h-4 text-[var(--sys-primary)]" />
         <h4 className="text-xs font-black text-[var(--sys-foreground)]">ملاحظات داخلية</h4>

@@ -12,7 +12,7 @@ export function Card({ children, className, onClick }: CardProps) {
     <div
       onClick={onClick}
       className={clsx(
-        'bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] transition-all',
+        'bg-[var(--sys-card)] rounded-lg shadow-card transition-all',
         className
       )}
     >
@@ -89,7 +89,7 @@ export function KpiCard({
   };
 
   return (
-    <div className="bg-[var(--sys-card)] rounded-lg p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+    <div className="bg-[var(--sys-card)] rounded-lg p-6 shadow-card">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-[var(--sys-muted-foreground)] uppercase tracking-wider">{title}</span>
         {Icon && (

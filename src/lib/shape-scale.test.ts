@@ -222,13 +222,63 @@ describe('the size of text', () => {
     const globals = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
     const theme = /@theme\s*\{([^}]*)\}/.exec(globals);
     expect(theme, 'اختفت كتلة السلّم').toBeTruthy();
+    const ADDED = ['--text-caption', '--shadow-card', '--shadow-raised'];
     for (const line of theme![1].split('\n')) {
       const name = /(--[\w-]+):/.exec(line);
       if (!name) continue;
       expect(
-        name[1].startsWith('--text-caption'),
+        ADDED.some((a) => name[1].startsWith(a)),
         `${name[1]} يعيد تعريف درجة قائمة — وهذا يصل إلى صفحات البائعين`
       ).toBe(true);
     }
+  });
+});
+
+/**
+ * TWO ELEVATIONS, AND BOTH KNOW WHICH THEME THEY ARE IN.
+ *
+ * Eight shadow values were in use across forty-seven places, and one of
+ * them was black written by hand: `rgba(0,0,0,0.1)` is a soft edge on
+ * white and is literally nothing on a near-black page. A card in the dark
+ * theme was separated from the page by no shadow at all, in thirteen
+ * places, and nobody noticed because nobody had looked at the dark theme
+ * with a card in front of them.
+ */
+describe('depth', () => {
+  const SHADOW = /(?<![\w-])shadow-(\[[^\]]+\]|xs|sm|md|lg|xl|2xl|none|inner|card|raised)(?![\w-])/g;
+
+  it('comes in two steps and no more', () => {
+    const offenders: string[] = [];
+    for (const { rel, src } of systemFiles()) {
+      for (const m of src.matchAll(SHADOW)) {
+        if (m[1] === 'card' || m[1] === 'raised' || m[1] === 'none') continue;
+        // A 9999px spread is not depth: it is the trick that dims
+        // everything outside a cut-out, over a camera viewfinder.
+        if (m[1].includes('9999px')) continue;
+        offenders.push(`${rel}: ${m[0]}`);
+      }
+    }
+    expect(offenders, `ظلّ خارج الدرجتين:\n${offenders.slice(0, 15).join('\n')}`).toEqual([]);
+  });
+
+  it('and the two steps resolve through the theme, not through a fixed colour', () => {
+    // The whole reason the dark theme now has usable depth. Writing the
+    // colour into the utility instead of into the theme puts it straight
+    // back where it was: one shadow, and a theme where it does nothing.
+    const globals = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
+    expect(globals, 'ظلّ البطاقة لم يعد يتبع القلم').toMatch(/--shadow-card:\s*var\(--sys-shadow\)/);
+    expect(globals, 'ظلّ الطبقة العائمة لم يعد يتبع القلم').toMatch(
+      /--shadow-raised:\s*var\(--sys-shadow-raised\)/
+    );
+  });
+
+  it('and never a colour written by hand, which cannot follow the theme', () => {
+    const offenders: string[] = [];
+    for (const { rel, src } of systemFiles()) {
+      for (const m of src.matchAll(SHADOW)) {
+        if (/rgba?\(/.test(m[1]) && !m[1].includes('9999px')) offenders.push(`${rel}: ${m[0]}`);
+      }
+    }
+    expect(offenders, `ظلّ بلونٍ مكتوبٍ بيده:\n${offenders.join('\n')}`).toEqual([]);
   });
 });

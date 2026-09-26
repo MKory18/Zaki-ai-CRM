@@ -158,7 +158,7 @@ export function DashboardScreen() {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Period selector */}
-            <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-1 flex text-xs font-medium text-[var(--sys-foreground)] shadow-xs">
+            <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-1 flex text-xs font-medium text-[var(--sys-foreground)] shadow-card">
               {PERIODS.map((p) => (
                 <button
                   key={p.key}
@@ -166,7 +166,7 @@ export function DashboardScreen() {
                   className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                     // Chosen, not lost. This was the colour that means
                     // "late, or money lost", used to mean "selected".
-                    period === p.key ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-bold shadow-sm' : 'hover:bg-[var(--sys-surface)]'
+                    period === p.key ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-bold shadow-card' : 'hover:bg-[var(--sys-surface)]'
                   }`}
                 >
                   {locale === 'ar' ? p.ar : p.en}
@@ -192,7 +192,7 @@ export function DashboardScreen() {
 
         {/* ─── AI Executive Banner ─── */}
         {canFinance && (
-          <div className="relative overflow-hidden bg-gradient-to-l rtl:bg-gradient-to-r from-[var(--sys-primary)] to-[var(--sys-heading)] rounded-lg p-5 text-[var(--sys-primary-foreground)] shadow-md">
+          <div className="relative overflow-hidden bg-gradient-to-l rtl:bg-gradient-to-r from-[var(--sys-primary)] to-[var(--sys-heading)] rounded-lg p-5 text-[var(--sys-primary-foreground)] shadow-raised">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="p-2.5 rounded-lg bg-[var(--sys-card)]/10 border border-[var(--sys-card)]/15 shrink-0">
@@ -239,7 +239,7 @@ export function DashboardScreen() {
         {/* ─── KPI Cards ─── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {canFinance && (
-            <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+            <div className="bg-[var(--sys-card)] rounded-lg shadow-card p-5">
               <div className="flex items-center justify-between">
                 <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">{t.netProfit}</span>
                 <div className="h-14 w-14 rounded-lg bg-[var(--sys-success-soft)] text-[var(--sys-success)] flex items-center justify-center">
@@ -257,7 +257,7 @@ export function DashboardScreen() {
           )}
 
           {canFinance && (
-            <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+            <div className="bg-[var(--sys-card)] rounded-lg shadow-card p-5">
               <div className="flex items-center justify-between">
                 <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">{t.deliveredRevenue}</span>
                 <div className="h-14 w-14 rounded-lg bg-[var(--sys-surface-strong)] text-[var(--sys-primary)] flex items-center justify-center">
@@ -271,7 +271,7 @@ export function DashboardScreen() {
             </div>
           )}
 
-          <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+          <div className="bg-[var(--sys-card)] rounded-lg shadow-card p-5">
             <div className="flex items-center justify-between">
               <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">{t.confirmationRate}</span>
               <div className="h-14 w-14 rounded-lg bg-[var(--sys-info)]/10 text-[var(--sys-info)] flex items-center justify-center">
@@ -284,7 +284,7 @@ export function DashboardScreen() {
             </p>
           </div>
 
-          <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
+          <div className="bg-[var(--sys-card)] rounded-lg shadow-card p-5">
             <div className="flex items-center justify-between">
               <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">{t.deliveryRate}</span>
               <div className="h-14 w-14 rounded-lg bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] flex items-center justify-center">
@@ -342,7 +342,7 @@ export function DashboardScreen() {
         {/* ─── Order Status Tiles ─── */}
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
           {statusTiles.map((s) => (
-            <div key={s.label} className="bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]/80 p-3.5 text-center shadow-xs">
+            <div key={s.label} className="bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]/80 p-3.5 text-center shadow-card">
               <span className={`inline-block w-2 h-2 rounded-full ${s.dot} mb-1.5`} />
               <span className="block text-caption font-semibold text-[var(--sys-muted-foreground)] leading-tight">{s.label}</span>
               <span className={`block text-xl font-black mt-1 ${s.value > 0 ? s.color : 'text-[var(--sys-border-strong)]'}`}>

@@ -54,12 +54,29 @@ describe('the palettes', () => {
     expect(themeByKey(DEFAULT_THEME).key).toBe(DEFAULT_THEME);
   });
 
-  it('every theme defines every variable — a missing one renders invisible text', () => {
+  /** Everything in the list that is a colour. The rest is depth. */
+  const DEPTH = ['shadow', 'shadow-raised'];
+
+  it('every theme defines every colour — a missing one renders invisible text', () => {
     for (const theme of SYSTEM_THEMES) {
       for (const name of SYS_VARS) {
+        if (DEPTH.includes(name)) continue;
         expect(theme.vars[name], `${theme.key}: --sys-${name}`).toMatch(/^#[0-9a-f]{6}$/i);
       }
     }
+  });
+
+  it('and every theme has its own depth, because a shadow is not portable', () => {
+    // A 10%-black shadow is a soft edge on white and is literally nothing
+    // on a near-black page. One shadow for three themes means one theme
+    // where the cards do not separate from the page at all.
+    for (const theme of SYSTEM_THEMES) {
+      for (const name of DEPTH) {
+        expect(theme.vars[name], `${theme.key}: --sys-${name}`).toMatch(/\d+px .*rgb\(/);
+      }
+    }
+    const resting = SYSTEM_THEMES.map((t) => t.vars.shadow);
+    expect(new Set(resting).size, 'الأقلمة الثلاث تتقاسم ظلاً واحداً').toBe(SYSTEM_THEMES.length);
   });
 
   it('and defines nothing extra, so a stray variable cannot hide unused', () => {

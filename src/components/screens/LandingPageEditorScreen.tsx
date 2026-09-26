@@ -686,7 +686,7 @@ export function LandingPageEditorScreen() {
                 <Type className="h-3.5 w-3.5" /> إدراج متغير
               </Button>
               {varOpen && (
-                <div className="absolute z-10 mt-1 w-full rounded-lg border border-[#e3e8ef] bg-white py-1 shadow-lg">
+                <div className="absolute z-10 mt-1 w-full rounded-lg border border-[#e3e8ef] bg-white py-1 shadow-raised">
                   {VARIABLES.map((v) => (
                     <button
                       key={v.value}
@@ -842,7 +842,7 @@ data-zaki-z-index="9999"`}</pre>
                   title="معاينة الصفحة"
                   sandbox="allow-scripts"
                   srcDoc={previewDoc}
-                  className="h-full min-h-[400px] rounded-lg border border-[#e3e8ef] bg-white shadow-sm"
+                  className="h-full min-h-[400px] rounded-lg border border-[#e3e8ef] bg-white shadow-card"
                   style={{ width: DEVICE_WIDTHS[device], maxWidth: '100%' }}
                 />
               </div>

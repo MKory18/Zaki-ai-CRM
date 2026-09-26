@@ -350,7 +350,7 @@ export function OrdersScreen() {
         {/* One bar, three rows that each answer a different question:
             which queue am I in, what am I looking for, and how do I narrow
             it. The old grid mixed all three into six equal cells. */}
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg shadow-xs divide-y divide-[var(--sys-border)]">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg shadow-card divide-y divide-[var(--sys-border)]">
           {/* Search — pressing Enter or the button runs it; it no longer
               fires on every keystroke, which made a long phone number send
               a request per digit. */}
