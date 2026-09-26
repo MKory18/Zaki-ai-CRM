@@ -7,7 +7,7 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
-import { RiCheckboxCircleLine, RiClipboardLine, RiMagicLine, RiSparkling2Line } from '@remixicon/react';
+import { RiCheckboxCircleLine, RiClipboardLine, RiErrorWarningLine, RiMagicLine, RiSparkling2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { useToast } from '@/components/ui/Toast';
 
@@ -202,7 +202,8 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
 
             {result.existingCustomer && (
               <div className="p-2.5 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] text-xs rounded-lg">
-                ⚠️ هذا الرقم مسجل مسبقاً لعميل: <strong>{result.existingCustomer.fullName}</strong> (
+                <RiErrorWarningLine className="me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />
+                هذا الرقم مسجل مسبقاً لعميل: <strong>{result.existingCustomer.fullName}</strong> (
                 {result.existingCustomer.totalOrders} طلب سابق) — سيتم ربط الطلب بنفس الملف.
               </div>
             )}

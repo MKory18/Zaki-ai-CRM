@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { DismissButton } from '@/components/ui/DismissButton';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
@@ -305,7 +306,7 @@ export function OrdersScreen() {
               size="sm"
               onClick={() => loadOrders(pagination.page)}
               className="p-2"
-              title="Refresh"
+              title="تحديث"
             >
               <RiRefreshLine className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
@@ -348,7 +349,7 @@ export function OrdersScreen() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
-                className="h-10 w-full ps-9 pe-3 text-sm bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
+                className="h-11 md:h-10 w-full ps-9 pe-3 text-sm bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
             </div>
             <Button onClick={runSearch} className="shrink-0 gap-1.5">
@@ -364,7 +365,7 @@ export function OrdersScreen() {
                 setSearchInput(code);
                 setSearch(code);
               }}
-              className="shrink-0 h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+              className="shrink-0 h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
             />
             <Button
               variant={lateOnly ? undefined : 'outline'}
@@ -435,7 +436,7 @@ export function OrdersScreen() {
         {error && (
           <div className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs flex items-center justify-between gap-2">
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
+            <DismissButton onClick={() => setError(null)} />
           </div>
         )}
 

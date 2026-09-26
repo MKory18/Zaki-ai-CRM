@@ -463,12 +463,12 @@ export function ShippingBatchesScreen() {
           onClose={() => setVerify(null)}
           onScan={(code) => {
             if (!verify.refs.has(code)) {
-              return `⚠ ${code} ليس من هذه الدفعة — لا تسلّمه معها.`;
+              return { text: `${code} ليس من هذه الدفعة — لا تسلّمه معها.`, ok: false };
             }
             // Counting is what turns twenty checks into a handover: the
             // twentieth scan should say twenty, not just "yes" again.
             verify.seen.add(code);
-            return `✓ ${code} — ${verify.seen.size} من ${verify.batch._count.orders}`;
+            return { text: `${code} — ${verify.seen.size} من ${verify.batch._count.orders}`, ok: true };
           }}
         />
       )}

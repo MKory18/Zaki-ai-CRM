@@ -48,7 +48,7 @@ export function PickingAssistant() {
         <button
           onClick={ask}
           disabled={busy}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] disabled:opacity-60 cursor-pointer"
+          className="shrink-0 flex h-11 items-center gap-1.5 px-3 md:h-auto md:py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] disabled:opacity-60 cursor-pointer"
         >
           {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiSparkling2Line className="w-4 h-4 text-[var(--sys-primary)]" />}
           {busy ? 'جارٍ…' : 'رتّب لي الجولة'}

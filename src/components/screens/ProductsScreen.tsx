@@ -237,7 +237,7 @@ export function ProductsScreen() {
                 placeholder="بحث بالاسم (عربي/إنجليزي) أو SKU..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full ps-9 pe-4 py-2.5 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
+                className="h-11 md:h-auto w-full ps-9 pe-4 md:py-2.5 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
               {search && (
                 <button

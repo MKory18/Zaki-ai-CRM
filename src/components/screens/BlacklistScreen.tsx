@@ -231,7 +231,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
             required
             autoFocus
             placeholder="0790123456"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
@@ -244,7 +244,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 

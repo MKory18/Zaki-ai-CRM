@@ -491,7 +491,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             required
             minLength={2}
             placeholder="شرائح التأكيد اليومي 2026"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
@@ -501,7 +501,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               {ROLES.map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
@@ -514,7 +514,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               disabled={people.length === 0}
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)] disabled:bg-[var(--sys-surface)]"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)] disabled:bg-[var(--sys-surface)]"
             >
               <option value="">كل من في هذا الدور</option>
               {people.map((p) => (
@@ -535,7 +535,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             <select
               value={metric}
               onChange={(e) => pickMetric(e.target.value as CommissionMetric)}
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               {COMMISSION_METRICS.map((m) => (
                 <option key={m} value={m}>{METRIC_LABEL_AR[m]}</option>
@@ -548,7 +548,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               value={perOrder ? 'PER_ORDER' : period}
               disabled={perOrder}
               onChange={(e) => setPeriod(e.target.value as CommissionPeriod)}
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)] disabled:bg-[var(--sys-surface)] disabled:text-[var(--sys-muted)]"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)] disabled:bg-[var(--sys-surface)] disabled:text-[var(--sys-muted)]"
             >
               {(perOrder ? (['PER_ORDER'] as const) : (['DAILY', 'WEEKLY', 'MONTHLY'] as const)).map((p) => (
                 <option key={p} value={p}>{PERIOD_LABEL_AR[p]}</option>
@@ -596,7 +596,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as CommissionType)}
-                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
               >
                 {COMMISSION_TYPES.map((t) => (
                   <option key={t} value={t}>{TYPE_LABEL_AR[t]}</option>
@@ -614,7 +614,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 required
-                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
                 dir="ltr"
               />
             </label>
@@ -633,7 +633,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                 onChange={(e) => setGoal(e.target.value)}
                 required
                 placeholder={isRate ? '70' : '150'}
-                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
                 dir="ltr"
               />
             </label>
@@ -646,7 +646,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                 value={bonus}
                 onChange={(e) => setBonus(e.target.value)}
                 required
-                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
                 dir="ltr"
               />
             </label>
@@ -662,7 +662,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as CommissionType)}
-                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
               >
                 {COMMISSION_TYPES.map((t) => (
                   <option key={t} value={t}>{TYPE_LABEL_AR[t]}</option>
@@ -734,7 +734,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               value={minOrders}
               onChange={(e) => setMinOrders(e.target.value)}
               placeholder="مثلاً 30"
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
             <span className="mt-1 block text-xs text-[var(--sys-muted)]">
@@ -752,7 +752,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             value={from}
             onChange={(e) => setFrom(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
@@ -812,7 +812,7 @@ function EndRuleDialog({ rule, onClose, onSaved }: { rule: Rule; onClose: () => 
             value={to}
             onChange={(e) => setTo(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>

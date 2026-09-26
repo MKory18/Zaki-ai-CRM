@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dashboardFiles, stripComments, stripTemplates } from './guard-source';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * ONE PALETTE, AND IT BELONGS TO THE THEME.
@@ -28,11 +29,6 @@ import { join, relative } from 'node:path';
  * same mistake as a dashboard colour reaching them.
  */
 
-const SELLERS = [
-  '/components/landing/', '/components/public/', '/components/store/',
-  '/app/(public)/', '/app/lp/', '/app/s/',
-];
-
 const HUES =
   'blue|purple|slate|gray|grey|emerald|rose|amber|green|red|indigo|teal|cyan|sky|orange|yellow|pink|violet|fuchsia|lime|stone|zinc|neutral';
 
@@ -49,12 +45,6 @@ const RAW = new RegExp(
  * after the first one is reported short and the offender list points at
  * innocent lines.
  */
-function code(src: string): string {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/^(\s*)\/\/.*$/gm, '$1');
-}
-
 /**
  * Template literals blanked out, newlines kept.
  *
@@ -63,63 +53,11 @@ function code(src: string): string {
  * colours are theirs. A guard that read them would be asking a seller's
  * page to follow the dashboard's theme — the same mistake in reverse.
  */
-function stripTemplates(src: string): string {
-  const out = src.split('');
-  const blank = (i: number) => {
-    if (src[i] !== '\n') out[i] = ' ';
-  };
-  let i = 0;
-  while (i < src.length) {
-    if (src[i] !== '`') {
-      i++;
-      continue;
-    }
-    blank(i);
-    i++;
-    let depth = 0;
-    while (i < src.length) {
-      const c = src[i];
-      if (c === '\\') {
-        blank(i);
-        blank(i + 1);
-        i += 2;
-        continue;
-      }
-      if (c === '$' && src[i + 1] === '{') depth++;
-      else if (c === '}' && depth > 0) depth--;
-      else if (c === '`' && depth === 0) {
-        blank(i);
-        i++;
-        break;
-      }
-      blank(i);
-      i++;
-    }
-  }
-  return out.join('');
-}
-
-function dashboard(): { rel: string; src: string }[] {
-  const out: { rel: string; src: string }[] = [];
-  const walk = (dir: string) => {
-    for (const name of readdirSync(dir)) {
-      const p = join(dir, name);
-      if (statSync(p).isDirectory()) walk(p);
-      else if (p.endsWith('.tsx') && !p.includes('.test.')) {
-        const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
-        if (!SELLERS.some((s) => rel.includes(s))) out.push({ rel, src: readFileSync(p, 'utf8') });
-      }
-    }
-  };
-  walk(join(process.cwd(), 'src'));
-  return out;
-}
-
 describe('the colours on a dashboard screen', () => {
   it('come from the theme, never from Tailwind’s own palette', () => {
     const offenders: string[] = [];
-    for (const { rel, src } of dashboard()) {
-      const lines = code(src).split('\n');
+    for (const { rel, src } of dashboardFiles()) {
+      const lines = stripComments(src).split('\n');
       for (let i = 0; i < lines.length; i++) {
         for (const m of lines[i].matchAll(RAW)) offenders.push(`${rel}:${i + 1}  ${m[0]}`);
       }
@@ -147,12 +85,28 @@ describe('the colours on a dashboard screen', () => {
 
   it('and no screen writes a hex of its own', () => {
     const offenders: string[] = [];
-    for (const { rel, src } of dashboard()) {
-      const lines = stripTemplates(code(src)).split('\n');
+    for (const { rel, src } of dashboardFiles()) {
+      const lines = stripTemplates(stripComments(src)).split('\n');
       for (let i = 0; i < lines.length; i++) {
-        // A hex in a className or a style attribute. A default `value` on
-        // a colour picker is the seller choosing a colour — that is data.
-        const styling = /className=|\bstyle=\{/.test(lines[i]);
+        /**
+         * A hex in a className or a style attribute — or in a STRING THAT
+         * IS a class list, which is the same thing written one line
+         * earlier:
+         *
+         *   const CARD = 'rounded-lg border border-[#e3e8ef] bg-white p-4';
+         *
+         * Six of those sat in the store-theme editor and this guard walked
+         * past all six, because the word `className` was on a different
+         * line. They came back when that file was restored from a commit
+         * and nothing failed — which is how a guard with a hole teaches you
+         * that it had one.
+         *
+         * A default `value` on a colour picker is the seller choosing a
+         * colour — that is data, and it has no class tokens beside it.
+         */
+        const styling =
+          /className=|\bstyle=\{/.test(lines[i]) ||
+          /'[^']*(?:rounded-|border-|bg-|text-|px-|py-|p-\d|mb-|mt-|flex|block)[^']*'/.test(lines[i]);
         if (!styling) continue;
         for (const m of lines[i].matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
           if (OTHER_BRANDS.has(m[0].toLowerCase())) continue;

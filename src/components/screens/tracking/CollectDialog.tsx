@@ -132,7 +132,7 @@ export function CollectDialog({
             value={walletId}
             onChange={(e) => setWalletId(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {wallets.map((w) => (
@@ -157,7 +157,7 @@ export function CollectDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder={String(expected)}
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           {difference !== 0 && (
@@ -175,7 +175,7 @@ export function CollectDialog({
             required
             minLength={3}
             placeholder="مثال: استلمت نقداً من المندوب"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 

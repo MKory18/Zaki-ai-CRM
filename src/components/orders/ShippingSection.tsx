@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { DismissButton } from '@/components/ui/DismissButton';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -40,7 +41,7 @@ const SHIPPING_STATE: Record<string, { ar: string; en: string; cls: string }> = 
   READY_FOR_PICKUP: { ar: 'جاهز للاستلام', en: 'Ready for Pickup', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
   SHIPPED: { ar: 'تم الشحن', en: 'Shipped', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
   OUT_FOR_DELIVERY: { ar: 'خرج للتوصيل', en: 'Out for Delivery', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
-  DELIVERED: { ar: 'تم التسليم ✓', en: 'Delivered ✓', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
+  DELIVERED: { ar: 'تم التسليم', en: 'Delivered', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
   FAILED_DELIVERY: { ar: 'فشل التوصيل', en: 'Delivery Failed', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
   RETURN_REQUESTED: { ar: 'طلب إرجاع', en: 'Return Requested', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
   RETURNED: { ar: 'مُرتجع', en: 'Returned', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
@@ -73,19 +74,19 @@ const NEXT_ACTIONS: Record<string, { to: string; labelAr: string; labelEn: strin
   // in the preparation screen, where the stock is actually reserved against
   // its lines; a button here only ever produced "الشحن يتطلب طلباً مؤكداً".
   NOT_READY: [],
-  READY_FOR_SHIPPING: [{ to: 'PACKING', labelAr: '📦 بدء التغليف', labelEn: '📦 Start Packing', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' }],
-  PACKING: [{ to: 'READY_FOR_PICKUP', labelAr: '🚚 جاهز للاستلام', labelEn: '🚚 Ready for Pickup', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' }],
-  READY_FOR_PICKUP: [{ to: 'SHIPPED', labelAr: '🚀 تم الشحن', labelEn: '🚀 Shipped', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' }],
-  SHIPPED: [{ to: 'OUT_FOR_DELIVERY', labelAr: '🛵 خرج للتوصيل', labelEn: '🛵 Out for Delivery', cls: 'border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)]' }],
+  READY_FOR_SHIPPING: [{ to: 'PACKING', labelAr: 'بدء التغليف', labelEn: 'Start Packing', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' }],
+  PACKING: [{ to: 'READY_FOR_PICKUP', labelAr: 'جاهز للاستلام', labelEn: 'Ready for Pickup', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' }],
+  READY_FOR_PICKUP: [{ to: 'SHIPPED', labelAr: 'تم الشحن', labelEn: 'Shipped', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' }],
+  SHIPPED: [{ to: 'OUT_FOR_DELIVERY', labelAr: 'خرج للتوصيل', labelEn: 'Out for Delivery', cls: 'border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)]' }],
   OUT_FOR_DELIVERY: [
-    { to: 'DELIVERED', labelAr: '✅ تم التسليم', labelEn: '✅ Delivered', cls: 'border-[var(--sys-success)]/60 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)]' },
-    { to: 'FAILED_DELIVERY', labelAr: '⚠️ فشل التوصيل', labelEn: '⚠️ Failed', cls: 'border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]' },
+    { to: 'DELIVERED', labelAr: 'تم التسليم', labelEn: 'Delivered', cls: 'border-[var(--sys-success)]/60 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)]' },
+    { to: 'FAILED_DELIVERY', labelAr: 'فشل التوصيل', labelEn: 'Failed', cls: 'border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]' },
   ],
   FAILED_DELIVERY: [
-    { to: 'RETURN_REQUESTED', labelAr: '↩️ طلب إرجاع', labelEn: '↩️ Return', cls: 'border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)]' },
-    { to: 'SHIPPED', labelAr: '🔁 إعادة شحن', labelEn: '🔁 Retry RiShipLine', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' },
+    { to: 'RETURN_REQUESTED', labelAr: 'طلب إرجاع', labelEn: 'Return', cls: 'border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)]' },
+    { to: 'SHIPPED', labelAr: 'إعادة شحن', labelEn: 'Retry RiShipLine', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' },
   ],
-  RETURN_REQUESTED: [{ to: 'RETURNED', labelAr: '↩️ تم الإرجاع', labelEn: '↩️ Returned', cls: 'border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]' }],
+  RETURN_REQUESTED: [{ to: 'RETURNED', labelAr: 'تم الإرجاع', labelEn: 'Returned', cls: 'border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]' }],
 };
 
 interface ShippingSectionProps {
@@ -179,7 +180,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
         setFeedback({ type: 'error', text: data.errorAr || data.error || (ar ? 'فشل الإجراء' : 'Action failed') });
         return { ok: false };
       }
-      setFeedback({ type: 'success', text: ar ? 'تم تحديث الشحن ✓' : 'Shipping updated ✓' });
+      setFeedback({ type: 'success', text: ar ? 'تم تحديث الشحن' : 'Shipping updated' });
       await onRefreshOrder();
       await loadAttempts();
       return { ok: true, order: data.order };
@@ -256,14 +257,16 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
       {/* Failure/return reasons */}
       {order.shippingStatus === 'FAILED_DELIVERY' && order.deliveryFailureReason && (
         <p className="mb-3 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1.5">
-          ⚠️ {ar ? 'سبب الفشل:' : 'Failure reason:'}{' '}
+          <RiCloseCircleLine className="me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />
+          {ar ? 'سبب الفشل:' : 'Failure reason:'}{' '}
           {(FAILURE_REASONS as any)[order.deliveryFailureReason]?.[ar ? 'ar' : 'en'] ?? order.deliveryFailureReason}
           {order.deliveryNote ? ` — ${order.deliveryNote}` : ''}
         </p>
       )}
       {order.returnReason && ['RETURN_REQUESTED', 'RETURNED'].includes(order.shippingStatus) && (
         <p className="mb-3 text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg px-2.5 py-1.5">
-          ↩️ {ar ? 'سبب الإرجاع:' : 'Return reason:'}{' '}
+          <RiArrowGoBackLine className="icon-mirror me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />
+          {ar ? 'سبب الإرجاع:' : 'Return reason:'}{' '}
           {(RETURN_REASONS as any)[order.returnReason]?.[ar ? 'ar' : 'en'] ?? order.returnReason}
         </p>
       )}
@@ -311,7 +314,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
           feedback.type === 'success' ? 'border-[var(--sys-success)]/60 bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
         }`}>
           <span>{feedback.text}</span>
-          <button onClick={() => setFeedback(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
+          <DismissButton onClick={() => setFeedback(null)} />
         </div>
       )}
 
@@ -319,7 +322,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
       {listError && (
         <div className="mb-3 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] p-2.5 text-xs flex items-center justify-between gap-2">
           <span>{listError}</span>
-          <button onClick={() => setListError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
+          <DismissButton onClick={() => setListError(null)} />
         </div>
       )}
 
@@ -357,7 +360,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
       </div>
 
       {/* ─── Forms ─── */}
-      <Modal isOpen={openForm === 'fail'} onClose={() => setOpenForm(null)} title={ar ? '⚠️ تسجيل فشل التوصيل' : '⚠️ Record Delivery Failure'} maxWidth="md">
+      <Modal isOpen={openForm === 'fail'} onClose={() => setOpenForm(null)} title={ar ? 'تسجيل فشل التوصيل' : 'Record Delivery Failure'} maxWidth="md">
         <div className="space-y-3" dir={isRtl ? 'rtl' : 'ltr'}>
           <Select label={ar ? 'سبب الفشل *' : 'Failure Reason *'} value={failureReason} onChange={(e) => setFailureReason(e.target.value)}>
             <option value="">— {ar ? 'اختر السبب' : 'Select'} —</option>
@@ -390,7 +393,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
         </div>
       </Modal>
 
-      <Modal isOpen={openForm === 'return'} onClose={() => setOpenForm(null)} title={ar ? '↩️ طلب إرجاع' : '↩️ Return Request'} maxWidth="md">
+      <Modal isOpen={openForm === 'return'} onClose={() => setOpenForm(null)} title={ar ? 'طلب إرجاع' : 'Return Request'} maxWidth="md">
         <div className="space-y-3" dir={isRtl ? 'rtl' : 'ltr'}>
           <Select label={ar ? 'سبب الإرجاع *' : 'Return Reason *'} value={returnReason} onChange={(e) => setReturnReason(e.target.value)}>
             <option value="">— {ar ? 'اختر السبب' : 'Select'} —</option>
@@ -413,7 +416,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
         </div>
       </Modal>
 
-      <Modal isOpen={openForm === 'tracking'} onClose={() => setOpenForm(null)} title={ar ? '🔢 بيانات التتبع' : 'Tracking Details'} maxWidth="md">
+      <Modal isOpen={openForm === 'tracking'} onClose={() => setOpenForm(null)} title={ar ? 'بيانات التتبع' : 'Tracking Details'} maxWidth="md">
         <div className="space-y-3" dir={isRtl ? 'rtl' : 'ltr'}>
           <Select
             label={ar ? 'شركة التوصيل' : 'Delivery Provider'}

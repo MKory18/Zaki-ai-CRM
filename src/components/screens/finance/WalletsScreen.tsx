@@ -455,7 +455,7 @@ function RecordDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
@@ -468,7 +468,7 @@ function RecordDialog({
             required
             minLength={2}
             placeholder="اسم الشخص أو الجهة"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
@@ -477,7 +477,7 @@ function RecordDialog({
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             {Object.entries(CATEGORY_AR)
               .filter(([key]) => key !== 'TRANSFER_IN' && key !== 'TRANSFER_OUT')
@@ -495,7 +495,7 @@ function RecordDialog({
             onChange={(e) => setNote(e.target.value)}
             required
             minLength={3}
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
@@ -670,7 +670,7 @@ function CreateWalletDialog({
               if (picked && !currency) setCurrency(picked.currencyCode);
             }}
             required
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {countries.map((c) => (
@@ -688,7 +688,7 @@ function CreateWalletDialog({
             minLength={2}
             autoFocus
             placeholder="مثال: الصندوق النقدي، حساب البنك العربي"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
@@ -700,7 +700,7 @@ function CreateWalletDialog({
             required
             maxLength={3}
             placeholder="USD"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
@@ -721,7 +721,7 @@ function CreateWalletDialog({
             value={opening}
             onChange={(e) => setOpening(e.target.value)}
             placeholder="0"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">

@@ -480,7 +480,7 @@ function AddStore({
         <select
           value={form.type}
           onChange={(e) => setForm({ ...form, type: e.target.value })}
-          className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+          className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
         >
           <option value="MULTI_PRODUCT">متعدد المنتجات</option>
           <option value="SINGLE_PRODUCT">{STORE_TYPE_LABEL.SINGLE_PRODUCT}</option>
@@ -517,7 +517,7 @@ function Input({
         onChange={(e) => onChange(e.target.value)}
         dir={dir}
         required
-        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+        className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
       />
     </label>
   );
@@ -543,7 +543,7 @@ function TextField({
         dir={dir}
         onChange={(e) => setV(e.target.value)}
         onBlur={() => v !== value && onSave(v)}
-        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+        className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
       />
     </label>
   );
@@ -558,7 +558,7 @@ function TimeField({ label, value, onSave }: { label: string; value: string; onS
         defaultValue={value}
         onBlur={(e) => e.target.value !== value && onSave(e.target.value)}
         dir="ltr"
-        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+        className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
       />
     </label>
   );

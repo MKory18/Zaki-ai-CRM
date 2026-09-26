@@ -35,13 +35,13 @@ const KIND_AR: Record<string, string> = {
 const KIND_TONE: Record<string, string> = {
   LANDING_PAGE: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
   FACEBOOK: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
-  INSTAGRAM: 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border-[#fbcfe8]',
-  TIKTOK: 'bg-[var(--sys-surface-strong)] text-[#0f172a] border-[var(--sys-border)]',
-  WHATSAPP: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[#a7f3d0]',
-  TELEGRAM: 'bg-[var(--sys-surface)] text-[#0284c7] border-[#bae6fd]',
-  PHONE: 'bg-[var(--sys-surface)] text-[#475569] border-[var(--sys-border)]',
+  INSTAGRAM: 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border-[var(--sys-primary-soft)]',
+  TIKTOK: 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)] border-[var(--sys-border)]',
+  WHATSAPP: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)]',
+  TELEGRAM: 'bg-[var(--sys-surface)] text-[var(--sys-primary)] border-[var(--sys-primary-soft)]',
+  PHONE: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
   SHEET: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]',
-  WEBSITE: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[#ddd6fe]',
+  WEBSITE: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
   OTHER: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
 };
 
@@ -55,7 +55,7 @@ interface Channel {
 }
 
 const INPUT =
-  'w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
+  'w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
 export function ChannelsScreen() {
   const toast = useToast();

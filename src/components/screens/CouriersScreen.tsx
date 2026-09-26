@@ -223,7 +223,7 @@ export function CouriersScreen() {
             <select
               value={form.kind}
               onChange={(e) => setForm({ ...form, kind: e.target.value as 'COMPANY' | 'AGENT' })}
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               <option value="COMPANY">شركة شحن</option>
               <option value="AGENT">مندوب</option>
@@ -241,7 +241,7 @@ export function CouriersScreen() {
               <select
                 value={form.adapterCode}
                 onChange={(e) => setForm({ ...form, adapterCode: e.target.value })}
-                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
               >
                 {COURIER_PLATFORMS.map((p) => (
                   <option key={p.code} value={p.code}>{p.name}</option>
@@ -452,7 +452,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         dir={dir}
         required={required}
-        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+        className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
       />
     </label>
   );

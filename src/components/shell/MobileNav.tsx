@@ -125,7 +125,18 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
             const on = active(route.path);
             const Icon = iconFor(route.icon, on);
             return (
-              <li key={route.path} className="flex-1">
+              /**
+               * `min-w-0` IS WHAT MAKES `truncate` BELOW DO ANYTHING.
+               *
+               * A flex item's `min-width` is `auto`, which means "never
+               * shrink below your content" — and `truncate` does not change
+               * that content's intrinsic width, it only clips the paint. So
+               * «الطلبات الجديدة» claimed 98px, five tabs claimed 530, and
+               * the whole page scrolled sideways by 170px on a 360px phone:
+               * the bar is `fixed inset-x-0`, but a fixed box still grows to
+               * its own min-content.
+               */
+              <li key={route.path} className="min-w-0 flex-1">
                 <Link
                   href={route.path}
                   aria-current={on ? 'page' : undefined}
@@ -142,7 +153,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
             );
           })}
 
-          <li className="flex-1">
+          <li className="min-w-0 flex-1">
             <button
               type="button"
               onClick={() => setSheet(true)}

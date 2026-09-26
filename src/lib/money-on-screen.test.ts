@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dashboardFiles, stripComments, stripTemplates } from './guard-source';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * A CURRENCY SYMBOL WRITTEN INTO A SCREEN IS ALWAYS WRONG HERE.
@@ -20,11 +21,6 @@ import { join, relative } from 'node:path';
  * refuses the guess coming back.
  */
 
-const SELLERS = [
-  '/components/landing/', '/components/public/', '/components/store/',
-  '/app/(public)/', '/app/lp/', '/app/s/',
-];
-
 /**
  * Source without its comments, and with its LINE NUMBERS intact.
  *
@@ -34,12 +30,6 @@ const SELLERS = [
  * innocent lines, which is worse than no line numbers: it sends whoever
  * reads the failure to the wrong place.
  */
-function code(src: string): string {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/^(\s*)\/\/.*$/gm, '$1');
-}
-
 /**
  * Source with every template literal blanked out, newlines kept.
  *
@@ -52,63 +42,11 @@ function code(src: string): string {
  * depth, and blanks what it skips. Whatever `$` survives is a dollar
  * somebody typed.
  */
-function stripTemplates(src: string): string {
-  const out = src.split('');
-  const blank = (i: number) => {
-    if (src[i] !== '\n') out[i] = ' ';
-  };
-  let i = 0;
-  while (i < src.length) {
-    if (src[i] !== '`') {
-      i++;
-      continue;
-    }
-    blank(i);
-    i++;
-    let depth = 0;
-    while (i < src.length) {
-      const c = src[i];
-      if (c === '\\') {
-        blank(i);
-        blank(i + 1);
-        i += 2;
-        continue;
-      }
-      if (c === '$' && src[i + 1] === '{') depth++;
-      else if (c === '}' && depth > 0) depth--;
-      else if (c === '`' && depth === 0) {
-        blank(i);
-        i++;
-        break;
-      }
-      blank(i);
-      i++;
-    }
-  }
-  return out.join('');
-}
-
-function dashboard(): { rel: string; src: string }[] {
-  const out: { rel: string; src: string }[] = [];
-  const walk = (dir: string) => {
-    for (const name of readdirSync(dir)) {
-      const p = join(dir, name);
-      if (statSync(p).isDirectory()) walk(p);
-      else if (p.endsWith('.tsx') && !p.includes('.test.')) {
-        const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
-        if (!SELLERS.some((s) => rel.includes(s))) out.push({ rel, src: readFileSync(p, 'utf8') });
-      }
-    }
-  };
-  walk(join(process.cwd(), 'src'));
-  return out;
-}
-
 describe('the currency on a screen', () => {
   it('is never a symbol somebody typed', () => {
     const offenders: string[] = [];
-    for (const { rel, src } of dashboard()) {
-      for (const [i, line] of stripTemplates(code(src)).split('\n').entries()) {
+    for (const { rel, src } of dashboardFiles()) {
+      for (const [i, line] of stripTemplates(stripComments(src)).split('\n').entries()) {
         // A dollar before a figure or before a JSX expression: «$12.50»,
         // «${total.toFixed(2)}» in text position.
         if (/\$(?=\d|\{)/.test(line)) offenders.push(`${rel}:${i + 1}`);
@@ -131,8 +69,8 @@ describe('the currency on a screen', () => {
   it('and the number of hand-formatted figures only goes down', () => {
     let n = 0;
     const where: string[] = [];
-    for (const { rel, src } of dashboard()) {
-      const hits = (code(src).match(/\.toFixed\(\s*2\s*\)/g) ?? []).length;
+    for (const { rel, src } of dashboardFiles()) {
+      const hits = (stripComments(src).match(/\.toFixed\(\s*2\s*\)/g) ?? []).length;
       if (hits) {
         n += hits;
         where.push(`${rel}: ${hits}`);
@@ -146,14 +84,14 @@ describe('the currency on a screen', () => {
   it('and the store’s currency reaches every screen without a new endpoint', () => {
     const shell = readFileSync(join(process.cwd(), 'src/components/shell/Shell.tsx'), 'utf8');
     expect(shell, 'العملة لا تصل الشاشات').toContain('StoreCurrencyProvider');
-    const money = code(readFileSync(join(process.cwd(), 'src/components/ui/Money.tsx'), 'utf8'));
+    const money = stripComments(readFileSync(join(process.cwd(), 'src/components/ui/Money.tsx'), 'utf8'));
     expect(money, 'Money لا يقرأ عملة المتجر').toContain('useStoreCurrency');
   });
 
   it('and outside the shell an amount prints bare rather than guessing', () => {
     // Sign-in and the entry picker: no store has been chosen yet, so there
     // is nothing to print but the number.
-    const money = code(readFileSync(join(process.cwd(), 'src/components/ui/Money.tsx'), 'utf8'));
+    const money = stripComments(readFileSync(join(process.cwd(), 'src/components/ui/Money.tsx'), 'utf8'));
     expect(money).toMatch(/store\?\.code\s*\?\?\s*null/);
   });
 });

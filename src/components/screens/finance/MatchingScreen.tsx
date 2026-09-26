@@ -85,7 +85,7 @@ export function MatchingScreen() {
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر كشفاً…</option>
             {(statements ?? []).map((s) => (

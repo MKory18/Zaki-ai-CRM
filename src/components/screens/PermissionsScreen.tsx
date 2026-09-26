@@ -359,7 +359,7 @@ export function PermissionsScreen() {
 
         {savedFlash && (
           <div className="rounded-lg bg-[var(--sys-success-soft)] border border-[var(--sys-success-soft)] text-[var(--sys-success)] text-xs font-medium px-4 py-2.5">
-            {ar ? '✓ تم الحفظ بنجاح' : '✓ Saved successfully'}
+            {ar ? 'تم الحفظ بنجاح' : 'Saved successfully'}
           </div>
         )}
 

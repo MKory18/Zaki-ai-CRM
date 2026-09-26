@@ -221,7 +221,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                   onBlur={handlePhoneBlur}
                   required
                   dir="ltr"
-                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-destructive)]/20 focus:border-[var(--sys-destructive)] transition-colors"
+                  className="h-11 md:h-auto w-full ps-9 pe-3 md:py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-destructive)]/20 focus:border-[var(--sys-destructive)] transition-colors"
                 />
               </div>
               {existingCustomerAlert && (
@@ -269,7 +269,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                   value={customerAddress}
                   onChange={(e) => setCustomerAddress(e.target.value)}
                   required
-                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-destructive)]/20 focus:border-[var(--sys-destructive)]"
+                  className="h-11 md:h-auto w-full ps-9 pe-3 md:py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-destructive)]/20 focus:border-[var(--sys-destructive)]"
                 />
               </div>
             </div>

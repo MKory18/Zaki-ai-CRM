@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dashboardFiles } from './guard-source';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * A TABLE ON A DESK, CARDS IN A HAND — FROM ONE DEFINITION.
@@ -14,11 +15,6 @@ import { join, relative } from 'node:path';
  *
  * They are one table now, with three exceptions that are not oversights.
  */
-
-const SELLERS = [
-  '/components/landing/', '/components/public/', '/components/store/',
-  '/app/(public)/', '/app/lp/', '/app/s/',
-];
 
 /**
  * THE THREE THAT STAY.
@@ -42,26 +38,10 @@ const MATRICES = [
 /** And the shared component itself, which IS the table. */
 const THE_TABLE = '/src/components/ui/Rows.tsx';
 
-function dashboard(): { rel: string; src: string }[] {
-  const out: { rel: string; src: string }[] = [];
-  const walk = (dir: string) => {
-    for (const name of readdirSync(dir)) {
-      const p = join(dir, name);
-      if (statSync(p).isDirectory()) walk(p);
-      else if (p.endsWith('.tsx') && !p.includes('.test.')) {
-        const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
-        if (!SELLERS.some((s) => rel.includes(s))) out.push({ rel, src: readFileSync(p, 'utf8') });
-      }
-    }
-  };
-  walk(join(process.cwd(), 'src'));
-  return out;
-}
-
 describe('a list of records', () => {
   it('is drawn once and read two ways, not written by hand per screen', () => {
     const offenders: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       if (rel === THE_TABLE || MATRICES.includes(rel)) continue;
       const n = (src.match(/<table\b/g) ?? []).length;
       if (n) offenders.push(`${rel}: ${n}`);

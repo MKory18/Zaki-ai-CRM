@@ -62,7 +62,7 @@ export function ConfirmationCounter() {
 
   if (counter.kind === 'POOL') {
     return (
-      <Link href="/confirmation/queue" className={`${chip} hover:border-[var(--sys-primary)]`} title="طلبات تنتظر السحب">
+      <Link href="/confirmation/queue" className={`tap-safe ${chip} hover:border-[var(--sys-primary)]`} title="طلبات تنتظر السحب">
         <RiPhoneLine className="h-4 w-4" />
         <span className="hidden sm:inline">بانتظار السحب</span>
         {counter.count}

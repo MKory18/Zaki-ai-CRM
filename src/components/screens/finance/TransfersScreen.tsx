@@ -169,7 +169,7 @@ export function TransfersScreen() {
               value={fromId}
               onChange={(e) => setFromId(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               <option value="">اختر…</option>
               {options(toId)}
@@ -182,7 +182,7 @@ export function TransfersScreen() {
               value={toId}
               onChange={(e) => setToId(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
             >
               <option value="">اختر…</option>
               {options(fromId)}
@@ -202,7 +202,7 @@ export function TransfersScreen() {
               value={amountOut}
               onChange={(e) => setAmountOut(e.target.value)}
               required
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
           </label>
@@ -219,7 +219,7 @@ export function TransfersScreen() {
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
                 required
-                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
                 dir="ltr"
               />
             </label>
@@ -244,7 +244,7 @@ export function TransfersScreen() {
             required
             minLength={3}
             placeholder="سبب التحويل"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 

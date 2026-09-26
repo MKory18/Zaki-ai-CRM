@@ -106,7 +106,7 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
 
   const previous = Math.max(0, (order.customer.totalOrders ?? 1) - 1);
   const inputClass =
-    'w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
+    'w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
   return (
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-3">

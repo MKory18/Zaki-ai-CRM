@@ -35,7 +35,12 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 h-[72px] bg-[var(--sys-card)] border-b border-[var(--sys-border)] flex items-center gap-3 px-4 md:px-6">
-      <button onClick={onMenuClick} className="md:hidden p-2 rounded-lg hover:bg-[var(--sys-surface)]" aria-label="القائمة">
+      <button
+        onClick={onMenuClick}
+        className="md:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--sys-surface)]"
+        aria-label="القائمة"
+        title="القائمة"
+      >
         <RiMenuLine className="w-5 h-5 text-[var(--sys-foreground)]" />
       </button>
 
@@ -96,7 +101,8 @@ export function Header({
         type="button"
         onClick={onSearchClick}
         aria-label="ابحث، انتقل، أو نفّذ"
-        className="md:hidden mr-auto p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
+        className="md:hidden mr-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
+        title="ابحث، انتقل، أو نفّذ"
       >
         <RiSearchLine className="w-5 h-5" />
       </button>

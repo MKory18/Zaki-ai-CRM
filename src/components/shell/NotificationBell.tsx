@@ -164,7 +164,8 @@ export function NotificationBell() {
       <button
         onClick={toggle}
         aria-label={unread > 0 ? `${unread} إشعار غير مقروء` : 'الإشعارات'}
-        className="relative p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] transition-colors"
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] transition-colors"
+        title={unread > 0 ? `${unread} إشعار غير مقروء` : 'الإشعارات'}
       >
         <RiNotification3Line className="w-5 h-5" />
         {unread > 0 && (

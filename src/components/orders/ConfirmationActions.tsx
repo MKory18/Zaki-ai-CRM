@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { DismissButton } from '@/components/ui/DismissButton';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input, Textarea, Select } from '@/components/ui/Input';
@@ -42,7 +43,7 @@ const WORKFLOW_STATE: Record<string, { ar: string; en: string; cls: string }> = 
   NO_ANSWER: { ar: 'لا يجيب', en: 'No Answer', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
   FOLLOW_UP_REQUIRED: { ar: 'يتطلب متابعة', en: 'Follow-Up Required', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
   POSTPONED: { ar: 'مؤجل', en: 'Postponed', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
-  CONFIRMED: { ar: 'مؤكد ✓', en: 'Confirmed ✓', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
+  CONFIRMED: { ar: 'مؤكد', en: 'Confirmed', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
   REJECTED: { ar: 'مرفوض', en: 'Rejected', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
   CANCELLED: { ar: 'ملغى', en: 'Cancelled', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
 };
@@ -154,7 +155,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
         }
       }
 
-      setFeedback({ type: 'success', text: ar ? 'تم تسجيل الإجراء بنجاح ✓' : 'Action recorded successfully ✓' });
+      setFeedback({ type: 'success', text: ar ? 'تم تسجيل الإجراء بنجاح' : 'Action recorded successfully' });
       setNote(''); setRejectionReason(''); setFollowUpDate('');
       await loadAttempts();
       await onRefreshOrder();
@@ -220,14 +221,14 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
             disabled={busy}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-muted-foreground)]/50 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RiPhoneLine className="w-4 h-4" />{ar ? '📞 العميل أجاب' : '📞 Answered'}
+            <RiPhoneLine className="w-4 h-4" />{ar ? 'العميل أجاب' : 'Answered'}
           </button>
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'NO_ANSWER' })}
             disabled={busy}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RiPhoneLockLine className="w-4 h-4" />{ar ? '☎️ لم يجب' : '☎️ No Answer'}
+            <RiPhoneLockLine className="w-4 h-4" />{ar ? 'لم يجب' : 'No Answer'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('call_later'); }}
@@ -241,28 +242,28 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
             disabled={busy}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RiRefreshLine className="w-4 h-4" />{ar ? '🔄 متابعة' : '🔄 Follow Up'}
+            <RiRefreshLine className="w-4 h-4" />{ar ? 'متابعة' : 'Follow Up'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('confirm'); }}
             disabled={busy}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-success)]/60 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RiCheckLine className="w-4 h-4" />{ar ? '✅ تأكيد الطلب' : '✅ Confirm Order'}
+            <RiCheckLine className="w-4 h-4" />{ar ? 'تأكيد الطلب' : 'Confirm Order'}
           </button>
           <button
             onClick={() => { setNote(''); setRejectionReason(''); setOpenForm('reject'); }}
             disabled={busy}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RiCloseCircleLine className="w-4 h-4" />{ar ? '❌ العميل رفض' : '❌ Rejected'}
+            <RiCloseCircleLine className="w-4 h-4" />{ar ? 'العميل رفض' : 'Rejected'}
           </button>
           <button
             onClick={() => submitAction({ action: 'contact_result', result: 'WRONG_NUMBER' })}
             disabled={busy}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RiPhoneLockLine className="w-4 h-4" />{ar ? '🚫 رقم خاطئ' : '🚫 Wrong Number'}
+            <RiPhoneLockLine className="w-4 h-4" />{ar ? 'رقم خاطئ' : 'Wrong Number'}
           </button>
         </div>
       )}
@@ -277,7 +278,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
           }`}
         >
           <span className="leading-relaxed">{feedback.text}</span>
-          <button onClick={() => setFeedback(null)} className="opacity-60 hover:opacity-100 cursor-pointer shrink-0">✕</button>
+          <DismissButton onClick={() => setFeedback(null)} />
         </div>
       )}
 
@@ -338,9 +339,9 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
   function formTitle() {
     if (!openForm) return '';
     const map: Record<string, { ar: string; en: string }> = {
-      confirm: { ar: '✅ تأكيد الطلب', en: '✅ Confirm Order' },
-      reject: { ar: '❌ رفض الطلب', en: '❌ Reject Order' },
-      followup: { ar: '🔄 جدولة متابعة', en: '🔄 Schedule Follow-Up' },
+      confirm: { ar: 'تأكيد الطلب', en: 'Confirm Order' },
+      reject: { ar: 'رفض الطلب', en: 'Reject Order' },
+      followup: { ar: 'جدولة متابعة', en: 'Schedule Follow-Up' },
       call_later: { ar: '⏰ الاتصال لاحقاً', en: '⏰ Call Later' },
     };
     const t = map[openForm];

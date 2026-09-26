@@ -178,7 +178,7 @@ export function DeliverDialog({
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="سبب رفض البنود مثلاً"
-                className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
               />
             </label>
           </>

@@ -14,7 +14,7 @@ import {
   type LandingSection, parseSections, ensureForm, starterSections,
 } from '@/lib/landing-sections';
 import { useHistory } from '@/lib/use-history';
-import { RiArchiveLine, RiArrowGoBackLine, RiArrowGoForwardLine, RiArrowRightLine, RiCodeSLine, RiComputerLine, RiCursorLine, RiEarthLine, RiEyeLine, RiFullscreenExitLine, RiFullscreenLine, RiGiftLine, RiImageLine, RiInputMethodLine, RiLoader4Line, RiPaletteLine, RiPlayListAddLine, RiSaveLine, RiSmartphoneLine, RiTabletLine, RiUpload2Line } from '@remixicon/react';
+import { RiArchiveLine, RiArrowGoBackLine, RiBookOpenLine, RiArrowGoForwardLine, RiArrowRightLine, RiCodeSLine, RiComputerLine, RiCursorLine, RiEarthLine, RiEyeLine, RiFullscreenExitLine, RiFullscreenLine, RiGiftLine, RiImageLine, RiInputMethodLine, RiLoader4Line, RiPaletteLine, RiPlayListAddLine, RiSaveLine, RiSmartphoneLine, RiTabletLine, RiUpload2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
@@ -561,7 +561,14 @@ export function LandingPageEditorScreen() {
             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${lp.isPublished ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'}`}>
               {lp.isPublished ? 'منشورة' : 'مسودة'}
             </span>
-            {dirty && <span className="text-xs text-[var(--sys-warning)]">● تغييرات غير محفوظة</span>}
+            {dirty && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-[var(--sys-warning)]">
+                {/* A drawn dot, not the character «●» — that one arrives at
+                    whatever size and weight the device's font gives it. */}
+                <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--sys-warning)]" aria-hidden />
+                تغييرات غير محفوظة
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {/* Which way this page is authored. Both are kept on the row, so
@@ -572,7 +579,7 @@ export function LandingPageEditorScreen() {
                   key={m}
                   onClick={() => { setMode(m); setDirty(true); }}
                   className={`cursor-pointer rounded-md px-2.5 py-1 text-xs font-bold transition ${
-                    mode === m ? 'bg-[#b8256e] text-white' : 'text-[#697586] hover:text-[#b8256e]'
+                    mode === m ? 'bg-[var(--sys-primary)] text-white' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]'
                   }`}
                 >
                   {label}
@@ -709,7 +716,7 @@ export function LandingPageEditorScreen() {
 
             {/* ─── Zaki Actions documentation ─── */}
             <details className="mt-4 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
-              <summary className="cursor-pointer text-xs font-bold text-[var(--sys-foreground)]">📚 توثيق Zaki Actions</summary>
+              <summary className="cursor-pointer text-xs font-bold text-[var(--sys-foreground)]"><RiBookOpenLine className="me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />توثيق Zaki Actions</summary>
               <div className="mt-2 space-y-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]" dir="ltr">
                 <div>
                   <p className="font-bold text-[var(--sys-foreground)]">Actions</p>

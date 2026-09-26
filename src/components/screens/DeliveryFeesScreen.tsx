@@ -396,7 +396,7 @@ function BulkFillDialog({
           <input
             type="number" min="0" step="0.001" value={fee} onChange={(e) => setFee(e.target.value)}
             required autoFocus dir="ltr"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 
@@ -405,14 +405,14 @@ function BulkFillDialog({
             <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">حد التأخير (أيام)</span>
             <input
               type="number" min="0" max="90" value={days} onChange={(e) => setDays(e.target.value)} dir="ltr"
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             />
           </label>
           <label>
             <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">أجرة الإرجاع</span>
             <input
               type="number" min="0" step="0.001" value={returnFee} onChange={(e) => setReturnFee(e.target.value)} dir="ltr"
-              className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             />
           </label>
         </div>

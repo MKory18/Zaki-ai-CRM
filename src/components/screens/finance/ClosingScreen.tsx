@@ -247,7 +247,7 @@ function CountDialog({
             onChange={(e) => setActual(e.target.value)}
             required
             autoFocus
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>

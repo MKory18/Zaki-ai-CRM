@@ -229,7 +229,7 @@ function ReceiveDialog({
             onChange={(e) => setQuantity(e.target.value)}
             required
             autoFocus
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
         </label>
@@ -242,7 +242,7 @@ function ReceiveDialog({
             step="0.001"
             value={unitCost}
             onChange={(e) => setUnitCost(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
@@ -256,7 +256,7 @@ function ReceiveDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="مثال: وصلت من المورّد"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 

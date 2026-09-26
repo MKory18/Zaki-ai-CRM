@@ -13,7 +13,7 @@ import { apiFetch } from '@/lib/api-client';
 import { productName } from '@/lib/product-name';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiEqualLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiSubtractLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiEqualLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiSubtractLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
@@ -107,11 +107,19 @@ export function DashboardScreen() {
     { label: t.REJECTED, value: counts.rejected, color: 'text-[var(--sys-destructive)]', dot: 'bg-[var(--sys-destructive)]' },
   ];
 
+  // The icon is a COMPONENT, not a character. An emoji here was drawn by
+  // the operating system: a flat outline on this desk, a gradient sticker
+  // on the phone in the warehouse, and neither one the colour of the card
+  // it sits in.
+  // And each row reuses the icon this screen ALREADY spends on that idea:
+  // the bag is an order here and on the orders card, the wallet is profit
+  // here and in the net-profit tile, the truck is a delivery in both. Four
+  // new drawings would have been four more concepts for the same four.
   const rankings = [
-    { icon: '🏆', label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', sub: analytics?.rankings?.mostRequested?.totalOrders ?? 0, subSuffix: locale === 'ar' ? 'طلب' : 'orders', name: analytics?.rankings?.mostRequested?.name, tint: 'bg-[var(--sys-surface)] border-[var(--sys-primary-soft)]', text: 'text-[var(--sys-primary)]' },
-    { icon: '💰', label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', sub: analytics?.rankings?.mostProfitable?.netProfit ?? 0, prefix: '+$', name: analytics?.rankings?.mostProfitable?.name, tint: 'bg-[var(--sys-success-soft)]', text: 'text-[var(--sys-success)]' },
-    { icon: '🚚', label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', sub: analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0, subSuffix: locale === 'ar' ? 'توصيل' : 'delivered', name: analytics?.rankings?.mostDelivered?.name, tint: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/30', text: 'text-[var(--sys-warning)]' },
-    { icon: '⚠️', label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', sub: analytics?.rankings?.highestRejection?.rejectedOrders ?? 0, subSuffix: locale === 'ar' ? 'رفض' : 'rejected', name: analytics?.rankings?.highestRejection?.name, tint: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]', text: 'text-[var(--sys-destructive)]' },
+    { icon: RiShoppingBagLine, label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', sub: analytics?.rankings?.mostRequested?.totalOrders ?? 0, subSuffix: locale === 'ar' ? 'طلب' : 'orders', name: analytics?.rankings?.mostRequested?.name, tint: 'bg-[var(--sys-surface)] border-[var(--sys-primary-soft)]', text: 'text-[var(--sys-primary)]' },
+    { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', sub: analytics?.rankings?.mostProfitable?.netProfit ?? 0, prefix: '+$', name: analytics?.rankings?.mostProfitable?.name, tint: 'bg-[var(--sys-success-soft)]', text: 'text-[var(--sys-success)]' },
+    { icon: RiTruckLine, label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', sub: analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0, subSuffix: locale === 'ar' ? 'توصيل' : 'delivered', name: analytics?.rankings?.mostDelivered?.name, tint: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/30', text: 'text-[var(--sys-warning)]' },
+    { icon: RiCloseCircleLine, label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', sub: analytics?.rankings?.highestRejection?.rejectedOrders ?? 0, subSuffix: locale === 'ar' ? 'رفض' : 'rejected', name: analytics?.rankings?.highestRejection?.name, tint: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]', text: 'text-[var(--sys-destructive)]' },
   ];
 
   // `value` is a NODE, not a string. It used to be `` `+${fmt(x)}` `` —
@@ -141,7 +149,7 @@ export function DashboardScreen() {
                 <button
                   key={p.key}
                   onClick={() => setPeriod(p.key)}
-                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  className={`flex h-11 items-center px-3 md:h-auto md:py-1.5 rounded-lg transition-colors cursor-pointer ${
                     // Chosen, not lost. This was the colour that means
                     // "late, or money lost", used to mean "selected".
                     period === p.key ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-bold shadow-raised' : 'hover:bg-[var(--sys-surface)]'
@@ -205,7 +213,7 @@ export function DashboardScreen() {
                   </p>
                 </div>
               </div>
-              <Link href="/assistant" className="shrink-0">
+              <Link href="/assistant" className="inline-flex shrink-0">
                 <Button size="sm" variant="secondary" className="bg-[var(--sys-card)] text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] border-0">
                   {locale === 'ar' ? 'المستشار الذكي' : 'AI Advisor'}
                   <RiArrowRightLine className={`icon-mirror w-4 h-4`} />
@@ -342,8 +350,12 @@ export function DashboardScreen() {
                 </span>
               }
               action={
-                <Link href="/products" className="text-xs text-[var(--sys-destructive)] font-medium hover:underline">
-                  {locale === 'ar' ? 'المنتجات ←' : 'View Products →'}
+                <Link href="/products" className="tap-safe inline-flex items-center gap-1 text-xs text-[var(--sys-destructive)] font-medium hover:underline">
+                  {locale === 'ar' ? 'المنتجات' : 'View Products'}
+                  {/* The same arrow, from the same set, mirrored the same way
+                      as the one at line 219 — not the character ←, whose
+                      weight and size are whatever the device's font says. */}
+                  <RiArrowRightLine className="icon-mirror h-4 w-4" aria-hidden />
                 </Link>
               }
             />
@@ -351,9 +363,11 @@ export function DashboardScreen() {
               {rankings.map((r) => (
                 <div key={r.label} className={`flex items-center justify-between p-3 rounded-lg border ${r.tint}`}>
                   <div className="flex items-center gap-3">
-                    <span className="text-lg">{r.icon}</span>
+                    <r.icon className={`h-5 w-5 shrink-0 ${r.text}`} aria-hidden />
                     <div>
-                      <p className={`text-xs font-bold uppercase tracking-wide ${r.text}`}>{r.label}</p>
+                      {/* No `uppercase tracking-wide`: the label is Arabic, and
+                          spacing a joined script out stops its letters touching. */}
+                      <p className={`text-xs font-bold ${r.text}`}>{r.label}</p>
                       <p className="text-sm font-bold text-[var(--sys-heading)] line-clamp-1">
                         {r.name ? productName(r.name, locale) : '—'}
                       </p>
@@ -377,8 +391,9 @@ export function DashboardScreen() {
                 </span>
               }
               action={
-                <Link href="/admin/users" className="text-xs text-[var(--sys-destructive)] font-medium hover:underline">
-                  {locale === 'ar' ? 'الفريق ←' : 'View Team →'}
+                <Link href="/admin/users" className="tap-safe inline-flex items-center gap-1 text-xs text-[var(--sys-destructive)] font-medium hover:underline">
+                  {locale === 'ar' ? 'الفريق' : 'View Team'}
+                  <RiArrowRightLine className="icon-mirror h-4 w-4" aria-hidden />
                 </Link>
               }
             />

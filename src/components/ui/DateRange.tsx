@@ -95,7 +95,7 @@ export function DateRange({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] inline-flex items-center gap-2 hover:border-[var(--sys-primary)]/50"
+        className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] inline-flex items-center gap-2 hover:border-[var(--sys-primary)]/50"
       >
         <RiCalendar2Line className="w-4 h-4 text-[var(--sys-muted)] shrink-0" />
         <span className="truncate flex-1 text-start">{summary}</span>

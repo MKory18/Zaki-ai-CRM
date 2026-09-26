@@ -9,7 +9,7 @@ import { Input, Select } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
-import { RiAddCircleLine, RiArrowRightLine, RiComputerLine, RiDashboard3Line, RiDeleteBinLine, RiExternalLinkLine, RiFileCodeLine, RiFileCopyLine, RiGiftLine, RiLoader4Line, RiPencilLine, RiUpload2Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiCheckLine, RiComputerLine, RiDashboard3Line, RiDeleteBinLine, RiExternalLinkLine, RiFileCodeLine, RiFileCopyLine, RiGiftLine, RiLoader4Line, RiPencilLine, RiUpload2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export function LandingPageDetailScreen() {
@@ -77,7 +77,7 @@ export function LandingPageDetailScreen() {
           domain: form.domain.trim(),
         }),
       });
-      setSaveMsg('تم الحفظ ✓');
+      setSaveMsg('تم الحفظ');
       await load();
     } catch (e: any) { setSaveMsg(e.message); } finally { setSaving(false); }
   };
@@ -99,7 +99,7 @@ export function LandingPageDetailScreen() {
       const res = await fetch(`/api/landing-pages/${lpId}/html`, { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      setUploadMsg(`تم رفع الملف ✓ (${file.name})`);
+      setUploadMsg(`تم رفع الملف (${file.name})`);
       await load();
       await refreshPreview();
     } catch (e: any) { setUploadMsg(e.message); }
@@ -287,7 +287,7 @@ export function LandingPageDetailScreen() {
               <CardContent className="p-4 space-y-3">
                 <h3 className="font-semibold text-[var(--sys-heading)]">نموذج الطلب</h3>
                 <div className="flex items-center gap-2 rounded-lg border border-[var(--sys-success)]/40 bg-[var(--sys-success-soft)] px-3 py-2.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-bold">✓</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] "><RiCheckLine className="h-4 w-4" aria-hidden /></span>
                   <div>
                     <p className="text-sm font-semibold text-[var(--sys-heading)]">نموذج الطلب مفعل</p>
                     <p className="text-xs text-[var(--sys-muted-foreground)]">يظهر تلقائيًا أسفل الصفحة لكل زائر — بدون أي إعداد إضافي. المنتج والسعر يؤخذان من قاعدة البيانات.</p>

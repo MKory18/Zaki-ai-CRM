@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { dashboardFiles, stripComments } from './guard-source';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
@@ -146,6 +147,13 @@ describe('a seller’s own pages', () => {
  *   md  40px  everything else: toolbars, forms, dialogs
  *   lg  48px  the one action a screen is for
  *
+ * AND 44px ON A PHONE, for every step below it. Those three are a rhythm
+ * for a mouse; Stage 8 measured the same controls at 360px against the
+ * 44px gate and they failed it. So each step states TWO heights — the
+ * phone's first, the desk's behind `md:` — and the guard checks both,
+ * because a scale with one of them missing is the drift this file exists
+ * to catch.
+ *
  * A chip or a badge is not a control and has no stated height - it is as
  * tall as its text, which is what makes it read as a label rather than as
  * something to press.
@@ -155,15 +163,31 @@ describe('the height of a control', () => {
 
   it('is stated by the shared button, not left to arithmetic', () => {
     const src = read('src/components/ui/Button.tsx');
-    expect(src).toMatch(/sm:\s*'h-8/);
-    expect(src).toMatch(/md:\s*'h-10/);
+    // A thumb first, then the desk.
+    expect(src).toMatch(/sm:\s*'h-11 md:h-8/);
+    expect(src).toMatch(/md:\s*'h-11 md:h-10/);
+    // `lg` is 48 everywhere: already past the gate, and it is the one
+    // action a screen is for.
     expect(src).toMatch(/lg:\s*'h-12/);
   });
 
   it('and by the shared field, so a field matches the button beside it', () => {
     const src = read('src/components/ui/Input.tsx');
     // The input and the select. A textarea is multi-line and is not one.
-    expect((src.match(/'h-10 w-full/g) ?? []).length).toBe(2);
+    expect((src.match(/'h-11 md:h-10 w-full/g) ?? []).length).toBe(2);
+  });
+
+  it('and a field written by hand carries both heights too', () => {
+    // Sixty-nine fields are written out rather than drawn by `Input`, so
+    // raising the component did not raise them. Any that still say a bare
+    // `h-10` is 40px under a thumb.
+    const offenders: string[] = [];
+    for (const { rel, src } of dashboardFiles()) {
+      for (const [i, line] of stripComments(src).split('\n').entries()) {
+        if (/\bw-full h-10 px-3\b/.test(line)) offenders.push(`${rel}:${i + 1}`);
+      }
+    }
+    expect(offenders, `حقلٌ بارتفاع ٤٠ على الهاتف:\n${offenders.slice(0, 12).join('\n')}`).toEqual([]);
   });
 
   it('and 36px is gone - the step that fit nothing', () => {

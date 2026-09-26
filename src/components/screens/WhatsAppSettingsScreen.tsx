@@ -99,7 +99,9 @@ export function WhatsAppSettingsScreen() {
           <span className={`w-3 h-3 rounded-full ${status === 'CONNECTED' ? 'bg-[var(--sys-success)]' : 'bg-[var(--sys-warning)]'}`} />
           <div className="flex-1">
             <p className={`font-bold text-sm ${status === 'CONNECTED' ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
-              {status === 'CONNECTED' ? '🟢 متصل' : '🟡 يحتاج إعداد'}
+              {/* The dot above IS the light. Two coloured circles and a word
+                  for one state is the state said three times. */}
+              {status === 'CONNECTED' ? 'متصل' : 'يحتاج إعداد'}
             </p>
             <p className="text-xs text-[var(--sys-muted-foreground)]">
               {status === 'CONNECTED'

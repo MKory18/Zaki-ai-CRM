@@ -7,7 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { SCOPE_CHOICES, scopeChoice, type TrackingPlatform, type TrackingScope } from '@/lib/tracking/tracking-types';
 import { validateTrackingPixelId, pixelIdHint } from '@/lib/tracking/tracking-validation';
-import { RiAddCircleLine, RiAlertLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiRadarLine } from '@remixicon/react';
+import { RiAddCircleLine, RiAlertLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiRadarLine, RiSnapchatFill, RiTiktokFill } from '@remixicon/react';
 
 /**
  * بكسل التتبع — every pixel the company's selling pages load, on one panel.
@@ -42,8 +42,8 @@ const PLATFORMS: {
   markBg: string;
 }[] = [
   { key: 'META', label: 'Meta', placeholder: '123456789012345', mark: <span className="text-sm font-bold text-[var(--sys-primary-foreground)]">f</span>, markBg: '#1877f2' },
-  { key: 'TIKTOK', label: 'TikTok', placeholder: 'C4ABCD1234567890', mark: <span className="text-sm font-bold text-[var(--sys-primary-foreground)]">♪</span>, markBg: '#000000' },
-  { key: 'SNAPCHAT', label: 'Snapchat', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', mark: <span className="text-sm">👻</span>, markBg: '#fffc00' },
+  { key: 'TIKTOK', label: 'TikTok', placeholder: 'C4ABCD1234567890', mark: <RiTiktokFill className="h-4 w-4 text-[var(--sys-primary-foreground)]" aria-hidden />, markBg: '#000000' },
+  { key: 'SNAPCHAT', label: 'Snapchat', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', mark: <RiSnapchatFill className="h-4 w-4 text-black" aria-hidden />, markBg: '#fffc00' },
   { key: 'GOOGLE', label: 'Google', placeholder: 'G-XXXXXXXXXX أو AW-123456789/التسمية', mark: <span className="text-sm font-bold text-[#4285f4]">G</span>, markBg: '#ffffff' },
 ];
 

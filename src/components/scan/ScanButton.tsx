@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { cleanScan, makeReader, RecentScans, type Reader } from '@/lib/scanning';
-import { RiCameraLine, RiFlashlightLine, RiKeyboardLine, RiLoader4Line } from '@remixicon/react';
+import { RiAlertLine, RiCameraLine, RiCheckLine, RiFlashlightLine, RiKeyboardLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * ONE SCANNER, EVERYWHERE SOMETHING IS SCANNED.
@@ -33,9 +33,19 @@ import { RiCameraLine, RiFlashlightLine, RiKeyboardLine, RiLoader4Line } from '@
  * through the same path, with the same validation.
  */
 
+/**
+ * WHAT A SCAN SAYS BACK.
+ *
+ * A bare string is neutral — a code echoed, a count. `{ text, ok }` is a
+ * verdict, and the box takes the colour of it: the twentieth parcel of a
+ * handover and a parcel that belongs to a different batch cannot read the
+ * same, and they are read across a warehouse at arm's length.
+ */
+export type ScanSaid = string | { text: string; ok: boolean };
+
 export interface ScanButtonProps {
   /** Given a validated code. Return a message to show, or nothing. */
-  onScan: (code: string) => void | string | Promise<void | string>;
+  onScan: (code: string) => void | ScanSaid | Promise<void | ScanSaid>;
   /** The sheet's heading — what the person is scanning, in their words. */
   title?: string;
   /**
@@ -124,7 +134,7 @@ export function ScanSheet({
 
   const [state, setState] = useState<'starting' | 'scanning' | 'denied' | 'nocamera'>('starting');
   const [torch, setTorch] = useState<boolean | null>(null); // null = the lamp does not exist
-  const [said, setSaid] = useState<string | null>(null);
+  const [said, setSaid] = useState<{ text: string; ok: boolean | null } | null>(null);
   const [typed, setTyped] = useState('');
 
   /**
@@ -137,14 +147,20 @@ export function ScanSheet({
       const code = cleanScan(raw);
       if (!code) {
         announce(false);
-        setSaid('هذا ليس مرجعاً نعرفه.');
+        setSaid({ text: 'هذا ليس مرجعاً نعرفه.', ok: false });
         return;
       }
       if (recent.current.isRepeat(code)) return;
       recent.current.accept(code);
       announce(true);
       const message = await onScan(code);
-      setSaid(typeof message === 'string' ? message : code);
+      setSaid(
+        typeof message === 'string'
+          ? { text: message, ok: null }
+          : message
+            ? { text: message.text, ok: message.ok }
+            : { text: code, ok: null }
+      );
       if (!continuous) onClose();
     },
     [continuous, onClose, onScan]
@@ -310,10 +326,21 @@ export function ScanSheet({
         {said && (
           <p
             data-testid="scan-said"
-            className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5 text-center text-sm text-[var(--sys-foreground)]"
+            className={`flex items-center justify-center gap-1.5 rounded-lg border p-2.5 text-center text-sm ${
+              said.ok === true
+                ? 'border-[var(--sys-success)]/60 bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
+                : said.ok === false
+                  ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
+                  : 'border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-foreground)]'
+            }`}
             dir="auto"
           >
-            {said}
+            {said.ok === true ? (
+              <RiCheckLine className="h-4 w-4 shrink-0" aria-hidden />
+            ) : said.ok === false ? (
+              <RiAlertLine className="h-4 w-4 shrink-0" aria-hidden />
+            ) : null}
+            {said.text}
           </p>
         )}
 

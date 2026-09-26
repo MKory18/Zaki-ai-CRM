@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dashboardFiles } from './guard-source';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * A FAILED ACTION AND A FAILED LOAD ARE NOT THE SAME MESSAGE.
@@ -26,27 +27,6 @@ import { join, relative } from 'node:path';
  * to a toast would be motion for its own sake.
  */
 
-const SELLERS = [
-  '/components/landing/', '/components/public/', '/components/store/',
-  '/app/(public)/', '/app/lp/', '/app/s/',
-];
-
-function dashboard(): { rel: string; src: string }[] {
-  const out: { rel: string; src: string }[] = [];
-  const walk = (dir: string) => {
-    for (const name of readdirSync(dir)) {
-      const p = join(dir, name);
-      if (statSync(p).isDirectory()) walk(p);
-      else if (p.endsWith('.tsx') && !p.includes('.test.')) {
-        const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
-        if (!SELLERS.some((s) => rel.includes(s))) out.push({ rel, src: readFileSync(p, 'utf8') });
-      }
-    }
-  };
-  walk(join(process.cwd(), 'src', 'components'));
-  return out;
-}
-
 describe('an error banner', () => {
   /**
    * The cost of moving a message is the strip left behind: markup, state
@@ -56,7 +36,7 @@ describe('an error banner', () => {
    */
   it('is never something the screen can no longer set', () => {
     const dead: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       const at = src.indexOf('const [error, setError]');
       if (at === -1) continue;
       const body = src.slice(at + 'const [error, setError]'.length);

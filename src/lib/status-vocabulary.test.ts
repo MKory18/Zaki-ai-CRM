@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dashboardFiles } from './guard-source';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { CORE_STATES, STATE_LABEL_AR, STATE_TONE } from './order-state';
 
 /**
@@ -16,29 +17,8 @@ import { CORE_STATES, STATE_LABEL_AR, STATE_TONE } from './order-state';
  * Nobody chose that. Each screen chose once, and the choices never met.
  */
 
-const SELLERS = [
-  '/components/landing/', '/components/public/', '/components/store/',
-  '/app/(public)/', '/app/lp/', '/app/s/',
-];
-
 function code(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-}
-
-function dashboard(): { rel: string; src: string }[] {
-  const out: { rel: string; src: string }[] = [];
-  const walk = (dir: string) => {
-    for (const name of readdirSync(dir)) {
-      const p = join(dir, name);
-      if (statSync(p).isDirectory()) walk(p);
-      else if ((p.endsWith('.ts') || p.endsWith('.tsx')) && !p.includes('.test.')) {
-        const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
-        if (!SELLERS.some((s) => rel.includes(s))) out.push({ rel, src: readFileSync(p, 'utf8') });
-      }
-    }
-  };
-  walk(join(process.cwd(), 'src'));
-  return out;
 }
 
 describe('the vocabulary', () => {
@@ -55,7 +35,7 @@ describe('the vocabulary', () => {
     // A `Record<CoreState, …>` outside order-state.ts that carries Arabic is
     // the exact shape the drift took last time.
     const offenders: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       if (rel.endsWith('/src/lib/order-state.ts')) continue;
       for (const m of code(src).matchAll(/Record<\s*CoreState\s*,([\s\S]{0,600}?)\}/g)) {
         if (/[\u0600-\u06FF]/.test(m[1])) offenders.push(rel);
@@ -86,7 +66,7 @@ describe('the vocabulary', () => {
     // It is the passive participle. «ملغي» was a slip, and it was on the
     // most-read chip in the product.
     const wrong: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       if (/'ملغي'|"ملغي"|>ملغي</.test(code(src))) wrong.push(rel);
     }
     expect(wrong, `إملاءٌ ثانٍ للكلمة نفسها:\n${wrong.join('\n')}`).toEqual([]);
@@ -118,7 +98,7 @@ describe('the colours a chip is allowed', () => {
 
   it('and every state chip in the product goes through it', () => {
     const offenders: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       if (rel.includes('/ui/StatusChip.tsx') || rel.includes('/ui/Badge.tsx')) continue;
       // A span that carries a state word AND its own pill classes is a chip
       // somebody drew again rather than imported.

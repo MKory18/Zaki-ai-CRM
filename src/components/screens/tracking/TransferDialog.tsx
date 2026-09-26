@@ -106,7 +106,7 @@ export function TransferDialog({
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             required
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {providers.map((p) => (
@@ -130,7 +130,7 @@ export function TransferDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="سبب التحويل"
-            className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>
 

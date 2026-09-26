@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dashboardFiles } from './guard-source';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { ICONS } from '../components/shell/icons';
 
 /**
@@ -15,35 +16,14 @@ import { ICONS } from '../components/shell/icons';
  * migration has no business in it.
  */
 
-const SELLERS = [
-  '/components/landing/', '/components/public/', '/components/store/',
-  '/app/(public)/', '/app/lp/', '/app/s/',
-];
-
 /** Source without its comments: a guard that reads prose reports prose. */
 function code(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
-function dashboard(): { rel: string; src: string }[] {
-  const out: { rel: string; src: string }[] = [];
-  const walk = (dir: string) => {
-    for (const name of readdirSync(dir)) {
-      const p = join(dir, name);
-      if (statSync(p).isDirectory()) walk(p);
-      else if ((p.endsWith('.ts') || p.endsWith('.tsx')) && !p.includes('.test.')) {
-        const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
-        if (!SELLERS.some((s) => rel.includes(s))) out.push({ rel, src: readFileSync(p, 'utf8') });
-      }
-    }
-  };
-  walk(join(process.cwd(), 'src'));
-  return out;
-}
-
 describe('one icon family', () => {
   it('and the dashboard draws from it alone', () => {
-    const strays = dashboard().filter((f) => f.src.includes("from 'lucide-react'")).map((f) => f.rel);
+    const strays = dashboardFiles().filter((f) => f.src.includes("from 'lucide-react'")).map((f) => f.rel);
     expect(strays, `عائلة أيقونات ثانية في لوحة التحكم:\n${strays.join('\n')}`).toEqual([]);
   });
 
@@ -59,7 +39,7 @@ describe('the size of an icon', () => {
 
   it('is 16, 20 or 24 — never 12, never 14, never 40', () => {
     const offenders: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       for (const m of code(src).matchAll(ICON)) {
         const found: Record<string, number> = {};
         for (const s of m[2].matchAll(SIZE)) found[s[1]] = Number(s[2]) * 4;
@@ -87,7 +67,7 @@ describe('which glyphs turn in RTL', () => {
 
   it('the directional ones carry the class', () => {
     const missing: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       for (const m of code(src).matchAll(TAG)) {
         if (!DIRECTIONAL.test(m[1])) continue;
         // Up and down do not change under a left-right mirror.
@@ -100,7 +80,7 @@ describe('which glyphs turn in RTL', () => {
 
   it('and the ones that must never turn do not', () => {
     const wrong: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       for (const m of code(src).matchAll(TAG)) {
         if (NEVER.test(m[1]) && m[2].includes('icon-mirror')) wrong.push(`${rel}: ${m[1]}`);
       }
@@ -110,7 +90,7 @@ describe('which glyphs turn in RTL', () => {
 
   it('and nothing is turned twice, which is the same as not at all', () => {
     const doubled: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       for (const [i, line] of code(src).split('\n').entries()) {
         if (!line.includes('icon-mirror')) continue;
         if (/rotate-180|scale-x|isRtl/.test(line)) doubled.push(`${rel}:${i + 1}`);
@@ -154,7 +134,7 @@ describe('the navigation', () => {
 describe('an icon-only button', () => {
   it('always says what it is', () => {
     const nameless: string[] = [];
-    for (const { rel, src } of dashboard()) {
+    for (const { rel, src } of dashboardFiles()) {
       for (const m of code(src).matchAll(/<button\b([\s\S]*?)<\/button>/g)) {
         const whole = m[0];
         const tag = whole.slice(0, whole.indexOf('>') + 1);

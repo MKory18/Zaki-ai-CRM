@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { DismissButton } from '@/components/ui/DismissButton';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Select, Textarea, Input } from '@/components/ui/Input';
@@ -251,7 +252,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         setEditError(data.errorAr || data.error || `فشل حفظ التعديلات (HTTP ${res.status})`);
         return;
       }
-      setEditSuccess('تم حفظ التعديلات بنجاح ✓');
+      setEditSuccess('تم حفظ التعديلات بنجاح');
       await loadOrder(order.id);
       onRefresh();
     } catch (e: any) {
@@ -361,7 +362,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setActionFeedback({ type: 'success', text: data.warning || 'تم تسجيل نتيجة الاتصال ✓' });
+        setActionFeedback({ type: 'success', text: data.warning || 'تم تسجيل نتيجة الاتصال' });
         await loadOrder(order.id);
         onRefresh();
         setCallNotes('');
@@ -504,7 +505,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           dir={isRtl ? 'rtl' : 'ltr'}
         >
           <span className="leading-relaxed">{actionFeedback.text}</span>
-          <button onClick={() => setActionFeedback(null)} className="opacity-60 hover:opacity-100 cursor-pointer shrink-0">✕</button>
+          <DismissButton onClick={() => setActionFeedback(null)} />
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -759,7 +760,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 <select
                   value={channelDraft}
                   onChange={(e) => setChannelDraft(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+                  className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
                 >
                   <option value="">— بلا قناة —</option>
                   {channels.map((c) => (

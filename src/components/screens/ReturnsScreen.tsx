@@ -241,7 +241,7 @@ function ReceiveDialog({
 
         <label className="block">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختياري)</span>
-          <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm" />
+          <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm" />
         </label>
 
         <label className="flex items-start gap-2 text-sm text-[var(--sys-heading)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2">
@@ -271,7 +271,7 @@ function Num({ label, value, onChange, max }: { label: string; value: number; on
         value={value}
         onChange={(e) => onChange(Math.max(0, Math.min(max, Number(e.target.value))))}
         dir="ltr"
-        className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+        className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
       />
     </label>
   );

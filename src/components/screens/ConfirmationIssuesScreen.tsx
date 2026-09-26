@@ -217,9 +217,9 @@ export function ConfirmationIssuesScreen() {
   }
 
   const inputClass =
-    'w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
+    'w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
   const flaggedClass =
-    'w-full h-10 px-3 rounded-lg border-2 border-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] text-sm focus:outline-none';
+    'w-full h-11 md:h-10 px-3 rounded-lg border-2 border-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] text-sm focus:outline-none';
 
   return (
     <div className="max-w-4xl space-y-3">

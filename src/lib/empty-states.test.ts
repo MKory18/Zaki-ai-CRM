@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dashboardFiles, stripComments } from './guard-source';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * WHAT A SCREEN SAYS WHEN IT HAS NOTHING.
@@ -17,33 +18,6 @@ import { join, relative } from 'node:path';
  * Two of those are prose, and prose cannot be tested. What can be tested
  * is the sentence that answers none of them.
  */
-
-const SELLERS = [
-  '/components/landing/', '/components/public/', '/components/store/',
-  '/app/(public)/', '/app/lp/', '/app/s/',
-];
-
-function code(src: string): string {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/^(\s*)\/\/.*$/gm, '$1');
-}
-
-function dashboard(): { rel: string; src: string }[] {
-  const out: { rel: string; src: string }[] = [];
-  const walk = (dir: string) => {
-    for (const name of readdirSync(dir)) {
-      const p = join(dir, name);
-      if (statSync(p).isDirectory()) walk(p);
-      else if (p.endsWith('.tsx') && !p.includes('.test.')) {
-        const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
-        if (!SELLERS.some((s) => rel.includes(s))) out.push({ rel, src: readFileSync(p, 'utf8') });
-      }
-    }
-  };
-  walk(join(process.cwd(), 'src'));
-  return out;
-}
 
 /**
  * The sentences that answer nothing. Not a list of forbidden WORDS — «لا
@@ -66,8 +40,8 @@ const SAYS_NOTHING = [
 describe('an empty screen', () => {
   it('never says «لا توجد بيانات» and leaves it there', () => {
     const offenders: string[] = [];
-    for (const { rel, src } of dashboard()) {
-      const lines = code(src).split('\n');
+    for (const { rel, src } of dashboardFiles()) {
+      const lines = stripComments(src).split('\n');
       for (let i = 0; i < lines.length; i++) {
         // Both shapes: words between tags, and a string literal.
         const texts = [
@@ -86,7 +60,7 @@ describe('an empty screen', () => {
     // Comments stripped: the note explaining why there is no illustration
     // contains the word «illustration», and a guard that reads prose
     // reports prose. Fourth time this has bitten in one session.
-    const src = code(readFileSync(join(process.cwd(), 'src/components/ui/EmptyState.tsx'), 'utf8'));
+    const src = stripComments(readFileSync(join(process.cwd(), 'src/components/ui/EmptyState.tsx'), 'utf8'));
     expect(src, 'لا مكان للسبب').toContain('why');
     expect(src, 'لا مكان للفعل الذي يُصلحه').toContain('action');
     // No illustration. A drawing of an empty box is a drawing somebody
@@ -111,13 +85,13 @@ describe('an empty screen', () => {
       'src/components/screens/FinanceProfitScreen.tsx',
       'src/components/screens/LandingPagesScreen.tsx',
     ]) {
-      const src = code(readFileSync(join(process.cwd(), rel), 'utf8'));
+      const src = stripComments(readFileSync(join(process.cwd(), rel), 'utf8'));
       expect(src, `${rel}: القائمة تقفز حين تصل`).toContain('SkeletonRows');
     }
   });
 
   it('and the shared table defaults to it rather than to a bare sentence', () => {
-    const rows = code(readFileSync(join(process.cwd(), 'src/components/ui/Rows.tsx'), 'utf8'));
+    const rows = stripComments(readFileSync(join(process.cwd(), 'src/components/ui/Rows.tsx'), 'utf8'));
     expect(rows, 'الجدول المشترك يعود إلى جملةٍ عارية').toContain('<EmptyState');
   });
 });

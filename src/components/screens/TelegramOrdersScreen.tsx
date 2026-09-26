@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { DismissButton } from '@/components/ui/DismissButton';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
@@ -42,7 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
   PROCESSED: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]',
   IGNORED: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]',
   NEEDS_REVIEW: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]',
-  FAILED: 'bg-[#fef2f2] text-[#dc2626]',
+  FAILED: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]',
 };
 
 const REVIEW_REASONS: Record<string, string> = {
@@ -136,7 +137,7 @@ export function TelegramOrdersScreen() {
         {error && (
           <div className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs flex items-center justify-between gap-2">
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 cursor-pointer">✕</button>
+            <DismissButton onClick={() => setError(null)} />
           </div>
         )}
 

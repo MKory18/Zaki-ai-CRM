@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import type { DomainCheck } from '@/lib/domain-verify';
-import { RiCheckLine, RiDeleteBinLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiShieldFlashLine, RiShieldKeyholeLine } from '@remixicon/react';
+import { RiCheckboxBlankCircleLine, RiCheckLine, RiDeleteBinLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiShieldFlashLine, RiShieldKeyholeLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { routeLabel } from '@/lib/route-registry';
 
@@ -252,11 +252,21 @@ export function StoreDomainScreen() {
                     </div>
                     <p className="text-xs leading-relaxed text-[var(--sys-foreground)]">{last.detail}</p>
                     <ul className="space-y-1 text-xs">
-                      <li className={last.ownership ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}>
-                        {last.ownership ? '✓' : '○'} ملكية النطاق (سجل TXT)
+                      <li className={`flex items-center gap-1.5 ${last.ownership ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}`}>
+                        {last.ownership ? (
+                          <RiCheckLine className="h-4 w-4 shrink-0" aria-hidden />
+                        ) : (
+                          <RiCheckboxBlankCircleLine className="h-4 w-4 shrink-0" aria-hidden />
+                        )}
+                        ملكية النطاق (سجل TXT)
                       </li>
-                      <li className={last.routing ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}>
-                        {last.routing ? '✓' : '○'} توجيه النطاق إلينا (سجل {data.target?.kind ?? 'A/CNAME'})
+                      <li className={`flex items-center gap-1.5 ${last.routing ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}`}>
+                        {last.routing ? (
+                          <RiCheckLine className="h-4 w-4 shrink-0" aria-hidden />
+                        ) : (
+                          <RiCheckboxBlankCircleLine className="h-4 w-4 shrink-0" aria-hidden />
+                        )}
+                        توجيه النطاق إلينا (سجل {data.target?.kind ?? 'A/CNAME'})
                       </li>
                       <li className="flex items-center gap-1.5 text-[var(--sys-muted-foreground)]">
                         {last.ssl === 'VALID' ? (

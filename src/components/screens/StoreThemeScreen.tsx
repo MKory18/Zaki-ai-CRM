@@ -80,9 +80,9 @@ interface StoreInfo {
   cartBarApplies: boolean;
 }
 
-const LABEL = 'mb-1.5 block text-xs font-medium text-[#121926]';
-const HINT = 'mt-1 block text-xs leading-relaxed text-[#9aa4b2]';
-const CARD = 'rounded-lg border border-[#e3e8ef] bg-white p-4';
+const LABEL = 'mb-1.5 block text-xs font-medium text-[var(--sys-heading)]';
+const HINT = 'mt-1 block text-xs leading-relaxed text-[var(--sys-muted-foreground)]';
+const CARD = 'rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4';
 
 export function StoreThemeScreen() {
   const [store, setStore] = useState<StoreInfo | null>(null);
@@ -232,8 +232,8 @@ export function StoreThemeScreen() {
             onClick={() => setTab(key)}
             className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-semibold transition ${
               tab === key
-                ? 'border-[#b8256e] text-[#b8256e]'
-                : 'border-transparent text-[#697586] hover:text-[#364152]'
+                ? 'border-[var(--sys-primary)] text-[var(--sys-primary)]'
+                : 'border-transparent text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
             }`}
           >
             <Icon className="h-3.5 w-3.5" />
@@ -399,7 +399,7 @@ export function StoreThemeScreen() {
                   title={hex}
                   style={{ background: hex }}
                   className={`h-7 rounded-md border-2 transition ${
-                    theme.accent.toLowerCase() === hex ? 'scale-105 border-[#121926]' : 'border-transparent'
+                    theme.accent.toLowerCase() === hex ? 'scale-105 border-[var(--sys-heading)]' : 'border-transparent'
                   }`}
                 />
               ))}

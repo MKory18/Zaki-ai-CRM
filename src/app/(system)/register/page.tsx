@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
-import { RiErrorWarningLine, RiShieldCheckLine, RiTimerLine, RiUserAddLine } from '@remixicon/react';
+import { RiCheckboxBlankCircleLine, RiCheckLine, RiErrorWarningLine, RiShieldCheckLine, RiTimerLine, RiUserAddLine } from '@remixicon/react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -112,13 +112,18 @@ export default function RegisterPage() {
                   {passwordChecks.map((c) => (
                     <span
                       key={c.label}
-                      className={`text-xs px-2 py-0.5 rounded-full border ${
+                      className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
                         c.ok
                           ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)]'
                           : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
                       }`}
                     >
-                      {c.ok ? '✓' : '•'} {c.label}
+                      {c.ok ? (
+                        <RiCheckLine className="h-4 w-4 shrink-0" aria-hidden />
+                      ) : (
+                        <RiCheckboxBlankCircleLine className="h-4 w-4 shrink-0" aria-hidden />
+                      )}
+                      {c.label}
                     </span>
                   ))}
                 </div>

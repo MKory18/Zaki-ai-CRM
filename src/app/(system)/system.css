@@ -351,18 +351,23 @@ html[lang="ar"] td {
  * a request flies is a control people press again, which on this system
  * means a second shipment, a second payout, a second deduction.
  *
+ * Eighty milliseconds, not a hundred and twenty. At 120 the control is
+ * still moving when the finger has already left it, and «did that
+ * register» is exactly the question a second press answers.
+ *
  * So the answer is not a prop somebody remembers to pass. It is a rule on
  * the element itself: every button, link-as-button, summary and input of
  * type button sinks slightly the moment it is touched, before any code
  * runs and long before any server replies.
  *
- * 0.97 and 120ms are chosen to be felt and not seen. A bigger scale reads
- * as a toy; a slower release reads as lag.
+ * 0.97 and 80ms are chosen to be felt and not seen. A bigger scale reads
+ * as a toy; a slower release reads as lag — and at 120ms, where this
+ * started, the control was still moving after the finger had left it.
  */
 button:not(:disabled),
 [role='button']:not([aria-disabled='true']),
 summary {
-  transition: transform 120ms var(--ease-standard), background-color 120ms var(--ease-standard),
+  transition: transform 80ms var(--ease-standard), background-color 80ms var(--ease-standard),
     border-color 120ms var(--ease-standard), color 120ms var(--ease-standard);
 }
 
@@ -370,6 +375,48 @@ button:not(:disabled):active,
 [role='button']:not([aria-disabled='true']):active,
 summary:active {
   transform: scale(0.97);
+}
+
+/*
+ * 44 PIXELS OF THUMB, WITHOUT 44 PIXELS OF BOX.
+ *
+ * For a CHIP OR AN INLINE LINK ONLY. A button gets a real height instead —
+ * see the size scale in Button.tsx, which is 44px on a phone.
+ *
+ * This is the exception for a control that is the size of the text it is
+ * made of: a status pill 26px tall, a customer's phone number as a link.
+ * Growing those to 44px would make a header look like a toolbar and put
+ * gaps in a sentence. So the control keeps its size and the TARGET grows,
+ * centred, through a pseudo-element that paints nothing.
+ *
+ * WHY IT IS NOT ON EVERY BUTTON, which was the first attempt: two controls
+ * closer together than 12px get OVERLAPPING areas, and the overlap goes to
+ * whichever paints later. In a wrapping toolbar that put the point below
+ * «تصدير CSV» inside «إدخال طلب سريع». Use this only where there is at
+ * least 12px of clear space around the control — which, for a chip in a
+ * header or a link in a cell, there is.
+ *
+ * And only where a finger is the pointer: a mouse does not need it, and on
+ * a desk the same overlap would be a mis-click with no upside.
+ */
+@media (pointer: coarse) {
+  .tap-safe {
+    position: relative;
+  }
+
+  .tap-safe::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    min-width: 44px;
+    min-height: 44px;
+    transform: translate(-50%, -50%);
+    /* The hit area only. It must never eat a scroll or paint a pixel. */
+    pointer-events: auto;
+  }
 }
 
 /*

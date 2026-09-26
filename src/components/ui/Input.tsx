@@ -22,7 +22,7 @@ export function Input({ label, error, helperText, className, id, ...props }: Inp
         className={clsx(
           // 40px, stated. Padding alone made the height a by-product of
           // the font size, and a row of controls came out four heights.
-          'h-10 w-full min-w-0 px-3 text-sm bg-[var(--sys-card)] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/25 focus:border-[var(--sys-primary)] transition-colors placeholder:text-[var(--sys-muted)]',
+          'h-11 md:h-10 w-full min-w-0 px-3 text-sm bg-[var(--sys-card)] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/25 focus:border-[var(--sys-primary)] transition-colors placeholder:text-[var(--sys-muted)]',
           error ? 'border-[var(--sys-destructive)] focus:border-[var(--sys-destructive)] focus:ring-[var(--sys-destructive)]/20' : 'border-[var(--sys-border)]',
           className
         )}
@@ -53,7 +53,7 @@ export function Select({ label, error, options, children, className, id, ...prop
       <select
         id={selectId}
         className={clsx(
-          'h-10 w-full min-w-0 px-3 text-sm bg-[var(--sys-card)] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/25 focus:border-[var(--sys-primary)] transition-colors',
+          'h-11 md:h-10 w-full min-w-0 px-3 text-sm bg-[var(--sys-card)] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/25 focus:border-[var(--sys-primary)] transition-colors',
           error ? 'border-[var(--sys-destructive)]' : 'border-[var(--sys-border)]',
           className
         )}
