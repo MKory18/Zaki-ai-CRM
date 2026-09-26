@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from 'next/server';
+import type { ProfitSummary } from '@/lib/profit-summary';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -50,25 +51,29 @@ export async function GET(req: Request) {
       totalCommissions -
       totalOperationalExpenses;
 
+    // Typed against the one shape the screen also uses: a field added
+    // here without adding it there is a crash on the screen, so the two
+    // lists are the same list.
+    const summary: ProfitSummary = {
+      totalRevenue: Number(totalRevenue.toFixed(2)),
+      totalCOGS: Number(totalCOGS.toFixed(2)),
+      totalShipping: Number(totalShipping.toFixed(2)),
+      totalCommissions: Number(totalCommissions.toFixed(2)),
+      // The two are shown together on the profit screen, so they are
+      // added HERE. Added in the browser they disagreed with the books
+      // the moment either rule changed on this side.
+      shippingAndCommissions: Number((totalShipping + totalCommissions).toFixed(2)),
+      totalOperationalExpenses: Number(totalOperationalExpenses.toFixed(2)),
+      netProfit: Number(netProfit.toFixed(2)),
+      profitMargin: totalRevenue > 0 ? Number(((netProfit / totalRevenue) * 100).toFixed(1)) : 0,
+    };
+
     return NextResponse.json({
       // The country's own currency. The screen printed "$" beside every
       // figure in a system that runs Syrian pounds, dinars and Egyptian
       // pounds side by side.
       currency: country.currencyCode,
-      summary: {
-        totalRevenue: Number(totalRevenue.toFixed(2)),
-        totalCOGS: Number(totalCOGS.toFixed(2)),
-        totalShipping: Number(totalShipping.toFixed(2)),
-        totalCommissions: Number(totalCommissions.toFixed(2)),
-        // The two are shown together on the profit screen, so they are
-        // added HERE. Added in the browser they disagreed with the books
-        // the moment either rule changed on this side.
-        shippingAndCommissions: Number((totalShipping + totalCommissions).toFixed(2)),
-        totalOperationalExpenses: Number(totalOperationalExpenses.toFixed(2)),
-        netProfit: Number(netProfit.toFixed(2)),
-        profitMargin:
-          totalRevenue > 0 ? Number(((netProfit / totalRevenue) * 100).toFixed(1)) : 0,
-      },
+      summary,
       expenses,
       recentDeliveredOrders: deliveredOrders.slice(0, 20),
     });

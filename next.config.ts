@@ -8,7 +8,17 @@ const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+  // `camera=(self)`, not `camera=()`.
+  //
+  // The empty list means NOBODY may use the camera — including this app.
+  // The barcode scanner (src/components/scan/ScanButton.tsx) therefore
+  // failed with NotAllowedError on every device, before the browser ever
+  // asked the person for permission, and no component test could see it:
+  // a test mocks getUserMedia, and this is the header above it.
+  //
+  // The microphone, the location and the payment API stay shut. Nothing in
+  // the system asks for them, and a warehouse phone should not be able to.
+  { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), payment=()' },
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
   // CSP: 'unsafe-inline' styles required by Tailwind; img allows data/blob thumbnails
   {
@@ -16,9 +26,13 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
+      // The theme and design screens PREVIEW the fonts a seller may pick
+      // for their shop, which means fetching the sheet those fonts come
+      // from. Without these two the picker offered twenty Arabic faces and
+      // rendered every one of them in the default.
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
+      "font-src 'self' data: https://fonts.gstatic.com",
       "connect-src 'self' https://openrouter.ai",
       "frame-ancestors 'none'",
       "base-uri 'self'",

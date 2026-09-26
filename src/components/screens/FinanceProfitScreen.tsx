@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { apiJson } from '@/lib/api-client';
+import { ZERO_SUMMARY, type ProfitSummary } from '@/lib/profit-summary';
 
 export function FinanceProfitScreen() {
   const { t } = useApp();
@@ -99,15 +100,10 @@ export function FinanceProfitScreen() {
     }
   };
 
-  const summary = data?.summary || {
-    totalRevenue: 0,
-    totalCOGS: 0,
-    totalShipping: 0,
-    totalCommissions: 0,
-    totalOperationalExpenses: 0,
-    netProfit: 0,
-    profitMargin: 0,
-  };
+  // The server's shape, not a second one written here. The hand-written
+  // copy was missing `shippingAndCommissions`, and the line that reads it
+  // took the whole screen down whenever the server did not answer.
+  const summary: ProfitSummary = data?.summary ?? ZERO_SUMMARY;
 
   return (
     <>
@@ -135,14 +131,14 @@ export function FinanceProfitScreen() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             title="إيراد الموصَّل"
-            value={`${summary.totalRevenue.toFixed(2)} {data?.currency ?? ''}`}
+            value={`${summary.totalRevenue.toFixed(2)} ${data?.currency ?? ''}`}
             subtitle="الطلبات المسلَّمة فعلاً، لا المؤكدة"
             icon={TrendingUp}
             color="blue"
           />
           <KpiCard
             title="صافي الربح"
-            value={`${summary.netProfit.toFixed(2)} {data?.currency ?? ''}`}
+            value={`${summary.netProfit.toFixed(2)} ${data?.currency ?? ''}`}
             subtitle={`هامش ${summary.profitMargin}%`}
             icon={DollarSign}
             color="emerald"
@@ -150,14 +146,14 @@ export function FinanceProfitScreen() {
           />
           <KpiCard
             title="كلفة البضاعة"
-            value={`${summary.totalCOGS.toFixed(2)} {data?.currency ?? ''}`}
+            value={`${summary.totalCOGS.toFixed(2)} ${data?.currency ?? ''}`}
             subtitle="من كلفة التشغيلات — تُدخَل من شاشة التصنيع"
             icon={Receipt}
             color="amber"
           />
           <KpiCard
             title="المصاريف التشغيلية"
-            value={`${summary.totalOperationalExpenses.toFixed(2)} {data?.currency ?? ''}`}
+            value={`${summary.totalOperationalExpenses.toFixed(2)} ${data?.currency ?? ''}`}
             subtitle="إعلانات وشحن ورواتب وما إليها"
             icon={ArrowDownRight}
             color="rose"
