@@ -7,6 +7,7 @@ import type { NavGroup } from '@/lib/route-registry';
 import { mobileNav } from '@/lib/mobile-nav';
 import { iconFor } from './icons';
 import { RiCloseLine, RiMoreLine } from '@remixicon/react';
+import { useBulkActive } from './BulkBar';
 
 /**
  * THE BOTTOM OF A PHONE.
@@ -35,6 +36,12 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
   const [sheet, setSheet] = useState(false);
   const { primary, rest } = mobileNav(groups, pathname);
+  /**
+   * While something is selected, this strip belongs to the bar that acts on
+   * it. Navigating away mid-selection is not what anybody is reaching for,
+   * and the bar was otherwise four screens up the page.
+   */
+  const yielding = useBulkActive();
 
   // Any navigation closes the sheet. Leaving it open over the screen it
   // just opened is the commonest way a sheet becomes a thing people avoid.
@@ -53,13 +60,13 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
 
   const active = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
-  if (primary.length === 0) return null;
+  if (primary.length === 0 || yielding) return null;
 
   return (
     <>
       {sheet && (
         <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-label="كل الشاشات">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setSheet(false)} aria-hidden="true" />
+          <div className="absolute inset-0 bg-[var(--sys-background)]/60" onClick={() => setSheet(false)} aria-hidden="true" />
           <div
             className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-y-auto rounded-t-lg border-t border-[var(--sys-border)] bg-[var(--sys-card)] pb-[env(safe-area-inset-bottom)]"
             dir="rtl"

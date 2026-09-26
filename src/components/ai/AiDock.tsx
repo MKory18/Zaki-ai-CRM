@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiRobot2Line, RiSendPlaneLine, RiSubtractLine } from '@remixicon/react';
+import { useBulkActive } from '@/components/shell/BulkBar';
 
 /**
  * THE ASSISTANT, WHEREVER YOU ARE.
@@ -38,6 +39,13 @@ const OPENERS = [
 ];
 
 export function AiDock() {
+  /**
+   * While a selection is live the bottom strip belongs to the bar acting
+   * on it, and this button sits exactly on top of that bar's last action.
+   * Nobody asks the assistant a question in the middle of selecting thirty
+   * orders to print.
+   */
+  const yielding = useBulkActive();
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [q, setQ] = useState('');
@@ -121,7 +129,9 @@ export function AiDock() {
         onClick={() => setOpen(true)}
         title="المساعد الذكي"
         aria-label="افتح المساعد الذكي"
-        className="fixed bottom-4 start-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] shadow-overlay transition hover:bg-[var(--sys-heading)] active:scale-95"
+        className={`fixed bottom-4 start-4 z-40 h-12 w-12 items-center justify-center rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] shadow-overlay transition hover:bg-[var(--sys-heading)] active:scale-95 ${
+          yielding ? 'hidden md:flex' : 'flex'
+        }`}
       >
         <RiRobot2Line className="h-5 w-5" />
         {/* A quiet mark that there is something to come back to. */}

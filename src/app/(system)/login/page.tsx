@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
 import { RiErrorWarningLine, RiLoginBoxLine, RiShieldCrossLine, RiTimerLine } from '@remixicon/react';
+import { BrandStage } from '@/components/shell/BrandStage';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -63,16 +64,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--sys-surface)] flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <img src="/logo.svg" alt="Zaki AI" className="w-20 h-16 object-contain" />
-          <h1 className="text-2xl font-semibold text-[var(--sys-heading)]">Zaki AI Store</h1>
-          <p className="text-xs text-[var(--sys-muted-foreground)]">
-            نظام المبيعات والطلبات والأرباح والذكاء الاصطناعي
-          </p>
-        </div>
-
+    <BrandStage caption="نظام المبيعات والطلبات والأرباح والذكاء الاصطناعي">
+      <div className="space-y-6">
         <Card className="shadow-raised">
           <CardContent className="p-6 space-y-4">
             {wasIdle && !error && (
@@ -161,6 +154,6 @@ export default function LoginPage() {
           — سيكون بانتظار موافقة المدير
         </p>
       </div>
-    </div>
+    </BrandStage>
   );
 }

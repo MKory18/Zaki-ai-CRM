@@ -6,6 +6,7 @@ import { apiJson } from '@/lib/api-client';
 import { storeTypeLabel } from '@/lib/store-types';
 import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from '@/components/ui/CurrencyPicker';
 import { RiAddCircleLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
+import { BrandStage } from './BrandStage';
 
 /**
  * Two explicit steps: country, then store. The server decides what is
@@ -224,21 +225,23 @@ function Screen({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg space-y-4">
-        {title && (
-          <div className="text-center">
-            <h1 className="text-xl font-bold text-[var(--sys-heading)]">{title}</h1>
-            {subtitle && <p className="mt-2 text-sm text-[var(--sys-muted-foreground)]">{subtitle}</p>}
-          </div>
-        )}
-        {children}
-        {onBack && (
-          <button onClick={onBack} className="block mx-auto text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]">
-            تغيير البلد
-          </button>
-        )}
-      </div>
+    <div dir="rtl">
+      <BrandStage>
+        <div className="space-y-4">
+          {title && (
+            <div className="text-center">
+              <h1 className="text-xl font-bold text-[var(--sys-heading)]">{title}</h1>
+              {subtitle && <p className="mt-2 text-sm text-[var(--sys-muted-foreground)]">{subtitle}</p>}
+            </div>
+          )}
+          {children}
+          {onBack && (
+            <button onClick={onBack} className="block mx-auto text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]">
+              تغيير البلد
+            </button>
+          )}
+        </div>
+      </BrandStage>
     </div>
   );
 }

@@ -54,10 +54,15 @@ export function Header({
             {context.storePaused && <span className="text-[var(--sys-destructive)]"> · موقوف</span>}
           </p>
         </div>
+        {/* On a desk there is room to offer the switch beside the name.
+            On a phone there is not, and the same command is one tap away in
+            the palette — which is also where signing out now lives. Seven
+            controls in a 375px bar is how a bell gets missed and a logout
+            gets hit. */}
         {context.canSwitch && (
           <Link
             href="/entry?change=1"
-            className="mr-1 p-1.5 rounded-md text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-card)]"
+            className="mr-1 hidden md:block p-1.5 rounded-md text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-card)]"
             title="تبديل البلد أو المتجر"
           >
             <RiRepeatLine className="w-4 h-4" />
@@ -120,7 +125,7 @@ export function Header({
         </div>
         <button aria-label="تسجيل الخروج"
           onClick={logout}
-          className="p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+          className="hidden md:block p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
           title="تسجيل الخروج"
         >
           <RiLogoutBoxLine className="icon-mirror w-5 h-5" />

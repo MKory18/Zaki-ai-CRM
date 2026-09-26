@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { DateRange } from '@/components/ui/DateRange';
+import { BulkBar } from '@/components/shell/BulkBar';
 import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
 import { describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
 import { useTell } from '@/components/ui/Confirm';
@@ -439,8 +440,11 @@ export function OrdersScreen() {
           </div>
         )}
 
-        {selected.size > 0 && (
-          <div className="flex flex-wrap items-center gap-2 bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] rounded-lg px-4 py-2.5">
+        {/* On a desk this sits where it always has. On a phone the shell
+            hands it the bottom strip, because selecting five rows and then
+            scrolling four screens up to act on them is why nobody did. */}
+        <BulkBar show={selected.size > 0}>
+          <>
             <span className="text-xs font-semibold text-[var(--sys-primary)]">
               محدَّد: {selected.size} طلب
             </span>
@@ -474,8 +478,8 @@ export function OrdersScreen() {
             <Button size="sm" variant="outline" onClick={() => setSelected(new Set())}>
               إلغاء التحديد
             </Button>
-          </div>
-        )}
+          </>
+        </BulkBar>
 
         {/* Orders — rows, not a table.
             Eleven columns could not fit any screen: the product name broke

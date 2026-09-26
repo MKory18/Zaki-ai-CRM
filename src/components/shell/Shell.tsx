@@ -10,6 +10,7 @@ import { Watermark } from './Watermark';
 import { IdleGuard } from './IdleGuard';
 import { CommandPalette, useCommandPalette } from './CommandPalette';
 import { RAIL_SCRIPT } from '@/lib/sidebar-rail';
+import { BulkProvider } from './BulkBar';
 
 /** Frame for every contract screen: fixed RTL sidebar + context header. */
 export function Shell({
@@ -35,6 +36,7 @@ export function Shell({
   const canSearchRecords = userRole === 'SUPER_ADMIN';
 
   return (
+    <BulkProvider>
     <div className="min-h-screen bg-[var(--sys-surface)] flex flex-col">
       {/* Before the first paint: was the sidebar left folded? React cannot
           answer that — the server does not know this browser — and answering
@@ -59,7 +61,9 @@ export function Shell({
         {/* The bar at the bottom is fixed, so the page needs room under it
             or the last row of every screen sits behind the thumb that is
             trying to read it. */}
-        <main className="w-full flex-1 p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-6">
+        {/* Room for whatever owns the bottom strip: the navigation at its
+            fixed height, or a bulk bar at whatever height it wrapped to. */}
+        <main className="w-full flex-1 p-4 pb-[calc(var(--bulk-h,4.5rem)+env(safe-area-inset-bottom))] md:p-6 md:pb-6">
           {children}
         </main>
       </div>
@@ -84,5 +88,6 @@ export function Shell({
       <Watermark viewer={viewer} />
       <IdleGuard />
     </div>
+    </BulkProvider>
   );
 }
