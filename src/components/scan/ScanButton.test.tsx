@@ -273,3 +273,46 @@ describe('the trigger', () => {
     await waitFor(() => expect(getUserMedia).toHaveBeenCalled());
   });
 });
+
+/**
+ * THE LENS IS BORROWED ONCE, NOT ONCE PER RENDER.
+ *
+ * `accept` used to depend on the `onScan` and `onClose` props, and the effect
+ * that opens the camera depends on `accept`. Every call site passes
+ * `onScan={(code) => {…}}` written in place, so each render of the screen
+ * above produced a new identity, re-ran the effect, and its cleanup calls
+ * `release()` — which STOPS THE VIDEO TRACKS and closes the reader — before
+ * asking the browser for the camera again.
+ *
+ * A screen that polls therefore handed the camera back and re-borrowed it
+ * every few seconds, while somebody held a parcel in front of it.
+ */
+describe('a screen that re-renders while the sheet is open', () => {
+  it('does not hand the camera back and ask for it again', async () => {
+    function Host() {
+      const [, bump] = React.useState(0);
+      return (
+        <>
+          <button onClick={() => bump((n) => n + 1)}>ارسم</button>
+          {/* Written in place, exactly as all three real call sites do. */}
+          <ScanSheet title="مسح" onClose={() => {}} onScan={async () => undefined} continuous={false} />
+        </>
+      );
+    }
+
+    await act(async () => {
+      render(<Host />);
+    });
+    await waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(1));
+
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        fireEvent.click(screen.getByText('ارسم'));
+      });
+    }
+
+    expect(getUserMedia, 'طُلبت الكاميرا مرّةً أخرى عند كلِّ رسمة').toHaveBeenCalledTimes(1);
+    expect(tracks[0].stop, 'أُوقف بثُّ الكاميرا والورقة ما زالت مفتوحة').not.toHaveBeenCalled();
+    expect(readerClosed, 'أُغلق القارئ والورقة ما زالت مفتوحة').not.toHaveBeenCalled();
+  });
+});

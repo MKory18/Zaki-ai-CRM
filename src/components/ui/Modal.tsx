@@ -38,6 +38,34 @@ export function Modal({
   side = 'center',
 }: ModalProps) {
   const panel = React.useRef<HTMLDivElement>(null);
+
+  /**
+   * THE CLOSER, HELD IN A REF, AND THAT IS THE WHOLE POINT.
+   *
+   * This effect used to list `onClose` in its dependencies. 63 places render
+   * this component and 73 pass their closer as an arrow written in place —
+   * `onClose={() => setOpenForm(null)}` — which is a NEW FUNCTION on every
+   * render. So the effect tore itself down and set itself up again on every
+   * render of the parent, for as long as the dialog was open, and each cycle:
+   *
+   *   • released the scroll lock and took it again, so the page behind could
+   *     move for an instant;
+   *   • and ran the cleanup's `opener.focus()` before re-focusing the first
+   *     control in the panel — WHICH TAKES THE CURSOR OUT OF THE FIELD
+   *     SOMEBODY IS TYPING IN. Any field whose value lives in the parent's
+   *     state re-renders the parent on every keystroke, so the caret jumped
+   *     to the top of the dialog on every letter. That is the «the page is
+   *     stuck and nothing works until I click» that was reported.
+   *
+   * The handler reads the ref at the moment the key is pressed, so Escape
+   * still calls the current closer while the effect runs exactly twice per
+   * dialog: once on open, once on close.
+   */
+  const onCloseRef = React.useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   /**
    * ESCAPE CLOSED IT, BUT TAB COULD WALK OUT OF IT.
    *
@@ -57,7 +85,7 @@ export function Modal({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab' || !panel.current) return;
@@ -87,6 +115,16 @@ export function Modal({
       }
     };
 
+    /**
+     * AND THE LOCK IS PUT BACK AS IT WAS FOUND, NOT SET TO A GUESS.
+     *
+     * The cleanup used to write `'unset'`, which is not «what it was» — it is
+     * «scrollable». `MobileNav` locks the same property while its drawer is
+     * open and correctly saves and restores the previous value; a dialog
+     * opened and closed above that drawer handed the page back its scroll
+     * underneath it.
+     */
+    const heldOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
     // After paint: the panel is not in the document yet on this tick.
@@ -95,13 +133,15 @@ export function Modal({
     }, 0);
 
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = heldOverflow;
       window.removeEventListener('keydown', handleKeyDown);
       window.clearTimeout(id);
       // Back to the control that opened it, not to the top of the page.
       opener?.focus?.();
     };
-  }, [isOpen, onClose]);
+    // `onClose` is deliberately NOT a dependency — see the ref above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen || typeof document === 'undefined') return null;
 

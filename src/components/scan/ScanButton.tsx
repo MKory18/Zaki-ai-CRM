@@ -138,6 +138,32 @@ export function ScanSheet({
   const [typed, setTyped] = useState('');
 
   /**
+   * THE CALLERS' TWO FUNCTIONS, HELD IN REFS, BECAUSE THE CAMERA DEPENDS ON
+   * THEM.
+   *
+   * `accept` used to list `onScan` and `onClose` in its dependencies, and the
+   * effect that opens the camera lists `accept` in its own. All three call
+   * sites pass `onScan={(code) => {…}}` written in place, and this sheet is
+   * handed `onClose={() => setOpen(false)}` the same way — new function
+   * identities on every render of the screen above.
+   *
+   * So every re-render of that screen — a poll finishing, a filter changing,
+   * anything — ran this effect's cleanup and setup again: `release()` STOPS
+   * THE VIDEO TRACKS AND CLOSES THE READER, then `start()` asks the browser
+   * for the camera once more. A lens being handed back and re-borrowed while
+   * somebody is holding a parcel in front of it.
+   *
+   * `continuous` stays a real dependency: it is a boolean, so it is stable by
+   * value and only changes when the behaviour genuinely changes.
+   */
+  const onScanRef = useRef(onScan);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onScanRef.current = onScan;
+    onCloseRef.current = onClose;
+  });
+
+  /**
    * The code is accepted in ONE place, whether it came from the lens or the
    * keyboard. Two entry points with two validations is how a rule ends up
    * enforced on one of them.
@@ -153,7 +179,7 @@ export function ScanSheet({
       if (recent.current.isRepeat(code)) return;
       recent.current.accept(code);
       announce(true);
-      const message = await onScan(code);
+      const message = await onScanRef.current(code);
       setSaid(
         typeof message === 'string'
           ? { text: message, ok: null }
@@ -161,9 +187,9 @@ export function ScanSheet({
             ? { text: message.text, ok: message.ok }
             : { text: code, ok: null }
       );
-      if (!continuous) onClose();
+      if (!continuous) onCloseRef.current();
     },
-    [continuous, onClose, onScan]
+    [continuous]
   );
 
   /**
@@ -257,8 +283,8 @@ export function ScanSheet({
 
   const close = useCallback(() => {
     release();
-    onClose();
-  }, [onClose, release]);
+    onCloseRef.current();
+  }, [release]);
 
   const toggleTorch = useCallback(async () => {
     const track = stream.current?.getVideoTracks()[0];

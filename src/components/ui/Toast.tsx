@@ -100,7 +100,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 p-4 pb-[calc(var(--bulk-h,4.5rem)+1rem+env(safe-area-inset-bottom))] md:pb-6"
         >
           {items.map((t) => (
-            <Line key={t.id} toast={t} onDone={() => drop(t.id)} />
+            // `drop` itself, not an arrow around it: the arrow was a new
+            // function on every render of this provider, and the line's
+            // dismiss timer depends on it — so each arriving toast restarted
+            // the countdown of every toast already on screen.
+            <Line key={t.id} toast={t} onDone={drop} />
           ))}
         </div>
       )}
@@ -108,15 +112,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Line({ toast, onDone }: { toast: Toast; onDone: () => void }) {
+function Line({ toast, onDone }: { toast: Toast; onDone: (id: number) => void }) {
   const { cls, Icon } = LOOK[toast.tone];
   const leaves = toast.tone === 'done';
 
   useEffect(() => {
     if (!leaves) return;
-    const id = setTimeout(onDone, LIVE_MS);
+    const id = setTimeout(() => onDone(toast.id), LIVE_MS);
     return () => clearTimeout(id);
-  }, [leaves, onDone]);
+  }, [leaves, onDone, toast.id]);
 
   return (
     <div
@@ -132,7 +136,7 @@ function Line({ toast, onDone }: { toast: Toast; onDone: () => void }) {
       {/* A message that removes itself is fine. A REASON that removes itself
           is a reason nobody finished reading, so this is how it goes. */}
       {!leaves && (
-        <button type="button" onClick={onDone} aria-label="إغلاق" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 -me-1 shrink-0 p-1">
+        <button type="button" onClick={() => onDone(toast.id)} aria-label="إغلاق" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 -me-1 shrink-0 p-1">
           <RiCloseLine className="h-4 w-4" />
         </button>
       )}

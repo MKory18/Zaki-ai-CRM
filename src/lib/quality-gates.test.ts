@@ -138,6 +138,34 @@ describe('the press', () => {
 });
 
 /**
+ * WHOEVER LOCKS THE PAGE'S SCROLL PUTS IT BACK AS THEY FOUND IT.
+ *
+ * Two components take this lock — the dialog and the phone's drawer. The
+ * drawer always saved the previous value and restored it; the dialog wrote
+ * `'unset'`, which is not «what it was» but «scrollable». So a dialog opened
+ * and closed above an open drawer handed the page its scroll back underneath
+ * it.
+ *
+ * A literal is always wrong here, because the writer cannot know whether
+ * somebody else is already holding the lock.
+ */
+describe('a scroll lock', () => {
+  it('restores the value it found, wherever one is taken', () => {
+    const offenders: string[] = [];
+    for (const { rel, src } of dashboardFiles()) {
+      const body = stripComments(src);
+      if (!/body\.style\.overflow\s*=\s*'hidden'/.test(body)) continue;
+      if (!/const \w+ = document\.body\.style\.overflow/.test(body)) {
+        offenders.push(`${rel}: يقفل التمرير ولا يقرأ قيمته أوّلاً`);
+      }
+      const literal = /body\.style\.overflow\s*=\s*'(?:unset|auto|visible|scroll|)'/.exec(body);
+      if (literal) offenders.push(`${rel}: يُعيد التمرير إلى ${literal[1] || "''"} لا إلى ما وجده`);
+    }
+    expect(offenders, `قفلُ تمريرٍ لا يُعاد كما كان:\n${offenders.join('\n')}`).toEqual([]);
+  });
+});
+
+/**
  * ONE COMPONENT LIBRARY.
  */
 describe('the component library', () => {
