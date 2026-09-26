@@ -49,7 +49,33 @@ export async function GET() {
         store: { select: { name: true } },
       },
     });
-    return NextResponse.json({ providers });
+
+    /**
+     * HOW MANY REGIONS THIS COURIER IS PRICED FOR — and how many exist.
+     *
+     * A courier with no fee rows cannot ship, and until now the only way
+     * to discover that was to try to create a shipment and be refused, or
+     * to go and read a different screen. The list said a courier was
+     * «نشط» while it was unusable.
+     *
+     * Counted for the CURRENT country, because a fee is per region and
+     * regions belong to a country: «٨ من ١٢» is an answer, «٨» is not.
+     */
+    const { country } = await requireContext();
+    const [priced, regions] = await Promise.all([
+      db.deliveryFee.groupBy({
+        by: ['deliveryProviderId'],
+        where: { companyId, countryId: country.id, isActive: true },
+        _count: { _all: true },
+      }),
+      db.region.count({ where: { countryId: country.id } }),
+    ]);
+    const pricedBy = new Map(priced.map((r) => [r.deliveryProviderId, r._count._all]));
+
+    return NextResponse.json({
+      providers: providers.map((p) => ({ ...p, pricedRegions: pricedBy.get(p.id) ?? 0 })),
+      totalRegions: regions,
+    });
   } catch (error: any) {
     return NextResponse.json({ error: 'حدث خطأ داخلي' }, { status: 400 });
   }

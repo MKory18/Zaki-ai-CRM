@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
@@ -31,7 +32,16 @@ interface Fee {
 export function DeliveryFeesScreen() {
   const toast = useToast();
   const [data, setData] = useState<{ providers: { id: string; name: string }[]; regions: { id: string; name: string }[]; fees: Fee[] } | null>(null);
-  const [courier, setCourier] = useState('');
+  /**
+   * `?courier=` opens focused on one company.
+   *
+   * The couriers screen shows «٨ من ١٢ محافظة» beside each company and
+   * links here with its id. Landing on an unfiltered list after tapping a
+   * specific courier's number is the small betrayal that makes people
+   * stop trusting the number.
+   */
+  const asked = useSearchParams().get('courier');
+  const [courier, setCourier] = useState(asked ?? '');
   const [draft, setDraft] = useState<Record<string, { fee: string; lateThresholdDays: string; returnFee: string }>>({});
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);

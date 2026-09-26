@@ -33,6 +33,8 @@ interface Courier {
   store?: { name: string } | null;
   /** Which platform it ships on; null = worked by hand. */
   adapterCode?: string | null;
+  /** Regions in the current country this courier has a fee for. */
+  pricedRegions?: number;
 }
 
 interface StoreRow {
@@ -44,6 +46,8 @@ export function CouriersScreen() {
   const ask = useConfirm();
   const toast = useToast();
   const [rows, setRows] = useState<Courier[] | null>(null);
+  /** Regions in the current country — the denominator of «٨ من ١٢». */
+  const [totalRegions, setTotalRegions] = useState(0);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT', adapterCode: 'MANUAL' });
   const [accountFor, setAccountFor] = useState<string | null>(null);
@@ -56,8 +60,9 @@ export function CouriersScreen() {
 
   const load = useCallback(async () => {
     try {
-      const data = await apiJson<{ providers?: Courier[]; deliveryProviders?: Courier[] }>('/api/delivery-providers');
+      const data = await apiJson<{ providers?: Courier[]; deliveryProviders?: Courier[]; totalRegions?: number }>('/api/delivery-providers');
       setRows(data.providers ?? data.deliveryProviders ?? []);
+      setTotalRegions(data.totalRegions ?? 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحميل');
     }
@@ -323,6 +328,40 @@ export function CouriersScreen() {
                     {c.kind === 'AGENT' ? 'مندوب' : 'شركة شحن'}
                   </span></>
                 ) },
+            /**
+             * CAN IT SHIP? — the question the list could not answer.
+             *
+             * A courier's fees are a row per region, and a courier with
+             * none cannot be used: the shipment screen refuses it. Until
+             * now the list said «نشط» beside a courier that was unusable,
+             * and the only way to find out was to try, or to open a
+             * different screen and count.
+             *
+             * The number links to that screen filtered to this courier,
+             * which is the merge that matters: not one giant page, but the
+             * fact where the decision is, and one tap to the editor.
+             */
+            { key: 'fees', label: 'الأجور',
+              render: (c) => {
+                const priced = c.pricedRegions ?? 0;
+                const all = totalRegions;
+                const none = priced === 0;
+                const partial = all > 0 && priced > 0 && priced < all;
+                return (
+                  <Link
+                    href={`/settings/delivery-fees?courier=${c.id}`}
+                    className={`tap-safe inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                      none
+                        ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
+                        : partial
+                          ? 'border-[var(--sys-warning)]/50 bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'
+                          : 'border-[var(--sys-success)]/50 bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
+                    }`}
+                  >
+                    {none ? 'بلا أجور — لا تشحن' : `${priced} من ${all} محافظة`}
+                  </Link>
+                );
+              } },
             { key: 'c2', label: "الرمز",
               render: (c) => (
                   <><span dir="ltr" className="block">{c.code}</span>
