@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { RiArrowLeftSLine, RiArrowRightSLine, RiForbidLine, RiGroupLine, RiKey2Line, RiLogoutBoxLine, RiPlayCircleLine, RiRefreshLine, RiSearchLine, RiShieldCheckLine, RiShieldCrossLine, RiUserAddLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /** One source for the Arabic role names — a screen with its own copy is how
  *  two of them ended up blank in the filter. */
@@ -233,6 +234,12 @@ export function UsersScreen() {
                         </div></>
                 ) },
                 ]}
+                empty={
+                  <EmptyState
+                    title="لا موظّف يطابق هذا البحث"
+                    why="البحث يقرأ الاسم والبريد. امسحه أو وسّع الفلاتر لترى الحسابات كلّها."
+                  />
+                }
               />
             </div>
 

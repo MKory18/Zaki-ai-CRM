@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAddCircleLine, RiArrowGoBackLine, RiForbidLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /control/blacklist — who may not order again.
@@ -146,6 +147,12 @@ export function BlacklistScreen() {
                     </span></>
                 ) },
             ]}
+            empty={
+              <EmptyState
+                title="لا أرقامَ محظورة"
+                why="الحظر على الهاتف لا على الاسم: مَن رفض الاستلام ثلاث مرّات يطلب من جديد باسمٍ آخر. أضِف رقماً حين يلزم."
+              />
+            }
             actions={(b) => (
               <>{b.active ? (
                       <button

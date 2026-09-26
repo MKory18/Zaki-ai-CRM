@@ -12,6 +12,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiEBike2Line, RiLoader4Line, RiPencilLine, RiTruckLine } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /settings/couriers — the shipping companies themselves. Their per-region
@@ -291,22 +292,13 @@ export function CouriersScreen() {
       )}
 
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-            <tr>
-              <th className="text-right font-medium px-4 py-2">الجهة</th>
-              <th className="text-right font-medium px-4 py-2">النوع</th>
-              <th className="text-right font-medium px-4 py-2">الرمز</th>
-              <th className="text-right font-medium px-4 py-2">الهاتف</th>
-              <th className="text-right font-medium px-4 py-2">الحالة</th>
-              <th className="text-right font-medium px-4 py-2"> </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--sys-border)]">
-            {rows.filter((c) => c.storeId).map((c) => (
-              <tr key={c.id}>
-                <td className="px-4 py-2 flex items-center gap-2 text-[var(--sys-heading)]">
-                  {c.kind === 'AGENT' ? (
+                <Rows
+          rows={rows.filter((c) => c.storeId)}
+          keyOf={(c) => c.id}
+          columns={[
+            { key: 'c0', label: "الجهة", primary: true,
+              render: (c) => (
+                  <>{c.kind === 'AGENT' ? (
                     <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" />
                   ) : (
                     <RiTruckLine className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
@@ -319,29 +311,32 @@ export function CouriersScreen() {
                     />
                   ) : (
                     c.name
-                  )}
-                </td>
-                <td className="px-4 py-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                  )}</>
+                ) },
+            { key: 'c1', label: "النوع", primary: true,
+              render: (c) => (
+                  <><span className={`text-xs px-2 py-0.5 rounded-full border ${
                     c.kind === 'AGENT'
                       ? 'bg-[var(--sys-primary-soft)] border-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
                       : 'bg-[var(--sys-surface)] border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
                   }`}>
                     {c.kind === 'AGENT' ? 'مندوب' : 'شركة شحن'}
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">
-                  <span dir="ltr" className="block">{c.code}</span>
+                  </span></>
+                ) },
+            { key: 'c2', label: "الرمز",
+              render: (c) => (
+                  <><span dir="ltr" className="block">{c.code}</span>
                   {/* Which platform it runs on, under its own code — the two
                       belong together and neither is the other. */}
                   {c.adapterCode && (
                     <span dir="ltr" className="mt-0.5 block text-xs text-[var(--sys-muted)]">
                       {COURIER_PLATFORMS.find((p) => p.code === c.adapterCode)?.name ?? c.adapterCode}
                     </span>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">
-                  {editing === c.id ? (
+                  )}</>
+                ) },
+            { key: 'c3', label: "الهاتف",
+              render: (c) => (
+                  <>{editing === c.id ? (
                     <input
                       value={edit.phone}
                       onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
@@ -359,10 +354,11 @@ export function CouriersScreen() {
                     </span>
                   ) : (
                     '—'
-                  )}
-                </td>
-                <td className="px-4 py-2">
-                  <div className="flex items-center gap-2">
+                  )}</>
+                ) },
+            { key: 'c4', label: "الحالة",
+              render: (c) => (
+                  <><div className="flex items-center gap-2">
                     <button onClick={() => toggle(c)} disabled={busy} className={`text-xs px-3 py-1 rounded-lg border ${c.isActive ? 'border-[var(--sys-border)] text-[var(--sys-success)]' : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'}`}>
                       {c.isActive ? 'نشطة' : 'موقوفة'}
                     </button>
@@ -376,10 +372,17 @@ export function CouriersScreen() {
                         الحساب والتكامل
                       </button>
                     )}
-                  </div>
-                </td>
-                <td className="px-4 py-2">
-                  {/* Edit and delete sit apart from the account panel: one
+                  </div></>
+                ) },
+          ]}
+          empty={
+            <EmptyState
+              title="لا شركةَ شحنٍ لهذا المتجر بعد"
+              why="بلا شركةِ شحنٍ لا يمكن تجهيز شحنة ولا طباعة بوليصة. أضِف واحدةً من النموذج أعلاه."
+            />
+          }
+          actions={(c) => (
+            <>{/* Edit and delete sit apart from the account panel: one
                       changes who this courier IS, the other changes how we
                       talk to them. */}
                   <div className="flex items-center justify-end gap-1">
@@ -420,34 +423,9 @@ export function CouriersScreen() {
                         </button>
                       </>
                     )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {rows.filter((c) => c.storeId).map((c) =>
-              accountFor === c.id ? (
-                <tr key={`${c.id}-account`}>
-                  <td colSpan={6} className="bg-[var(--sys-surface)] px-4 py-4 space-y-3">
-                    <CourierCredentials providerId={c.id} />
-                    {/* Statuses can arrive two ways; both belong to the
-                        account, so both live on the account panel. */}
-                    <CourierWebhook providerId={c.id} />
-                  </td>
-                </tr>
-              ) : null
-            )}
-            {rows.filter((c) => c.storeId).length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-0">
-                  <EmptyState
-                    title="لا شركةَ شحنٍ لهذا المتجر بعد"
-                    why="بلا شركةِ شحنٍ لا يمكن تجهيز شحنة ولا طباعة بوليصة. أضِف واحدةً من النموذج أعلاه، أو انسخ شركةً معرَّفةً على مستوى البلد."
-                  />
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  </div></>
+          )}
+        />
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ import { format } from 'date-fns';
 import { RiAddCircleLine, RiArrowRightLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiTimerLine, RiUserLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /** A role picked by name (the fallback list), not by its row id. */
 const BY_NAME = 'name:';
@@ -730,6 +731,12 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                         { key: 'c4', label: ar ? 'النطاق' : 'Scope',
                           render: (r) => (r.scopeLabel ?? '—') },
                       ]}
+                      empty={
+                        <EmptyState
+                          title="لا استثناءات على هذا الحساب"
+                          why="الصلاحيات تأتي من الدور كما هي. الاستثناء يُضاف هنا حين يحتاج شخصٌ أكثرَ أو أقلَّ من دوره."
+                        />
+                      }
                     />
                   </div>
                 </>

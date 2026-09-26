@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowDownLine, RiArrowUpLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /inventory/movements — how the stock got to where it is.
@@ -146,6 +147,12 @@ export function InventoryMovementsScreen() {
               { key: 'c7', label: "سجّلها",
                 render: (m) => (m.createdByName ?? '—') },
             ]}
+            empty={
+              <EmptyState
+                title="لا حركاتِ مخزونٍ في هذه الفترة"
+                why="كلُّ استلامٍ وشحنةٍ ومرتجعٍ يكتب حركةً هنا. إن كنت تنتظر حركةً، فوسّع الفترة أو راجع الفلاتر."
+              />
+            }
           />
           {data.hasMore && (
             <p className="text-xs text-[var(--sys-muted)] px-3 py-2 border-t border-[var(--sys-border)]">

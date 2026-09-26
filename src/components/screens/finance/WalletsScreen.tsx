@@ -8,6 +8,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAddCircleLine, RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiShutDownLine, RiWallet3Line } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /finance/wallets — balances and the movement ledger. A recorded movement is
@@ -320,6 +321,12 @@ export function WalletsScreen() {
                   { key: 'c5', label: "سجّلها",
                     render: (m) => (m.createdByName ?? '—') },
                 ]}
+                empty={
+                  <EmptyState
+                    title="لا حركاتٍ على هذه المحفظة"
+                    why="كلُّ تحصيلٍ وصرفٍ وتحويلٍ يكتب حركةً هنا. فراغُها يعني أنّ المحفظة لم يمرّ بها مال بعد."
+                  />
+                }
                 actions={(m) => (
                   <>{m.wasReversed ? (
                           <span className="text-xs text-[var(--sys-muted)]">عُكِست</span>

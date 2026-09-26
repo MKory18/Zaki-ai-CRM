@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiPlayLine, RiTimerLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /admin/jobs — is anything quietly not running?
@@ -249,6 +250,12 @@ export function JobsScreen() {
                   { key: 'c4', label: "التفصيل",
                     render: (run) => (run.error ?? run.detail ?? '—') },
                 ]}
+                empty={
+                  <EmptyState
+                    title="لا تشغيلاتٍ مسجَّلة"
+                    why="المهامُ المجدولة تكتب سطراً هنا في كلّ مرّة تعمل. فراغُ السجلّ يعني أنّ عاملَ المهامّ لم يعمل بعد — أو لا يعمل."
+                  />
+                }
               />
             )}
           </div>

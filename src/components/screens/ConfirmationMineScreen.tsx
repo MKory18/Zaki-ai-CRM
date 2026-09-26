@@ -18,6 +18,7 @@ import { AssistantDialog } from './confirmation/AssistantDialog';
 import { RiAlertLine, RiChat3Line, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLoader4Line, RiPencilLine, RiPhoneLine, RiPhoneLockLine, RiSearchLine, RiShieldFlashLine, RiSparkling2Line, RiTimerLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
@@ -439,6 +440,12 @@ export function ConfirmationMineScreen() {
                   <>{order.totalAmount} {order.currency}</>
                 ) },
             ]}
+            empty={
+              <EmptyState
+                title="لا طلبات في يدك الآن"
+                why="اسحب طلباً من الطابور لتبدأ. ما تسحبه يبقى لك حتى تؤكّده أو ترفضه أو يُحرَّر تلقائيّاً."
+              />
+            }
             actions={(order) => (
               <>{order.changeRequests && order.changeRequests.length > 0 ? (
                       <span className="text-xs text-[var(--sys-warning)]">طلب تعديل قيد المراجعة</span>

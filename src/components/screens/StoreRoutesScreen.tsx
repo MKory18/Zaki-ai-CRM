@@ -8,6 +8,7 @@ import { apiJson } from '@/lib/api-client';
 import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiLoader4Line, RiShutDownLine, RiSparkling2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * OLD ADDRESSES THAT STILL ARRIVE.
@@ -241,6 +242,12 @@ export function StoreRoutesScreen() {
                   </div></>
                 ) },
           ]}
+          empty={
+            <EmptyState
+              title="لا مساراتٍ مُحوَّلة"
+              why="التحويل يُبقي رابطاً قديماً يعمل بعد تغيير المسار. أضِف واحداً حين تُغيّر عنوان صفحة."
+            />
+          }
         />
       </div>
       <p className="text-xs text-[var(--sys-muted)]">

@@ -11,6 +11,7 @@ import { RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiMessage3L
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
+import { Rows } from '@/components/ui/Rows';
 
 interface TelegramMsg {
   id: string;
@@ -197,65 +198,52 @@ export function TelegramOrdersScreen() {
           />
           <CardContent className="p-0 mt-3">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase">
-                  <tr>
-                    <th className="px-4 py-3 text-right">الرسائل</th>
-                    <th className="px-4 py-3 text-right">المجموعات</th>
-                    <th className="px-4 py-3 text-right">المواضيع</th>
-                    <th className="px-4 py-3 text-right">اسم الصفحة</th>
-                    <th className="px-4 py-3 text-right">حالة المعالجة</th>
-                    <th className="px-4 py-3 text-right">الطلب</th>
-                    <th className="px-4 py-3 text-right">الوقت</th>
-                    <th className="px-4 py-3 text-left">إجراء</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {messages.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="p-0">
-                        {loading ? (
-                          <p className="py-8 text-center text-xs text-[var(--sys-muted-foreground)]">جارٍ التحميل…</p>
-                        ) : (
-                          <EmptyState
-                            title="لا رسائل من تلجرام بعد"
-                            why="الرسائل تصل حين يُضاف البوت إلى المجموعة ويُمنح صلاحية القراءة. لا شيء يُسحب بأثرٍ رجعيّ — ما قبل الربط ليس هنا."
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  ) : messages.map((m) => (
-                    <tr key={m.id} className="hover:bg-[var(--sys-surface)]">
-                      <td className="px-4 py-3 max-w-[280px]">
-                        <p className="truncate text-[var(--sys-heading)]">{m.text || '—'}</p>
-                        <p className="text-xs text-[var(--sys-muted-foreground)]">{m.senderName || 'مجهول'}</p>
-                      </td>
-                      <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{m.source?.chatTitle || m.chatId}</td>
-                      <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{m.threadName || m.source?.topicName || (m.threadId ? m.threadId : '—')}</td>
-                      <td className="px-4 py-3">
-                        {m.pageName ? <span className="text-[var(--sys-heading)] font-semibold">{m.pageName}</span> : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[m.processingStatus] || ''}`}>
+                            <Rows
+                rows={messages}
+                keyOf={(m) => m.id}
+                columns={[
+                  { key: 'c0', label: "الرسائل", primary: true,
+                    render: (m) => (
+                  <><p className="truncate text-[var(--sys-heading)]">{m.text || '—'}</p>
+                        <p className="text-xs text-[var(--sys-muted-foreground)]">{m.senderName || 'مجهول'}</p></>
+                ) },
+                  { key: 'c1', label: "المجموعات", primary: true,
+                    render: (m) => (m.source?.chatTitle || m.chatId) },
+                  { key: 'c2', label: "المواضيع",
+                    render: (m) => (m.threadName || m.source?.topicName || (m.threadId ? m.threadId : '—')) },
+                  { key: 'c3', label: "اسم الصفحة",
+                    render: (m) => (
+                  <>{m.pageName ? <span className="text-[var(--sys-heading)] font-semibold">{m.pageName}</span> : '—'}</>
+                ) },
+                  { key: 'c4', label: "حالة المعالجة",
+                    render: (m) => (
+                  <><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[m.processingStatus] || ''}`}>
                           {STATUS_LABELS[m.processingStatus] || m.processingStatus}
                         </span>
-                        {m.reviewReason && <p className="text-xs text-[var(--sys-destructive)] mt-0.5">{REVIEW_REASONS[m.reviewReason] || m.reviewReason}</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        {m.order ? <span className="font-mono text-[var(--sys-primary)] font-semibold" dir="ltr">{m.order.orderNumber}</span> : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{new Date(m.createdAt).toLocaleString('ar-u-nu-latn')}</td>
-                      <td className="px-4 py-3 text-left">
-                        {['NEEDS_REVIEW', 'FAILED'].includes(m.processingStatus) && canManage && (
+                        {m.reviewReason && <p className="text-xs text-[var(--sys-destructive)] mt-0.5">{REVIEW_REASONS[m.reviewReason] || m.reviewReason}</p>}</>
+                ) },
+                  { key: 'c5', label: "الطلب",
+                    render: (m) => (
+                  <>{m.order ? <span className="font-mono text-[var(--sys-primary)] font-semibold" dir="ltr">{m.order.orderNumber}</span> : '—'}</>
+                ) },
+                  { key: 'c6', label: "الوقت",
+                    render: (m) => (new Date(m.createdAt).toLocaleString('ar-u-nu-latn')) },
+                  { key: 'c7', label: "إجراء", align: 'end',
+                    render: (m) => (
+                  <>{['NEEDS_REVIEW', 'FAILED'].includes(m.processingStatus) && canManage && (
                           <Button size="sm" variant="outline" disabled={busyId === m.id} onClick={() => retryMessage(m)}>
                             <RiArrowGoBackLine className="icon-mirror w-4 h-4 ml-1" /> إعادة المعالجة
                           </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        )}</>
+                ) },
+                ]}
+                empty={
+                  <EmptyState
+                    title="لا رسائل من تلجرام بعد"
+                    why="الرسائل تصل حين يُضاف البوت إلى المجموعة ويُمنح صلاحية القراءة. لا شيء يُسحب بأثرٍ رجعيّ."
+                  />
+                }
+              />
             </div>
           </CardContent>
         </Card>

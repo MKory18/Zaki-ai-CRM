@@ -6,6 +6,7 @@ import {
 } from '@/lib/ai-assistants';
 import { RiShieldCheckLine, RiShieldCrossLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * EVERY ASSISTANT, AND WHAT IT IS ALLOWED TO SEE.
@@ -107,6 +108,12 @@ export function AssistantsTable({
                     </span>
                   )) },
           ]}
+          empty={
+            <EmptyState
+              title="لا مساعدين مُعرَّفين"
+              why="كلُّ مساعدٍ يُربط بمزوّدٍ ونموذجٍ ونطاقٍ يقرأ منه. بلا تعريف، لا يعمل أيٌّ منها."
+            />
+          }
         />
       </div>
 

@@ -6,6 +6,7 @@ import { readTransfer, transferRefusal, type TransferSide } from '@/lib/transfer
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowLeftLine, RiLoader4Line, RiRepeatLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /finance/transfers — moving money between wallets. One transfer writes two
@@ -331,6 +332,12 @@ export function TransfersScreen() {
               { key: 'c7', label: "الملاحظة",
                 render: (t) => (t.note ?? '—') },
             ]}
+            empty={
+              <EmptyState
+                title="لا تحويلاتٍ في هذه الفترة"
+                why="التحويل ينقل مالاً بين محفظتين. فراغُ القائمة يعني أنّ لا مالَ تحرّك بين المحافظ هنا."
+              />
+            }
           />
         )}
       </div>

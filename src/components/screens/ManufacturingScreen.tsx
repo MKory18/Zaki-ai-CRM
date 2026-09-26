@@ -13,6 +13,7 @@ import { RiAddCircleLine, RiCalculatorLine, RiDeleteBinLine } from '@remixicon/r
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * The costs that keep coming back, offered instead of typed.
@@ -223,6 +224,12 @@ export function ManufacturingScreen() {
                   { key: 'c7', label: "التاريخ",
                     render: (b) => (format(new Date(b.productionDate), 'd MMM yyyy')) },
                 ]}
+                empty={
+                  <EmptyState
+                    title="لا تشغيلاتِ إنتاجٍ بعد"
+                    why="التشغيلة هي ما يُحسب منه سعرُ الوحدة. بلا تشغيلةٍ بكلفة، الربحُ المحسوب إجماليٌّ لا صافٍ."
+                  />
+                }
                 actions={(b) => (
                   <><button
                           type="button"

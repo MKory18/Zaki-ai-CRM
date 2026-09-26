@@ -462,7 +462,7 @@
   "src/components/screens/CouriersScreen.tsx": {
     "buttons": 10,
     "inputs": 5,
-    "columns": 6,
+    "columns": 5,
     "cards": 0,
     "modals": 0,
     "icons": 8,
@@ -622,7 +622,7 @@
   "src/components/screens/InventoryReceivingScreen.tsx": {
     "buttons": 3,
     "inputs": 5,
-    "columns": 3,
+    "columns": 2,
     "cards": 0,
     "modals": 1,
     "icons": 3,

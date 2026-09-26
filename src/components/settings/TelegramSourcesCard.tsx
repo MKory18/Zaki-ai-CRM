@@ -9,6 +9,8 @@ import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { RiAddCircleLine, RiDeleteBinLine, RiFlaskLine, RiShutDownLine } from '@remixicon/react';
 import { SkeletonRows } from '@/components/ui/Skeleton';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * WHICH TELEGRAM GROUPS AND TOPICS BECOME ORDERS — configuration, on the
@@ -136,43 +138,38 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
           </div>
         )}
         {error && <p className="mx-4 mb-2 rounded-lg bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs text-[var(--sys-destructive)]">{error}</p>}
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="border-b border-[var(--sys-border)] bg-[var(--sys-surface)] font-semibold text-[var(--sys-muted-foreground)]">
-              <tr>
-                <th className="px-4 py-3 text-right">المجموعة</th>
-                <th className="px-4 py-3 text-right">المتجر</th>
-                <th className="px-4 py-3 text-right">النوع</th>
-                <th className="px-4 py-3 text-right">الحالة</th>
-                <th className="px-4 py-3 text-right">الطلبات</th>
-                <th className="px-4 py-3 text-right">آخر رسالة</th>
-                {canManage && <th className="px-4 py-3 text-left">إجراءات</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {sources === null ? (
-                <tr><td colSpan={7} className="p-4"><SkeletonRows rows={3} /></td></tr>
-              ) : sources.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-[var(--sys-muted)]">لا مجموعات مرتبطة بعد.</td></tr>
-              ) : sources.map((s) => (
-                <tr key={s.id} className="hover:bg-[var(--sys-surface)]">
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-[var(--sys-heading)]">{s.chatTitle || 'بدون عنوان'}</p>
+        {sources === null ? (
+          <div className="p-4">
+            <SkeletonRows rows={3} />
+          </div>
+        ) : (
+          <Rows
+            rows={sources}
+            keyOf={(s) => s.id}
+            columns={[
+              { key: 'c0', label: "المجموعة", primary: true,
+                render: (s) => (
+                  <><p className="font-semibold text-[var(--sys-heading)]">{s.chatTitle || 'بدون عنوان'}</p>
                     <p className="font-mono text-xs text-[var(--sys-muted-foreground)]" dir="ltr">{s.chatId}{s.topicId ? ` • topic ${s.topicId}` : ''}</p>
-                    {s.topicName && <p className="text-xs text-[var(--sys-muted-foreground)]">الموضوع: {s.topicName}</p>}
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-[var(--sys-foreground)]">{s.storeName ?? '—'}</td>
-                  <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{s.chatType === 'supergroup' ? 'مجموعة فائقة' : s.chatType === 'group' ? 'مجموعة' : 'قناة'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.isActive ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
+                    {s.topicName && <p className="text-xs text-[var(--sys-muted-foreground)]">الموضوع: {s.topicName}</p>}</>
+                ) },
+              { key: 'c1', label: "المتجر", primary: true,
+                render: (s) => (s.storeName ?? '—') },
+              { key: 'c2', label: "النوع",
+                render: (s) => (s.chatType === 'supergroup' ? 'مجموعة فائقة' : s.chatType === 'group' ? 'مجموعة' : 'قناة') },
+              { key: 'c3', label: "الحالة",
+                render: (s) => (
+                  <><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.isActive ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
                       {s.isActive ? 'مفعل' : 'معطل'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-[var(--sys-heading)]">{s.ordersCount}</td>
-                  <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar-u-nu-latn') : '—'}</td>
-                  {canManage && (
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
+                    </span></>
+                ) },
+              { key: 'c4', label: "الطلبات",
+                render: (s) => (s.ordersCount) },
+              { key: 'c5', label: "آخر رسالة",
+                render: (s) => (s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar-u-nu-latn') : '—') },
+              { key: 'c6', label: "إجراءات",
+                render: (s) => (
+                  <><div className="flex items-center justify-end gap-1">
                         <button disabled={busyId === s.id} onClick={() => void testSource(s)} title="اختبار" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"><RiFlaskLine className="h-4 w-4" /></button>
                         <button
                           disabled={busyId === s.id}
@@ -183,14 +180,17 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
                           <RiShutDownLine className="h-4 w-4" />
                         </button>
                         <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"><RiDeleteBinLine className="h-4 w-4" /></button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      </div></>
+                ) },
+            ]}
+            empty={
+              <EmptyState
+                title="لا مجموعات مرتبطة بعد"
+                why="الطلبات تصل حين يُضاف البوت إلى مجموعةٍ ويُمنح صلاحية القراءة. أضِف مجموعةً من الزرّ أعلاه."
+              />
+            }
+          />
+        )}
       </CardContent>
 
       <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="إضافة مصدر تيليجرام">

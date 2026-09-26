@@ -5,6 +5,8 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { RiInboxArchiveLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /inventory/receiving — put stock in.
@@ -116,20 +118,15 @@ export function InventoryReceivingScreen() {
         </p>
       ) : (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-3 py-2">المنتج</th>
-                <th className="text-right font-medium px-3 py-2">الرصيد الحالي</th>
-                <th className="text-right font-medium px-3 py-2"> </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {rows.slice(0, 100).map((p) => (
-                <tr key={p.id}>
-                  <td className="px-3 py-2 text-[var(--sys-heading)]">{p.name}</td>
-                  <td className="px-3 py-2">
-                    <span
+                    <Rows
+            rows={rows.slice(0, 100)}
+            keyOf={(p) => p.id}
+            columns={[
+              { key: 'c0', label: "المنتج", primary: true,
+                render: (p) => (p.name) },
+              { key: 'c1', label: "الرصيد الحالي", primary: true,
+                render: (p) => (
+                  <><span
                       className={`tabular-nums px-2 py-0.5 rounded-md border text-xs ${
                         p.remaining > 0
                           ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
@@ -137,17 +134,21 @@ export function InventoryReceivingScreen() {
                       }`}
                     >
                       {p.remaining}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-left">
-                    <button onClick={() => setActive(p)} className="text-xs text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1">
+                    </span></>
+                ) },
+            ]}
+            empty={
+              <EmptyState
+                title="لا أصنافَ في هذا الاستلام"
+                why="أضِف صنفاً وكميّته لتسجيل ما وصل فعلاً. المخزون لا يتحرّك حتى يُحفظ الاستلام."
+              />
+            }
+            actions={(p) => (
+              <><button onClick={() => setActive(p)} className="text-xs text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1">
                       <RiInboxArchiveLine className="w-4 h-4" /> استلام
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </button></>
+            )}
+          />
           {rows.length > 100 && (
             <p className="text-xs text-[var(--sys-muted)] px-3 py-2 border-t border-[var(--sys-border)]">
               يعرض أول 100 من {rows.length} — ضيّق البحث.
