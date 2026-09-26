@@ -52,7 +52,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-RUN apk add --no-cache libc6-compat openssl
+# `postgresql16-client` is here for the DAILY BACKUP, and it is not optional.
+# The scheduled `daily-backup` job shells out to `pg_dump`, and without this
+# line the job fails on the first night in production with «command not
+# found» — a backup system that has never existed while reporting an error
+# nobody reads until the day it is needed. The version matches the
+# `postgres:16-alpine` in docker-compose.yml: a client older than the server
+# refuses to dump it.
+RUN apk add --no-cache libc6-compat openssl postgresql16-client
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
