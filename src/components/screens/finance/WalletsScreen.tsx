@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAddCircleLine, RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiShutDownLine, RiWallet3Line } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /finance/wallets — balances and the movement ledger. A recorded movement is
@@ -294,37 +295,33 @@ export function WalletsScreen() {
             ) : movements.length === 0 ? (
               <p className="text-sm text-[var(--sys-muted-foreground)] py-10 text-center">لا حركات بعد.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-                  <tr>
-                    <th className="text-right font-medium px-3 py-2">التاريخ</th>
-                    <th className="text-right font-medium px-3 py-2">الطرف</th>
-                    <th className="text-right font-medium px-3 py-2">البند</th>
-                    <th className="text-right font-medium px-3 py-2">وارد</th>
-                    <th className="text-right font-medium px-3 py-2">صادر</th>
-                    <th className="text-right font-medium px-3 py-2">سجّلها</th>
-                    <th className="text-right font-medium px-3 py-2"> </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {movements.map((m) => (
-                    <tr key={m.id} className={m.isReversal ? 'bg-[var(--sys-destructive-soft)]' : undefined}>
-                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
-                        {new Date(m.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}
-                      </td>
-                      <td className="px-3 py-2 text-[var(--sys-foreground)]">
-                        {m.party}
+                            <Rows
+                rows={movements}
+                keyOf={(m) => m.id}
+                columns={[
+                  { key: 'c0', label: "التاريخ", primary: true,
+                    render: (m) => (
+                  <>{new Date(m.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}</>
+                ) },
+                  { key: 'c1', label: "الطرف", primary: true,
+                    render: (m) => (
+                  <>{m.party}
                         {m.note && <span className="block text-xs text-[var(--sys-muted)]">{m.note}</span>}
                         {m.reversalReason && (
                           <span className="block text-xs text-[var(--sys-destructive)]">قيد عكسي: {m.reversalReason}</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{CATEGORY_AR[m.category] ?? m.category}</td>
-                      <td className="px-3 py-2 tabular-nums text-[var(--sys-success)]">{m.direction === 'IN' ? m.amount : ''}</td>
-                      <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)]">{m.direction === 'OUT' ? m.amount : ''}</td>
-                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{m.createdByName ?? '—'}</td>
-                      <td className="px-3 py-2 text-left">
-                        {m.wasReversed ? (
+                        )}</>
+                ) },
+                  { key: 'c2', label: "البند",
+                    render: (m) => (CATEGORY_AR[m.category] ?? m.category) },
+                  { key: 'c3', label: "وارد", align: 'end',
+                    render: (m) => (m.direction === 'IN' ? m.amount : '') },
+                  { key: 'c4', label: "صادر", align: 'end',
+                    render: (m) => (m.direction === 'OUT' ? m.amount : '') },
+                  { key: 'c5', label: "سجّلها",
+                    render: (m) => (m.createdByName ?? '—') },
+                ]}
+                actions={(m) => (
+                  <>{m.wasReversed ? (
                           <span className="text-xs text-[var(--sys-muted)]">عُكِست</span>
                         ) : m.isReversal ? (
                           <span className="text-xs text-[var(--sys-muted)]">قيد عكسي</span>
@@ -335,12 +332,9 @@ export function WalletsScreen() {
                           >
                             <RiArrowGoBackLine className="icon-mirror w-4 h-4" /> قيد عكسي
                           </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        )}</>
+                )}
+              />
             )}
           </div>
         </>

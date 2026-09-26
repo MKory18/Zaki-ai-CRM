@@ -190,6 +190,10 @@ describe('the stock log has one screen', () => {
   });
 
   it('the movements screen still draws it', () => {
-    expect(read('src/components/screens/InventoryMovementsScreen.tsx')).toContain('<table');
+    // It draws the log with `<Rows>` now — a table on a desk and a card on
+    // a phone, from one definition. The invariant is unchanged: ONE screen
+    // owns the stock log. Only the markup moved.
+    const src = read('src/components/screens/InventoryMovementsScreen.tsx');
+    expect(src.includes('<table') || src.includes('<Rows'), 'شاشة الحركات لا ترسم السجلّ').toBe(true);
   });
 });

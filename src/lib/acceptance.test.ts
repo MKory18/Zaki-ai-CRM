@@ -181,6 +181,40 @@ describe('no screen is reachable without its key', () => {
  * The cure is that no screen writes its own title: it reads the one the
  * sidebar draws from, so the two cannot disagree.
  */
+describe('a page title', () => {
+  /**
+   * IT IS A NAME, NOT MARKUP.
+   *
+   * `title` is a string prop. A sweep that lifted a heading's whole
+   * contents into it put an icon element there too — and the users screen
+   * printed «RiGroupLine className="w-6 h-6 …" /><span>{findRoute(…)}»
+   * across the top of the page, at heading size, to whoever opened it.
+   *
+   * The guard that was supposed to catch that only looked at titles
+   * containing ARABIC, and this one contained none. So it looks at all of
+   * them now, and asks one thing: a name has no angle brackets in it.
+   */
+  it('never contains markup', () => {
+    const offenders: string[] = [];
+    const walkAll = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) walkAll(p);
+        else if (p.endsWith('.tsx') && !p.includes('.test.')) {
+          const src = readFileSync(p, 'utf8');
+          for (const m of src.matchAll(/<PageHeader[\s\S]{0,200}?title=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {
+            const text = m[1] ?? m[2] ?? '';
+            if (/[<>]/.test(text)) offenders.push(`${p.split(/[\/]/).pop()}: ${text.slice(0, 50)}`);
+          }
+        }
+      }
+    };
+    walkAll(join(process.cwd(), 'src', 'components'));
+    walkAll(join(process.cwd(), 'src', 'app'));
+    expect(offenders, `عنوانٌ يحمل ترميزاً: ${offenders.join(' | ')}`).toEqual([]);
+  });
+});
+
 describe('every screen names itself', () => {
   const ROOT = join(process.cwd(), 'src/components/screens');
 

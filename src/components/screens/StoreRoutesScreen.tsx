@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiLoader4Line, RiShutDownLine, RiSparkling2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * OLD ADDRESSES THAT STILL ARRIVE.
@@ -192,42 +193,33 @@ export function StoreRoutesScreen() {
       )}
 
       <div className="overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-[var(--sys-surface)] text-xs text-[var(--sys-muted-foreground)]">
-              <th className="px-3 py-2.5 text-start">من</th>
-              <th className="px-3 py-2.5 text-start">إلى</th>
-              <th className="px-3 py-2.5 text-start">النوع</th>
-              <th className="px-3 py-2.5 text-start">الزيارات</th>
-              <th className="px-3 py-2.5 text-start">الحالة</th>
-              <th className="px-3 py-2.5 text-start">إجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {live.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-xs text-[var(--sys-muted)]">
-                  لا تحويلات بعد.
-                </td>
-              </tr>
-            )}
-            {live.map((row) => (
-              <tr key={row.id} className="border-t border-[var(--sys-border)]">
-                <td className="px-3 py-2.5" dir="ltr"><code className="text-xs">{row.from}</code></td>
-                <td className="px-3 py-2.5" dir="ltr"><code className="text-xs">{row.to}</code></td>
-                <td className="px-3 py-2.5 tabular-nums text-xs">{row.kind}</td>
-                <td className="px-3 py-2.5 tabular-nums text-xs" title="تقديري — لا يُحتسب على حساب سرعة التحويل">
-                  {row.hits.toLocaleString('ar-u-nu-latn')}
-                </td>
-                <td className="px-3 py-2.5">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                <Rows
+          rows={live}
+          keyOf={(row) => row.id}
+          columns={[
+            { key: 'c0', label: "من", primary: true,
+              render: (row) => (
+                  <><code className="text-xs">{row.from}</code></>
+                ) },
+            { key: 'c1', label: "إلى", primary: true,
+              render: (row) => (
+                  <><code className="text-xs">{row.to}</code></>
+                ) },
+            { key: 'c2', label: "النوع", align: 'end',
+              render: (row) => (row.kind) },
+            { key: 'c3', label: "الزيارات", align: 'end',
+              render: (row) => (row.hits.toLocaleString('ar-u-nu-latn')) },
+            { key: 'c4', label: "الحالة",
+              render: (row) => (
+                  <><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                     row.isActive ? 'bg-[var(--sys-success)]/10 text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
                   }`}>
                     {row.isActive ? 'يعمل' : 'موقوف'}
-                  </span>
-                </td>
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-1">
+                  </span></>
+                ) },
+            { key: 'c5', label: "إجراءات",
+              render: (row) => (
+                  <><div className="flex items-center gap-1">
                     <button
                       type="button"
                       disabled={busy}
@@ -246,12 +238,10 @@ export function StoreRoutesScreen() {
                     >
                       <RiDeleteBinLine className="h-4 w-4" />
                     </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </div></>
+                ) },
+          ]}
+        />
       </div>
       <p className="text-xs text-[var(--sys-muted)]">
         عدد الزيارات تقديري: يُحتسب بعد إرسال الزائر، فلا ينتظر أحد على عدّاد.

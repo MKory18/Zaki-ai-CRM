@@ -17,6 +17,7 @@ import {
 import { AssistantDialog } from './confirmation/AssistantDialog';
 import { RiAlertLine, RiChat3Line, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLoader4Line, RiPencilLine, RiPhoneLine, RiPhoneLockLine, RiSearchLine, RiShieldFlashLine, RiSparkling2Line, RiTimerLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
@@ -410,40 +411,36 @@ export function ConfirmationMineScreen() {
           onChange={setFindDone}
         />
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-4 py-2">الطلب</th>
-                <th className="text-right font-medium px-4 py-2">العميل</th>
-                <th className="text-right font-medium px-4 py-2">الهاتف</th>
-                <th className="text-right font-medium px-4 py-2">المبلغ</th>
-                <th className="text-right font-medium px-4 py-2"> </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {confirmed.map((order) => (
-                <tr key={order.id}>
-                  <td className="px-4 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{order.orderNumber}</td>
-                  <td className="px-4 py-2 text-[var(--sys-foreground)]">
-                    <span className="flex items-center gap-2">
+                    <Rows
+            rows={confirmed}
+            keyOf={(order) => order.id}
+            columns={[
+              { key: 'c0', label: "الطلب", primary: true,
+                render: (order) => (order.orderNumber) },
+              { key: 'c1', label: "العميل", primary: true,
+                render: (order) => (
+                  <><span className="flex items-center gap-2">
                       {order.customer.fullName}
                       <CustomerHistoryButton
                         customerId={order.customer.id}
                         orderId={order.id}
                         previousOrders={order.previousOrders}
                       />
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-[var(--sys-foreground)]" dir="ltr">
-                    <a href={`tel:${order.customer.rawPhone}`} className="tabular-nums hover:text-[var(--sys-primary)]">
+                    </span></>
+                ) },
+              { key: 'c2', label: "الهاتف",
+                render: (order) => (
+                  <><a href={`tel:${order.customer.rawPhone}`} className="tabular-nums hover:text-[var(--sys-primary)]">
                       {order.customer.rawPhone}
-                    </a>
-                  </td>
-                  <td className="px-4 py-2 tabular-nums text-[var(--sys-foreground)]" dir="ltr">
-                    {order.totalAmount} {order.currency}
-                  </td>
-                  <td className="px-4 py-2 text-left">
-                    {order.changeRequests && order.changeRequests.length > 0 ? (
+                    </a></>
+                ) },
+              { key: 'c3', label: "المبلغ", align: 'end',
+                render: (order) => (
+                  <>{order.totalAmount} {order.currency}</>
+                ) },
+            ]}
+            actions={(order) => (
+              <>{order.changeRequests && order.changeRequests.length > 0 ? (
                       <span className="text-xs text-[var(--sys-warning)]">طلب تعديل قيد المراجعة</span>
                     ) : (
                       <button
@@ -453,19 +450,9 @@ export function ConfirmationMineScreen() {
                       >
                         طلب تعديل
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {confirmed.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">
-                    لا توجد طلبات مؤكدة بعد.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    )}</>
+            )}
+          />
         </div>
       </section>
 

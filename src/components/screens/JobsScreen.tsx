@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiPlayLine, RiTimerLine } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /admin/jobs — is anything quietly not running?
@@ -219,22 +220,15 @@ export function JobsScreen() {
             {data.recent.length === 0 ? (
               <p className="text-sm text-[var(--sys-muted-foreground)] py-8 text-center">لم تعمل أي مهمة بعد.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-                  <tr>
-                    <th className="text-right font-medium px-3 py-2">المهمة</th>
-                    <th className="text-right font-medium px-3 py-2">الحالة</th>
-                    <th className="text-right font-medium px-3 py-2">البدء</th>
-                    <th className="text-right font-medium px-3 py-2">عدد</th>
-                    <th className="text-right font-medium px-3 py-2">التفصيل</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {data.recent.map((run) => (
-                    <tr key={run.id}>
-                      <td className="px-3 py-2 text-[var(--sys-foreground)]" dir="ltr">{run.jobName}</td>
-                      <td className="px-3 py-2">
-                        <span
+                            <Rows
+                rows={data.recent}
+                keyOf={(run) => run.id}
+                columns={[
+                  { key: 'c0', label: "المهمة", primary: true,
+                    render: (run) => (run.jobName) },
+                  { key: 'c1', label: "الحالة", primary: true,
+                    render: (run) => (
+                  <><span
                           className={`text-xs px-2 py-0.5 rounded-full border ${
                             run.status === 'SUCCEEDED'
                               ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
@@ -244,17 +238,18 @@ export function JobsScreen() {
                           }`}
                         >
                           {run.status === 'SUCCEEDED' ? 'نجحت' : run.status === 'FAILED' ? 'فشلت' : 'تعمل'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
-                        {new Date(run.startedAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}
-                      </td>
-                      <td className="px-3 py-2 tabular-nums text-[var(--sys-foreground)]">{run.processed}</td>
-                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{run.error ?? run.detail ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </span></>
+                ) },
+                  { key: 'c2', label: "البدء",
+                    render: (run) => (
+                  <>{new Date(run.startedAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}</>
+                ) },
+                  { key: 'c3', label: "عدد", align: 'end',
+                    render: (run) => (run.processed) },
+                  { key: 'c4', label: "التفصيل",
+                    render: (run) => (run.error ?? run.detail ?? '—') },
+                ]}
+              />
             )}
           </div>
         </>

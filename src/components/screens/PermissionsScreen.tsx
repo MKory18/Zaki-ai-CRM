@@ -332,8 +332,7 @@ export function PermissionsScreen() {
   return (
     <>
       <div className="space-y-6" dir={isRtl ? 'rtl' : 'ltr'}>
-        <PageHeader title={`<RiShieldCheckLine className="w-6 h-6 text-[var(--sys-primary)]" />
-              {ar ? 'الأدوار والصلاحيات' : 'Roles & Permissions'}`}
+        <PageHeader title={ar ? 'الأدوار والصلاحيات' : 'Roles & Permissions'}
             description={ar
                 ? 'إدارة أدوار الفريق وصلاحياتهم — تُطبق التغييرات فورًا على الخادم.'
                 : 'Manage team roles and their permissions — changes apply server-side immediately.'}

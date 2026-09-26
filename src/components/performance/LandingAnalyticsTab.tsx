@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiJson } from '@/lib/api-client';
 import { RiEyeLine, RiInformationLine, RiLoader4Line, RiPercentLine, RiShoppingBagLine } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * تحليلات صفحات الهبوط — for the screen's one date window.
@@ -106,35 +107,29 @@ function Table({ title, rows, empty, linkPages }: { title: string; rows: Row[]; 
         <p className="p-4 text-center text-xs text-[var(--sys-muted)]">{empty}</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-xs text-[var(--sys-muted-foreground)]">
-                <th className="px-4 py-2 text-start font-semibold">الاسم</th>
-                <th className="px-2 py-2 text-end font-semibold">مشاهدات</th>
-                <th className="px-2 py-2 text-end font-semibold">طلبات</th>
-                <th className="px-4 py-2 text-end font-semibold">التحويل</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.key} className="border-t border-[var(--sys-surface-strong)]">
-                  <td className="px-4 py-2">
-                    <span className="font-semibold text-[var(--sys-heading)]">
+                    <Rows
+            rows={rows}
+            keyOf={(r) => r.key}
+            columns={[
+              { key: 'c0', label: "الاسم", primary: true,
+                render: (r) => (
+                  <><span className="font-semibold text-[var(--sys-heading)]">
                       {linkPages && r.hint?.startsWith('/lp/') ? (
                         <Link href={r.hint} target="_blank" className="hover:text-[var(--sys-primary)] hover:underline">{r.label}</Link>
                       ) : r.label}
                     </span>
                     {r.hint && !r.hint.startsWith('/lp/') && (
                       <span className="ms-1.5 text-xs text-[var(--sys-muted)]" dir={r.hint.startsWith('?') ? 'ltr' : undefined}>{r.hint}</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-2 text-end tabular-nums text-[var(--sys-foreground)]" dir="ltr">{fmt(r.views)}</td>
-                  <td className="px-2 py-2 text-end tabular-nums text-[var(--sys-foreground)]" dir="ltr">{fmt(r.orders)}</td>
-                  <td className="px-4 py-2 text-end font-bold tabular-nums text-[var(--sys-heading)]" dir="ltr">{pct(r.conversion)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    )}</>
+                ) },
+              { key: 'c1', label: "مشاهدات", primary: true, align: 'end',
+                render: (r) => (fmt(r.views)) },
+              { key: 'c2', label: "طلبات", align: 'end',
+                render: (r) => (fmt(r.orders)) },
+              { key: 'c3', label: "التحويل", align: 'end',
+                render: (r) => (pct(r.conversion)) },
+            ]}
+          />
         </div>
       )}
     </section>

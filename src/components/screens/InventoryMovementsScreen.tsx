@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowDownLine, RiArrowUpLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /inventory/movements — how the stock got to where it is.
@@ -110,48 +111,42 @@ export function InventoryMovementsScreen() {
         </p>
       ) : (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-3 py-2">التاريخ</th>
-                <th className="text-right font-medium px-3 py-2">المنتج</th>
-                <th className="text-right font-medium px-3 py-2">النوع</th>
-                <th className="text-right font-medium px-3 py-2">الكمية</th>
-                <th className="text-right font-medium px-3 py-2">الرصيد بعدها</th>
-                <th className="text-right font-medium px-3 py-2">الدفعة</th>
-                <th className="text-right font-medium px-3 py-2">السبب</th>
-                <th className="text-right font-medium px-3 py-2">سجّلها</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {data.movements.map((m) => (
-                <tr key={m.id}>
-                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
-                    {new Date(m.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}
-                  </td>
-                  <td className="px-3 py-2 text-[var(--sys-heading)]">
-                    {m.product?.name ?? '—'}
-                    {m.product?.sku && <span className="block text-xs text-[var(--sys-muted)]" dir="ltr">{m.product.sku}</span>}
-                  </td>
-                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{TYPE_AR[m.type] ?? m.type}</td>
-                  <td className="px-3 py-2">
-                    <span
+                    <Rows
+            rows={data.movements}
+            keyOf={(m) => m.id}
+            columns={[
+              { key: 'c0', label: "التاريخ", primary: true,
+                render: (m) => (
+                  <>{new Date(m.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}</>
+                ) },
+              { key: 'c1', label: "المنتج", primary: true,
+                render: (m) => (
+                  <>{m.product?.name ?? '—'}
+                    {m.product?.sku && <span className="block text-xs text-[var(--sys-muted)]" dir="ltr">{m.product.sku}</span>}</>
+                ) },
+              { key: 'c2', label: "النوع",
+                render: (m) => (TYPE_AR[m.type] ?? m.type) },
+              { key: 'c3', label: "الكمية",
+                render: (m) => (
+                  <><span
                       className={`inline-flex items-center gap-1 tabular-nums font-medium ${
                         m.quantity >= 0 ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'
                       }`}
                     >
                       {m.quantity >= 0 ? <RiArrowUpLine className="w-4 h-4" /> : <RiArrowDownLine className="w-4 h-4" />}
                       {Math.abs(m.quantity)}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 tabular-nums text-[var(--sys-foreground)]">{m.balanceAfter}</td>
-                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]" dir="ltr">{m.batchNumber ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{m.reason ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{m.createdByName ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </span></>
+                ) },
+              { key: 'c4', label: "الرصيد بعدها", align: 'end',
+                render: (m) => (m.balanceAfter) },
+              { key: 'c5', label: "الدفعة",
+                render: (m) => (m.batchNumber ?? '—') },
+              { key: 'c6', label: "السبب",
+                render: (m) => (m.reason ?? '—') },
+              { key: 'c7', label: "سجّلها",
+                render: (m) => (m.createdByName ?? '—') },
+            ]}
+          />
           {data.hasMore && (
             <p className="text-xs text-[var(--sys-muted)] px-3 py-2 border-t border-[var(--sys-border)]">
               تُعرض أحدث الحركات — ضيّق البحث لرؤية أقدم منها.

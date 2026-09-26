@@ -5,7 +5,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
-import { findRoute } from '@/lib/route-registry';
+import { findRoute, routeLabel } from '@/lib/route-registry';
 import { RiCheckboxCircleLine, RiLightbulbLine, RiRobot2Line, RiSendPlaneLine, RiShieldFlashLine, RiSparkling2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -146,8 +146,7 @@ export function AssistantScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <PageHeader title={`<RiSparkling2Line className="w-6 h-6 text-[var(--sys-destructive)]" />
-              <span>{findRoute('/assistant')?.label}</span>`}
+        <PageHeader title={routeLabel('/assistant')}
             description="يجيب من أرقام متجرك وحدها. ما لا يجده في البيانات يقول إنه لا يعرفه، ولا يخترع رقماً."
             actions={
               <><Button

@@ -31,6 +31,7 @@ import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { format } from 'date-fns';
 import { RiAddCircleLine, RiArrowRightLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiTimerLine, RiUserLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Rows } from '@/components/ui/Rows';
 
 /** A role picked by name (the fallback list), not by its row id. */
 const BY_NAME = 'name:';
@@ -689,60 +690,47 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                     />
                   </div>
                   <div className="overflow-x-auto rounded-lg border border-[var(--sys-border)]">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-[var(--sys-surface)] text-[var(--sys-foreground)]">
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'الصلاحية' : 'Permission'}</th>
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'من الدور' : 'Role'}</th>
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'الاستثناء' : 'Override'}</th>
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'الفعّالة' : 'Effective'}</th>
-                          <th className="text-start font-bold px-3 py-2">{ar ? 'النطاق' : 'Scope'}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[var(--sys-surface)]">
-                        {filteredRows.map((r) => (
-                          <tr key={r.key} className="hover:bg-[var(--sys-surface)]/60">
-                            <td className="px-3 py-2 min-w-[160px]">
-                              <p className="font-medium text-[var(--sys-heading)]">{ar ? r.ar : r.en}</p>
-                              <p className="text-xs text-[var(--sys-muted)] font-mono" dir="ltr">{r.key}</p>
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {r.roleEffect ? (
+                                        <Rows
+                      rows={filteredRows}
+                      keyOf={(r) => r.key}
+                      columns={[
+                        { key: 'c0', label: ar ? 'الصلاحية' : 'Permission', primary: true,
+                          render: (r) => (
+                  <><p className="font-medium text-[var(--sys-heading)]">{ar ? r.ar : r.en}</p>
+                              <p className="text-xs text-[var(--sys-muted)] font-mono" dir="ltr">{r.key}</p></>
+                ) },
+                        { key: 'c1', label: ar ? 'من الدور' : 'Role', primary: true,
+                          render: (r) => (
+                  <>{r.roleEffect ? (
                                 <span className="font-bold text-[var(--sys-success)]">ALLOW آ· {ar ? 'موروث' : 'inherited'}</span>
                               ) : (
                                 <span className="text-[var(--sys-muted)]">{ar ? 'غير ممنوح' : 'not granted'}</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {r.overrideEffect ? (
+                              )}</>
+                ) },
+                        { key: 'c2', label: ar ? 'الاستثناء' : 'Override',
+                          render: (r) => (
+                  <>{r.overrideEffect ? (
                                 <span className={`font-bold ${r.overrideEffect === 'DENY' ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-success)]'}`}>
                                   {r.overrideEffect} آ· {r.overrideEffect === 'DENY' ? (ar ? 'منع' : 'deny') : (ar ? 'إضافة' : 'allow')}
                                 </span>
                               ) : (
                                 <span className="text-[var(--sys-muted)]">—</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {r.effectiveEffect === 'ALLOW' ? (
+                              )}</>
+                ) },
+                        { key: 'c3', label: ar ? 'الفعّالة' : 'Effective',
+                          render: (r) => (
+                  <>{r.effectiveEffect === 'ALLOW' ? (
                                 <span className="font-bold text-[var(--sys-success)]">ALLOW</span>
                               ) : (
                                 <span className="font-bold text-[var(--sys-destructive)]">
                                   DENY <span className="font-medium">آ· {ar ? 'ممنوع' : 'denied'}</span>
                                 </span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-[var(--sys-muted-foreground)] whitespace-nowrap">{r.scopeLabel ?? '—'}</td>
-                          </tr>
-                        ))}
-                        {filteredRows.length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="px-3 py-6 text-center text-[var(--sys-muted)]">
-                              {ar ? 'لا نتائج مطابقة للبحث' : 'No matching permissions'}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                              )}</>
+                ) },
+                        { key: 'c4', label: ar ? 'النطاق' : 'Scope',
+                          render: (r) => (r.scopeLabel ?? '—') },
+                      ]}
+                    />
                   </div>
                 </>
               )}

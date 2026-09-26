@@ -315,7 +315,7 @@
     "columns": 0,
     "cards": 2,
     "modals": 0,
-    "icons": 10,
+    "icons": 9,
     "links": 0,
     "tabs": 0
   },
@@ -332,7 +332,7 @@
   "src/components/screens/BlacklistScreen.tsx": {
     "buttons": 6,
     "inputs": 6,
-    "columns": 6,
+    "columns": 5,
     "cards": 0,
     "modals": 2,
     "icons": 5,
@@ -432,7 +432,7 @@
   "src/components/screens/ConfirmationMineScreen.tsx": {
     "buttons": 3,
     "inputs": 1,
-    "columns": 5,
+    "columns": 4,
     "cards": 0,
     "modals": 0,
     "icons": 13,
@@ -552,7 +552,7 @@
   "src/components/screens/finance/WalletsScreen.tsx": {
     "buttons": 16,
     "inputs": 10,
-    "columns": 7,
+    "columns": 6,
     "cards": 0,
     "modals": 3,
     "icons": 11,
@@ -672,7 +672,7 @@
   "src/components/screens/ManufacturingScreen.tsx": {
     "buttons": 6,
     "inputs": 10,
-    "columns": 9,
+    "columns": 8,
     "cards": 1,
     "modals": 1,
     "icons": 3,
@@ -725,7 +725,7 @@
     "columns": 0,
     "cards": 3,
     "modals": 3,
-    "icons": 16,
+    "icons": 15,
     "links": 0,
     "tabs": 0
   },
@@ -1015,7 +1015,7 @@
     "columns": 7,
     "cards": 1,
     "modals": 2,
-    "icons": 13,
+    "icons": 12,
     "links": 0,
     "tabs": 0
   },

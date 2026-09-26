@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { readTransfer, transferRefusal, type TransferSide } from '@/lib/transfer-kind';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowLeftLine, RiLoader4Line, RiRepeatLine } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /finance/transfers — moving money between wallets. One transfer writes two
@@ -289,52 +290,48 @@ export function TransfersScreen() {
         ) : rows.length === 0 ? (
           <p className="text-sm text-[var(--sys-muted-foreground)] py-10 text-center">لا تحويلات بعد.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-3 py-2">التاريخ</th>
-                <th className="text-right font-medium px-3 py-2">النوع</th>
-                <th className="text-right font-medium px-3 py-2">من</th>
-                <th className="text-right font-medium px-3 py-2">إلى</th>
-                <th className="text-right font-medium px-3 py-2">الصادر</th>
-                <th className="text-right font-medium px-3 py-2">الوارد</th>
-                <th className="text-right font-medium px-3 py-2">السعر</th>
-                <th className="text-right font-medium px-3 py-2">الملاحظة</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {rows.map((t) => (
-                <tr key={t.id}>
-                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
-                    {new Date(t.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}
-                  </td>
-                  {/* As RECORDED, not re-read now: a wallet moved to another
-                      store since must not change what this transfer was. */}
-                  <td className="px-3 py-2">
-                    <span className="rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-0.5 text-xs text-[var(--sys-foreground)] whitespace-nowrap">
+                    <Rows
+            rows={rows}
+            keyOf={(t) => t.id}
+            columns={[
+              { key: 'c0', label: "التاريخ", primary: true,
+                render: (t) => (
+                  <>{new Date(t.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}</>
+                ) },
+              { key: 'c1', label: "النوع", primary: true,
+                render: (t) => (
+                  <><span className="rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-0.5 text-xs text-[var(--sys-foreground)] whitespace-nowrap">
                       {t.kindLabel ?? '—'}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
-                    {t.from?.name ?? '—'}
+                    </span></>
+                ) },
+              { key: 'c2', label: "من",
+                render: (t) => (
+                  <>{t.from?.name ?? '—'}
                     {t.from?.store && (
                       <span className="block text-xs text-[var(--sys-muted)]">{t.from.store.name}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
-                    {t.to?.name ?? '—'}
+                    )}</>
+                ) },
+              { key: 'c3', label: "إلى",
+                render: (t) => (
+                  <>{t.to?.name ?? '—'}
                     {t.to?.store && (
                       <span className="block text-xs text-[var(--sys-muted)]">{t.to.store.name}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)]">{t.amountOut} {t.from?.currencyCode}</td>
-                  <td className="px-3 py-2 tabular-nums text-[var(--sys-success)]">{t.amountIn} {t.to?.currencyCode}</td>
-                  <td className="px-3 py-2 tabular-nums text-xs text-[var(--sys-muted-foreground)]">{t.exchangeRate}</td>
-                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{t.note ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    )}</>
+                ) },
+              { key: 'c4', label: "الصادر", align: 'end',
+                render: (t) => (
+                  <>{t.amountOut} {t.from?.currencyCode}</>
+                ) },
+              { key: 'c5', label: "الوارد", align: 'end',
+                render: (t) => (
+                  <>{t.amountIn} {t.to?.currencyCode}</>
+                ) },
+              { key: 'c6', label: "السعر", align: 'end',
+                render: (t) => (t.exchangeRate) },
+              { key: 'c7', label: "الملاحظة",
+                render: (t) => (t.note ?? '—') },
+            ]}
+          />
         )}
       </div>
     </div>

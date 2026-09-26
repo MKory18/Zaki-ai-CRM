@@ -11,10 +11,11 @@ import { userCan } from '@/lib/can';
 import { CreateUserModal } from './users/CreateUserModal';
 import { useConfirm } from '@/components/ui/Confirm';
 import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '@/types/auth';
-import { findRoute } from '@/lib/route-registry';
+import { findRoute, routeLabel } from '@/lib/route-registry';
 import { format } from 'date-fns';
 import { RiArrowLeftSLine, RiArrowRightSLine, RiForbidLine, RiGroupLine, RiKey2Line, RiLogoutBoxLine, RiPlayCircleLine, RiRefreshLine, RiSearchLine, RiShieldCheckLine, RiShieldCrossLine, RiUserAddLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Rows } from '@/components/ui/Rows';
 
 /** One source for the Arabic role names — a screen with its own copy is how
  *  two of them ended up blank in the filter. */
@@ -128,8 +129,7 @@ export function UsersScreen() {
   return (
     <>
       <div className="space-y-6">
-        <PageHeader title={`<RiGroupLine className="w-6 h-6 text-[var(--sys-destructive)]" />
-              <span>{findRoute('/admin/users')?.label}</span>`}
+        <PageHeader title={routeLabel('/admin/users')}
             description="مراجعة طلبات التسجيل، تعيين الأدوار، تنشيط/إيقاف الحسابات — كل إجراء يُسجَّل في سجل التدقيق"
             actions={
               <><div className="flex items-center gap-2">
@@ -188,44 +188,34 @@ export function UsersScreen() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3.5">المستخدم</th>
-                    <th className="px-6 py-3.5">الدور الحالي</th>
-                    <th className="px-6 py-3.5">حالة الحساب</th>
-                    <th className="px-6 py-3.5">تاريخ التسجيل</th>
-                    <th className="px-6 py-3.5">آخر دخول</th>
-                    <th className="px-6 py-3.5">عيّنه</th>
-                    <th className="px-6 py-3.5 text-right rtl:text-left">إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-[var(--sys-surface)] transition-colors">
-                      <td className="px-6 py-3.5">
-                        <p className="font-bold text-[var(--sys-heading)]">{u.name}</p>
-                        <p className="text-xs text-[var(--sys-muted)]">{u.email}</p>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <Badge variant={u.role === 'PENDING_USER' ? 'warning' : u.role === 'SUPER_ADMIN' ? 'purple' : 'info'}>
+                            <Rows
+                rows={users}
+                keyOf={(u) => u.id}
+                columns={[
+                  { key: 'c0', label: "المستخدم", primary: true,
+                    render: (u) => (
+                  <><p className="font-bold text-[var(--sys-heading)]">{u.name}</p>
+                        <p className="text-xs text-[var(--sys-muted)]">{u.email}</p></>
+                ) },
+                  { key: 'c1', label: "الدور الحالي", primary: true,
+                    render: (u) => (
+                  <><Badge variant={u.role === 'PENDING_USER' ? 'warning' : u.role === 'SUPER_ADMIN' ? 'purple' : 'info'}>
                           {ROLE_LABELS[u.role] || u.role}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <Badge variant={statusVariant(u.status) as any}>{STATUS_LABELS[u.status] || u.status}</Badge>
-                      </td>
-                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)]">
-                        {format(new Date(u.createdAt), 'yyyy-MM-dd')}
-                      </td>
-                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)]">
-                        {u.lastLoginAt ? format(new Date(u.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—'}
-                      </td>
-                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)]">
-                        {u.assignedBy?.name || '—'}
-                      </td>
-                      <td className="px-6 py-3.5 text-right rtl:text-left">
-                        <div className="flex items-center gap-1.5 justify-end rtl:justify-start">
+                        </Badge></>
+                ) },
+                  { key: 'c2', label: "حالة الحساب",
+                    render: (u) => (
+                  <><Badge variant={statusVariant(u.status) as any}>{STATUS_LABELS[u.status] || u.status}</Badge></>
+                ) },
+                  { key: 'c3', label: "تاريخ التسجيل",
+                    render: (u) => (format(new Date(u.createdAt), 'yyyy-MM-dd')) },
+                  { key: 'c4', label: "آخر دخول",
+                    render: (u) => (u.lastLoginAt ? format(new Date(u.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—') },
+                  { key: 'c5', label: "عيّنه",
+                    render: (u) => (u.assignedBy?.name || '—') },
+                  { key: 'c6', label: "إجراءات", align: 'end',
+                    render: (u) => (
+                  <><div className="flex items-center gap-1.5 justify-end rtl:justify-start">
                           <Button size="sm" variant="outline" onClick={() => openManage(u)} className="text-xs">
                             <RiShieldCheckLine className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                             إدارة
@@ -240,12 +230,10 @@ export function UsersScreen() {
                             <RiKey2Line className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                             صفحة الموظف
                           </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </div></>
+                ) },
+                ]}
+              />
             </div>
 
             <div className="px-6 py-3 border-t border-[var(--sys-border)] flex items-center justify-between text-xs text-[var(--sys-muted-foreground)]">

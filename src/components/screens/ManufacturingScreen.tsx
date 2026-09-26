@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { RiAddCircleLine, RiCalculatorLine, RiDeleteBinLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * The costs that keep coming back, offered instead of typed.
@@ -173,46 +174,38 @@ export function ManufacturingScreen() {
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3.5">رقم التشغيلة</th>
-                    <th className="px-6 py-3.5">المنتج</th>
-                    <th className="px-6 py-3.5">أُنتج</th>
-                    <th className="px-6 py-3.5">بِيع</th>
-                    <th className="px-6 py-3.5">متبقٍّ</th>
-                    <th className="px-6 py-3.5">الكلفة الكلية</th>
-                    <th className="px-6 py-3.5">كلفة الوحدة</th>
-                    <th className="px-6 py-3.5">التاريخ</th>
-                    <th className="px-6 py-3.5"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {batches.map((b) => (
-                    <tr key={b.id} className="hover:bg-[var(--sys-surface)] transition-colors">
-                      <td className="px-6 py-3.5 font-bold font-mono text-[var(--sys-destructive)]">
-                        {b.batchNumber}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <span className="font-semibold text-[var(--sys-heading)] block">{b.product?.name}</span>
-                        <span className="text-xs text-[var(--sys-muted)] font-mono">{b.product?.sku}</span>
-                      </td>
-                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
-                        {b.quantityProduced} قطعة
-                      </td>
-                      <td className="px-6 py-3.5 text-[var(--sys-destructive)] font-medium">
-                        {b.quantitySold} قطعة
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <span className="font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-full">
+                            <Rows
+                rows={batches}
+                keyOf={(b) => b.id}
+                columns={[
+                  { key: 'c0', label: "رقم التشغيلة", primary: true,
+                    render: (b) => (b.batchNumber) },
+                  { key: 'c1', label: "المنتج", primary: true,
+                    render: (b) => (
+                  <><span className="font-semibold text-[var(--sys-heading)] block">{b.product?.name}</span>
+                        <span className="text-xs text-[var(--sys-muted)] font-mono">{b.product?.sku}</span></>
+                ) },
+                  { key: 'c2', label: "أُنتج",
+                    render: (b) => (
+                  <>{b.quantityProduced} قطعة</>
+                ) },
+                  { key: 'c3', label: "بِيع",
+                    render: (b) => (
+                  <>{b.quantitySold} قطعة</>
+                ) },
+                  { key: 'c4', label: "متبقٍّ",
+                    render: (b) => (
+                  <><span className="font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-full">
                           {b.quantityRemaining} قطعة
-                        </span>
-                      </td>
-                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
-                        <Money value={b.totalProductionCost} currency={currency} />
-                      </td>
-                      <td className="px-6 py-3.5">
-                        {b.costPerUnit > 0 ? (
+                        </span></>
+                ) },
+                  { key: 'c5', label: "الكلفة الكلية",
+                    render: (b) => (
+                  <><Money value={b.totalProductionCost} currency={currency} /></>
+                ) },
+                  { key: 'c6', label: "كلفة الوحدة",
+                    render: (b) => (
+                  <>{b.costPerUnit > 0 ? (
                           <span className="font-black text-[var(--sys-heading)] bg-[var(--sys-surface)] px-2.5 py-1 rounded-md text-xs tabular-nums">
                             <Money value={b.costPerUnit} currency={currency} />
                           </span>
@@ -225,24 +218,21 @@ export function ManufacturingScreen() {
                           >
                             بلا كلفة
                           </button>
-                        )}
-                      </td>
-                      <td className="px-6 py-3.5 text-[var(--sys-muted)]">
-                        {format(new Date(b.productionDate), 'd MMM yyyy')}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <button
+                        )}</>
+                ) },
+                  { key: 'c7', label: "التاريخ",
+                    render: (b) => (format(new Date(b.productionDate), 'd MMM yyyy')) },
+                ]}
+                actions={(b) => (
+                  <><button
                           type="button"
                           onClick={() => setCosting(b)}
                           className="text-xs text-[var(--sys-primary)] hover:underline whitespace-nowrap"
                         >
                           عدّل الكلفة
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </button></>
+                )}
+              />
             </div>
           </CardContent>
         </Card>

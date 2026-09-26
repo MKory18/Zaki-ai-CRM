@@ -5,6 +5,7 @@ import {
   ASSISTANTS, AI_SCOPES, SCOPE_LABEL_AR, SCOPE_NOTE_AR, type AiScope,
 } from '@/lib/ai-assistants';
 import { RiShieldCheckLine, RiShieldCrossLine } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * EVERY ASSISTANT, AND WHAT IT IS ALLOWED TO SEE.
@@ -66,28 +67,23 @@ export function AssistantsTable({
       </p>
 
       <div className="overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
-        <table className="w-full text-xs">
-          <thead className="border-b border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]">
-            <tr>
-              <th className="px-3 py-2 text-right font-medium">المساعد</th>
-              <th className="px-3 py-2 text-right font-medium">لمن</th>
-              <th className="px-3 py-2 text-right font-medium">يقرأ</th>
-              <th className="px-3 py-2 text-right font-medium">بيانات الزبون</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--sys-border)]">
-            {ASSISTANTS.map((a) => (
-              <tr key={a.key} className="align-top">
-                <td className="px-3 py-2.5">
-                  <p className="font-semibold text-[var(--sys-heading)]">{a.label}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{a.note}</p>
-                </td>
-                <td className="px-3 py-2.5 whitespace-nowrap text-[var(--sys-foreground)]">
-                  {a.who}
-                  <span className="mt-0.5 block text-xs text-[var(--sys-muted)]" dir="ltr">{a.needs}</span>
-                </td>
-                <td className="px-3 py-2.5">
-                  {a.scopes.length === 0 && !a.optionalScopes ? (
+                <Rows
+          rows={ASSISTANTS}
+          keyOf={(a) => a.key}
+          columns={[
+            { key: 'c0', label: "المساعد", primary: true,
+              render: (a) => (
+                  <><p className="font-semibold text-[var(--sys-heading)]">{a.label}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{a.note}</p></>
+                ) },
+            { key: 'c1', label: "لمن", primary: true,
+              render: (a) => (
+                  <>{a.who}
+                  <span className="mt-0.5 block text-xs text-[var(--sys-muted)]" dir="ltr">{a.needs}</span></>
+                ) },
+            { key: 'c2', label: "يقرأ",
+              render: (a) => (
+                  <>{a.scopes.length === 0 && !a.optionalScopes ? (
                     <span className="text-[var(--sys-muted)]">لا شيء من قاعدة البيانات</span>
                   ) : (
                     <span className="text-[var(--sys-foreground)]">
@@ -98,10 +94,10 @@ export function AssistantsTable({
                     <span className="mt-0.5 block text-xs text-[var(--sys-muted)]">
                       {enabled.length === 0 ? 'ولا مجال مؤشَّر' : `مؤشَّر: ${enabled.map((s) => SCOPE_LABEL_AR[s as AiScope]).join(' · ')}`}
                     </span>
-                  )}
-                </td>
-                <td className="px-3 py-2.5 whitespace-nowrap">
-                  {a.pii ? (
+                  )}</>
+                ) },
+            { key: 'c3', label: "بيانات الزبون",
+              render: (a) => (a.pii ? (
                     <span className="inline-flex items-center gap-1 text-[var(--sys-warning)]">
                       <RiShieldCheckLine className="h-4 w-4" /> نعم
                     </span>
@@ -109,12 +105,9 @@ export function AssistantsTable({
                     <span className="inline-flex items-center gap-1 text-[var(--sys-success)]">
                       <RiShieldCrossLine className="h-4 w-4" /> لا — أبداً
                     </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  )) },
+          ]}
+        />
       </div>
 
       {/* The one assistant whose reach is a decision rather than a job. */}

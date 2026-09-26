@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAddCircleLine, RiArrowGoBackLine, RiForbidLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /control/blacklist — who may not order again.
@@ -114,43 +115,39 @@ export function BlacklistScreen() {
         </p>
       ) : (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-3 py-2">الرقم</th>
-                <th className="text-right font-medium px-3 py-2">الاسم</th>
-                <th className="text-right font-medium px-3 py-2">سجله معنا</th>
-                <th className="text-right font-medium px-3 py-2">السبب</th>
-                <th className="text-right font-medium px-3 py-2">حظره</th>
-                <th className="text-right font-medium px-3 py-2"> </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {rows.map((b) => (
-                <tr key={b.id} className={b.active ? undefined : 'text-[var(--sys-muted)]'}>
-                  <td className="px-3 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{b.phone}</td>
-                  <td className="px-3 py-2">{b.name ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs tabular-nums text-[var(--sys-muted-foreground)]">
-                    {b.customer
+                    <Rows
+            rows={rows}
+            keyOf={(b) => b.id}
+            columns={[
+              { key: 'c0', label: "الرقم", primary: true,
+                render: (b) => (b.phone) },
+              { key: 'c1', label: "الاسم", primary: true,
+                render: (b) => (b.name ?? '—') },
+              { key: 'c2', label: "سجله معنا", align: 'end',
+                render: (b) => (
+                  <>{b.customer
                       ? `${b.customer.totalOrders} طلب · ${b.customer.deliveredOrders} مسلّم · ${b.customer.cancelledOrders} ملغى`
-                      : 'لا سجل'}
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    {b.reason}
+                      : 'لا سجل'}</>
+                ) },
+              { key: 'c3', label: "السبب",
+                render: (b) => (
+                  <>{b.reason}
                     {!b.active && b.releaseReason && (
                       <span className="block text-xs text-[var(--sys-success)] mt-0.5">
                         فُك: {b.releaseReason} — {b.releasedByName ?? '—'}
                       </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
-                    {b.blockedByName ?? '—'}
+                    )}</>
+                ) },
+              { key: 'c4', label: "حظره",
+                render: (b) => (
+                  <>{b.blockedByName ?? '—'}
                     <span className="block text-xs text-[var(--sys-muted)]">
                       {new Date(b.createdAt).toLocaleDateString('ar-u-nu-latn', { dateStyle: 'short' })}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-left">
-                    {b.active ? (
+                    </span></>
+                ) },
+            ]}
+            actions={(b) => (
+              <>{b.active ? (
                       <button
                         onClick={() => setReleasing(b)}
                         className="text-xs text-[var(--sys-success)] hover:underline inline-flex items-center gap-1"
@@ -159,12 +156,9 @@ export function BlacklistScreen() {
                       </button>
                     ) : (
                       <span className="text-xs text-[var(--sys-muted)]">مفكوك</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    )}</>
+            )}
+          />
         </div>
       )}
 
