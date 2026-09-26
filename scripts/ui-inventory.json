@@ -1179,6 +1179,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/shell/CommandPalette.tsx": {
+    "buttons": 2,
+    "inputs": 1,
+    "columns": 3,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/shell/ConfirmationCounter.tsx": {
     "buttons": 0,
     "inputs": 0,
@@ -1200,12 +1210,12 @@
     "tabs": 0
   },
   "src/components/shell/Header.tsx": {
-    "buttons": 2,
-    "inputs": 1,
+    "buttons": 4,
+    "inputs": 0,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 5,
+    "icons": 6,
     "links": 1,
     "tabs": 0
   },
@@ -1250,12 +1260,12 @@
     "tabs": 0
   },
   "src/components/shell/Sidebar.tsx": {
-    "buttons": 2,
+    "buttons": 4,
     "inputs": 0,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 3,
+    "icons": 5,
     "links": 2,
     "tabs": 0
   },

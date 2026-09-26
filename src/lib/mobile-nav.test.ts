@@ -230,6 +230,12 @@ describe('nothing is parked outside the screen', () => {
     expect(src).toMatch(/className="flex min-w-0 shrink items-center[^"]*"/);
     // And the cluster of icons on the other end must NOT shrink, or the
     // bell and the avatar squash into each other instead.
-    expect(src).toContain('flex shrink-0 items-center gap-3 mr-auto');
+    expect(src).toMatch(/className="flex shrink-0 items-center gap-3[^"]*"/);
+    // On a phone the thing that pushes that cluster to the far end is the
+    // search icon, not the cluster itself — so `mr-auto` sits on whichever
+    // of the two is drawn at that width. Both carrying it would leave a gap
+    // in the middle of the row on a desk.
+    const autos = [...src.matchAll(/(?<![\w:-])mr-auto/g)].length;
+    expect(autos, 'أكثر من عنصر يدفع البقية إلى الطرف').toBe(1);
   });
 });

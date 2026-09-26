@@ -154,6 +154,46 @@ describe('legible in the theme it lives in', () => {
     }
   });
 
+  /**
+   * THE MENU, WHICH IS ON EVERY SCREEN AND WAS ON NO TEST.
+   *
+   * `sidebar` and `sidebar-foreground` were defined in all three palettes
+   * and read by nothing: the sidebar painted itself from `heading`, which
+   * is a TEXT colour. That worked while heading happened to be dark navy,
+   * and stopped working the moment the dark theme made it near-white — a
+   * near-white menu with pale blue-grey labels, measured at 1.84:1, on
+   * every screen in the product.
+   *
+   * Contrast on the pair alone would not have caught it, because the pair
+   * was fine and simply unused. So this asserts both halves: the colours
+   * are readable, AND the component paints from them.
+   */
+  it('the menu that is on every screen, in every theme', () => {
+    for (const theme of SYSTEM_THEMES) {
+      expect(
+        contrast(theme.vars['sidebar-foreground'], theme.vars.sidebar),
+        `${theme.key}: قائمةٌ لا تُقرأ`
+      ).toBeGreaterThan(READABLE);
+      // The item you are standing on, which is the filled one.
+      expect(
+        contrast(theme.vars['primary-foreground'], theme.vars.primary),
+        `${theme.key}: العنصر الحالي في القائمة`
+      ).toBeGreaterThan(READABLE);
+      // And hovering must not take the label somewhere unreadable.
+      expect(
+        contrast(theme.vars.heading, theme.vars['primary-soft']),
+        `${theme.key}: التمرير فوق عنصر يخفي اسمه`
+      ).toBeGreaterThan(READABLE);
+    }
+  });
+
+  it('and the sidebar is actually painted from those two, not from a text colour', () => {
+    const src = readFileSync(join(process.cwd(), 'src/components/shell/Sidebar.tsx'), 'utf8');
+    const surface = /bg-\[var\(--sys-sidebar\)\][^']*text-\[var\(--sys-sidebar-foreground\)\]/;
+    expect(surface.test(src), 'القائمة لا تأخذ لونها من رمزَي القائمة').toBe(true);
+    expect(src, 'لونُ نصٍّ يُستعمل خلفيةً للقائمة').not.toContain('bg-[var(--sys-heading)]');
+  });
+
   it('and each semantic colour against the surface it is drawn on', () => {
     for (const theme of SYSTEM_THEMES) {
       expect(contrast(theme.vars.destructive, theme.vars['destructive-soft']), theme.key).toBeGreaterThan(LARGE);

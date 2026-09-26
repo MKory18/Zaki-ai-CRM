@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import type { NavGroup } from '@/lib/route-registry';
 import { iconFor } from './icons';
-import { RiArrowDownSLine, RiListSettingsLine, RiTreeLine } from '@remixicon/react';
+import { RiArrowDownSLine, RiListSettingsLine, RiSideBarLine, RiTreeLine } from '@remixicon/react';
+import { RAIL_EVENT, railed as storedRail, setRailed } from '@/lib/sidebar-rail';
 
 const OPEN_GROUPS_KEY = 'osm.sidebar.open';
 const PINNED_KEY = 'osm.sidebar.pinned';
@@ -44,6 +45,13 @@ export function Sidebar({
   const [open, setOpen] = useState<Set<string>>(new Set());
   /** Everything showing at once, and staying that way. */
   const [pinned, setPinned] = useState(false);
+  /**
+   * Folded to a rail of icons. The WIDTH is CSS (see sidebar-rail.ts) so it
+   * is right on the first frame; this copy exists only for the things a
+   * frame of delay cannot be seen in — a tooltip, a name for a screen
+   * reader, which way the chevron points.
+   */
+  const [rail, setRail] = useState(false);
 
   // What was left open last time, per browser. A missing or unreadable value
   // is not a failure: the active group opens either way.
@@ -60,7 +68,20 @@ export function Sidebar({
     } catch {
       setPinned(false);
     }
+    setRail(storedRail());
   }, []);
+
+  // The palette folds the same menu. Without this the names on the icons
+  // come from a copy only the button here ever updated.
+  useEffect(() => {
+    const heard = () => setRail(storedRail());
+    window.addEventListener(RAIL_EVENT, heard);
+    return () => window.removeEventListener(RAIL_EVENT, heard);
+  }, []);
+
+  function toggleRail() {
+    setRailed(!rail);
+  }
 
   function togglePinned() {
     setPinned((was) => {
@@ -102,7 +123,7 @@ export function Sidebar({
 
   return (
     <>
-      {mobileOpen && <div className="fixed inset-0 z-40 bg-[var(--sys-sidebar)]/50 md:hidden" onClick={onClose} />}
+      {mobileOpen && <div className="fixed inset-0 z-40 bg-[var(--sys-background)]/60 md:hidden" onClick={onClose} />}
 
       {/*
         THE SIDEWAYS SCROLL NOBODY COULD FIND.
@@ -123,15 +144,15 @@ export function Sidebar({
       */}
       <aside
         className={clsx(
-          'fixed top-0 bottom-0 right-0 z-40 flex-col w-[280px] bg-[var(--sys-heading)] text-[var(--sys-muted-foreground)] md:flex',
+          'fixed top-0 bottom-0 right-0 z-40 flex-col w-[280px] bg-[var(--sys-sidebar)] text-[var(--sys-sidebar-foreground)] md:w-[var(--shell-nav)] md:flex',
           mobileOpen ? 'flex animate-in slide-in-from-right duration-200' : 'hidden'
         )}
       >
-        <div className="flex items-center h-[72px] px-5 border-b border-[var(--sys-heading)] shrink-0">
-          <Link href="/" className="flex items-center gap-3" onClick={onClose}>
+        <div className="rail-center flex items-center gap-2 h-[72px] px-5 border-b border-[var(--sys-border)] shrink-0">
+          <Link href="/" className="flex min-w-0 items-center gap-3" onClick={onClose}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="Zaki AI" className="w-11 h-9 object-contain" />
-            <div>
+            <img src="/logo.svg" alt="Zaki AI" className="w-11 h-9 shrink-0 object-contain" />
+            <div className="rail-hide min-w-0">
               <span className="font-bold text-[var(--sys-primary-foreground)] tracking-wide text-base leading-tight block" dir="ltr">
                 Zaki <span className="text-[var(--sys-primary)]">AI</span> Store
               </span>
@@ -140,28 +161,55 @@ export function Sidebar({
               </span>
             </div>
           </Link>
+
+          {/* Folding is a desktop affair: below 768px this is a drawer laid
+              over the screen, and a narrower drawer buys nothing. */}
+          <button
+            onClick={toggleRail}
+            aria-label={rail ? 'وسّع القائمة' : 'اطوِ القائمة إلى شريط'}
+            title={rail ? 'وسّع القائمة' : 'اطوِ القائمة إلى شريط'}
+            aria-pressed={rail}
+            className="rail-hide hidden md:flex mr-auto h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--sys-sidebar-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-heading)]"
+          >
+            <RiSideBarLine className="icon-mirror w-5 h-5" />
+          </button>
         </div>
+
+        {/* Folded, the control that unfolds it must still be reachable — and
+            it cannot be the row above, which is now just the mark. */}
+        {rail && (
+          <button
+            onClick={toggleRail}
+            aria-label="وسّع القائمة"
+            title="وسّع القائمة"
+            className="hidden md:flex mx-auto mt-2 h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--sys-sidebar-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-heading)]"
+          >
+            <RiSideBarLine className="icon-mirror w-5 h-5" />
+          </button>
+        )}
 
         <nav className="flex-1 overflow-y-auto sidebar-scroll py-3 space-y-0.5">
           {groups.map((group) => {
-            const isOpen = pinned || open.has(group.key) || activeGroup === group.key;
+            // Folded, a collapsed group is a heading that is not drawn at
+            // all — so the rail would show nothing. Everything is open.
+            const isOpen = rail || pinned || open.has(group.key) || activeGroup === group.key;
             const count = group.routes.length;
 
             return (
             <div key={group.key} className="pb-1">
               {pinned ? (
-                <p className="px-5 pt-3 pb-2 text-xs font-semibold tracking-[0.12em] text-[var(--sys-muted-foreground)]">
+                <p className="rail-hide px-5 pt-3 pb-2 text-xs font-semibold tracking-[0.12em] text-[var(--sys-sidebar-foreground)]">
                   {group.label}
                 </p>
               ) : (
                 <button
                   onClick={() => toggle(group.key)}
                   aria-expanded={isOpen}
-                  className="w-full flex items-center justify-between gap-2 px-5 pt-3 pb-2 text-xs font-semibold tracking-[0.12em] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-muted)] transition-colors"
+                  className="rail-hide w-full flex items-center justify-between gap-2 px-5 pt-3 pb-2 text-xs font-semibold tracking-[0.12em] text-[var(--sys-sidebar-foreground)] hover:text-[var(--sys-heading)] transition-colors"
                 >
                   <span className="flex items-center gap-2">
                     {group.label}
-                    {!isOpen && <span className="text-[var(--sys-border-strong)] tabular-nums">{count}</span>}
+                    {!isOpen && <span className="text-[var(--sys-muted)] tabular-nums">{count}</span>}
                   </span>
                   <RiArrowDownSLine
                     className={clsx('w-4 h-4 transition-transform', isOpen ? '' : '-rotate-90')}
@@ -179,21 +227,30 @@ export function Sidebar({
                     key={route.path}
                     href={route.path}
                     onClick={onClose}
+                    // Folded, the label is not drawn, so the name has to
+                    // come from somewhere: `title` for the eye, `aria-label`
+                    // for anything reading the screen aloud. Both only when
+                    // folded — a tooltip repeating a label you can already
+                    // read is noise.
+                    title={rail ? route.label : undefined}
+                    aria-label={rail ? route.label : undefined}
                     className={clsx(
-                      'flex items-center justify-between mx-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors group',
-                      isActive ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-heading)]'
+                      'rail-center flex items-center justify-between mx-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors group',
+                      isActive
+                        ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]'
+                        : 'text-[var(--sys-sidebar-foreground)] hover:text-[var(--sys-heading)] hover:bg-[var(--sys-primary-soft)]'
                     )}
                   >
-                    <span className="flex items-center gap-3">
-                      <span
-                        className={clsx(
-                          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors',
-                          isActive ? 'bg-[var(--sys-card)]/10 text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-heading)] text-[var(--sys-muted-foreground)] group-hover:text-[var(--sys-primary-foreground)]'
-                        )}
-                      >
+                    <span className="rail-center flex items-center gap-3">
+                      {/* No box behind the glyph. It measured 1.07:1 against
+                          the surface it sat on — not a container, a smudge —
+                          and the difference it was trying to make is already
+                          made twice over: the icon fills when you are on the
+                          row, and the row itself is a filled bar. */}
+                      <span className="w-8 h-8 flex items-center justify-center shrink-0">
                         <Icon className="w-[18px] h-[18px]" />
                       </span>
-                      <span>{route.label}</span>
+                      <span className="rail-hide">{route.label}</span>
                     </span>
                   </Link>
                 );
@@ -208,7 +265,7 @@ export function Sidebar({
             remembered on this browser. */}
         <button
           onClick={togglePinned}
-          className="shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[var(--sys-heading)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-muted)] transition-colors"
+          className="rail-hide shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[var(--sys-border)] text-xs text-[var(--sys-sidebar-foreground)] hover:text-[var(--sys-heading)] transition-colors"
         >
           {pinned ? <RiListSettingsLine className="w-4 h-4" /> : <RiTreeLine className="w-4 h-4" />}
           {pinned ? 'اطوِ القوائم' : 'اعرض كل القوائم'}

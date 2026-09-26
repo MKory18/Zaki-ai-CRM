@@ -1,9 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api-client';
 import { signOut } from '@/lib/sign-out';
 import { NotificationBell } from '@/components/shell/NotificationBell';
 import { ConfirmationCounter } from './ConfirmationCounter';
@@ -24,22 +22,15 @@ export function Header({
   userName,
   userRole,
   context,
+  onSearchClick,
 }: {
   onMenuClick: () => void;
   userName: string;
   userRole: string;
   context: ShellContextInfo;
+  /** Opens the one box. The shortcut that also opens it lives in Shell. */
+  onSearchClick: () => void;
 }) {
-  const router = useRouter();
-  const [query, setQuery] = useState('');
-  /** The owner's search. Everyone else works from their own queue. */
-  const canSearch = userRole === 'SUPER_ADMIN';
-
-  const submitSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim().length >= 2) router.push(`/orders?q=${encodeURIComponent(query.trim())}`);
-  };
-
   const logout = () => signOut('manual');
 
   return (
@@ -74,24 +65,38 @@ export function Header({
         )}
       </div>
 
-      {/* Searching the whole store by phone or customer name is the owner's
-          tool, not the floor's. The RESULTS were always scoped — the orders
-          service filters by role, so an agent typing the URL by hand still
-          only ever sees her own — but a box inviting everyone to look up any
-          customer is not the same thing as a box only the owner has. */}
-      {canSearch && (
-      <form onSubmit={submitSearch} className="hidden md:flex flex-1 max-w-md items-center relative">
-        <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute right-3" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="ابحث برقم الطلب أو اسم العميل أو الهاتف"
-          className="w-full h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
-        />
-      </form>
-      )}
+      {/* ONE TRIGGER, NOT A SECOND SEARCH.
+          What stood here was an input that searched orders and nothing
+          else, that only the owner could see, and that sat beside a menu of
+          fifty screens nobody could search at all. It is now the door to
+          the palette — which finds records, screens AND actions, and which
+          Ctrl/Cmd + K opens without reaching for the mouse.
 
-      <div className="flex shrink-0 items-center gap-3 mr-auto">
+          Everyone gets the door. What is behind it is still decided per
+          person: record lookup remains the owner's, exactly as before. */}
+      <button
+        type="button"
+        onClick={onSearchClick}
+        className="hidden md:flex flex-1 max-w-md items-center gap-2 h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)]"
+      >
+        <RiSearchLine className="w-4 h-4 shrink-0 text-[var(--sys-muted)]" aria-hidden />
+        <span className="flex-1 text-start truncate">ابحث، انتقل، أو نفّذ</span>
+        <kbd className="shrink-0 rounded-sm border border-[var(--sys-border)] bg-[var(--sys-card)] px-1.5 py-0.5 text-xs font-sans text-[var(--sys-muted-foreground)]">
+          Ctrl K
+        </kbd>
+      </button>
+
+      {/* A phone has no Ctrl, so it gets the same door as an icon. */}
+      <button
+        type="button"
+        onClick={onSearchClick}
+        aria-label="ابحث، انتقل، أو نفّذ"
+        className="md:hidden mr-auto p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
+      >
+        <RiSearchLine className="w-5 h-5" />
+      </button>
+
+      <div className="flex shrink-0 items-center gap-3 md:mr-auto">
         {/* Am I on shift, and how long since my last order. It lives here
             rather than above a queue: same place on every screen, beside
             the name, and never in the path of somebody clicking fast. The

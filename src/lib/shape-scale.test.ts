@@ -68,7 +68,14 @@ function code(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
-const RADIUS = /(?<![\w-])rounded(?:-[tbrlse]{1,2})?(?:-(\[[^\]]+\]|none|sm|md|lg|xl|2xl|3xl|full))?(?![\w-])/g;
+/**
+ * Any `rounded-*`, not a list of the ones that existed when this was
+ * written. The list was the hole: a `rounded-sheet` — a token added in good
+ * faith, as a fourth surface step for one dialog — matched nothing here and
+ * so was reported as nothing. A guard that only knows the steps it already
+ * approves of cannot catch a new one being invented.
+ */
+const RADIUS = /(?<![\w-])rounded(?:-[tbrlse]{1,2})?(?:-(\[[^\]]+\]|[a-z0-9]+))?(?![\w-])/g;
 
 /** A bare `rounded` is Tailwind's 4px, and a step nobody chose. */
 const BARE = 'bare';

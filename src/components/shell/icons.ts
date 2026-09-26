@@ -25,6 +25,7 @@ import {
   RiTruckFill, RiTruckLine, RiUserSettingsFill, RiUserSettingsLine,
   RiWallet3Fill, RiWallet3Line,
   RiEBike2Fill, RiEBike2Line, RiFileTextFill, RiFileTextLine, RiGlobalFill, RiGlobalLine, RiLayoutFill, RiLayoutLine, RiPaletteFill, RiPaletteLine, RiShieldKeyholeFill, RiShieldKeyholeLine, RiSignpostFill, RiSignpostLine, RiTreeFill, RiTreeLine,
+  RiShutDownFill, RiShutDownLine, RiSideBarFill, RiSideBarLine,
   type RemixiconComponentType,
 } from '@remixicon/react';
 
@@ -108,6 +109,11 @@ export const ICONS: Record<string, Pair> = {
   LayoutTemplate: pair(RiLayoutLine, RiLayoutFill),
   Palette: pair(RiPaletteLine, RiPaletteFill),
   ListTree: pair(RiTreeLine, RiTreeFill),
+  // Not routes: the two chrome commands the palette offers. They live here
+  // because there is one icon vocabulary, and a component that reaches past
+  // it for a glyph is how a second family starts.
+  SideBar: pair(RiSideBarLine, RiSideBarFill),
+  SignOut: pair(RiShutDownLine, RiShutDownFill),
   FileText: pair(RiFileTextLine, RiFileTextFill),
   Languages: pair(RiGlobalLine, RiGlobalFill),
   Signpost: pair(RiSignpostLine, RiSignpostFill),
