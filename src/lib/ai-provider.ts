@@ -39,10 +39,19 @@ export interface ProviderInfo {
 /**
  * THE MODELS EACH VENDOR OFFERS, NEWEST FIRST.
  *
- * A list in code goes stale the week a vendor ships something — so this is
- * a SUGGESTION list, not a whitelist: the model box accepts anything typed
- * into it, and the names here only save somebody from remembering the
- * exact spelling of `claude-haiku-4-5-20251001`.
+ * THIS LIST WAS WRONG AND IT COST A 404. It carried `claude-sonnet-4-5` and
+ * `claude-haiku-4-5`, and neither is a model id Anthropic answers to. The
+ * owner picked the first of them from the box, the vendor said 404, and the
+ * screen reported «النموذج غير موجود عند هذا المزوّد» — which was true, and
+ * pointed at a list that had lied to him.
+ *
+ * The reasoning that produced it was: a list in code goes stale the week a
+ * vendor ships something, so keep it a SUGGESTION and let the box accept
+ * anything. That is half right. Staleness is real — but a free text box does
+ * not solve it, it only moves the invention from this file to the screen,
+ * where a typo looks exactly like a choice. The models are a closed list
+ * now, with one explicit «أخرى» door for a name that ships before this file
+ * is edited.
  *
  * Ordered newest first and annotated by what each is FOR, because the
  * choice that matters is not the vendor but the tier: a note classifier
@@ -58,9 +67,8 @@ export const AI_PROVIDERS: ProviderInfo[] = [
     models: [
       'claude-opus-5-5',
       'claude-sonnet-5',
+      'claude-fable-5-1',
       'claude-haiku-4-5-20251001',
-      'claude-sonnet-4-5',
-      'claude-haiku-4-5',
     ],
     keyHelp: 'مفتاح من console.anthropic.com — يبدأ بـ sk-ant-',
   },
@@ -98,6 +106,24 @@ export const AI_PROVIDERS: ProviderInfo[] = [
  * Shown beside the model box so the tier is a decision rather than a
  * default nobody revisited.
  */
+/**
+ * NAMES THAT WERE OFFERED AND ARE NOT REAL.
+ *
+ * Anyone who picked one has it saved, and dropping it from the list would
+ * leave them with a setting that 404s and a box that cannot show what is in
+ * it. Read-time repair, not a migration: the id is mapped to the real model
+ * it was meant to be, once, wherever settings are read.
+ */
+export const RETIRED_MODELS: Record<string, string> = {
+  'claude-sonnet-4-5': 'claude-sonnet-5',
+  'claude-haiku-4-5': 'claude-haiku-4-5-20251001',
+};
+
+/** The real name for a model id, if the one stored was retired. */
+export function liveModel(model: string): string {
+  return RETIRED_MODELS[model] ?? model;
+}
+
 export const MODEL_TIERS: { match: RegExp; tier: string; note: string }[] = [
   { match: /opus|gpt-4o(?!-mini)|o3(?!-mini)/i, tier: 'الأعلى', note: 'للتحليل والقرارات — أغلى بكثير، لا يُستعمل لكلّ رسالة' },
   { match: /sonnet|o4-mini|o3-mini/i, tier: 'متوازن', note: 'الاستخراج والتأكيد والتلخيص' },
@@ -378,11 +404,14 @@ async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
   // A model belongs to a vendor. When the assistant switched vendor and
   // named no model, the company's model is the WRONG default — it is the
   // other vendor's name — so the new vendor's own default is used.
-  const model =
+  // `liveModel` repairs a name that was offered and is not real — a setting
+  // saved as `claude-sonnet-4-5` would otherwise 404 on every call for ever.
+  const model = liveModel(
     override?.model?.trim() ||
-    (chosen && chosen !== fallback
-      ? providerInfo(provider).defaultModel
-      : ai.model || providerInfo(provider).defaultModel);
+      (chosen && chosen !== fallback
+        ? providerInfo(provider).defaultModel
+        : ai.model || providerInfo(provider).defaultModel)
+  );
 
   let key: string | null = null;
   const stored = ai.keys?.[provider]?.enc;

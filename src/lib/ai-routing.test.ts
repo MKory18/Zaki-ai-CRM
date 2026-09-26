@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { AI_PROVIDERS, tierOf } from './ai-provider';
+import { AI_PROVIDERS, RETIRED_MODELS, liveModel, tierOf } from './ai-provider';
 import { ASSISTANTS } from './ai-assistants';
-import { repoFile, stripComments } from './guard-source';
+import { dashboardFiles, repoFile, stripComments } from './guard-source';
 
 /**
  * A VENDOR PER ASSISTANT, AND A KEY PER VENDOR.
@@ -91,5 +91,89 @@ describe('what the screen offers', () => {
       expect(p.models.length, `${p.id}: بلا اقتراحات`).toBeGreaterThan(0);
       expect(p.models, `${p.id}: الافتراضي ليس من قائمته`).toContain(p.defaultModel);
     }
+  });
+});
+
+/**
+ * A LIST OF MODELS THAT DOES NOT EXIST IS WORSE THAN NO LIST.
+ *
+ * Reported from a live screen: the owner picked `claude-sonnet-4-5` from the
+ * box, the vendor answered 404, and the screen said «النموذج غير موجود عند
+ * هذا المزوّد» — which was true, and pointed at a list that had lied to him.
+ * Two of the five names offered for Anthropic were not model ids at all.
+ */
+describe('the models offered', () => {
+  it('does not offer a name that was never real', () => {
+    const anthropic = AI_PROVIDERS.find((p) => p.id === 'ANTHROPIC')!;
+    for (const dead of Object.keys(RETIRED_MODELS)) {
+      expect(anthropic.models, `${dead} ما زال معروضاً`).not.toContain(dead);
+    }
+  });
+
+  it('and every default is one of the vendor’s own', () => {
+    for (const p of AI_PROVIDERS) {
+      expect(p.models, `${p.id}: النموذج الافتراضي ليس في قائمته`).toContain(p.defaultModel);
+    }
+  });
+
+  /**
+   * A SETTING ALREADY SAVED WITH A RETIRED NAME KEEPS WORKING.
+   *
+   * Dropping the name from the list without this would leave whoever picked
+   * it with a setting that 404s on every call and a box that cannot show what
+   * is in it.
+   */
+  it('repairs a retired name instead of failing on it', () => {
+    expect(liveModel('claude-sonnet-4-5')).toBe('claude-sonnet-5');
+    expect(liveModel('claude-haiku-4-5')).toBe('claude-haiku-4-5-20251001');
+    // And leaves a real one alone.
+    expect(liveModel('claude-opus-5-5')).toBe('claude-opus-5-5');
+    expect(liveModel('gpt-4o-mini')).toBe('gpt-4o-mini');
+  });
+
+  it('and the repair is applied where a call is routed, not only in the screen', () => {
+    const src = stripComments(repoFile('src/lib/ai-provider.ts'));
+    const route = src.slice(src.indexOf('async function routeFor'));
+    expect(route, 'المسار لا يُصلح الاسم المتقاعد').toMatch(/const model = liveModel\(/);
+  });
+
+  /** Every retired name maps to something the vendor actually offers. */
+  it('maps every retired name onto a live one', () => {
+    const live = new Set(AI_PROVIDERS.flatMap((p) => p.models));
+    for (const [dead, replacement] of Object.entries(RETIRED_MODELS)) {
+      expect(live.has(replacement), `${dead} → ${replacement} وليس معروضاً`).toBe(true);
+    }
+  });
+});
+
+/**
+ * A DATALIST IS NOT A DROPDOWN.
+ *
+ * Three complaints from one screen, all of them this element:
+ *   it FILTERS its suggestions by what is in the box, so a field already
+ *   holding a full value opens an empty list;
+ *   its popup is drawn by the browser and cannot be styled, so it lands as a
+ *   bare white panel on a dark screen;
+ *   and a text box beside a password field is one Chrome offers to autofill.
+ */
+describe('a choice from a known set', () => {
+  it('is a select, never a datalist', () => {
+    const offenders: string[] = [];
+    for (const { rel, src } of dashboardFiles()) {
+      const body = stripComments(src);
+      if (/<datalist\b/.test(body) || /\blist=\{?`?models/.test(body)) offenders.push(rel);
+    }
+    expect(offenders, `قائمةُ اقتراحاتٍ مكان قائمة اختيار:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  /** And the vendor tab no longer offers a second place to set a model. */
+  it('and the model is chosen in one place — the assistant', () => {
+    const screen = stripComments(repoFile('src/components/screens/AiSettingsScreen.tsx'));
+    expect(screen, 'ما زال للنموذج حقلٌ في تبويب المزوّد').not.toMatch(/id="ai-model"/);
+    expect(screen).toContain('يُختار لكلِّ مساعدٍ');
+    const table = stripComments(repoFile('src/components/screens/ai/AssistantsTable.tsx'));
+    expect(table, 'لا منتقي نموذج للمساعد').toContain('function ModelPicker');
+    // The escape hatch the free-text box used to provide, kept on purpose.
+    expect(table).toContain("'__other__'");
   });
 });

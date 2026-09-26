@@ -26,6 +26,83 @@ import { EmptyState } from '@/components/ui/EmptyState';
  * setting, it would be a different assistant.
  */
 
+/**
+ * A MODEL IS PICKED FROM A LIST, NOT TYPED AT.
+ *
+ * This was an `<input list>` with a `<datalist>`, and that was wrong three
+ * ways at once, all of them reported from a real screen:
+ *
+ *   A datalist FILTERS ITS SUGGESTIONS BY WHAT IS IN THE BOX. A field already
+ *   holding a full model id matches nothing, so the list opened empty — «even
+ *   in the assistants tab they do not show».
+ *
+ *   Its popup is drawn by the browser and cannot be styled, so it arrived as a
+ *   bare white panel over a dark screen — «and if they show, they show in a
+ *   very stupid way».
+ *
+ *   And a text box beside a password field is a box Chrome offers to autofill
+ *   with an email address.
+ *
+ * So: a real select of names that exist, and one explicit «أخرى» door for a
+ * model a vendor ships before this file is edited. The door is the point —
+ * the old free-text box was defended as future-proofing, and it did buy that,
+ * at the price of every typo looking exactly like a choice.
+ */
+function ModelPicker({
+  value,
+  models,
+  fallbackLabel,
+  onChange,
+  label,
+}: {
+  value: string | undefined;
+  models: string[];
+  fallbackLabel: string;
+  onChange: (model: string | undefined) => void;
+  label: string;
+}) {
+  const known = !value || models.includes(value);
+  const [typing, setTyping] = React.useState(!known);
+
+  return (
+    <span className="flex flex-col gap-1">
+      <select
+        value={typing ? '__other__' : (value ?? '')}
+        onChange={(e) => {
+          if (e.target.value === '__other__') {
+            setTyping(true);
+            return;
+          }
+          setTyping(false);
+          onChange(e.target.value || undefined);
+        }}
+        dir="ltr"
+        aria-label={label}
+        className="h-11 md:h-8 w-44 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs"
+      >
+        <option value="">{fallbackLabel ? `\u200fالافتراضي — ${fallbackLabel}` : '\u200fالافتراضي'}</option>
+        {models.map((m) => (
+          <option key={m} value={m}>
+            {m}
+          </option>
+        ))}
+        <option value="__other__">\u200fأخرى…</option>
+      </select>
+      {typing && (
+        <input
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value || undefined)}
+          placeholder="اسم النموذج كما عند المزوّد"
+          dir="ltr"
+          autoComplete="off"
+          aria-label={`${label} — اسم آخر`}
+          className="h-11 md:h-8 w-44 rounded-lg border border-[var(--sys-warning)]/60 bg-[var(--sys-card)] px-2 text-xs"
+        />
+      )}
+    </span>
+  );
+}
+
 export function AssistantsTable({
   enabled,
   onSaved,
@@ -159,18 +236,17 @@ export function AssistantsTable({
                         <option key={p.id} value={p.id}>{p.label}</option>
                       ))}
                     </select>
-                    <input
-                      list={`models-${a.key}`}
-                      value={mine.model ?? ''}
-                      onChange={(e) => set({ model: e.target.value || undefined })}
-                      placeholder={mine.provider ? providers.find((p) => p.id === provider)?.defaultModel : fallback.model}
-                      dir="ltr"
-                      aria-label={`نموذج ${a.label}`}
-                      className="h-11 md:h-8 w-44 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs"
+                    <ModelPicker
+                      value={mine.model}
+                      models={models}
+                      fallbackLabel={
+                        mine.provider
+                          ? (providers.find((p) => p.id === provider)?.defaultModel ?? '')
+                          : fallback.model
+                      }
+                      onChange={(model) => set({ model })}
+                      label={`نموذج ${a.label}`}
                     />
-                    <datalist id={`models-${a.key}`}>
-                      {models.map((m) => <option key={m} value={m} />)}
-                    </datalist>
                   </span>
                 );
               } },

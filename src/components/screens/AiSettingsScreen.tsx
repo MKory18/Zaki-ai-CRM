@@ -169,47 +169,38 @@ export function AiSettingsScreen() {
 
       {/* ── the vendor ── */}
       <section className={`rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 ${tab === 'provider' ? '' : 'hidden'}`}>
-        <h2 className="mb-3 text-sm font-bold text-[var(--sys-heading)]">المزوّد والنموذج</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">المزوّد</label>
-            <select
-              value={settings.provider}
-              onChange={(e) => {
-                const p = providers.find((x) => x.id === e.target.value);
-                setSettings({ ...settings, provider: e.target.value, model: p?.defaultModel ?? settings.model });
-              }}
-              className={INPUT}
-            >
-              {providers.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]" htmlFor="ai-model">
-              النموذج
-            </label>
-            {/* A list of suggestions, not a closed set: the box still
-                accepts anything, because a vendor ships a new name more
-                often than this file is edited. */}
-            <input
-              id="ai-model"
-              list="ai-models"
-              value={settings.model}
-              onChange={(e) => setSettings({ ...settings, model: e.target.value })}
-              className={INPUT}
-              dir="ltr"
-            />
-            <datalist id="ai-models">
-              {(provider?.models ?? []).map((m) => (
-                <option key={m} value={m} />
-              ))}
-            </datalist>
-            {tier && (
-              <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted)]">
-                <span className="font-semibold text-[var(--sys-foreground)]">{tier.tier}</span> — {tier.note}
-              </p>
-            )}
-          </div>
+        <h2 className="mb-3 text-sm font-bold text-[var(--sys-heading)]">المزوّد والمفتاح</h2>
+        {/*
+          THE MODEL IS NOT CHOSEN HERE ANY MORE.
+          A model was editable in two places — here and per assistant — and two
+          places to set one thing is two places to get it wrong. The choice
+          that matters is per assistant anyway: a note classifier running
+          thousands of times a day and an analysis run once an hour are not
+          the same model. What belongs here is the pairing that cannot be
+          split: a KEY belongs to a VENDOR.
+          The line below is not a field. It says which model answers a call
+          that names no assistant, so nothing is hidden.
+        */}
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]" htmlFor="ai-provider">
+            المزوّد
+          </label>
+          <select
+            id="ai-provider"
+            value={settings.provider}
+            onChange={(e) => {
+              const p = providers.find((x) => x.id === e.target.value);
+              setSettings({ ...settings, provider: e.target.value, model: p?.defaultModel ?? settings.model });
+            }}
+            className={INPUT}
+          >
+            {providers.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted)]">
+            النموذج يُختار لكلِّ مساعدٍ في تبويب «المساعدون». وما لا يخصّه مساعدٌ يُجاب بـ
+            <span className="mx-1 font-semibold text-[var(--sys-foreground)]" dir="ltr">{settings.model}</span>
+            {tier && <>— {tier.tier}: {tier.note}</>}
+          </p>
         </div>
 
         <div className="mt-3">

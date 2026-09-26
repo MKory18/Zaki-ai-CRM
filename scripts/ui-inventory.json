@@ -311,7 +311,7 @@
   },
   "src/components/screens/ai/AssistantsTable.tsx": {
     "buttons": 0,
-    "inputs": 3,
+    "inputs": 5,
     "columns": 5,
     "cards": 0,
     "modals": 0,
@@ -321,7 +321,7 @@
   },
   "src/components/screens/AiSettingsScreen.tsx": {
     "buttons": 6,
-    "inputs": 4,
+    "inputs": 3,
     "columns": 0,
     "cards": 0,
     "modals": 0,
