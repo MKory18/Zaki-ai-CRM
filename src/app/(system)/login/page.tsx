@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState } from 'react';
+import { SecondFactor } from '@/components/shell/SecondFactor';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -21,6 +22,15 @@ export default function LoginPage() {
   // plainly is what stops somebody concluding the app signed them out at
   // random and asking for the whole measure to be removed.
   const [wasIdle, setWasIdle] = useState(false);
+  /**
+   * The second step, for the roles whose password moves money.
+   *
+   * Held in state rather than routed to: the challenge ticket lives ten
+   * minutes and exists only in this page. A route would mean putting it in a
+   * URL or a cookie, and a ticket the browser sends everywhere is one some
+   * other route eventually gets asked to interpret.
+   */
+  const [second, setSecond] = useState<{ step: 'enrol' | 'verify'; challenge: string; email: string } | null>(null);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -47,6 +57,12 @@ export default function LoginPage() {
       if (!res.ok) {
         if (data.status === 'PENDING') setPendingFlag(true);
         throw new Error(data.error || 'فشل تسجيل الدخول');
+      }
+
+      // The password was right and is not enough. Nothing has been issued.
+      if (data.twoFactor) {
+        setSecond({ step: data.twoFactor, challenge: data.challenge, email: data.email });
+        return;
       }
 
       // Route by server-verified status — never by client-supplied role
@@ -104,6 +120,21 @@ export default function LoginPage() {
               </div>
             )}
 
+            {second ? (
+              <SecondFactor
+                step={second.step}
+                challenge={second.challenge}
+                email={second.email}
+                onSignedIn={(status) => {
+                  router.push(status === 'PENDING' ? '/pending' : '/');
+                  router.refresh();
+                }}
+                onCancel={() => {
+                  setSecond(null);
+                  setPassword('');
+                }}
+              />
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 label="البريد الإلكتروني"
@@ -143,6 +174,7 @@ export default function LoginPage() {
                 تسجيل الدخول
               </Button>
             </form>
+            )}
           </CardContent>
         </Card>
 

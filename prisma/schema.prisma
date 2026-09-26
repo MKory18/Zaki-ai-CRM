@@ -250,6 +250,16 @@ model User {
   assignedAt        DateTime?
   resetToken        String?
   resetTokenExpires DateTime?
+
+  /// THE SECOND FACTOR, FOR THE ROLES THAT MOVE MONEY.
+  ///
+  /// The secret is encrypted with the app key, like a courier's password:
+  /// a database copy alone must not hand somebody a working authenticator.
+  /// `totpLastStep` is the 30-second step most recently spent, so the same
+  /// code cannot be replayed inside its own window.
+  totpSecretEnc     String?
+  totpEnabledAt     DateTime?
+  totpLastStep      Int?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -262,6 +272,7 @@ model User {
   signedOrders                  Order[]                @relation("OrderSignedBy")
   callLogs                      CallLog[]
   auditLogs                     AuditLog[]
+  recoveryCodes                 TwoFactorRecoveryCode[]
   attendanceMarks               AttendanceMark[]
   claimHistory                  OrderClaimHistory[]
   statusLogs                    OrderStatusLog[]
@@ -1979,6 +1990,26 @@ model Wallet {
 /// correction instrument — a wallet that has started moving is reconciled by
 /// the daily closing, which already compares book against counted and makes
 /// somebody explain the gap.
+/// ONE-TIME CODES FOR A LOST PHONE.
+///
+/// Without these, an authenticator on a broken phone is an owner locked out
+/// of their own business with nobody able to let them back in — and the
+/// pressure that creates is exactly how a second factor gets switched off
+/// for everyone. Hashed like a password, because a database copy must not
+/// be a set of keys. Spent once and kept, so the audit can say which.
+model TwoFactorRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
+  @@map("two_factor_recovery_codes")
+}
+
 model WalletOpeningCount {
   id              String   @id @default(uuid())
   companyId       String

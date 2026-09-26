@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import {
-  verifyPassword,
-  createSessionToken,
-  sessionCookieOptions,
-  COOKIE_NAME,
-} from '@/lib/auth';
+import { verifyPassword } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
-import { markLogin } from '@/lib/attendance';
-import { UserRole, UserStatus, ROLE_PERMISSIONS } from '@/types/auth';
+import { UserStatus } from '@/types/auth';
+import { issueSession } from '@/lib/sign-in';
+import { issueChallenge } from '@/lib/two-factor-challenge';
+import { stepFor } from '@/lib/two-factor';
 
 export async function POST(req: Request) {
   try {
@@ -61,72 +58,31 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update last login
-    // ── One account, one device at a time ──
-    //
-    // Every session carries the tokenVersion it was signed with, and
-    // verifySessionToken refuses a token whose version is no longer the
-    // user's. Bumping it here means signing in anywhere signs out
-    // everywhere else — the newest sign-in wins.
-    //
-    // This is what stops one account being shared by three people: not a
-    // rule in a handbook, but a session that stops working the moment
-    // somebody else uses the same login.
-    const refreshed = await db.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date(), tokenVersion: { increment: 1 } },
-      select: { tokenVersion: true },
-    });
-
-    // Signing in IS the fingerprint. There is no button to forget, and
-    // since an account opens on one device at a time, it is a mark nobody
-    // can press from somebody else's phone. It never blocks the login.
-    await markLogin(user.companyId, user.id);
-
-    await logAudit({
-      companyId: user.companyId || 'platform',
-      userId: user.id,
-      action: 'USER_LOGGED_IN',
-      entity: 'User',
-      entityId: user.id,
-      newData: { email: user.email, role: user.role, status: user.status, ip },
-    });
-
-    const role = user.role as UserRole;
-    const token = await createSessionToken({
-      userId: user.id,
-      email: user.email,
-      role,
-      status,
-      companyId: user.companyId,
-      tv: refreshed.tokenVersion,
-      remember: !!remember,
-    });
-
-    const response = NextResponse.json({
-      success: true,
-      status,
-      role,
-      user: {
-        id: user.id,
+    /**
+     * THE PASSWORD IS THE FIRST FACTOR. FOR FIVE ROLES IT IS NO LONGER THE LAST.
+     *
+     * Nothing is issued and NOTHING IS CHANGED here — no session, and in
+     * particular no `tokenVersion` bump. Bumping it now would mean a stolen
+     * password alone could sign an owner out of the device they are working
+     * on, repeatedly, without ever getting in.
+     *
+     * A protected role that has not enrolled yet is not turned away either:
+     * on the morning this ships nobody is enrolled, and an owner locked out
+     * of their own business is how a second factor gets switched off for
+     * everyone. They get an enrolment challenge instead, which grants
+     * nothing but the two endpoints that set it up.
+     */
+    const step = stepFor({ role: user.role, totpEnabledAt: user.totpEnabledAt });
+    if (step !== 'none') {
+      const challenge = await issueChallenge({ userId: user.id, purpose: step, remember: !!remember });
+      return NextResponse.json({
+        twoFactor: step,
+        challenge,
         email: user.email,
-        name: user.name,
-        role,
-        status,
-        companyId: user.companyId,
-        companyName: user.company?.name,
-        commissionRate: user.commissionRate,
-        permissions: ROLE_PERMISSIONS[role] || [],
-      },
-    });
+      });
+    }
 
-    response.cookies.set({
-      name: COOKIE_NAME,
-      value: token,
-      ...sessionCookieOptions(!!remember),
-    });
-
-    return response;
+    return issueSession({ user, remember: !!remember, ip, factor: 'password' });
   } catch (error: any) {
     console.error('Login error:', error);
     return NextResponse.json({ error: 'حدث خطأ داخلي. حاول مرة أخرى' }, { status: 500 });

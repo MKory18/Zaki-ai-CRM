@@ -1289,6 +1289,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/shell/SecondFactor.tsx": {
+    "buttons": 5,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/shell/Sidebar.tsx": {
     "buttons": 4,
     "inputs": 0,
