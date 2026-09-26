@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
+import { ContactButtons } from '@/components/orders/ContactButtons';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import {
@@ -121,18 +122,12 @@ export function ConfirmationMineScreen() {
   };
 
   /**
-   * Dial, and record that she dialled.
-   *
-   * The phone is a link so the desk phone or the handset takes over, and
-   * the attempt is logged in the same click — a call nobody recorded is a
-   * call that did not happen as far as every counter on this system is
-   * concerned.
+   * Dialling, and recording that she dialled, now both live in
+   * `ContactButtons` — which does it for every screen rather than for this
+   * one. A call nobody recorded is a call that did not happen as far as
+   * every counter on this system is concerned, and that is true wherever
+   * the call is made from.
    */
-  const callCustomer = (order: OrderRow) => {
-    window.location.href = `tel:${order.customer.rawPhone}`;
-    void logAttempt(order, 'PHONE', 'ANSWERED');
-  };
-
   const logAttempt = (order: OrderRow, method: 'PHONE' | 'WHATSAPP' | 'SMS', result: string) =>
     act(order.id, async () => {
       const res = await apiJson<{ autoClosed: boolean; noAnswerCount: number }>(
@@ -369,13 +364,36 @@ export function ConfirmationMineScreen() {
                         : `متبقٍ ${remaining} محاولات قبل الإغلاق التلقائي`}
                   </span>
 
-                  <Action onClick={() => callCustomer(order)} busy={busyId === order.id} icon={<RiPhoneLine className="w-4 h-4" />}>
-                    اتصال
-                  </Action>
-
-                  <Action onClick={() => logAttempt(order, 'WHATSAPP', 'ANSWERED')} busy={busyId === order.id} icon={<RiChat3Line className="w-4 h-4" />}>
-                    واتساب
-                  </Action>
+                  {/*
+                    CALL, SMS AND WHATSAPP — THE SAME STRIP THE REST OF THE
+                    PRODUCT USES.
+                    Two buttons were hand-rolled here and both were poorer for
+                    it: the WhatsApp one opened NOTHING — it recorded a contact
+                    and left the agent to find the customer in WhatsApp
+                    themselves — and there was no SMS at all, on the one screen
+                    where the whole job is reaching somebody.
+                    `ContactButtons` already carries the ready-made messages,
+                    filtered by channel and filled with this order's own words,
+                    and the tracking and couriers screens already use it. The
+                    templates were never missing; this screen was not asking
+                    for them.
+                  */}
+                  <ContactButtons
+                    phone={order.customer.rawPhone}
+                    context={{
+                      orderNumber: order.orderNumber,
+                      customerName: order.customer.fullName,
+                      amount: order.totalAmount,
+                      region: order.customer.city,
+                    }}
+                    onContacted={(method) =>
+                      // A dialled call keeps the result it always had. A sent
+                      // message is `MESSAGE_SENT`: filing it as «answered»
+                      // would inflate the answer rate with messages nobody
+                      // has replied to.
+                      logAttempt(order, method, method === 'PHONE' ? 'ANSWERED' : 'MESSAGE_SENT')
+                    }
+                  />
                   <Action onClick={() => setDialog({ kind: 'postpone', order })} busy={busyId === order.id} icon={<RiTimerLine className="w-4 h-4" />}>
                     تأجيل {order.postponeCount > 0 && `(${order.postponeCount})`}
                   </Action>

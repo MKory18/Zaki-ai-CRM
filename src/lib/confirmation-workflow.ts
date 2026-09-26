@@ -111,7 +111,17 @@ export type FollowUpReason = (typeof FOLLOW_UP_REASONS)[number];
 
 export const CONTACT_METHODS = ['PHONE', 'WHATSAPP', 'SMS', 'OTHER'] as const;
 export const CONTACT_RESULTS = [
-  'ANSWERED', 'NO_ANSWER', 'BUSY', 'WRONG_NUMBER', 'CALLBACK_REQUESTED', 'CONFIRMED', 'REJECTED', 'OTHER',
+  'ANSWERED', 'NO_ANSWER', 'BUSY', 'WRONG_NUMBER', 'CALLBACK_REQUESTED', 'CONFIRMED', 'REJECTED',
+  // Writing to somebody is a contact attempt with its own outcome, and it is
+  // NOT «answered». Filing a sent message under ANSWERED inflates the answer
+  // rate — the number that decides whether the problem is the script or the
+  // hour of day — with messages nobody has replied to yet.
+  //
+  // It is deliberately not counted toward the 1/2/3 no-answer close either:
+  // that counter reads NO_ANSWER and BUSY, and closing an order because
+  // three messages were sent would punish the agent for trying twice more.
+  'MESSAGE_SENT',
+  'OTHER',
 ] as const;
 
 /**

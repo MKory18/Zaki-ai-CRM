@@ -25,9 +25,20 @@ export function ContactButtons({
   countryCode,
   compact,
   plain,
+  onContacted,
 }: {
   phone: string | null | undefined;
   context: FillContext;
+  /**
+   * Called the moment something actually leaves — a message sent, a number
+   * dialled. The queue screen counts contact attempts and closes an order
+   * after three unanswered calls, so a contact it never hears about is a
+   * contact that did not happen as far as every counter is concerned.
+   *
+   * Optional: the couriers screen contacts a rep, and there is no order to
+   * count it against.
+   */
+  onContacted?: (method: 'PHONE' | 'SMS' | 'WHATSAPP') => void;
   /** Digits, e.g. "963" — wa.me needs the number in full international form. */
   countryCode?: string | null;
   compact?: boolean;
@@ -83,6 +94,7 @@ export function ContactButtons({
   /** WhatsApp with no message behind it — for a number that has no order. */
   const openPlainWhatsapp = () => {
     window.open(`https://wa.me/${waNumber(phone!, countryCode)}`, '_blank', 'noopener');
+    onContacted?.('WHATSAPP');
   };
 
   const send = (t: MessageTemplate) => {
@@ -95,6 +107,7 @@ export function ContactButtons({
       // handsets wanted `?` vs `&` differently and are not a concern here.
       window.location.href = `sms:${phone}?body=${encodeURIComponent(text)}`;
     }
+    onContacted?.(open === 'WHATSAPP' ? 'WHATSAPP' : 'SMS');
     setOpen(null);
   };
 
@@ -113,7 +126,12 @@ export function ContactButtons({
       {/* A dialler is handed digits, not a formatted number: "+962 6 000
           0000" is how a person reads it, and some phones refuse it as a
           tel: target. The leading + is kept; everything decorative goes. */}
-      <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} title="اتصال" className={btn}>
+      <a
+        href={`tel:${phone.replace(/[^\d+]/g, '')}`}
+        title="اتصال"
+        className={btn}
+        onClick={() => onContacted?.('PHONE')}
+      >
         <RiPhoneLine className="w-4 h-4" />
         {!compact && 'اتصال'}
       </a>
