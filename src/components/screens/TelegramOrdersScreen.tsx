@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import { RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiMessage3Line, RiRefreshLine, RiSettings3Line, RiShoppingBagLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useToast } from '@/components/ui/Toast';
 
 interface TelegramMsg {
   id: string;
@@ -58,6 +59,7 @@ const REVIEW_REASONS: Record<string, string> = {
 
 export function TelegramOrdersScreen() {
   const { currentUser } = useApp();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<any>(null);
@@ -102,9 +104,9 @@ export function TelegramOrdersScreen() {
     try {
       const r: any = await crmApi(`/api/telegram/messages/${m.id}/retry`, { method: 'POST' });
       if (r.status === 'PROCESSED') await loadAll(true);
-      else setError(REVIEW_REASONS[r.reason] || 'لا يزال لا يمكن إنشاء الطلب');
+      else toast.failed(REVIEW_REASONS[r.reason] || 'لا يزال لا يمكن إنشاء الطلب');
     } catch (e: any) {
-      setError(e?.message || 'تعذر إعادة المحاولة');
+      toast.failed(e?.message || 'تعذر إعادة المحاولة');
     } finally {
       setBusyId(null);
     }

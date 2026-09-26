@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { Modal } from '@/components/ui/Modal';
 import { RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * WHAT THE SYSTEM PROPOSED, AND WHAT A PERSON DECIDES.
@@ -61,6 +62,7 @@ const TABS = [
 export function PenaltiesScreen() {
   const { currentUser } = useApp();
   const mayDecide = userCan(currentUser, 'penalties.decide');
+  const toast = useToast();
   const [tab, setTab] = useState('PROPOSED');
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,6 @@ export function PenaltiesScreen() {
 
   const decide = async (row: Row, action: 'apply' | 'waive' | 'reverse', note?: string) => {
     setBusy(row.id);
-    setError(null);
     try {
       await apiJson('/api/team/penalties', {
         method: 'POST',
@@ -93,7 +94,7 @@ export function PenaltiesScreen() {
       setReason('');
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التنفيذ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التنفيذ');
     } finally {
       setBusy(null);
     }

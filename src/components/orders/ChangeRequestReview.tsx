@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { changeFieldLabel } from '@/lib/change-request-fields';
 import { RiAlertLine, RiArrowLeftLine, RiCheckLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * ONE CHANGE REQUEST, DECIDED.
@@ -53,6 +54,7 @@ export function ChangeRequestReview({
   onClose: () => void;
   onDecided: () => void;
 }) {
+  const toast = useToast();
   const [row, setRow] = useState<RequestRow | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState<'APPROVED' | 'REJECTED' | null>(null);
@@ -75,7 +77,6 @@ export function ChangeRequestReview({
 
   const decide = async (decision: 'APPROVED' | 'REJECTED') => {
     setBusy(decision);
-    setError(null);
     try {
       await apiJson(`/api/control/change-requests/${requestId}`, {
         method: 'PATCH',
@@ -85,7 +86,7 @@ export function ChangeRequestReview({
       onDecided();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر حفظ القرار');
+      toast.failed(e instanceof Error ? e.message : 'تعذر حفظ القرار');
     } finally {
       setBusy(null);
     }

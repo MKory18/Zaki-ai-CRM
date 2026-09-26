@@ -6,7 +6,8 @@ import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { useRegions } from '@/hooks/useRegions';
 import { arDateTime } from '@/lib/format';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiAlertLine, RiCloseLine, RiForbidLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
+import { RiAlertLine, RiForbidLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /confirmation/issues — entry issues on moderator-entered orders only.
@@ -89,6 +90,7 @@ const FIELD_LABEL: Record<keyof Draft, string> = {
 
 export function ConfirmationIssuesScreen() {
   const patchOrder = useOrderPatch();
+  const toast = useToast();
   const [issues, setIssues] = useState<Issue[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -146,11 +148,10 @@ export function ConfirmationIssuesScreen() {
     if (!draft) return;
     const changes = changeSummary(issue, draft);
     if (changes.length === 0) {
-      setError('لم تُعدّل أي بيانات — صحّح ما أشار إليه موظف التأكيد أولاً.');
+      toast.failed('لم تُعدّل أي بيانات — صحّح ما أشار إليه موظف التأكيد أولاً.');
       return;
     }
     setBusy(issue.id);
-    setError(null);
     try {
       // 1. The correction itself, through the ordinary order edit: phone rule,
       //    duplicate check and version guard all apply here and nowhere else.
@@ -179,7 +180,7 @@ export function ConfirmationIssuesScreen() {
       setDraft(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر حفظ التصحيح');
+      toast.failed(e instanceof Error ? e.message : 'تعذر حفظ التصحيح');
     } finally {
       setBusy(null);
     }
@@ -187,11 +188,10 @@ export function ConfirmationIssuesScreen() {
 
   async function confirmVoid(issue: Issue) {
     if (!voidReason.trim()) {
-      setError('سبب الإبطال مطلوب.');
+      toast.failed('سبب الإبطال مطلوب.');
       return;
     }
     setBusy(issue.id);
-    setError(null);
     try {
       await apiJson(`/api/confirmation/issues/${issue.id}`, {
         method: 'PATCH',
@@ -202,7 +202,7 @@ export function ConfirmationIssuesScreen() {
       setVoidReason('');
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الإبطال');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الإبطال');
     } finally {
       setBusy(null);
     }

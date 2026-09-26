@@ -11,6 +11,7 @@ import { ROLE_LABELS, type UserRole } from '@/types/auth';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowLeftLine, RiCheckboxCircleLine, RiFileEditLine, RiLoader4Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /control/change-requests — the review queue, in its two halves.
@@ -56,11 +57,11 @@ type Tab = 'PENDING' | 'AWAITING_APPLY';
 const show = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : String(v));
 
 export function ChangeRequestsScreen() {
+  const toast = useToast();
   const [tab, setTab] = useState<Tab>('PENDING');
   const [lists, setLists] = useState<Record<Tab, ChangeRequest[]> | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [applying, setApplying] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
   const tell = useTell();
 
@@ -74,7 +75,7 @@ export function ChangeRequestsScreen() {
       ]);
       setLists({ PENDING: pending.requests, AWAITING_APPLY: awaiting.requests });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التحميل');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التحميل');
     }
   }, []);
 
@@ -128,7 +129,6 @@ export function ChangeRequestsScreen() {
     <div className="max-w-4xl space-y-3">
       <ScreenTitle />
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
       <div className="flex gap-1 rounded-lg bg-[var(--sys-surface-strong)] p-0.5 w-fit">
         {(

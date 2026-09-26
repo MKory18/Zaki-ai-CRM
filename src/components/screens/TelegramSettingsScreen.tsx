@@ -10,9 +10,11 @@ import { copyText } from '@/lib/clipboard';
 import { TelegramSourcesCard } from '@/components/settings/TelegramSourcesCard';
 import { RiCheckboxCircleLine, RiCloseCircleLine, RiFileCopyLine, RiRefreshLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useToast } from '@/components/ui/Toast';
 
 export function TelegramSettingsScreen() {
   const { currentUser } = useApp();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export function TelegramSettingsScreen() {
       await crmApi('/api/telegram/webhook/setup', { method: 'POST' });
       await load();
     } catch (e: any) {
-      setError(e?.message || 'تعذر تسجيل الويبهوك');
+      toast.failed(e?.message || 'تعذر تسجيل الويبهوك');
     } finally {
       setBusy(false);
     }

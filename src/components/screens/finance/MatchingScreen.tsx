@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiGitBranchLine, RiLoader4Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /finance/matching — the outcome of matching, read as four queues: agreed,
@@ -39,10 +40,10 @@ interface StatementRow {
 const num = (v: string | number | null | undefined) => (v === null || v === undefined ? null : Number(v));
 
 export function MatchingScreen() {
+  const toast = useToast();
   const [statements, setStatements] = useState<StatementRow[] | null>(null);
   const [selected, setSelected] = useState<string>('');
   const [matches, setMatches] = useState<Match[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export function MatchingScreen() {
         const withMatches = d.statements.find((s) => s.counts.matches > 0) ?? d.statements[0];
         if (withMatches) setSelected(withMatches.id);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'تعذر التحميل'));
+      .catch((e) => toast.failed(e instanceof Error ? e.message : 'تعذر التحميل'));
   }, []);
 
   const load = useCallback(async (id: string) => {
@@ -62,7 +63,7 @@ export function MatchingScreen() {
       const data = await apiJson<{ statement: { matches: Match[] } }>(`/api/finance/statements/${id}`);
       setMatches(data.statement.matches);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التحميل');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التحميل');
     }
   }, []);
 
@@ -96,12 +97,11 @@ export function MatchingScreen() {
           title={(statement?.counts.receipts ?? 0) === 0 ? 'سجّل إيصال الاستلام أولاً' : 'إعادة تشغيل المطابقة'}
           onClick={async () => {
             setBusy(true);
-            setError(null);
             try {
               await apiJson(`/api/finance/statements/${selected}/match`, { method: 'POST' });
               await load(selected);
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'تعذرت المطابقة');
+              toast.failed(e instanceof Error ? e.message : 'تعذرت المطابقة');
             } finally {
               setBusy(false);
             }
@@ -113,7 +113,6 @@ export function MatchingScreen() {
         </button>
       </div>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
       {!selected ? null : !matches ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">

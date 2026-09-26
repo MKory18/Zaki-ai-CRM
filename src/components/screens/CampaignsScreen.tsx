@@ -6,6 +6,7 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { CAMPAIGN_PLATFORMS, CAMPAIGN_STATUSES } from '@/lib/campaigns';
 import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLinksLine, RiLoader4Line, RiMegaphoneLine, RiPencilLine, RiPlugLine, RiRefreshLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * WHAT EACH AD COST, AND WHAT IT BROUGHT BACK.
@@ -67,6 +68,7 @@ const fmt = (n: number | null) =>
   n === null ? '—' : n.toLocaleString('en-US', { maximumFractionDigits: 2 });
 
 export function CampaignsScreen() {
+  const toast = useToast();
   const [data, setData] = useState<Payload | null>(null);
   const [period, setPeriod] = useState<string>('this_month');
   const [loading, setLoading] = useState(true);
@@ -589,6 +591,7 @@ function LinkDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const toast = useToast();
   const [accountId, setAccountId] = useState(campaign.adAccount?.id ?? accounts[0]?.id ?? '');
   const [remote, setRemote] = useState<{ id: string; name: string; status: string }[] | null>(null);
   const [chosen, setChosen] = useState(campaign.externalId ?? '');
@@ -610,7 +613,6 @@ function LinkDialog({
 
   async function save(unlink = false) {
     setBusy(true);
-    setError(null);
     try {
       const res = await fetch(`/api/growth/campaigns/${campaign.id}`, {
         method: 'PATCH',
@@ -623,7 +625,7 @@ function LinkDialog({
       if (!res.ok) throw new Error(j.error || 'تعذر الحفظ');
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(false);
     }

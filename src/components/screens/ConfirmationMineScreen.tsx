@@ -16,6 +16,7 @@ import {
 } from './confirmation/ActionDialogs';
 import { AssistantDialog } from './confirmation/AssistantDialog';
 import { RiAlertLine, RiChat3Line, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLoader4Line, RiPencilLine, RiPhoneLine, RiPhoneLockLine, RiSearchLine, RiShieldFlashLine, RiSparkling2Line, RiTimerLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
@@ -79,6 +80,7 @@ type DialogState =
   | null;
 
 export function ConfirmationMineScreen() {
+  const toast = useToast();
   const [data, setData] = useState<MineResponse | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -160,7 +162,7 @@ export function ConfirmationMineScreen() {
   const submitPostpone = (order: OrderRow, value: PostponeValue) => {
     const at = new Date(`${value.date}T10:00:00`);
     if (Number.isNaN(at.getTime())) {
-      setError('تاريخ غير صالح');
+      toast.failed('تاريخ غير صالح');
       return;
     }
     setDialog(null);

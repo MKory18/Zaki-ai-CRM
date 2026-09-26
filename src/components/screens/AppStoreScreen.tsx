@@ -10,6 +10,7 @@ import { apiJson } from '@/lib/api-client';
 import { copyText } from '@/lib/clipboard';
 import { RiAddCircleLine, RiAlertLine, RiCheckLine, RiCloseLine, RiEqualizer2Line, RiFileCopyLine, RiLoader4Line, RiShieldCheckLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /apps/store — what this system can be connected to.
@@ -56,6 +57,7 @@ interface Shelf {
 }
 
 export function AppStoreScreen() {
+  const toast = useToast();
   const [shelf, setShelf] = useState<Shelf | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,12 +75,11 @@ export function AppStoreScreen() {
 
   async function act(appCode: string, action: 'install' | 'enable' | 'disable' | 'uninstall') {
     setBusy(appCode);
-    setError(null);
     try {
       await apiJson('/api/apps/installs', { method: 'POST', body: JSON.stringify({ appCode, action }) });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التنفيذ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التنفيذ');
     } finally {
       setBusy(null);
     }
@@ -254,6 +255,7 @@ function RegisterApp({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const toast = useToast();
   const [form, setForm] = useState({ name: '', code: '', developerName: '', webhookUrl: '', description: '' });
   const [chosen, setChosen] = useState<string[]>(['order.created']);
   const [saving, setSaving] = useState(false);
@@ -265,7 +267,6 @@ function RegisterApp({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError(null);
     try {
       const res = await apiJson<{ secret: string }>('/api/apps', {
         method: 'POST',
@@ -273,7 +274,7 @@ function RegisterApp({
       });
       setSecret(res.secret);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر التسجيل');
+      toast.failed(err instanceof Error ? err.message : 'تعذر التسجيل');
     } finally {
       setSaving(false);
     }

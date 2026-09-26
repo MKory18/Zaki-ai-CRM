@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useConfirm } from '@/components/ui/Confirm';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAddCircleLine, RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiShutDownLine, RiWallet3Line } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /finance/wallets — balances and the movement ledger. A recorded movement is
@@ -53,6 +54,7 @@ const CATEGORY_AR: Record<string, string> = {
 
 export function WalletsScreen() {
   const ask = useConfirm();
+  const toast = useToast();
   const [wallets, setWallets] = useState<WalletRow[] | null>(null);
   const [active, setActive] = useState<string>('');
   const [movements, setMovements] = useState<Movement[] | null>(null);
@@ -104,7 +106,6 @@ export function WalletsScreen() {
   const patchWallet = async (body: Record<string, unknown>, ok: string) => {
     if (!wallet) return;
     setBusy(true);
-    setError(null);
     setDone(null);
     try {
       await apiJson(`/api/finance/wallets/${wallet.id}`, {
@@ -116,7 +117,7 @@ export function WalletsScreen() {
       setRenaming(false);
       await loadWallets();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(false);
     }
@@ -136,7 +137,6 @@ export function WalletsScreen() {
     });
     if (!ok) return;
     setBusy(true);
-    setError(null);
     setDone(null);
     try {
       const d = await apiJson<{ message?: string; deleted?: boolean }>(
@@ -147,7 +147,7 @@ export function WalletsScreen() {
       if (d.deleted) setActive('');
       await loadWallets();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحذف');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحذف');
     } finally {
       setBusy(false);
     }

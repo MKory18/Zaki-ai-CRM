@@ -6,6 +6,7 @@ import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiArrowGoBackLine, RiLoader4Line, RiPauseCircleLine, RiTruckLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /ops/shipments/new — pick a courier, filter, review each row's COD and its
@@ -33,6 +34,7 @@ interface Row {
 
 export function ShipmentsNewScreen() {
   const ask = useAsk();
+  const toast = useToast();
   const [providers, setProviders] = useState<{ id: string; name: string }[]>([]);
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
   const [filters, setFilters] = useState({ courier: '', region: '', from: '', to: '' });
@@ -74,7 +76,6 @@ export function ShipmentsNewScreen() {
       reason = answer || undefined;
     }
     setHolding(row.id);
-    setError(null);
     try {
       await apiJson('/api/ops/shipments/hold', {
         method: 'POST',
@@ -87,7 +88,7 @@ export function ShipmentsNewScreen() {
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التأجيل');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التأجيل');
     } finally {
       setHolding(null);
     }
@@ -123,11 +124,10 @@ export function ShipmentsNewScreen() {
   const create = async () => {
     const orderIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
     if (orderIds.length === 0 || !filters.courier) {
-      setError('اختر شركة الشحن وطلباً واحداً على الأقل');
+      toast.failed('اختر شركة الشحن وطلباً واحداً على الأقل');
       return;
     }
     setBusy(true);
-    setError(null);
     try {
       const res = await apiJson<{ batch: { batchNumber: string }; shipped: number; exceptions: { orderNumber: string; reasons: string[] }[] }>(
         '/api/ops/shipments',
@@ -145,7 +145,7 @@ export function ShipmentsNewScreen() {
       setExceptions(res.exceptions);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر إنشاء الشحنة');
+      toast.failed(e instanceof Error ? e.message : 'تعذر إنشاء الشحنة');
     } finally {
       setBusy(false);
     }

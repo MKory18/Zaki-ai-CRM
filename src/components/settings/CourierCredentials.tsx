@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
 import { RiCheckLine, RiCloseCircleLine, RiDeleteBinLine, RiKey2Line, RiLoader4Line, RiPlug2Line, RiShieldCheckLine, RiShieldFlashLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * Where a courier account is entered — and the only place it is.
@@ -46,6 +47,7 @@ const BLANK = {
 };
 
 export function CourierCredentials({ providerId }: { providerId: string }) {
+  const toast = useToast();
   const [status, setStatus] = useState<Status | null>(null);
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<{ ok: boolean; message: string } | null>(null);
@@ -68,7 +70,6 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError(null);
     try {
       await apiJson(`/api/delivery-providers/${providerId}/credentials`, {
         method: 'PUT',
@@ -80,7 +81,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
       setDone('حُفظ الحساب مشفَّراً');
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setSaving(false);
     }
@@ -88,13 +89,12 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
 
   async function clear() {
     setSaving(true);
-    setError(null);
     try {
       await apiJson(`/api/delivery-providers/${providerId}/credentials`, { method: 'DELETE' });
       setDone('حُذف الحساب — الشركة تعود يدوية');
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحذف');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحذف');
     } finally {
       setSaving(false);
     }

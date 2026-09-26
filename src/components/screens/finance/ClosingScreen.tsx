@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiLoader4Line, RiLockLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /finance/closing — count each wallet at the end of the day against its book
@@ -35,6 +36,7 @@ interface Row {
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function ClosingScreen() {
+  const toast = useToast();
   const [date, setDate] = useState(today());
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export function ClosingScreen() {
       const data = await apiJson<{ rows: Row[] }>(`/api/finance/closing?date=${date}`);
       setRows(data.rows);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التحميل');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التحميل');
     }
   }, [date]);
 
@@ -129,7 +131,6 @@ export function ClosingScreen() {
                           title="يعتمده شخص غير من سجّل الحركات أو الجرد"
                           onClick={async () => {
                             setBusy(r.walletId);
-                            setError(null);
                             setDone(null);
                             try {
                               await apiJson('/api/finance/closing', {
@@ -139,7 +140,7 @@ export function ClosingScreen() {
                               setDone(`اعتُمد إغلاق ${r.walletName}`);
                               await load();
                             } catch (e) {
-                              setError(e instanceof Error ? e.message : 'تعذر الاعتماد');
+                              toast.failed(e instanceof Error ? e.message : 'تعذر الاعتماد');
                             } finally {
                               setBusy(null);
                             }

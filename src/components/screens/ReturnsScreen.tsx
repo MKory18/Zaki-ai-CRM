@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { ScanButton } from '@/components/scan/ScanButton';
 import { RiInboxUnarchiveLine, RiLoader4Line, RiQrScan2Line } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /ops/returns — scan or pick a returned shipment, then record the physical
@@ -28,6 +29,7 @@ interface Row {
 }
 
 export function ReturnsScreen() {
+  const toast = useToast();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [term, setTerm] = useState('');
   const [active, setActive] = useState<Row | null>(null);
@@ -159,6 +161,7 @@ function ReceiveDialog({
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  const toast = useToast();
   const [received, setReceived] = useState(order.expectedQty);
   const [damaged, setDamaged] = useState(0);
   const [courierFee, setCourierFee] = useState(false);
@@ -172,7 +175,6 @@ function ReceiveDialog({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    setError(null);
     try {
       const res = await apiJson<{ missingQty: number; courierFeeAmount: number }>('/api/ops/returns', {
         method: 'POST',
@@ -191,7 +193,7 @@ function ReceiveDialog({
           (res.courierFeeAmount ? ` — أجرة إرجاع ${res.courierFeeAmount}` : '')
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر حفظ الاستلام');
+      toast.failed(e instanceof Error ? e.message : 'تعذر حفظ الاستلام');
     } finally {
       setBusy(false);
     }

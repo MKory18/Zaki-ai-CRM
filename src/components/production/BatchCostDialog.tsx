@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { RiAddCircleLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * WHAT THIS RUN ACTUALLY COST.
@@ -58,6 +59,7 @@ export function BatchCostDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const toast = useToast();
   const [buckets, setBuckets] = useState({
     rawMaterialCost: batch.rawMaterialCost,
     manufacturingCost: batch.manufacturingCost,
@@ -67,7 +69,6 @@ export function BatchCostDialog({
   const [lines, setLines] = useState<{ label: string; amount: number }[]>(batch.costLines ?? []);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const total =
     Object.values(buckets).reduce((s, v) => s + (Number(v) || 0), 0) +
@@ -78,7 +79,6 @@ export function BatchCostDialog({
 
   const save = async () => {
     setBusy(true);
-    setError(null);
     try {
       await apiJson(`/api/production/${batch.id}`, {
         method: 'PATCH',
@@ -92,7 +92,7 @@ export function BatchCostDialog({
       onSaved();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(false);
     }
@@ -200,9 +200,6 @@ export function BatchCostDialog({
           />
         </label>
 
-        {error && (
-          <p className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-2.5">{error}</p>
-        )}
 
         <div className="flex gap-2 justify-end pt-1">
           <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>

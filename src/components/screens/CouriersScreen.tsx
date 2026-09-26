@@ -9,8 +9,9 @@ import { CourierWebhook } from '@/components/settings/CourierWebhook';
 import { ContactButtons } from '@/components/orders/ContactButtons';
 import { COURIER_PLATFORMS } from '@/lib/couriers';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiEBike2Line, RiLoader4Line, RiPencilLine, RiStore2Line, RiTruckLine } from '@remixicon/react';
+import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiEBike2Line, RiLoader4Line, RiPencilLine, RiTruckLine } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /settings/couriers — the shipping companies themselves. Their per-region
@@ -40,6 +41,7 @@ interface StoreRow {
 
 export function CouriersScreen() {
   const ask = useConfirm();
+  const toast = useToast();
   const [rows, setRows] = useState<Courier[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT', adapterCode: 'MANUAL' });
@@ -71,7 +73,6 @@ export function CouriersScreen() {
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    setError(null);
     try {
       await apiJson('/api/delivery-providers', {
         method: 'POST',
@@ -88,7 +89,7 @@ export function CouriersScreen() {
       setAdding(false);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الإضافة');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الإضافة');
     } finally {
       setBusy(false);
     }
@@ -104,7 +105,7 @@ export function CouriersScreen() {
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التحديث');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التحديث');
     } finally {
       setBusy(false);
     }
@@ -119,7 +120,6 @@ export function CouriersScreen() {
 
   const placeHere = async (c: Courier) => {
     setBusy(true);
-    setError(null);
     try {
       await apiJson(`/api/delivery-providers/${c.id}`, {
         method: 'PATCH',
@@ -128,7 +128,7 @@ export function CouriersScreen() {
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الإسناد');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الإسناد');
     } finally {
       setBusy(false);
     }
@@ -142,7 +142,6 @@ export function CouriersScreen() {
 
   const saveEdit = async (id: string) => {
     setBusy(true);
-    setError(null);
     try {
       await apiJson(`/api/delivery-providers/${id}`, {
         method: 'PATCH',
@@ -155,7 +154,7 @@ export function CouriersScreen() {
       setEditing(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(false);
     }
@@ -174,7 +173,6 @@ export function CouriersScreen() {
     });
     if (!ok) return;
     setBusy(true);
-    setError(null);
     setNote(null);
     try {
       const d = await apiJson<{ deleted?: boolean; deactivated?: boolean; message?: string }>(
@@ -184,7 +182,7 @@ export function CouriersScreen() {
       setNote(d.message ?? null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحذف');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحذف');
     } finally {
       setBusy(false);
     }

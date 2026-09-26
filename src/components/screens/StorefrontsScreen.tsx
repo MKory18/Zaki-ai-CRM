@@ -6,6 +6,7 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { STORE_TYPE_LABEL } from '@/lib/store-types';
 import { RiAddCircleLine, RiAlertLine, RiBrushLine, RiCheckLine, RiEarthLine, RiEqualizer2Line, RiExternalLinkLine, RiInformationLine, RiLinksLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * متجر SINGLE PRODUCT — A STORE WHOSE FRONT IS ONE OF ITS LANDING PAGES.
@@ -53,12 +54,12 @@ interface Shop {
 }
 
 export function StorefrontsScreen() {
+  const toast = useToast();
   const [shops, setShops] = useState<Shop[] | null>(null);
   /** A failed load is not "you have no stores" — telling a seller to create one would be wrong. */
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
 
   const load = useCallback(async () => {
@@ -78,7 +79,6 @@ export function StorefrontsScreen() {
 
   async function send(shop: Shop, body: Record<string, unknown>) {
     setBusy(shop.id);
-    setError(null);
     try {
       const res = await fetch('/api/growth/storefronts', {
         method: 'PATCH',
@@ -88,7 +88,7 @@ export function StorefrontsScreen() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'تعذر الحفظ');
     } catch (e) {
-      setError(`${shop.name}: ${e instanceof Error ? e.message : 'تعذر الحفظ'}`);
+      toast.failed(`${shop.name}: ${e instanceof Error ? e.message : 'تعذر الحفظ'}`);
     } finally {
       await load();
       setBusy(null);
@@ -126,7 +126,6 @@ export function StorefrontsScreen() {
           description="متجر يبيع منتجاً واحداً. واجهته صفحة هبوط من صفحاتك — بكل أقسامها وقوالبها وبكسلاتها وعروض ما بعد الطلب — على رابط المتجر ونطاقه. لا سلة ولا كتالوج."
         />
 
-      {error && <p className="rounded-lg bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs font-medium text-[var(--sys-destructive)]" role="alert">{error}</p>}
 
       {loadFailed && (
         <p className="rounded-lg bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs font-medium text-[var(--sys-destructive)]" role="alert">

@@ -11,6 +11,7 @@ import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { ScanSheet } from '@/components/scan/ScanButton';
 import { RiAddCircleLine, RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader4Line, RiLockLine, RiPrinterLine, RiQrScan2Line, RiSendPlaneLine, RiTruckLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /ops/batches — the handovers to the couriers.
@@ -48,6 +49,7 @@ const STATUS: Record<string, { ar: string; cls: string }> = {
 };
 
 export function ShippingBatchesScreen() {
+  const toast = useToast();
   const [batches, setBatches] = useState<Batch[] | null>(null);
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<'all' | 'READY' | 'SHIPPED' | 'CLOSED'>('all');
@@ -83,7 +85,6 @@ export function ShippingBatchesScreen() {
 
   async function setStatus(batch: Batch, status: 'SHIPPED' | 'CLOSED') {
     setBusy(batch.id);
-    setError(null);
     try {
       await apiJson(`/api/shipping-batches/${batch.id}`, {
         method: 'PATCH',
@@ -92,7 +93,7 @@ export function ShippingBatchesScreen() {
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التحديث');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التحديث');
     } finally {
       setBusy(null);
     }
@@ -107,7 +108,6 @@ export function ShippingBatchesScreen() {
    */
   async function dispatch(batch: Batch) {
     setBusy(batch.id);
-    setError(null);
     setResult(null);
     try {
       const summary = await apiJson<DispatchSummary>(`/api/ops/shipments/${batch.id}/dispatch`, {
@@ -118,7 +118,7 @@ export function ShippingBatchesScreen() {
       setResult({ batchId: batch.id, summary });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الترحيل');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الترحيل');
     } finally {
       setBusy(null);
     }

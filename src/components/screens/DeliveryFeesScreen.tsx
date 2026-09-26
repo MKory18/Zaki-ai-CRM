@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiLoader4Line, RiMagicLine, RiSaveLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /settings/delivery-fees — one row per courier per region: the fee, the
@@ -26,6 +27,7 @@ interface Fee {
 }
 
 export function DeliveryFeesScreen() {
+  const toast = useToast();
   const [data, setData] = useState<{ providers: { id: string; name: string }[]; regions: { id: string; name: string }[]; fees: Fee[] } | null>(null);
   const [courier, setCourier] = useState('');
   const [draft, setDraft] = useState<Record<string, { fee: string; lateThresholdDays: string; returnFee: string }>>({});
@@ -68,7 +70,7 @@ export function DeliveryFeesScreen() {
     };
     const fee = Number(d.fee);
     if (!Number.isFinite(fee)) {
-      setError('أجرة غير صالحة');
+      toast.failed('أجرة غير صالحة');
       return;
     }
 
@@ -81,7 +83,6 @@ export function DeliveryFeesScreen() {
     }
 
     setBusy(regionId);
-    setError(null);
     try {
       await apiJson('/api/settings/delivery-fees', {
         method: 'PUT',
@@ -99,7 +100,7 @@ export function DeliveryFeesScreen() {
       setTimeout(() => setSaved(null), 2000);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(null);
     }

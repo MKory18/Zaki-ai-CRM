@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /settings/channels — where this shop's orders come from.
@@ -57,6 +58,7 @@ const INPUT =
   'w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
 export function ChannelsScreen() {
+  const toast = useToast();
   const [channels, setChannels] = useState<Channel[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -80,11 +82,10 @@ export function ChannelsScreen() {
 
   async function create() {
     if (draft.name.trim().length < 2) {
-      setError('اكتب اسم القناة');
+      toast.failed('اكتب اسم القناة');
       return;
     }
     setBusy('new');
-    setError(null);
     try {
       await apiJson('/api/settings/channels', {
         method: 'POST',
@@ -95,7 +96,7 @@ export function ChannelsScreen() {
       setAdding(false);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الإضافة');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الإضافة');
     } finally {
       setBusy(null);
     }
@@ -103,7 +104,6 @@ export function ChannelsScreen() {
 
   async function patch(id: string, body: Record<string, unknown>) {
     setBusy(id);
-    setError(null);
     try {
       await apiJson(`/api/settings/channels/${id}`, {
         method: 'PATCH',
@@ -113,7 +113,7 @@ export function ChannelsScreen() {
       setEditing(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(null);
     }
@@ -121,12 +121,11 @@ export function ChannelsScreen() {
 
   async function remove(channel: Channel) {
     setBusy(channel.id);
-    setError(null);
     try {
       await apiJson(`/api/settings/channels/${channel.id}`, { method: 'DELETE' });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحذف');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحذف');
     } finally {
       setBusy(null);
     }

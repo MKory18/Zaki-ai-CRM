@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
 import { RiChatQuoteLine, RiLoader4Line, RiSendPlaneLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * The conversation about an order, between the people working it.
@@ -53,6 +54,7 @@ function toneFor(name: string): string {
 const initials = (name: string) => name.trim().charAt(0) || '؟';
 
 export function OrderNotes({ orderId }: { orderId: string }) {
+  const toast = useToast();
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -76,7 +78,6 @@ export function OrderNotes({ orderId }: { orderId: string }) {
     const body = draft.trim();
     if (body.length < 2) return;
     setBusy(true);
-    setError(null);
     try {
       await apiJson(`/api/orders/${orderId}/notes`, {
         method: 'POST',
@@ -87,7 +88,7 @@ export function OrderNotes({ orderId }: { orderId: string }) {
       await load();
       box.current?.focus();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر إضافة الملاحظة');
+      toast.failed(e instanceof Error ? e.message : 'تعذر إضافة الملاحظة');
     } finally {
       setBusy(false);
     }

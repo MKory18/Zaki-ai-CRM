@@ -7,8 +7,9 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
-import { RiArchiveLine, RiCheckboxCircleLine, RiClipboardLine, RiErrorWarningLine, RiMagicLine, RiMapPinLine, RiPhoneLine, RiSparkling2Line, RiUserLine } from '@remixicon/react';
+import { RiCheckboxCircleLine, RiClipboardLine, RiMagicLine, RiSparkling2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { useToast } from '@/components/ui/Toast';
 
 interface AiOrderModalProps {
   isOpen: boolean;
@@ -38,10 +39,10 @@ interface ParseResult {
 
 export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) {
   const { t } = useApp();
+  const toast = useToast();
   const [text, setText] = useState('');
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ParseResult | null>(null);
   // Governorates of the selected country (never a hard-coded country list).
   const { regions, countryName } = useRegions();
@@ -59,7 +60,6 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       setText('');
       setParsing(false);
       setSaving(false);
-      setError(null);
       setResult(null);
       setProducts([]);
       setProductId('');
@@ -91,7 +91,6 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   const handleParse = async () => {
     if (!text.trim()) return;
     setParsing(true);
-    setError(null);
     setResult(null);
     try {
       await loadProducts();
@@ -106,7 +105,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       if (data.matchedProduct) setProductId(data.matchedProduct.id);
       setFinalPrice(data.suggestedPrice ?? data.parsed.price ?? 0);
     } catch (err: any) {
-      setError(err.message);
+      toast.failed(err.message);
     } finally {
       setParsing(false);
     }
@@ -115,7 +114,6 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   const handleConfirm = async () => {
     if (!result) return;
     setSaving(true);
-    setError(null);
     try {
       const res = await apiFetch('/api/orders/ai-intake', {
         method: 'POST',
@@ -136,7 +134,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       setText('');
       setResult(null);
     } catch (err: any) {
-      setError(err.message);
+      toast.failed(err.message);
     } finally {
       setSaving(false);
     }
@@ -153,12 +151,6 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       maxWidth="2xl"
     >
       <div className="space-y-5">
-        {error && (
-          <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
-            <RiErrorWarningLine className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
 
         {/* Step 1: Paste text */}
         <div>

@@ -11,6 +11,7 @@ import {
   type Situation,
 } from '@/lib/message-templates';
 import { RiAddCircleLine, RiArrowDownSLine, RiCheckLine, RiDeleteBinLine, RiLoader4Line, RiMessage3Line } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * THE SENTENCES SENT TO CUSTOMERS, FILED BY THE MOMENT THEY BELONG TO.
@@ -48,6 +49,7 @@ const INPUT =
 const NO_SAMPLE = 'لا طلبات في هذا المتجر بعد، فلا معاينة بطلب حقيقي.';
 
 export function MessageTemplatesCard() {
+  const toast = useToast();
   const [data, setData] = useState<Loaded | null>(null);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [busy, setBusy] = useState(false);
@@ -102,7 +104,6 @@ export function MessageTemplatesCard() {
 
   const save = async () => {
     setBusy(true);
-    setError(null);
     setSaved(false);
     try {
       const d = await apiJson<{ templates: MessageTemplate[] }>('/api/settings/messages', {
@@ -114,7 +115,7 @@ export function MessageTemplatesCard() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(false);
     }

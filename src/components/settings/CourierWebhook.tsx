@@ -7,6 +7,7 @@ import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
 import { copyText } from '@/lib/clipboard';
 import { RiAlertLine, RiCheckLine, RiExchangeLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * The address the courier pushes statuses to.
@@ -28,6 +29,7 @@ interface Status {
 
 export function CourierWebhook({ providerId }: { providerId: string }) {
   const ask = useConfirm();
+  const toast = useToast();
   const [status, setStatus] = useState<Status | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,13 +60,12 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
       return;
     }
     setBusy(true);
-    setError(null);
     try {
       const d = await apiJson<{ url: string }>(`/api/settings/couriers/${providerId}/webhook`, { method: 'POST' });
       setUrl(d.url);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التوليد');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التوليد');
     } finally {
       setBusy(false);
     }

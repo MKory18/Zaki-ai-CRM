@@ -10,6 +10,7 @@ import { STORE_TYPE_LABEL, storeTypeLabel } from '@/lib/store-types';
 import { RiAddCircleLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /settings/geo — countries, their stores and their regions in one screen.
@@ -47,6 +48,7 @@ interface CountryRow {
 const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
 export function GeoSettingsScreen() {
+  const toast = useToast();
   const [countries, setCountries] = useState<CountryRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openCountry, setOpenCountry] = useState<string | null>(null);
@@ -74,7 +76,6 @@ export function GeoSettingsScreen() {
   }, []);
 
   const patchCountry = async (id: string, data: Record<string, unknown>) => {
-    setError(null);
     try {
       await apiJson(`/api/geo/countries/${id}`, {
         method: 'PATCH',
@@ -83,12 +84,11 @@ export function GeoSettingsScreen() {
       });
       await load();
     } catch (e: any) {
-      setError(e?.message || 'تعذر الحفظ');
+      toast.failed(e?.message || 'تعذر الحفظ');
     }
   };
 
   const patchStore = async (id: string, data: Record<string, unknown>) => {
-    setError(null);
     try {
       await apiJson(`/api/geo/stores/${id}`, {
         method: 'PATCH',
@@ -97,7 +97,7 @@ export function GeoSettingsScreen() {
       });
       await load();
     } catch (e: any) {
-      setError(e?.message || 'تعذر الحفظ');
+      toast.failed(e?.message || 'تعذر الحفظ');
     }
   };
 
@@ -304,6 +304,7 @@ export function GeoSettingsScreen() {
 }
 
 function Regions({ countryId }: { countryId: string }) {
+  const toast = useToast();
   const [regions, setRegions] = useState<{ id: string; name: string }[] | null>(null);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -324,7 +325,6 @@ function Regions({ countryId }: { countryId: string }) {
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    setError(null);
     try {
       await apiJson(`/api/geo/countries/${countryId}/regions`, {
         method: 'POST',
@@ -334,7 +334,7 @@ function Regions({ countryId }: { countryId: string }) {
       setName('');
       await load();
     } catch (e: any) {
-      setError(e?.message || 'تعذر الإضافة');
+      toast.failed(e?.message || 'تعذر الإضافة');
     }
   };
 
@@ -370,6 +370,7 @@ function Regions({ countryId }: { countryId: string }) {
 }
 
 function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => void }) {
+  const toast = useToast();
   const [form, setForm] = useState({ code: '', name: '' });
   const [currency, setCurrency] = useState<CurrencyChoice>({ code: '', minorUnit: null });
   const [error, setError] = useState<string | null>(null);
@@ -382,7 +383,6 @@ function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => 
     e.preventDefault();
     if (!ready) return;
     setBusy(true);
-    setError(null);
     try {
       await apiJson('/api/geo/countries', {
         method: 'POST',
@@ -396,7 +396,7 @@ function AddCountry({ onCancel, onDone }: { onCancel: () => void; onDone: () => 
       });
       onDone();
     } catch (e: any) {
-      setError(e?.message || 'تعذر إضافة البلد');
+      toast.failed(e?.message || 'تعذر إضافة البلد');
     } finally {
       setBusy(false);
     }
@@ -439,6 +439,7 @@ function AddStore({
   onCancel: () => void;
   onDone: () => void;
 }) {
+  const toast = useToast();
   const [form, setForm] = useState({ name: '', slug: '', type: 'MULTI_PRODUCT' });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -446,7 +447,6 @@ function AddStore({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    setError(null);
     try {
       await apiJson('/api/geo/stores', {
         method: 'POST',
@@ -455,7 +455,7 @@ function AddStore({
       });
       onDone();
     } catch (e: any) {
-      setError(e?.message || 'تعذر إضافة المتجر');
+      toast.failed(e?.message || 'تعذر إضافة المتجر');
     } finally {
       setBusy(false);
     }

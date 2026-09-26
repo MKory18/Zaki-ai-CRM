@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { useConfirm } from '@/components/ui/Confirm';
 import { RiDeleteBinLine, RiImageAddLine, RiLoader4Line } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * THE STORE'S LOGO AND FAVICON — one place to set each, used everywhere.
@@ -53,8 +54,8 @@ export function StoreBrandField({
   value: string | null | undefined;
   onChange: (value: string | null) => void;
 }) {
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const confirm = useConfirm();
   const copy = COPY[kind];
@@ -62,7 +63,6 @@ export function StoreBrandField({
 
   async function upload(file: File) {
     setBusy(true);
-    setError(null);
     try {
       const form = new FormData();
       form.append('file', file);
@@ -71,7 +71,7 @@ export function StoreBrandField({
       if (!res.ok) throw new Error(data.error || copy.failed);
       onChange(data[kind]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : copy.failed);
+      toast.failed(e instanceof Error ? e.message : copy.failed);
     } finally {
       setBusy(false);
       if (input.current) input.current.value = '';
@@ -82,13 +82,12 @@ export function StoreBrandField({
     const ok = await confirm({ title: copy.confirmTitle, body: copy.confirmBody, confirmLabel: 'أزل', tone: 'danger' });
     if (!ok) return;
     setBusy(true);
-    setError(null);
     try {
       const res = await fetch(endpoint, { method: 'DELETE', credentials: 'same-origin' });
       if (!res.ok) throw new Error(copy.removeFailed);
       onChange(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : copy.removeFailed);
+      toast.failed(e instanceof Error ? e.message : copy.removeFailed);
     } finally {
       setBusy(false);
     }
@@ -110,7 +109,6 @@ export function StoreBrandField({
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold text-[var(--sys-heading)]">{copy.title}</p>
         <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{copy.hint}</p>
-        {error && <p className="mt-0.5 text-xs text-[var(--sys-destructive)]">{error}</p>}
       </div>
       <input
         ref={input}

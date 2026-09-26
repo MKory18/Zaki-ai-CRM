@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiInboxLine, RiLoader4Line, RiPhoneLockLine, RiTimerFlashLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * /confirmation/queue — agents see NO list: one "pull next" button and a
@@ -36,6 +37,7 @@ interface QueueResponse {
 
 export function ConfirmationQueueScreen() {
   const router = useRouter();
+  const toast = useToast();
   const [data, setData] = useState<QueueResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
@@ -58,12 +60,11 @@ export function ConfirmationQueueScreen() {
 
   const pullNext = async () => {
     setPulling(true);
-    setError(null);
     try {
       await apiJson('/api/confirmation/pull', { method: 'POST' });
       router.push('/confirmation/mine');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر سحب طلب');
+      toast.failed(e instanceof Error ? e.message : 'تعذر سحب طلب');
       void load();
     } finally {
       setPulling(false);

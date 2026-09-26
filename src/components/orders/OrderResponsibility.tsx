@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
 import { RiArrowLeftRightLine, RiLoader4Line, RiUserFollowLine, RiUserUnfollowLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * Whose hands the order is in.
@@ -34,20 +35,19 @@ interface Props {
 interface Candidate { id: string; name: string; email?: string }
 
 export function OrderResponsibility({ order, currentUserId, onChanged }: Props) {
+  const toast = useToast();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [mayTransfer, setMayTransfer] = useState(false);
   const [open, setOpen] = useState<'transfer' | 'release' | null>(null);
   const [targetId, setTargetId] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const holder = order.claimer ?? order.owner ?? null;
   const heldByMe = holder?.id === currentUserId;
 
   useEffect(() => {
     setOpen(null);
-    setError(null);
     apiJson<{ mayTransfer: boolean; candidates: Candidate[] }>(`/api/orders/${order.id}/transfer`)
       .then((d) => {
         setMayTransfer(d.mayTransfer);
@@ -61,15 +61,14 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
 
   async function run(action: 'transfer' | 'release') {
     if (!reason.trim() || reason.trim().length < 3) {
-      setError('اكتب السبب — يُسجَّل في سجل الطلب.');
+      toast.failed('اكتب السبب — يُسجَّل في سجل الطلب.');
       return;
     }
     if (action === 'transfer' && !targetId) {
-      setError('اختر الزميل الذي سيستلم الطلب.');
+      toast.failed('اختر الزميل الذي سيستلم الطلب.');
       return;
     }
     setBusy(true);
-    setError(null);
     try {
       if (action === 'transfer') {
         await apiJson(`/api/orders/${order.id}/transfer`, {
@@ -87,7 +86,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
       setTargetId('');
       onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر تنفيذ الإجراء');
+      toast.failed(e instanceof Error ? e.message : 'تعذر تنفيذ الإجراء');
     } finally {
       setBusy(false);
     }
@@ -120,14 +119,14 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
         {holder && mayTransfer && (
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => { setOpen(open === 'release' ? null : 'release'); setError(null); }}
+              onClick={() => { setOpen(open === 'release' ? null : 'release'); }}
               className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
             >
               <RiUserUnfollowLine className="w-4 h-4" />
               سحبه منه
             </button>
             <button
-              onClick={() => { setOpen(open === 'transfer' ? null : 'transfer'); setError(null); }}
+              onClick={() => { setOpen(open === 'transfer' ? null : 'transfer'); }}
               disabled={candidates.length === 0}
               title={candidates.length === 0 ? 'لا يوجد زميل بنفس الرتبة' : undefined}
               className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
@@ -168,7 +167,6 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
             />
           </label>
 
-          {error && <p className="text-xs text-[var(--sys-destructive)]">{error}</p>}
 
           <div className="flex gap-2">
             <button
@@ -180,7 +178,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
               {open === 'release' ? 'أعِده للطابور' : 'حوّل الطلب'}
             </button>
             <button
-              onClick={() => { setOpen(null); setError(null); }}
+              onClick={() => { setOpen(null); }}
               className="text-xs px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]"
             >
               إلغاء

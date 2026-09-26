@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { ROLE_LABELS } from '@/types/auth';
 import { RiAddCircleLine, RiLoader4Line, RiShieldKeyholeLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * THE RULES THAT PROPOSE A DEDUCTION.
@@ -41,6 +42,7 @@ const FIELD =
   'h-10 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]';
 
 export function PenaltyRulesCard() {
+  const toast = useToast();
   const [kinds, setKinds] = useState<Kind[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [rules, setRules] = useState<Rule[] | null>(null);
@@ -77,7 +79,6 @@ export function PenaltyRulesCard() {
 
   const add = async () => {
     setBusy(true);
-    setError(null);
     try {
       await apiJson('/api/settings/penalty-rules', {
         method: 'POST',
@@ -94,7 +95,7 @@ export function PenaltyRulesCard() {
       setDraft({ ...draft, perUnit: '', periodCap: '' });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(false);
     }
@@ -110,7 +111,7 @@ export function PenaltyRulesCard() {
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(false);
     }

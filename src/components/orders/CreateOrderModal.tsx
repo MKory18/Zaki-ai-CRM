@@ -10,7 +10,8 @@ import { useRegions } from '@/hooks/useRegions';
 import { productName } from '@/lib/product-name';
 import { ProductLinesEditor, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
 import { amount } from '@/lib/format';
-import { RiArchiveLine, RiCheckboxCircleLine, RiErrorWarningLine, RiMagicLine, RiMapPinLine, RiMegaphoneLine, RiMoneyDollarCircleLine, RiPhoneLine, RiStickyNoteLine, RiUserFollowLine, RiUserSettingsLine } from '@remixicon/react';
+import { RiArchiveLine, RiCheckboxCircleLine, RiMagicLine, RiMapPinLine, RiMegaphoneLine, RiPhoneLine, RiStickyNoteLine, RiUserFollowLine, RiUserSettingsLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 interface CreateOrderModalProps {
   isOpen: boolean;
@@ -27,8 +28,8 @@ interface CreateOrderModalProps {
 export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModalProps) {
   const { t, locale, isRtl } = useApp();
   const ar = locale === 'ar';
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [products, setProducts] = useState<any[]>([]);
   const [moderators, setModerators] = useState<any[]>([]);
@@ -58,7 +59,6 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     if (isOpen) {
       // Reset ALL form state first so stale customer data / selections from a
       // previous open never persist, then load fresh dropdown data
-      setError(null);
       setLoading(false);
       setCustomerName('');
       setCustomerPhone('');
@@ -133,7 +133,6 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     try {
       const res = await apiFetch('/api/orders', {
         method: 'POST',
@@ -164,7 +163,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       onSuccess(data.order ?? data);
       onClose();
     } catch (err: any) {
-      setError(err.message);
+      toast.failed(err.message);
     } finally {
       setLoading(false);
     }
@@ -196,12 +195,6 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4" dir={isRtl ? 'rtl' : 'ltr'}>
-        {error && (
-          <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center gap-2">
-            <RiErrorWarningLine className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
 
         {/* ─── 1. Customer ─── */}
         <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">

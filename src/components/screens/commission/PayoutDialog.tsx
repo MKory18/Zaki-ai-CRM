@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { apiJson } from '@/lib/api-client';
 import { RiLoader4Line, RiWallet3Line } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * HANDING OVER THE MONEY.
@@ -42,6 +43,7 @@ export function PayoutDialog({
   onClose: () => void;
   onPaid: () => void;
 }) {
+  const toast = useToast();
   const [owed, setOwed] = useState<Owed[] | null>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [pick, setPick] = useState(0);
@@ -75,7 +77,6 @@ export function PayoutDialog({
   async function pay() {
     if (!row || !wallet) return;
     setSaving(true);
-    setError(null);
     try {
       await apiJson('/api/finance/commission/payout', {
         method: 'POST',
@@ -89,7 +90,7 @@ export function PayoutDialog({
       });
       onPaid();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الصرف');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الصرف');
     } finally {
       setSaving(false);
     }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import type { PerformanceSettings } from '@/lib/performance-settings';
 import { RiCheckLine, RiDashboard3Line, RiLoader4Line, RiLockLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * THE BARS — AND THE WEIGHTS, SHOWN AND LOCKED.
@@ -33,6 +34,7 @@ const FIELD =
   'h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]';
 
 export function PerformanceSettingsCard() {
+  const toast = useToast();
   const [settings, setSettings] = useState<PerformanceSettings | null>(null);
   const [weights, setWeights] = useState<Weight[]>([]);
   const [busy, setBusy] = useState(false);
@@ -59,7 +61,6 @@ export function PerformanceSettingsCard() {
 
   const save = async () => {
     setBusy(true);
-    setError(null);
     setSaved(false);
     try {
       const d = await apiJson<{ settings: PerformanceSettings }>('/api/settings/performance', {
@@ -71,7 +72,7 @@ export function PerformanceSettingsCard() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الحفظ');
+      toast.failed(e instanceof Error ? e.message : 'تعذر الحفظ');
     } finally {
       setBusy(false);
     }

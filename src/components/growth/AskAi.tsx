@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { apiJson } from '@/lib/api-client';
 import { RiBrainLine, RiCpuLine, RiEqualizer2Line, RiLoader4Line, RiSendPlaneLine } from '@remixicon/react';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * ASKING THE AI ABOUT THIS COMPANY.
@@ -37,12 +38,12 @@ interface Info {
 }
 
 export function AskAi() {
+  const toast = useToast();
   const [info, setInfo] = useState<Info | null>(null);
   const [question, setQuestion] = useState('');
   const [picked, setPicked] = useState<string[]>(['SALES', 'PRODUCTS', 'TEAM']);
   const [answer, setAnswer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
 
   const load = useCallback(async () => {
@@ -65,7 +66,6 @@ export function AskAi() {
   const ask = async () => {
     if (!question.trim() || picked.length === 0) return;
     setBusy(true);
-    setError(null);
     setAnswer(null);
     try {
       const d = await apiJson<{ answer: string }>('/api/growth/intelligence/ask', {
@@ -75,7 +75,7 @@ export function AskAi() {
       });
       setAnswer(d.answer || 'لم يرجع المزوّد إجابة.');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التحليل');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التحليل');
     } finally {
       setBusy(false);
     }
@@ -167,9 +167,6 @@ export function AskAi() {
           )}
         </div>
 
-        {error && (
-          <p className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-2.5">{error}</p>
-        )}
 
         {answer && (
           <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3">
