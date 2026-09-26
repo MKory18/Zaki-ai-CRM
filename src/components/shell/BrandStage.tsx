@@ -10,18 +10,20 @@ import React from 'react';
  *
  * THE BANNER IS A SLOT, NOT A DEPENDENCY.
  *
- * The photograph is layered ON TOP of a gradient built from the brand's own
- * colours. If `/brand/banner.jpg` is not there, the request 404s, the layer
- * draws nothing, and the gradient is what shows — which is a finished
- * screen, not a broken one. Dropping the file in later changes no code.
+ * The image is layered ON TOP of a gradient built from the brand's own
+ * colours. The slot is filled now — `/brand/banner.jpg`, the circuit wave —
+ * but it stays a slot: if the file is ever missing the request 404s, the
+ * layer draws nothing, and the gradient is a finished screen rather than a
+ * broken one. Swapping the file changes no code.
  *
  * AND THE OVERLAY IS NOT DECORATION.
  *
- * Whatever image eventually lands in that slot, nobody here will have seen
- * it. A scrim at 0.78 of the page's own background is what guarantees the
- * heading keeps its contrast over a bright sky as well as over a dark one —
- * so the text is measured against the background token, as everywhere else,
- * rather than against a photograph nobody can test.
+ * A scrim at 0.78 of the page's own background is what guarantees the
+ * heading keeps its contrast over a bright image as well as over a dark
+ * one — so the text is measured against the background token, as
+ * everywhere else, rather than against a picture that may be replaced.
+ * The banner that arrived is dark navy, which the scrim did not need to
+ * know.
  */
 export function BrandStage({
   children,
@@ -44,18 +46,31 @@ export function BrandStage({
             'var(--sys-background)',
         }}
       />
-      {/* The slot. Absent today; present the moment a file is put there. */}
+      {/* The slot, filled: the circuit wave, in the brand's own navy. */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-cover bg-center opacity-25"
+        className="absolute inset-0 -z-10 bg-cover bg-center opacity-[0.55]"
         style={{ backgroundImage: "url('/brand/banner.jpg')" }}
       />
-      <div aria-hidden className="absolute inset-0 -z-10 bg-[var(--sys-background)]/[0.78]" />
+      {/*
+        0.55 over a 0.45 scrim, and both numbers were measured rather than
+        guessed. While the slot was empty they were 0.25 and 0.78 — blind
+        insurance against a photograph nobody had seen, which would have
+        left the real banner as a faint smudge.
+
+        What these two numbers buy is that the IMAGE NO LONGER MATTERS: at
+        0.55 and 0.45, even a pure-white banner leaves the heading above
+        4.5:1. `brand-stage.test.ts` composites exactly that worst case, so
+        the pair cannot be pushed apart without failing — which is the real
+        risk, since the file can be swapped by anyone and these numbers can
+        be nudged by anyone reading them as taste.
+      */}
+      <div aria-hidden className="absolute inset-0 -z-10 bg-[var(--sys-background)]/[0.45]" />
 
       <div className="w-full max-w-lg space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="Zaki AI" className="h-16 w-20 object-contain" />
+          <img src="/brand/mark.png" alt="" aria-hidden className="h-20 w-20 object-contain" />
           <div>
             <p className="text-display font-bold leading-none tracking-wide text-[var(--sys-heading)]" dir="ltr">
               Zaki <span className="text-[var(--sys-primary)]">AI</span> Store

@@ -229,6 +229,6 @@ export const config = {
      * at all, and the offline page the worker falls back to was redirected
      * to a page it cannot reach while offline.
      */
-    '/((?!_next/static|_next/image|favicon.ico|logo.svg|manifest.webmanifest|offline.html|icons/|.*\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|webmanifest|html)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|offline.html|icons/|.*\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|webmanifest|html)$).*)',
   ],
 };

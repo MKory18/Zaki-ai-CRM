@@ -58,7 +58,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-[var(--sys-surface)] flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <img src="/logo.svg" alt="Zaki AI" className="w-20 h-16 object-contain" />
+          <img src="/brand/mark.png" alt="" aria-hidden className="h-20 w-20 object-contain" />
           <h1 className="text-2xl font-semibold text-[var(--sys-heading)]">إنشاء حساب جديد</h1>
           <p className="text-xs text-[var(--sys-muted-foreground)]">
             Zaki AI Store — نظام إدارة المبيعات والطلبات والأرباح

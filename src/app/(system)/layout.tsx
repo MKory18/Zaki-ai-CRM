@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description:
     'Zaki AI Store — منصة متكاملة لإدارة المنتجات والطلبات والمودريتورات والأرباح الحقيقية مع مستشار أعمال بالذكاء الاصطناعي.',
   icons: {
-    icon: '/logo.svg',
+    icon: '/brand/mark.png',
     apple: '/icons/icon-192.png',
   },
   manifest: '/manifest.webmanifest',

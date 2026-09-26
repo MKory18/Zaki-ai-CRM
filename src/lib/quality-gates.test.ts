@@ -103,7 +103,11 @@ describe('brand imagery', () => {
       if (ENTRY.test(rel)) continue;
       const body = stripComments(src);
       if (body.includes('/brand/banner')) offenders.push(`${rel}: البانر`);
-      if (/logo\.svg/.test(body)) offenders.push(`${rel}: العلامة`);
+      // `logo.svg` was the placeholder, and it is gone: the mark is now
+      // `/brand/mark.png`, lifted from the supplied lockup. A guard still
+      // watching the old filename would pass on every screen for the
+      // reason that no screen can use it — which is not a guard.
+      if (/brand\/mark\.png/.test(body)) offenders.push(`${rel}: العلامة`);
     }
     expect(offenders, `صورةُ علامةٍ على شاشة بيانات:\n${offenders.join('\n')}`).toEqual([]);
   });

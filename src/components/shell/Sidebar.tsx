@@ -151,7 +151,7 @@ export function Sidebar({
         <div className="rail-center flex items-center gap-2 h-[72px] px-5 border-b border-[var(--sys-border)] shrink-0">
           <Link href="/" className="flex min-w-0 items-center gap-3" onClick={onClose}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="Zaki AI" className="w-11 h-9 shrink-0 object-contain" />
+            <img src="/brand/mark.png" alt="" aria-hidden className="h-11 w-11 shrink-0 object-contain" />
             <div className="rail-hide min-w-0">
               {/*
                 THE WORDMARK SITS ON THE SIDEBAR, NOT ON THE ACCENT.
