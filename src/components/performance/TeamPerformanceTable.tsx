@@ -135,7 +135,28 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+{/*
+          A MATRIX, NOT A LIST — AND IT STAYS A TABLE.
+          
+          Each person against the same eight measures, with a totals row
+          under them.
+
+          Every other table in the dashboard became `<Rows>`: a table on a
+          desk, a card in a hand, from one definition. This one does not,
+          and the reason is what it is FOR.
+
+          A card per row destroys the comparison that is the whole point:
+          the reader is scanning one column DOWN, across campaigns or
+          people, and cards put each row's number in a different place.
+          And the totals row has no card form at all — it is the sum of
+          the column, and a card of sums beside cards of rows reads as one
+          more row.
+
+          So it scrolls sideways on a phone. For a matrix that is the
+          honest behaviour: the thing genuinely does not fit, and pretending
+          otherwise costs the comparison it exists to make.
+        */}
+        <table className="w-full text-xs">
         <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">
           <tr>
             {HEADS.map((h) => (

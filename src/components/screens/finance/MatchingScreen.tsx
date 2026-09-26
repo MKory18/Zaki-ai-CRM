@@ -6,6 +6,8 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiGitBranchLine, RiLoader4Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
+import { Rows } from '@/components/ui/Rows';
+import { Money } from '@/components/ui/Money';
 
 /**
  * /finance/matching — the outcome of matching, read as four queues: agreed,
@@ -199,70 +201,97 @@ function Queue({
           {rows.length === 0 ? (
             <EmptyState title="لا شيء في هذه المجموعة" why={hint} />
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-                <tr>
-                  <th className="text-right font-medium px-3 py-2">باركود الشحنة</th>
-                  <th className="text-right font-medium px-3 py-2">الطلب</th>
-                  <th className="text-right font-medium px-3 py-2">المتوقَّع</th>
-                  <th className="text-right font-medium px-3 py-2">في الكشف</th>
-                  <th className="text-right font-medium px-3 py-2">الفرق</th>
-                  <th className="text-right font-medium px-3 py-2">أجرة التوصيل</th>
-                  <th className="text-right font-medium px-3 py-2">طوبق عبر</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--sys-border)]">
-                {rows.map((m) => {
-                  const diff = num(m.difference);
-                  const feeDiff = num(m.feeDifference);
-                  return (
-                    <tr key={m.id}>
-                      {/* The barcode IS the reference: the courier assigns it
-                          and writes their statement in it. Our own number is
-                          shown under it, smaller, as the fallback key. */}
-                      <td className="px-3 py-2 text-[var(--sys-foreground)]" dir="ltr">
-                        <span className="block font-medium">
-                          {m.statementLine?.barcode ?? '—'}
+            <Rows
+              rows={rows}
+              keyOf={(m) => m.id}
+              alert={(m) => num(m.difference) !== null && num(m.difference) !== 0}
+              columns={[
+                {
+                  key: 'barcode',
+                  label: 'باركود الشحنة',
+                  primary: true,
+                  // The barcode IS the reference: the courier assigns it and
+                  // writes their statement in it. Our own number sits under
+                  // it, smaller, as the fallback key.
+                  render: (m) => (
+                    <span dir="ltr">
+                      <span className="block font-medium">{m.statementLine?.barcode ?? '—'}</span>
+                      {(m.statementLine?.merchantRef ?? m.order?.merchantRef) && (
+                        <span className="block text-xs text-[var(--sys-muted)]">
+                          {m.statementLine?.merchantRef ?? m.order?.merchantRef}
                         </span>
-                        {(m.statementLine?.merchantRef ?? m.order?.merchantRef) && (
-                          <span className="block text-xs text-[var(--sys-muted)]">
-                            {m.statementLine?.merchantRef ?? m.order?.merchantRef}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        {m.order ? (
-                          <a href={`/orders/${m.order.id}`} className="text-[var(--sys-primary)] hover:underline" dir="ltr">
-                            {m.order.orderNumber}
-                          </a>
-                        ) : (
-                          <span className="text-[var(--sys-muted)]">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 tabular-nums">{num(m.expectedAmount) ?? '—'}</td>
-                      <td className="px-3 py-2 tabular-nums">{num(m.statementAmount) ?? '—'}</td>
-                      <td className={`px-3 py-2 tabular-nums ${diff ? 'text-[var(--sys-destructive)] font-medium' : 'text-[var(--sys-muted-foreground)]'}`}>
-                        {diff === null ? '—' : `${diff} ${currency}`}
-                      </td>
-                      <td className="px-3 py-2 text-xs tabular-nums">
-                        {num(m.statementFee) === null ? (
-                          <span className="text-[var(--sys-muted)]">—</span>
-                        ) : feeDiff ? (
-                          <span className="text-[var(--sys-destructive)] font-medium">
-                            {num(m.statementFee)} بدل {num(m.expectedFee)}
-                          </span>
-                        ) : (
-                          <span className="text-[var(--sys-muted-foreground)]">{num(m.statementFee)}</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
-                        {m.matchedBy === 'MERCHANT_REF' ? 'المرجع' : m.matchedBy === 'BARCODE' ? 'الباركود' : '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      )}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'order',
+                  label: 'الطلب',
+                  primary: true,
+                  render: (m) =>
+                    m.order ? (
+                      <a href={`/orders/${m.order.id}`} className="text-[var(--sys-primary)] hover:underline" dir="ltr">
+                        {m.order.orderNumber}
+                      </a>
+                    ) : (
+                      <span className="text-[var(--sys-muted)]">—</span>
+                    ),
+                },
+                {
+                  key: 'expected',
+                  label: 'المتوقَّع',
+                  align: 'end',
+                  render: (m) =>
+                    num(m.expectedAmount) === null ? '—' : <Money value={num(m.expectedAmount)!} currency={currency} />,
+                },
+                {
+                  key: 'stated',
+                  label: 'في الكشف',
+                  align: 'end',
+                  render: (m) =>
+                    num(m.statementAmount) === null ? '—' : <Money value={num(m.statementAmount)!} currency={currency} />,
+                },
+                {
+                  key: 'gap',
+                  label: 'الفرق',
+                  align: 'end',
+                  render: (m) => {
+                    const diff = num(m.difference);
+                    return diff === null ? (
+                      '—'
+                    ) : (
+                      <Money value={diff} currency={currency} tone={diff ? 'lost' : undefined} />
+                    );
+                  },
+                },
+                {
+                  key: 'fee',
+                  label: 'أجرة التوصيل',
+                  align: 'end',
+                  render: (m) => {
+                    const feeDiff = num(m.feeDifference);
+                    if (num(m.statementFee) === null) return <span className="text-[var(--sys-muted)]">—</span>;
+                    return feeDiff ? (
+                      <span className="text-xs font-medium text-[var(--sys-destructive)]">
+                        {num(m.statementFee)} بدل {num(m.expectedFee)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-[var(--sys-muted-foreground)]">{num(m.statementFee)}</span>
+                    );
+                  },
+                },
+                {
+                  key: 'via',
+                  label: 'طوبق عبر',
+                  // A desk's column. On a card it is one more labelled line
+                  // between the reader and the number they came for.
+                  hideOnPhone: true,
+                  render: (m) =>
+                    m.matchedBy === 'MERCHANT_REF' ? 'المرجع' : m.matchedBy === 'BARCODE' ? 'الباركود' : '—',
+                },
+              ]}
+              empty={<EmptyState title="لا أسطر في هذه المجموعة" why={hint} />}
+            />
           )}
         </div>
       )}

@@ -15,6 +15,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { RiAddCircleLine, RiAlertLine, RiLoader4Line, RiPercentLine } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Money } from '@/components/ui/Money';
 
 /**
  * /settings/commission — commission rules are dated data, not settings. A
@@ -176,64 +179,99 @@ export function CommissionSettingsScreen() {
             لا قواعد بعد — بدون قاعدة لا تُحتسب أي عمولة.
           </p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-3 py-2">القاعدة</th>
-                <th className="text-right font-medium px-3 py-2">تنطبق على</th>
-                <th className="text-right font-medium px-3 py-2">يُحتسب على</th>
-                <th className="text-right font-medium px-3 py-2">القيمة</th>
-                <th className="text-right font-medium px-3 py-2">من</th>
-                <th className="text-right font-medium px-3 py-2">إلى</th>
-                <th className="text-right font-medium px-3 py-2"> </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {rules.map((r) => {
-                const ended = !!r.effectiveTo || !r.isActive;
-                return (
-                  <tr key={r.id} className={ended ? 'text-[var(--sys-muted)]' : undefined}>
-                    <td className="px-3 py-2 font-medium text-[var(--sys-heading)]">{r.name}</td>
-                    <td className="px-3 py-2">
-                      {r.appliesToUserName
-                        ? r.appliesToUserName
-                        : ROLES.find((x) => x.value === r.appliesToRole)?.label ?? r.appliesToRole ?? '—'}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
-                      {METRIC_LABEL_AR[r.metric] ?? r.metric}
-                      {r.period !== 'PER_ORDER' && ` · ${PERIOD_LABEL_AR[r.period] ?? r.period}`}
-                    </td>
-                    <td className="px-3 py-2 tabular-nums">
-                      {isTarget(r) ? (
-                        <span title={`مكافأة ${r.tiers![0].value} عند بلوغ ${targetGoal(r.tiers)}`}>
-                          هدف {targetGoal(r.tiers)} ← {r.tiers![0].value}
-                        </span>
-                      ) : r.tiers && r.tiers.length > 0 ? (
-                        <span title={r.tiers.map((t) => `${t.from}${t.to === null ? '+' : `–${t.to}`}: ${t.value}`).join(' · ')}>
-                          {r.tiers.length} شرائح
-                        </span>
-                      ) : (
-                        valueLabel(r.type, r.value)
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs tabular-nums" dir="ltr">
-                      {String(r.effectiveFrom).slice(0, 10)}
-                    </td>
-                    <td className="px-3 py-2 text-xs tabular-nums" dir="ltr">
-                      {r.effectiveTo ? String(r.effectiveTo).slice(0, 10) : '—'}
-                    </td>
-                    <td className="px-3 py-2 text-left">
-                      {!ended && (
-                        <button onClick={() => setEndFor(r)} className="text-xs text-[var(--sys-primary)] hover:underline">
-                          إنهاء العمل بها
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <Rows
+            rows={rules}
+            keyOf={(r) => r.id}
+            columns={[
+              {
+                key: 'name',
+                label: 'القاعدة',
+                primary: true,
+                render: (r) => (
+                  <span
+                    className={
+                      r.effectiveTo || !r.isActive
+                        ? 'text-[var(--sys-muted)]'
+                        : 'font-medium text-[var(--sys-heading)]'
+                    }
+                  >
+                    {r.name}
+                  </span>
+                ),
+              },
+              {
+                key: 'who',
+                label: 'تنطبق على',
+                primary: true,
+                render: (r) =>
+                  r.appliesToUserName
+                    ? r.appliesToUserName
+                    : ROLES.find((x) => x.value === r.appliesToRole)?.label ?? r.appliesToRole ?? '—',
+              },
+              {
+                key: 'metric',
+                label: 'يُحتسب على',
+                render: (r) => (
+                  <span className="text-xs text-[var(--sys-muted-foreground)]">
+                    {METRIC_LABEL_AR[r.metric] ?? r.metric}
+                    {r.period !== 'PER_ORDER' && ` · ${PERIOD_LABEL_AR[r.period] ?? r.period}`}
+                  </span>
+                ),
+              },
+              {
+                key: 'value',
+                label: 'القيمة',
+                align: 'end',
+                render: (r) =>
+                  isTarget(r) ? (
+                    <span title={`مكافأة ${r.tiers![0].value} عند بلوغ ${targetGoal(r.tiers)}`}>
+                      هدف {targetGoal(r.tiers)} ← {r.tiers![0].value}
+                    </span>
+                  ) : r.tiers && r.tiers.length > 0 ? (
+                    <span
+                      title={r.tiers
+                        .map((t) => `${t.from}${t.to === null ? '+' : `–${t.to}`}: ${t.value}`)
+                        .join(' · ')}
+                    >
+                      {r.tiers.length} شرائح
+                    </span>
+                  ) : (
+                    valueLabel(r.type, r.value)
+                  ),
+              },
+              {
+                key: 'from',
+                label: 'من',
+                render: (r) => (
+                  <span className="text-xs tabular-nums" dir="ltr">
+                    {String(r.effectiveFrom).slice(0, 10)}
+                  </span>
+                ),
+              },
+              {
+                key: 'to',
+                label: 'إلى',
+                render: (r) => (
+                  <span className="text-xs tabular-nums" dir="ltr">
+                    {r.effectiveTo ? String(r.effectiveTo).slice(0, 10) : '—'}
+                  </span>
+                ),
+              },
+            ]}
+            actions={(r) =>
+              r.effectiveTo || !r.isActive ? null : (
+                <button onClick={() => setEndFor(r)} className="text-xs text-[var(--sys-primary)] hover:underline">
+                  إنهاء العمل بها
+                </button>
+              )
+            }
+            empty={
+              <EmptyState
+                title="لا قواعد عمولة بعد"
+                why="بلا قاعدةٍ لا تُحتسب عمولةٌ لأحد، مهما سُلِّم من طلبات. أضِف واحدةً من الزرّ أعلاه."
+              />
+            }
+          />
         )}
       </div>
 
@@ -246,41 +284,56 @@ export function CommissionSettingsScreen() {
         ) : totals.length === 0 ? (
           <p className="text-sm text-[var(--sys-muted-foreground)] py-8 text-center">لا عمولات محتسبة هذا الشهر.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-3 py-2">الموظف</th>
-                <th className="text-right font-medium px-3 py-2">محتسبة</th>
-                <th className="text-right font-medium px-3 py-2">مستحقة</th>
-                <th className="text-right font-medium px-3 py-2">مدفوعة</th>
-                <th className="text-right font-medium px-3 py-2">معكوسة</th>
-                <th className="text-right font-medium px-3 py-2"> </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {totals.map((t) => (
-                <tr key={t.userId}>
-                  <td className="px-3 py-2 text-[var(--sys-foreground)]">{t.name}</td>
-                  <td className="px-3 py-2 tabular-nums">{t.accrued} {currency}</td>
-                  <td className="px-3 py-2 tabular-nums text-[var(--sys-success)]">{t.payable}</td>
-                  <td className="px-3 py-2 tabular-nums text-[var(--sys-muted-foreground)]">{t.paid}</td>
-                  <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)]">{t.reversed}</td>
-                  <td className="px-3 py-2 text-left">
-                    {/* An entry used to reach "مستحقة" and stop: nothing
-                        turned it into money, so the cash left by hand. */}
-                    {t.payable > 0 && canPay && (
-                      <button
-                        onClick={() => setPaying({ id: t.userId, name: t.name })}
-                        className="h-7 rounded-lg border border-[var(--sys-primary)] px-2.5 text-xs font-medium text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
-                      >
-                        صرف
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Rows
+            rows={totals}
+            keyOf={(t) => t.userId}
+            columns={[
+              { key: 'who', label: 'الموظف', primary: true, render: (t) => t.name },
+              {
+                key: 'accrued',
+                label: 'محتسبة',
+                primary: true,
+                align: 'end',
+                render: (t) => <Money value={t.accrued} currency={currency} />,
+              },
+              {
+                key: 'payable',
+                label: 'مستحقة',
+                align: 'end',
+                render: (t) => <Money value={t.payable} currency={currency} tone="owed" />,
+              },
+              {
+                key: 'paid',
+                label: 'مدفوعة',
+                align: 'end',
+                render: (t) => <Money value={t.paid} currency={currency} tone="collected" />,
+              },
+              {
+                key: 'reversed',
+                label: 'معكوسة',
+                align: 'end',
+                render: (t) => <Money value={t.reversed} currency={currency} tone="lost" />,
+              },
+            ]}
+            actions={(t) =>
+              // An entry used to reach «مستحقة» and stop: nothing turned it
+              // into money, so the cash left by hand.
+              t.payable > 0 && canPay ? (
+                <button
+                  onClick={() => setPaying({ id: t.userId, name: t.name })}
+                  className="h-7 rounded-md border border-[var(--sys-primary)] px-2.5 text-xs font-medium text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
+                >
+                  صرف
+                </button>
+              ) : null
+            }
+            empty={
+              <EmptyState
+                title="لا عمولات محتسبة هذا الشهر"
+                why="العمولة تُحتسب على التسليم. فراغُ القائمة يعني أنّ لا طلبَ سُلِّم هذا الشهر — أو أنّ لا قاعدةَ عمولةٍ سارية."
+              />
+            }
+          />
         )}
       </div>
 

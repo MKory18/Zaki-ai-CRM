@@ -6,6 +6,8 @@ import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiLoader4Line, RiMagicLine, RiSaveLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /settings/delivery-fees — one row per courier per region: the fee, the
@@ -55,6 +57,26 @@ export function DeliveryFeesScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * The row's draft, and one setter for it.
+   *
+   * These lived inside the <tr> body, computed per row. A card's cells are
+   * separate render functions, so they live here instead — one definition,
+   * read by five of them, rather than five copies of the same defaults.
+   */
+  const draftFor = (id: string) => {
+    const current = feeFor(id);
+    return (
+      draft[id] ?? {
+        fee: String(current?.fee ?? ''),
+        lateThresholdDays: String(current?.lateThresholdDays ?? 3),
+        returnFee: String(current?.returnFee ?? 0),
+      }
+    );
+  };
+  const setField = (id: string, patch: Partial<ReturnType<typeof draftFor>>) =>
+    setDraft({ ...draft, [id]: { ...draftFor(id), ...patch } });
 
   const feeFor = (regionId: string) => data?.fees.find((f) => f.deliveryProviderId === courier && f.regionId === regionId);
 
@@ -170,72 +192,109 @@ export function DeliveryFeesScreen() {
 
       {data.regions.length > 0 && courier && (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-4 py-2">المحافظة</th>
-                <th className="text-right font-medium px-4 py-2">الأجرة</th>
-                <th className="text-right font-medium px-4 py-2">حد التأخير (أيام)</th>
-                <th className="text-right font-medium px-4 py-2">أجرة الإرجاع</th>
-                <th className="text-right font-medium px-4 py-2">رمزها عند الشركة</th>
-                <th className="text-right font-medium px-4 py-2"> </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {data.regions.map((r) => {
-                const current = feeFor(r.id);
-                const d = draft[r.id] ?? {
-                  fee: String(current?.fee ?? ''),
-                  lateThresholdDays: String(current?.lateThresholdDays ?? 3),
-                  returnFee: String(current?.returnFee ?? 0),
-                };
-                const set = (patch: Partial<typeof d>) => setDraft({ ...draft, [r.id]: { ...d, ...patch } });
-                return (
-                  <tr key={r.id} className={current ? '' : 'bg-[var(--sys-surface)]/60'}>
-                    <td className="px-4 py-2 text-[var(--sys-heading)]">{r.name}</td>
-                    <td className="px-4 py-2">
-                      <input value={d.fee} onChange={(e) => set({ fee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm" />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input value={d.lateThresholdDays} onChange={(e) => set({ lateThresholdDays: e.target.value })} type="number" min={0} max={90} dir="ltr" className="w-20 h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm" />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input value={d.returnFee} onChange={(e) => set({ returnFee: e.target.value })} type="number" min={0} step="0.001" dir="ltr" className="w-24 h-10 px-2 rounded-lg border border-[var(--sys-border)] text-sm" />
-                    </td>
-                    {/* Read-only: their id, not ours to invent. A blank one
-                        means their API will refuse the shipment, and that is
-                        better seen here than when a parcel fails to book. */}
-                    <td className="px-4 py-2" dir="ltr">
-                      {current?.courierCityId ? (
-                        <span className="text-xs text-[var(--sys-muted-foreground)]">{current.courierCityId}</span>
-                      ) : (
-                        /* "We do not have their id" — not "they do not serve
-                           it". Those are different claims, and only the
-                           courier can make the second one. */
-                        <span
-                          dir="rtl"
-                          title="لا نملك رمز هذه المحافظة لدى الشركة — بدونه لا تُنشأ الشحنة آلياً. اطلبه منهم أو ارفع قائمة مناطقهم."
-                          className="inline-flex items-center gap-1 rounded-full border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] px-2 py-0.5 text-xs text-[var(--sys-warning)]"
-                        >
-                          بلا رمز
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-left">
-                      <button
-                        onClick={() => save(r.id)}
-                        disabled={busy === r.id}
-                        className="inline-flex items-center gap-1 text-xs text-[var(--sys-primary)] hover:underline disabled:opacity-50"
-                      >
-                        <RiSaveLine className="w-4 h-4" />
-                        {saved === r.id ? 'تم الحفظ' : current ? 'تحديث' : 'إضافة'}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {/* A settings table somebody fills in from a courier's price
+              list. Six columns of inputs on a phone is one row per screen;
+              as cards each governorate is a labelled little form. */}
+          <Rows
+            rows={data.regions}
+            keyOf={(r) => r.id}
+            alert={(r) => !feeFor(r.id)}
+            columns={[
+              {
+                key: 'region',
+                label: 'المحافظة',
+                primary: true,
+                render: (r) => <span className="text-[var(--sys-heading)]">{r.name}</span>,
+              },
+              {
+                key: 'fee',
+                label: 'الأجرة',
+                render: (r) => (
+                  <input
+                    value={draftFor(r.id).fee}
+                    onChange={(e) => setField(r.id, { fee: e.target.value })}
+                    aria-label={`أجرة ${r.name}`}
+                    type="number"
+                    min={0}
+                    step="0.001"
+                    dir="ltr"
+                    className="w-24 h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+                  />
+                ),
+              },
+              {
+                key: 'late',
+                label: 'حد التأخير (أيام)',
+                render: (r) => (
+                  <input
+                    value={draftFor(r.id).lateThresholdDays}
+                    onChange={(e) => setField(r.id, { lateThresholdDays: e.target.value })}
+                    aria-label={`حد التأخير في ${r.name}`}
+                    type="number"
+                    min={0}
+                    max={90}
+                    dir="ltr"
+                    className="w-20 h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+                  />
+                ),
+              },
+              {
+                key: 'return',
+                label: 'أجرة الإرجاع',
+                render: (r) => (
+                  <input
+                    value={draftFor(r.id).returnFee}
+                    onChange={(e) => setField(r.id, { returnFee: e.target.value })}
+                    aria-label={`أجرة إرجاع ${r.name}`}
+                    type="number"
+                    min={0}
+                    step="0.001"
+                    dir="ltr"
+                    className="w-24 h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm"
+                  />
+                ),
+              },
+              {
+                key: 'courierId',
+                label: 'رمزها عند الشركة',
+                // Read-only: their id, not ours to invent. A blank one means
+                // their API will refuse the shipment, and that is better
+                // seen here than when a parcel fails to book.
+                render: (r) =>
+                  feeFor(r.id)?.courierCityId ? (
+                    <span className="text-xs text-[var(--sys-muted-foreground)]" dir="ltr">
+                      {feeFor(r.id)!.courierCityId}
+                    </span>
+                  ) : (
+                    // «We do not have their id» — not «they do not serve
+                    // it». Those are different claims, and only the courier
+                    // can make the second one.
+                    <span
+                      title="لا نملك رمز هذه المحافظة لدى الشركة — بدونه لا تُنشأ الشحنة آلياً. اطلبه منهم أو ارفع قائمة مناطقهم."
+                      className="inline-flex items-center gap-1 rounded-sm border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] px-2 py-0.5 text-xs text-[var(--sys-warning)]"
+                    >
+                      بلا رمز
+                    </span>
+                  ),
+              },
+            ]}
+            actions={(r) => (
+              <button
+                onClick={() => save(r.id)}
+                disabled={busy === r.id}
+                className="inline-flex items-center gap-1 text-xs text-[var(--sys-primary)] hover:underline disabled:opacity-50"
+              >
+                <RiSaveLine className="w-4 h-4" />
+                {saved === r.id ? 'تم الحفظ' : feeFor(r.id) ? 'تحديث' : 'إضافة'}
+              </button>
+            )}
+            empty={
+              <EmptyState
+                title="لا محافظات في هذا البلد"
+                why="أجرةُ التوصيل تُسعَّر بالمحافظة. عرّف المحافظات من «الإعدادات ← البلدان والمتاجر» ثمّ عُد لتسعيرها."
+              />
+            }
+          />
         </div>
       )}
 

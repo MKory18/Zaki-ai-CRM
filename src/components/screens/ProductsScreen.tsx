@@ -16,6 +16,7 @@ import { RiAddCircleLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFo
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Rows } from '@/components/ui/Rows';
 
 export function ProductsScreen() {
   const { t, locale } = useApp();
@@ -253,107 +254,106 @@ export function ProductsScreen() {
           </CardContent>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3.5">الصورة</th>
-                    <th className="px-6 py-3.5">اسم المنتج</th>
-                    <th className="px-6 py-3.5">SKU</th>
-                    <th className="px-6 py-3.5">الحالة</th>
-                    <th className="px-6 py-3.5">المخزون</th>
-                    <th className="px-6 py-3.5">التكلفة/وحدة</th>
-                    <th className="px-6 py-3.5">المبيعات</th>
-                    <th className="px-6 py-3.5 text-right rtl:text-left">إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {filteredProducts.map((p) => {
-                    const img = primaryImageOf(p);
-                    return (
-                      <tr
-                        key={p.id}
-                        className="hover:bg-[var(--sys-surface)] transition-colors cursor-pointer"
-                        onClick={() => router.push(`/products/${p.id}`)}
-                      >
-                        <td className="px-6 py-3">
-                          <ProductThumb src={img?.url} alt={productName(p, locale)} size="md" />
-                        </td>
-                        <td className="px-6 py-3">
-                          <span className="font-bold text-[var(--sys-heading)] block">{productName(p, locale)}</span>
-                          <span className="text-xs text-[var(--sys-muted)]">
-                            {p.images?.length || 0} صورة • {p.offers?.length || 0} عرض
-                          </span>
-                        </td>
-                        <td className="px-6 py-3 font-mono text-[var(--sys-muted-foreground)]">{p.sku}</td>
-                        <td className="px-6 py-3">
-                          <Badge variant={p.status === 'ACTIVE' ? 'success' : 'warning'}>
-                            {p.status === 'ACTIVE' ? 'نشط' : p.status === 'INACTIVE' ? 'غير نشط' : 'نفد المخزون'}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-3 font-bold text-[var(--sys-success)]">
-                          {p.analytics?.totalRemaining ?? 0}
-                        </td>
-                        <td className="px-6 py-3 text-[var(--sys-heading)]">
-                          <Money value={p.analytics?.avgCostPerUnit ?? 0} />
-                        </td>
-                        <td className="px-6 py-3 text-[var(--sys-primary)] font-medium">
-                          {p.analytics?.totalSold ?? 0}
-                        </td>
-                        <td className="px-6 py-3 text-right rtl:text-left">
-                          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => router.push(`/products/${p.id}`)}
-                              className="p-2"
-                              title="التفاصيل والصور"
-                            >
-                              <RiArrowRightUpLine className="icon-mirror w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => openEdit(p)}
-                              className="p-2 bg-[var(--sys-surface)] text-[var(--sys-primary)] border-[var(--sys-primary-soft)] hover:bg-[var(--sys-surface-strong)]"
-                              title="تعديل المنتج"
-                            >
-                              <RiPencilLine className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="danger"
-                              onClick={() => handleDelete(p)}
-                              className="p-2"
-                              title="حذف المنتج"
-                            >
-                              <RiDeleteBinLine className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {filteredProducts.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="p-0">
-                        {loading ? (
-                          <p className="py-12 text-center text-xs text-[var(--sys-muted-foreground)]">{t.loading}</p>
-                        ) : (
-                          <EmptyState
-                            title={search ? `لا منتجَ يطابق «${search}»` : 'لا منتجات في هذا المتجر بعد'}
-                            why={
-                              search
-                                ? 'البحث يقرأ الاسم العربيّ والإنجليزيّ وSKU. امسحه لترى الكتالوج كلّه.'
-                                : 'بلا منتجٍ لا طلبَ ولا مخزونَ ولا صفحةَ هبوط. ابدأ بواحد.'
-                            }
-                            action={search ? { label: 'امسح البحث', onClick: () => setSearch('') } : undefined}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <Rows
+                rows={filteredProducts}
+                keyOf={(p) => p.id}
+                onRowClick={(p) => router.push(`/products/${p.id}`)}
+                columns={[
+                  {
+                    key: 'image',
+                    label: 'الصورة',
+                    render: (p) => <ProductThumb src={primaryImageOf(p)?.url} alt={productName(p, locale)} size="md" />,
+                  },
+                  {
+                    key: 'name',
+                    label: 'اسم المنتج',
+                    primary: true,
+                    render: (p) => (
+                      <>
+                        <span className="block font-bold text-[var(--sys-heading)]">{productName(p, locale)}</span>
+                        <span className="text-xs text-[var(--sys-muted)]">
+                          {p.images?.length || 0} صورة • {p.offers?.length || 0} عرض
+                        </span>
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'sku',
+                    label: 'SKU',
+                    primary: true,
+                    render: (p) => <span className="font-mono text-[var(--sys-muted-foreground)]">{p.sku}</span>,
+                  },
+                  {
+                    key: 'status',
+                    label: 'الحالة',
+                    render: (p) => (
+                      <Badge variant={p.status === 'ACTIVE' ? 'success' : 'warning'}>
+                        {p.status === 'ACTIVE' ? 'نشط' : p.status === 'INACTIVE' ? 'غير نشط' : 'نفد المخزون'}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'stock',
+                    label: 'المخزون',
+                    align: 'end',
+                    render: (p) => (
+                      <span className="font-bold tabular-nums text-[var(--sys-success)]">
+                        {p.analytics?.totalRemaining ?? 0}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'cost',
+                    label: 'التكلفة/وحدة',
+                    align: 'end',
+                    render: (p) => <Money value={p.analytics?.avgCostPerUnit ?? 0} />,
+                  },
+                  {
+                    key: 'sold',
+                    label: 'المبيعات',
+                    align: 'end',
+                    render: (p) => (
+                      <span className="font-medium tabular-nums text-[var(--sys-primary)]">
+                        {p.analytics?.totalSold ?? 0}
+                      </span>
+                    ),
+                  },
+                ]}
+                actions={(p) => (
+                  <span className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <Button size="sm" variant="outline" onClick={() => router.push(`/products/${p.id}`)} className="p-2" title="التفاصيل والصور">
+                      <RiArrowRightUpLine className="icon-mirror w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => openEdit(p)}
+                      className="p-2 bg-[var(--sys-surface)] text-[var(--sys-primary)] border-[var(--sys-primary-soft)] hover:bg-[var(--sys-surface-strong)]"
+                      title="تعديل المنتج"
+                    >
+                      <RiPencilLine className="w-4 h-4" />
+                    </Button>
+                    <Button size="sm" variant="danger" onClick={() => handleDelete(p)} className="p-2" title="حذف المنتج">
+                      <RiDeleteBinLine className="w-4 h-4" />
+                    </Button>
+                  </span>
+                )}
+                empty={
+                  loading ? (
+                    <p className="py-12 text-center text-xs text-[var(--sys-muted-foreground)]">{t.loading}</p>
+                  ) : (
+                    <EmptyState
+                      title={search ? `لا منتجَ يطابق «${search}»` : 'لا منتجات في هذا المتجر بعد'}
+                      why={
+                        search
+                          ? 'البحث يقرأ الاسم العربيّ والإنجليزيّ وSKU. امسحه لترى الكتالوج كلّه.'
+                          : 'بلا منتجٍ لا طلبَ ولا مخزونَ ولا صفحةَ هبوط. ابدأ بواحد.'
+                      }
+                      action={search ? { label: 'امسح البحث', onClick: () => setSearch('') } : undefined}
+                    />
+                  )
+                }
+              />
             </div>
           </CardContent>
         </Card>

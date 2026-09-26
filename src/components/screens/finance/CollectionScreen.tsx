@@ -5,6 +5,9 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiCheckboxCircleLine, RiFileExcel2Line, RiLoader4Line, RiUpload2Line } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Money } from '@/components/ui/Money';
 
 /**
  * /finance/collection — the three sequential steps, in order and visible as
@@ -135,104 +138,140 @@ export function CollectionScreen() {
         </p>
       ) : (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-3 py-2">الكشف</th>
-                <th className="text-right font-medium px-3 py-2">الحالة</th>
-                <th className="text-right font-medium px-3 py-2">أقرّت الشركة</th>
-                <th className="text-right font-medium px-3 py-2">وصل فعلاً</th>
-                <th className="text-right font-medium px-3 py-2">الفرق</th>
-                <th className="text-right font-medium px-3 py-2">الأسطر</th>
-                <th className="text-right font-medium px-3 py-2"> </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {rows.map((s) => {
-                const approvable =
-                  s.status !== 'APPROVED' &&
-                  s.counts.receipts > 0 &&
-                  s.counts.matches > 0 &&
-                  (!s.gap.needsExplanation || s.gap.explained);
-                return (
-                  <tr key={s.id}>
-                    <td className="px-3 py-2">
-                      <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{s.reference}</span>
-                      <span className="block text-xs text-[var(--sys-muted)]" dir="ltr">{s.fileName}</span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={`text-xs px-2 py-1 rounded-full border ${STATUS_STYLE[s.status] ?? ''}`}>
-                        {STATUS_AR[s.status] ?? s.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 tabular-nums">{s.gap.claimed} {s.currencyCode}</td>
-                    <td className="px-3 py-2 tabular-nums">{s.gap.received}</td>
-                    <td className={`px-3 py-2 tabular-nums ${s.gap.gap === 0 ? 'text-[var(--sys-muted-foreground)]' : 'text-[var(--sys-destructive)] font-medium'}`}>
-                      {s.gap.gap}
-                      {s.gap.needsExplanation && !s.gap.explained && (
-                        <RiAlertLine className="w-4 h-4 inline mr-1 align-[-2px]" />
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] tabular-nums">
-                      {s.counts.lines} سطر · {s.counts.receipts} إيصال · {s.counts.matches} مطابقة
-                    </td>
-                    <td className="px-3 py-2 text-left whitespace-nowrap">
-                      {s.status === 'APPROVED' ? (
-                        <span className="text-xs text-[var(--sys-success)] inline-flex items-center gap-1">
-                          <RiCheckboxCircleLine className="w-4 h-4" /> معتمد
-                        </span>
-                      ) : (
-                        <span className="flex gap-3 justify-end">
-                          <button onClick={() => setReceiptFor(s)} className="text-xs text-[var(--sys-primary)] hover:underline">
-                            إيصال استلام
-                          </button>
-                          <button
-                            disabled={s.counts.receipts === 0 || busy === s.id}
-                            onClick={() =>
-                              act(s.id, 'تمت المطابقة', () =>
-                                apiJson(`/api/finance/statements/${s.id}/match`, { method: 'POST' })
-                              )
-                            }
-                            className="text-xs text-[var(--sys-primary)] hover:underline disabled:text-[var(--sys-border-strong)] disabled:no-underline"
-                          >
-                            مطابقة
-                          </button>
-                          {s.gap.needsExplanation && !s.gap.explained && (
-                            <button onClick={() => setExplainFor(s)} className="text-xs text-[var(--sys-warning)] hover:underline">
-                              تفسير الفرق
-                            </button>
-                          )}
-                          <button
-                            disabled={!approvable || busy === s.id}
-                            title={
-                              s.counts.receipts === 0
-                                ? 'سجّل إيصال الاستلام أولاً'
-                                : s.counts.matches === 0
-                                  ? 'شغّل المطابقة أولاً'
-                                  : s.gap.needsExplanation && !s.gap.explained
-                                    ? 'الفرق يحتاج تفسيراً مكتوباً'
-                                    : 'اعتماد الكشف — عندها تُسجَّل حركة المحفظة'
-                            }
-                            onClick={() =>
-                              act(s.id, 'اعتُمد الكشف وسُجِّلت حركة المحفظة', () =>
-                                apiJson(`/api/finance/statements/${s.id}`, {
-                                  method: 'PATCH',
-                                  body: JSON.stringify({ approve: true }),
-                                })
-                              )
-                            }
-                            className="text-xs font-medium text-[var(--sys-success)] hover:underline disabled:text-[var(--sys-border-strong)] disabled:no-underline"
-                          >
-                            اعتماد
-                          </button>
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {/* Seven columns of money on a 375px screen. The same
+              definition draws the table a finance clerk reads at a desk
+              and the card somebody checks on the way to the courier —
+              led by the statement's reference and its state. */}
+          <Rows
+            rows={rows}
+            keyOf={(s) => s.id}
+            alert={(s) => s.gap.needsExplanation && !s.gap.explained}
+            columns={[
+              {
+                key: 'ref',
+                label: 'الكشف',
+                primary: true,
+                render: (s) => (
+                  <>
+                    <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{s.reference}</span>
+                    <span className="block text-xs text-[var(--sys-muted)]" dir="ltr">{s.fileName}</span>
+                  </>
+                ),
+              },
+              {
+                key: 'state',
+                label: 'الحالة',
+                primary: true,
+                render: (s) => (
+                  <span className={`text-xs px-2 py-1 rounded-sm border ${STATUS_STYLE[s.status] ?? ''}`}>
+                    {STATUS_AR[s.status] ?? s.status}
+                  </span>
+                ),
+              },
+              {
+                key: 'claimed',
+                label: 'أقرّت الشركة',
+                align: 'end',
+                render: (s) => <Money value={s.gap.claimed} currency={s.currencyCode} />,
+              },
+              {
+                key: 'received',
+                label: 'وصل فعلاً',
+                align: 'end',
+                render: (s) => <Money value={s.gap.received} currency={s.currencyCode} />,
+              },
+              {
+                key: 'gap',
+                label: 'الفرق',
+                align: 'end',
+                render: (s) => (
+                  <span className={s.gap.gap === 0 ? '' : 'font-medium'}>
+                    <Money
+                      value={s.gap.gap}
+                      currency={s.currencyCode}
+                      tone={s.gap.gap === 0 ? undefined : 'lost'}
+                    />
+                    {s.gap.needsExplanation && !s.gap.explained && (
+                      <RiAlertLine className="w-4 h-4 inline mr-1 align-[-2px]" />
+                    )}
+                  </span>
+                ),
+              },
+              {
+                key: 'counts',
+                label: 'الأسطر',
+                render: (s) => (
+                  <span className="text-xs text-[var(--sys-muted-foreground)] tabular-nums">
+                    {s.counts.lines} سطر · {s.counts.receipts} إيصال · {s.counts.matches} مطابقة
+                  </span>
+                ),
+              },
+            ]}
+            actions={(s) => {
+              // The one thing this row decides: may it be approved yet.
+              const approvable =
+                s.status !== 'APPROVED' &&
+                s.counts.receipts > 0 &&
+                s.counts.matches > 0 &&
+                (!s.gap.needsExplanation || s.gap.explained);
+              return s.status === 'APPROVED' ? (
+                <span className="text-xs text-[var(--sys-success)] inline-flex items-center gap-1">
+                  <RiCheckboxCircleLine className="w-4 h-4" /> معتمد
+                </span>
+              ) : (
+                <span className="flex flex-wrap gap-3 justify-end">
+                  <button onClick={() => setReceiptFor(s)} className="text-xs text-[var(--sys-primary)] hover:underline">
+                    إيصال استلام
+                  </button>
+                  <button
+                    disabled={s.counts.receipts === 0 || busy === s.id}
+                    onClick={() =>
+                      act(s.id, 'تمت المطابقة', () =>
+                        apiJson(`/api/finance/statements/${s.id}/match`, { method: 'POST' })
+                      )
+                    }
+                    className="text-xs text-[var(--sys-primary)] hover:underline disabled:text-[var(--sys-border-strong)] disabled:no-underline"
+                  >
+                    مطابقة
+                  </button>
+                  {s.gap.needsExplanation && !s.gap.explained && (
+                    <button onClick={() => setExplainFor(s)} className="text-xs text-[var(--sys-warning)] hover:underline">
+                      تفسير الفرق
+                    </button>
+                  )}
+                  <button
+                    disabled={!approvable || busy === s.id}
+                    title={
+                      s.counts.receipts === 0
+                        ? 'سجّل إيصال الاستلام أولاً'
+                        : s.counts.matches === 0
+                          ? 'شغّل المطابقة أولاً'
+                          : s.gap.needsExplanation && !s.gap.explained
+                            ? 'الفرق يحتاج تفسيراً مكتوباً'
+                            : 'اعتماد الكشف — عندها تُسجَّل حركة المحفظة'
+                    }
+                    onClick={() =>
+                      act(s.id, 'اعتُمد الكشف وسُجِّلت حركة المحفظة', () =>
+                        apiJson(`/api/finance/statements/${s.id}`, {
+                          method: 'PATCH',
+                          body: JSON.stringify({ approve: true }),
+                        })
+                      )
+                    }
+                    className="text-xs font-medium text-[var(--sys-success)] hover:underline disabled:text-[var(--sys-border-strong)] disabled:no-underline"
+                  >
+                    اعتماد
+                  </button>
+                </span>
+              );
+            }}
+            empty={
+              <EmptyState
+                title="لا كشوفَ في هذه الفترة"
+                why="الكشف يصل من شركة الشحن ويُرفع من الزرّ أعلاه. بلا كشفٍ لا مطابقةَ ولا اعتماد، والمال المحصَّل يبقى خارج المحافظ."
+              />
+            }
+          />
         </div>
       )}
 

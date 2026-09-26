@@ -392,7 +392,7 @@
   "src/components/screens/CommissionSettingsScreen.tsx": {
     "buttons": 10,
     "inputs": 15,
-    "columns": 13,
+    "columns": 11,
     "cards": 0,
     "modals": 2,
     "icons": 4,
@@ -492,7 +492,7 @@
   "src/components/screens/DeliveryFeesScreen.tsx": {
     "buttons": 6,
     "inputs": 8,
-    "columns": 6,
+    "columns": 5,
     "cards": 0,
     "modals": 2,
     "icons": 4,
@@ -522,7 +522,7 @@
   "src/components/screens/finance/CollectionScreen.tsx": {
     "buttons": 9,
     "inputs": 8,
-    "columns": 7,
+    "columns": 6,
     "cards": 0,
     "modals": 2,
     "icons": 6,
@@ -752,7 +752,7 @@
   "src/components/screens/ProductsScreen.tsx": {
     "buttons": 15,
     "inputs": 11,
-    "columns": 8,
+    "columns": 7,
     "cards": 1,
     "modals": 2,
     "icons": 11,
@@ -781,11 +781,11 @@
   },
   "src/components/screens/ShipmentsNewScreen.tsx": {
     "buttons": 3,
-    "inputs": 7,
-    "columns": 7,
+    "inputs": 5,
+    "columns": 5,
     "cards": 0,
     "modals": 0,
-    "icons": 6,
+    "icons": 5,
     "links": 0,
     "tabs": 0
   },
@@ -1381,7 +1381,7 @@
   },
   "src/components/ui/Rows.tsx": {
     "buttons": 0,
-    "inputs": 2,
+    "inputs": 4,
     "columns": 3,
     "cards": 0,
     "modals": 0,

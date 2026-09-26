@@ -129,7 +129,27 @@ export function ScoreBoard() {
           <h3 className="border-b border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs font-bold text-[var(--sys-foreground)]">
             {r.ar}
           </h3>
-          <table className="w-full text-sm">
+{/*
+          A MATRIX, NOT A LIST — AND IT STAYS A TABLE.
+          
+          The score of every person on the same bands, read down a column.
+
+          Every other table in the dashboard became `<Rows>`: a table on a
+          desk, a card in a hand, from one definition. This one does not,
+          and the reason is what it is FOR.
+
+          A card per row destroys the comparison that is the whole point:
+          the reader is scanning one column DOWN, across campaigns or
+          people, and cards put each row's number in a different place.
+          And the totals row has no card form at all — it is the sum of
+          the column, and a card of sums beside cards of rows reads as one
+          more row.
+
+          So it scrolls sideways on a phone. For a matrix that is the
+          honest behaviour: the thing genuinely does not fit, and pretending
+          otherwise costs the comparison it exists to make.
+        */}
+        <table className="w-full text-sm">
             <thead className="text-xs text-[var(--sys-muted)]">
               <tr>
                 <th className="w-10 px-3 py-1.5 text-right font-medium">#</th>

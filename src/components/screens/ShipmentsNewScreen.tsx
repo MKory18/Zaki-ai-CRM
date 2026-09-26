@@ -7,6 +7,8 @@ import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiArrowGoBackLine, RiLoader4Line, RiPauseCircleLine, RiTruckLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /ops/shipments/new — pick a courier, filter, review each row's COD and its
@@ -112,15 +114,6 @@ export function ShipmentsNewScreen() {
     void load();
   }, [load]);
 
-  const toggleAll = () => {
-    if (!rows) return;
-    const allSelected = rows.filter((r) => r.selectable).every((r) => selected[r.id]);
-    const next: Record<string, boolean> = {};
-    // Select-all skips blocked rows by design.
-    for (const row of rows) if (row.selectable) next[row.id] = !allSelected;
-    setSelected(next);
-  };
-
   const create = async () => {
     const orderIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
     if (orderIds.length === 0 || !filters.courier) {
@@ -212,118 +205,146 @@ export function ShipmentsNewScreen() {
         ))}
       </div>
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="px-3 py-2 w-10">
-                  <input type="checkbox" onChange={toggleAll} aria-label="اختيار الكل" />
-                </th>
-                <th className="text-right font-medium px-3 py-2">الطلب</th>
-                <th className="text-right font-medium px-3 py-2">العميل</th>
-                <th className="text-right font-medium px-3 py-2">المحافظة</th>
-                <th className="text-right font-medium px-3 py-2">تفصيل التحصيل</th>
-                <th className="text-right font-medium px-3 py-2">تنبيهات</th>
-                <th className="text-right font-medium px-3 py-2"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {rows.map((r) => (
-                <tr key={r.id} className={r.hardBlocked ? 'bg-[var(--sys-destructive-soft)]/40' : ''}>
-                  <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={!!selected[r.id]}
-                      disabled={r.hardBlocked}
-                      onChange={(e) => setSelected({ ...selected, [r.id]: e.target.checked })}
+          {/* The picking list: seven columns, read on a phone at the
+              packing bench. `selection` puts the checkbox where a thumb is
+              — in the card's heading — instead of in a first column
+              somebody has to aim at. */}
+          <Rows
+            rows={rows}
+            keyOf={(r) => r.id}
+            alert={(r) => r.hardBlocked}
+            selection={{
+              // A hard-blocked order has no checkbox rather than one that
+              // refuses: a control that cannot work is worse than none.
+              canSelect: (r) => !r.hardBlocked,
+              isSelected: (r) => !!selected[r.id],
+              onToggle: (r, next) => setSelected({ ...selected, [r.id]: next }),
+              onToggleAll: (next) => {
+                const all: Record<string, boolean> = {};
+                // Select-all skips blocked rows by design.
+                for (const row of rows) if (row.selectable) all[row.id] = next;
+                setSelected(all);
+              },
+            }}
+            columns={[
+              {
+                key: 'order',
+                label: 'الطلب',
+                primary: true,
+                render: (r) => (
+                  <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{r.orderNumber}</span>
+                ),
+              },
+              {
+                key: 'customer',
+                label: 'العميل',
+                primary: true,
+                render: (r) => (
+                  <span className="flex items-center gap-2">
+                    {r.customer.fullName}
+                    <CustomerHistoryButton
+                      customerId={r.customer.id}
+                      orderId={r.id}
+                      previousOrders={r.previousOrders}
                     />
-                  </td>
-                  <td className="px-3 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{r.orderNumber}</td>
-                  <td className="px-3 py-2 text-[var(--sys-foreground)]">
-                    <span className="flex items-center gap-2">
-                      {r.customer.fullName}
-                      <CustomerHistoryButton customerId={r.customer.id} orderId={r.id} previousOrders={r.previousOrders} />
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{r.region?.name ?? r.customer.city}</td>
-                  <td className="px-3 py-2 text-xs text-[var(--sys-foreground)]" dir="ltr">
+                  </span>
+                ),
+              },
+              { key: 'region', label: 'المحافظة', render: (r) => r.region?.name ?? r.customer.city },
+              {
+                key: 'cod',
+                label: 'تفصيل التحصيل',
+                render: (r) => (
+                  <span className="text-xs" dir="ltr">
                     {r.cod.subtotal} − {r.cod.discount} + {r.cod.deliveryFee} ={' '}
-                    <strong className="tabular-nums">{r.cod.cod} {r.cod.currency}</strong>
-                    {r.cod.feeSource === 'NONE' && <span className="text-[var(--sys-destructive)]"> (بلا أجرة)</span>}
-                  </td>
-                  <td className="px-3 py-2">
-                    {r.blocks.length === 0 ? (
-                      <span className="text-xs text-[var(--sys-success)]">جاهز</span>
-                    ) : (
-                      <div className="space-y-1">
-                        {r.blocks.map((b) => (
-                          <p key={b.code} className={`text-xs flex items-center gap-1 ${b.hard ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-warning)]'}`}>
-                            <RiAlertLine className="w-4 h-4" /> {b.message}
-                          </p>
-                        ))}
-                        {!r.hardBlocked && (
-                          <label className="flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)]">
-                            <input
-                              type="checkbox"
-                              checked={!!acknowledged[r.id]}
-                              onChange={(e) => setAcknowledged({ ...acknowledged, [r.id]: e.target.checked })}
-                            />
-                            أقرّ بالتنبيه وأتابع
-                          </label>
-                        )}
-                      </div>
+                    <strong className="tabular-nums">
+                      {r.cod.cod} {r.cod.currency}
+                    </strong>
+                    {r.cod.feeSource === 'NONE' && (
+                      <span className="text-[var(--sys-destructive)]"> (بلا أجرة)</span>
                     )}
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {/* Not this week, the customer said. The order is good;
-                        it simply must not go out yet — and cancelling it
-                        would throw away a sale and free stock he still
-                        wants. */}
-                    <button
-                      type="button"
-                      onClick={() => toggleHold(r)}
-                      disabled={holding === r.id}
-                      title={
-                        view === 'held'
-                          ? 'أعِده إلى قائمة الشحن'
-                          : 'أجّله — لن يدخل أي شحنة حتى تُفرج عنه، والبضاعة تبقى محجوزة له'
-                      }
-                      className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors disabled:opacity-50 ${
-                        view === 'held'
-                          ? 'border-[var(--sys-border)] text-[var(--sys-success)] hover:border-[var(--sys-success)]'
-                          : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)]'
-                      }`}
-                    >
-                      {holding === r.id ? (
-                        <RiLoader4Line className="w-4 h-4 animate-spin" />
-                      ) : view === 'held' ? (
-                        <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
-                      ) : (
-                        <RiPauseCircleLine className="w-4 h-4" />
+                  </span>
+                ),
+              },
+              {
+                key: 'blocks',
+                label: 'تنبيهات',
+                render: (r) =>
+                  r.blocks.length === 0 ? (
+                    <span className="text-xs text-[var(--sys-success)]">جاهز</span>
+                  ) : (
+                    <span className="block space-y-1">
+                      {r.blocks.map((b) => (
+                        <span
+                          key={b.code}
+                          className={`text-xs flex items-center gap-1 ${
+                            b.hard ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-warning)]'
+                          }`}
+                        >
+                          <RiAlertLine className="w-4 h-4" /> {b.message}
+                        </span>
+                      ))}
+                      {!r.hardBlocked && (
+                        <label className="flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)]">
+                          <input
+                            type="checkbox"
+                            checked={!!acknowledged[r.id]}
+                            onChange={(e) => setAcknowledged({ ...acknowledged, [r.id]: e.target.checked })}
+                          />
+                          أقرّ بالتنبيه وأتابع
+                        </label>
                       )}
-                      {view === 'held' ? 'أرجِعه' : 'أجّل'}
-                    </button>
-                    {r.shipHoldReason && (
-                      <span className="block text-xs text-[var(--sys-muted)] mt-0.5 max-w-[10rem] truncate" title={r.shipHoldReason}>
-                        {r.shipHoldReason}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  {/* Seven columns: the checkbox, order, customer, governorate, the
-                      collection breakdown, alerts, and the actions cell. Six
-                      left the empty message short of the table and the last
-                      column hanging off the end of the row. */}
-                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">
-                    <RiTruckLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
-                    لا توجد طلبات مؤكدة جاهزة للشحن بهذه الفلاتر.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </span>
+                  ),
+              },
+            ]}
+            actions={(r) => (
+              <span className="whitespace-nowrap">
+                {/* Not this week, the customer said. The order is good; it
+                    simply must not go out yet — and cancelling it would
+                    throw away a sale and free stock he still wants. */}
+                <button
+                  type="button"
+                  onClick={() => toggleHold(r)}
+                  disabled={holding === r.id}
+                  title={
+                    view === 'held'
+                      ? 'أعِده إلى قائمة الشحن'
+                      : 'أجّله — لن يدخل أي شحنة حتى تُفرج عنه، والبضاعة تبقى محجوزة له'
+                  }
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border transition-colors disabled:opacity-50 ${
+                    view === 'held'
+                      ? 'border-[var(--sys-border)] text-[var(--sys-success)] hover:border-[var(--sys-success)]'
+                      : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)]'
+                  }`}
+                >
+                  {holding === r.id ? (
+                    <RiLoader4Line className="w-4 h-4 animate-spin" />
+                  ) : view === 'held' ? (
+                    <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
+                  ) : (
+                    <RiPauseCircleLine className="w-4 h-4" />
+                  )}
+                  {view === 'held' ? 'أرجِعه' : 'أجّل'}
+                </button>
+                {r.shipHoldReason && (
+                  <span
+                    className="block text-xs text-[var(--sys-muted)] mt-0.5 max-w-[10rem] truncate"
+                    title={r.shipHoldReason}
+                  >
+                    {r.shipHoldReason}
+                  </span>
+                )}
+              </span>
+            )}
+            empty={
+              <EmptyState
+                icon={RiTruckLine}
+                title="لا طلبات جاهزة للشحن بهذه الفلاتر"
+                why="الطلب يصل هنا بعد تأكيده وتجهيزه. إن كنت تنتظر طلباً، فراجع الفلاتر أعلاه أو شاشةَ التجهيز."
+              />
+            }
+          />
         </div>
         </>
       )}

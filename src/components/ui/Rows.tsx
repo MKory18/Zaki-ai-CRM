@@ -62,6 +62,15 @@ export interface RowsProps<T> {
     canSelect: (row: T) => boolean;
     isSelected: (row: T) => boolean;
     onToggle: (row: T, next: boolean) => void;
+    /**
+     * Pick every selectable row at once, or drop them all.
+     *
+     * Not optional out of politeness: picking thirty orders one at a time
+     * is the reason people stop picking and print them one by one. It sits
+     * in the table's own heading on a desk, and above the cards on a
+     * phone, where there is no heading row to put it in.
+     */
+    onToggleAll?: (next: boolean) => void;
   };
   /** Marks a row as needing attention — red on the desk, red on the card. */
   alert?: (row: T) => boolean;
@@ -98,6 +107,9 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
     );
   }
 
+  const selectable = selection ? rows.filter(selection.canSelect) : [];
+  const allPicked = selectable.length > 0 && selectable.every(selection!.isSelected);
+
   const onCard = columns.filter((c) => !c.hideOnPhone);
   const titles = onCard.filter((c) => c.primary);
   const details = onCard.filter((c) => !c.primary);
@@ -109,7 +121,18 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
         <table className="w-full text-sm">
           <thead className="bg-[var(--sys-surface)] text-xs text-[var(--sys-muted-foreground)]">
             <tr>
-              {selection && <th className="w-10 px-3 py-2" />}
+              {selection && (
+                <th className="w-10 px-3 py-2">
+                  {selection.onToggleAll && selectable.length > 0 && (
+                    <input
+                      type="checkbox"
+                      checked={allPicked}
+                      onChange={(e) => selection.onToggleAll!(e.target.checked)}
+                      aria-label={allPicked ? 'ألغِ اختيار الكل' : 'اختر الكل'}
+                    />
+                  )}
+                </th>
+              )}
               {columns.map((c) => (
                 <th
                   key={c.key}
@@ -158,6 +181,18 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
       </div>
 
       {/* The hand. */}
+      {selection?.onToggleAll && selectable.length > 0 && (
+        // There is no heading row on a phone, so the select-all sits above
+        // the cards. Without it the only way to pick thirty is thirty taps.
+        <label className="mb-2 flex items-center gap-2 px-1 text-xs text-[var(--sys-muted-foreground)] md:hidden">
+          <input
+            type="checkbox"
+            checked={allPicked}
+            onChange={(e) => selection.onToggleAll!(e.target.checked)}
+          />
+          {allPicked ? 'ألغِ اختيار الكل' : `اختر الكل (${selectable.length})`}
+        </label>
+      )}
       <ul className="space-y-2 md:hidden">
         {rows.map((row) => (
           <li
