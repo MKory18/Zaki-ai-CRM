@@ -159,7 +159,7 @@ export function useLabelSize() {
 }
 
 const INPUT =
-  'w-full h-10 px-2 rounded-lg border border-[#e3e8ef] bg-white text-xs text-[#364152] focus:outline-none focus:border-[#b8256e]';
+  'w-full h-10 px-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]';
 
 /**
  * The picker itself. `compact` is the one-line form that sits beside a
@@ -206,7 +206,7 @@ export function LabelSizePicker({
               className={`${INPUT} w-16`}
               aria-label="العرض بالمليمتر"
             />
-            <span className="text-[11px] text-[#9aa4b2]">×</span>
+            <span className="text-[11px] text-[var(--sys-muted)]">×</span>
             <input
               type="number"
               min={40}
@@ -224,7 +224,7 @@ export function LabelSizePicker({
 
   return (
     <div className={className}>
-      <label className="block text-[11px] text-[#697586] mb-1">مقاس البوليصة</label>
+      <label className="block text-[11px] text-[var(--sys-muted-foreground)] mb-1">مقاس البوليصة</label>
       {select}
       {stored.key === 'custom' && (
         <div className="grid grid-cols-2 gap-2 mt-2" dir="ltr">
@@ -254,7 +254,7 @@ export function LabelSizePicker({
           Drawn to the real proportions, and to real millimetres where the
           screen can (`mm` is a CSS unit), so choosing is looking. */}
       <SizePreview />
-      <p className="text-[10px] text-[#9aa4b2] mt-1">يُحفظ على هذا الجهاز ويُستعمل في كل شاشات الطباعة.</p>
+      <p className="text-[10px] text-[var(--sys-muted)] mt-1">يُحفظ على هذا الجهاز ويُستعمل في كل شاشات الطباعة.</p>
     </div>
   );
 }
@@ -284,7 +284,7 @@ function SizePreview() {
   return (
     <figure className="mt-2 flex items-center gap-3">
       <div
-        className="shrink-0 border border-[#cdd5df] bg-white"
+        className="shrink-0 border border-[var(--sys-border-strong)] bg-[var(--sys-card)]"
         style={{ width: `${sheetW * SCALE}mm`, height: `${sheetH * SCALE}mm` }}
       >
         <div
@@ -295,11 +295,11 @@ function SizePreview() {
           }}
         >
           {Array.from({ length: across * down }, (_, i) => (
-            <span key={i} className="border border-dashed border-[#b8256e]/40" />
+            <span key={i} className="border border-dashed border-[var(--sys-primary)]/40" />
           ))}
         </div>
       </div>
-      <figcaption className="text-[10px] leading-relaxed text-[#697586]">
+      <figcaption className="text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
         {label}
         <span className="block" dir="ltr" data-testid="preview-mm">
           {dims.width}×{dims.height} mm

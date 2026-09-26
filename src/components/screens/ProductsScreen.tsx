@@ -527,7 +527,7 @@ export function ProductsScreen() {
             <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" loading={modalLoading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
+            <Button type="submit" loading={modalLoading}>
               حفظ المنتج
             </Button>
           </div>

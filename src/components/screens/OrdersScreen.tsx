@@ -328,8 +328,9 @@ export function OrdersScreen() {
 
             <Button
               size="sm"
+              variant="outline"
               onClick={() => setAiModalOpen(true)}
-              className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
+              className="items-center gap-1.5 text-[var(--sys-primary)] border-[var(--sys-primary)]/35 hover:bg-[var(--sys-primary-soft)]"
             >
               <Wand2 className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
@@ -568,7 +569,7 @@ export function OrdersScreen() {
                       <div className="min-w-0 flex-1 space-y-1">
                         {/* Line 1 — which order, and where it stands. */}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="font-bold text-[var(--sys-destructive)] text-xs" dir="ltr">{order.orderNumber}</span>
+                          <span className="font-bold text-[var(--sys-heading)] text-xs" dir="ltr">{order.orderNumber}</span>
                           <OrderStateBadge state={order.state} />
                           {order.deliveryProvider && (
                             <span className="inline-flex items-center gap-1 text-[11px] text-[var(--sys-muted-foreground)]">

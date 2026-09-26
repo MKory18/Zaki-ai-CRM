@@ -164,7 +164,9 @@ export function DashboardScreen() {
                   key={p.key}
                   onClick={() => setPeriod(p.key)}
                   className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    period === p.key ? 'bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] font-bold shadow-sm' : 'hover:bg-[var(--sys-surface)]'
+                    // Chosen, not lost. This was the colour that means
+                    // "late, or money lost", used to mean "selected".
+                    period === p.key ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-bold shadow-sm' : 'hover:bg-[var(--sys-surface)]'
                   }`}
                 >
                   {locale === 'ar' ? p.ar : p.en}
@@ -175,7 +177,7 @@ export function DashboardScreen() {
             <Button
               variant="outline"
               onClick={() => setAiModalOpen(true)}
-              className="items-center bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)] hover:bg-[var(--sys-success-soft)]"
+              className="items-center gap-1.5 text-[var(--sys-primary)] border-[var(--sys-primary)]/35 hover:bg-[var(--sys-primary-soft)]"
             >
               <Sparkles className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>

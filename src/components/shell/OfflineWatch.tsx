@@ -38,6 +38,31 @@ export function OfflineWatch() {
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
+
+    /**
+     * NOT IN DEVELOPMENT.
+     *
+     * The worker serves `/_next/static/` cache-first, which is safe in
+     * production because every file there is content-hashed: changed bytes
+     * mean a changed URL. In development they are NOT - the same URL is
+     * rebuilt in place - so cache-first hands back yesterday's stylesheet
+     * and yesterday's chunk, and the page renders the old colours over the
+     * new markup. It cost an hour of chasing a "stale server" that was
+     * this, and it will cost anybody else the same hour.
+     *
+     * A worker already installed on a developer's machine has to be taken
+     * off it too, or it outlives the fix.
+     */
+    if (process.env.NODE_ENV !== 'production') {
+      void navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+        .then(() => (typeof caches !== 'undefined' ? caches.keys() : []))
+        .then((keys) => Promise.all([...keys].map((k) => caches.delete(k))))
+        .catch(() => undefined);
+      return;
+    }
+
     // After load: registering during hydration competes with the requests
     // the page is already making.
     const register = () => navigator.serviceWorker.register('/sw.js').catch(() => {});

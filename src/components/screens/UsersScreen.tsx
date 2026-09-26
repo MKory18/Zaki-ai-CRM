@@ -414,7 +414,7 @@ export function UsersScreen() {
               className={
                 pendingAction?.action === 'changeStatus' && pendingAction.extra?.status === 'ACTIVE'
                   ? 'bg-[var(--sys-success)] hover:bg-[var(--sys-success)]/85'
-                  : 'bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85'
+                  : ''
               }
             >
               تأكيد

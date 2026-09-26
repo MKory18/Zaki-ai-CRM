@@ -229,7 +229,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 type="submit"
                 size="sm"
                 disabled={blocked}
-                className={danger && open.kind !== 'tell' ? 'bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]' : undefined}
+                variant={danger && open.kind !== 'tell' ? 'danger' : 'primary'}
               >
                 {open.kind === 'tell'
                   ? open.options.okLabel ?? 'حسناً'

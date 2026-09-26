@@ -365,7 +365,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             <Button type="button" variant="outline" onClick={onClose}>
               إلغاء
             </Button>
-            <Button type="submit" loading={loading} disabled={!ready} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]">
+            <Button type="submit" loading={loading} disabled={!ready}>
               <Megaphone className="w-4 h-4" />
               إنشاء الطلب ({money(goodsTotal)})
             </Button>

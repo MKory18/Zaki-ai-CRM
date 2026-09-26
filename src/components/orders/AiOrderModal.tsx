@@ -197,7 +197,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
             className="font-mono text-xs leading-relaxed"
           />
           <div className="flex justify-end mt-3">
-            <Button onClick={handleParse} loading={parsing} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]">
+            <Button onClick={handleParse} loading={parsing}>
               <Wand2 className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
               تحليل الطلب بالذكاء الاصطناعي
             </Button>
@@ -311,7 +311,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               <Button variant="outline" onClick={() => setResult(null)}>
                 إلغاء
               </Button>
-              <Button onClick={handleConfirm} loading={saving} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]">
+              <Button onClick={handleConfirm} loading={saving}>
                 <CheckCircle2 className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 تسجيل الطلب (${finalPrice})
               </Button>

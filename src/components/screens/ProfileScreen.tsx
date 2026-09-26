@@ -188,7 +188,7 @@ export function ProfileScreen() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" loading={loading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
+            <Button type="submit" loading={loading}>
               حفظ التغييرات
             </Button>
           </div>

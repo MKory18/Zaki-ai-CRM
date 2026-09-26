@@ -336,7 +336,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
             <Button size="sm" variant="outline" onClick={() => setOpenForm(null)}>
               {ar ? 'إلغاء' : 'Cancel'}
             </Button>
-            <Button size="sm" loading={actionLoading} onClick={handleQuickSubmit} disabled={formDisabled()} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]">
+            <Button size="sm" loading={actionLoading} onClick={handleQuickSubmit} disabled={formDisabled()}>
               {ar ? 'تأكيد' : 'Submit'}
             </Button>
           </div>

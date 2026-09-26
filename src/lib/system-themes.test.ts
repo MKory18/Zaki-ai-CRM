@@ -136,6 +136,75 @@ describe('legible in the theme it lives in', () => {
   });
 });
 
+/**
+ * BLACK AND SKY, AND NOTHING ELSE.
+ *
+ * The identity was asked for in three words - black, sky, quiet - and three
+ * words are exactly what gets lost the next time somebody adds a theme or
+ * "warms up" a grey. So each of the three is a number here.
+ */
+describe('black and sky', () => {
+  /** How far a colour is from grey, as an absolute channel spread. */
+  const cast = (hex: string) => {
+    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    return (Math.max(...c) - Math.min(...c)) / 255;
+  };
+
+  /** How vivid, for the one colour that is allowed to be. */
+  const vivid = (hex: string) => {
+    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const mx = Math.max(...c);
+    return mx === 0 ? 0 : (mx - Math.min(...c)) / mx;
+  };
+
+  const NEUTRALS = [
+    'background', 'card', 'surface', 'surface-strong', 'heading', 'foreground',
+    'muted-foreground', 'muted', 'border', 'border-strong',
+  ] as const;
+
+  it('the greys are grey - no blue cast, no warm cast, nothing competing', () => {
+    for (const theme of SYSTEM_THEMES) {
+      for (const name of NEUTRALS) {
+        expect(
+          cast(theme.vars[name]),
+          `${theme.key}: --sys-${name} (${theme.vars[name]}) يحمل لوناً`
+        ).toBeLessThan(0.07);
+      }
+    }
+  });
+
+  it('and the one colour in the system is a sky blue', () => {
+    for (const theme of SYSTEM_THEMES) {
+      const h = hue(theme.vars.primary);
+      expect(h, `${theme.key}: اللون المميّز ليس سماوياً`).toBeGreaterThan(185);
+      expect(h, `${theme.key}: اللون المميّز ليس سماوياً`).toBeLessThan(205);
+    }
+  });
+
+  it('quiet, which is a measurement: deep enough to carry its own label', () => {
+    // The failure this prevents is the bright cyan that reads as "sky" on a
+    // swatch and cannot hold white text, so somebody "fixes" it by making
+    // the label grey and now the button has no label anybody can read.
+    for (const theme of SYSTEM_THEMES) {
+      expect(
+        contrast(theme.vars.primary, theme.vars.card),
+        `${theme.key}: اللون المميّز لا يُقرأ ككتابة على البطاقة`
+      ).toBeGreaterThan(4.5);
+    }
+  });
+
+  it('and a note never reads as an action', () => {
+    // Info is a blue too, now that the action is. If they end up equally
+    // vivid, an informational strip looks like something to press.
+    for (const theme of SYSTEM_THEMES) {
+      expect(
+        Math.abs(vivid(theme.vars.primary) - vivid(theme.vars.info)),
+        `${theme.key}: التنبيه المعلوماتي يشبه زرّ الفعل`
+      ).toBeGreaterThan(0.15);
+    }
+  });
+});
+
 describe('the stylesheet matches the palettes', () => {
   // The CSS is generated from these objects so the first paint is already
   // the right theme. Two copies of a palette is one palette that goes stale.

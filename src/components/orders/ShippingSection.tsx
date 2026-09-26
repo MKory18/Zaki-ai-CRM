@@ -381,7 +381,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => setOpenForm(null)}>{ar ? 'إلغاء' : 'Cancel'}</Button>
             <Button
-              size="sm" loading={actionLoading === 'transition'} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]"
+              size="sm" loading={actionLoading === 'transition'}
               disabled={!failureReason || (failureReason === 'OTHER' && note.trim().length < 5)}
               onClick={async () => {
                 // 1. record attempt 2. transition — abort the sequence on first
@@ -441,7 +441,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => setOpenForm(null)}>{ar ? 'إلغاء' : 'Cancel'}</Button>
             <Button
-              size="sm" loading={actionLoading !== null} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]"
+              size="sm" loading={actionLoading !== null}
               onClick={async () => {
                 // Sequence: assign_provider → update_tracking. Each call must use
                 // the LATEST version from the previous response — abort on first

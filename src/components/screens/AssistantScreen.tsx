@@ -171,7 +171,7 @@ export function AssistantScreen() {
             size="sm"
             onClick={handleGenerateSummary}
             loading={generating}
-            className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
+            className="flex items-center space-x-1.5"
           >
             <Sparkles className="w-4 h-4" />
             <span>أعد توليد الملخّص</span>
@@ -307,7 +307,7 @@ export function AssistantScreen() {
                 }`}
               >
                 {m.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-8 h-8 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center shrink-0 shadow-xs">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
@@ -375,7 +375,7 @@ export function AssistantScreen() {
                 onChange={(e) => setInputQuery(e.target.value)}
                 className="flex-1 px-4 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
-              <Button type="submit" size="sm" loading={chatLoading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
+              <Button type="submit" size="sm" loading={chatLoading}>
                 <Send className="w-4 h-4" />
               </Button>
             </form>
