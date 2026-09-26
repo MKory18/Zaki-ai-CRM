@@ -131,7 +131,7 @@ export function InventoryMovementsScreen() {
                   </td>
                   <td className="px-3 py-2 text-[var(--sys-heading)]">
                     {m.product?.name ?? '—'}
-                    {m.product?.sku && <span className="block text-[11px] text-[var(--sys-muted)]" dir="ltr">{m.product.sku}</span>}
+                    {m.product?.sku && <span className="block text-caption text-[var(--sys-muted)]" dir="ltr">{m.product.sku}</span>}
                   </td>
                   <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{TYPE_AR[m.type] ?? m.type}</td>
                   <td className="px-3 py-2">

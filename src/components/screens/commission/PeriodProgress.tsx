@@ -63,7 +63,7 @@ export function PeriodProgress() {
               return (
                 <li key={`${r.ruleId}:${r.userId}`} className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="text-sm font-medium text-[var(--sys-heading)] min-w-[120px]">{r.userName}</span>
-                  <span className="text-[11px] text-[var(--sys-muted-foreground)]">
+                  <span className="text-caption text-[var(--sys-muted-foreground)]">
                     {r.ruleName} · {r.metricLabel} · {r.periodLabel}
                   </span>
                   <span className="text-sm font-bold text-[var(--sys-heading)] tabular-nums ms-auto" dir="ltr">
@@ -71,18 +71,18 @@ export function PeriodProgress() {
                     {r.goal !== null && <span className="text-[var(--sys-muted)] font-normal"> / {r.goal}</span>}
                   </span>
                   {short ? (
-                    <span className="text-[11px] text-[var(--sys-warning)] whitespace-nowrap">
+                    <span className="text-caption text-[var(--sys-warning)] whitespace-nowrap">
                       دون الحد الأدنى ({r.minOrders}) — لا تُحتسب بعد
                     </span>
                   ) : r.inBand ? (
-                    <span className="text-[11px] text-[var(--sys-success)] whitespace-nowrap">
+                    <span className="text-caption text-[var(--sys-success)] whitespace-nowrap">
                       {r.isTarget ? `بلغ الهدف · ${r.inBand.value}` : `شريحة ${r.inBand.label} · ${r.inBand.value}`}
                     </span>
                   ) : (
-                    <span className="text-[11px] text-[var(--sys-muted)] whitespace-nowrap">لم يبلغ أي شريحة بعد</span>
+                    <span className="text-caption text-[var(--sys-muted)] whitespace-nowrap">لم يبلغ أي شريحة بعد</span>
                   )}
                   {r.next && (
-                    <span className="text-[11px] text-[var(--sys-muted-foreground)] whitespace-nowrap">
+                    <span className="text-caption text-[var(--sys-muted-foreground)] whitespace-nowrap">
                       باقي {r.next.remaining} لـ {r.next.at}
                     </span>
                   )}
@@ -90,7 +90,7 @@ export function PeriodProgress() {
               );
             })}
           </ul>
-          {note && <p className="px-4 py-2 text-[11px] text-[var(--sys-muted)] border-t border-[var(--sys-border)]">{note}</p>}
+          {note && <p className="px-4 py-2 text-caption text-[var(--sys-muted)] border-t border-[var(--sys-border)]">{note}</p>}
         </>
       )}
     </div>

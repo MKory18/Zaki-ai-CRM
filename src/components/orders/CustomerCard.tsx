@@ -118,14 +118,14 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
         <div className="flex items-center gap-1.5">
           <button
             onClick={onOpenHistory}
-            className="text-[11px] px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+            className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
           >
             <History className="w-3.5 h-3.5" />
             طلبات سابقة ({previous})
           </button>
           <button
             onClick={openForm}
-            className="text-[11px] px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+            className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
           >
             <Pencil className="w-3.5 h-3.5" />
             {open ? 'إغلاق' : 'تعديل'}
@@ -170,7 +170,7 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
             </div>
           </div>
 
-          {error && <p className="text-[11px] text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1.5">{error}</p>}
+          {error && <p className="text-caption text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1.5">{error}</p>}
 
           <div className="flex gap-2">
             <button
@@ -194,7 +194,7 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
 function Row({ label, value, ltr }: { label: string; value: string; ltr?: boolean }) {
   return (
     <div>
-      <dt className="text-[11px] text-[var(--sys-muted)]">{label}</dt>
+      <dt className="text-caption text-[var(--sys-muted)]">{label}</dt>
       <dd className="text-[var(--sys-heading)] font-medium" dir={ltr ? 'ltr' : undefined}>{value}</dd>
     </div>
   );

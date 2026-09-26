@@ -255,7 +255,7 @@ export function LandingPagesScreen() {
           */}
           <div>
             <label className="text-xs font-semibold text-[var(--sys-foreground)]">شكل الصفحة</label>
-            <p className="mb-2 mt-0.5 text-[11px] text-[var(--sys-muted-foreground)]">
+            <p className="mb-2 mt-0.5 text-caption text-[var(--sys-muted-foreground)]">
               تبدأ الصفحة بهذا الشكل ولونه وخطه — ويمكنك تغيير كل شيء بعدها.
             </p>
             <div className="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto pe-1 sm:grid-cols-2">
@@ -273,7 +273,7 @@ export function LandingPagesScreen() {
                   <span className="mt-0.5 h-7 w-1.5 shrink-0 rounded-full" style={{ background: t.swatch }} />
                   <span className="min-w-0">
                     <span className="block text-xs font-semibold text-[var(--sys-foreground)]">{t.label}</span>
-                    <span className="block text-[9.5px] leading-relaxed text-[var(--sys-muted)]">{t.hint}</span>
+                    <span className="block text-caption leading-relaxed text-[var(--sys-muted)]">{t.hint}</span>
                   </span>
                 </button>
               ))}
@@ -293,7 +293,7 @@ export function LandingPagesScreen() {
               <option value="">— اختر منتجًا —</option>
               {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </Select>
-            <p className="text-[11px] text-[var(--sys-muted-foreground)] mt-1">المنتج والسعر يُحدَّدان من السيرفر عند إرسال أي طلب — لا يمكن التلاعب بهما من الصفحة.</p>
+            <p className="text-caption text-[var(--sys-muted-foreground)] mt-1">المنتج والسعر يُحدَّدان من السيرفر عند إرسال أي طلب — لا يمكن التلاعب بهما من الصفحة.</p>
           </div>
           {formError && <div className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] rounded-lg px-3 py-2">{formError}</div>}
           <div className="flex justify-end gap-2 pt-2">

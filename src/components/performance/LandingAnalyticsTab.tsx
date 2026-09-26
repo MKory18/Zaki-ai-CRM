@@ -68,7 +68,7 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
       </div>
 
       {partial && (
-        <p className="flex items-start gap-1.5 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-[11px] leading-relaxed text-[var(--sys-foreground)]">
+        <p className="flex items-start gap-1.5 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-caption leading-relaxed text-[var(--sys-foreground)]">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {data.countingSince
             ? `المشاهدات تُعدّ يومياً منذ ${data.countingSince}. عمود الطلبات يشمل المدة كلها، أما نسبة التحويل فتُحسب من طلبات الأيام التي عُدّت فيها المشاهدات فقط.`
@@ -81,7 +81,7 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
         <Table title="حسب الجهاز" rows={data.byDevice} empty="لا بيانات." />
         <Table title="حسب الحملة" rows={data.byCampaign} empty="لا حملات لها زيارات أو طلبات في هذه المدة." />
       </div>
-      <p className="text-[10px] leading-relaxed text-[var(--sys-muted)]">
+      <p className="text-caption leading-relaxed text-[var(--sys-muted)]">
         المشاهدة زيارة حقيقية لصفحة منشورة — المعاينة من لوحة التحكم وروابط المعاينة في المحادثات لا تُعدّ. الطلب
         كل طلب جاء من صفحة هبوط خلال المدة، والحملة من رمز ?c= في رابطها.
       </p>
@@ -92,7 +92,7 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
 function Tile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
-      <p className="flex items-center gap-1 text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{icon}{label}</p>
+      <p className="flex items-center gap-1 text-caption font-semibold text-[var(--sys-muted-foreground)]">{icon}{label}</p>
       <p className="mt-1 text-xl font-black tabular-nums text-[var(--sys-heading)]" dir="ltr">{value}</p>
     </div>
   );
@@ -108,7 +108,7 @@ function Table({ title, rows, empty, linkPages }: { title: string; rows: Row[]; 
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-[10px] text-[var(--sys-muted-foreground)]">
+              <tr className="text-caption text-[var(--sys-muted-foreground)]">
                 <th className="px-4 py-2 text-start font-semibold">الاسم</th>
                 <th className="px-2 py-2 text-end font-semibold">مشاهدات</th>
                 <th className="px-2 py-2 text-end font-semibold">طلبات</th>
@@ -125,7 +125,7 @@ function Table({ title, rows, empty, linkPages }: { title: string; rows: Row[]; 
                       ) : r.label}
                     </span>
                     {r.hint && !r.hint.startsWith('/lp/') && (
-                      <span className="ms-1.5 text-[10px] text-[var(--sys-muted)]" dir={r.hint.startsWith('?') ? 'ltr' : undefined}>{r.hint}</span>
+                      <span className="ms-1.5 text-caption text-[var(--sys-muted)]" dir={r.hint.startsWith('?') ? 'ltr' : undefined}>{r.hint}</span>
                     )}
                   </td>
                   <td className="px-2 py-2 text-end tabular-nums text-[var(--sys-foreground)]" dir="ltr">{fmt(r.views)}</td>

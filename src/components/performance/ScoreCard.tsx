@@ -63,7 +63,7 @@ function BandLine({ band, bars }: { band: ScoredBand; bars: CardData['bars'] }) 
     <li className="py-2">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-xs font-medium text-[var(--sys-foreground)]">{band.ar}</span>
-        <span className="text-[11px] tabular-nums text-[var(--sys-muted-foreground)]">
+        <span className="text-caption tabular-nums text-[var(--sys-muted-foreground)]">
           {missing ? (
             'لا يُقاس'
           ) : (
@@ -84,7 +84,7 @@ function BandLine({ band, bars }: { band: ScoredBand; bars: CardData['bars'] }) 
         />
       </div>
       {low && (
-        <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--sys-destructive)]">
+        <p className="mt-1 flex items-center gap-1 text-caption text-[var(--sys-destructive)]">
           <TrendingDown className="h-3 w-3" /> دون العتبة التي حدّدها المتجر
         </p>
       )}
@@ -126,7 +126,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
       <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--sys-border)] pb-3">
         <div>
           <h3 className="text-sm font-bold text-[var(--sys-heading)]">{data.person.name}</h3>
-          <p className="text-[11px] text-[var(--sys-muted-foreground)]">{PERIOD_AR[data.window.period]}</p>
+          <p className="text-caption text-[var(--sys-muted-foreground)]">{PERIOD_AR[data.window.period]}</p>
         </div>
         {score?.total !== null && score !== null && (
           <div className="text-left" dir="ltr">
@@ -147,7 +147,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
       ) : (
         <>
           {data.rank && (
-            <p className="flex items-center gap-1.5 pt-3 text-[11px] text-[var(--sys-muted-foreground)]">
+            <p className="flex items-center gap-1.5 pt-3 text-caption text-[var(--sys-muted-foreground)]">
               <Medal className="h-3.5 w-3.5 text-[var(--sys-warning)]" />
               ترتيبك <span className="font-semibold tabular-nums text-[var(--sys-heading)]">{data.rank.position}</span> من{' '}
               <span className="tabular-nums">{data.rank.of}</span> في دورك بهذا المتجر
@@ -164,7 +164,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
 
       {data.owed && data.owed.length > 0 && (
         <footer className="mt-3 border-t border-[var(--sys-border)] pt-2">
-          <p className="text-[11px] text-[var(--sys-muted-foreground)]">
+          <p className="text-caption text-[var(--sys-muted-foreground)]">
             عمولة مستحقة لم تُصرف بعد:{' '}
             {data.owed.map((o) => (
               <span key={o.currencyCode} className="ms-2 font-semibold tabular-nums text-[var(--sys-heading)]" dir="ltr">
@@ -175,7 +175,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
         </footer>
       )}
 
-      <p className="mt-2 text-[10px] leading-relaxed text-[var(--sys-muted)]">
+      <p className="mt-2 text-caption leading-relaxed text-[var(--sys-muted)]">
         الأوزان ثابتة ولا تُعدَّل، ليبقى الرقم قابلاً للمقارنة بين الشهور. القابل للضبط هو العتبات
         وحدها، وهي تلوّن السطر ولا تحرّك النقاط.
       </p>

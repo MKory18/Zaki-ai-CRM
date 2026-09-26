@@ -78,7 +78,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
           <span className="flex items-center gap-2">
             <Boxes className="h-4 w-4 text-[var(--sys-primary)]" />
             <span>المخزون والتكلفة</span>
-            <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-[10px] font-bold text-[var(--sys-foreground)]">
+            <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-caption font-bold text-[var(--sys-foreground)]">
               {made ? 'منتج مصنّع' : 'منتج جاهز'}
             </span>
           </span>
@@ -119,7 +119,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
           <Tile label="قيمة المخزون" value={money(stock.stockValue)} />
         </div>
 
-        <p className="text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
           «متوسط مرجّح» يعني: كل دفعة بوزن ما تبقّى منها فعلاً. ٩٠ قطعة بـ٣ و١٠ بـ٨
           تكلفتها ٣.٥٠ للقطعة — لا ٥.٥٠. الدفعات الفارغة خارج الحساب لأنها تقول
           ماذا كلّف الماضي، لا ماذا تكلّف قطعة اليوم.
@@ -128,7 +128,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
 
         <Link
           href="/inventory/movements"
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--sys-primary)] hover:underline"
+          className="inline-flex items-center gap-1.5 text-caption font-semibold text-[var(--sys-primary)] hover:underline"
         >
           <ArrowLeftRight className="h-3 w-3" /> سجل حركات هذا المخزون
         </Link>
@@ -154,7 +154,7 @@ function Tile({
 
   return (
     <div className={`rounded-lg border p-3 ${tones[tone]}`}>
-      <p className="flex items-center gap-1 text-[10px] font-medium text-[var(--sys-muted-foreground)]">
+      <p className="flex items-center gap-1 text-caption font-medium text-[var(--sys-muted-foreground)]">
         {icon} {label}
       </p>
       <p className="mt-0.5 text-sm font-black tabular-nums" dir="ltr">{value}</p>

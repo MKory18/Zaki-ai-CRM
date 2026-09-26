@@ -180,7 +180,7 @@ export function ProfileScreen() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
-              <p className="text-[11px] text-[var(--sys-muted-foreground)] flex items-center space-x-1.5 rtl:space-x-reverse">
+              <p className="text-caption text-[var(--sys-muted-foreground)] flex items-center space-x-1.5 rtl:space-x-reverse">
                 <ShieldCheck className="w-3.5 h-3.5 text-[var(--sys-destructive)]" />
                 <span>تغيير كلمة المرور يُنهي جميع الجلسات النشطة على حسابك.</span>
               </p>

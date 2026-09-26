@@ -179,7 +179,7 @@ export function AiDock() {
           <div className="pt-4 text-center">
             <Bot className="mx-auto h-7 w-7 text-[var(--sys-border-strong)]" />
             <p className="mt-2 text-xs font-semibold text-[var(--sys-foreground)]">اسأل عن أرقامك</p>
-            <p className="mx-auto mt-1 max-w-[16rem] text-[10px] leading-relaxed text-[var(--sys-muted)]">
+            <p className="mx-auto mt-1 max-w-[16rem] text-caption leading-relaxed text-[var(--sys-muted)]">
               يرى بيانات هذا المتجر وحده، وبحدود صلاحياتك.
             </p>
             <div className="mt-3 space-y-1.5">
@@ -188,7 +188,7 @@ export function AiDock() {
                   key={o}
                   type="button"
                   onClick={() => void ask(o)}
-                  className="block w-full rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-[11px] text-[var(--sys-foreground)] transition hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+                  className="block w-full rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-caption text-[var(--sys-foreground)] transition hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                 >
                   {o}
                 </button>
@@ -199,14 +199,14 @@ export function AiDock() {
           msgs.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
               <div
-                className={`max-w-[85%] rounded-lg px-3 py-2 text-[11px] leading-relaxed ${
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-caption leading-relaxed ${
                   m.role === 'user'
                     ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]'
                     : 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)]'
                 }`}
               >
                 <p className="whitespace-pre-wrap">{m.content}</p>
-                <p className={`mt-0.5 text-[9px] ${m.role === 'user' ? 'text-[var(--sys-primary-foreground)]/60' : 'text-[var(--sys-muted)]'}`}>
+                <p className={`mt-0.5 text-caption ${m.role === 'user' ? 'text-[var(--sys-primary-foreground)]/60' : 'text-[var(--sys-muted)]'}`}>
                   {m.at}
                 </p>
               </div>
@@ -215,7 +215,7 @@ export function AiDock() {
         )}
         {busy && (
           <div className="flex justify-end">
-            <span className="flex items-center gap-1 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-[10px] text-[var(--sys-muted-foreground)]">
+            <span className="flex items-center gap-1 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-caption text-[var(--sys-muted-foreground)]">
               <Loader2 className="h-3 w-3 animate-spin" /> يقرأ أرقامك…
             </span>
           </div>
@@ -232,7 +232,7 @@ export function AiDock() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="اكتب سؤالك…"
-          className="flex-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-[11px] text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
+          className="flex-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-caption text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
         />
         <button
           type="submit"

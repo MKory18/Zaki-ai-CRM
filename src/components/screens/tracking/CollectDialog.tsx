@@ -140,7 +140,7 @@ export function CollectDialog({
             ))}
           </select>
           {wallets.length === 0 && (
-            <span className="block text-[11px] text-[var(--sys-destructive)] mt-1">
+            <span className="block text-caption text-[var(--sys-destructive)] mt-1">
               لا توجد محفظة بعملة {currency} — أنشئ واحدة أولاً.
             </span>
           )}
@@ -161,7 +161,7 @@ export function CollectDialog({
             dir="ltr"
           />
           {difference !== 0 && (
-            <span className="block text-[11px] text-[var(--sys-destructive)] mt-1 tabular-nums">
+            <span className="block text-caption text-[var(--sys-destructive)] mt-1 tabular-nums">
               فارق {difference} عن المتوقَّع — سيُسجَّل كما هو.
             </span>
           )}

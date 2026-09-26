@@ -93,7 +93,7 @@ export function DiscountAlertsScreen() {
             <input type="checkbox" checked={onlyNotable} onChange={(e) => setOnlyNotable(e.target.checked)} />
             الخصومات الكبيرة فقط (فوق {data.notableThreshold}%)
             {data.totals.notable > 0 && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] tabular-nums">
+              <span className="text-caption px-2 py-0.5 rounded-full bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] tabular-nums">
                 {data.totals.notable}
               </span>
             )}

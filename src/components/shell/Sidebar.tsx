@@ -135,7 +135,7 @@ export function Sidebar({
               <span className="font-bold text-[var(--sys-primary-foreground)] tracking-wide text-base leading-tight block" dir="ltr">
                 Zaki <span className="text-[var(--sys-primary)]">AI</span> Store
               </span>
-              <span className="block text-[10px] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-[0.18em]" dir="ltr">
+              <span className="block text-caption text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-[0.18em]" dir="ltr">
                 Operations
               </span>
             </div>
@@ -150,14 +150,14 @@ export function Sidebar({
             return (
             <div key={group.key} className="pb-1">
               {pinned ? (
-                <p className="px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--sys-muted-foreground)]">
+                <p className="px-5 pt-3 pb-2 text-caption font-semibold tracking-[0.12em] text-[var(--sys-muted-foreground)]">
                   {group.label}
                 </p>
               ) : (
                 <button
                   onClick={() => toggle(group.key)}
                   aria-expanded={isOpen}
-                  className="w-full flex items-center justify-between gap-2 px-5 pt-3 pb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-muted)] transition-colors"
+                  className="w-full flex items-center justify-between gap-2 px-5 pt-3 pb-2 text-caption font-semibold tracking-[0.12em] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-muted)] transition-colors"
                 >
                   <span className="flex items-center gap-2">
                     {group.label}
@@ -205,7 +205,7 @@ export function Sidebar({
             remembered on this browser. */}
         <button
           onClick={togglePinned}
-          className="shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[var(--sys-heading)] text-[11px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-muted)] transition-colors"
+          className="shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[var(--sys-heading)] text-caption text-[var(--sys-muted-foreground)] hover:text-[var(--sys-muted)] transition-colors"
         >
           {pinned ? <List className="w-3.5 h-3.5" /> : <ListTree className="w-3.5 h-3.5" />}
           {pinned ? 'اطوِ القوائم' : 'اعرض كل القوائم'}

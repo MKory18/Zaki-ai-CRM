@@ -60,10 +60,10 @@ export default function ForgotPasswordPage() {
                 </p>
                 {devToken && (
                   <div className="bg-[var(--sys-surface)] rounded-lg p-2.5 border border-[var(--sys-border)]">
-                    <p className="text-[10px] text-[var(--sys-muted-foreground)] mb-1">وضع التطوير — رابط إعادة التعيين:</p>
+                    <p className="text-caption text-[var(--sys-muted-foreground)] mb-1">وضع التطوير — رابط إعادة التعيين:</p>
                     <Link
                       href={`/reset-password?token=${devToken}`}
-                      className="text-[var(--sys-primary)] font-mono text-[11px] break-all hover:underline"
+                      className="text-[var(--sys-primary)] font-mono text-caption break-all hover:underline"
                     >
                       /reset-password?token={devToken.slice(0, 20)}...
                     </Link>

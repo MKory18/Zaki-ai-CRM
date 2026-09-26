@@ -100,19 +100,19 @@ export function InstalledAppsScreen() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-[var(--sys-heading)]">{a.name}</p>
-                  <p className="text-[11px] text-[var(--sys-muted-foreground)]">{a.summary}</p>
+                  <p className="text-caption text-[var(--sys-muted-foreground)]">{a.summary}</p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-caption font-semibold ${
                   a.enabled ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
                 }`}>
                   {a.enabled ? 'مفعَّل' : 'موقوف'}
                 </span>
               </div>
-              <p className={`mt-2 flex items-center gap-1.5 text-[11px] ${a.configured ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
+              <p className={`mt-2 flex items-center gap-1.5 text-caption ${a.configured ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
                 {a.configured ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
                 {a.configured ? 'مهيَّأ' : 'غير مهيَّأ'}
               </p>
-              <Link href={a.settingsPath} className="mt-2 inline-block text-[11px] font-bold text-[var(--sys-primary)] hover:underline">
+              <Link href={a.settingsPath} className="mt-2 inline-block text-caption font-bold text-[var(--sys-primary)] hover:underline">
                 الإعدادات ←
               </Link>
             </div>
@@ -124,10 +124,10 @@ export function InstalledAppsScreen() {
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-[var(--sys-heading)]">{a.name}</p>
                   {a.webhookUrl && (
-                    <p className="truncate font-mono text-[10.5px] text-[var(--sys-muted-foreground)]" dir="ltr">{a.webhookUrl}</p>
+                    <p className="truncate font-mono text-caption text-[var(--sys-muted-foreground)]" dir="ltr">{a.webhookUrl}</p>
                   )}
                 </div>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-caption font-semibold ${
                   a.enabled ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
                 }`}>
                   {a.enabled ? 'مفعَّل' : 'موقوف'}
@@ -135,7 +135,7 @@ export function InstalledAppsScreen() {
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
                 {a.events.map((e) => (
-                  <span key={e} className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 font-mono text-[10px] text-[var(--sys-foreground)]" dir="ltr">{e}</span>
+                  <span key={e} className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 font-mono text-caption text-[var(--sys-foreground)]" dir="ltr">{e}</span>
                 ))}
               </div>
             </div>
@@ -145,7 +145,7 @@ export function InstalledAppsScreen() {
 
       <section>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)]">سجل الإرسال</h2>
+          <h2 className="text-caption font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)]">سجل الإرسال</h2>
           <div className="flex items-center gap-1.5">
             {([
               ['all', `الكل`],
@@ -155,7 +155,7 @@ export function InstalledAppsScreen() {
               <button
                 key={k}
                 onClick={() => setFilter(k)}
-                className={`cursor-pointer rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${
+                className={`cursor-pointer rounded-lg border px-2.5 py-1 text-caption font-semibold ${
                   filter === k ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
                 }`}
               >
@@ -184,26 +184,26 @@ export function InstalledAppsScreen() {
                   {d.status === 'FAILED' && <XCircle className="h-4 w-4 shrink-0 text-[var(--sys-destructive)]" />}
                   {d.status === 'PENDING' && <Clock className="h-4 w-4 shrink-0 text-[var(--sys-warning)]" />}
 
-                  <span className="font-mono text-[11px] font-bold text-[var(--sys-heading)]" dir="ltr">{d.event}</span>
-                  <span className="text-[11px] text-[var(--sys-muted-foreground)]">{d.appCode}</span>
-                  <span className="text-[11px] text-[var(--sys-muted)]">{arDateTime(d.createdAt)}</span>
+                  <span className="font-mono text-caption font-bold text-[var(--sys-heading)]" dir="ltr">{d.event}</span>
+                  <span className="text-caption text-[var(--sys-muted-foreground)]">{d.appCode}</span>
+                  <span className="text-caption text-[var(--sys-muted)]">{arDateTime(d.createdAt)}</span>
 
                   {d.attempts > 1 && (
-                    <span className="text-[11px] text-[var(--sys-warning)]">{d.attempts} محاولات</span>
+                    <span className="text-caption text-[var(--sys-warning)]">{d.attempts} محاولات</span>
                   )}
                   {d.responseCode !== null && (
-                    <span className="font-mono text-[11px] text-[var(--sys-muted-foreground)]" dir="ltr">HTTP {d.responseCode}</span>
+                    <span className="font-mono text-caption text-[var(--sys-muted-foreground)]" dir="ltr">HTTP {d.responseCode}</span>
                   )}
                   {d.status === 'PENDING' && d.nextAttemptAt && (
-                    <span className="text-[11px] text-[var(--sys-muted)]">المحاولة القادمة {arDateTime(d.nextAttemptAt)}</span>
+                    <span className="text-caption text-[var(--sys-muted)]">المحاولة القادمة {arDateTime(d.nextAttemptAt)}</span>
                   )}
-                  {d.error && <span className="ms-auto truncate text-[11px] text-[var(--sys-destructive)]">{d.error}</span>}
+                  {d.error && <span className="ms-auto truncate text-caption text-[var(--sys-destructive)]">{d.error}</span>}
                 </button>
 
                 {open === d.id && (
                   <div className="border-t border-[var(--sys-border)] bg-[var(--sys-surface)] p-3">
-                    <p className="mb-1 text-[10px] font-semibold text-[var(--sys-muted-foreground)]" dir="ltr">{d.url}</p>
-                    <pre className="overflow-x-auto rounded-lg bg-[var(--sys-heading)] p-3 font-mono text-[10.5px] leading-relaxed text-[var(--sys-border-strong)]" dir="ltr">
+                    <p className="mb-1 text-caption font-semibold text-[var(--sys-muted-foreground)]" dir="ltr">{d.url}</p>
+                    <pre className="overflow-x-auto rounded-lg bg-[var(--sys-heading)] p-3 font-mono text-caption leading-relaxed text-[var(--sys-border-strong)]" dir="ltr">
                       {prettyJson(d.payload)}
                     </pre>
                   </div>

@@ -101,7 +101,7 @@ export function WhatsAppSettingsScreen() {
             <p className={`font-bold text-sm ${status === 'CONNECTED' ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
               {status === 'CONNECTED' ? '🟢 متصل' : '🟡 يحتاج إعداد'}
             </p>
-            <p className="text-[11px] text-[var(--sys-muted-foreground)]">
+            <p className="text-caption text-[var(--sys-muted-foreground)]">
               {status === 'CONNECTED'
                 ? 'الاتصال بواتساب يعمل عبر WhatsApp Business Cloud API'
                 : conn?.envConfigured
@@ -159,7 +159,7 @@ export function WhatsAppSettingsScreen() {
                 <span className="text-[var(--sys-muted-foreground)]">{desc}</span>
               </div>
             ))}
-            <div className="mt-3 p-3 rounded-lg bg-[var(--sys-surface)] border border-[#eef1f5] text-[11px] text-[var(--sys-muted-foreground)] flex gap-2">
+            <div className="mt-3 p-3 rounded-lg bg-[var(--sys-surface)] border border-[#eef1f5] text-caption text-[var(--sys-muted-foreground)] flex gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-[var(--sys-primary)]" />
               <span>
                 لا تُدخل أي بيانات سرية هنا في الواجهة — كل البيانات من متغيرات بيئة الخادم فقط، ولا يتم عرض Access Token مطلقًا.

@@ -99,7 +99,7 @@ export function InventoryReceivingScreen() {
           <input type="checkbox" checked={onlyEmpty} onChange={(e) => setOnlyEmpty(e.target.checked)} />
           بدون رصيد فقط
           {emptyCount > 0 && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] tabular-nums">
+            <span className="text-caption px-2 py-0.5 rounded-full bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] tabular-nums">
               {emptyCount}
             </span>
           )}
@@ -247,7 +247,7 @@ function ReceiveDialog({
             className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
-          <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
+          <span className="block text-caption text-[var(--sys-muted)] mt-1">
             تُفتح دفعة جديدة بهذه التكلفة، فلا تتأثر تكلفة البضاعة القديمة.
           </span>
         </label>

@@ -197,7 +197,7 @@ export function ManufacturingScreen() {
                       </td>
                       <td className="px-6 py-3.5">
                         <span className="font-semibold text-[var(--sys-heading)] block">{b.product?.name}</span>
-                        <span className="text-[10px] text-[var(--sys-muted)] font-mono">{b.product?.sku}</span>
+                        <span className="text-caption text-[var(--sys-muted)] font-mono">{b.product?.sku}</span>
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
                         {b.quantityProduced} قطعة
@@ -236,7 +236,7 @@ export function ManufacturingScreen() {
                         <button
                           type="button"
                           onClick={() => setCosting(b)}
-                          className="text-[11px] text-[var(--sys-primary)] hover:underline whitespace-nowrap"
+                          className="text-caption text-[var(--sys-primary)] hover:underline whitespace-nowrap"
                         >
                           عدّل الكلفة
                         </button>
@@ -366,7 +366,7 @@ export function ManufacturingScreen() {
               </div>
 
               {costLines.length === 0 ? (
-                <p className="text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">
+                <p className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
                   اختياري — أضف أي كلفة لا تناسبها الخانات الأربع أعلاه: قالب، أجرة عامل،
                   شحن مواد، كهرباء. كل بند باسمه ومبلغه، ويدخل في المجموع وفي تكلفة الوحدة.
                 </p>

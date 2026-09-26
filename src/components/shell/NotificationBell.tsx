@@ -168,7 +168,7 @@ export function NotificationBell() {
       >
         <Bell className="w-5 h-5" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-[10px] font-bold flex items-center justify-center tabular-nums">
+          <span className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-caption font-bold flex items-center justify-center tabular-nums">
             {unread > 99 ? '99+' : unread}
           </span>
         )}
@@ -185,7 +185,7 @@ export function NotificationBell() {
               <button
                 onClick={markAll}
                 disabled={busy}
-                className="text-[11px] text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+                className="text-caption text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1 disabled:opacity-50"
               >
                 {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                 تعليم الكل كمقروء
@@ -216,15 +216,15 @@ export function NotificationBell() {
                         )}
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${TONE[n.type as NotificationType] ?? TONE.SYSTEM_ALERT}`}>
+                            <span className={`text-caption px-1.5 py-0.5 rounded-md ${TONE[n.type as NotificationType] ?? TONE.SYSTEM_ALERT}`}>
                               {TYPE_AR[n.type as NotificationType] ?? TYPE_AR.SYSTEM_ALERT}
                             </span>
-                            <span className="text-[10px] text-[var(--sys-muted)]">{arDateShort(n.createdAt)}</span>
+                            <span className="text-caption text-[var(--sys-muted)]">{arDateShort(n.createdAt)}</span>
                           </span>
                           <span className={`block text-xs mt-1 ${n.isRead ? 'text-[var(--sys-muted-foreground)]' : 'text-[var(--sys-heading)] font-medium'}`}>
                             {n.title}
                           </span>
-                          <span className="block text-[11px] text-[var(--sys-muted)] mt-0.5 break-words">{n.message}</span>
+                          <span className="block text-caption text-[var(--sys-muted)] mt-0.5 break-words">{n.message}</span>
                         </span>
                       </span>
                     </button>

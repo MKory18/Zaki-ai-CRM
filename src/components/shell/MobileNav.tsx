@@ -79,7 +79,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
             <div className="p-2">
               {rest.map((group) => (
                 <section key={group.key} className="mb-2">
-                  <h3 className="px-2 py-1 text-[11px] font-semibold text-[var(--sys-muted-foreground)]">
+                  <h3 className="px-2 py-1 text-caption font-semibold text-[var(--sys-muted-foreground)]">
                     {group.label}
                   </h3>
                   <ul>
@@ -129,7 +129,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
                   <Icon className="h-5 w-5" />
                   {/* Truncated, never wrapped: a label that wraps makes the
                       bar taller and moves every other tab under the thumb. */}
-                  <span className="w-full truncate text-center text-[10px] leading-tight">{route.label}</span>
+                  <span className="w-full truncate text-center text-caption leading-tight">{route.label}</span>
                 </Link>
               </li>
             );
@@ -143,7 +143,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
               className={`${TAP} flex w-full flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[var(--sys-muted-foreground)]`}
             >
               <MoreHorizontal className="h-5 w-5" />
-              <span className="text-[10px] leading-tight">المزيد</span>
+              <span className="text-caption leading-tight">المزيد</span>
             </button>
           </li>
         </ul>

@@ -104,7 +104,7 @@ export function PayoutDialog({
       ) : owed.length === 0 ? (
         <p className="py-8 text-center text-sm text-[var(--sys-muted-foreground)]">
           لا عمولة مستحقة لهذا الموظف.
-          <span className="mt-1 block text-[11px] text-[var(--sys-muted)]">
+          <span className="mt-1 block text-caption text-[var(--sys-muted)]">
             العمولة تصير مستحقة بعد اعتماد كشف التحصيل الذي يغطّيها.
           </span>
         </p>
@@ -124,18 +124,18 @@ export function PayoutDialog({
                   </option>
                 ))}
               </select>
-              <span className="mt-1 block text-[10.5px] text-[var(--sys-muted)]">
+              <span className="mt-1 block text-caption text-[var(--sys-muted)]">
                 كل عملة تُصرف وحدها — سعر واحد لا يخدم عملتين.
               </span>
             </label>
           )}
 
           <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-            <p className="text-[11px] text-[var(--sys-muted-foreground)]">المستحق</p>
+            <p className="text-caption text-[var(--sys-muted-foreground)]">المستحق</p>
             <p className="text-lg font-black text-[var(--sys-heading)] tabular-nums" dir="ltr">
               {row?.amount} {row?.currencyCode}
             </p>
-            <p className="text-[10.5px] text-[var(--sys-muted)]">{row?.entries.length} قيد عمولة</p>
+            <p className="text-caption text-[var(--sys-muted)]">{row?.entries.length} قيد عمولة</p>
           </div>
 
           <label className="block">
@@ -151,7 +151,7 @@ export function PayoutDialog({
               ))}
             </select>
             {wallets.length === 0 && (
-              <span className="mt-1 block text-[11px] text-[var(--sys-warning)]">لا محفظة مفعّلة — أنشئ واحدة أولاً.</span>
+              <span className="mt-1 block text-caption text-[var(--sys-warning)]">لا محفظة مفعّلة — أنشئ واحدة أولاً.</span>
             )}
           </label>
 
@@ -169,7 +169,7 @@ export function PayoutDialog({
                 className="h-10 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm"
                 dir="ltr"
               />
-              <span className="mt-1 block text-[10.5px] text-[var(--sys-muted)]">
+              <span className="mt-1 block text-caption text-[var(--sys-muted)]">
                 يُحفظ كما تكتبه ولا يُعاد حسابه — شهر دُفع يبقى كما هو.
               </span>
             </label>
@@ -177,13 +177,13 @@ export function PayoutDialog({
 
           {wallet && leaving !== null && (
             <div className="rounded-lg border border-[var(--sys-border)] px-3 py-2.5">
-              <p className="flex items-center gap-1.5 text-[11px] text-[var(--sys-muted-foreground)]">
+              <p className="flex items-center gap-1.5 text-caption text-[var(--sys-muted-foreground)]">
                 <WalletIcon className="h-3 w-3" /> سيخرج من «{wallet.name}»
               </p>
               <p className="text-lg font-black text-[var(--sys-destructive)] tabular-nums" dir="ltr">
                 {leaving.toFixed(3)} {wallet.currencyCode}
               </p>
-              <p className="text-[10.5px] text-[var(--sys-muted)]">
+              <p className="text-caption text-[var(--sys-muted)]">
                 ويُسجَّل مصروفاً على المحفظة، وتُقفل قيود العمولة المدفوعة.
               </p>
             </div>

@@ -109,8 +109,8 @@ export function StoreBrandField({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold text-[var(--sys-heading)]">{copy.title}</p>
-        <p className="text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">{copy.hint}</p>
-        {error && <p className="mt-0.5 text-[11px] text-[var(--sys-destructive)]">{error}</p>}
+        <p className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">{copy.hint}</p>
+        {error && <p className="mt-0.5 text-caption text-[var(--sys-destructive)]">{error}</p>}
       </div>
       <input
         ref={input}
@@ -128,7 +128,7 @@ export function StoreBrandField({
           type="button"
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-1.5 text-[11px] font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-1.5 text-caption font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
           {value ? 'تغيير' : copy.upload}

@@ -50,7 +50,7 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
 
               <div className="relative flex flex-col items-center gap-1.5">
                 <span
-                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold z-10 ${
+                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-caption font-bold z-10 ${
                     current
                       ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] ring-4 ring-[var(--sys-primary)]/15'
                       : done
@@ -64,14 +64,14 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
                 </span>
 
                 <span
-                  className={`text-[11px] font-bold text-center leading-tight ${
+                  className={`text-caption font-bold text-center leading-tight ${
                     current ? 'text-[var(--sys-primary)]' : done ? 'text-[var(--sys-heading)]' : 'text-[var(--sys-muted)]'
                   }`}
                 >
                   {stage.title}
                 </span>
 
-                <span className="text-[10px] text-[var(--sys-muted)] text-center leading-tight">
+                <span className="text-caption text-[var(--sys-muted)] text-center leading-tight">
                   {stage.at ? arDateShort(stage.at) : skipped ? 'لم يمر بها' : '—'}
                   {stage.minutes !== null && (
                     <span className={`block ${stage.ongoing ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-muted)]'}`}>
@@ -89,7 +89,7 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
       {withFacts.length > 0 && (
         <div className="mt-4 pt-3 border-t border-[var(--sys-border)] space-y-1.5">
           {withFacts.map((stage) => (
-            <p key={stage.key} className="text-[11px] text-[var(--sys-muted-foreground)] flex flex-wrap gap-x-1.5">
+            <p key={stage.key} className="text-caption text-[var(--sys-muted-foreground)] flex flex-wrap gap-x-1.5">
               <span
                 className={`font-bold shrink-0 ${
                   stage.status === 'CURRENT' ? 'text-[var(--sys-primary)]' : 'text-[var(--sys-foreground)]'

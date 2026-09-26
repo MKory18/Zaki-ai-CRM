@@ -256,7 +256,7 @@ export function TransfersScreen() {
               one in front of you rather than making you pick it first. */}
           {reading && !refusal && (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2">
-              <span className="rounded-full bg-[var(--sys-primary)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-primary-foreground)]">
+              <span className="rounded-full bg-[var(--sys-primary)] px-2 py-0.5 text-caption font-semibold text-[var(--sys-primary-foreground)]">
                 {reading.label}
               </span>
               <span className="text-xs text-[var(--sys-foreground)]">{reading.detail}</span>
@@ -311,20 +311,20 @@ export function TransfersScreen() {
                   {/* As RECORDED, not re-read now: a wallet moved to another
                       store since must not change what this transfer was. */}
                   <td className="px-3 py-2">
-                    <span className="rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-0.5 text-[10px] text-[var(--sys-foreground)] whitespace-nowrap">
+                    <span className="rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-0.5 text-caption text-[var(--sys-foreground)] whitespace-nowrap">
                       {t.kindLabel ?? '—'}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-[var(--sys-foreground)]">
                     {t.from?.name ?? '—'}
                     {t.from?.store && (
-                      <span className="block text-[10px] text-[var(--sys-muted)]">{t.from.store.name}</span>
+                      <span className="block text-caption text-[var(--sys-muted)]">{t.from.store.name}</span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-[var(--sys-foreground)]">
                     {t.to?.name ?? '—'}
                     {t.to?.store && (
-                      <span className="block text-[10px] text-[var(--sys-muted)]">{t.to.store.name}</span>
+                      <span className="block text-caption text-[var(--sys-muted)]">{t.to.store.name}</span>
                     )}
                   </td>
                   <td className="px-3 py-2 tabular-nums text-[var(--sys-destructive)]">{t.amountOut} {t.from?.currencyCode}</td>

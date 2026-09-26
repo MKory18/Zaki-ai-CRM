@@ -201,7 +201,7 @@ export function ShipmentsNewScreen() {
             key={k}
             type="button"
             onClick={() => setView(k)}
-            className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors ${
+            className={`px-3 py-1.5 text-caption font-semibold rounded-lg border transition-colors ${
               view === k
                 ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]'
                 : 'bg-[var(--sys-card)] text-[var(--sys-foreground)] border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
@@ -261,7 +261,7 @@ export function ShipmentsNewScreen() {
                           </p>
                         ))}
                         {!r.hardBlocked && (
-                          <label className="flex items-center gap-1 text-[11px] text-[var(--sys-muted-foreground)]">
+                          <label className="flex items-center gap-1 text-caption text-[var(--sys-muted-foreground)]">
                             <input
                               type="checkbox"
                               checked={!!acknowledged[r.id]}
@@ -287,7 +287,7 @@ export function ShipmentsNewScreen() {
                           ? 'أعِده إلى قائمة الشحن'
                           : 'أجّله — لن يدخل أي شحنة حتى تُفرج عنه، والبضاعة تبقى محجوزة له'
                       }
-                      className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-lg border transition-colors disabled:opacity-50 ${
+                      className={`inline-flex items-center gap-1 px-2 py-1 text-caption rounded-lg border transition-colors disabled:opacity-50 ${
                         view === 'held'
                           ? 'border-[var(--sys-border)] text-[var(--sys-success)] hover:border-[var(--sys-success)]'
                           : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)]'
@@ -303,7 +303,7 @@ export function ShipmentsNewScreen() {
                       {view === 'held' ? 'أرجِعه' : 'أجّل'}
                     </button>
                     {r.shipHoldReason && (
-                      <span className="block text-[10px] text-[var(--sys-muted)] mt-0.5 max-w-[10rem] truncate" title={r.shipHoldReason}>
+                      <span className="block text-caption text-[var(--sys-muted)] mt-0.5 max-w-[10rem] truncate" title={r.shipHoldReason}>
                         {r.shipHoldReason}
                       </span>
                     )}

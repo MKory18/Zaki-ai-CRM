@@ -145,7 +145,7 @@ export function ChangeRequestsScreen() {
           >
             {label}
             <span
-              className={`tabular-nums rounded-lg px-1.5 text-[10px] ${
+              className={`tabular-nums rounded-lg px-1.5 text-caption ${
                 lists[key].length > 0 ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
               }`}
             >
@@ -175,14 +175,14 @@ export function ChangeRequestsScreen() {
                 )}
               </span>
               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{r.order.orderNumber}</span>
-              <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">{state}</span>
+              <span className="text-caption px-2 py-0.5 rounded-md bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">{state}</span>
               {tab === 'PENDING' && r.blocking && (
-                <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]">
+                <span className="text-caption px-2 py-0.5 rounded-md bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]">
                   يوقف تقدّم الطلب
                 </span>
               )}
               {tab === 'PENDING' && r.overdue && (
-                <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
+                <span className="text-caption px-2 py-0.5 rounded-md bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
                   تجاوز مهلة المراجعة
                 </span>
               )}

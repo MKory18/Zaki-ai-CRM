@@ -214,7 +214,7 @@ export function ProductOffers({
         }
       />
       <CardContent className="space-y-3">
-        <p className="text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
           هذه العروض هي المصدر الوحيد للأسعار — صفحات الهبوط والطلب السريع تقرأ منها،
           فتغيير السعر هنا يصل إلى كل مكان يبيع هذا المنتج.
         </p>
@@ -277,7 +277,7 @@ export function ProductOffers({
                     {/* Every run of digits + Latin currency is isolated, or
                         Arabic bidi reorders "100 USD · 50 USD/قطعة" into
                         something that reads like a different price. */}
-                    <p className="text-[11px] text-[var(--sys-muted-foreground)]">
+                    <p className="text-caption text-[var(--sys-muted-foreground)]">
                       {o.quantity} قطعة
                       {o.freeQuantity > 0 && <span className="text-[var(--sys-primary)]"> + {o.freeQuantity} مجاناً</span>}
                       {' — '}
@@ -375,7 +375,7 @@ export function ProductOffers({
                 }
               />
             </div>
-            <p className="text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
+            <p className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
               «السعر» هو ما يدفعه الزبون فعلاً. «السعر قبل الخصم» للعرض فقط — يظهر مشطوباً
               ولا يدخل في أي حساب مال.
             </p>

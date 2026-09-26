@@ -112,7 +112,7 @@ export function StoreLanguagesScreen() {
               }`}
             >
               <span className="text-sm font-medium text-[var(--sys-heading)]" dir={l.dir}>{l.label}</span>
-              <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-muted-foreground)]">
+              <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-caption font-semibold text-[var(--sys-muted-foreground)]">
                 {l.dir === 'rtl' ? 'من اليمين' : 'من اليسار'}
               </span>
             </button>
@@ -121,7 +121,7 @@ export function StoreLanguagesScreen() {
 
         {/* The direction is derived, and shown as a consequence — not as a
             second control that could be set to disagree with the language. */}
-        <p className="mt-3 text-[11px] text-[var(--sys-muted-foreground)]">
+        <p className="mt-3 text-caption text-[var(--sys-muted-foreground)]">
           الاتجاه يتبع اللغة: «{chosen?.label}» تُقرأ{' '}
           <strong>{chosen?.dir === 'rtl' ? 'من اليمين إلى اليسار' : 'من اليسار إلى اليمين'}</strong>.
           لا يُضبط منفصلاً حتى لا يتناقض الاثنان.
@@ -134,7 +134,7 @@ export function StoreLanguagesScreen() {
           {language !== saved && (
             <Button variant="secondary" size="sm" onClick={() => setLanguage(saved)}>تراجع</Button>
           )}
-          <span className="text-[11px] text-[var(--sys-muted)]">
+          <span className="text-caption text-[var(--sys-muted)]">
             المحفوظ حالياً: {available.find((l) => l.code === saved)?.label} ({dir === 'rtl' ? 'RTL' : 'LTR'})
           </span>
         </div>

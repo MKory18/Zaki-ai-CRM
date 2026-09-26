@@ -77,7 +77,7 @@ export function AuditScreen() {
 
                         <td className="px-6 py-3.5 font-sans font-medium text-[var(--sys-heading)]">
                           {l.user?.name || 'System Auto'}
-                          <span className="block text-[10px] text-[var(--sys-muted)] font-mono">
+                          <span className="block text-caption text-[var(--sys-muted)] font-mono">
                             {l.user?.role || 'SYSTEM'}
                           </span>
                         </td>
@@ -94,7 +94,7 @@ export function AuditScreen() {
                           {l.entityId}
                         </td>
 
-                        <td className="px-6 py-3.5 text-[var(--sys-foreground)] font-sans max-w-xs truncate text-[11px]">
+                        <td className="px-6 py-3.5 text-[var(--sys-foreground)] font-sans max-w-xs truncate text-caption">
                           {l.newData ? (
                             <span title={l.newData} className="bg-[var(--sys-surface)] px-2 py-0.5 rounded-lg">
                               {l.newData.slice(0, 60)}...

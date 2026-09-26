@@ -276,7 +276,7 @@ export function FinanceProfitScreen() {
                     </span>
                     <span className="ms-auto tabular-nums font-bold text-[var(--sys-success)]">
                       {Number(p.netProfit).toFixed(2)}
-                      <span className="text-[10px] text-[var(--sys-muted)] font-normal">
+                      <span className="text-caption text-[var(--sys-muted)] font-normal">
                         {' '}صافي · {p.profitMargin ?? 0}%
                       </span>
                     </span>

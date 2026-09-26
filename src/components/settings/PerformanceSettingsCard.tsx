@@ -86,12 +86,12 @@ export function PerformanceSettingsCard() {
       <CardContent className="space-y-4">
         {/* Shown, explained, and not a field. */}
         <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
-          <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold text-[var(--sys-muted-foreground)]">
+          <p className="mb-1.5 flex items-center gap-1 text-caption font-semibold text-[var(--sys-muted-foreground)]">
             <Lock className="h-3 w-3" /> الأوزان — مثبّتة بالكود، لا تُعدَّل من هنا ولا من غيره
           </p>
           <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
             {weights.map((w) => (
-              <li key={w.key} className="flex items-baseline justify-between text-[11px]">
+              <li key={w.key} className="flex items-baseline justify-between text-caption">
                 <span className="text-[var(--sys-muted-foreground)]">
                   {w.ar}
                   {w.negative && <span className="text-[var(--sys-muted)]"> (بالسالب)</span>}
@@ -104,7 +104,7 @@ export function PerformanceSettingsCard() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">عتبة نسبة التسليم المقبولة</span>
+            <span className="mb-1 block text-caption font-semibold text-[var(--sys-foreground)]">عتبة نسبة التسليم المقبولة</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -116,11 +116,11 @@ export function PerformanceSettingsCard() {
               />
               <span className="text-xs text-[var(--sys-muted)]">٪</span>
             </div>
-            <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">دونها يُعلَّم السطر بالأحمر — ولا تتغيّر النقاط.</span>
+            <span className="mt-0.5 block text-caption text-[var(--sys-muted)]">دونها يُعلَّم السطر بالأحمر — ولا تتغيّر النقاط.</span>
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">عتبة نسبة الإشكالات</span>
+            <span className="mb-1 block text-caption font-semibold text-[var(--sys-foreground)]">عتبة نسبة الإشكالات</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -132,11 +132,11 @@ export function PerformanceSettingsCard() {
               />
               <span className="text-xs text-[var(--sys-muted)]">٪</span>
             </div>
-            <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">فوقها يُعلَّم السطر — والإشكال المُلغى لا يُحتسب على أحد.</span>
+            <span className="mt-0.5 block text-caption text-[var(--sys-muted)]">فوقها يُعلَّم السطر — والإشكال المُلغى لا يُحتسب على أحد.</span>
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">الحد الأدنى للعيّنة</span>
+            <span className="mb-1 block text-caption font-semibold text-[var(--sys-foreground)]">الحد الأدنى للعيّنة</span>
             <input
               type="number"
               min={1}
@@ -145,13 +145,13 @@ export function PerformanceSettingsCard() {
               onChange={(e) => patch({ minSample: Number(e.target.value) })}
               className={FIELD}
             />
-            <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">
+            <span className="mt-0.5 block text-caption text-[var(--sys-muted)]">
               تحته لا يُحتسب سكور أصلاً. غير الحد الأدنى في قواعد العمولة: ذاك يحكم المال، وهذا يحكم القياس.
             </span>
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold text-[var(--sys-foreground)]">فترة القياس</span>
+            <span className="mb-1 block text-caption font-semibold text-[var(--sys-foreground)]">فترة القياس</span>
             <select
               value={settings.period}
               onChange={(e) => patch({ period: e.target.value as PerformanceSettings['period'] })}
@@ -160,7 +160,7 @@ export function PerformanceSettingsCard() {
               <option value="WEEKLY">أسبوع</option>
               <option value="MONTHLY">شهر</option>
             </select>
-            <span className="mt-0.5 block text-[10px] text-[var(--sys-muted)]">الأسبوع يبدأ السبت، كتقويم العمل.</span>
+            <span className="mt-0.5 block text-caption text-[var(--sys-muted)]">الأسبوع يبدأ السبت، كتقويم العمل.</span>
           </label>
         </div>
 
@@ -170,7 +170,7 @@ export function PerformanceSettingsCard() {
             احفظ العتبات
           </Button>
           {saved && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--sys-success)]">
+            <span className="inline-flex items-center gap-1 text-caption text-[var(--sys-success)]">
               <Check className="h-3.5 w-3.5" /> تم الحفظ
             </span>
           )}

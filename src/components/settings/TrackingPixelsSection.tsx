@@ -41,10 +41,10 @@ const PLATFORMS: {
   mark: React.ReactNode;
   markBg: string;
 }[] = [
-  { key: 'META', label: 'Meta', placeholder: '123456789012345', mark: <span className="text-[13px] font-bold text-[var(--sys-primary-foreground)]">f</span>, markBg: '#1877f2' },
-  { key: 'TIKTOK', label: 'TikTok', placeholder: 'C4ABCD1234567890', mark: <span className="text-[13px] font-bold text-[var(--sys-primary-foreground)]">♪</span>, markBg: '#000000' },
-  { key: 'SNAPCHAT', label: 'Snapchat', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', mark: <span className="text-[13px]">👻</span>, markBg: '#fffc00' },
-  { key: 'GOOGLE', label: 'Google', placeholder: 'G-XXXXXXXXXX أو AW-123456789/التسمية', mark: <span className="text-[13px] font-bold text-[#4285f4]">G</span>, markBg: '#ffffff' },
+  { key: 'META', label: 'Meta', placeholder: '123456789012345', mark: <span className="text-sm font-bold text-[var(--sys-primary-foreground)]">f</span>, markBg: '#1877f2' },
+  { key: 'TIKTOK', label: 'TikTok', placeholder: 'C4ABCD1234567890', mark: <span className="text-sm font-bold text-[var(--sys-primary-foreground)]">♪</span>, markBg: '#000000' },
+  { key: 'SNAPCHAT', label: 'Snapchat', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', mark: <span className="text-sm">👻</span>, markBg: '#fffc00' },
+  { key: 'GOOGLE', label: 'Google', placeholder: 'G-XXXXXXXXXX أو AW-123456789/التسمية', mark: <span className="text-sm font-bold text-[#4285f4]">G</span>, markBg: '#ffffff' },
 ];
 
 export function TrackingPixelsSection() {
@@ -153,14 +153,14 @@ export function TrackingPixelsSection() {
         <Radar className="h-4 w-4 text-[var(--sys-primary)]" />
         <h1 className="text-base font-bold text-[var(--sys-heading)]">بكسل التتبع والحملات</h1>
       </div>
-      <p className="mb-3 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
+      <p className="mb-3 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
         البكسلات تعمل على صفحات البيع وحدها — صفحات الهبوط وواجهات المتاجر — ولا تُحمَّل أبداً داخل لوحة التحكم
         ولا في المعاينة.
       </p>
 
       <div className="mb-4 flex items-start gap-2 rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] px-3 py-2.5">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sys-warning)]" />
-        <p className="text-[11px] leading-relaxed text-amber-900">
+        <p className="text-caption leading-relaxed text-amber-900">
           كل بكسل إضافي سكربت آخر يحمّله متصفح الزبون قبل أن تكتمل الصفحة — أضف ما تحتاجه فعلاً، وعطّل ما لم تعد
           تستعمله بدل أن تتركه يعمل.
         </p>
@@ -187,7 +187,7 @@ export function TrackingPixelsSection() {
               </span>
               {p.label}
               {counts[p.key] ? (
-                <span className="rounded-full bg-[var(--sys-surface-strong)] px-1.5 text-[10px] tabular-nums text-[var(--sys-foreground)]">{counts[p.key]}</span>
+                <span className="rounded-full bg-[var(--sys-surface-strong)] px-1.5 text-caption tabular-nums text-[var(--sys-foreground)]">{counts[p.key]}</span>
               ) : null}
             </button>
           );
@@ -201,7 +201,7 @@ export function TrackingPixelsSection() {
       ) : (
         <div className="space-y-2">
           {rows.length === 0 && (
-            <p className="rounded-lg border border-dashed border-[var(--sys-border)] py-5 text-center text-[11px] text-[var(--sys-muted)]">
+            <p className="rounded-lg border border-dashed border-[var(--sys-border)] py-5 text-center text-caption text-[var(--sys-muted)]">
               لا بكسل {meta.label} بعد.
             </p>
           )}
@@ -214,7 +214,7 @@ export function TrackingPixelsSection() {
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold text-[var(--sys-heading)]">{p.name}</p>
-                <p className="truncate font-mono text-[11px] text-[var(--sys-muted-foreground)]" dir="ltr">{p.pixelId}</p>
+                <p className="truncate font-mono text-caption text-[var(--sys-muted-foreground)]" dir="ltr">{p.pixelId}</p>
               </div>
 
               <select
@@ -224,7 +224,7 @@ export function TrackingPixelsSection() {
                 onChange={(e) =>
                   void send(`/api/settings/tracking-pixels/${p.id}`, { method: 'PATCH', body: JSON.stringify({ scope: e.target.value }) }, 'حُفظ.')
                 }
-                className="h-8 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-[11px] text-[var(--sys-foreground)] disabled:bg-[var(--sys-surface)]"
+                className="h-8 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-caption text-[var(--sys-foreground)] disabled:bg-[var(--sys-surface)]"
               >
                 {SCOPE_CHOICES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
@@ -238,7 +238,7 @@ export function TrackingPixelsSection() {
                     onClick={() =>
                       void send(`/api/settings/tracking-pixels/${p.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !p.enabled }) }, p.enabled ? 'عُطّل البكسل.' : 'فُعّل البكسل.')
                     }
-                    className="rounded-md px-2 py-1 text-[11px] font-semibold text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] hover:text-[var(--sys-foreground)]"
+                    className="rounded-md px-2 py-1 text-caption font-semibold text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] hover:text-[var(--sys-foreground)]"
                   >
                     {p.enabled ? 'تعطيل' : 'تفعيل'}
                   </button>
@@ -281,7 +281,7 @@ export function TrackingPixelsSection() {
               </Button>
             </form>
           ) : (
-            <p className="text-[11px] text-[var(--sys-muted-foreground)]">عرض فقط — تعديل البكسلات يحتاج صلاحية تعديل الإعدادات.</p>
+            <p className="text-caption text-[var(--sys-muted-foreground)]">عرض فقط — تعديل البكسلات يحتاج صلاحية تعديل الإعدادات.</p>
           )}
 
           {msg && (

@@ -500,7 +500,7 @@ export function OrdersScreen() {
             how much — and never runs off the edge. */}
         <Card>
           <CardContent className="p-0">
-            <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b border-[var(--sys-border)] bg-[var(--sys-surface)] text-[11px] text-[var(--sys-muted-foreground)]">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b border-[var(--sys-border)] bg-[var(--sys-surface)] text-caption text-[var(--sys-muted-foreground)]">
               <input
                 type="checkbox"
                 checked={allOnPageSelected}
@@ -520,7 +520,7 @@ export function OrdersScreen() {
               {!showAll && pagination.totalPages > 1 && (
                 <button
                   onClick={() => setShowAll(true)}
-                  className="ms-auto text-[11px] font-medium text-[var(--sys-primary)] hover:underline"
+                  className="ms-auto text-caption font-medium text-[var(--sys-primary)] hover:underline"
                 >
                   إظهار كل النتائج ({pagination.total})
                 </button>
@@ -528,7 +528,7 @@ export function OrdersScreen() {
               {showAll && (
                 <button
                   onClick={() => setShowAll(false)}
-                  className="ms-auto text-[11px] font-medium text-[var(--sys-muted-foreground)] hover:underline"
+                  className="ms-auto text-caption font-medium text-[var(--sys-muted-foreground)] hover:underline"
                 >
                   العودة للعرض بالصفحات
                 </button>
@@ -572,7 +572,7 @@ export function OrdersScreen() {
                           <span className="font-bold text-[var(--sys-heading)] text-xs" dir="ltr">{order.orderNumber}</span>
                           <OrderStateBadge state={order.state} />
                           {order.deliveryProvider && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--sys-muted-foreground)]">
+                            <span className="inline-flex items-center gap-1 text-caption text-[var(--sys-muted-foreground)]">
                               {order.deliveryProvider.kind === 'AGENT' ? (
                                 <Bike className="w-3 h-3 text-[var(--sys-primary)]" />
                               ) : (
@@ -582,7 +582,7 @@ export function OrdersScreen() {
                             </span>
                           )}
                           {order.trackingNumber && (
-                            <span className="text-[10px] font-mono text-[var(--sys-muted)]" dir="ltr">
+                            <span className="text-caption font-mono text-[var(--sys-muted)]" dir="ltr">
                               {order.trackingNumber}
                             </span>
                           )}
@@ -591,10 +591,10 @@ export function OrdersScreen() {
                         {/* Line 2 — who it goes to. */}
                         <p className="text-sm text-[var(--sys-heading)] truncate">
                           {order.customer?.fullName}
-                          <span className="text-[11px] text-[var(--sys-muted-foreground)]" dir="ltr">
+                          <span className="text-caption text-[var(--sys-muted-foreground)]" dir="ltr">
                             {' · '}{order.customer?.rawPhone || order.customer?.phone}
                           </span>
-                          <span className="text-[11px] text-[var(--sys-muted)]">
+                          <span className="text-caption text-[var(--sys-muted)]">
                             {' · '}{order.region?.name ?? order.customer?.city ?? '—'}
                           </span>
                         </p>
@@ -609,7 +609,7 @@ export function OrdersScreen() {
                         </p>
 
                         {/* Line 4 — where it came from and when. */}
-                        <p className="text-[11px] text-[var(--sys-muted)] truncate">
+                        <p className="text-caption text-[var(--sys-muted)] truncate">
                           {order.source || '—'}
                           {order.moderator?.name ? ` · ${order.moderator.name}` : ''}
                           {' · '}

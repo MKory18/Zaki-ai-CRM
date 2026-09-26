@@ -492,7 +492,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           <span className="hidden sm:inline">{ar ? 'الطلب التالي' : 'Next Order'}</span>
         </Button>
 
-        <span className="text-[11px] text-[var(--sys-muted)] font-medium">
+        <span className="text-caption text-[var(--sys-muted)] font-medium">
           {navLoading || loading ? (ar ? 'جارٍ التحميل…' : 'Loading…') : ''}
         </span>
 
@@ -546,11 +546,11 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               standalone "تعديل" here neither advanced nor stopped anything. */}
           <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3 shadow-xs">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="text-[11px] font-semibold text-[var(--sys-muted)]">حالة الطلب</span>
+              <span className="text-caption font-semibold text-[var(--sys-muted)]">حالة الطلب</span>
               <OrderStateBadge state={order.state} />
 
               {order.deliveryProvider && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] text-[11px] font-semibold text-[var(--sys-muted-foreground)]">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] text-caption font-semibold text-[var(--sys-muted-foreground)]">
                   {order.deliveryProvider.kind === 'AGENT' ? (
                     <Bike className="w-3 h-3 text-[var(--sys-primary)]" />
                   ) : (
@@ -560,13 +560,13 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 </span>
               )}
               {order.trackingNumber && (
-                <span className="px-2.5 py-1 rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] text-[11px] font-mono text-[var(--sys-muted-foreground)]" dir="ltr">
+                <span className="px-2.5 py-1 rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] text-caption font-mono text-[var(--sys-muted-foreground)]" dir="ltr">
                   {order.trackingNumber}
                 </span>
               )}
               {order.settlementStatus && order.settlementStatus !== 'NOT_APPLICABLE' && (
                 <span
-                  className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold ${
+                  className={`px-2.5 py-1 rounded-full border text-caption font-semibold ${
                     order.settlementStatus === 'SETTLED'
                       ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
                       : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]'
@@ -577,7 +577,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               )}
 
               {editingLockedByOther && (
-                <span className="ms-auto text-[11px] text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1 inline-flex items-center gap-1.5">
+                <span className="ms-auto text-caption text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1 inline-flex items-center gap-1.5">
                   <Lock className="w-3 h-3" />
                   {t.editingBy} {lockHolderName}
                 </span>
@@ -660,7 +660,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 size="md"
               />
               <div className="min-w-0">
-                <p className="text-[11px] text-[var(--sys-muted)]">المنتج</p>
+                <p className="text-caption text-[var(--sys-muted)]">المنتج</p>
                 <p className="text-xs font-bold text-[var(--sys-heading)] line-clamp-2">
                   {order.productNameSnapshot || order.product?.name}
                 </p>
@@ -686,7 +686,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               {/* What the customer pays. The figures come from the one COD
                   function on the server — a screen never adds up money. */}
               <div className="mt-2 rounded-lg border border-[var(--sys-border)] divide-y divide-slate-100">
-                <p className="text-[11px] font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-lg">
+                <p className="text-caption font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-lg">
                   ما يدفعه العميل
                 </p>
                 <div className="flex justify-between px-2.5 py-1.5">
@@ -710,7 +710,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                       the shipment is created. Before that it is undecided, not
                       zero — printing 0.00 here reads as free delivery. */}
                   {!order.deliveryProvider && !Number(cod?.deliveryFee ?? 0) ? (
-                    <span className="text-[var(--sys-muted)] text-[11px]">تُحدَّد عند إنشاء الشحنة</span>
+                    <span className="text-[var(--sys-muted)] text-caption">تُحدَّد عند إنشاء الشحنة</span>
                   ) : (
                     <span className="text-[var(--sys-foreground)]" dir="ltr">{money(cod?.deliveryFee ?? order.shippingCost)}</span>
                   )}
@@ -726,7 +726,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               {/* Costs are ours, not the customer's — kept apart so the column
                   above never reads as a sum that includes them. */}
               <div className="mt-2 rounded-lg border border-[var(--sys-border)] divide-y divide-slate-100">
-                <p className="text-[11px] font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-lg">
+                <p className="text-caption font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-lg">
                   تكاليفنا على هذا الطلب
                 </p>
                 <div className="flex justify-between px-2.5 py-1.5">
@@ -758,7 +758,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               {mayChangeChannel && (
                 <button
                   onClick={() => { setChannelOpen((v) => !v); setChannelDraft(order.channelId ?? ''); }}
-                  className="text-[11px] px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+                  className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   {channelOpen ? 'إغلاق' : 'تعديل'}
@@ -784,7 +784,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 >
                   حفظ القناة
                 </button>
-                <p className="text-[11px] text-[var(--sys-muted)]">
+                <p className="text-caption text-[var(--sys-muted)]">
                   القنوات تُدار من الإعدادات ← قنوات الطلبات.
                 </p>
               </div>
@@ -792,7 +792,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               <>
                 <p className="text-sm font-bold text-[var(--sys-heading)]">{order.source || '—'}</p>
                 {order.moderator?.name && (
-                  <p className="text-[11px] text-[var(--sys-muted)]">أدخله: {order.moderator.name}</p>
+                  <p className="text-caption text-[var(--sys-muted)]">أدخله: {order.moderator.name}</p>
                 )}
               </>
             )}
@@ -807,7 +807,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               {timeline.length > 5 && (
                 <button
                   onClick={() => setTimelineExpanded((v) => !v)}
-                  className="ms-auto text-[11px] font-medium text-[var(--sys-primary)] hover:underline"
+                  className="ms-auto text-caption font-medium text-[var(--sys-primary)] hover:underline"
                 >
                   {timelineExpanded ? 'إظهار الأحدث فقط' : `إظهار الكل (${timeline.length})`}
                 </button>
@@ -821,7 +821,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                   <span className="absolute -start-[7px] top-1 w-2.5 h-2.5 rounded-full bg-[var(--sys-destructive)] border-2 border-[var(--sys-card)]" />
                   <p className="font-bold text-[var(--sys-foreground)]">{event.title}</p>
                   {event.detail && <p className="text-[var(--sys-muted-foreground)] mt-0.5 break-words">{event.detail}</p>}
-                  <p className="text-[10px] text-[var(--sys-muted)] mt-0.5">
+                  <p className="text-caption text-[var(--sys-muted)] mt-0.5">
                     {arDateShort(event.at)}
                     {event.actorName ? ` — ${event.actorName}` : ''}
                   </p>
@@ -864,19 +864,19 @@ function OrderRegionField({
       <div className="flex items-start gap-1.5">
         <MapPin className="w-3.5 h-3.5 text-[var(--sys-muted)] mt-0.5 shrink-0" />
         <div className="flex-1">
-          <p className="text-[11px] text-[var(--sys-muted)]">المحافظة</p>
+          <p className="text-caption text-[var(--sys-muted)]">المحافظة</p>
           <div className="flex items-center gap-2">
             {order.regionId ? (
               <p className="text-[var(--sys-foreground)] text-xs font-medium">{current?.name ?? order.customer?.city}</p>
             ) : (
-              <p className="text-[11px] text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-md px-2 py-0.5">
+              <p className="text-caption text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-md px-2 py-0.5">
                 لم تُحدَّد — لا يمكن حساب أجرة التوصيل
               </p>
             )}
             <button
               type="button"
               onClick={() => { setValue(order.regionId ?? ''); setEditing(true); }}
-              className="text-[11px] text-[var(--sys-primary)] hover:underline"
+              className="text-caption text-[var(--sys-primary)] hover:underline"
             >
               {order.regionId ? 'تغيير' : 'تحديد'}
             </button>
@@ -890,7 +890,7 @@ function OrderRegionField({
     <div className="flex items-start gap-1.5">
       <MapPin className="w-3.5 h-3.5 text-[var(--sys-muted)] mt-0.5 shrink-0" />
       <div className="flex-1">
-        <p className="text-[11px] text-[var(--sys-muted)] mb-1">المحافظة</p>
+        <p className="text-caption text-[var(--sys-muted)] mb-1">المحافظة</p>
         <div className="flex items-center gap-2">
           <select
             value={value}
@@ -927,11 +927,11 @@ function OrderRegionField({
           >
             {saving ? '…' : 'حفظ'}
           </button>
-          <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-[var(--sys-muted-foreground)]">
+          <button type="button" onClick={() => setEditing(false)} className="text-caption text-[var(--sys-muted-foreground)]">
             إلغاء
           </button>
         </div>
-        {error && <p className="text-[11px] text-[var(--sys-destructive)] mt-1">{error}</p>}
+        {error && <p className="text-caption text-[var(--sys-destructive)] mt-1">{error}</p>}
       </div>
     </div>
   );

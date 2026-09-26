@@ -200,10 +200,10 @@ export function DashboardScreen() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--sys-warning)]">
+                    <span className="text-caption font-bold uppercase tracking-wider text-[var(--sys-warning)]">
                       {locale === 'ar' ? 'الملخص التنفيذي الذكي' : 'AI Business Intelligence'}
                     </span>
-                    <span className="text-[10px] bg-[var(--sys-card)]/15 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-caption bg-[var(--sys-card)]/15 px-2 py-0.5 rounded-full font-mono">
                       {locale === 'ar' ? 'مبني على بيانات حقيقية' : 'Grounded on real data'}
                     </span>
                   </div>
@@ -241,17 +241,17 @@ export function DashboardScreen() {
           {canFinance && (
             <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.netProfit}</span>
+                <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">{t.netProfit}</span>
                 <div className="h-14 w-14 rounded-lg bg-[var(--sys-success-soft)] text-[var(--sys-success)] flex items-center justify-center">
                   <Wallet className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{fmt(fin.netProfit)}</div>
               <div className="mt-1.5 flex items-center gap-1.5">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-0">
+                <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-0">
                   {fin.profitMargin}%
                 </span>
-                <span className="text-[11px] text-[var(--sys-muted)]">{t.profitMargin}</span>
+                <span className="text-caption text-[var(--sys-muted)]">{t.profitMargin}</span>
               </div>
             </div>
           )}
@@ -259,13 +259,13 @@ export function DashboardScreen() {
           {canFinance && (
             <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.deliveredRevenue}</span>
+                <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">{t.deliveredRevenue}</span>
                 <div className="h-14 w-14 rounded-lg bg-[var(--sys-surface-strong)] text-[var(--sys-primary)] flex items-center justify-center">
                   <TrendingUp className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{fmt(fin.deliveredRevenue)}</div>
-              <p className="mt-1.5 text-[11px] text-[var(--sys-muted)]">
+              <p className="mt-1.5 text-caption text-[var(--sys-muted)]">
                 {counts.delivered} {locale === 'ar' ? 'طلب موصّل' : 'delivered orders'}
               </p>
             </div>
@@ -273,26 +273,26 @@ export function DashboardScreen() {
 
           <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.confirmationRate}</span>
+              <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">{t.confirmationRate}</span>
               <div className="h-14 w-14 rounded-lg bg-[var(--sys-info)]/10 text-[var(--sys-info)] flex items-center justify-center">
                 <Percent className="w-6 h-6" />
               </div>
             </div>
             <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{rates.confirmationRate}%</div>
-            <p className="mt-1.5 text-[11px] text-[var(--sys-muted)]">
+            <p className="mt-1.5 text-caption text-[var(--sys-muted)]">
               {counts.confirmed} / {counts.decided ?? counts.total} {t.decidedOrders}
             </p>
           </div>
 
           <div className="bg-[var(--sys-card)] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[var(--sys-muted-foreground)]">{t.deliveryRate}</span>
+              <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">{t.deliveryRate}</span>
               <div className="h-14 w-14 rounded-lg bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] flex items-center justify-center">
                 <Truck className="w-6 h-6" />
               </div>
             </div>
             <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{rates.deliveryRate}%</div>
-            <p className="mt-1.5 text-[11px] text-[var(--sys-muted)]">
+            <p className="mt-1.5 text-caption text-[var(--sys-muted)]">
               {counts.delivered} / {counts.confirmed} {t.confirmedOrders}
             </p>
           </div>
@@ -319,7 +319,7 @@ export function DashboardScreen() {
                 {profitFlow.map((f, i) => (
                   <React.Fragment key={f.label}>
                     <div className={`flex-1 min-w-[110px] px-3 py-2.5 rounded-lg border text-center ${f.cls}`}>
-                      <span className="block text-[10px] font-semibold opacity-75">{f.label}</span>
+                      <span className="block text-caption font-semibold opacity-75">{f.label}</span>
                       <span className="block text-sm font-black mt-0.5" dir="ltr">{f.value}</span>
                     </div>
                     {i < profitFlow.length - 1 && (
@@ -329,7 +329,7 @@ export function DashboardScreen() {
                 ))}
                 <Equal className="w-4 h-4 text-[var(--sys-muted)] shrink-0" />
                 <div className="px-4 py-2.5 rounded-lg bg-[var(--sys-primary)] text-center">
-                  <span className="block text-[10px] font-bold text-[var(--sys-primary-foreground)]/80">
+                  <span className="block text-caption font-bold text-[var(--sys-primary-foreground)]/80">
                     {locale === 'ar' ? 'صافي الربح' : 'NET PROFIT'}
                   </span>
                   <span className="block text-base font-black text-[var(--sys-primary-foreground)] mt-0.5" dir="ltr">{fmt(fin.netProfit)}</span>
@@ -344,7 +344,7 @@ export function DashboardScreen() {
           {statusTiles.map((s) => (
             <div key={s.label} className="bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]/80 p-3.5 text-center shadow-xs">
               <span className={`inline-block w-2 h-2 rounded-full ${s.dot} mb-1.5`} />
-              <span className="block text-[10px] font-semibold text-[var(--sys-muted-foreground)] leading-tight">{s.label}</span>
+              <span className="block text-caption font-semibold text-[var(--sys-muted-foreground)] leading-tight">{s.label}</span>
               <span className={`block text-xl font-black mt-1 ${s.value > 0 ? s.color : 'text-[var(--sys-border-strong)]'}`}>
                 {s.value}
               </span>
@@ -374,7 +374,7 @@ export function DashboardScreen() {
                   <div className="flex items-center gap-3">
                     <span className="text-lg">{r.icon}</span>
                     <div>
-                      <p className={`text-[10px] font-bold uppercase tracking-wide ${r.text}`}>{r.label}</p>
+                      <p className={`text-caption font-bold uppercase tracking-wide ${r.text}`}>{r.label}</p>
                       <p className="text-sm font-bold text-[var(--sys-heading)] line-clamp-1">
                         {r.name ? productName(r.name, locale) : '—'}
                       </p>
@@ -421,17 +421,17 @@ export function DashboardScreen() {
                       </span>
                       <div>
                         <p className="text-sm font-bold text-[var(--sys-heading)]">{mod.name}</p>
-                        <p className="text-[11px] text-[var(--sys-muted)]">
+                        <p className="text-caption text-[var(--sys-muted)]">
                           {mod.totalOrders} {locale === 'ar' ? 'طلب' : 'orders'} • {mod.confirmedOrders}{' '}
                           {locale === 'ar' ? 'مؤكد' : 'confirmed'}
                         </p>
                       </div>
                     </div>
                     <div className="text-end">
-                      <span className="text-[11px] font-bold text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-0 px-2 py-0.5 rounded-full">
+                      <span className="text-caption font-bold text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-0 px-2 py-0.5 rounded-full">
                         {mod.confirmationRate}%
                       </span>
-                      <p className="text-[11px] font-semibold text-[var(--sys-foreground)] mt-1" dir="ltr">
+                      <p className="text-caption font-semibold text-[var(--sys-foreground)] mt-1" dir="ltr">
                         ${mod.sales.toFixed(2)}
                       </p>
                     </div>
@@ -489,7 +489,7 @@ export function DashboardScreen() {
                             <p className="font-semibold text-[var(--sys-heading)] line-clamp-1 max-w-[200px]">
                               {order.productNameSnapshot || order.product?.name}
                             </p>
-                            <p className="text-[11px] text-[var(--sys-muted)]">
+                            <p className="text-caption text-[var(--sys-muted)]">
                               {order.customer?.fullName} • {order.quantity} {t.units}
                             </p>
                           </div>

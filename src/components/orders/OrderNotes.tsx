@@ -99,16 +99,16 @@ export function OrderNotes({ orderId }: { orderId: string }) {
         <MessageSquareText className="w-4 h-4 text-[var(--sys-primary)]" />
         <h4 className="text-xs font-black text-[var(--sys-foreground)]">ملاحظات داخلية</h4>
         {notes && notes.length > 0 && (
-          <span className="text-[10px] font-medium text-[var(--sys-muted)] tabular-nums">{notes.length}</span>
+          <span className="text-caption font-medium text-[var(--sys-muted)] tabular-nums">{notes.length}</span>
         )}
       </div>
 
       {notes === null ? (
-        <p className="text-[11px] text-[var(--sys-muted)] flex items-center gap-1.5 py-2">
+        <p className="text-caption text-[var(--sys-muted)] flex items-center gap-1.5 py-2">
           <Loader2 className="w-3 h-3 animate-spin" /> جارٍ التحميل…
         </p>
       ) : notes.length === 0 ? (
-        <p className="text-[11px] text-[var(--sys-muted)] py-2">لا ملاحظات بعد — اكتب أول واحدة.</p>
+        <p className="text-caption text-[var(--sys-muted)] py-2">لا ملاحظات بعد — اكتب أول واحدة.</p>
       ) : (
         <ol className="space-y-2.5">
           {notes.map((note) => {
@@ -116,16 +116,16 @@ export function OrderNotes({ orderId }: { orderId: string }) {
             return (
               <li key={note.id} className="flex gap-2.5">
                 <span
-                  className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold ${toneFor(who)}`}
+                  className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-caption font-bold ${toneFor(who)}`}
                   aria-hidden="true"
                 >
                   {initials(who)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] text-[var(--sys-heading)] whitespace-pre-line break-words leading-relaxed">
+                  <p className="text-caption text-[var(--sys-heading)] whitespace-pre-line break-words leading-relaxed">
                     {note.body}
                   </p>
-                  <p className="text-[10px] text-[var(--sys-muted)] mt-0.5 flex flex-wrap gap-x-1.5">
+                  <p className="text-caption text-[var(--sys-muted)] mt-0.5 flex flex-wrap gap-x-1.5">
                     <span className="font-medium text-[var(--sys-muted-foreground)]">{who}</span>
                     <span>· {arDateShort(note.createdAt)}</span>
                     {note.kind !== 'internal' && <span>· {KIND_AR[note.kind] ?? note.kind}</span>}
@@ -137,7 +137,7 @@ export function OrderNotes({ orderId }: { orderId: string }) {
         </ol>
       )}
 
-      {error && <p className="text-[11px] text-[var(--sys-destructive)] mt-2">{error}</p>}
+      {error && <p className="text-caption text-[var(--sys-destructive)] mt-2">{error}</p>}
 
       <div className="mt-4 pt-3 border-t border-[var(--sys-border)]">
         <div className="flex items-end gap-2">
@@ -154,7 +154,7 @@ export function OrderNotes({ orderId }: { orderId: string }) {
               }
             }}
             placeholder="اكتب ملاحظة لمن يكمل هذا الطلب…"
-            className="flex-1 min-h-9 max-h-32 px-3 py-2 rounded-lg border border-[var(--sys-border)] text-[11px] resize-y focus:outline-none focus:border-[var(--sys-primary)]"
+            className="flex-1 min-h-9 max-h-32 px-3 py-2 rounded-lg border border-[var(--sys-border)] text-caption resize-y focus:outline-none focus:border-[var(--sys-primary)]"
           />
           <button
             onClick={send}
@@ -165,7 +165,7 @@ export function OrderNotes({ orderId }: { orderId: string }) {
             {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
           </button>
         </div>
-        <p className="text-[10px] text-[var(--sys-muted)] mt-1.5">
+        <p className="text-caption text-[var(--sys-muted)] mt-1.5">
           تُضاف ولا تُعدَّل — تبقى كما كُتبت وباسم كاتبها.
         </p>
       </div>

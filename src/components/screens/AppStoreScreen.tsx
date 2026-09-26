@@ -116,7 +116,7 @@ export function AppStoreScreen() {
       )}
 
       <section>
-        <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)]">تكاملات جاهزة</h2>
+        <h2 className="mb-2 text-caption font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)]">تكاملات جاهزة</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {shelf.builtIn.map((a) => (
             <div
@@ -128,20 +128,20 @@ export function AppStoreScreen() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-[var(--sys-heading)]">{a.name}</p>
-                  <p className="text-[11px] text-[var(--sys-muted-foreground)]">{a.summary}</p>
+                  <p className="text-caption text-[var(--sys-muted-foreground)]">{a.summary}</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-foreground)]">
+                <span className="shrink-0 rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-caption font-semibold text-[var(--sys-foreground)]">
                   {a.categoryLabel}
                 </span>
               </div>
 
-              <p className="mt-2 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">{a.description}</p>
+              <p className="mt-2 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">{a.description}</p>
 
               {/* Installed is not the same as working. A courier whose
                   credentials were cleared is installed and useless, and the
                   card says which. */}
               {a.installed && (
-                <p className={`mt-2 flex items-center gap-1.5 text-[11px] ${a.configured ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
+                <p className={`mt-2 flex items-center gap-1.5 text-caption ${a.configured ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
                   {a.configured ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
                   {a.configured ? 'مهيَّأ ويعمل' : 'مثبَّت لكن غير مهيَّأ — أدخل بياناته'}
                 </p>
@@ -171,14 +171,14 @@ export function AppStoreScreen() {
                     <button
                       onClick={() => act(a.code, 'uninstall')}
                       disabled={!a.canManage || busy === a.code}
-                      className="cursor-pointer text-[11px] text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
+                      className="cursor-pointer text-caption text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
                     >
                       إزالة
                     </button>
                   </>
                 )}
                 {!a.canManage && (
-                  <span className="text-[10.5px] text-[var(--sys-muted)]">تحتاج صلاحية لتثبيته</span>
+                  <span className="text-caption text-[var(--sys-muted)]">تحتاج صلاحية لتثبيته</span>
                 )}
               </div>
             </div>
@@ -187,7 +187,7 @@ export function AppStoreScreen() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)]">
+        <h2 className="mb-2 text-caption font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)]">
           تطبيقات مسجَّلة عندك
         </h2>
         {shelf.external.length === 0 ? (
@@ -202,11 +202,11 @@ export function AppStoreScreen() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-[var(--sys-heading)]">
-                      {a.name} <span className="font-mono text-[11px] text-[var(--sys-muted)]" dir="ltr">{a.code}</span>
+                      {a.name} <span className="font-mono text-caption text-[var(--sys-muted)]" dir="ltr">{a.code}</span>
                     </p>
-                    {a.developerName && <p className="text-[11px] text-[var(--sys-muted-foreground)]">{a.developerName}</p>}
+                    {a.developerName && <p className="text-caption text-[var(--sys-muted-foreground)]">{a.developerName}</p>}
                     {a.webhookUrl && (
-                      <p className="mt-1 truncate font-mono text-[10.5px] text-[var(--sys-muted-foreground)]" dir="ltr">{a.webhookUrl}</p>
+                      <p className="mt-1 truncate font-mono text-caption text-[var(--sys-muted-foreground)]" dir="ltr">{a.webhookUrl}</p>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -224,7 +224,7 @@ export function AppStoreScreen() {
                 {a.events.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {a.events.map((e) => (
-                      <span key={e} className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 font-mono text-[10px] text-[var(--sys-foreground)]" dir="ltr">
+                      <span key={e} className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 font-mono text-caption text-[var(--sys-foreground)]" dir="ltr">
                         {e}
                       </span>
                     ))}
@@ -296,7 +296,7 @@ function RegisterApp({
             الوقت داخل النصّ الموقَّع حتى لا يُعاد إرسال طلب مُلتقَط بعد أسبوع بنفس التوقيع.
           </p>
           <div className="flex items-center gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
-            <code className="min-w-0 flex-1 break-all font-mono text-[11px] text-[var(--sys-heading)]" dir="ltr">{secret}</code>
+            <code className="min-w-0 flex-1 break-all font-mono text-caption text-[var(--sys-heading)]" dir="ltr">{secret}</code>
             <button
               onClick={async () => {
                 // Shown once and never again, so a copy that silently
@@ -361,13 +361,13 @@ function RegisterApp({
                   }
                 />
                 {ev.label}
-                <span className="ms-auto font-mono text-[10px] text-[var(--sys-muted)]" dir="ltr">{ev.code}</span>
+                <span className="ms-auto font-mono text-caption text-[var(--sys-muted)]" dir="ltr">{ev.code}</span>
               </label>
             ))}
           </div>
         </div>
 
-        <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-[10.5px] leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
           التطبيق يُخبَر فقط — لا يقرأ بياناتك ولا يعدّلها. عنوان الويبهوك يجب أن يكون
           <code dir="ltr"> https</code>، والإرسال يُعاد خمس مرات بتباعد متزايد قبل أن يُعلَّم فاشلاً.
         </p>

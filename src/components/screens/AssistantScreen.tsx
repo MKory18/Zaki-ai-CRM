@@ -206,27 +206,27 @@ export function AssistantScreen() {
                 {metrics && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-center text-xs">
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-[10px] text-[var(--sys-muted)] block">Orders</span>
+                      <span className="text-caption text-[var(--sys-muted)] block">Orders</span>
                       <strong className="text-[var(--sys-heading)] font-bold">{metrics.total_orders}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-[10px] text-[var(--sys-muted)] block">Confirmed</span>
+                      <span className="text-caption text-[var(--sys-muted)] block">Confirmed</span>
                       <strong className="text-[var(--sys-destructive)] font-bold">{metrics.confirmed_orders}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-[10px] text-[var(--sys-muted)] block">Delivered</span>
+                      <span className="text-caption text-[var(--sys-muted)] block">Delivered</span>
                       <strong className="text-[var(--sys-destructive)] font-bold">{metrics.delivered_orders}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-[10px] text-[var(--sys-muted)] block">Delivered Revenue</span>
+                      <span className="text-caption text-[var(--sys-muted)] block">Delivered Revenue</span>
                       <strong className="text-[var(--sys-heading)] font-bold">${metrics.revenue?.toFixed(2)}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-[10px] text-[var(--sys-muted)] block">Real Net Profit</span>
+                      <span className="text-caption text-[var(--sys-muted)] block">Real Net Profit</span>
                       <strong className="text-[var(--sys-destructive)] font-black">${metrics.net_profit?.toFixed(2)}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-[10px] text-[var(--sys-muted)] block">Confirm Rate</span>
+                      <span className="text-caption text-[var(--sys-muted)] block">Confirm Rate</span>
                       <strong className="text-[var(--sys-destructive)] font-bold">{metrics.confirmation_rate}%</strong>
                     </div>
                   </div>
@@ -321,7 +321,7 @@ export function AssistantScreen() {
                 >
                   <p>{m.content}</p>
                   <span
-                    className={`text-[9px] block mt-1 text-right ${
+                    className={`text-caption block mt-1 text-right ${
                       m.role === 'user' ? 'text-[var(--sys-primary-foreground)]/80' : 'text-[var(--sys-muted)]'
                     }`}
                   >
@@ -346,7 +346,7 @@ export function AssistantScreen() {
           </CardContent>
 
           {/* Quick Prompts Bar */}
-          <div className="px-4 py-2 bg-[var(--sys-surface)] border-t border-[var(--sys-border)] flex items-center space-x-2 rtl:space-x-reverse overflow-x-auto text-[11px]">
+          <div className="px-4 py-2 bg-[var(--sys-surface)] border-t border-[var(--sys-border)] flex items-center space-x-2 rtl:space-x-reverse overflow-x-auto text-caption">
             <span className="text-[var(--sys-muted)] shrink-0 font-medium">Try asking:</span>
             {suggestedQuestions.map((sq, i) => (
               <button

@@ -136,7 +136,7 @@ export function MessageTemplatesCard() {
 
   return (
     <div className="space-y-2" dir="rtl">
-      <p className="text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
+      <p className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
         تُرسَل من رقم شركتك عبر تطبيقك — بلا بوابة ولا اشتراك ولا كلفة لكل رسالة. مجمّعة حسب الموقف
         الذي تُقال فيه، لا حسب القناة.
       </p>
@@ -153,7 +153,7 @@ export function MessageTemplatesCard() {
               className="flex w-full items-center gap-2 px-3 py-2 text-start"
             >
               <span className="flex-1 text-xs font-semibold text-[var(--sys-foreground)]">{s.ar}</span>
-              <span className="text-[10px] tabular-nums text-[var(--sys-muted)]">
+              <span className="text-caption tabular-nums text-[var(--sys-muted)]">
                 {mine.length === 0 ? 'لا قوالب' : `${live} من ${mine.length} مفعّلة`}
               </span>
               <ChevronDown className={`h-3.5 w-3.5 text-[var(--sys-muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
@@ -205,7 +205,7 @@ export function MessageTemplatesCard() {
                           <option key={l.code} value={l.code}>{l.label}</option>
                         ))}
                       </select>
-                      <label className="flex items-center gap-1 text-[10px] text-[var(--sys-muted-foreground)]">
+                      <label className="flex items-center gap-1 text-caption text-[var(--sys-muted-foreground)]">
                         <input
                           type="checkbox"
                           checked={t.active}
@@ -244,14 +244,14 @@ export function MessageTemplatesCard() {
                           type="button"
                           title={v.label}
                           onClick={() => insertVar(t.id, v.key)}
-                          className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-1.5 py-0.5 text-[10px] text-[var(--sys-primary)] hover:border-[var(--sys-primary)]"
+                          className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-1.5 py-0.5 text-caption text-[var(--sys-primary)] hover:border-[var(--sys-primary)]"
                         >
                           {v.label}
                         </button>
                       ))}
                     </div>
 
-                    <p className="rounded-lg bg-[var(--sys-surface)] px-2 py-1.5 text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
+                    <p className="rounded-lg bg-[var(--sys-surface)] px-2 py-1.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
                       {data.sample ? fillTemplate(t.body, data.sample) || '—' : NO_SAMPLE}
                     </p>
                   </div>
@@ -273,12 +273,12 @@ export function MessageTemplatesCard() {
           احفظ القوالب
         </Button>
         {saved && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-[var(--sys-success)]">
+          <span className="inline-flex items-center gap-1 text-caption text-[var(--sys-success)]">
             <Check className="h-3.5 w-3.5" /> تم الحفظ
           </span>
         )}
         {data.sample && (
-          <span className="text-[10px] text-[var(--sys-muted)]">
+          <span className="text-caption text-[var(--sys-muted)]">
             المعاينة بالطلب{' '}
             <span dir="ltr" className="tabular-nums">{data.sample.orderNumber}</span>
           </span>

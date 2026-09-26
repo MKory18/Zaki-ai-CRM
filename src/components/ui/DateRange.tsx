@@ -138,7 +138,7 @@ export function DateRange({
                 key={p.label}
                 type="button"
                 onClick={p.run}
-                className="px-2.5 py-1 text-[11px] rounded-lg border border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+                className="px-2.5 py-1 text-caption rounded-lg border border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
               >
                 {p.label}
               </button>
@@ -175,7 +175,7 @@ export function DateRange({
             style={{ gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}
           >
             {DAY_INITIALS.map((d) => (
-              <span key={d} className="text-[10px] text-[var(--sys-muted)] py-1">{d}</span>
+              <span key={d} className="text-caption text-[var(--sys-muted)] py-1">{d}</span>
             ))}
             {days.map((day) => {
               const outside = day.getMonth() !== month.getMonth();
@@ -189,7 +189,7 @@ export function DateRange({
                   key={day.toISOString()}
                   type="button"
                   onClick={() => pick(day)}
-                  className={`h-8 text-[11px] tabular-nums rounded-lg transition-colors ${
+                  className={`h-8 text-caption tabular-nums rounded-lg transition-colors ${
                     edge
                       ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-bold'
                       : inside
@@ -206,7 +206,7 @@ export function DateRange({
           </div>
 
           {anchor && (
-            <p className="text-[11px] text-[var(--sys-primary)]">اختر يوم النهاية…</p>
+            <p className="text-caption text-[var(--sys-primary)]">اختر يوم النهاية…</p>
           )}
         </div>
       )}

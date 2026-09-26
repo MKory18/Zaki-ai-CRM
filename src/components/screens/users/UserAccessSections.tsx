@@ -102,7 +102,7 @@ export function UserGeoAccessSection({ userId, canEdit }: { userId: string; canE
         <h3 className="mb-1 flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)]">
           <Globe2 className="h-3.5 w-3.5" /> البلدان والمتاجر
         </h3>
-        <p className="mb-3 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="mb-3 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
           البلد وحده يفتح كل متاجره؛ اختيار متاجر بعينها يحصره فيها. ومن يملك صلاحية إدارة البلدان والمتاجر
           يدخل الكل مهما اخترت هنا.
         </p>
@@ -120,13 +120,13 @@ export function UserGeoAccessSection({ userId, canEdit }: { userId: string; canE
                     <input type="checkbox" checked={on} disabled={!canEdit} onChange={() => toggleCountry(c)} />
                     {c.name}
                     {allStores && c.stores.length > 0 && (
-                      <span className="rounded-full bg-[var(--sys-success-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-success)]">كل متاجره</span>
+                      <span className="rounded-full bg-[var(--sys-success-soft)] px-2 py-0.5 text-caption font-semibold text-[var(--sys-success)]">كل متاجره</span>
                     )}
                   </label>
                   {c.stores.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 ps-6">
                       {c.stores.map((s) => (
-                        <label key={s.id} className="flex items-center gap-1.5 text-[11px] text-[var(--sys-foreground)]">
+                        <label key={s.id} className="flex items-center gap-1.5 text-caption text-[var(--sys-foreground)]">
                           <input
                             type="checkbox"
                             checked={picked.storeIds.has(s.id)}
@@ -188,7 +188,7 @@ export function UserPhoneField({ userId, initial, canEdit }: { userId: string; i
 
   return (
     <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-      <p className="flex items-center gap-1 text-[10px] text-[var(--sys-muted)]"><Phone className="h-3 w-3" /> الهاتف</p>
+      <p className="flex items-center gap-1 text-caption text-[var(--sys-muted)]"><Phone className="h-3 w-3" /> الهاتف</p>
       {canEdit ? (
         <div className="mt-1 flex items-center gap-1.5">
           <input
@@ -206,7 +206,7 @@ export function UserPhoneField({ userId, initial, canEdit }: { userId: string; i
       ) : (
         <p className="font-bold text-[var(--sys-heading)]" dir="ltr">{saved || '—'}</p>
       )}
-      {msg && <p className={`mt-1 text-[10px] font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>}
+      {msg && <p className={`mt-1 text-caption font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>}
     </div>
   );
 }

@@ -107,7 +107,7 @@ export function DeliverDialog({
                   <div key={l.id} className="flex items-center justify-between gap-3 px-3 py-2">
                     <div className="min-w-0">
                       <p className="text-sm text-[var(--sys-heading)] truncate">{l.productName}</p>
-                      <p className="text-[11px] text-[var(--sys-muted)] tabular-nums">
+                      <p className="text-caption text-[var(--sys-muted)] tabular-nums">
                         شُحن {shipped}
                         {l.freeQuantity > 0 && ` (منها ${l.freeQuantity} هدية)`}
                       </p>
@@ -116,7 +116,7 @@ export function DeliverDialog({
                       <button
                         type="button"
                         onClick={() => setTaken((t) => ({ ...t, [l.id]: 0 }))}
-                        className={`text-[11px] px-2 py-1 rounded-md border ${
+                        className={`text-caption px-2 py-1 rounded-md border ${
                           value === 0 ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
                         }`}
                       >
@@ -157,18 +157,18 @@ export function DeliverDialog({
               </p>
 
               {!allTaken && anyTaken && (
-                <p className="text-[11px] text-[var(--sys-warning)] pt-1">
+                <p className="text-caption text-[var(--sys-warning)] pt-1">
                   الأجرة تُحتسب كاملة رغم رفض بعض البنود — المندوب قطع الطريق فعلاً.
                 </p>
               )}
               {!anyTaken && (
-                <p className="text-[11px] text-[var(--sys-destructive)] pt-1">
+                <p className="text-caption text-[var(--sys-destructive)] pt-1">
                   لم يُستلم شيء — سيُسجَّل الطلب مرتجعاً بلا أجرة.
                 </p>
               )}
             </div>
 
-            <p className="text-[11px] text-[var(--sys-muted)]">
+            <p className="text-caption text-[var(--sys-muted)]">
               البنود المرفوضة لا تعود للمخزون من هنا — تُستلم وتُفحص في شاشة المرتجعات.
             </p>
 

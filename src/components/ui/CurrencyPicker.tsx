@@ -112,7 +112,7 @@ export function CurrencyPicker({
         </select>
       </label>
       {official !== null && value.minorUnit !== null && value.minorUnit !== official && (
-        <p className="col-span-2 text-[11px] text-[var(--sys-warning)]">
+        <p className="col-span-2 text-caption text-[var(--sys-warning)]">
           الرسمي لـ {code} هو {official} — كل مبلغ في هذا البلد سيُقرَّب على ما تختاره.
         </p>
       )}

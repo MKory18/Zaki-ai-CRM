@@ -8,6 +8,28 @@
  * the dashboard's heading colour came to beat a page's own theme.
  */
 
+/*
+ * THE SMALLEST TEXT THE SYSTEM IS ALLOWED TO SET.
+ *
+ * Tailwind's ladder stops at 12px, so every line that wanted to be smaller
+ * measured itself by hand: 11, 10.5, 10, 9.5, 9 — five sizes nobody chose,
+ * and three hundred places using one of the bottom four. Nine-pixel Arabic
+ * is not small text, it is a smudge: the script carries its meaning in
+ * marks above and below the letters, and at that size they merge into the
+ * line. A warehouse reads those lines at arm's length in bad light.
+ *
+ * So there is one step below `xs` and nothing below it. Its line-height is
+ * generous on purpose, for the same reason.
+ *
+ * This ADDS a utility and overrides nothing, which is why it may live in
+ * the file every page loads: a seller's shop gains a class it does not use
+ * and loses nothing it had.
+ */
+@theme {
+  --text-caption: 0.6875rem; /* 11px */
+  --text-caption--line-height: 1.6;
+}
+
 /* RTL: reversed spacing for the space-x utilities */
 [dir="rtl"] .space-x-reverse > :not([hidden]) ~ :not([hidden]) {
   --tw-space-x-reverse: 1;

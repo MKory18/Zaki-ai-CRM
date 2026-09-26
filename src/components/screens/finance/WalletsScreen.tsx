@@ -192,7 +192,7 @@ export function WalletsScreen() {
               >
                 <span className="flex items-center justify-between">
                   <span className="text-sm font-medium text-[var(--sys-heading)]">{w.name}</span>
-                  {!w.isActive && <span className="text-[10px] text-[var(--sys-muted)] border border-[var(--sys-border)] rounded-full px-2 py-0.5">موقوفة</span>}
+                  {!w.isActive && <span className="text-caption text-[var(--sys-muted)] border border-[var(--sys-border)] rounded-full px-2 py-0.5">موقوفة</span>}
                 </span>
                 <span className="block text-2xl font-semibold text-[var(--sys-heading)] tabular-nums mt-2">
                   {w.balance} <span className="text-sm font-normal text-[var(--sys-muted-foreground)]">{w.currencyCode}</span>
@@ -484,7 +484,7 @@ function RecordDialog({
                 <option key={key} value={key}>{label}</option>
               ))}
           </select>
-          <span className="block text-[11px] text-[var(--sys-muted)] mt-1">التحويلات تُسجَّل من شاشة التحويلات لا من هنا.</span>
+          <span className="block text-caption text-[var(--sys-muted)] mt-1">التحويلات تُسجَّل من شاشة التحويلات لا من هنا.</span>
         </label>
 
         <label className="block">
@@ -702,7 +702,7 @@ function CreateWalletDialog({
             className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
-          <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
+          <span className="block text-caption text-[var(--sys-muted)] mt-1">
             ثلاثة أحرف. لا يمكن تغييرها لاحقاً — كل حركة تُسجَّل بها.
             {country && currency && currency !== country.currencyCode && (
               <span className="block text-[var(--sys-warning)] mt-0.5">
@@ -723,7 +723,7 @@ function CreateWalletDialog({
             className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
-          <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
+          <span className="block text-caption text-[var(--sys-muted)] mt-1">
             ما في المحفظة الآن قبل أي حركة. ليس حركة بحد ذاته، فلا يظهر في السجل.
           </span>
         </label>

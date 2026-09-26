@@ -162,14 +162,14 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
           <Package className="w-4 h-4 text-[var(--sys-primary)]" />
           بيانات الطلب
           {offerName && (
-            <span className="text-[10px] font-medium text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5">
+            <span className="text-caption font-medium text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5">
               عرض: {offerName}
             </span>
           )}
         </h4>
         <button
           onClick={openForm}
-          className="text-[11px] px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
+          className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
         >
           <Pencil className="w-3.5 h-3.5" />
           {open ? 'إغلاق' : 'تعديل'}
@@ -186,7 +186,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
             />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-[var(--sys-heading)] truncate">{line.productName}</p>
-              <p className="text-[11px] text-[var(--sys-muted)] tabular-nums" dir="ltr">
+              <p className="text-caption text-[var(--sys-muted)] tabular-nums" dir="ltr">
                 {line.quantity} × {amount(line.unitPrice, currency)}
                 {line.freeQuantity > 0 && ` + ${line.freeQuantity} هدية`}
               </p>
@@ -215,7 +215,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
       )}
 
       {order.priceIncludesDelivery && !open && (
-        <p className="text-[11px] text-[var(--sys-muted)]">سعر البيع شامل التوصيل.</p>
+        <p className="text-caption text-[var(--sys-muted)]">سعر البيع شامل التوصيل.</p>
       )}
 
       {order.customerNotes && !open && (
@@ -256,11 +256,11 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
             />
           </label>
 
-          <p className="text-[11px] text-[var(--sys-muted)]">
+          <p className="text-caption text-[var(--sys-muted)]">
             أجرة التوصيل لا تُكتب هنا — تُحسب من جدول الأجور حين يُسند الطلب لشركة شحن.
           </p>
 
-          {error && <p className="text-[11px] text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1.5">{error}</p>}
+          {error && <p className="text-caption text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1.5">{error}</p>}
 
           <div className="flex gap-2">
             <button
@@ -284,7 +284,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
 function Small({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[11px] text-[var(--sys-muted)]">{label}</dt>
+      <dt className="text-caption text-[var(--sys-muted)]">{label}</dt>
       <dd className="text-[var(--sys-heading)] font-medium tabular-nums" dir="ltr">{value}</dd>
     </div>
   );

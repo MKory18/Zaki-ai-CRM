@@ -222,7 +222,7 @@ export function UsersScreen() {
                     <tr key={u.id} className="hover:bg-[var(--sys-surface)] transition-colors">
                       <td className="px-6 py-3.5">
                         <p className="font-bold text-[var(--sys-heading)]">{u.name}</p>
-                        <p className="text-[11px] text-[var(--sys-muted)]">{u.email}</p>
+                        <p className="text-caption text-[var(--sys-muted)]">{u.email}</p>
                       </td>
                       <td className="px-6 py-3.5">
                         <Badge variant={u.role === 'PENDING_USER' ? 'warning' : u.role === 'SUPER_ADMIN' ? 'purple' : 'info'}>
@@ -243,7 +243,7 @@ export function UsersScreen() {
                       </td>
                       <td className="px-6 py-3.5 text-right rtl:text-left">
                         <div className="flex items-center gap-1.5 justify-end rtl:justify-start">
-                          <Button size="sm" variant="outline" onClick={() => openManage(u)} className="text-[11px]">
+                          <Button size="sm" variant="outline" onClick={() => openManage(u)} className="text-caption">
                             <ShieldCheck className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
                             إدارة
                           </Button>
@@ -251,7 +251,7 @@ export function UsersScreen() {
                             size="sm"
                             variant="outline"
                             onClick={() => (window.location.href = `/admin/users/${u.id}`)}
-                            className="text-[11px]"
+                            className="text-caption"
                             title="الدور والصلاحيات والوصول"
                           >
                             <KeyRound className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
@@ -386,7 +386,7 @@ export function UsersScreen() {
                   إنهاء الجلسات (Force Logout)
                 </Button>
               </div>
-              <p className="text-[11px] text-[var(--sys-muted-foreground)]">
+              <p className="text-caption text-[var(--sys-muted-foreground)]">
                 إيقاف/تعطيل الحساب ينهي جميع الجلسات النشطة فوراً عبر إبطال التوكن الحالي.
               </p>
             </div>

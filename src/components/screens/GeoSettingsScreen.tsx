@@ -231,7 +231,7 @@ export function GeoSettingsScreen() {
                   {/* Read on every direct order of this store (an offer can
                       still override it), and until now it had no control at
                       all — every store priced as price + delivery. */}
-                  <label className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--sys-foreground)]">
+                  <label className="mt-1 flex items-center gap-1.5 text-caption text-[var(--sys-foreground)]">
                     <input
                       type="checkbox"
                       checked={!!s.priceIncludesDelivery}
@@ -581,7 +581,7 @@ function CurrencyField({
     return (
       <div className="md:col-span-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-xs text-[var(--sys-foreground)]">
         العملة: <b>{currencyLabel(code)}</b> · {minorUnit} خانات عشرية
-        <span className="ms-2 text-[10px] text-[var(--sys-muted)]">لا تتغيّر بعد أول طلب — على هذا البلد {orders} طلباً مسجّلاً بها.</span>
+        <span className="ms-2 text-caption text-[var(--sys-muted)]">لا تتغيّر بعد أول طلب — على هذا البلد {orders} طلباً مسجّلاً بها.</span>
       </div>
     );
   }
@@ -596,7 +596,7 @@ function CurrencyField({
       >
         حفظ العملة
       </button>
-      <p className="w-full text-[10px] text-[var(--sys-muted)]">تُصحَّح حتى أول طلب في هذا البلد، ثم تُقفل.</p>
+      <p className="w-full text-caption text-[var(--sys-muted)]">تُصحَّح حتى أول طلب في هذا البلد، ثم تُقفل.</p>
     </div>
   );
 }

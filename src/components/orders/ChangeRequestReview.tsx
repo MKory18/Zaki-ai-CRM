@@ -98,7 +98,7 @@ export function ChangeRequestReview({
       <div className="space-y-4">
         {row && (
           <>
-            <p className="text-[11px] text-[var(--sys-muted-foreground)]">
+            <p className="text-caption text-[var(--sys-muted-foreground)]">
               {row.requestedByName ?? 'موظف'} · {new Date(row.createdAt).toLocaleString('ar-EG')}
             </p>
 
@@ -108,7 +108,7 @@ export function ChangeRequestReview({
               ) : (
                 fields.map(([field, change]) => (
                   <div key={field} className="p-3">
-                    <p className="text-[11px] font-semibold text-[var(--sys-muted-foreground)] mb-1">
+                    <p className="text-caption font-semibold text-[var(--sys-muted-foreground)] mb-1">
                       {changeFieldLabel(field)}
                     </p>
                     <div className="flex items-center gap-2 text-xs flex-wrap">
@@ -122,12 +122,12 @@ export function ChangeRequestReview({
             </div>
 
             <div className="rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-3">
-              <p className="text-[11px] font-semibold text-[var(--sys-muted-foreground)] mb-1">السبب</p>
+              <p className="text-caption font-semibold text-[var(--sys-muted-foreground)] mb-1">السبب</p>
               <p className="text-xs text-[var(--sys-foreground)]">{row.reason}</p>
             </div>
 
             <label className="block">
-              <span className="block text-[11px] text-[var(--sys-muted-foreground)] mb-1">
+              <span className="block text-caption text-[var(--sys-muted-foreground)] mb-1">
                 ردّك — <span className="text-[var(--sys-warning)]">مطلوب مع الرفض</span>
               </span>
               <input
@@ -139,7 +139,7 @@ export function ChangeRequestReview({
               />
             </label>
 
-            <p className="flex items-start gap-1.5 text-[11px] text-[var(--sys-muted-foreground)]">
+            <p className="flex items-start gap-1.5 text-caption text-[var(--sys-muted-foreground)]">
               <AlertTriangle className="w-3.5 h-3.5 text-[var(--sys-warning)] shrink-0 mt-0.5" />
               الموافقة تسجّل القرار ولا تكتب التعديل بعد — يظهر بعدها في «بانتظار التطبيق» بطلبات
               التعديل، ومن هناك يُطبَّق بزرّ واحد عبر مسار المال نفسه، لا بنسخ حقل.

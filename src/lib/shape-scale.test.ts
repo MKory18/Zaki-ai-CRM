@@ -175,3 +175,60 @@ describe('the height of a control', () => {
     expect(offenders, 'شكل مربّع صار مستطيلاً:\n' + offenders.join('\n')).toEqual([]);
   });
 });
+
+/**
+ * ONE LADDER OF TEXT SIZES, AND A FLOOR UNDER IT.
+ *
+ * Fourteen sizes were in use, five of them measured by hand because
+ * Tailwind's ladder stops at 12px: 11, 10.5, 10, 9.5, 9. Three hundred
+ * lines sat on one of the bottom four.
+ *
+ * Nine-pixel Arabic is not small text, it is a smudge. The script carries
+ * meaning in the marks above and below the letters, and at that size they
+ * merge into the line - in a warehouse, at arm's length, in bad light. So
+ * `caption` at 11px is the floor, and there is nothing below it.
+ */
+describe('the size of text', () => {
+  const SIZE = /(?<![\w-])text-(\[[0-9.]+(?:px|rem)\]|caption|xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)(?![\w-])/g;
+
+  it('is never measured by hand', () => {
+    const offenders: string[] = [];
+    for (const { rel, src } of systemFiles()) {
+      for (const m of src.matchAll(SIZE)) {
+        if (m[1].startsWith('[')) offenders.push(`${rel}: ${m[0]}`);
+      }
+    }
+    expect(offenders, `حجم خطّ مقاس باليد:\n${offenders.slice(0, 20).join('\n')}`).toEqual([]);
+  });
+
+  it('and never smaller than the floor', () => {
+    // The guard is on the token, because the pixels live in one place now.
+    const globals = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
+    const m = /--text-caption:\s*([0-9.]+)rem/.exec(globals);
+    expect(m, 'اختفت درجة أصغر حجم').toBeTruthy();
+    expect(Number(m![1]) * 16, 'أصغر حجم نزل تحت ١١ بكسل').toBeGreaterThanOrEqual(11);
+  });
+
+  it('and the floor leaves room for Arabic to breathe', () => {
+    const globals = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
+    const m = /--text-caption--line-height:\s*([0-9.]+)/.exec(globals);
+    expect(m, 'أصغر حجم بلا ارتفاع سطر').toBeTruthy();
+    expect(Number(m![1])).toBeGreaterThanOrEqual(1.5);
+  });
+
+  it('and adding it did not reach into a seller’s pages', () => {
+    // It lives in the file every page loads, which is only acceptable
+    // because it ADDS a utility and overrides nothing.
+    const globals = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
+    const theme = /@theme\s*\{([^}]*)\}/.exec(globals);
+    expect(theme, 'اختفت كتلة السلّم').toBeTruthy();
+    for (const line of theme![1].split('\n')) {
+      const name = /(--[\w-]+):/.exec(line);
+      if (!name) continue;
+      expect(
+        name[1].startsWith('--text-caption'),
+        `${name[1]} يعيد تعريف درجة قائمة — وهذا يصل إلى صفحات البائعين`
+      ).toBe(true);
+    }
+  });
+});

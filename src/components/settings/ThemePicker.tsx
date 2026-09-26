@@ -58,7 +58,7 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
       <h3 className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-[var(--sys-foreground)]">
         <Palette className="h-3.5 w-3.5 text-[var(--sys-primary)]" /> مظهر النظام
       </h3>
-      <p className="mb-2 text-[11px] leading-relaxed text-[var(--sys-muted-foreground)]">
+      <p className="mb-2 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
         اختيارك أنت وحدك، ويتبعك بين الأجهزة. ألوان المعاني لا تتغيّر بين المظاهر: الأحمر متأخر أو
         خسارة، والأخضر محصَّل، والكهرماني يحتاج انتباهاً — يتغيّر السطح فقط. ولا يمسّ هذا شكل متجرك
         إطلاقاً.
@@ -98,7 +98,7 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
                 ))}
               </span>
 
-              <span className="mt-1.5 block text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
+              <span className="mt-1.5 block text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
                 {theme.note}
               </span>
             </button>
@@ -107,7 +107,7 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
       </div>
 
       {failed && (
-        <p className="mt-2 text-[11px] text-[var(--sys-warning)]">
+        <p className="mt-2 text-caption text-[var(--sys-warning)]">
           طُبِّق المظهر هنا، لكن تعذّر حفظه — سيعود إلى السابق على جهاز آخر.
         </p>
       )}

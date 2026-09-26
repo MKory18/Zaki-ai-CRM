@@ -185,19 +185,19 @@ export function StorePagesScreen() {
           <div key={page.id} className={CARD}>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-bold text-[var(--sys-heading)]">{page.title}</span>
-              <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-[10px] text-[var(--sys-muted-foreground)]">
+              <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-caption text-[var(--sys-muted-foreground)]">
                 {PAGE_KIND_AR[page.kind]}
               </span>
               {page.isPublished ? (
-                <span className="rounded-full bg-[var(--sys-success)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-success)]">
+                <span className="rounded-full bg-[var(--sys-success)]/10 px-2 py-0.5 text-caption font-semibold text-[var(--sys-success)]">
                   منشورة
                 </span>
               ) : (
-                <span className="rounded-full bg-[var(--sys-warning)]/15 px-2 py-0.5 text-[10px] font-semibold text-[var(--sys-warning)]">
+                <span className="rounded-full bg-[var(--sys-warning)]/15 px-2 py-0.5 text-caption font-semibold text-[var(--sys-warning)]">
                   مسوّدة
                 </span>
               )}
-              <span className="text-[11px] text-[var(--sys-muted)]" dir="ltr">/s/{storeSlug}/pages/{page.slug}</span>
+              <span className="text-caption text-[var(--sys-muted)]" dir="ltr">/s/{storeSlug}/pages/{page.slug}</span>
               <div className="ms-auto flex items-center gap-1">
                 {page.isPublished && (
                   <a
@@ -257,7 +257,7 @@ export function StorePagesScreen() {
                     onChange={(e) => setDraft({ ...draft, body: e.target.value })}
                     className="w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm leading-7 focus:border-[var(--sys-primary)] focus:outline-none"
                   />
-                  <span className="mt-1 block text-[10.5px] text-[var(--sys-muted)]">
+                  <span className="mt-1 block text-caption text-[var(--sys-muted)]">
                     نصّ فقط — سطر فارغ يفصل فقرة عن فقرة. لا وسوم ولا سكربتات: صفحة كلام، لا صفحة تصميم.
                   </span>
                 </label>

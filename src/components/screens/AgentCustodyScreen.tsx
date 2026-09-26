@@ -176,17 +176,17 @@ export function AgentCustodyScreen() {
                     {agent.name}
                   </span>
 
-                  <span className="text-[11px] text-[var(--sys-muted-foreground)]">
+                  <span className="text-caption text-[var(--sys-muted-foreground)]">
                     بيده:{' '}
                     <span className="font-semibold text-[var(--sys-heading)] tabular-nums">{totals.inHandCount}</span> طلب
                     <span className="text-[var(--sys-muted)]"> ({money(totals.inHandValue)})</span>
                   </span>
 
-                  <span className="text-[11px] text-[var(--sys-muted-foreground)]">
+                  <span className="text-caption text-[var(--sys-muted-foreground)]">
                     حصّل: <span className="font-semibold text-[var(--sys-heading)] tabular-nums">{money(totals.collected)}</span>
                   </span>
 
-                  <span className="text-[11px] text-[var(--sys-muted-foreground)]">
+                  <span className="text-caption text-[var(--sys-muted-foreground)]">
                     له: <span className="font-semibold text-[var(--sys-heading)] tabular-nums">{money(totals.fees)}</span>
                   </span>
 
@@ -198,7 +198,7 @@ export function AgentCustodyScreen() {
         </ul>
       )}
 
-      <p className="text-[11px] text-[var(--sys-muted)]">
+      <p className="text-caption text-[var(--sys-muted)]">
         الأرقام محسوبة من الطلبات نفسها لحظة فتح الشاشة — لا رصيد مخزَّن يمكن أن يختلف عن الواقع.
       </p>
     </div>
@@ -239,7 +239,7 @@ function Summary({ totals, money }: { totals: Totals; money: (n: number) => stri
               : 'bg-[var(--sys-surface)] border-[var(--sys-border)]'
         }`}
       >
-        <p className="text-[10px] text-[var(--sys-muted-foreground)]">
+        <p className="text-caption text-[var(--sys-muted-foreground)]">
           {totals.balance > 0 ? 'صافي عليه' : totals.balance < 0 ? 'صافي له' : 'متوازن'}
         </p>
         <p className="text-sm font-black text-[var(--sys-heading)] tabular-nums mt-0.5" dir="ltr">
@@ -253,9 +253,9 @@ function Summary({ totals, money }: { totals: Totals; money: (n: number) => stri
 function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
-      <p className="text-[10px] text-[var(--sys-muted-foreground)]">{label}</p>
+      <p className="text-caption text-[var(--sys-muted-foreground)]">{label}</p>
       <p className="text-sm font-black text-[var(--sys-heading)] tabular-nums mt-0.5" dir="ltr">{value}</p>
-      {hint && <p className="text-[10px] text-[var(--sys-muted)] tabular-nums" dir="ltr">{hint}</p>}
+      {hint && <p className="text-caption text-[var(--sys-muted)] tabular-nums" dir="ltr">{hint}</p>}
     </div>
   );
 }
@@ -276,19 +276,19 @@ function Section({
         <h4 className="text-xs font-black text-[var(--sys-heading)] flex items-center gap-2">
           <Icon className="w-4 h-4 text-[var(--sys-primary)]" />
           {title}
-          <span className="text-[10px] font-medium text-[var(--sys-muted)] tabular-nums">{orders.length}</span>
+          <span className="text-caption font-medium text-[var(--sys-muted)] tabular-nums">{orders.length}</span>
         </h4>
-        <p className="text-[11px] text-[var(--sys-muted)] mt-0.5">{subtitle}</p>
+        <p className="text-caption text-[var(--sys-muted)] mt-0.5">{subtitle}</p>
       </div>
 
       {orders.length === 0 ? (
-        <p className="px-4 py-5 text-[11px] text-[var(--sys-muted)] text-center">لا شيء هنا.</p>
+        <p className="px-4 py-5 text-caption text-[var(--sys-muted)] text-center">لا شيء هنا.</p>
       ) : (
         <ul className="divide-y divide-[var(--sys-border)]">
           {orders.map((o) => {
             const stuck = o.shippingStatus === 'FAILED_DELIVERY' || o.shippingStatus === 'RETURN_REQUESTED';
             return (
-              <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-[11px]">
+              <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-caption">
                 <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
                 {stuck && (
                   <span className="inline-flex items-center gap-1 text-[var(--sys-warning)]">

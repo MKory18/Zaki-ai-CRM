@@ -157,13 +157,13 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
                 <tr key={s.id} className="hover:bg-[var(--sys-surface)]">
                   <td className="px-4 py-3">
                     <p className="font-semibold text-[var(--sys-heading)]">{s.chatTitle || 'بدون عنوان'}</p>
-                    <p className="font-mono text-[10px] text-[var(--sys-muted-foreground)]" dir="ltr">{s.chatId}{s.topicId ? ` • topic ${s.topicId}` : ''}</p>
-                    {s.topicName && <p className="text-[10px] text-[var(--sys-muted-foreground)]">الموضوع: {s.topicName}</p>}
+                    <p className="font-mono text-caption text-[var(--sys-muted-foreground)]" dir="ltr">{s.chatId}{s.topicId ? ` • topic ${s.topicId}` : ''}</p>
+                    {s.topicName && <p className="text-caption text-[var(--sys-muted-foreground)]">الموضوع: {s.topicName}</p>}
                   </td>
                   <td className="px-4 py-3 font-semibold text-[var(--sys-foreground)]">{s.storeName ?? '—'}</td>
                   <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{s.chatType === 'supergroup' ? 'مجموعة فائقة' : s.chatType === 'group' ? 'مجموعة' : 'قناة'}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.isActive ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-caption font-semibold ${s.isActive ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
                       {s.isActive ? 'مفعل' : 'معطل'}
                     </span>
                   </td>
@@ -213,7 +213,7 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
             </div>
           </div>
           {formError && <p className="text-xs text-[var(--sys-destructive)]">{formError}</p>}
-          <p className="text-[10px] leading-relaxed text-[var(--sys-muted-foreground)]">
+          <p className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
             تأكد من إضافة البوت إلى المجموعة ومن تفعيل Privacy Mode المناسب. اترك Topic ID فارغًا لربط المجموعة بالكامل.
           </p>
           <div className="flex justify-end gap-2 pt-2">

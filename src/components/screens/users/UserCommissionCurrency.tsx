@@ -65,7 +65,7 @@ export function UserCommissionCurrency({
 
   return (
     <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-      <p className="flex items-center gap-1 text-[10px] text-[var(--sys-muted)]">
+      <p className="flex items-center gap-1 text-caption text-[var(--sys-muted)]">
         <Coins className="h-3 w-3" /> عملة العمولة
       </p>
 
@@ -79,7 +79,7 @@ export function UserCommissionCurrency({
               type="button"
               onClick={() => void save()}
               disabled={!changed || !valid || busy}
-              className="h-8 rounded-md bg-[var(--sys-primary)] px-3 text-[11px] font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
+              className="h-8 rounded-md bg-[var(--sys-primary)] px-3 text-caption font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
             >
               حفظ
             </button>
@@ -87,19 +87,19 @@ export function UserCommissionCurrency({
               <button
                 type="button"
                 onClick={() => { setChoice({ code: '', minorUnit: null }); }}
-                className="text-[11px] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)]"
+                className="text-caption text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)]"
               >
                 استخدم عملة المتجر
               </button>
             )}
-            {msg && <span className={`text-[11px] ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</span>}
+            {msg && <span className={`text-caption ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</span>}
           </div>
         </>
       ) : (
         <p className="mt-1 text-xs font-bold text-[var(--sys-heading)]">{saved || 'عملة المتجر'}</p>
       )}
 
-      <p className="mt-1 text-[10.5px] leading-relaxed text-[var(--sys-muted)]">
+      <p className="mt-1 text-caption leading-relaxed text-[var(--sys-muted)]">
         تُحتسب عمولته بهذه العملة ويُقال له رقمه بها. المحفظة التي يخرج منها المال تُختار وقت الصرف — قد
         تكون بعملة أخرى، ويُكتب سعر الصرف حينها.
       </p>

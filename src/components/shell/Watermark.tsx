@@ -62,7 +62,7 @@ export function Watermark({ viewer }: { viewer: { name: string; id: string } }) 
              * brings the name straight back. Invisible in use, recoverable
              * when it matters, which is the whole shape of the thing.
              */
-            className="whitespace-nowrap text-[13px] font-medium tracking-wide text-[var(--sys-heading)] opacity-[0.028]"
+            className="whitespace-nowrap text-sm font-medium tracking-wide text-[var(--sys-heading)] opacity-[0.028]"
             dir="auto"
           >
             {text}

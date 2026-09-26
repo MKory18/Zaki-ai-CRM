@@ -196,7 +196,7 @@ export function ProductDetailScreen() {
                   </div>
                 )}
                 {primary && (
-                  <span className="absolute top-3 left-3 rtl:left-auto rtl:right-3 bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-[10px] font-bold px-2 py-1 rounded-lg flex items-center space-x-1 rtl:space-x-reverse">
+                  <span className="absolute top-3 left-3 rtl:left-auto rtl:right-3 bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-caption font-bold px-2 py-1 rounded-lg flex items-center space-x-1 rtl:space-x-reverse">
                     <Star className="w-3 h-3" />
                     <span>الصورة الرئيسية</span>
                   </span>

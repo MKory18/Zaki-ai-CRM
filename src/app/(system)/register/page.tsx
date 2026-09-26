@@ -112,7 +112,7 @@ export default function RegisterPage() {
                   {passwordChecks.map((c) => (
                     <span
                       key={c.label}
-                      className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                      className={`text-caption px-2 py-0.5 rounded-full border ${
                         c.ok
                           ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)]'
                           : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
@@ -139,7 +139,7 @@ export default function RegisterPage() {
               </Button>
             </form>
 
-            <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg flex items-start space-x-2 rtl:space-x-reverse text-[11px] text-[var(--sys-foreground)]">
+            <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg flex items-start space-x-2 rtl:space-x-reverse text-caption text-[var(--sys-foreground)]">
               <Clock className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
               <span>
                 بعد التسجيل يكون حسابك بحالة <strong className="text-[var(--sys-heading)]">بانتظار الموافقة</strong>،

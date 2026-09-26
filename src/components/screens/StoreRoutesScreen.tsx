@@ -145,15 +145,15 @@ export function StoreRoutesScreen() {
             <Sparkles className="h-3.5 w-3.5" />
             {suggestions.length === 1 ? 'اقتراح ينتظر قرارك' : `${suggestions.length} اقتراحات تنتظر قرارك`}
           </p>
-          <p className="text-[11px] leading-relaxed text-[var(--sys-warning)]">
+          <p className="text-caption leading-relaxed text-[var(--sys-warning)]">
             غيّرتَ رابط صفحة، والإعلان ما زال يشير إلى القديم. كل نقرة عليه مدفوعة سلفاً وتصل الآن إلى
             «غير موجود». حوّلها، أو تجاهل الاقتراح إن كنت تريد للعنوان القديم أن يتوقف.
           </p>
           {suggestions.map((row) => (
             <div key={row.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--sys-card)] p-2.5">
-              <code className="text-[11px] text-[var(--sys-muted-foreground)]" dir="ltr">{row.from}</code>
+              <code className="text-caption text-[var(--sys-muted-foreground)]" dir="ltr">{row.from}</code>
               <span className="text-[var(--sys-muted)]">←</span>
-              <code className="text-[11px] font-semibold text-[var(--sys-heading)]" dir="ltr">{row.to}</code>
+              <code className="text-caption font-semibold text-[var(--sys-heading)]" dir="ltr">{row.to}</code>
               <div className="ms-auto flex items-center gap-1.5">
                 <Button size="sm" disabled={busy} onClick={() => void accept(row)}>حوّلها</Button>
                 <Button variant="secondary" size="sm" disabled={busy} onClick={() => void dismiss(row)}>تجاهل</Button>
@@ -185,7 +185,7 @@ export function StoreRoutesScreen() {
               </Select>
             </label>
           </div>
-          <p className="mt-2 text-[10.5px] leading-relaxed text-[var(--sys-muted)]">
+          <p className="mt-2 text-caption leading-relaxed text-[var(--sys-muted)]">
             ٣٠٢ مؤقّت ويمكن الرجوع عنه في أي وقت. ٣٠١ دائم، وتحفظه المتصفحات ومحرّكات البحث مدّة طويلة —
             فالخطأ فيه يصعب التراجع عنه على الأجهزة التي حفظته. ابدأ بـ٣٠٢ إن لم تكن واثقاً.
           </p>
@@ -218,14 +218,14 @@ export function StoreRoutesScreen() {
             )}
             {live.map((row) => (
               <tr key={row.id} className="border-t border-[var(--sys-border)]">
-                <td className="px-3 py-2.5" dir="ltr"><code className="text-[11px]">{row.from}</code></td>
-                <td className="px-3 py-2.5" dir="ltr"><code className="text-[11px]">{row.to}</code></td>
+                <td className="px-3 py-2.5" dir="ltr"><code className="text-caption">{row.from}</code></td>
+                <td className="px-3 py-2.5" dir="ltr"><code className="text-caption">{row.to}</code></td>
                 <td className="px-3 py-2.5 tabular-nums text-xs">{row.kind}</td>
                 <td className="px-3 py-2.5 tabular-nums text-xs" title="تقديري — لا يُحتسب على حساب سرعة التحويل">
                   {row.hits.toLocaleString('ar')}
                 </td>
                 <td className="px-3 py-2.5">
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  <span className={`rounded-full px-2 py-0.5 text-caption font-semibold ${
                     row.isActive ? 'bg-[var(--sys-success)]/10 text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
                   }`}>
                     {row.isActive ? 'يعمل' : 'موقوف'}
@@ -258,7 +258,7 @@ export function StoreRoutesScreen() {
           </tbody>
         </table>
       </div>
-      <p className="text-[10.5px] text-[var(--sys-muted)]">
+      <p className="text-caption text-[var(--sys-muted)]">
         عدد الزيارات تقديري: يُحتسب بعد إرسال الزائر، فلا ينتظر أحد على عدّاد.
       </p>
     </div>

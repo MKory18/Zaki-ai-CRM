@@ -138,14 +138,14 @@ export function BlacklistScreen() {
                   <td className="px-3 py-2 text-xs">
                     {b.reason}
                     {!b.active && b.releaseReason && (
-                      <span className="block text-[11px] text-[var(--sys-success)] mt-0.5">
+                      <span className="block text-caption text-[var(--sys-success)] mt-0.5">
                         فُك: {b.releaseReason} — {b.releasedByName ?? '—'}
                       </span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
                     {b.blockedByName ?? '—'}
-                    <span className="block text-[11px] text-[var(--sys-muted)]">
+                    <span className="block text-caption text-[var(--sys-muted)]">
                       {new Date(b.createdAt).toLocaleDateString('ar', { dateStyle: 'short' })}
                     </span>
                   </td>
@@ -233,7 +233,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
             className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
-          <span className="block text-[11px] text-[var(--sys-muted)] mt-1">
+          <span className="block text-caption text-[var(--sys-muted)] mt-1">
             يُطابَق بصيغته المجرّدة، فلا يهم كيف كُتب.
           </span>
         </label>

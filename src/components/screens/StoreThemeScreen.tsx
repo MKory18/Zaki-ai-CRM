@@ -83,7 +83,7 @@ interface StoreInfo {
 }
 
 const LABEL = 'mb-1.5 block text-xs font-medium text-[#121926]';
-const HINT = 'mt-1 block text-[10.5px] leading-relaxed text-[#9aa4b2]';
+const HINT = 'mt-1 block text-caption leading-relaxed text-[#9aa4b2]';
 const CARD = 'rounded-lg border border-[#e3e8ef] bg-white p-4';
 
 export function StoreThemeScreen() {
@@ -257,7 +257,7 @@ export function StoreThemeScreen() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-bold text-[#121926]">قالبك الحالي</p>
-                <p className="mt-0.5 text-[11px] text-[#697586]">
+                <p className="mt-0.5 text-caption text-[#697586]">
                   احفظه كملف لتنقله إلى متجر آخر، أو ثبّت ملفاً جاهزاً.
                 </p>
               </div>
@@ -282,7 +282,7 @@ export function StoreThemeScreen() {
                 </label>
               </div>
             </div>
-            <p className="mt-2 text-[10.5px] leading-relaxed text-[#9aa4b2]">
+            <p className="mt-2 text-caption leading-relaxed text-[#9aa4b2]">
               القالب ينقل الشكل والأقسام ونصوصها. لا ينقل الصور — كل صورة تخصّ المتجر الذي رُفعت فيه
               ولا تُعرض من متجر آخر — ولا الأسعار ولا البكسلات ولا النطاق.
             </p>
@@ -297,7 +297,7 @@ export function StoreThemeScreen() {
                     <p className="truncate text-sm font-bold text-[#121926]">{t.label}</p>
                   </div>
                 </div>
-                <p className="flex-1 text-[11px] leading-relaxed text-[#697586]">{t.hint}</p>
+                <p className="flex-1 text-caption leading-relaxed text-[#697586]">{t.hint}</p>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -310,7 +310,7 @@ export function StoreThemeScreen() {
               </div>
             ))}
           </div>
-          <p className="text-[10.5px] leading-relaxed text-[#9aa4b2]">
+          <p className="text-caption leading-relaxed text-[#9aa4b2]">
             التثبيت يكتب المسوّدة فقط: تعاينها في «التصميم» وتنشرها حين ترضى عنها. لا شيء يتغيّر عند
             الزبون قبل النشر.
           </p>
@@ -395,7 +395,7 @@ export function StoreThemeScreen() {
 
           <div className={CARD}>
             <p className="mb-1 text-sm font-bold text-[#121926]">الألوان</p>
-            <p className="mb-3 text-[10.5px] text-[#9aa4b2]">
+            <p className="mb-3 text-caption text-[#9aa4b2]">
               كل لون لا تحدّده يُشتق من اللون الأساسي، فلا يخرج لك متجر بثمانية ألوان لا تتفق.
             </p>
             <div className="mb-3 grid grid-cols-6 gap-1.5 sm:grid-cols-12">
@@ -450,15 +450,15 @@ export function StoreThemeScreen() {
                         className="h-7 w-9 cursor-pointer rounded-lg border border-[#e3e8ef]"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[11px] font-semibold text-[#364152]">{label}</p>
-                        <p className="truncate text-[10px] text-[#9aa4b2]">{hint}</p>
+                        <p className="truncate text-caption font-semibold text-[#364152]">{label}</p>
+                        <p className="truncate text-caption text-[#9aa4b2]">{hint}</p>
                       </div>
                     </div>
                     <button
                       type="button"
                       disabled={!value}
                       onClick={() => setPart('colors', { [key]: undefined })}
-                      className="mt-1 text-[10px] text-[#9aa4b2] underline disabled:opacity-40"
+                      className="mt-1 text-caption text-[#9aa4b2] underline disabled:opacity-40"
                     >
                       {value ? 'أعده للمُشتقّ' : 'مُشتقّ من الأساسي'}
                     </button>
@@ -500,7 +500,7 @@ export function StoreThemeScreen() {
                     type="button"
                     disabled={!theme.header?.background}
                     onClick={() => setPart('header', { background: undefined })}
-                    className="text-[10px] text-[#9aa4b2] underline disabled:opacity-40"
+                    className="text-caption text-[#9aa4b2] underline disabled:opacity-40"
                   >
                     مُشتقّ
                   </button>
@@ -602,7 +602,7 @@ export function StoreThemeScreen() {
         <div className="space-y-4">
           <div className={CARD}>
             <p className="mb-1 text-sm font-bold text-[#121926]">ترتيب الحقول وإلزامها</p>
-            <p className="mb-3 text-[10.5px] text-[#9aa4b2]">
+            <p className="mb-3 text-caption text-[#9aa4b2]">
               الاسم والهاتف والمحافظة والعنوان إلزامية دائماً: بدونها لا تُسعَّر الشحنة ولا تصل.
             </p>
             <div className="space-y-1.5">
@@ -612,7 +612,7 @@ export function StoreThemeScreen() {
                 return (
                   <div key={field} className="flex items-center gap-2 rounded-lg border border-[#e3e8ef] px-2.5 py-1.5">
                     <span className="flex-1 text-xs font-medium text-[#364152]">{CHECKOUT_LABEL[field]}</span>
-                    <label className="flex items-center gap-1.5 text-[11px] text-[#697586]">
+                    <label className="flex items-center gap-1.5 text-caption text-[#697586]">
                       <input
                         type="checkbox"
                         checked={required}
@@ -685,7 +685,7 @@ export function StoreThemeScreen() {
                     type="button"
                     disabled={!theme.checkout?.buttonColor}
                     onClick={() => setPart('checkout', { buttonColor: undefined })}
-                    className="text-[10px] text-[#9aa4b2] underline disabled:opacity-40"
+                    className="text-caption text-[#9aa4b2] underline disabled:opacity-40"
                   >
                     مثل اللون الأساسي
                   </button>
@@ -745,7 +745,7 @@ export function StoreThemeScreen() {
               مسار من رفعك أنت. رابط خارجي مرفوض: صورة من موقع لا نتحكم به تسرّب كل زائر إليه.
             </span>
           </label>
-          <p className="mt-4 text-[11px] leading-relaxed text-[#697586]">
+          <p className="mt-4 text-caption leading-relaxed text-[#697586]">
             ترتيب أقسام الرئيسية يُسحب ويُرتَّب في «التصميم» — نفس بانية الأقسام المستعملة في صفحات الهبوط،
             لا بانية ثانية.
           </p>

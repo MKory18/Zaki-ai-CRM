@@ -164,7 +164,7 @@ export function CustomersScreen() {
                   {c.altPhone && <span className="text-[var(--sys-muted)]">بديل: {c.altPhone}</span>}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--sys-border)] text-center text-[11px]">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--sys-border)] text-center text-caption">
                   <div className="bg-[var(--sys-surface)] p-1.5 rounded-lg">
                     <span className="text-[var(--sys-muted)] block">الكل</span>
                     <span className="font-bold text-[var(--sys-heading)]">{c.totalOrders}</span>
