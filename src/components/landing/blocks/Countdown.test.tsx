@@ -4,6 +4,12 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { Countdown } from './Countdown';
+// Static, not imported inside the test that uses them. `PageBlocks` pulls in
+// the whole section library, and paying that transform cost INSIDE the test
+// counted it against the 5s timeout — so the test failed under full-suite
+// load and passed alone. A flake nobody could reproduce on purpose.
+import { PageBlocks } from './PageBlocks';
+import { newSection } from '@/lib/landing-sections';
 
 /**
  * A COUNTDOWN THAT DOES NOT LIE ON RELOAD.
@@ -82,9 +88,7 @@ describe('the deadline', () => {
 });
 
 describe('on a page', () => {
-  it('the builder canvas never keeps a deadline; the public page does', async () => {
-    const { PageBlocks } = await import('./PageBlocks');
-    const { newSection } = await import('@/lib/landing-sections');
+  it('the builder canvas never keeps a deadline; the public page does', () => {
     const urgency = { ...newSection('urgency'), minutes: 5 } as ReturnType<typeof newSection>;
     const ctx = {
       palette: {} as never, productName: 'x', price: 1, currency: 'SYP', stock: null, offers: [], form: null,

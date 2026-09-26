@@ -570,12 +570,12 @@
     "tabs": 0
   },
   "src/components/screens/finance/WalletsScreen.tsx": {
-    "buttons": 16,
-    "inputs": 10,
+    "buttons": 19,
+    "inputs": 14,
     "columns": 6,
     "cards": 0,
-    "modals": 3,
-    "icons": 11,
+    "modals": 4,
+    "icons": 13,
     "links": 0,
     "tabs": 0
   },

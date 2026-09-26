@@ -1902,6 +1902,7 @@ model Wallet {
   store     Store?             @relation(fields: [storeId], references: [id], onDelete: Restrict)
   movements WalletMovement[]
   closings  DailyClosing[]
+  openingCount WalletOpeningCount?
   receipts  StatementReceipt[]
   commissionPayouts CommissionPayout[]
   payslips          Payslip[]
@@ -1916,6 +1917,48 @@ model Wallet {
 // Every movement carries wallet, direction, amount, party, category and note.
 // NOTHING is ever deleted: a correction is a reversing entry that points at
 // the original (reversalOfId) and states its reason.
+/// THE SIGNED PHYSICAL COUNT BEHIND AN OPENING BALANCE.
+///
+/// `Wallet.openingBalance` already existed and is already immutable — the
+/// wallet PATCH accepts `name` and `isActive` and nothing else. What was
+/// missing is the only thing the cutover actually asks for: WHO COUNTED THE
+/// MONEY, AND WHEN.
+///
+/// The audit log records who CREATED the wallet, and that is the person who
+/// typed, not the person who counted a cash box at the switch time. Without
+/// this row, a wallet opened at zero and a wallet opened at 4,350 after two
+/// people counted a drawer are the same shape of data, and the opening
+/// balance is a term in every daily closing that follows it.
+///
+/// One row per wallet, ever: `walletId` is unique. The count is not a
+/// correction instrument — a wallet that has started moving is reconciled by
+/// the daily closing, which already compares book against counted and makes
+/// somebody explain the gap.
+model WalletOpeningCount {
+  id              String   @id @default(uuid())
+  companyId       String
+  walletId        String   @unique
+  countedAmount   Decimal  @db.Decimal(14, 3)
+  currencyCode    String
+  /// The person who physically counted. Free text on purpose: the warehouse
+  /// keeper holding the drawer may have no login, and naming a user id here
+  /// would quietly turn "who counted" into "who typed".
+  countedByName   String
+  /// When the money was counted — the switch time, not when it was entered.
+  countedAt       DateTime
+  /// What this replaced, kept so the change is legible afterwards.
+  previousOpening Decimal  @db.Decimal(14, 3)
+  note            String?
+  /// The system user who entered it. Distinct from countedByName by design.
+  recordedById    String
+  createdAt       DateTime @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, countedAt])
+  @@map("wallet_opening_counts")
+}
+
 model WalletMovement {
   id             String   @id @default(uuid())
   companyId      String

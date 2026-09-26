@@ -57,6 +57,13 @@ export async function GET(req: Request) {
       include: {
         country: { select: { id: true, name: true, code: true, minorUnit: true } },
         store: { select: { id: true, name: true } },
+        // The signed physical count behind the opening balance, if one was
+        // taken. The screen needs it to say who counted rather than to offer
+        // counting again — and `walletBalance` already reports `movements`,
+        // which is the other half of «can this still be counted».
+        openingCount: {
+          select: { countedAmount: true, countedByName: true, countedAt: true, note: true },
+        },
       },
     });
 
@@ -90,6 +97,7 @@ export async function GET(req: Request) {
         countryId: w.countryId,
         storeId: w.storeId,
         store: w.store,
+        openingCount: w.openingCount,
       })),
     });
   } catch (error) {

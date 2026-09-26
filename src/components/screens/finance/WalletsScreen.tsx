@@ -5,7 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { useConfirm } from '@/components/ui/Confirm';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiAddCircleLine, RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiShutDownLine, RiWallet3Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiScales3Line, RiShutDownLine, RiWallet3Line } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -28,6 +28,13 @@ interface WalletRow {
   balance: number;
   movements: number;
   country: { id: string; name: string } | null;
+  /** The signed physical count behind `opening`, once one has been taken. */
+  openingCount: {
+    countedAmount: number;
+    countedByName: string;
+    countedAt: string;
+    note: string | null;
+  } | null;
 }
 
 interface Movement {
@@ -66,6 +73,7 @@ export function WalletsScreen() {
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState('');
   const [recordOpen, setRecordOpen] = useState(false);
+  const [countOpen, setCountOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [reverseFor, setReverseFor] = useState<Movement | null>(null);
 
@@ -202,6 +210,20 @@ export function WalletsScreen() {
                 <span className="block text-xs text-[var(--sys-muted-foreground)] mt-1 tabular-nums">
                   افتتاحي {w.opening} · وارد {w.in} · صادر {w.out}
                 </span>
+                {/* An opening balance nobody counted is a number somebody
+                    typed, and it is a term in every daily closing after it.
+                    Said on the card because that is where the number is. */}
+                {w.openingCount ? (
+                  <span className="mt-1 block text-xs text-[var(--sys-success)]">
+                    عُدَّ بمعرفة {w.openingCount.countedByName} · {w.openingCount.countedAt.slice(0, 10)}
+                  </span>
+                ) : (
+                  w.movements === 0 && (
+                    <span className="mt-1 block text-xs text-[var(--sys-warning)]">
+                      رصيدٌ افتتاحيٌّ غير معدود
+                    </span>
+                  )
+                )}
               </button>
             ))}
           </div>
@@ -276,6 +298,20 @@ export function WalletsScreen() {
                     >
                       <RiDeleteBinLine className="w-4 h-4" />
                     </button>
+                    {/* Offered only while it is still true. A wallet that has
+                        started moving is reconciled by the daily closing, and
+                        the server refuses this outright — so showing the button
+                        there would be an invitation to a red error. */}
+                    {wallet.movements === 0 && !wallet.openingCount && (
+                      <button
+                        onClick={() => setCountOpen(true)}
+                        disabled={busy}
+                        title="سجّل العدّ الافتتاحيّ"
+                        className="h-11 md:h-8 px-3 rounded-lg border border-[var(--sys-warning)]/60 text-[var(--sys-warning)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+                      >
+                        <RiScales3Line className="w-4 h-4" /> العدّ الافتتاحيّ
+                      </button>
+                    )}
                     <span className="mx-1 h-5 w-px bg-[var(--sys-border)]" />
                   </>
                 )}
@@ -357,6 +393,18 @@ export function WalletsScreen() {
         />
       )}
 
+      {countOpen && wallet && (
+        <OpeningCountDialog
+          wallet={wallet}
+          onClose={() => setCountOpen(false)}
+          onDone={(message) => {
+            setCountOpen(false);
+            setDone(message);
+            void loadWallets();
+          }}
+        />
+      )}
+
       {recordOpen && wallet && (
         <RecordDialog
           wallet={wallet}
@@ -380,6 +428,143 @@ export function WalletsScreen() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * THE SIGNED PHYSICAL COUNT.
+ *
+ * Three fields and one of them is the point: the NAME OF WHOEVER COUNTED. The
+ * logged-in user is already recorded separately, and they are usually not the
+ * person holding the drawer — so asking for a name is not duplication, it is
+ * the difference between «who typed 4,350» and «who counted 4,350».
+ *
+ * The time defaults to now and can be moved back, because the count is taken
+ * at the switch time and entered afterwards; the server refuses a future one.
+ */
+function OpeningCountDialog({
+  wallet,
+  onClose,
+  onDone,
+}: {
+  wallet: WalletRow;
+  onClose: () => void;
+  onDone: (message: string) => void;
+}) {
+  const [amount, setAmount] = useState('');
+  const [countedByName, setCountedByName] = useState('');
+  const [countedAt, setCountedAt] = useState(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const ready = amount.trim() !== '' && Number.isFinite(Number(amount)) && countedByName.trim().length >= 3 && countedAt !== '';
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiJson(`/api/finance/wallets/${wallet.id}/opening-count`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          countedAmount: Number(amount),
+          countedByName: countedByName.trim(),
+          countedAt: new Date(countedAt).toISOString(),
+          note: note.trim() || null,
+        }),
+      });
+      onDone(`سُجّل العدّ الافتتاحيّ لـ«${wallet.name}»`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذّر الحفظ');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal isOpen onClose={onClose} title={`العدّ الافتتاحيّ — ${wallet.name}`}>
+      <div className="space-y-3">
+        <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+          المبلغ الموجود فعلاً في المحفظة لحظةَ العدّ. يُسجَّل مرّةً واحدةً ولا يُعاد، وهو حدٌّ في
+          كلِّ إغلاقٍ يوميٍّ بعده — فإن بدأت الحركاتُ صار العدُّ شأنَ الإغلاق اليوميّ لا شأنَ هذه
+          الشاشة.
+        </p>
+
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">
+            المبلغ المعدود ({wallet.currencyCode}) *
+          </span>
+          <input
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm tabular-nums"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">من عدَّ المبلغ *</span>
+          <input
+            value={countedByName}
+            onChange={(e) => setCountedByName(e.target.value)}
+            placeholder="الاسم كما يُوقَّع على ورقة العدّ"
+            maxLength={120}
+            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+          />
+          <span className="mt-1 block text-xs text-[var(--sys-muted-foreground)]">
+            اسمُ من عدَّ بيده، لا اسمُك — أنت مُسجَّلٌ أصلاً بوصفك من أدخل العدّ.
+          </span>
+        </label>
+
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">وقت العدّ *</span>
+          <input
+            type="datetime-local"
+            value={countedAt}
+            onChange={(e) => setCountedAt(e.target.value)}
+            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">ملاحظة</span>
+          <textarea
+            rows={2}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={500}
+            className="w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm"
+          />
+        </label>
+
+        {error && (
+          <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-sm text-[var(--sys-destructive)]">
+            {error}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="h-11 md:h-10 rounded-lg border border-[var(--sys-border)] px-3 text-sm text-[var(--sys-muted-foreground)]"
+          >
+            إلغاء
+          </button>
+          <button
+            onClick={() => void submit()}
+            disabled={!ready || busy}
+            className="h-11 md:h-10 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+          >
+            {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" aria-hidden /> : 'سجّل العدّ'}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
