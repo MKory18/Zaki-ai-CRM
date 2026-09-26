@@ -251,6 +251,7 @@ export function ConfirmationMineScreen() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      <ScreenTitle />
       {error && (
         <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>
       )}
@@ -594,8 +595,6 @@ function SectionHead({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 mb-3">
-      <ScreenTitle />
-
       <h2 className="text-sm font-bold text-[var(--sys-heading)]">
         {title} ({value.trim() ? `${count} من ${total}` : total})
       </h2>

@@ -6,6 +6,8 @@ import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiInboxLine, RiLoader4Line, RiPhoneLockLine, RiTimerFlashLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /confirmation/queue — agents see NO list: one "pull next" button and a
@@ -81,6 +83,7 @@ export function ConfirmationQueueScreen() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
+      <ScreenTitle />
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
         <div className="mx-auto w-14 h-14 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
           <RiInboxLine className="w-6 h-6 text-[var(--sys-primary)]" />
@@ -125,28 +128,39 @@ export function ConfirmationQueueScreen() {
           <header className="px-4 py-3 border-b border-[var(--sys-border)] text-sm font-semibold text-[var(--sys-heading)]">
             عرض المشرف — نفس الطلبات المنتظرة ({data.orders.length})
           </header>
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-4 py-2">الطلب</th>
-                <th className="text-right font-medium px-4 py-2">العميل</th>
-                <th className="text-right font-medium px-4 py-2">الحالة</th>
-                <th className="text-right font-medium px-4 py-2">التأجيلات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {data.orders.map((o) => (
-                <tr key={o.id}>
-                  <td className="px-4 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</td>
-                  <td className="px-4 py-2 text-[var(--sys-foreground)]">
-                    {o.customer.fullName} · {o.customer.city}
-                  </td>
-                  <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{o.confirmationStatus}</td>
-                  <td className="px-4 py-2 text-[var(--sys-muted-foreground)] tabular-nums">{o.postponeCount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Rows
+            rows={data.orders}
+            keyOf={(o) => o.id}
+            columns={[
+              {
+                key: 'order',
+                label: 'الطلب',
+                primary: true,
+                render: (o) => (
+                  <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
+                ),
+              },
+              {
+                key: 'customer',
+                label: 'العميل',
+                primary: true,
+                render: (o) => `${o.customer.fullName} · ${o.customer.city}`,
+              },
+              { key: 'state', label: 'الحالة', render: (o) => o.confirmationStatus },
+              {
+                key: 'postponed',
+                label: 'التأجيلات',
+                align: 'end',
+                render: (o) => <span className="tabular-nums">{o.postponeCount}</span>,
+              },
+            ]}
+            empty={
+              <EmptyState
+                title="لا طلبات تنتظر التأكيد"
+                why="الطابور يمتلئ حين تصل طلباتٌ جديدة. فراغُه يعني أنّ كلّ ما وصل قد سُحب."
+              />
+            }
+          />
         </section>
       )}
     </div>
@@ -156,8 +170,6 @@ export function ConfirmationQueueScreen() {
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)]">
-      <ScreenTitle />
-
       <span className="text-[var(--sys-muted-foreground)]">{icon}</span>
       <div className="min-w-0">
         <p className="text-xs text-[var(--sys-muted-foreground)] truncate">{label}</p>

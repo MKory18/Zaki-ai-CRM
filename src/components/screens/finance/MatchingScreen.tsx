@@ -76,6 +76,7 @@ export function MatchingScreen() {
 
   return (
     <div className="max-w-6xl space-y-3">
+      <ScreenTitle />
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex flex-wrap gap-3 items-end">
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الكشف</span>
@@ -181,8 +182,6 @@ function Queue({
 
   return (
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-      <ScreenTitle />
-
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 text-right"

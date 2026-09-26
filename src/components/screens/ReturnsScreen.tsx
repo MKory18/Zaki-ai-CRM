@@ -5,8 +5,11 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { ScanButton } from '@/components/scan/ScanButton';
-import { RiInboxUnarchiveLine, RiLoader4Line, RiQrScan2Line } from '@remixicon/react';
+import { RiInboxUnarchiveLine, RiQrScan2Line } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 
 /**
  * /ops/returns — scan or pick a returned shipment, then record the physical
@@ -96,44 +99,52 @@ export function ReturnsScreen() {
       {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
       {!rows ? (
-        <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
-        </div>
-      ) : rows.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <RiInboxUnarchiveLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
-          لا توجد مرتجعات بانتظار الاستلام.
-        </p>
+        <SkeletonRows rows={4} />
       ) : (
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-              <tr>
-                <th className="text-right font-medium px-3 py-2">المرجع</th>
-                <th className="text-right font-medium px-3 py-2">العميل</th>
-                <th className="text-right font-medium px-3 py-2">شركة الشحن</th>
-                <th className="text-right font-medium px-3 py-2">السبب</th>
-                <th className="text-right font-medium px-3 py-2">المشحون</th>
-                <th className="text-right font-medium px-3 py-2"> </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--sys-border)]">
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td className="px-3 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{r.merchantRef ?? r.orderNumber}</td>
-                  <td className="px-3 py-2 text-[var(--sys-foreground)]">{r.customer.fullName}</td>
-                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{r.deliveryProvider?.name ?? '—'}</td>
-                  <td className="px-3 py-2 text-[var(--sys-muted-foreground)]">{r.returnReason ?? '—'}</td>
-                  <td className="px-3 py-2 tabular-nums">{r.expectedQty}</td>
-                  <td className="px-3 py-2 text-left">
-                    <button onClick={() => setActive(r)} className="text-xs text-[var(--sys-primary)] hover:underline">
-                      استلام
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+          {/* A returns clerk reads this at the door with a parcel in one
+              hand. Six columns on a phone is unreadable; the card leads
+              with the reference on the label and whose parcel it is. */}
+          <Rows
+            rows={rows}
+            keyOf={(r) => r.id}
+            columns={[
+              {
+                key: 'ref',
+                label: 'المرجع',
+                primary: true,
+                render: (r) => (
+                  <span className="font-medium text-[var(--sys-heading)]" dir="ltr">
+                    {r.merchantRef ?? r.orderNumber}
+                  </span>
+                ),
+              },
+              { key: 'customer', label: 'العميل', primary: true, render: (r) => r.customer.fullName },
+              { key: 'courier', label: 'شركة الشحن', render: (r) => r.deliveryProvider?.name ?? '—' },
+              { key: 'reason', label: 'السبب', render: (r) => r.returnReason ?? '—' },
+              {
+                key: 'qty',
+                label: 'المشحون',
+                align: 'end',
+                render: (r) => <span className="tabular-nums">{r.expectedQty}</span>,
+              },
+            ]}
+            actions={(r) => (
+              <button
+                onClick={() => setActive(r)}
+                className="text-xs font-semibold text-[var(--sys-primary)] hover:underline"
+              >
+                استلام
+              </button>
+            )}
+            empty={
+              <EmptyState
+                icon={RiInboxUnarchiveLine}
+                title="لا مرتجعات بانتظار الاستلام"
+                why="المرتجع يظهر هنا حين تُعلن شركةُ الشحن فشلَ التسليم أو إرجاعَ الطرد. فراغُ القائمة يعني أنّ لا طردَ في طريق العودة."
+              />
+            }
+          />
         </div>
       )}
 

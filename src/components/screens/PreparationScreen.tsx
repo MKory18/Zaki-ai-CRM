@@ -9,6 +9,7 @@ import { useApp } from '@/context/AppContext';
 import { PickingAssistant } from '@/components/screens/ops/PickingAssistant';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArchiveDrawerLine, RiArrowDownSLine, RiArrowLeftSLine, RiCloseCircleLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
 
 /**
  * /ops/preparation — grouped BY PRODUCT, collapsible. Orders, required,
@@ -92,6 +93,7 @@ export function PreparationScreen() {
 
   return (
     <div className="max-w-4xl space-y-3">
+      <ScreenTitle />
       <div className="flex flex-wrap gap-3 text-sm">
         <Kpi label="منتجات للتجهيز" value={data.totals.products} />
         <Kpi label="طلبات" value={data.totals.orders} />
@@ -129,67 +131,93 @@ export function PreparationScreen() {
           </button>
 
           {open[g.productId] && (
-            <table className="w-full text-sm border-t border-[var(--sys-border)]">
-              <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-                <tr>
-                  <th className="text-right font-medium px-4 py-2">الطلب</th>
-                  <th className="text-right font-medium px-4 py-2">العميل</th>
-                  <th className="text-right font-medium px-4 py-2">المحافظة</th>
-                  <th className="text-right font-medium px-4 py-2">الكمية</th>
-                  <th className="text-right font-medium px-4 py-2">محجوز</th>
-                  <th className="text-right font-medium px-4 py-2"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--sys-border)]">
-                {g.lines.map((l) => (
-                  <tr key={l.orderId}>
-                    <td className="px-4 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{l.orderNumber}</td>
-                    <td className="px-4 py-2 text-[var(--sys-foreground)]">{l.customerName}</td>
-                    <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{l.regionName ?? '—'}</td>
-                    <td className="px-4 py-2 tabular-nums">
-                      {l.quantity}
-                      {l.freeQuantity > 0 && ` (+${l.freeQuantity})`}
-                    </td>
-                    <td className={`px-4 py-2 tabular-nums ${l.reservedQty >= l.quantity + l.freeQuantity ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-                      {l.reservedQty}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      {mayOpenOrder && (
-                        <button
-                          type="button"
-                          onClick={() => setOpenOrderId(l.orderId)}
-                          title="افتح الطلب وعدّله — ما لم تكن بوليصته قد طُبعت"
-                          className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
-                        >
-                          <RiPencilLine className="w-4 h-4" />
-                        </button>
-                      )}
-                      {mayCancel && (
-                        <button
-                          type="button"
-                          onClick={() => setCancelling({ id: l.orderId, orderNumber: l.orderNumber })}
-                          title="ألغِ الطلب — يعود المحجوز من بضاعته إلى المخزون"
-                          className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
-                        >
-                          <RiCloseCircleLine className="w-4 h-4" />
-                        </button>
-                      )}
-                      {l.pendingChangeRequestId && (
-                        <button
-                          type="button"
-                          onClick={() => setReviewing(l.pendingChangeRequestId!)}
-                          title="طلب تعديل بانتظار البتّ — راجعه قبل التغليف"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] text-xs font-semibold text-[var(--sys-warning)] hover:border-[var(--sys-warning)]"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--sys-warning)] animate-pulse" aria-hidden />
-                          طلب تعديل
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="border-t border-[var(--sys-border)] p-3">
+              {/* A packer reads this standing at a shelf. Six columns on a
+                  phone is every cell wrapped to four lines; the same
+                  definition gives a table on the packing desk and a card in
+                  the hand, led by the order and the customer. */}
+              <Rows
+                rows={g.lines}
+                keyOf={(l) => l.orderId}
+                alert={(l) => l.reservedQty < l.quantity + l.freeQuantity}
+                columns={[
+                  {
+                    key: 'order',
+                    label: 'الطلب',
+                    primary: true,
+                    render: (l) => (
+                      <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{l.orderNumber}</span>
+                    ),
+                  },
+                  { key: 'customer', label: 'العميل', primary: true, render: (l) => l.customerName },
+                  { key: 'region', label: 'المحافظة', render: (l) => l.regionName ?? '—' },
+                  {
+                    key: 'qty',
+                    label: 'الكمية',
+                    align: 'end',
+                    render: (l) => (
+                      <span className="tabular-nums">
+                        {l.quantity}
+                        {l.freeQuantity > 0 && ` (+${l.freeQuantity})`}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'reserved',
+                    label: 'محجوز',
+                    align: 'end',
+                    render: (l) => (
+                      <span
+                        className={`tabular-nums ${
+                          l.reservedQty >= l.quantity + l.freeQuantity
+                            ? 'text-[var(--sys-success)]'
+                            : 'text-[var(--sys-destructive)]'
+                        }`}
+                      >
+                        {l.reservedQty}
+                      </span>
+                    ),
+                  },
+                ]}
+                actions={(l) => (
+                  <span className="flex items-center gap-1 whitespace-nowrap">
+                    {mayOpenOrder && (
+                      <button
+                        type="button"
+                        onClick={() => setOpenOrderId(l.orderId)}
+                        title="افتح الطلب وعدّله — ما لم تكن بوليصته قد طُبعت"
+                        aria-label="افتح الطلب"
+                        className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
+                      >
+                        <RiPencilLine className="w-4 h-4" />
+                      </button>
+                    )}
+                    {mayCancel && (
+                      <button
+                        type="button"
+                        onClick={() => setCancelling({ id: l.orderId, orderNumber: l.orderNumber })}
+                        title="ألغِ الطلب — يعود المحجوز من بضاعته إلى المخزون"
+                        aria-label="ألغِ الطلب"
+                        className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
+                      >
+                        <RiCloseCircleLine className="w-4 h-4" />
+                      </button>
+                    )}
+                    {l.pendingChangeRequestId && (
+                      <button
+                        type="button"
+                        onClick={() => setReviewing(l.pendingChangeRequestId!)}
+                        title="طلب تعديل بانتظار البتّ — راجعه قبل التغليف"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] text-xs font-semibold text-[var(--sys-warning)] hover:border-[var(--sys-warning)]"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--sys-warning)] animate-pulse" aria-hidden />
+                        طلب تعديل
+                      </button>
+                    )}
+                  </span>
+                )}
+              />
+            </div>
           )}
         </section>
       ))}
@@ -251,8 +279,6 @@ export function PreparationScreen() {
 function Kpi({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
   return (
     <div className={`px-4 py-2 rounded-lg border ${danger ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' : 'bg-[var(--sys-card)] border-[var(--sys-border)]'}`}>
-      <ScreenTitle />
-
       <p className="text-xs text-[var(--sys-muted-foreground)]">{label}</p>
       <p className={`text-lg font-bold tabular-nums ${danger ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-heading)]'}`}>{value}</p>
     </div>

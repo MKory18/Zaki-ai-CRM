@@ -732,7 +732,7 @@
   "src/components/screens/PreparationScreen.tsx": {
     "buttons": 4,
     "inputs": 0,
-    "columns": 6,
+    "columns": 5,
     "cards": 0,
     "modals": 0,
     "icons": 6,
@@ -772,10 +772,10 @@
   "src/components/screens/ReturnsScreen.tsx": {
     "buttons": 4,
     "inputs": 5,
-    "columns": 6,
+    "columns": 5,
     "cards": 0,
     "modals": 1,
-    "icons": 3,
+    "icons": 1,
     "links": 0,
     "tabs": 0
   },

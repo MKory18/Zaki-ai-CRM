@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiLoader4Line } from '@remixicon/react';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /confirmation/postponed — order, customer, due date, days remaining,
@@ -55,53 +57,69 @@ export function ConfirmationPostponedScreen() {
         القابل للعمل عليه: المستحق خلال {data.leadDays} يوم أو المتأخر. الباقي للعرض فقط.
       </p>
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">
-            <tr>
-              <th className="text-right font-medium px-4 py-2">الطلب</th>
-              <th className="text-right font-medium px-4 py-2">العميل</th>
-              <th className="text-right font-medium px-4 py-2">تاريخ الاستحقاق</th>
-              <th className="text-right font-medium px-4 py-2">المتبقي</th>
-              <th className="text-right font-medium px-4 py-2">الوقت المفضّل</th>
-              <th className="text-right font-medium px-4 py-2">السبب</th>
-              <th className="text-right font-medium px-4 py-2">مرات التأجيل</th>
-              <th className="text-right font-medium px-4 py-2">الموظف</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--sys-border)]">
-            {data.orders.map((o) => (
-              <tr key={o.id} className={o.actionable ? '' : 'opacity-50'}>
-                <td className="px-4 py-2 font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</td>
-                <td className="px-4 py-2 text-[var(--sys-foreground)]">
-                  {o.customer.fullName} · {o.customer.city}
-                </td>
-                <td className="px-4 py-2 text-[var(--sys-foreground)]" dir="ltr">
-                  {o.dueAt ? new Date(o.dueAt).toLocaleDateString('ar-u-nu-latn') : '—'}
-                </td>
-                <td className="px-4 py-2 tabular-nums">
-                  {o.daysRemaining === null ? (
-                    '—'
-                  ) : o.daysRemaining < 0 ? (
-                    <span className="text-[var(--sys-destructive)]">متأخر {Math.abs(o.daysRemaining)} يوم</span>
-                  ) : (
-                    `${o.daysRemaining} يوم`
-                  )}
-                </td>
-                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{o.postponePreferredTime ?? '—'}</td>
-                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{o.followUpReason ?? '—'}</td>
-                <td className="px-4 py-2 tabular-nums text-[var(--sys-foreground)]">{o.postponeCount}</td>
-                <td className="px-4 py-2 text-[var(--sys-muted-foreground)]">{o.claimer?.name ?? '—'}</td>
-              </tr>
-            ))}
-            {data.orders.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">
-                  لا توجد طلبات مؤجلة.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {/* Eight columns on a 375px screen is every cell wrapped to four
+            lines and one row filling the phone. The same definition draws
+            a table on a desk and a card in a hand — and the card leads
+            with what somebody scans for: the order, and who it is for. */}
+        <Rows
+          rows={data.orders}
+          keyOf={(o) => o.id}
+          alert={(o) => o.daysRemaining !== null && o.daysRemaining < 0}
+          columns={[
+            {
+              key: 'order',
+              label: 'الطلب',
+              primary: true,
+              render: (o) => (
+                <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
+              ),
+            },
+            {
+              key: 'customer',
+              label: 'العميل',
+              primary: true,
+              render: (o) => `${o.customer.fullName} · ${o.customer.city}`,
+            },
+            {
+              key: 'due',
+              label: 'تاريخ الاستحقاق',
+              render: (o) => (
+                <span dir="ltr">{o.dueAt ? new Date(o.dueAt).toLocaleDateString('ar-u-nu-latn') : '—'}</span>
+              ),
+            },
+            {
+              key: 'left',
+              label: 'المتبقي',
+              render: (o) =>
+                o.daysRemaining === null ? (
+                  '—'
+                ) : o.daysRemaining < 0 ? (
+                  <span className="tabular-nums text-[var(--sys-destructive)]">
+                    متأخر {Math.abs(o.daysRemaining)} يوم
+                  </span>
+                ) : (
+                  <span className="tabular-nums">{o.daysRemaining} يوم</span>
+                ),
+            },
+            { key: 'time', label: 'الوقت المفضّل', render: (o) => o.postponePreferredTime ?? '—' },
+            { key: 'reason', label: 'السبب', render: (o) => o.followUpReason ?? '—' },
+            {
+              key: 'count',
+              label: 'مرات التأجيل',
+              align: 'end',
+              render: (o) => <span className="tabular-nums">{o.postponeCount}</span>,
+            },
+            // The agent's own name is on a desk's table; on a card it is
+            // one more labelled line between her and the phone number.
+            { key: 'agent', label: 'الموظف', hideOnPhone: true, render: (o) => o.claimer?.name ?? '—' },
+          ]}
+          empty={
+            <EmptyState
+              title="لا طلبات مؤجلة"
+              why="التأجيل يضع الطلب هنا حتى موعده. فراغُ القائمة يعني أنّ لا طلبَ أُجِّل، أو أنّ كلّ ما أُجِّل حلّ موعدُه وعاد إلى الطابور."
+            />
+          }
+        />
       </div>
     </div>
   );
