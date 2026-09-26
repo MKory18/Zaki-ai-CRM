@@ -36,9 +36,9 @@ const ATTEMPT_RESULT_AR: Record<string, string> = {
 const SHIPPING_STATE: Record<string, { ar: string; en: string; cls: string }> = {
   NOT_READY: { ar: 'غير جاهز', en: 'Not Ready', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
   READY_FOR_SHIPPING: { ar: 'جاهز للشحن', en: 'Ready for Shipping', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-muted-foreground)]/50' },
-  PACKING: { ar: 'تغليف', en: 'Packing', cls: 'bg-indigo-50 text-indigo-700 border-indigo-300' },
-  READY_FOR_PICKUP: { ar: 'جاهز للاستلام', en: 'Ready for Pickup', cls: 'bg-cyan-50 text-cyan-700 border-cyan-300' },
-  SHIPPED: { ar: 'تم الشحن', en: 'Shipped', cls: 'bg-violet-50 text-violet-700 border-violet-300' },
+  PACKING: { ar: 'تغليف', en: 'Packing', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
+  READY_FOR_PICKUP: { ar: 'جاهز للاستلام', en: 'Ready for Pickup', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
+  SHIPPED: { ar: 'تم الشحن', en: 'Shipped', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
   OUT_FOR_DELIVERY: { ar: 'خرج للتوصيل', en: 'Out for Delivery', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
   DELIVERED: { ar: 'تم التسليم ✓', en: 'Delivered ✓', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
   FAILED_DELIVERY: { ar: 'فشل التوصيل', en: 'Delivery Failed', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
@@ -73,17 +73,17 @@ const NEXT_ACTIONS: Record<string, { to: string; labelAr: string; labelEn: strin
   // in the preparation screen, where the stock is actually reserved against
   // its lines; a button here only ever produced "الشحن يتطلب طلباً مؤكداً".
   NOT_READY: [],
-  READY_FOR_SHIPPING: [{ to: 'PACKING', labelAr: '📦 بدء التغليف', labelEn: '📦 Start Packing', cls: 'border-indigo-300 text-indigo-700 hover:bg-indigo-50' }],
-  PACKING: [{ to: 'READY_FOR_PICKUP', labelAr: '🚚 جاهز للاستلام', labelEn: '🚚 Ready for Pickup', cls: 'border-cyan-300 text-cyan-700 hover:bg-cyan-50' }],
-  READY_FOR_PICKUP: [{ to: 'SHIPPED', labelAr: '🚀 تم الشحن', labelEn: '🚀 Shipped', cls: 'border-violet-300 text-violet-700 hover:bg-violet-50' }],
+  READY_FOR_SHIPPING: [{ to: 'PACKING', labelAr: '📦 بدء التغليف', labelEn: '📦 Start Packing', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' }],
+  PACKING: [{ to: 'READY_FOR_PICKUP', labelAr: '🚚 جاهز للاستلام', labelEn: '🚚 Ready for Pickup', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' }],
+  READY_FOR_PICKUP: [{ to: 'SHIPPED', labelAr: '🚀 تم الشحن', labelEn: '🚀 Shipped', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' }],
   SHIPPED: [{ to: 'OUT_FOR_DELIVERY', labelAr: '🛵 خرج للتوصيل', labelEn: '🛵 Out for Delivery', cls: 'border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)]' }],
   OUT_FOR_DELIVERY: [
-    { to: 'DELIVERED', labelAr: '✅ تم التسليم', labelEn: '✅ Delivered', cls: 'border-green-400 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)]' },
+    { to: 'DELIVERED', labelAr: '✅ تم التسليم', labelEn: '✅ Delivered', cls: 'border-[var(--sys-success)]/60 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)]' },
     { to: 'FAILED_DELIVERY', labelAr: '⚠️ فشل التوصيل', labelEn: '⚠️ Failed', cls: 'border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]' },
   ],
   FAILED_DELIVERY: [
     { to: 'RETURN_REQUESTED', labelAr: '↩️ طلب إرجاع', labelEn: '↩️ Return', cls: 'border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)]' },
-    { to: 'SHIPPED', labelAr: '🔁 إعادة شحن', labelEn: '🔁 Retry RiShipLine', cls: 'border-violet-300 text-violet-700 hover:bg-violet-50' },
+    { to: 'SHIPPED', labelAr: '🔁 إعادة شحن', labelEn: '🔁 Retry RiShipLine', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' },
   ],
   RETURN_REQUESTED: [{ to: 'RETURNED', labelAr: '↩️ تم الإرجاع', labelEn: '↩️ Returned', cls: 'border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]' }],
 };
@@ -262,7 +262,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
         </p>
       )}
       {order.returnReason && ['RETURN_REQUESTED', 'RETURNED'].includes(order.shippingStatus) && (
-        <p className="mb-3 text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-orange-200 rounded-lg px-2.5 py-1.5">
+        <p className="mb-3 text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg px-2.5 py-1.5">
           ↩️ {ar ? 'سبب الإرجاع:' : 'Return reason:'}{' '}
           {(RETURN_REASONS as any)[order.returnReason]?.[ar ? 'ar' : 'en'] ?? order.returnReason}
         </p>
@@ -324,7 +324,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
       )}
 
       {/* Delivery attempts (append-only history) */}
-      <div className="border-t border-slate-100 pt-3">
+      <div className="border-t border-[var(--sys-border)] pt-3">
         <p className="text-xs font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2 flex items-center gap-1.5">
           <RiHistoryLine className="w-4 h-4" />
           {ar ? 'سجل الشحن والتوصيل' : 'Shipping & Delivery Timeline'}
@@ -400,7 +400,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => setOpenForm(null)}>{ar ? 'إلغاء' : 'Cancel'}</Button>
             <Button
-              size="sm" loading={actionLoading === 'transition'} className="bg-orange-600 hover:bg-orange-700"
+              size="sm" loading={actionLoading === 'transition'} className="bg-[var(--sys-warning)] hover:bg-[var(--sys-warning)]"
               disabled={!returnReason}
               onClick={async () => {
                 const ok = await transition('RETURN_REQUESTED', { returnReason, shippingNote: note });

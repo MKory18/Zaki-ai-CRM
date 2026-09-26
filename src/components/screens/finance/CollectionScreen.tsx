@@ -44,7 +44,7 @@ const STATUS_AR: Record<string, string> = {
 const STATUS_STYLE: Record<string, string> = {
   IMPORTED: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
   RECEIPTED: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/40',
-  MATCHED: 'bg-sky-50 text-sky-700 border-sky-200',
+  MATCHED: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border)]',
   APPROVED: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/40',
 };
 

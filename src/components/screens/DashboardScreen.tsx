@@ -388,7 +388,7 @@ export function DashboardScreen() {
                       <span
                         className={`w-7 h-7 rounded-full text-xs font-black flex items-center justify-center ${
                           idx === 0
-                            ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] ring-2 ring-amber-300'
+                            ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] ring-2 ring-[var(--sys-warning)]/60'
                             : idx === 1
                             ? 'bg-[var(--sys-border)] text-[var(--sys-foreground)]'
                             : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]'

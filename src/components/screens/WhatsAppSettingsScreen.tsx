@@ -159,7 +159,7 @@ export function WhatsAppSettingsScreen() {
                 <span className="text-[var(--sys-muted-foreground)]">{desc}</span>
               </div>
             ))}
-            <div className="mt-3 p-3 rounded-lg bg-[var(--sys-surface)] border border-[#eef1f5] text-xs text-[var(--sys-muted-foreground)] flex gap-2">
+            <div className="mt-3 p-3 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)] flex gap-2">
               <RiErrorWarningLine className="w-4 h-4 shrink-0 text-[var(--sys-primary)]" />
               <span>
                 لا تُدخل أي بيانات سرية هنا في الواجهة — كل البيانات من متغيرات بيئة الخادم فقط، ولا يتم عرض Access Token مطلقًا.

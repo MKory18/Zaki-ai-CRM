@@ -532,7 +532,7 @@ export function LandingPageEditorScreen() {
   if (loading) {
     return (
       <>
-        <div className="flex h-[60vh] items-center justify-center text-sm text-[#697586]">
+        <div className="flex h-[60vh] items-center justify-center text-sm text-[var(--sys-muted-foreground)]">
           <RiLoader4Line className="h-5 w-5 animate-spin" /> جارٍ تحميل المحرر...
         </div>
       </>
@@ -541,7 +541,7 @@ export function LandingPageEditorScreen() {
   if (pageError || !lp) {
     return (
       <>
-        <div className="p-10 text-center text-sm text-rose-600">{pageError || 'صفحة الهبوط غير موجودة'}</div>
+        <div className="p-10 text-center text-sm text-[var(--sys-destructive)]">{pageError || 'صفحة الهبوط غير موجودة'}</div>
       </>
     );
   }
@@ -550,26 +550,26 @@ export function LandingPageEditorScreen() {
     <>
       <div className="flex flex-col" dir="rtl">
         {/* ─── Header ─── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e8ef] bg-white px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3">
           <div className="flex items-center gap-3">
             <Button variant="secondary" size="sm" onClick={() => router.push(`/growth/landing-pages/${lp.id}`)}>
               <RiArrowRightLine className="icon-mirror h-4 w-4" /> Landing Pages
             </Button>
             <div>
-              <h1 className="flex items-center gap-2 text-base font-bold text-[#121926]">
-                <RiEarthLine className="h-4 w-4 text-[#b8256e]" /> {lp.name}
-                <span className="text-xs font-normal text-[#697586]" dir="ltr">/lp/{lp.slug}</span>
+              <h1 className="flex items-center gap-2 text-base font-bold text-[var(--sys-heading)]">
+                <RiEarthLine className="h-4 w-4 text-[var(--sys-primary)]" /> {lp.name}
+                <span className="text-xs font-normal text-[var(--sys-muted-foreground)]" dir="ltr">/lp/{lp.slug}</span>
               </h1>
             </div>
-            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${lp.isPublished ? 'bg-[#e6f9ee] text-[#00a651]' : 'bg-[#fff7e6] text-[#b8860b]'}`}>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${lp.isPublished ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'}`}>
               {lp.isPublished ? 'منشورة' : 'مسودة'}
             </span>
-            {dirty && <span className="text-xs text-[#ffab00]">● تغييرات غير محفوظة</span>}
+            {dirty && <span className="text-xs text-[var(--sys-warning)]">● تغييرات غير محفوظة</span>}
           </div>
           <div className="flex items-center gap-2">
             {/* Which way this page is authored. Both are kept on the row, so
                 switching is a view change, not a loss. */}
-            <div className="flex rounded-lg border border-[#e3e8ef] p-0.5">
+            <div className="flex rounded-lg border border-[var(--sys-border)] p-0.5">
               {([['BLOCKS', 'مصمّم البلوكات'], ['HTML', 'HTML']] as const).map(([m, label]) => (
                 <button
                   key={m}
@@ -586,12 +586,12 @@ export function LandingPageEditorScreen() {
                 designer: the HTML editor is a textarea, and the browser
                 already gives a textarea its own undo. */}
             {mode === 'BLOCKS' && (
-              <div className="flex rounded-lg border border-[#e3e8ef] p-0.5">
+              <div className="flex rounded-lg border border-[var(--sys-border)] p-0.5">
                 <button aria-label="تراجع"
                   onClick={history.undo}
                   disabled={!history.canUndo}
                   title="تراجع — Ctrl+Z"
-                  className="cursor-pointer rounded-md p-1.5 text-[#697586] hover:text-[#b8256e] disabled:cursor-default disabled:opacity-30"
+                  className="cursor-pointer rounded-md p-1.5 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] disabled:cursor-default disabled:opacity-30"
                 >
                   <RiArrowGoBackLine className="icon-mirror h-4 w-4" />
                 </button>
@@ -599,13 +599,13 @@ export function LandingPageEditorScreen() {
                   onClick={history.redo}
                   disabled={!history.canRedo}
                   title="إعادة — Ctrl+Shift+Z"
-                  className="cursor-pointer rounded-md p-1.5 text-[#697586] hover:text-[#b8256e] disabled:cursor-default disabled:opacity-30"
+                  className="cursor-pointer rounded-md p-1.5 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] disabled:cursor-default disabled:opacity-30"
                 >
                   <RiArrowGoForwardLine className="icon-mirror h-4 w-4" />
                 </button>
               </div>
             )}
-            {saveMsg && <span className={`text-xs ${saveMsg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{saveMsg.text}</span>}
+            {saveMsg && <span className={`text-xs ${saveMsg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{saveMsg.text}</span>}
             <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving}>
               {saving ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiSaveLine className="h-4 w-4" />} حفظ
             </Button>
@@ -650,54 +650,54 @@ export function LandingPageEditorScreen() {
           />
         ) : (
         /* ─── 3-column workspace ─── */
-        <div className="flex flex-1 flex-col gap-3 bg-[#f1f5f9] p-3 lg:grid lg:grid-cols-[1fr_300px] lg:items-start">
+        <div className="flex flex-1 flex-col gap-3 bg-[var(--sys-surface)] p-3 lg:grid lg:grid-cols-[1fr_300px] lg:items-start">
           {/* RIGHT COLUMN (second on a phone): the tools, folded away. */}
-          <div className="order-2 space-y-3 rounded-lg border border-[#e3e8ef] bg-white p-3 lg:order-2">
+          <div className="order-2 space-y-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3 lg:order-2">
             <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[#697586]">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--sys-muted-foreground)]">
                 اكتب الـHTML بالذكاء الاصطناعي
               </p>
-              <p className="mb-2 text-xs leading-relaxed text-[#697586]">
+              <p className="mb-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                 هذا البرومبت يشرح كل قيود النظام — ما يُحذف عند الحفظ، وكيف تربط
                 الأزرار بنموذج الطلب الحقيقي. الصقه في أي مساعد ذكاء اصطناعي.
               </p>
               <HtmlPromptButtons />
             </div>
 
-            <p className="mb-2 mt-4 text-xs font-semibold text-[#697586]">إدراج</p>
+            <p className="mb-2 mt-4 text-xs font-semibold text-[var(--sys-muted-foreground)]">إدراج</p>
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
               {INSERT_SNIPPETS.map((item) => (
                 <button
                   key={item.label}
                   onClick={() => insertAtCursor(item.snippet)}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#e3e8ef] px-2.5 py-2 text-xs font-medium text-[#364152] transition-colors hover:border-[#b8256e]/40 hover:bg-[#fdf2f7]"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--sys-border)] px-2.5 py-2 text-xs font-medium text-[var(--sys-foreground)] transition-colors hover:border-[var(--sys-primary)]/40 hover:bg-[var(--sys-primary-soft)]"
                 >
-                  <item.icon className="h-3.5 w-3.5 text-[#b8256e]" /> {item.label}
+                  <item.icon className="h-3.5 w-3.5 text-[var(--sys-primary)]" /> {item.label}
                 </button>
               ))}
             </div>
 
-            <p className="mb-2 mt-4 text-xs font-semibold text-[#697586]">متغيرات</p>
+            <p className="mb-2 mt-4 text-xs font-semibold text-[var(--sys-muted-foreground)]">متغيرات</p>
             <div className="relative">
               <Button variant="outline" size="sm" className="w-full" onClick={() => setVarOpen((v) => !v)}>
                 <RiInputMethodLine className="h-4 w-4" /> إدراج متغير
               </Button>
               {varOpen && (
-                <div className="absolute z-10 mt-1 w-full rounded-lg border border-[#e3e8ef] bg-white py-1 shadow-overlay">
+                <div className="absolute z-10 mt-1 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] py-1 shadow-overlay">
                   {VARIABLES.map((v) => (
                     <button
                       key={v.value}
-                      className="block w-full cursor-pointer px-3 py-1.5 text-right text-xs text-[#364152] hover:bg-[#f8fafc]"
+                      className="block w-full cursor-pointer px-3 py-1.5 text-right text-xs text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]"
                       onClick={() => { insertAtCursor(v.value); setVarOpen(false); }}
                     >
-                      {v.label} <span className="font-mono text-xs text-[#9aa4b2]" dir="ltr">{v.value}</span>
+                      {v.label} <span className="font-mono text-xs text-[var(--sys-muted)]" dir="ltr">{v.value}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            <p className="mb-2 mt-4 text-xs font-semibold text-[#697586]">الصور</p>
+            <p className="mb-2 mt-4 text-xs font-semibold text-[var(--sys-muted-foreground)]">الصور</p>
             <input
               ref={imageInputRef}
               type="file"
@@ -711,12 +711,12 @@ export function LandingPageEditorScreen() {
             </Button>
 
             {/* ─── Zaki Actions documentation ─── */}
-            <details className="mt-4 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] p-2.5">
-              <summary className="cursor-pointer text-xs font-bold text-[#364152]">📚 توثيق Zaki Actions</summary>
-              <div className="mt-2 space-y-3 text-xs leading-relaxed text-[#697586]" dir="ltr">
+            <details className="mt-4 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
+              <summary className="cursor-pointer text-xs font-bold text-[var(--sys-foreground)]">📚 توثيق Zaki Actions</summary>
+              <div className="mt-2 space-y-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]" dir="ltr">
                 <div>
-                  <p className="font-bold text-[#364152]">Actions</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-xs text-[#c9d1d9]">{`<button data-zaki-action="order">
+                  <p className="font-bold text-[var(--sys-foreground)]">Actions</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[var(--sys-heading)] p-2 font-mono text-xs text-[var(--sys-foreground)]">{`<button data-zaki-action="order">
   اطلب الآن
 </button>
 <button data-zaki-action="scroll-order">…</button>
@@ -725,14 +725,14 @@ export function LandingPageEditorScreen() {
                   <p>open/scroll → Trusted OrderForm (لا ينفّذ الطلب مباشرة). offer → يتحقق السيرفر من الـ id ضد عروض الصفحة.</p>
                 </div>
                 <div>
-                  <p className="font-bold text-[#364152]">Fixed Button</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-xs text-[#c9d1d9]">{`data-zaki-position="fixed-bottom"
+                  <p className="font-bold text-[var(--sys-foreground)]">Fixed Button</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[var(--sys-heading)] p-2 font-mono text-xs text-[var(--sys-foreground)]">{`data-zaki-position="fixed-bottom"
   | "fixed-top" | "floating"`}</pre>
                   <p>position فقط — لا لون ولا خط إلا إن طلبتها.</p>
                 </div>
                 <div>
-                  <p className="font-bold text-[#364152]">Styling (اختياري)</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-xs text-[#c9d1d9]">{`data-zaki-bg="#16a34a"
+                  <p className="font-bold text-[var(--sys-foreground)]">Styling (اختياري)</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[var(--sys-heading)] p-2 font-mono text-xs text-[var(--sys-foreground)]">{`data-zaki-bg="#16a34a"
 data-zaki-color="#fff"
 data-zaki-font-size="20px"
 data-zaki-font-weight="700"
@@ -745,8 +745,8 @@ data-zaki-z-index="9999"`}</pre>
                   <p>قيم غير آمنة (javascript:, url(), …) تُتجاهل تلقائيًا.</p>
                 </div>
                 <div>
-                  <p className="font-bold text-[#364152]">Placeholders</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-xs text-[#c9d1d9]">{`<div data-zaki-product></div>
+                  <p className="font-bold text-[var(--sys-foreground)]">Placeholders</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[var(--sys-heading)] p-2 font-mono text-xs text-[var(--sys-foreground)]">{`<div data-zaki-product></div>
 <div data-zaki-offers></div>
 <div data-zaki-recommendations></div>
 <div data-zaki-order-form></div>
@@ -756,7 +756,7 @@ data-zaki-z-index="9999"`}</pre>
                 </div>
               </div>
             </details>
-            <p className="mt-3 text-xs leading-relaxed text-[#697586]">
+            <p className="mt-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
               العناصر المدرجة هي placeholders — تُحوَّل للعناصر الحقيقية في الصفحة المنشورة. نموذج الطلب الموثوق يعمل خارج HTML المخصص دائمًا.
             </p>
           </div>
@@ -764,28 +764,28 @@ data-zaki-z-index="9999"`}</pre>
           {/* The code and the preview, with the whole width to themselves. */}
           <div className="order-1 flex min-w-0 flex-col gap-3 lg:order-1">
             {/* Code editors */}
-            <div className="overflow-hidden rounded-lg border border-[#e3e8ef]">
-              <div className="flex items-center gap-1 border-b border-[#202939] bg-[#121926] px-2 py-1.5">
+            <div className="overflow-hidden rounded-lg border border-[var(--sys-border)]">
+              <div className="flex items-center gap-1 border-b border-[var(--sys-border)] bg-[var(--sys-heading)] px-2 py-1.5">
                 <button
                   onClick={() => setTab('html')}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'html' ? 'bg-[#1a2232] text-white' : 'text-[#697586] hover:text-white'}`}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'html' ? 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)]' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'}`}
                 >
                   <RiCodeSLine className="h-4 w-4" /> HTML
                 </button>
                 <button
                   onClick={() => setTab('css')}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'css' ? 'bg-[#1a2232] text-white' : 'text-[#697586] hover:text-white'}`}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'css' ? 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)]' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'}`}
                 >
                   <RiPaletteLine className="h-4 w-4" /> CSS
                 </button>
-                <span className="mr-auto text-xs text-[#5b6474]">{tab === 'html' ? `${lineCount(html)} سطر` : `${lineCount(css)} سطر`}</span>
+                <span className="mr-auto text-xs text-[var(--sys-muted-foreground)]">{tab === 'html' ? `${lineCount(html)} سطر` : `${lineCount(css)} سطر`}</span>
                 {/* The editor starts small and grows when asked. A code box
                     that owns the screen by default hides the preview, which
                     is the thing you are actually editing against. */}
                 <button
                   onClick={() => setFull((f) => !f)}
                   title={full ? 'تصغير المحرر' : 'ملء الشاشة'}
-                  className="cursor-pointer rounded-lg p-1 text-[#697586] hover:text-white"
+                  className="cursor-pointer rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]"
                 >
                   {full ? <RiFullscreenExitLine className="h-4 w-4" /> : <RiFullscreenLine className="h-4 w-4" />}
                 </button>
@@ -809,9 +809,12 @@ data-zaki-z-index="9999"`}</pre>
             </div>
 
             {/* Live preview */}
-            <div className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-lg border border-[#e3e8ef] bg-white">
-              <div className="flex items-center justify-between border-b border-[#e3e8ef] px-3 py-2">
-                <span className="text-xs font-semibold text-[#364152]">معاينة مباشرة</span>
+            <div // White on purpose: this is the PREVIEW of the seller's page, and
+              // their page is white. A dashboard token here would be the
+              // same mistake as a dashboard colour on their live page.
+              className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-white">
+              <div className="flex items-center justify-between border-b border-[var(--sys-border)] px-3 py-2">
+                <span className="text-xs font-semibold text-[var(--sys-foreground)]">معاينة مباشرة</span>
                 <div className="flex items-center gap-1">
                   {([
                     ['desktop', RiComputerLine], ['tablet', RiTabletLine], ['mobile', RiSmartphoneLine],
@@ -820,7 +823,7 @@ data-zaki-z-index="9999"`}</pre>
                       key={d}
                       onClick={() => setDevice(d)}
                       title={d}
-                      className={`cursor-pointer rounded-lg p-1.5 ${device === d ? 'bg-[#fdf2f7] text-[#b8256e]' : 'text-[#697586] hover:bg-[#f8fafc]'}`}
+                      className={`cursor-pointer rounded-lg p-1.5 ${device === d ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]'}`}
                     >
                       <Icon className="h-4 w-4" />
                     </button>
@@ -830,7 +833,7 @@ data-zaki-z-index="9999"`}</pre>
                   </Button>
                 </div>
               </div>
-              <div className="flex flex-1 justify-center overflow-auto bg-[#eef2f6] p-3">
+              <div className="flex flex-1 justify-center overflow-auto bg-[var(--sys-surface-strong)] p-3">
                 {/* sandbox="allow-scripts" WITHOUT allow-same-origin → opaque
                     origin: preview scripts run but can never touch the
                     dashboard DOM, cookies, localStorage or parent window */}
@@ -839,7 +842,7 @@ data-zaki-z-index="9999"`}</pre>
                   title="معاينة الصفحة"
                   sandbox="allow-scripts"
                   srcDoc={previewDoc}
-                  className="h-full min-h-[400px] rounded-lg border border-[#e3e8ef] bg-white shadow-raised"
+                  className="h-full min-h-[400px] rounded-lg border border-[var(--sys-border)] bg-white shadow-raised"
                   style={{ width: DEVICE_WIDTHS[device], maxWidth: '100%' }}
                 />
               </div>
@@ -847,11 +850,11 @@ data-zaki-z-index="9999"`}</pre>
           </div>
 
           {/* Page settings — beneath the tools, same column. */}
-          <div className="order-3 rounded-lg border border-[#e3e8ef] bg-white p-4 lg:order-3">
-            <p className="mb-3 text-xs font-semibold text-[#697586]">إعدادات الصفحة</p>
+          <div className="order-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 lg:order-3">
+            <p className="mb-3 text-xs font-semibold text-[var(--sys-muted-foreground)]">إعدادات الصفحة</p>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-[#364152]">عرض الصفحة</label>
+                <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">عرض الصفحة</label>
                 <Select value={settings.width} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSettings({ ...settings, width: e.target.value }); setDirty(true); }} className="text-xs">
                   <option value="full">ملء الشاشة</option>
                   <option value="contained">عرض محدود</option>
@@ -859,7 +862,7 @@ data-zaki-z-index="9999"`}</pre>
               </div>
               {settings.width === 'contained' && (
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-[#364152]">أقصى عرض (px)</label>
+                  <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">أقصى عرض (px)</label>
                   <Input
                     type="number" min="320" max="1920" dir="ltr"
                     value={settings.maxWidth ?? 960}
@@ -869,13 +872,13 @@ data-zaki-z-index="9999"`}</pre>
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs font-semibold text-[#364152]">لون الخلفية</label>
+                <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">لون الخلفية</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
                     value={settings.background || '#ffffff'}
                     onChange={(e) => { setSettings({ ...settings, background: e.target.value }); setDirty(true); }}
-                    className="h-8 w-10 cursor-pointer rounded-lg border border-[#e3e8ef]"
+                    className="h-8 w-10 cursor-pointer rounded-lg border border-[var(--sys-border)]"
                   />
                   <Input
                     dir="ltr"
@@ -886,14 +889,14 @@ data-zaki-z-index="9999"`}</pre>
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-[#364152]">اتجاه النص</label>
+                <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">اتجاه النص</label>
                 <Select value={settings.direction} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSettings({ ...settings, direction: e.target.value }); setDirty(true); }} className="text-xs">
                   <option value="rtl">RTL (عربي)</option>
                   <option value="ltr">LTR (إنجليزي)</option>
                 </Select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-[#364152]">الخط الافتراضي</label>
+                <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">الخط الافتراضي</label>
                 <Select value={settings.fontFamily || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSettings({ ...settings, fontFamily: e.target.value }); setDirty(true); }} className="text-xs">
                   <option value="">النظام الافتراضي</option>
                   <option value="'Tajawal', sans-serif">Tajawal</option>
@@ -901,22 +904,22 @@ data-zaki-z-index="9999"`}</pre>
                   <option value="Georgia, serif">Georgia</option>
                 </Select>
               </div>
-              <p className="text-xs leading-relaxed text-[#697586]">
+              <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                 الإعدادات تُطبَّق كأنماط أساسية — CSS المخصص لك يتجاوزها دائمًا عند التعارض.
               </p>
             </div>
 
             {/* ─── Tracking (centralized in Settings) ─── */}
-            <div className="mt-6 border-t border-[#e3e8ef] pt-4">
-              <p className="mb-2 text-xs font-semibold text-[#697586]">التتبع والإعلانات</p>
-              <p className="text-xs leading-relaxed text-[#697586]">
+            <div className="mt-6 border-t border-[var(--sys-border)] pt-4">
+              <p className="mb-2 text-xs font-semibold text-[var(--sys-muted-foreground)]">التتبع والإعلانات</p>
+              <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                 أكواد التتبع (Meta / TikTok / Snapchat / Google) تُدار في مكان واحد لكل صفحاتك.
               </p>
               <a
                 href="/settings/tracking"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#b8256e] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#b8256e]/90"
+                className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[var(--sys-primary)] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[var(--sys-primary-hover)]"
               >
                 إدارة البكسلات من الإعدادات ←
               </a>
@@ -976,12 +979,12 @@ function CodePane({
       // makes a div resizable at all. Full screen turns the handle off:
       // dragging something that is already the height of the window only
       // produces a box taller than the window.
-      className={`flex overflow-hidden bg-[#121926] ${full ? '' : 'resize-y'}`}
+      className={`flex overflow-hidden bg-[var(--sys-heading)] ${full ? '' : 'resize-y'}`}
       style={full ? { height: 'calc(100vh - 14rem)' } : { height: '10rem', minHeight: '6rem' }}
     >
       <div
         ref={gutter}
-        className="h-full shrink-0 select-none overflow-hidden border-l border-[#202939] bg-[#0d1117] px-2 py-3 text-right font-mono text-xs leading-5 text-[#5b6474]"
+        className="h-full shrink-0 select-none overflow-hidden border-l border-[var(--sys-border)] bg-[var(--sys-background)] px-2 py-3 text-right font-mono text-xs leading-5 text-[var(--sys-muted-foreground)]"
       >
         {Array.from({ length: lines }, (_, i) => (
           <div key={i}>{i + 1}</div>
@@ -999,7 +1002,7 @@ function CodePane({
         spellCheck={false}
         // No handle of its own: two resize handles on one box is two
         // heights that disagree, which is how the numbers came adrift.
-        className="h-full w-full resize-none bg-[#121926] p-3 font-mono text-xs leading-5 text-[#c9d1d9] outline-none" 
+        className="h-full w-full resize-none bg-[var(--sys-heading)] p-3 font-mono text-xs leading-5 text-[var(--sys-foreground)] outline-none" 
       />
     </div>
   );

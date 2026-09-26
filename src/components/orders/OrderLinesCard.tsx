@@ -219,7 +219,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
       )}
 
       {order.customerNotes && !open && (
-        <p className="text-xs text-amber-900 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg px-2.5 py-1.5 whitespace-pre-line">
+        <p className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg px-2.5 py-1.5 whitespace-pre-line">
           <span className="text-[var(--sys-warning)]">ملاحظات الطلب: </span>
           {order.customerNotes}
         </p>

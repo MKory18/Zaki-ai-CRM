@@ -206,7 +206,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         {/* ─── 1. Customer ─── */}
         <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <SectionTitle icon={RiUserFollowLine} title="1. بيانات العميل" color="bg-red-100 text-[var(--sys-destructive)]" />
+            <SectionTitle icon={RiUserFollowLine} title="1. بيانات العميل" color="bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]" />
             {existingCustomerAlert?.exists && (
               <span className="text-xs font-bold text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/60 px-2.5 py-1 rounded-full flex items-center gap-1.5">
                 <RiCheckboxCircleLine className="w-4 h-4" />
@@ -228,7 +228,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                   onBlur={handlePhoneBlur}
                   required
                   dir="ltr"
-                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-[var(--sys-destructive)] transition-colors"
+                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-destructive)]/20 focus:border-[var(--sys-destructive)] transition-colors"
                 />
               </div>
               {existingCustomerAlert && (
@@ -276,7 +276,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                   value={customerAddress}
                   onChange={(e) => setCustomerAddress(e.target.value)}
                   required
-                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-[var(--sys-destructive)]"
+                  className="w-full ps-9 pe-3 py-2 text-sm bg-[var(--sys-card)] border border-[var(--sys-border-strong)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-destructive)]/20 focus:border-[var(--sys-destructive)]"
                 />
               </div>
             </div>
@@ -285,7 +285,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
         {/* ─── 2. المنتجات ─── */}
         <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
-          <SectionTitle icon={RiArchiveLine} title="2. المنتجات" color="bg-[var(--sys-surface-strong)] text-blue-600" />
+          <SectionTitle icon={RiArchiveLine} title="2. المنتجات" color="bg-[var(--sys-surface-strong)] text-[var(--sys-primary)]" />
           {/* The same editor the order screen uses, so a line means the same
               thing whether it is typed here or corrected later. */}
           <ProductLinesEditor
@@ -299,7 +299,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
         {/* ─── 3. Assignment & Source ─── */}
         <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
-          <SectionTitle icon={RiUserSettingsLine} title="3. التعيين والمصدر" color="bg-purple-100 text-purple-600" />
+          <SectionTitle icon={RiUserSettingsLine} title="3. التعيين والمصدر" color="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select label="المودريتور المسؤول" value={moderatorId} onChange={(e) => setModeratorId(e.target.value)}>

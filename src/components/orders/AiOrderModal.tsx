@@ -249,7 +249,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                   const prod = products.find((x) => x.id === e.target.value);
                   if (prod?.offers?.length) setFinalPrice(prod.offers[0].sellingPrice);
                 }}
-                className={result.matchedProduct && !result.productMatchConfident ? 'border-amber-400' : ''}
+                className={result.matchedProduct && !result.productMatchConfident ? 'border-[var(--sys-warning)]/60' : ''}
               >
                 {products.map((prod) => (
                   <option key={prod.id} value={prod.id}>
@@ -285,7 +285,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               <div
                 className={`p-2.5 rounded-lg text-xs flex items-start space-x-2 rtl:space-x-reverse ${
                   result.productMatchConfident
-                    ? 'bg-red-100/70 text-[var(--sys-destructive)]'
+                    ? 'bg-[var(--sys-destructive-soft)]/70 text-[var(--sys-destructive)]'
                     : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'
                 }`}
               >
@@ -298,7 +298,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               </div>
             )}
 
-            <div className="flex items-center justify-end space-x-3 rtl:space-x-reverse pt-3 border-t border-red-100">
+            <div className="flex items-center justify-end space-x-3 rtl:space-x-reverse pt-3 border-t border-[var(--sys-destructive-border)]">
               <Button variant="outline" onClick={() => setResult(null)}>
                 إلغاء
               </Button>

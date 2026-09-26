@@ -123,7 +123,7 @@ export function StoreDesignScreen() {
 
   if (loading || !data) {
     return (
-      <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
+      <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
         <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -135,13 +135,13 @@ export function StoreDesignScreen() {
   if (data.store.singleProduct) {
     return (
       <div className="space-y-4 p-4 sm:p-6" dir="rtl">
-        <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-          <RiLayoutLine className="h-5 w-5 text-[#b8256e]" />
+        <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+          <RiLayoutLine className="h-5 w-5 text-[var(--sys-primary)]" />
           تصميم الواجهة
         </h1>
-        <div className="rounded-lg border border-[#e3e8ef] bg-white p-4">
-          <p className="text-sm font-bold text-[#121926]">واجهة هذا المتجر هي صفحة الهبوط المرتبطة به</p>
-          <p className="mt-1.5 text-xs leading-relaxed text-[#697586]">
+        <div className="rounded-lg border border-[var(--sys-border)] bg-white p-4">
+          <p className="text-sm font-bold text-[var(--sys-heading)]">واجهة هذا المتجر هي صفحة الهبوط المرتبطة به</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             متجر Single Product لا يملك صفحة رئيسية منفصلة: عنوانه يعرض صفحة الهبوط التي اخترتَها،
             بكل أقسامها وعروضها وبكسلاتها. تُصمَّم من مكانها — لا نبني لك بانية ثانية لنفس الصفحة.
           </p>
@@ -165,13 +165,13 @@ export function StoreDesignScreen() {
 
   return (
     <div className="flex h-full flex-col" dir="rtl">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e8ef] bg-white px-4 py-3">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sys-border)] bg-white px-4 py-3">
         <div>
-          <h1 className="flex items-center gap-2 text-base font-bold text-[#121926]">
-            <RiLayoutLine className="h-4 w-4 text-[#b8256e]" />
+          <h1 className="flex items-center gap-2 text-base font-bold text-[var(--sys-heading)]">
+            <RiLayoutLine className="h-4 w-4 text-[var(--sys-primary)]" />
             الصفحة الرئيسية لـ«{data.store.name}»
           </h1>
-          <p className="mt-0.5 text-xs text-[#697586]">
+          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             {data.publishedAt
               ? `آخر نشر: ${new Date(data.publishedAt).toLocaleString('ar-u-nu-latn')}`
               : 'لم تُنشر بعد — متجرك يعرض قائمة المنتجات العادية'}
@@ -180,7 +180,7 @@ export function StoreDesignScreen() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {msg && (
-            <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
+            <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
               {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
@@ -200,7 +200,7 @@ export function StoreDesignScreen() {
       </header>
 
       {!data.store.storefrontEnabled && (
-        <p className="border-b border-[#f59e0b]/40 bg-[#f59e0b]/10 px-4 py-2 text-xs text-[#92400e]">
+        <p className="border-b border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 px-4 py-2 text-xs text-[var(--sys-warning)]">
           واجهة هذا المتجر مطفأة — انشر ما شئت، لن يراه أحد حتى تُشغّلها من «البلدان والمتاجر».
         </p>
       )}

@@ -667,7 +667,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
               {/* What the customer pays. The figures come from the one COD
                   function on the server — a screen never adds up money. */}
-              <div className="mt-2 rounded-lg border border-[var(--sys-border)] divide-y divide-slate-100">
+              <div className="mt-2 rounded-lg border border-[var(--sys-border)] divide-y divide-[var(--sys-border)]">
                 <p className="text-xs font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-lg">
                   ما يدفعه العميل
                 </p>
@@ -713,7 +713,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
               {/* Costs are ours, not the customer's — kept apart so the column
                   above never reads as a sum that includes them. */}
-              <div className="mt-2 rounded-lg border border-[var(--sys-border)] divide-y divide-slate-100">
+              <div className="mt-2 rounded-lg border border-[var(--sys-border)] divide-y divide-[var(--sys-border)]">
                 <p className="text-xs font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-lg">
                   تكاليفنا على هذا الطلب
                 </p>

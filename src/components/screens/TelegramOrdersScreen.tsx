@@ -142,7 +142,7 @@ export function TelegramOrdersScreen() {
         <Card>
           <CardContent className="p-4 flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-[var(--sys-success)]' : 'bg-[var(--sys-destructive)]'}`} />
               <span className="text-sm font-semibold text-[var(--sys-heading)]">{connected ? 'متصل' : 'غير متصل'}</span>
             </div>
             <div className="text-xs text-[var(--sys-muted-foreground)]">

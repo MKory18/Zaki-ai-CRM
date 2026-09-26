@@ -181,7 +181,7 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
                         >
                           <RiShutDownLine className="h-4 w-4" />
                         </button>
-                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded-lg p-1.5 text-rose-500 hover:bg-[var(--sys-destructive-soft)]"><RiDeleteBinLine className="h-4 w-4" /></button>
+                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"><RiDeleteBinLine className="h-4 w-4" /></button>
                       </div>
                     </td>
                   )}

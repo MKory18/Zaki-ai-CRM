@@ -194,7 +194,7 @@ export function StoreThemeScreen() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
+      <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
         <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
@@ -204,17 +204,17 @@ export function StoreThemeScreen() {
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-            <RiPaletteLine className="h-5 w-5 text-[#b8256e]" />
+          <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
+            <RiPaletteLine className="h-5 w-5 text-[var(--sys-primary)]" />
             قالب المتجر
           </h1>
-          <p className="mt-0.5 text-xs text-[#697586]">
+          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             شكل «{store?.name}» ومحتواه. إعدادات تشغيل النظام مكانها «الإعدادات».
           </p>
         </div>
         <div className="flex items-center gap-2">
           {msg && (
-            <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
+            <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
               {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
@@ -228,7 +228,7 @@ export function StoreThemeScreen() {
         </div>
       </header>
 
-      <nav className="flex flex-wrap gap-1 border-b border-[#e3e8ef]">
+      <nav className="flex flex-wrap gap-1 border-b border-[var(--sys-border)]">
         {tabs.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -252,8 +252,8 @@ export function StoreThemeScreen() {
           <div className={CARD}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-bold text-[#121926]">قالبك الحالي</p>
-                <p className="mt-0.5 text-xs text-[#697586]">
+                <p className="text-sm font-bold text-[var(--sys-heading)]">قالبك الحالي</p>
+                <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
                   احفظه كملف لتنقله إلى متجر آخر، أو ثبّت ملفاً جاهزاً.
                 </p>
               </div>
@@ -263,7 +263,7 @@ export function StoreThemeScreen() {
                     <RiDownload2Line className="h-4 w-4" /> صدّر قالبي
                   </Button>
                 </a>
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#e3e8ef] px-3 py-1.5 text-xs font-bold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 py-1.5 text-xs font-bold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]">
                   <RiUpload2Line className="h-4 w-4" /> استورد ملفاً
                   <input
                     type="file"
@@ -278,7 +278,7 @@ export function StoreThemeScreen() {
                 </label>
               </div>
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-[#9aa4b2]">
+            <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted)]">
               القالب ينقل الشكل والأقسام ونصوصها. لا ينقل الصور — كل صورة تخصّ المتجر الذي رُفعت فيه
               ولا تُعرض من متجر آخر — ولا الأسعار ولا البكسلات ولا النطاق.
             </p>
@@ -290,10 +290,10 @@ export function StoreThemeScreen() {
                 <div className="flex items-center gap-2">
                   <span className="h-8 w-8 shrink-0 rounded-lg" style={{ background: t.swatch }} aria-hidden />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-[#121926]">{t.label}</p>
+                    <p className="truncate text-sm font-bold text-[var(--sys-heading)]">{t.label}</p>
                   </div>
                 </div>
-                <p className="flex-1 text-xs leading-relaxed text-[#697586]">{t.hint}</p>
+                <p className="flex-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{t.hint}</p>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -306,7 +306,7 @@ export function StoreThemeScreen() {
               </div>
             ))}
           </div>
-          <p className="text-xs leading-relaxed text-[#9aa4b2]">
+          <p className="text-xs leading-relaxed text-[var(--sys-muted)]">
             التثبيت يكتب المسوّدة فقط: تعاينها في «التصميم» وتنشرها حين ترضى عنها. لا شيء يتغيّر عند
             الزبون قبل النشر.
           </p>
@@ -317,11 +317,11 @@ export function StoreThemeScreen() {
       {tab === 'general' && (
         <div className="space-y-4">
           <div className={CARD}>
-            <p className="mb-3 text-sm font-bold text-[#121926]">الهوية</p>
+            <p className="mb-3 text-sm font-bold text-[var(--sys-heading)]">الهوية</p>
             {/* A LINK, never a second copy of the control. */}
             <a
               href="/settings/geo"
-              className="flex items-center justify-between gap-3 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2.5 text-xs text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+              className="flex items-center justify-between gap-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
             >
               <span className="flex items-center gap-2">
                 {store?.logo ? (
@@ -331,7 +331,7 @@ export function StoreThemeScreen() {
                   <RiImageLine className="h-4 w-4" />
                 )}
                 الشعار والأيقونة المفضّلة ورقم الدعم
-                {!store?.logo && <span className="text-[#9aa4b2]">— لم يُضبط بعد</span>}
+                {!store?.logo && <span className="text-[var(--sys-muted)]">— لم يُضبط بعد</span>}
               </span>
               <span className="flex items-center gap-1 font-semibold">
                 في «البلدان والمتاجر» <RiExternalLinkLine className="icon-mirror h-4 w-4" />
@@ -343,7 +343,7 @@ export function StoreThemeScreen() {
           </div>
 
           <div className={CARD}>
-            <p className="mb-3 text-sm font-bold text-[#121926]">الخطوط</p>
+            <p className="mb-3 text-sm font-bold text-[var(--sys-heading)]">الخطوط</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="block">
                 <span className={LABEL}>خط النص</span>
@@ -390,8 +390,8 @@ export function StoreThemeScreen() {
           </div>
 
           <div className={CARD}>
-            <p className="mb-1 text-sm font-bold text-[#121926]">الألوان</p>
-            <p className="mb-3 text-xs text-[#9aa4b2]">
+            <p className="mb-1 text-sm font-bold text-[var(--sys-heading)]">الألوان</p>
+            <p className="mb-3 text-xs text-[var(--sys-muted)]">
               كل لون لا تحدّده يُشتق من اللون الأساسي، فلا يخرج لك متجر بثمانية ألوان لا تتفق.
             </p>
             <div className="mb-3 grid grid-cols-6 gap-1.5 sm:grid-cols-12">
@@ -414,7 +414,7 @@ export function StoreThemeScreen() {
                 aria-label="اللون الأساسي"
                 value={isValidHex(theme.accent) ? theme.accent : DEFAULT_STORE_THEME.accent}
                 onChange={(e) => set('accent', e.target.value)}
-                className="h-8 w-10 cursor-pointer rounded-lg border border-[#e3e8ef]"
+                className="h-8 w-10 cursor-pointer rounded-lg border border-[var(--sys-border)]"
               />
               <Select
                 className="text-xs"
@@ -436,25 +436,25 @@ export function StoreThemeScreen() {
               {COLOR_FIELDS.map(({ key, label, hint }) => {
                 const value = theme.colors?.[key];
                 return (
-                  <div key={key} className="rounded-lg border border-[#e3e8ef] p-2">
+                  <div key={key} className="rounded-lg border border-[var(--sys-border)] p-2">
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
                         aria-label={label}
                         value={value && isValidHex(value) ? value : '#ffffff'}
                         onChange={(e) => setPart('colors', { [key]: e.target.value })}
-                        className="h-7 w-9 cursor-pointer rounded-lg border border-[#e3e8ef]"
+                        className="h-7 w-9 cursor-pointer rounded-lg border border-[var(--sys-border)]"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-[#364152]">{label}</p>
-                        <p className="truncate text-xs text-[#9aa4b2]">{hint}</p>
+                        <p className="truncate text-xs font-semibold text-[var(--sys-foreground)]">{label}</p>
+                        <p className="truncate text-xs text-[var(--sys-muted)]">{hint}</p>
                       </div>
                     </div>
                     <button
                       type="button"
                       disabled={!value}
                       onClick={() => setPart('colors', { [key]: undefined })}
-                      className="mt-1 text-xs text-[#9aa4b2] underline disabled:opacity-40"
+                      className="mt-1 text-xs text-[var(--sys-muted)] underline disabled:opacity-40"
                     >
                       {value ? 'أعده للمُشتقّ' : 'مُشتقّ من الأساسي'}
                     </button>
@@ -470,7 +470,7 @@ export function StoreThemeScreen() {
       {tab === 'chrome' && (
         <div className="space-y-4">
           <div className={CARD}>
-            <p className="mb-3 text-sm font-bold text-[#121926]">الترويسة</p>
+            <p className="mb-3 text-sm font-bold text-[var(--sys-heading)]">الترويسة</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="block">
                 <span className={LABEL}>الارتفاع (بكسل)</span>
@@ -490,24 +490,24 @@ export function StoreThemeScreen() {
                     aria-label="لون الترويسة"
                     value={theme.header?.background && isValidHex(theme.header.background) ? theme.header.background : '#ffffff'}
                     onChange={(e) => setPart('header', { background: e.target.value })}
-                    className="h-10 w-12 cursor-pointer rounded-lg border border-[#e3e8ef]"
+                    className="h-10 w-12 cursor-pointer rounded-lg border border-[var(--sys-border)]"
                   />
                   <button
                     type="button"
                     disabled={!theme.header?.background}
                     onClick={() => setPart('header', { background: undefined })}
-                    className="text-xs text-[#9aa4b2] underline disabled:opacity-40"
+                    className="text-xs text-[var(--sys-muted)] underline disabled:opacity-40"
                   >
                     مُشتقّ
                   </button>
                 </div>
               </label>
-              <label className="flex items-center gap-2 self-end pb-2 text-xs text-[#364152]">
+              <label className="flex items-center gap-2 self-end pb-2 text-xs text-[var(--sys-foreground)]">
                 <input
                   type="checkbox"
                   checked={theme.header?.sticky ?? true}
                   onChange={(e) => setPart('header', { sticky: e.target.checked })}
-                  className="h-4 w-4 accent-[#b8256e]"
+                  className="h-4 w-4 accent-[var(--sys-primary)]"
                 />
                 تثبيتها عند التمرير
               </label>
@@ -518,14 +518,14 @@ export function StoreThemeScreen() {
           </div>
 
           <div className={CARD}>
-            <p className="mb-3 text-sm font-bold text-[#121926]">التذييل</p>
+            <p className="mb-3 text-sm font-bold text-[var(--sys-heading)]">التذييل</p>
             {/* The links are a MENU — with an order and a visibility flag —
                 and they have one editor. They lived here too for one part,
                 because the contract named them in this tab and named
                 «التذييل» among the five menus. */}
             <a
               href="/store/menus"
-              className="flex items-center justify-between gap-2 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2.5 text-xs text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
+              className="flex items-center justify-between gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
             >
               <span className="flex items-center gap-1.5">
                 <RiTreeLine className="h-4 w-4" />
@@ -571,22 +571,22 @@ export function StoreThemeScreen() {
               </Select>
             </label>
           </div>
-          <label className="mt-3 flex items-center gap-2 text-xs text-[#364152]">
+          <label className="mt-3 flex items-center gap-2 text-xs text-[var(--sys-foreground)]">
             <input
               type="checkbox"
               checked={theme.product?.showStock ?? false}
               onChange={(e) => setPart('product', { showStock: e.target.checked })}
-              className="h-4 w-4 accent-[#b8256e]"
+              className="h-4 w-4 accent-[var(--sys-primary)]"
             />
             أظهر المخزون المتبقي
           </label>
           <p className={HINT}>رقم منخفض قد يُقنع بالشراء وقد يُخيف — لذلك هو اختيار، ومطفأ افتراضياً.</p>
-          <label className="mt-3 flex items-center gap-2 text-xs text-[#364152]">
+          <label className="mt-3 flex items-center gap-2 text-xs text-[var(--sys-foreground)]">
             <input
               type="checkbox"
               checked={theme.product?.discountBadge ?? true}
               onChange={(e) => setPart('product', { discountBadge: e.target.checked })}
-              className="h-4 w-4 accent-[#b8256e]"
+              className="h-4 w-4 accent-[var(--sys-primary)]"
             />
             أظهر شارة الخصم
           </label>
@@ -597,8 +597,8 @@ export function StoreThemeScreen() {
       {tab === 'checkout' && (
         <div className="space-y-4">
           <div className={CARD}>
-            <p className="mb-1 text-sm font-bold text-[#121926]">ترتيب الحقول وإلزامها</p>
-            <p className="mb-3 text-xs text-[#9aa4b2]">
+            <p className="mb-1 text-sm font-bold text-[var(--sys-heading)]">ترتيب الحقول وإلزامها</p>
+            <p className="mb-3 text-xs text-[var(--sys-muted)]">
               الاسم والهاتف والمحافظة والعنوان إلزامية دائماً: بدونها لا تُسعَّر الشحنة ولا تصل.
             </p>
             <div className="space-y-1.5">
@@ -606,9 +606,9 @@ export function StoreThemeScreen() {
                 const mandatory = MANDATORY_CHECKOUT_FIELDS.includes(field);
                 const required = mandatory || (theme.checkout?.required ?? []).includes(field);
                 return (
-                  <div key={field} className="flex items-center gap-2 rounded-lg border border-[#e3e8ef] px-2.5 py-1.5">
-                    <span className="flex-1 text-xs font-medium text-[#364152]">{CHECKOUT_LABEL[field]}</span>
-                    <label className="flex items-center gap-1.5 text-xs text-[#697586]">
+                  <div key={field} className="flex items-center gap-2 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5">
+                    <span className="flex-1 text-xs font-medium text-[var(--sys-foreground)]">{CHECKOUT_LABEL[field]}</span>
+                    <label className="flex items-center gap-1.5 text-xs text-[var(--sys-muted-foreground)]">
                       <input
                         type="checkbox"
                         checked={required}
@@ -618,7 +618,7 @@ export function StoreThemeScreen() {
                           if (e.target.checked) set.add(field); else set.delete(field);
                           setPart('checkout', { required: [...set] });
                         }}
-                        className="h-3.5 w-3.5 accent-[#b8256e] disabled:opacity-50"
+                        className="h-3.5 w-3.5 accent-[var(--sys-primary)] disabled:opacity-50"
                       />
                       إلزامي{mandatory && ' (دائماً)'}
                     </label>
@@ -631,7 +631,7 @@ export function StoreThemeScreen() {
                           [next[i - 1], next[i]] = [next[i], next[i - 1]];
                           setPart('checkout', { fieldOrder: next });
                         }}
-                        className="rounded-lg px-1.5 text-xs text-[#697586] hover:bg-[#eef2f6] disabled:opacity-30"
+                        className="rounded-lg px-1.5 text-xs text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
                         aria-label="حرّكه لأعلى"
                       >
                         ↑
@@ -644,7 +644,7 @@ export function StoreThemeScreen() {
                           [next[i + 1], next[i]] = [next[i], next[i + 1]];
                           setPart('checkout', { fieldOrder: next });
                         }}
-                        className="rounded-lg px-1.5 text-xs text-[#697586] hover:bg-[#eef2f6] disabled:opacity-30"
+                        className="rounded-lg px-1.5 text-xs text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
                         aria-label="حرّكه لأسفل"
                       >
                         ↓
@@ -675,13 +675,13 @@ export function StoreThemeScreen() {
                     aria-label="لون زر التأكيد"
                     value={theme.checkout?.buttonColor && isValidHex(theme.checkout.buttonColor) ? theme.checkout.buttonColor : '#ffffff'}
                     onChange={(e) => setPart('checkout', { buttonColor: e.target.value })}
-                    className="h-10 w-12 cursor-pointer rounded-lg border border-[#e3e8ef]"
+                    className="h-10 w-12 cursor-pointer rounded-lg border border-[var(--sys-border)]"
                   />
                   <button
                     type="button"
                     disabled={!theme.checkout?.buttonColor}
                     onClick={() => setPart('checkout', { buttonColor: undefined })}
-                    className="text-xs text-[#9aa4b2] underline disabled:opacity-40"
+                    className="text-xs text-[var(--sys-muted)] underline disabled:opacity-40"
                   >
                     مثل اللون الأساسي
                   </button>
@@ -704,12 +704,12 @@ export function StoreThemeScreen() {
       {/* ── هـ. شريط السلة السفلي — لا يُعرض أصلاً لمتجر Single Product ── */}
       {tab === 'cart' && store?.cartBarApplies && (
         <div className={CARD}>
-          <label className="flex items-center gap-2 text-xs text-[#364152]">
+          <label className="flex items-center gap-2 text-xs text-[var(--sys-foreground)]">
             <input
               type="checkbox"
               checked={theme.cartBar?.enabled ?? true}
               onChange={(e) => setPart('cartBar', { enabled: e.target.checked })}
-              className="h-4 w-4 accent-[#b8256e]"
+              className="h-4 w-4 accent-[var(--sys-primary)]"
             />
             أظهر شريط السلة أسفل الشاشة
           </label>
@@ -741,7 +741,7 @@ export function StoreThemeScreen() {
               مسار من رفعك أنت. رابط خارجي مرفوض: صورة من موقع لا نتحكم به تسرّب كل زائر إليه.
             </span>
           </label>
-          <p className="mt-4 text-xs leading-relaxed text-[#697586]">
+          <p className="mt-4 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             ترتيب أقسام الرئيسية يُسحب ويُرتَّب في «التصميم» — نفس بانية الأقسام المستعملة في صفحات الهبوط،
             لا بانية ثانية.
           </p>

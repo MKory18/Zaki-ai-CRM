@@ -38,10 +38,10 @@ const RESULTS: Record<string, { ar: string; en: string }> = {
 
 const WORKFLOW_STATE: Record<string, { ar: string; en: string; cls: string }> = {
   NEW: { ar: 'جديد', en: 'New', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-muted-foreground)]/50' },
-  IN_PROGRESS: { ar: 'قيد المعالجة', en: 'In Progress', cls: 'bg-[var(--sys-surface)] text-purple-700 border-purple-300' },
+  IN_PROGRESS: { ar: 'قيد المعالجة', en: 'In Progress', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
   NO_ANSWER: { ar: 'لا يجيب', en: 'No Answer', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
   FOLLOW_UP_REQUIRED: { ar: 'يتطلب متابعة', en: 'Follow-Up Required', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
-  POSTPONED: { ar: 'مؤجل', en: 'Postponed', cls: 'bg-yellow-50 text-yellow-700 border-yellow-300' },
+  POSTPONED: { ar: 'مؤجل', en: 'Postponed', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
   CONFIRMED: { ar: 'مؤكد ✓', en: 'Confirmed ✓', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
   REJECTED: { ar: 'مرفوض', en: 'Rejected', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
   CANCELLED: { ar: 'ملغى', en: 'Cancelled', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
@@ -191,7 +191,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
-          <RiPhoneLine className="w-4 h-4 text-indigo-600" />
+          <RiPhoneLine className="w-4 h-4 text-[var(--sys-primary)]" />
           {ar ? 'تسجيل نتيجة الاتصال' : 'Record a call outcome'}
         </h4>
         <div className="flex items-center gap-2">
@@ -201,7 +201,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
             </span>
           )}
           {order.nextFollowUpAt && order.followUpStatus !== 'COMPLETED' && order.followUpStatus !== 'CANCELLED' && (
-            <span className="text-xs font-bold text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-orange-200 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+            <span className="text-xs font-bold text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg px-2 py-1 inline-flex items-center gap-1">
               <RiCalendarScheduleLine className="w-4 h-4" />
               {ar ? 'متابعة:' : 'Follow-up:'} {arDateShort(order.nextFollowUpAt)}
             </span>
@@ -232,7 +232,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
           <button
             onClick={() => { setNote(''); setOpenForm('call_later'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-purple-300 text-purple-700 hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RiTimerLine className="w-4 h-4" />{ar ? '⏰ الاتصال لاحقاً' : '⏰ Call Later'}
           </button>
@@ -246,7 +246,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
           <button
             onClick={() => { setNote(''); setOpenForm('confirm'); }}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-green-400 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-success)]/60 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
             <RiCheckLine className="w-4 h-4" />{ar ? '✅ تأكيد الطلب' : '✅ Confirm Order'}
           </button>

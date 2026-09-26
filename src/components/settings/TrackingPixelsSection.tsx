@@ -160,7 +160,7 @@ export function TrackingPixelsSection() {
 
       <div className="mb-4 flex items-start gap-2 rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] px-3 py-2.5">
         <RiAlertLine className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sys-warning)]" />
-        <p className="text-xs leading-relaxed text-amber-900">
+        <p className="text-xs leading-relaxed text-[var(--sys-warning)]">
           كل بكسل إضافي سكربت آخر يحمّله متصفح الزبون قبل أن تكتمل الصفحة — أضف ما تحتاجه فعلاً، وعطّل ما لم تعد
           تستعمله بدل أن تتركه يعمل.
         </p>
