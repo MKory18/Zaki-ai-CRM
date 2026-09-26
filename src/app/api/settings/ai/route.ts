@@ -33,6 +33,20 @@ const schema = z.object({
   intelligenceScopes: z.array(z.string()).max(20).optional(),
   /** A new key, or null to clear it. Omitted leaves the stored one alone. */
   apiKey: z.string().trim().min(8).max(400).nullable().optional(),
+  /**
+   * A key per vendor. Same rules as the single key above: written, never
+   * read back, and refused outright when encryption is unavailable.
+   */
+  providerKeys: z
+    .record(z.string(), z.string().trim().min(8).max(400).nullable())
+    .optional(),
+  /** Per-assistant vendor and model. Unknown vendors are dropped on save. */
+  assistants: z
+    .record(
+      z.string().max(40),
+      z.object({ provider: z.string().max(20).optional(), model: z.string().trim().max(120).optional() }).strict()
+    )
+    .optional(),
 });
 
 /** The scopes alone — the boxes are ticked one at a time, not with the form. */

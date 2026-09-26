@@ -145,6 +145,13 @@ export interface AiSettings {
    */
   promptHistory: PromptHistory;
   hasKey: boolean;
+  /**
+   * Which providers have a key, and the last four characters of each.
+   * Never the key: no endpoint returns one, ever.
+   */
+  providerKeys: Record<string, string | null>;
+  /** Per-assistant vendor and model, where one was chosen. */
+  assistants: Record<string, { provider?: string; model?: string }>;
   keyHint: string | null;
 }
 
@@ -164,8 +171,25 @@ interface StoredAi {
   intelligenceScopes?: string[];
   /** See AiSettings.promptHistory. */
   promptHistory?: PromptHistory;
+  /**
+   * LEGACY single key: the one the default provider uses. Kept and still
+   * read, so a company that configured a key before this existed does not
+   * have to touch anything.
+   */
   apiKeyEncrypted?: string;
   keyHint?: string;
+  /**
+   * A key PER PROVIDER, so several vendors can be configured at once.
+   * Without this an assistant could be pointed at Anthropic while the only
+   * key in the box belonged to OpenAI — a setting that saves and then
+   * fails at the moment somebody needs an answer.
+   */
+  keys?: Record<string, { enc: string; hint: string }>;
+  /**
+   * Per-assistant routing. Absent = the company default, which is what
+   * every assistant did before and what most should keep doing.
+   */
+  assistants?: Record<string, { provider?: string; model?: string }>;
 }
 
 /** The overrides as the editor should show them: the legacy house prompt folded in. */
@@ -200,8 +224,17 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
     // because nobody turned it off is an assistant nobody decided on.
     intelligenceScopes: sanitizeScopes(ai.intelligenceScopes),
     promptHistory: ai.promptHistory ?? {},
-    hasKey: !!ai.apiKeyEncrypted || !!process.env.OPENROUTER_API_KEY,
+    hasKey: !!ai.apiKeyEncrypted || !!ai.keys?.[provider] || !!process.env.OPENROUTER_API_KEY,
     keyHint: ai.keyHint ?? null,
+    // A hint per vendor, so the screen can say WHICH ones are configured
+    // rather than one «محفوظ» that could mean any of them.
+    providerKeys: Object.fromEntries(
+      AI_PROVIDERS.map((p) => [
+        p.id,
+        ai.keys?.[p.id]?.hint ?? (p.id === provider ? ai.keyHint ?? null : null),
+      ])
+    ),
+    assistants: ai.assistants ?? {},
   };
 }
 
@@ -213,13 +246,18 @@ export async function saveAiSettings(
     prompts?: Record<string, string>;
     intelligenceScopes?: string[];
     apiKey?: string | null;
+    /** A key per vendor: value = set it, null = clear it, absent = leave it. */
+    providerKeys?: Record<string, string | null>;
+    /** Per-assistant vendor and model. An empty object clears an override. */
+    assistants?: Record<string, { provider?: string; model?: string }>;
   },
   /** Whoever pressed save, for the prompt versions. */
   actor?: { name: string | null; now?: Date }
 ): Promise<AiSettings> {
   // Refused before anything is touched: a key stored in the clear is worse
   // than no AI at all.
-  if (input.apiKey && !encryptionAvailable()) throw new Error('ENCRYPTION_KEY_MISSING');
+  const anyKey = input.apiKey || Object.values(input.providerKeys ?? {}).some((v) => !!v);
+  if (anyKey && !encryptionAvailable()) throw new Error('ENCRYPTION_KEY_MISSING');
 
   // Only the `ai` key, under a row lock: a template save running at the
   // same moment used to write back the key this save had just removed.
@@ -258,7 +296,40 @@ export async function saveAiSettings(
       ...(input.prompts === undefined && current.prompt ? { prompt: current.prompt } : {}),
       apiKeyEncrypted: current.apiKeyEncrypted,
       keyHint: current.keyHint,
+      keys: current.keys,
+      /**
+       * Only vendors and models this system knows.
+       *
+       * An unknown provider is dropped rather than stored: a typo would
+       * otherwise route an assistant to a vendor that does not exist, and
+       * the failure would appear as «الذكاء غير مضبوط» on a screen far
+       * from the setting that caused it.
+       */
+      assistants:
+        input.assistants === undefined
+          ? current.assistants
+          : Object.fromEntries(
+              Object.entries(input.assistants)
+                .map(([job, v]) => {
+                  const provider = AI_PROVIDERS.find((p) => p.id === v.provider)?.id;
+                  const model = v.model?.trim() || undefined;
+                  return [job, { ...(provider ? { provider } : {}), ...(model ? { model } : {}) }] as const;
+                })
+                // An override that says nothing is not stored at all.
+                .filter(([, v]) => Object.keys(v).length > 0)
+            ),
     };
+
+    // Per-vendor keys, each encrypted on the way in.
+    if (input.providerKeys) {
+      const keys = { ...(current.keys ?? {}) };
+      for (const [id, value] of Object.entries(input.providerKeys)) {
+        if (!AI_PROVIDERS.some((p) => p.id === id)) continue;
+        if (value === null) delete keys[id];
+        else if (value) keys[id] = { enc: encryptSecret(value.trim()), hint: secretHint(value.trim()) ?? '' };
+      }
+      next.keys = Object.keys(keys).length > 0 ? keys : undefined;
+    }
 
     if (input.apiKey === null) {
       // Explicitly cleared.
@@ -273,18 +344,66 @@ export async function saveAiSettings(
   return aiSettings(companyId);
 }
 
-/** The key, decrypted, for a call about to be made. Never leaves the server. */
-async function resolveKey(companyId: string): Promise<string | null> {
+/**
+ * WHERE ONE CALL GOES: vendor, model and key, for THIS assistant.
+ *
+ * Resolved in one place because the three have to agree. Pointing an
+ * assistant at Anthropic while handing it the OpenAI key is a setting that
+ * saves cleanly and fails only when somebody asks a question — so the key
+ * is chosen by the provider that was resolved, never by what happens to be
+ * stored first.
+ *
+ * Order, narrowest first:
+ *   the assistant's own provider and model
+ *   the company's default provider and model
+ *   the provider's own default model, when only a provider was chosen
+ *
+ * Never leaves the server.
+ */
+export interface AiRoute {
+  provider: AiProvider;
+  model: string;
+  key: string | null;
+}
+
+async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
   const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
   const ai = readStored(company?.settings ?? null);
-  if (ai.apiKeyEncrypted) {
+
+  const fallback = (AI_PROVIDERS.find((p) => p.id === ai.provider)?.id ?? 'OPENROUTER') as AiProvider;
+  const override = job ? ai.assistants?.[job] : undefined;
+  const chosen = AI_PROVIDERS.find((p) => p.id === override?.provider)?.id as AiProvider | undefined;
+  const provider = chosen ?? fallback;
+
+  // A model belongs to a vendor. When the assistant switched vendor and
+  // named no model, the company's model is the WRONG default — it is the
+  // other vendor's name — so the new vendor's own default is used.
+  const model =
+    override?.model?.trim() ||
+    (chosen && chosen !== fallback
+      ? providerInfo(provider).defaultModel
+      : ai.model || providerInfo(provider).defaultModel);
+
+  let key: string | null = null;
+  const stored = ai.keys?.[provider]?.enc;
+  if (stored) {
     try {
-      return decryptSecret(ai.apiKeyEncrypted);
+      key = decryptSecret(stored);
     } catch {
-      return null;
+      key = null;
+    }
+  } else if (provider === fallback && ai.apiKeyEncrypted) {
+    // The legacy single key belongs to whichever provider was the default
+    // when it was entered — never handed to a vendor it was not issued by.
+    try {
+      key = decryptSecret(ai.apiKeyEncrypted);
+    } catch {
+      key = null;
     }
   }
-  return process.env.OPENROUTER_API_KEY ?? null;
+  if (!key && provider === 'OPENROUTER') key = process.env.OPENROUTER_API_KEY ?? null;
+
+  return { provider, model, key };
 }
 
 export interface ChatRequest {
@@ -320,7 +439,9 @@ export class AiNotConfigured extends Error {
  */
 export async function aiChat(req: ChatRequest): Promise<string> {
   const settings = await aiSettings(req.companyId);
-  const key = await resolveKey(req.companyId);
+  // Vendor, model and key for THIS assistant — `req.job` is the assistant.
+  const route = await routeFor(req.companyId, req.job);
+  const key = route.key;
   if (!key) throw new AiNotConfigured();
 
   const controller = new AbortController();
@@ -330,7 +451,7 @@ export async function aiChat(req: ChatRequest): Promise<string> {
     const house = settings.prompt.trim();
     const system = house ? `${house}\n\n${req.system}` : req.system;
 
-    if (settings.provider === 'ANTHROPIC') {
+    if (route.provider === 'ANTHROPIC') {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         signal: controller.signal,
@@ -340,7 +461,7 @@ export async function aiChat(req: ChatRequest): Promise<string> {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: settings.model,
+          model: route.model,
           max_tokens: 2000,
           system,
           messages: [{ role: 'user', content: req.user }],
@@ -352,7 +473,7 @@ export async function aiChat(req: ChatRequest): Promise<string> {
     }
 
     const url =
-      settings.provider === 'OPENAI'
+      route.provider === 'OPENAI'
         ? 'https://api.openai.com/v1/chat/completions'
         : 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -362,12 +483,12 @@ export async function aiChat(req: ChatRequest): Promise<string> {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${key}`,
-        ...(settings.provider === 'OPENROUTER'
+        ...(route.provider === 'OPENROUTER'
           ? { 'HTTP-Referer': 'https://salesflow.io', 'X-Title': 'SALESFLOW Business Intelligence' }
           : {}),
       },
       body: JSON.stringify({
-        model: settings.model,
+        model: route.model,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: req.user },

@@ -29,10 +29,21 @@ import { EmptyState } from '@/components/ui/EmptyState';
 export function AssistantsTable({
   enabled,
   onSaved,
+  providers,
+  fallback,
+  routing,
+  onRouted,
 }: {
   /** The scopes the owner turned on for business intelligence. */
   enabled: string[];
   onSaved: (scopes: string[]) => void;
+  /** Vendors this system speaks, with their suggested models. */
+  providers: { id: string; label: string; defaultModel: string; models: string[] }[];
+  /** The company default, used by any assistant that names nothing. */
+  fallback: { provider: string; model: string };
+  /** Per-assistant overrides, keyed by the assistant's prompt job. */
+  routing: Record<string, { provider?: string; model?: string }>;
+  onRouted: (next: Record<string, { provider?: string; model?: string }>) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -107,6 +118,62 @@ export function AssistantsTable({
                       <RiShieldCrossLine className="h-4 w-4" /> لا — أبداً
                     </span>
                   )) },
+            /**
+             * WHICH BRAIN THIS ONE USES.
+             *
+             * The tier is a per-assistant decision and the settings could
+             * not express it: the note classifier runs on every follow-up
+             * note — thousands a day — and the business analysis runs when
+             * somebody asks. One model for both is either a surprising
+             * bill or a useless analysis.
+             *
+             * «الافتراضي» is a real choice and the common one, so it is
+             * first and costs nothing to keep.
+             */
+            { key: 'route', label: 'النموذج',
+              render: (a) => {
+                const mine = routing[a.promptJob] ?? {};
+                const provider = mine.provider ?? fallback.provider;
+                const models = providers.find((p) => p.id === provider)?.models ?? [];
+                const set = (patch: { provider?: string; model?: string }) => {
+                  const next = { ...routing };
+                  const merged = { ...mine, ...patch };
+                  // Switching vendor drops a model that belonged to the old
+                  // one: `gpt-4o` is not a name Anthropic answers to.
+                  if (patch.provider !== undefined && patch.provider !== mine.provider) delete merged.model;
+                  const clean = Object.fromEntries(Object.entries(merged).filter(([, v]) => !!v));
+                  if (Object.keys(clean).length === 0) delete next[a.promptJob];
+                  else next[a.promptJob] = clean;
+                  onRouted(next);
+                };
+                return (
+                  <span className="flex flex-col gap-1">
+                    <select
+                      value={mine.provider ?? ''}
+                      onChange={(e) => set({ provider: e.target.value || undefined })}
+                      className="h-11 md:h-8 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs"
+                      aria-label={`مزوّد ${a.label}`}
+                    >
+                      <option value="">الافتراضي — {providers.find((p) => p.id === fallback.provider)?.label}</option>
+                      {providers.map((p) => (
+                        <option key={p.id} value={p.id}>{p.label}</option>
+                      ))}
+                    </select>
+                    <input
+                      list={`models-${a.key}`}
+                      value={mine.model ?? ''}
+                      onChange={(e) => set({ model: e.target.value || undefined })}
+                      placeholder={mine.provider ? providers.find((p) => p.id === provider)?.defaultModel : fallback.model}
+                      dir="ltr"
+                      aria-label={`نموذج ${a.label}`}
+                      className="h-11 md:h-8 w-44 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs"
+                    />
+                    <datalist id={`models-${a.key}`}>
+                      {models.map((m) => <option key={m} value={m} />)}
+                    </datalist>
+                  </span>
+                );
+              } },
           ]}
           empty={
             <EmptyState

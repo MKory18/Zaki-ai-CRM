@@ -222,7 +222,17 @@ describe('making the call', () => {
   it('still applies a house prompt saved the old way, until the next save', async () => {
     // Written by the card that sat on the system settings screen, which is
     // gone. Its value must keep working, and must be what /settings/ai shows.
-    withSettings({ provider: 'OPENAI', model: 'gpt-4o-mini', prompt: 'اختصر', apiKeyEncrypted: undefined });
+    /**
+     * OpenRouter's env key is OpenRouter's.
+     *
+     * This used to set `provider: 'OPENAI'` and lean on
+     * `OPENROUTER_API_KEY` as a universal fallback — which would have sent
+     * an OpenRouter key to OpenAI's endpoint in production and failed at
+     * the vendor. The routing now picks the key that belongs to the
+     * provider it resolved, so the test says the provider whose key it is.
+     * The assertion below — the legacy house prompt — is unchanged.
+     */
+    withSettings({ provider: 'OPENROUTER', model: 'gpt-4o-mini', prompt: 'اختصر', apiKeyEncrypted: undefined });
     process.env.OPENROUTER_API_KEY = 'sk-env';
     const shown = await aiSettings('c1');
     expect(shown.prompt).toBe('اختصر');

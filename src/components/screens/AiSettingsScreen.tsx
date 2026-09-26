@@ -35,6 +35,10 @@ interface Settings {
   intelligenceScopes?: string[];
   provider: string;
   model: string;
+  /** Per-assistant vendor and model, where one was chosen. */
+  assistants?: Record<string, { provider?: string; model?: string }>;
+  /** Which vendors have a key, and the last four characters of each. */
+  providerKeys?: Record<string, string | null>;
   prompt: string;
   prompts: Record<string, string>;
   /** What each job's prompt said before, newest first. */
@@ -156,6 +160,10 @@ export function AiSettingsScreen() {
         <AssistantsTable
           enabled={settings.intelligenceScopes ?? []}
           onSaved={(scopes) => setSettings({ ...settings, intelligenceScopes: scopes })}
+          providers={providers}
+          fallback={{ provider: settings.provider, model: settings.model }}
+          routing={settings.assistants ?? {}}
+          onRouted={(assistants) => setSettings({ ...settings, assistants })}
         />
       )}
 
