@@ -165,8 +165,8 @@ export function Sidebar({
               <span className="font-bold text-[var(--sys-sidebar-foreground)] tracking-wide text-base leading-tight block" dir="ltr">
                 Zaki <span className="text-[var(--sys-primary)]">AI</span> OMS
               </span>
-              <span className="block text-xs text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-[0.18em]" dir="ltr">
-                Operations
+              <span className="block text-xs text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wide" lang="en" dir="ltr">
+                Intelligent Systems
               </span>
             </div>
           </Link>

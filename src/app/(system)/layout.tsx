@@ -12,7 +12,9 @@ export const metadata: Metadata = {
   description:
     'Zaki AI OMS — منصة متكاملة لإدارة المنتجات والطلبات والمودريتورات والأرباح الحقيقية مع مستشار أعمال بالذكاء الاصطناعي.',
   icons: {
-    icon: '/brand/mark.png',
+    // The FLAT mark, because a favicon is 16px and the low-poly one is
+    // mud at that size — the brief's own reason for making it.
+    icon: '/brand/mark-flat.svg',
     apple: '/icons/icon-192.png',
   },
   manifest: '/manifest.webmanifest',

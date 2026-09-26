@@ -11,7 +11,7 @@ import React from 'react';
  * THE BANNER IS A SLOT, NOT A DEPENDENCY.
  *
  * The image is layered ON TOP of a gradient built from the brand's own
- * colours. The slot is filled now — `/brand/banner.jpg`, the circuit wave —
+ * colours. The slot is filled now — `/brand/banner.webp`, the circuit wave —
  * but it stays a slot: if the file is ever missing the request 404s, the
  * layer draws nothing, and the gradient is a finished screen rather than a
  * broken one. Swapping the file changes no code.
@@ -50,7 +50,7 @@ export function BrandStage({
       <div
         aria-hidden
         className="absolute inset-0 -z-10 bg-cover bg-center opacity-[0.55]"
-        style={{ backgroundImage: "url('/brand/banner.jpg')" }}
+        style={{ backgroundImage: "url('/brand/banner.webp')" }}
       />
       {/*
         0.55 over a 0.45 scrim, and both numbers were measured rather than
@@ -75,11 +75,17 @@ export function BrandStage({
             <p className="text-display font-bold leading-none tracking-wide text-[var(--sys-heading)]" dir="ltr">
               Zaki <span className="text-[var(--sys-primary)]">AI</span> OMS
             </p>
+            {/* `lang="en"` and `tracking-wide` are not decoration: they are
+                what the one documented exception in system.css looks for.
+                Arabic refuses letter-spacing and text-transform globally —
+                correctly — and this Latin tagline opts back in by saying
+                what it is. */}
             <p
-              className="mt-1.5 text-note font-semibold uppercase tracking-[0.3em] text-[var(--sys-muted-foreground)]"
+              className="mt-1.5 text-note font-semibold uppercase tracking-wide text-[var(--sys-muted-foreground)]"
+              lang="en"
               dir="ltr"
             >
-              Operations
+              Intelligent Systems
             </p>
           </div>
           {caption && <p className="text-sm text-[var(--sys-muted-foreground)]">{caption}</p>}

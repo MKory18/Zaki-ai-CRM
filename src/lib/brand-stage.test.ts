@@ -43,7 +43,7 @@ describe('the brand moment', () => {
    */
   it('does not depend on the file being there', () => {
     const src = read('src/components/shell/BrandStage.tsx');
-    expect(src).toContain('/brand/banner.jpg');
+    expect(src).toContain('/brand/banner.webp');
     // Not imported, not fetched, not branched on: a missing file must not
     // be able to change what renders.
     expect(/import .*banner/i.test(src), 'البانر مستورد فيكسر البناء بغيابه').toBe(false);
@@ -74,7 +74,7 @@ describe('the brand moment', () => {
     const imageA = Number('0.' + image![1]);
 
     const sharp = (await import('sharp')).default;
-    const { data, info } = await sharp(join(process.cwd(), 'public/brand/banner.jpg'))
+    const { data, info } = await sharp(join(process.cwd(), 'public/brand/banner.webp'))
       .resize(240, 80, { fit: 'fill' })
       .raw()
       .toBuffer({ resolveWithObject: true });
@@ -154,5 +154,54 @@ describe('the brand moment', () => {
   it('and uses the product’s own mark, not one invented here', () => {
     const src = read('src/components/shell/BrandStage.tsx');
     expect(src).toContain('/brand/mark.png');
+  });
+});
+
+/**
+ * THE MARK HAS TWO FORMS, AND THE SMALL ONE IS NOT OPTIONAL.
+ *
+ * The brief: «the low-poly dolphin loses detail below 32px. Produce a
+ * simplified flat dolphin silhouette for the favicon, the maskable PWA
+ * icon and any size under 32px.» I shipped the low-poly one into both and
+ * had to come back.
+ *
+ * The flat mark is TRACED from the full one — its own alpha outline,
+ * simplified — rather than drawn, so it is the same animal rather than a
+ * dolphin I invented in roughly the same pose.
+ */
+describe('the two forms of the mark', () => {
+  it('a flat silhouette exists, and it is a vector', () => {
+    const svg = readFileSync(join(process.cwd(), 'public/brand/mark-flat.svg'), 'utf8');
+    expect(svg.startsWith('<svg'), 'العلامة المسطّحة ليست SVG').toBe(true);
+    // One path: a silhouette, not a copy of the low-poly facets.
+    expect((svg.match(/<path/g) ?? []).length, 'أكثر من مسار — ليست ظلّاً').toBe(1);
+    expect(svg, 'صورة نقطيّة مضمّنة بدل مسار').not.toContain('data:image');
+  });
+
+  it('and it is what the favicon and the maskable icon use', () => {
+    const layout = read('src/app/(system)/layout.tsx');
+    expect(layout, 'الـfavicon يستعمل العلامة الكاملة عند ١٦ بكسل').toContain('/brand/mark-flat.svg');
+    const icons = readFileSync(join(process.cwd(), 'scripts/make-icons.mjs'), 'utf8');
+    // Android crops it into a circle and draws it small: twice the reason.
+    expect(icons).toMatch(/const logo = await sharp\(flat/);
+  });
+
+  it('while the full mark stays for the sizes that can carry it', () => {
+    const sidebar = read('src/components/shell/Sidebar.tsx');
+    expect(sidebar, 'الشريط الجانبي يرسم الظلّ بدل العلامة').toContain('/brand/mark.png');
+  });
+
+  it('and the mark carries no wordmark — the name is drawn as text beside it', () => {
+    // It did, for a while: the crop took the longest gap under the artwork,
+    // which on a lockup is the bottom margin UNDER the tagline. Every place
+    // that draws the mark beside the name was drawing the name twice, and at
+    // 44px it read as a smudge rather than as a bug.
+    const png = readFileSync(join(process.cwd(), 'public/brand/mark.png'));
+    // PNG dimensions from the IHDR chunk.
+    const w = png.readUInt32BE(16);
+    const h = png.readUInt32BE(20);
+    expect(w, 'العلامة ليست مربّعة').toBe(h);
+    // A lockup is much taller than it is wide once cropped; a mark is not.
+    expect(w).toBeGreaterThanOrEqual(256);
   });
 });

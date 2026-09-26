@@ -17,6 +17,14 @@ import { readFileSync } from 'node:fs';
  * again would say «Zakai.io Zakai.io».
  */
 const mark = readFileSync('public/brand/mark.png');
+/**
+ * The simplified silhouette, for the sizes the full mark cannot survive.
+ *
+ * Android crops the maskable icon into whatever shape the launcher uses
+ * and then draws it small: low-poly facets and a circuit-line wave become
+ * a blue smear. The flat dolphin still reads.
+ */
+const flat = readFileSync('public/brand/mark-flat.svg');
 const OUT = 'public/icons';
 
 // The system's own page colour, so the icon does not sit on a white square
@@ -34,7 +42,7 @@ async function plain(size) {
 async function maskable(size) {
   // 20% margin each side: Android crops up to ~10% and centres a circle.
   const inner = Math.round(size * 0.6);
-  const logo = await sharp(mark)
+  const logo = await sharp(flat, { density: 600 })
     .resize(inner, inner, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toBuffer();
