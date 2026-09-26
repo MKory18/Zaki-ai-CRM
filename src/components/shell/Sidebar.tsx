@@ -107,11 +107,23 @@ export function Sidebar({
     });
   }
 
+  /**
+   * ONE GROUP OPEN AT A TIME.
+   *
+   * Ten groups that each stay open where they were left is a sidebar that
+   * ends up fully unfolded after a morning's work — which is the state the
+   * folding exists to avoid, reached one honest click at a time. Opening
+   * التشغيل to reach التجهيز and then المال to reach المطابقة left both
+   * standing, and the list you have to read to find the next thing grows
+   * every time you use it.
+   *
+   * So opening one folds the rest. Pressing the open one still closes it:
+   * an accordion that cannot be fully shut is a control with a state it
+   * refuses to enter.
+   */
   function toggle(key: string) {
     setOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      const next = prev.has(key) ? new Set<string>() : new Set([key]);
       try {
         localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify([...next]));
       } catch {
@@ -120,6 +132,22 @@ export function Sidebar({
       return next;
     });
   }
+
+  /**
+   * AND ARRIVING SOMEWHERE FOLDS WHAT YOU CAME FROM.
+   *
+   * `activeGroup` already opens the group holding the current page, so after
+   * navigating from التجهيز to المطابقة both were open — the new one because
+   * it holds the page, the old one because a hand had opened it and nothing
+   * ever closed it. Following a link IS leaving the other group.
+   *
+   * Not while pinned: pinning is the explicit «show me everything», and
+   * folding underneath it would make that button a lie.
+   */
+  useEffect(() => {
+    if (pinned || !activeGroup) return;
+    setOpen((prev) => (prev.size === 1 && prev.has(activeGroup) ? prev : new Set([activeGroup])));
+  }, [activeGroup, pinned]);
 
   return (
     <>

@@ -15,7 +15,8 @@ import { join } from 'node:path';
  * nothing at all for anyone reading the screen aloud.
  */
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/orders' }));
+const here = { path: '/orders' };
+vi.mock('next/navigation', () => ({ usePathname: () => here.path }));
 
 import { Sidebar } from './Sidebar';
 import { RAIL_COOKIE, railed, setRailed } from '@/lib/sidebar-rail';
@@ -29,9 +30,21 @@ const GROUPS = [
       { path: '/products', label: 'المنتجات', icon: 'Package', permissions: null },
     ],
   },
+  {
+    key: 'ops',
+    label: 'التشغيل',
+    routes: [{ path: '/ops/preparation', label: 'التجهيز', icon: 'Box', permissions: null }],
+  },
+  {
+    key: 'finance',
+    label: 'المال',
+    routes: [{ path: '/finance/matching', label: 'المطابقة', icon: 'Coins', permissions: null }],
+  },
 ];
 
 beforeEach(() => {
+  here.path = '/orders';
+  localStorage.clear();
   document.cookie = `${RAIL_COOKIE}=; path=/; max-age=0`;
   document.documentElement.removeAttribute('data-rail');
   document.querySelector('[data-sys-theme]')?.removeAttribute('data-rail');
@@ -148,5 +161,68 @@ describe('a folded menu', () => {
     // Both routes present: a collapsed group in a rail is an empty rail.
     expect(screen.getByRole('link', { name: 'الطلبات' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'المنتجات' })).toBeTruthy();
+  });
+});
+
+
+/**
+ * TEN GROUPS THAT EACH STAY OPEN IS A SIDEBAR THAT UNFOLDS ITSELF.
+ *
+ * Reported: «open التجهيز in التشغيل, then click المطابقة in المال — close
+ * التشغيل». And it is the same complaint as the folding itself: the list you
+ * read to find the next thing grew every time you used it, one honest click
+ * at a time, until it was the fully-open menu the fold exists to avoid.
+ */
+describe('the menu', () => {
+  const open = (label: string) => fireEvent.click(screen.getByRole('button', { name: new RegExp(label) }));
+  const isOpen = (label: string) =>
+    screen.getByRole('button', { name: new RegExp(label) }).getAttribute('aria-expanded') === 'true';
+
+  it('keeps one group open — opening the next folds the last', async () => {
+    await act(async () => {
+      render(<Sidebar groups={GROUPS} />);
+    });
+    await act(async () => open('التشغيل'));
+    expect(isOpen('التشغيل')).toBe(true);
+
+    await act(async () => open('المال'));
+    expect(isOpen('المال')).toBe(true);
+    expect(isOpen('التشغيل'), 'المجموعة السابقة بقيت مفتوحة').toBe(false);
+  });
+
+  /** An accordion that cannot be fully shut is a control with a state it refuses. */
+  it('and pressing the open one still closes it', async () => {
+    await act(async () => {
+      render(<Sidebar groups={GROUPS} />);
+    });
+    await act(async () => open('التشغيل'));
+    await act(async () => open('التشغيل'));
+    expect(isOpen('التشغيل')).toBe(false);
+  });
+
+  /**
+   * AND ARRIVING SOMEWHERE FOLDS WHAT YOU CAME FROM.
+   *
+   * Following a link IS leaving the other group — which is the exact case
+   * that was reported, and the one a toggle alone does not cover: the new
+   * group opens because it holds the page, and the old one stayed open
+   * because a hand had opened it and nothing ever closed it.
+   */
+  it('folds the group you came from when you arrive somewhere else', async () => {
+    const view = await act(async () => render(<Sidebar groups={GROUPS} />));
+
+    // Opened BY HAND, which is the case that was reported: a group the
+    // active-page rule would not have opened, and so would not have closed.
+    // A first version of this test navigated away from the group holding the
+    // page, and that folds itself — it proved nothing.
+    await act(async () => open('التشغيل'));
+    expect(isOpen('التشغيل')).toBe(true);
+
+    here.path = '/finance/matching';
+    await act(async () => {
+      view.rerender(<Sidebar groups={GROUPS} />);
+    });
+    expect(isOpen('المال')).toBe(true);
+    expect(isOpen('التشغيل'), 'مجموعة الصفحة السابقة بقيت مفتوحة').toBe(false);
   });
 });
