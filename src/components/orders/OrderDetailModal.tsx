@@ -803,7 +803,14 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
             </h4>
 
             <div className="relative border-s-2 border-[var(--sys-border)] ms-2.5 space-y-4 text-xs">
-              {timeline.length === 0 && <p className="ps-4 text-[var(--sys-muted)]">لا توجد أحداث بعد.</p>}
+              {/* Every order is created, so an empty timeline is not a
+                  quiet order — it is a record whose events did not reach
+                  the log. Saying «لا أحداث» invites somebody to shrug. */}
+              {timeline.length === 0 && (
+                <p className="ps-4 text-[var(--sys-muted-foreground)]">
+                  لا حدثَ مسجَّلاً لهذا الطلب — ولو إنشاؤه. إن كان الطلب قديماً فقد سبق السجلّ؛ وإلّا فأبلغ عنه.
+                </p>
+              )}
               {(timelineExpanded ? timeline : timeline.slice(-5)).map((event) => (
                 <div key={event.id} className="relative ps-4">
                   <span className="absolute -start-[7px] top-1 w-2.5 h-2.5 rounded-full bg-[var(--sys-destructive)] border-2 border-[var(--sys-card)]" />

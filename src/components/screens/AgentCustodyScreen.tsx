@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { amount, arDateShort, type Currency } from '@/lib/format';
 import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiWallet3Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /finance/agents — what each agent is holding.
@@ -273,7 +274,10 @@ function Section({
       </div>
 
       {orders.length === 0 ? (
-        <p className="px-4 py-5 text-xs text-[var(--sys-muted)] text-center">لا شيء هنا.</p>
+        <EmptyState
+          title="لا طلبات في هذه العهدة"
+          why="عهدةُ المندوب تمتلئ حين تُسلَّم إليه شحنة. إن كنت تنتظر طلباً هنا، فهو لم يُسلَّم بعد أو سُلِّم لمندوبٍ آخر."
+        />
       ) : (
         <ul className="divide-y divide-[var(--sys-border)]">
           {orders.map((o) => {

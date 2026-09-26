@@ -922,7 +922,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                 <div className="rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-3">
                   {categoriesError && <p className="text-xs text-[var(--sys-destructive)]">{categoriesError}</p>}
                   {!categoriesError && categories.length === 0 && (
-                    <p className="text-xs text-[var(--sys-muted)]">{ar ? 'لا توجد فئات بعد' : 'No categories yet'}</p>
+                    <p className="text-xs text-[var(--sys-muted)]">لا فئاتِ منتجاتٍ بعد — وبلا فئةٍ لا يمكن حصرُ هذا الموظّف في جزءٍ من الكتالوج. تُعرَّف من «المنتجات ← الفئات».</p>
                   )}
                   {categories.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">

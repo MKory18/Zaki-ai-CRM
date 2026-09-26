@@ -378,7 +378,9 @@ export function PermissionsScreen() {
             <CardContent className="text-center py-12">
               <RiShieldCheckLine className="w-6 h-6 text-[var(--sys-border-strong)] mx-auto mb-3" />
               <p className="text-sm text-[var(--sys-muted-foreground)]">
-                {search ? (ar ? 'لا نتائج مطابقة للبحث' : 'No roles match your search') : (ar ? 'لا توجد أدوار بعد' : 'No roles yet')}
+                {search
+                  ? `لا دورَ اسمه «${search}» — امسح البحث لترى الأدوار كلّها.`
+                  : 'لا أدوارَ بعد. الدور مجموعةُ صلاحياتٍ تُسنَد لموظّفين، وبلا دورٍ يُسنَد كلُّ موظّفٍ صلاحياتِه واحدةً واحدة.'}
               </p>
             </CardContent>
           </Card>
@@ -552,7 +554,7 @@ export function PermissionsScreen() {
                               {d && d.scope === 'CATEGORY' && (
                                 <div className="mt-2 ms-6 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-3">
                                   {categories.length === 0 ? (
-                                    <p className="text-xs text-[var(--sys-muted)]">{ar ? 'لا توجد فئات بعد' : 'No categories yet'}</p>
+                                    <p className="text-xs text-[var(--sys-muted)]">لا فئاتِ منتجاتٍ بعد — وبلا فئةٍ لا معنى لصلاحيةٍ محصورةٍ بفئة. تُعرَّف من «المنتجات ← الفئات».</p>
                                   ) : (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                                       {categories.map((c) => (

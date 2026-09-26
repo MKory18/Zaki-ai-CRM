@@ -7,6 +7,7 @@ import { screenApi as crmApi, qs } from '@/lib/screen-api';
 import { findRoute, routeLabel } from '@/lib/route-registry';
 import { RiArrowRightSLine, RiChat3Line, RiCheckDoubleLine, RiCheckLine, RiCloseLine, RiErrorWarningLine, RiPhoneLine, RiRefreshLine, RiSearchLine, RiSendPlaneLine, RiSettings3Line, RiShieldFlashLine, RiShoppingBagLine, RiUserLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface Conversation {
   id: string;
@@ -418,7 +419,10 @@ export function WhatsAppInboxScreen() {
                     {msgsLoading ? (
                       <div className="text-center text-xs text-[var(--sys-muted-foreground)] py-8">جارٍ التحميل...</div>
                     ) : messages.length === 0 ? (
-                      <div className="text-center text-xs text-[var(--sys-muted-foreground)] py-8">لا توجد رسائل بعد</div>
+                      <EmptyState
+                        title="لا رسائل في هذه المحادثة"
+                        why="المحادثة مفتوحة ولم يصل منها شيء بعد. رسائل واتساب لا تُسحب بأثرٍ رجعيّ — ما قبل الربط ليس هنا."
+                      />
                     ) : (
                       messages.map((m) => (
                         <div key={m.id} className={`flex ${m.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}>
@@ -514,7 +518,9 @@ export function WhatsAppInboxScreen() {
                     <p className="text-xs font-bold text-[var(--sys-muted)] mb-2">الطلبات الأخيرة</p>
                     {selected.customerId ? (
                       recentOrders.length === 0 ? (
-                        <p className="text-xs text-[var(--sys-muted)]">لا توجد طلبات</p>
+                        <p className="text-xs text-[var(--sys-muted-foreground)]">
+                          لا طلبَ لهذا الرقم بعد — المحادثة سابقةٌ لأوّل طلب.
+                        </p>
                       ) : (
                         <div className="space-y-1.5">
                           {recentOrders.map((o: any) => (

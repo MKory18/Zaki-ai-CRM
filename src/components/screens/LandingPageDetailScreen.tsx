@@ -343,7 +343,9 @@ export function LandingPageDetailScreen() {
                   </Button>
                 </div>
                 {recs.length === 0 ? (
-                  <p className="text-xs text-[var(--sys-muted-foreground)]">لا توجد منتجات مقترحة.</p>
+                  <p className="text-xs text-[var(--sys-muted-foreground)]">
+                    لا اقتراحاتٍ بعد — اضغط الزرّ أعلاه ليقرأ المساعدُ الصفحةَ ويقترح ما يناسبها.
+                  </p>
                 ) : (
                   <div className="space-y-1.5">
                     {recs.map((r: any, i: number) => (

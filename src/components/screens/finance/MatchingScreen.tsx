@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiGitBranchLine, RiLoader4Line } from '@remixicon/react';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /finance/matching — the outcome of matching, read as four queues: agreed,
@@ -198,7 +199,7 @@ function Queue({
         <div className="border-t border-[var(--sys-border)]">
           <p className="text-xs text-[var(--sys-muted-foreground)] px-4 py-2 bg-[var(--sys-surface)]">{hint}</p>
           {rows.length === 0 ? (
-            <p className="text-sm text-[var(--sys-muted-foreground)] px-4 py-6 text-center">لا شيء هنا.</p>
+            <EmptyState title="لا شيء في هذه المجموعة" why={hint} />
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs">

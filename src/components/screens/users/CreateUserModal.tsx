@@ -208,7 +208,9 @@ export function CreateUserModal({
             الدول التي يعمل فيها
           </p>
           {countries.length === 0 ? (
-            <p className="text-xs text-[var(--sys-muted)]">لا توجد دول معرّفة بعد.</p>
+            <p className="text-xs text-[var(--sys-muted-foreground)]">
+              لا بلدَ معرَّفاً بعد، وبلا بلدٍ لا يمكن حصرُ نطاق هذا الموظّف. تُعرَّف البلدان من «الإعدادات ← البلدان والمحافظات».
+            </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {countries.map((c) => (

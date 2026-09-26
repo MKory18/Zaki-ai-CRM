@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { RiAddCircleLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiPencilLine, RiSearchLine, RiStarLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export function ProductsScreen() {
   const { t, locale } = useApp();
@@ -334,8 +335,20 @@ export function ProductsScreen() {
                   })}
                   {filteredProducts.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-[var(--sys-muted)] text-xs">
-                        {loading ? t.loading : 'لا توجد منتجات مطابقة للبحث.'}
+                      <td colSpan={8} className="p-0">
+                        {loading ? (
+                          <p className="py-12 text-center text-xs text-[var(--sys-muted-foreground)]">{t.loading}</p>
+                        ) : (
+                          <EmptyState
+                            title={search ? `لا منتجَ يطابق «${search}»` : 'لا منتجات في هذا المتجر بعد'}
+                            why={
+                              search
+                                ? 'البحث يقرأ الاسم العربيّ والإنجليزيّ وSKU. امسحه لترى الكتالوج كلّه.'
+                                : 'بلا منتجٍ لا طلبَ ولا مخزونَ ولا صفحةَ هبوط. ابدأ بواحد.'
+                            }
+                            action={search ? { label: 'امسح البحث', onClick: () => setSearch('') } : undefined}
+                          />
+                        )}
                       </td>
                     </tr>
                   )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { EmptyState } from './EmptyState';
 
 /**
  * A TABLE ON A DESK, CARDS IN A HAND.
@@ -68,9 +69,19 @@ export interface RowsProps<T> {
 export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, selection, alert }: RowsProps<T>) {
   if (rows.length === 0) {
     return (
-      <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
-        {empty ?? 'لا شيء هنا.'}
-      </p>
+      <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
+        {empty ?? (
+          // The default says as little as it honestly can. A list that is
+          // empty because a filter is narrow and a list that is empty
+          // because nothing was ever created are different situations with
+          // different answers, and only the SCREEN knows which it is — so
+          // the caller passes an <EmptyState> that names the one it means.
+          <EmptyState
+            title="لا شيء هنا"
+            why="إمّا أنّ الفلاتر أضيق من أن تُطابق شيئاً، أو لم يُسجَّل شيءٌ بعد."
+          />
+        )}
+      </div>
     );
   }
 

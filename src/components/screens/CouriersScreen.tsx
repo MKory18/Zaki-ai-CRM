@@ -10,6 +10,7 @@ import { ContactButtons } from '@/components/orders/ContactButtons';
 import { COURIER_PLATFORMS } from '@/lib/couriers';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiEBike2Line, RiLoader4Line, RiPencilLine, RiStore2Line, RiTruckLine } from '@remixicon/react';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /settings/couriers — the shipping companies themselves. Their per-region
@@ -439,7 +440,12 @@ export function CouriersScreen() {
             )}
             {rows.filter((c) => c.storeId).length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">لا توجد شركات شحن ولا مندوبون بعد.</td>
+                <td colSpan={6} className="p-0">
+                  <EmptyState
+                    title="لا شركةَ شحنٍ لهذا المتجر بعد"
+                    why="بلا شركةِ شحنٍ لا يمكن تجهيز شحنة ولا طباعة بوليصة. أضِف واحدةً من النموذج أعلاه، أو انسخ شركةً معرَّفةً على مستوى البلد."
+                  />
+                </td>
               </tr>
             )}
           </tbody>

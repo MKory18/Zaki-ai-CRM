@@ -9,6 +9,7 @@ import { screenApi as crmApi } from '@/lib/screen-api';
 import { useApp } from '@/context/AppContext';
 import { RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiMessage3Line, RiRefreshLine, RiSettings3Line, RiShoppingBagLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface TelegramMsg {
   id: string;
@@ -209,7 +210,18 @@ export function TelegramOrdersScreen() {
                 </thead>
                 <tbody className="divide-y divide-[var(--sys-border)]">
                   {messages.length === 0 ? (
-                    <tr><td colSpan={8} className="py-8 text-center text-[var(--sys-muted)]">{loading ? 'جارٍ التحميل...' : 'لا توجد بيانات'}</td></tr>
+                    <tr>
+                      <td colSpan={8} className="p-0">
+                        {loading ? (
+                          <p className="py-8 text-center text-xs text-[var(--sys-muted-foreground)]">جارٍ التحميل…</p>
+                        ) : (
+                          <EmptyState
+                            title="لا رسائل من تلجرام بعد"
+                            why="الرسائل تصل حين يُضاف البوت إلى المجموعة ويُمنح صلاحية القراءة. لا شيء يُسحب بأثرٍ رجعيّ — ما قبل الربط ليس هنا."
+                          />
+                        )}
+                      </td>
+                    </tr>
                   ) : messages.map((m) => (
                     <tr key={m.id} className="hover:bg-[var(--sys-surface)]">
                       <td className="px-4 py-3 max-w-[280px]">

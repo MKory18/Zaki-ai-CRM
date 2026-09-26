@@ -128,7 +128,9 @@ export function CustomerHistoryModal({
       ) : (
         <div className="space-y-2">
           {history?.orders.length === 0 && (
-            <p className="text-sm text-[var(--sys-muted-foreground)]">لا توجد طلبات سابقة لهذا العميل.</p>
+            <p className="text-sm text-[var(--sys-muted-foreground)]">
+              هذا أوّل طلبٍ لهذا الرقم — لا سجلَّ سابقاً يُقاس عليه قبولٌ أو رفض.
+            </p>
           )}
           {history?.orders.map((o) => (
             <article key={o.id} className="border border-[var(--sys-border)] rounded-lg p-3">

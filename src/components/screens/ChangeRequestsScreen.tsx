@@ -10,6 +10,7 @@ import { OrderStateChip } from '@/components/ui/StatusChip';
 import { ROLE_LABELS, type UserRole } from '@/types/auth';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowLeftLine, RiCheckboxCircleLine, RiFileEditLine, RiLoader4Line } from '@remixicon/react';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /control/change-requests — the review queue, in its two halves.
@@ -157,9 +158,16 @@ export function ChangeRequestsScreen() {
       </div>
 
       {rows.length === 0 && (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          {tab === 'PENDING' ? 'لا توجد طلبات تعديل قيد المراجعة.' : 'لا تعديلات معتمدة بانتظار التطبيق.'}
-        </p>
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
+          <EmptyState
+            title={tab === 'PENDING' ? 'لا طلبَ تعديلٍ ينتظر المراجعة' : 'لا تعديلَ معتمَداً ينتظر التطبيق'}
+            why={
+              tab === 'PENDING'
+                ? 'الطلب المؤكَّد للقراءة فقط بالنسبة للموظّف: تغييرُه يمرّ من هنا. فراغُ القائمة يعني أنّ لا أحد طلب تغييراً.'
+                : 'ما يُعتمد هنا يُطبَّق على الطلب مباشرةً. فراغُ القائمة يعني أنّ كلّ ما اعتُمد طُبِّق.'
+            }
+          />
+        </div>
       )}
 
       {rows.map((r) => {

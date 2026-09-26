@@ -9,6 +9,7 @@ import { StoreIdentityCard } from '@/components/settings/StoreIdentityCard';
 import { STORE_TYPE_LABEL, storeTypeLabel } from '@/lib/store-types';
 import { RiAddCircleLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /settings/geo — countries, their stores and their regions in one screen.
@@ -347,7 +348,11 @@ function Regions({ countryId }: { countryId: string }) {
             {r.name}
           </span>
         ))}
-        {regions?.length === 0 && <span className="text-xs text-[var(--sys-muted)]">لا توجد محافظات بعد.</span>}
+        {regions?.length === 0 && (
+          <span className="text-xs text-[var(--sys-muted-foreground)]">
+            لا محافظاتٍ لهذا البلد — وبلا محافظةٍ لا تُحسب أجرةُ توصيلٍ ولا يُقاس أداءُ منطقة. أضِفها من الحقل أدناه.
+          </span>
+        )}
       </div>
       <form onSubmit={add} className="flex gap-2">
         <input
