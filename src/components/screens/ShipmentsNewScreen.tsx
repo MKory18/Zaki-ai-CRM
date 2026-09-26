@@ -6,6 +6,7 @@ import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiArrowGoBackLine, RiLoader4Line, RiPauseCircleLine, RiTruckLine } from '@remixicon/react';
+import { useConfirm } from '@/components/ui/Confirm';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -37,6 +38,7 @@ interface Row {
 export function ShipmentsNewScreen() {
   const ask = useAsk();
   const toast = useToast();
+  const confirm = useConfirm();
   const [providers, setProviders] = useState<{ id: string; name: string }[]>([]);
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
   const [filters, setFilters] = useState({ courier: '', region: '', from: '', to: '' });
@@ -120,6 +122,30 @@ export function ShipmentsNewScreen() {
       toast.failed('اختر شركة الشحن وطلباً واحداً على الأقل');
       return;
     }
+    /**
+     * ASKED BEFORE, BECAUSE THERE IS NO AFTER.
+     *
+     * This books the selected orders with a courier, opens a batch and
+     * commits their delivery fees. There is no endpoint that undoes it —
+     * the domain forbids deleting a financial record, and a reversal is a
+     * separate movement somebody has to write.
+     *
+     * Every other bulk action that changes money or state in this product
+     * asks first (collect, deliver, transfer are all dialogs). This one
+     * fired on a single click, and the only thing standing between a
+     * mis-tap and thirty booked parcels was the person's own attention.
+     *
+     * The count and the courier are in the question, because «هل أنت
+     * متأكّد» is a question nobody reads.
+     */
+    const courierName = providers.find((c) => c.id === filters.courier)?.name ?? 'شركة الشحن';
+    const ok = await confirm({
+      title: `شحن ${orderIds.length} طلباً مع ${courierName}؟`,
+      body: 'تُحجز لدى الشركة وتُحمَّل أجورُها، ولا تراجع بعدها — الإلغاء حركةٌ منفصلة.',
+      confirmLabel: 'أنشئ الشحنة',
+    });
+    if (!ok) return;
+
     setBusy(true);
     try {
       const res = await apiJson<{ batch: { batchNumber: string }; shipped: number; exceptions: { orderNumber: string; reasons: string[] }[] }>(

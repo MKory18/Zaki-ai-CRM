@@ -166,6 +166,28 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           colour, font and words come from the page editor. Said here, where
           the seller would otherwise change a colour and see nothing move.
           The logo and the support phone still count — waybills print them. */}
+      {/*
+        A SINGLE-PRODUCT STORE WITH NO PAGE CANNOT SELL, AND SAID NOTHING.
+
+        This block used to require `landingPageId`, so the note appeared
+        only once the store was already finished — and the state that
+        needed it, a store whose type says «its front IS a landing page»
+        while no page is picked, showed nothing at all. Same shape as a
+        courier with no fee rows: the setup that cannot work looks
+        identical to the one that can.
+      */}
+      {store.type === 'SINGLE_PRODUCT' && !store.landingPageId && (
+        <p className="rounded-lg border border-[var(--sys-warning)]/50 bg-[var(--sys-warning-soft)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-warning)]">
+          هذا المتجر واجهتُه صفحةُ هبوط، ولم تُختَر صفحةٌ بعد — فلا شيء يُعرض لزائره.{' '}
+          <a
+            href="/growth/single-product-stores"
+            className="font-semibold underline"
+          >
+            اختر صفحته الآن
+          </a>
+        </p>
+      )}
+
       {store.type === 'SINGLE_PRODUCT' && store.landingPageId && (
         <p className="rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-foreground)]">
           واجهة هذا المتجر صفحة هبوط — ألوانها وخطها ونصوصها تُعدَّل من{' '}
