@@ -296,7 +296,7 @@ export function WhatsAppInboxScreen() {
         {/* No connection state */}
         {!loading && conn && conn.status !== 'CONNECTED' ? (
           <div className="flex-1 flex items-center justify-center px-6">
-            <div className="text-center p-10 bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] max-w-md">
+            <div className="text-center p-8 bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] max-w-md">
               <div className="w-14 h-14 mx-auto rounded-full bg-[var(--sys-surface)] flex items-center justify-center">
                 <MessageCircle className="w-7 h-7 text-[var(--sys-muted-foreground)]" />
               </div>

@@ -282,3 +282,68 @@ describe('depth', () => {
     expect(offenders, `ظلّ بلونٍ مكتوبٍ بيده:\n${offenders.join('\n')}`).toEqual([]);
   });
 });
+
+/**
+ * THE ROOM INSIDE A SURFACE.
+ *
+ * Eleven paddings were in use inside cards, and two of them were doing the
+ * same job: "nothing here" was 24px on twenty-three screens and 32px on
+ * eight, so the empty message sat differently depending on which screen
+ * you happened to be on. Nobody chose two; two happened.
+ *
+ * Seven remain, and each answers a different question:
+ *
+ *   p-1    the inset of a segmented control, around its own segments
+ *   p-1.5  the inset of an icon button, or of a sheet that holds a list
+ *   p-2.5  a note strip sitting inside a card
+ *   p-3    a dense row card in a list
+ *   p-4    a card or a panel — the default
+ *   p-6    "nothing here", inside a screen
+ *   p-8    a whole page that is only a message
+ */
+describe('the room inside a surface', () => {
+  const CLASS = /class[nN]ame=\{?[`"']([^`"']*)[`"']/g;
+  const PAD = /(?<![\w-])p-(\d+(?:\.\d+)?)(?![\w-])/g;
+  const ALLOWED = new Set(['1', '1.5', '2.5', '3', '4', '6', '8']);
+
+  const isSurface = (cls: string) =>
+    cls.includes('rounded-lg') &&
+    cls.includes('border') &&
+    (cls.includes('--sys-card') || cls.includes('--sys-surface'));
+
+  it('comes from the scale, with no half-steps invented along the way', () => {
+    const offenders: string[] = [];
+    for (const { rel, src } of systemFiles()) {
+      for (const m of src.matchAll(CLASS)) {
+        if (!isSurface(m[1])) continue;
+        for (const pm of m[1].matchAll(PAD)) {
+          if (!ALLOWED.has(pm[1])) offenders.push(`${rel}: p-${pm[1]}`);
+        }
+      }
+    }
+    expect(offenders, `حشوٌ خارج السلّم:\n${offenders.slice(0, 15).join('\n')}`).toEqual([]);
+  });
+
+  it('and every "nothing here" panel says it with the same room around it', () => {
+    // The property, not the number: whatever the value is, there is one of
+    // it. A screen whose empty state is roomier than the next screen's
+    // reads as two different products.
+    const found = new Map<string, string[]>();
+    for (const { rel, src } of systemFiles()) {
+      for (const m of src.matchAll(CLASS)) {
+        const cls = m[1];
+        if (!isSurface(cls) || !cls.includes('text-center')) continue;
+        if (!cls.includes('--sys-muted-foreground')) continue;
+        // A whole page that is only a message is a different thing, and it
+        // centres itself to say so.
+        if (cls.includes('mx-auto')) continue;
+        const pad = [...cls.matchAll(PAD)][0]?.[1];
+        if (!pad) continue;
+        found.set(pad, [...(found.get(pad) ?? []), rel]);
+      }
+    }
+    expect(found.size, 'أكثر من حشوٍ لحالة «لا شيء هنا»').toBeGreaterThan(0);
+    const spread = [...found.entries()].map(([pad, files]) => `p-${pad}: ${files.length}`);
+    expect([...found.keys()], `أحجام مختلفة لنفس الحالة — ${spread.join(', ')}`).toHaveLength(1);
+  });
+});

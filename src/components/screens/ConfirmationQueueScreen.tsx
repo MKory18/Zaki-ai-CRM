@@ -80,7 +80,7 @@ export function ConfirmationQueueScreen() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-8 text-center">
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
         <div className="mx-auto w-14 h-14 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
           <Inbox className="w-7 h-7 text-[var(--sys-primary)]" />
         </div>

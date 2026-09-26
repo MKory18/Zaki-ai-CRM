@@ -342,7 +342,7 @@ export function DashboardScreen() {
         {/* ─── Order Status Tiles ─── */}
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
           {statusTiles.map((s) => (
-            <div key={s.label} className="bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]/80 p-3.5 text-center shadow-card">
+            <div key={s.label} className="bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]/80 p-4 text-center shadow-card">
               <span className={`inline-block w-2 h-2 rounded-full ${s.dot} mb-1.5`} />
               <span className="block text-caption font-semibold text-[var(--sys-muted-foreground)] leading-tight">{s.label}</span>
               <span className={`block text-xl font-black mt-1 ${s.value > 0 ? s.color : 'text-[var(--sys-border-strong)]'}`}>

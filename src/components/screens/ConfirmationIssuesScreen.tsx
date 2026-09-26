@@ -341,7 +341,7 @@ export function ConfirmationIssuesScreen() {
                 </div>
 
                 {changeSummary(issue, draft).length > 0 && (
-                  <div className="text-caption text-[var(--sys-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-2 space-y-0.5">
+                  <div className="text-caption text-[var(--sys-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-2.5 space-y-0.5">
                     <p className="text-[var(--sys-muted-foreground)]">سيُسجَّل في الطلب:</p>
                     {changeSummary(issue, draft).map((line) => (
                       <p key={line} dir="rtl">• {line}</p>

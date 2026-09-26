@@ -68,7 +68,7 @@ export interface RowsProps<T> {
 export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, selection, alert }: RowsProps<T>) {
   if (rows.length === 0) {
     return (
-      <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
+      <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
         {empty ?? 'لا شيء هنا.'}
       </p>
     );

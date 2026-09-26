@@ -717,7 +717,13 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                 </div>
                 <div className="flex justify-between px-2.5 py-2 bg-[var(--sys-surface)] rounded-b-lg">
                   <span className="font-bold">المحصَّل عند الباب:</span>
-                  <span className="font-black text-[var(--sys-destructive)] text-sm" dir="ltr">
+                  {/* Money coming IN, and the headline figure of the whole
+                      order. It was painted with the colour that means "late,
+                      or money lost" — which nobody noticed while the action
+                      colour was a pink sitting next to that red. The list
+                      shows the same number in the heading colour; this is
+                      now the same number in the same colour. */}
+                  <span className="font-black text-[var(--sys-heading)] text-sm" dir="ltr">
                     {money(cod?.cod ?? order.totalAmount)}
                   </span>
                 </div>

@@ -135,7 +135,7 @@ export function PenaltiesScreen() {
           <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
         </p>
       ) : data.penalties.length === 0 ? (
-        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
           لا خصومات هنا.
         </p>
       ) : (

@@ -89,7 +89,7 @@ export function InstalledAppsScreen() {
       {error && <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 text-sm text-[var(--sys-destructive)]">{error}</p>}
 
       {nothing ? (
-        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-8 text-center text-sm text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
           لا تطبيقات مثبتة.{' '}
           <Link href="/apps/store" className="font-bold text-[var(--sys-primary)] hover:underline">افتح متجر التطبيقات</Link>
         </p>
