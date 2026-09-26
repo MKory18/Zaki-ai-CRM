@@ -196,9 +196,30 @@ describe('spacing and type', () => {
 /**
  * AND WHAT THE BROWSER DOWNLOADS.
  *
- * Measured from the build, not asserted from memory. The CSS gate is met
- * with room; the icon gate is not, and the number is stated here rather
- * than rounded away — 234 distinct icons at about 717 bytes each.
+ * Measured from the build, not asserted from memory.
+ *
+ * CSS is met with room: 98.5 KB raw, 16.4 KB gzipped, against 100.
+ *
+ * ICONS MISS, BY 2.7 KB, AND THE NUMBER TOOK THREE TRIES TO GET RIGHT.
+ * The first measurement summed every icon definition in the product —
+ * 36 KB — which answers «how many concepts does this draw», not «what
+ * does a browser fetch». The second guessed that per-route splitting
+ * would save most of it. It does not: the bundler puts 231 of the icon
+ * paths in ONE shared chunk, so nearly every page pays nearly all of it.
+ * The shipped figure is 32.7 KB gzipped of path data against a 30 KB
+ * target.
+ *
+ * Closing it by drawing fewer things was examined and refused. 65 icons
+ * are drawn in a single place, and reading them one by one they are not
+ * duplicates — the hamburger, the filter funnel, the fullscreen pair,
+ * cash against a bank card, three arrows pointing three ways. Deleting
+ * distinctions to save 8% is the kind of tidiness that costs meaning.
+ *
+ * What is guarded instead, in `icon-inventory.test.ts`: nothing is
+ * imported and never drawn, and a fill is only ever an active state. Both
+ * found something. The remaining 2.7 KB is a delivery question — a sprite
+ * would move the paths out of JavaScript — and that is an architecture
+ * change across 239 call sites, not a cleanup.
  */
 describe('the payload', () => {
   it('keeps the first-load stylesheet under 100 KB', () => {

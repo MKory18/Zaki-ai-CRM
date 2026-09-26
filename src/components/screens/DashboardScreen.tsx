@@ -13,7 +13,7 @@ import { apiFetch } from '@/lib/api-client';
 import { productName } from '@/lib/product-name';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiEqualLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiSubtractLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiSubtractLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { IntelligenceStrip } from '@/components/growth/IntelligenceStrip';
 import { PageHeader } from '@/components/ui/PageHeader';
