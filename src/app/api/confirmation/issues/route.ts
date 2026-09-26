@@ -5,6 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { assertOrderAccess } from '@/lib/rbac';
 import { apiErrorResponse } from '@/lib/api-error';
+import { createNotification } from '@/lib/notification';
 import { logAudit } from '@/lib/audit';
 import { zodMessage } from '@/lib/zod-message';
 
@@ -23,6 +24,16 @@ import { zodMessage } from '@/lib/zod-message';
 export const ISSUE_REASONS = [
   'WRONG_PHONE', 'WRONG_ADDRESS', 'WRONG_PRODUCT', 'MISSING_DATA', 'DUPLICATE', 'OTHER',
 ] as const;
+
+/** The reason in words, for the message that goes to the people who fix it. */
+export const ISSUE_REASON_AR: Record<string, string> = {
+  WRONG_PHONE: 'رقم خاطئ',
+  WRONG_ADDRESS: 'عنوان خاطئ',
+  WRONG_PRODUCT: 'منتج خاطئ',
+  MISSING_DATA: 'بيانات ناقصة',
+  DUPLICATE: 'طلب مكرّر',
+  OTHER: 'سبب آخر',
+};
 
 const createSchema = z.object({
   orderId: z.string().uuid(),
@@ -137,6 +148,45 @@ export async function POST(req: Request) {
     await logAudit({
       companyId, userId: user.id, action: 'ORDER_ISSUE_RAISED',
       entity: 'Order', entityId: order.id, newData: { issueId: issue.id, reason: parsed.data.reason },
+    });
+
+    /**
+     * AND SOMEBODY IS TOLD.
+     *
+     * Raising an issue told NOBODY. The order went back to the pool marked as
+     * having a problem, and then waited for whoever happened to open the
+     * issues screen next — which, for an order that a customer is waiting on,
+     * is the wrong kind of patience.
+     *
+     * Two audiences in one call, because the union is what the situation is:
+     *
+     *   THE MODERATOR WHO ENTERED IT, by name. They typed the wrong number or
+     *   picked the wrong product; they are the one who can say what was meant.
+     *   Named explicitly because a moderator holds `confirmation.issues` for
+     *   their own work and there may be several — only this one is involved.
+     *
+     *   AND EVERYONE WHO CAN ACT ON AN ISSUE, which now includes the follow-up
+     *   agent. Waiting for one person to come back from lunch is how a
+     *   correctable order becomes a late one.
+     *
+     * A failed notification never fails the issue: the issue is the record,
+     * the message is the courtesy.
+     */
+    await createNotification({
+      companyId,
+      storeId: order.storeId,
+      audience: {
+        permission: 'confirmation.issues',
+        userIds: order.moderatorId ? [order.moderatorId] : [],
+      },
+      type: 'SYSTEM_ALERT',
+      title: 'إشكال إدخال على طلب',
+      message:
+        `الطلب ${order.orderNumber} رجع بإشكال: ${ISSUE_REASON_AR[parsed.data.reason] ?? parsed.data.reason}` +
+        `${parsed.data.note ? ` — ${parsed.data.note}` : ''}. صحّحه ليعود إلى الطابور.`,
+      link: `/confirmation/issues?order=${order.id}`,
+    }).catch(() => {
+      /* the issue is recorded either way */
     });
 
     return NextResponse.json({ issue }, { status: 201 });
