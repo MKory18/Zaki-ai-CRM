@@ -12,6 +12,20 @@ interface ModalProps {
   subtitle?: string;
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl';
+  /**
+   * WHERE IT COMES FROM. A SHEET IS THIS COMPONENT WITH AN EDGE.
+   *
+   * `center` is a dialog: a decision, and the page behind it waits.
+   * `end` is a side panel: a record you read BESIDE the list you found it
+   *   in, so closing it returns you to your place in that list rather than
+   *   to the top of a page you have to find your way down again.
+   * `bottom` is a phone's sheet, where the thumb already is.
+   *
+   * It is one prop and not a second component on purpose: a second dialog
+   * implementation means a second portal, a second scrim, a second Escape
+   * handler and a second focus trap — and one of the two always lags.
+   */
+  side?: 'center' | 'end' | 'bottom';
 }
 
 export function Modal({
@@ -21,18 +35,71 @@ export function Modal({
   subtitle,
   children,
   maxWidth = 'lg',
+  side = 'center',
 }: ModalProps) {
+  const panel = React.useRef<HTMLDivElement>(null);
+  /**
+   * ESCAPE CLOSED IT, BUT TAB COULD WALK OUT OF IT.
+   *
+   * A dialog whose focus is not held is a dialog where the third Tab press
+   * lands on a button in the page behind — a page the scrim says is not
+   * available, and which the keyboard could reach anyway. And on close,
+   * focus went to the top of the document rather than back to the control
+   * that opened it, so somebody who opened a modal from row forty resumed
+   * at row one.
+   */
   useEffect(() => {
+    if (!isOpen) return;
+
+    const opener = document.activeElement as HTMLElement | null;
+    const FOCUSABLE =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !panel.current) return;
+      /**
+       * No visibility filter here, and that is deliberate.
+       *
+       * The obvious one — `el.offsetParent !== null` — is wrong in exactly
+       * this component: this panel lives inside a `position: fixed` box,
+       * and a fixed element's descendants report a null `offsetParent` in
+       * real browsers. It would have filtered away every stop in the
+       * dialog and quietly turned the trap off altogether.
+       *
+       * The selector already excludes disabled controls and anything taken
+       * out of the tab order, and a dialog renders what it means to show.
+       */
+      const stops = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      if (stops.length === 0) return;
+      const first = stops[0];
+      const last = stops[stops.length - 1];
+      const here = document.activeElement;
+      if (!e.shiftKey && here === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && (here === first || !panel.current.contains(here))) {
+        e.preventDefault();
+        last.focus();
+      }
     };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    // After paint: the panel is not in the document yet on this tick.
+    const id = window.setTimeout(() => {
+      panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    }, 0);
+
     return () => {
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
+      window.clearTimeout(id);
+      // Back to the control that opened it, not to the top of the page.
+      opener?.focus?.();
     };
   }, [isOpen, onClose]);
 
@@ -53,7 +120,15 @@ export function Modal({
   // in the order instead of the history.
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--sys-sidebar)]/50 backdrop-blur-xs animate-in fade-in duration-200"
+      className={clsx(
+        // One scrim for the whole product. It used to be `--sys-sidebar`
+        // at 50% — a token that is a LIGHT colour in two of the three
+        // themes, so the wash meant to push the page back barely dimmed it.
+        'fixed inset-0 z-50 flex bg-[var(--sys-background)]/60 backdrop-blur-xs animate-in fade-in duration-200',
+        side === 'center' && 'items-center justify-center p-4',
+        side === 'end' && 'items-stretch justify-start',
+        side === 'bottom' && 'items-end justify-center'
+      )}
       // The portal moves the modal out of the row in the DOM, but a React
       // event still travels up the COMPONENT tree — so a click on a tab
       // inside this modal reached the row's onClick and opened the order
@@ -67,9 +142,19 @@ export function Modal({
         aria-hidden="true"
       />
       <div
+        ref={panel}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className={clsx(
-          'relative w-full bg-[var(--sys-card)] rounded-lg shadow-raised overflow-hidden z-10 max-h-[90vh] flex flex-col',
-          widthStyles[maxWidth]
+          'relative z-10 flex w-full flex-col overflow-hidden bg-[var(--sys-card)] shadow-raised',
+          side === 'center' && clsx('max-h-[90vh] rounded-lg', widthStyles[maxWidth]),
+          // A record read BESIDE the list it was found in: closing it
+          // returns you to your place in that list. Full height on a desk,
+          // and on a phone it is simply the screen.
+          side === 'end' && clsx('h-full max-h-full sm:rounded-s-lg', widthStyles[maxWidth]),
+          side === 'bottom' && clsx('max-h-[85vh] rounded-t-lg', widthStyles[maxWidth]),
+          side === 'bottom' && 'pb-[env(safe-area-inset-bottom)]'
         )}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--sys-border)] bg-[var(--sys-surface)]">

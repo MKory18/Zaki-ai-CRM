@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, KpiCard } from '@/components/ui/Card';
+import { Money } from '@/components/ui/Money';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -123,32 +124,27 @@ export function FinanceProfitScreen() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             title="إيراد الموصَّل"
-            value={`${summary.totalRevenue.toFixed(2)} ${data?.currency ?? ''}`}
+            value={<Money value={summary.totalRevenue} currency={data?.currency} />}
             subtitle="الطلبات المسلَّمة فعلاً، لا المؤكدة"
             icon={RiArrowUpCircleLine}
-            color="blue"
           />
           <KpiCard
             title="صافي الربح"
-            value={`${summary.netProfit.toFixed(2)} ${data?.currency ?? ''}`}
+            value={<Money value={summary.netProfit} currency={data?.currency} />}
             subtitle={`هامش ${summary.profitMargin}%`}
             icon={RiMoneyDollarCircleLine}
-            color="emerald"
-            trend={{ value: `${summary.profitMargin}%`, positive: summary.netProfit >= 0 }}
           />
           <KpiCard
             title="كلفة البضاعة"
-            value={`${summary.totalCOGS.toFixed(2)} ${data?.currency ?? ''}`}
+            value={<Money value={summary.totalCOGS} currency={data?.currency} />}
             subtitle="من كلفة التشغيلات — تُدخَل من شاشة التصنيع"
             icon={RiFileList3Line}
-            color="amber"
           />
           <KpiCard
             title="المصاريف التشغيلية"
-            value={`${summary.totalOperationalExpenses.toFixed(2)} ${data?.currency ?? ''}`}
+            value={<Money value={summary.totalOperationalExpenses} currency={data?.currency} />}
             subtitle="إعلانات وشحن ورواتب وما إليها"
             icon={RiArrowRightDownLine}
-            color="rose"
           />
         </div>
 
@@ -163,13 +159,13 @@ export function FinanceProfitScreen() {
               <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-xs text-[var(--sys-muted)] block">إيراد الموصَّل</span>
                 <span className="text-lg font-bold text-[var(--sys-success)] mt-1 block">
-                  +{summary.totalRevenue.toFixed(2)} {data?.currency ?? ''}
+                  +<Money value={summary.totalRevenue} currency={data?.currency} />
                 </span>
               </div>
               <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-xs text-[var(--sys-muted)] block">كلفة البضاعة</span>
                 <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
-                  -{summary.totalCOGS.toFixed(2)} {data?.currency ?? ''}
+                  −<Money value={summary.totalCOGS} currency={data?.currency} />
                 </span>
               </div>
               <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
@@ -177,19 +173,19 @@ export function FinanceProfitScreen() {
                 <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
                   {/* Read, not computed. A total assembled in the browser
                       disagrees with the books the moment a rule changes. */}
-                  -{summary.shippingAndCommissions.toFixed(2)} {data?.currency ?? ''}
+                  −<Money value={summary.shippingAndCommissions} currency={data?.currency} />
                 </span>
               </div>
               <div className="bg-[var(--sys-surface)] p-3 rounded-lg">
                 <span className="text-xs text-[var(--sys-muted)] block">مصاريف</span>
                 <span className="text-lg font-bold text-[var(--sys-destructive)] mt-1 block">
-                  -{summary.totalOperationalExpenses.toFixed(2)} {data?.currency ?? ''}
+                  −<Money value={summary.totalOperationalExpenses} currency={data?.currency} />
                 </span>
               </div>
               <div className="bg-[var(--sys-primary)] p-3 rounded-lg">
                 <span className="text-xs text-[var(--sys-primary-foreground)]/80 block font-bold">الصافي</span>
                 <span className="text-xl font-black text-[var(--sys-primary-foreground)] mt-1 block">
-                  {summary.netProfit.toFixed(2)} {data?.currency ?? ''}
+                  <Money value={summary.netProfit} currency={data?.currency} />
                 </span>
               </div>
             </div>
@@ -225,7 +221,7 @@ export function FinanceProfitScreen() {
                         <Badge variant="purple">{e.category}</Badge>
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[var(--sys-destructive)]">
-                        ${e.amount.toFixed(2)}
+                        <Money value={e.amount} currency={data?.currency} />
                       </td>
                       <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)] max-w-sm truncate">
                         {e.notes || '—'}
@@ -260,10 +256,10 @@ export function FinanceProfitScreen() {
                       مسلَّم: <span className="tabular-nums text-[var(--sys-heading)] font-semibold">{p.deliveredOrders}</span>
                     </span>
                     <span className="text-[var(--sys-muted-foreground)]">
-                      إيراد: <span className="tabular-nums text-[var(--sys-heading)] font-semibold">{Number(p.revenue).toFixed(2)}</span>
+                      إيراد: <Money value={p.revenue} currency={data?.currency} className="text-[var(--sys-heading)] font-semibold" />
                     </span>
                     <span className="ms-auto tabular-nums font-bold text-[var(--sys-success)]">
-                      {Number(p.netProfit).toFixed(2)}
+                      <Money value={p.netProfit} currency={data?.currency} />
                       <span className="text-xs text-[var(--sys-muted)] font-normal">
                         {' '}صافي · {p.profitMargin ?? 0}%
                       </span>
