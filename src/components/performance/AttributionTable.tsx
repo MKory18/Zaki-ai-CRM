@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Money } from '@/components/ui/Money';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 
 /**
  * Who brought the business, and what became of it.
@@ -79,7 +80,11 @@ export function AttributionTable({
   totals?: AttributionRow | null;
   empty: string;
 }) {
-  if (rows === null) return <p className="p-6 text-sm text-[var(--sys-muted)] text-center">جارٍ التحميل…</p>;
+  // The table reserves the height it is about to need. A panel that
+  // is one line while it waits and ten rows when it arrives moves
+  // everything under it, and on a phone a thumb already travelling
+  // towards a button presses whatever lands there.
+  if (rows === null) return <div className="p-4"><SkeletonRows rows={5} /></div>;
   if (rows.length === 0) return <p className="p-6 text-sm text-[var(--sys-muted)] text-center">{empty}</p>;
 
 

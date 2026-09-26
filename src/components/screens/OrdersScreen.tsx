@@ -26,6 +26,8 @@ import { FILTERABLE_STATES, STATE_LABEL_AR } from '@/lib/order-state';
 import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiFilter3Line, RiMagicLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SkeletonRows } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export function OrdersScreen() {
   const { t, currentUser, locale } = useApp();
@@ -522,9 +524,24 @@ export function OrdersScreen() {
             </div>
 
             {orders.length === 0 ? (
-              <p className="py-12 text-center text-sm text-[var(--sys-muted)]">
-                {loading ? t.loading : t.noOrders}
-              </p>
+              loading ? (
+                // The rows are the height the page is about to be. Saying
+                // «جارٍ التحميل» in one line and then growing to twenty-five
+                // rows moves every control under it.
+                <div className="p-4">
+                  <SkeletonRows rows={8} />
+                </div>
+              ) : (
+                <EmptyState
+                  title={activeFilters > 0 ? 'لا طلبَ يطابق هذه الفلاتر' : 'لا طلبات في هذا المتجر بعد'}
+                  why={
+                    activeFilters > 0
+                      ? 'الفلاتر أضيق من أن تُطابق شيئاً — وأكثرُ قائمةٍ فارغةٍ سببُها فلترٌ ضُبط قبل ساعةٍ ونُسي.'
+                      : 'الطلبات تصل من صفحات الهبوط والقنوات، أو تُدخَل يدويّاً من الزرّ أعلاه.'
+                  }
+                  action={activeFilters > 0 ? { label: 'امسح الفلاتر', onClick: resetFilters } : undefined}
+                />
+              )
             ) : (
               <ul className="divide-y divide-[var(--sys-border)]">
                 {orders.map((order) => (

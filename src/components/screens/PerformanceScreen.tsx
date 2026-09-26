@@ -15,6 +15,7 @@ import { findRoute, routeLabel } from '@/lib/route-registry';
 import { RiAlertLine, RiCheckboxCircleLine, RiCopperCoinLine, RiDownload2Line, RiEBike2Line, RiTrophyLine, RiTruckLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -331,7 +332,7 @@ export function PerformanceScreen() {
           <CardHeader title="أداء شركات الشحن" subtitle="نسبة النجاح والمرتجعات ومتوسط زمن التوصيل" />
           <CardContent className="p-0">
             {couriers === null ? (
-              <p className="p-6 text-sm text-[var(--sys-muted)] text-center">جارٍ التحميل…</p>
+              <div className="p-4"><SkeletonRows rows={5} /></div>
             ) : couriers.length === 0 ? (
               <p className="p-6 text-sm text-[var(--sys-muted)] text-center">لا شركات شحن بعد.</p>
             ) : (

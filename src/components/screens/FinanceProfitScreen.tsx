@@ -14,6 +14,7 @@ import { apiJson } from '@/lib/api-client';
 import { ZERO_SUMMARY, type ProfitSummary } from '@/lib/profit-summary';
 import { RiAddCircleLine, RiArrowRightDownLine, RiArrowUpCircleLine, RiFileList3Line, RiMoneyDollarCircleLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 
 export function FinanceProfitScreen() {
   const { t } = useApp();
@@ -238,7 +239,7 @@ export function FinanceProfitScreen() {
           <CardHeader title="ربحية المنتجات" subtitle="من الطلبات المسلَّمة — الإيراد ناقص كلفة البضاعة والشحن" />
           <CardContent className="p-0">
             {profitability === null ? (
-              <p className="p-6 text-sm text-[var(--sys-muted)] text-center">جارٍ التحميل…</p>
+              <div className="p-4"><SkeletonRows rows={5} /></div>
             ) : profitability.length === 0 ? (
               <p className="p-6 text-sm text-[var(--sys-muted)] text-center">لا مبيعات مسلَّمة بعد.</p>
             ) : (

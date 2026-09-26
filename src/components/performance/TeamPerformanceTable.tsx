@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { RiPhoneLine, RiShieldCheckLine, RiUserSettingsLine } from '@remixicon/react';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 
 /**
  * The confirmation desk, by person, for the span of days chosen above.
@@ -116,7 +117,7 @@ const HEADS = [
 
 export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null; totals?: TeamRow | null }) {
   if (rows === null) {
-    return <p className="p-6 text-sm text-[var(--sys-muted)] text-center">جارٍ التحميل…</p>;
+    return <div className="p-4"><SkeletonRows rows={5} /></div>;
   }
   if (rows.length === 0) {
     return (

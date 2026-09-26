@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { RiAddCircleLine, RiDeleteBinLine, RiFlaskLine, RiShutDownLine } from '@remixicon/react';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 
 /**
  * WHICH TELEGRAM GROUPS AND TOPICS BECOME ORDERS — configuration, on the
@@ -150,7 +151,7 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
             </thead>
             <tbody className="divide-y divide-[var(--sys-border)]">
               {sources === null ? (
-                <tr><td colSpan={7} className="py-8 text-center text-[var(--sys-muted)]">جارٍ التحميل...</td></tr>
+                <tr><td colSpan={7} className="p-4"><SkeletonRows rows={3} /></td></tr>
               ) : sources.length === 0 ? (
                 <tr><td colSpan={7} className="py-8 text-center text-[var(--sys-muted)]">لا مجموعات مرتبطة بعد.</td></tr>
               ) : sources.map((s) => (

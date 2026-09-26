@@ -16,6 +16,7 @@ import { userCan } from '@/lib/can';
 import { RiAddCircleLine, RiCursorLine, RiDeleteBinLine, RiExternalLinkLine, RiEyeLine, RiEyeOffLine, RiFileCopy2Line, RiFileCopyLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { routeLabel } from '@/lib/route-registry';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 
 export function LandingPagesScreen() {
   const tell = useTell();
@@ -159,7 +160,7 @@ export function LandingPagesScreen() {
             )}
 
             {loading ? (
-              <div className="p-10 text-center text-[var(--sys-muted-foreground)] text-sm">جارٍ التحميل…</div>
+              <div className="p-4"><SkeletonRows rows={4} /></div>
             ) : pages.length === 0 ? (
               <div className="p-10 text-center text-[var(--sys-muted-foreground)] text-sm">
                 لا توجد صفحات هبوط بعد. أنشئ أول صفحة لبدء استقبال الطلبات.
