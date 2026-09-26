@@ -73,7 +73,7 @@ export function BrandStage({
           <img src="/brand/mark.png" alt="" aria-hidden className="h-20 w-20 object-contain" />
           <div>
             <p className="text-display font-bold leading-none tracking-wide text-[var(--sys-heading)]" dir="ltr">
-              Zaki <span className="text-[var(--sys-primary)]">AI</span> Store
+              Zaki <span className="text-[var(--sys-primary)]">AI</span> OMS
             </p>
             <p
               className="mt-1.5 text-note font-semibold uppercase tracking-[0.3em] text-[var(--sys-muted-foreground)]"

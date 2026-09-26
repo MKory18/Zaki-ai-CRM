@@ -5,7 +5,7 @@ import { db } from './db';
  * WHAT A PUBLIC PAGE IS CALLED, AND ITS ICON — the store's, never ours.
  *
  * Every landing page and storefront carried the dashboard's title ("Zaki AI
- * Store — نظام المبيعات…") and the framework's default icon in the browser
+ * OMS — نظام المبيعات…") and the framework's default icon in the browser
  * tab and in every shared link's preview: a seller's customers saw the
  * seller's software, not the seller. A page is now named by what it sells
  * and the store selling it, and iconed by the store's favicon — its logo

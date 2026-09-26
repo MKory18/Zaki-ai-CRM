@@ -50,11 +50,31 @@ describe('the watermark', () => {
     expect(markZ).toBeGreaterThan(modalZ);
   });
 
-  it('is not something a screen can opt out of', () => {
-    // A watermark with a switch is a watermark for the honest.
+  /**
+   * THE ONE EXEMPTION, AND WHY IT IS SAFE TO HAVE ONE.
+   *
+   * The owner is exempt: the mark exists to make a leaked screen traceable
+   * to the account that was looking at it, and the owner is who that
+   * protects rather than who it deters. Everybody else carries it.
+   *
+   * This asserted that the mark was UNCONDITIONAL, which was the right
+   * rule while there were no exemptions and is now too strong. What still
+   * has to hold is the shape of the condition: exactly one, on the ROLE
+   * the server rendered, and on nothing a client can change. A mark behind
+   * a preference or a query parameter is a mark for the honest.
+   */
+  it('is lifted for the owner, and for nobody else', () => {
     const shell = readFile('src/components/shell/Shell.tsx');
     expect(shell).toContain('<Watermark');
-    expect(/\{\s*\w+\s*&&\s*<Watermark/.test(shell), 'العلامة صارت مشروطة').toBe(false);
+    const conditions = [...shell.matchAll(/\{\s*([^{}]+?)\s*&&\s*<Watermark/g)].map((m) => m[1]);
+    expect(conditions.length, 'العلامة بلا شرط، أو بأكثر من شرط').toBe(1);
+    expect(conditions[0], 'الإعفاء ليس بالدور').toBe("userRole !== 'SUPER_ADMIN'");
+    // The role arrives as a rendered prop from the server layout. Anything
+    // the browser can set — storage, a search param, a toggle — is not it.
+    for (const escape of ['localStorage', 'sessionStorage', 'searchParams', 'document.cookie']) {
+      const near = new RegExp(escape + '[\s\S]{0,200}<Watermark');
+      expect(near.test(shell), `الإعفاء من ${escape}`).toBe(false);
+    }
   });
 });
 

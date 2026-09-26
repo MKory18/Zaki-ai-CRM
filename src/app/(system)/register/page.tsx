@@ -61,7 +61,7 @@ export default function RegisterPage() {
           <img src="/brand/mark.png" alt="" aria-hidden className="h-20 w-20 object-contain" />
           <h1 className="text-2xl font-semibold text-[var(--sys-heading)]">إنشاء حساب جديد</h1>
           <p className="text-xs text-[var(--sys-muted-foreground)]">
-            Zaki AI Store — نظام إدارة المبيعات والطلبات والأرباح
+            Zaki AI OMS — نظام إدارة المبيعات والطلبات والأرباح
           </p>
         </div>
 

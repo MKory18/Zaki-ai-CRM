@@ -2,7 +2,7 @@ export type Locale = 'en' | 'ar';
 
 export const translations = {
   en: {
-    appName: 'Zaki AI Store',
+    appName: 'Zaki AI OMS',
     tagline: 'E-Commerce Sales, Orders, Profit & Business Intelligence',
     // Navigation
     dashboard: 'Dashboard',

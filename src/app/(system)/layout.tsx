@@ -8,15 +8,15 @@ import { AppProvider } from '@/context/AppContext';
 import { GlobalTrackingProvider } from '@/components/tracking/GlobalTrackingProvider';
 
 export const metadata: Metadata = {
-  title: 'Zaki AI Store — نظام المبيعات والطلبات والأرباح الذكي',
+  title: 'Zaki AI OMS — نظام المبيعات والطلبات والأرباح الذكي',
   description:
-    'Zaki AI Store — منصة متكاملة لإدارة المنتجات والطلبات والمودريتورات والأرباح الحقيقية مع مستشار أعمال بالذكاء الاصطناعي.',
+    'Zaki AI OMS — منصة متكاملة لإدارة المنتجات والطلبات والمودريتورات والأرباح الحقيقية مع مستشار أعمال بالذكاء الاصطناعي.',
   icons: {
     icon: '/brand/mark.png',
     apple: '/icons/icon-192.png',
   },
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Zaki AI' },
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Zaki AI OMS' },
 };
 
 /**

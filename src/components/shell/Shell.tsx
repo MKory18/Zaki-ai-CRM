@@ -84,7 +84,20 @@ export function Shell({
         onClose={() => palette.setOpen(false)}
       />
 
-      <Watermark viewer={viewer} />
+      {/*
+        EVERYONE EXCEPT THE OWNER.
+
+        The mark exists so a photographed screen full of customers' numbers
+        can be traced to the account that was looking at it. The owner is
+        who that protects, not who it deters — and it is their company's
+        data on the screen. So they are exempt, and nobody else is.
+
+        The exemption is a ROLE, read from the session on the server and
+        arriving here as a rendered prop. It is deliberately not a setting,
+        not a preference and not a query parameter: a mark anyone can turn
+        off is a mark for the honest.
+      */}
+      {userRole !== 'SUPER_ADMIN' && <Watermark viewer={viewer} />}
       <IdleGuard />
     </div>
     </StoreCurrencyProvider>
