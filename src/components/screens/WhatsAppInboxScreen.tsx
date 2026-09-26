@@ -302,7 +302,7 @@ export function WhatsAppInboxScreen() {
               <p className="mt-2 text-xs text-[var(--sys-muted-foreground)] leading-relaxed">
                 {conn.envConfigured
                   ? 'تم إعداد البيانات لكن الاتصال غير مفعّل. جرّب إعادة الاتصال من الإعدادات.'
-                  : 'أكمل متغيرات البيئة (Access Token, WABA ID, RiPhoneLine Number ID, App Secret, Verify Token, Encryption Key) ثم اضغط إعادة الاتصال من صفحة الإعدادات.'}
+                  : 'متغيّرات البيئة على الخادم غير مكتملة. صفحةُ الإعداد تسرد المطلوبَ بأسمائه وخطواتِ التفعيل.'}
               </p>
               {canManage && (
                 <Link href="/settings/whatsapp" className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold hover:opacity-90">

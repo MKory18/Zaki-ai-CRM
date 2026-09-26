@@ -96,6 +96,42 @@ describe('the icon set', () => {
     ).toEqual([]);
   });
 
+  /**
+   * AN ICON'S NAME INSIDE A STRING IS NOT AN ICON.
+   *
+   * Two were found, both left by a global rename that walked out of the JSX
+   * and into text a person reads:
+   *
+   *   • a button labelled «Retry RiShipLine», which is the name of its own
+   *     icon where the word «Shipping» used to be;
+   *   • and worse, a WhatsApp setup message listing «RiPhoneLine Number ID»
+   *     among the environment variables to set — telling somebody to
+   *     configure a variable that does not exist. That one was a copy of a
+   *     list the settings screen already holds correctly, so the copy went
+   *     rather than the word.
+   *
+   * A rename cannot see the difference between a component and a sentence.
+   * This can.
+   */
+  it('never leaves an icon name inside a string a person reads', () => {
+    const LIT = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"/g;
+    const offenders: string[] = [];
+    for (const { rel, src } of dashboardFiles('both')) {
+      for (const [i, line] of stripComments(src).split('\n').entries()) {
+        if (!line.includes('Ri')) continue;
+        for (const m of line.matchAll(LIT)) {
+          const body = m[1] ?? m[2] ?? '';
+          const hit = /Ri[A-Z]\w*(?:Line|Fill)\b/.exec(body);
+          if (hit) offenders.push(`${rel}:${i + 1}  ${hit[0]}  «${body.trim().slice(0, 60)}»`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      `اسم أيقونة داخل نصٍّ يقرأه إنسان:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
   it('and the two solid marks that stay are somebody else’s logo', () => {
     // TikTok's note and Snapchat's ghost are brand marks: a logo is a
     // solid shape, and drawing them as outlines would make them wrong

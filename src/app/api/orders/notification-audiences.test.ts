@@ -26,6 +26,12 @@ const { db, requireContext, assertOrderAccess, can, createNotification } = vi.ho
     orderStatusLog: { create: vi.fn() },
     orderActivity: { create: vi.fn() },
     orderItem: { create: vi.fn() },
+    // A FAILED_DELIVERY transition now writes its attempt in the same
+    // transaction as the status.
+    deliveryAttempt: {
+      findFirst: vi.fn(async () => null),
+      create: vi.fn(async () => ({ id: 'attempt-1', attemptNumber: 1 })),
+    },
     user: { findUnique: vi.fn(), findMany: vi.fn() },
     region: { findMany: vi.fn() },
     offer: { findMany: vi.fn() },

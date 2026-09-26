@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { roundMinor } from './money';
 import { consumeOrderStock } from './stock-consumption';
+import { appendDeliveryAttempt } from './delivery-attempts';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -83,7 +84,7 @@ export async function recordPartialDelivery(
     where: { id: input.orderId, companyId: input.companyId },
     select: {
       id: true, orderNumber: true, shippingStatus: true, deliveryFee: true,
-      priceIncludesDelivery: true, collectedAmount: true,
+      priceIncludesDelivery: true, collectedAmount: true, deliveryProviderId: true,
       items: {
         select: {
           id: true, productId: true, productName: true,
@@ -195,6 +196,23 @@ export async function recordPartialDelivery(
       ...(nothingTaken ? { returnReason: input.note ?? 'رفض الاستلام بالكامل' } : {}),
       version: { increment: 1 },
     },
+  });
+
+  // THE KNOCK. This is the screen built for the person at the door, and it
+  // was the one recording no attempt at all.
+  //
+  // Refusing everything is a FAILED attempt whose reason is the refusal —
+  // not a «returned» attempt. The parcel coming back is what happens next,
+  // at a warehouse; what happened at the door is that somebody would not
+  // take it.
+  await appendDeliveryAttempt(tx, {
+    orderId: order.id,
+    companyId: input.companyId,
+    result: nothingTaken ? 'FAILED' : status === 'PARTIALLY_DELIVERED' ? 'PARTIALLY_DELIVERED' : 'DELIVERED',
+    failureReason: nothingTaken ? 'CUSTOMER_REFUSED' : null,
+    note: input.note ?? null,
+    deliveryProviderId: order.deliveryProviderId,
+    userId: input.userId,
   });
 
   // THE GOODS LEAVE THE SHELF HERE.

@@ -9,8 +9,10 @@ import { queueConversions } from '@/lib/conversions/emit';
 import { assertOrderAccess } from '@/lib/rbac';
 import {
   isValidShippingTransition, canEnterShipping, STATUS_TIMESTAMP,
-  DELIVERY_FAILURE_REASONS, RETURN_REASONS, SHIPPING_STATUSES, type ShippingStatus,
+  DELIVERY_FAILURE_REASONS, RETURN_REASONS, SHIPPING_STATUSES, attemptForShippingStatus,
+  type ShippingStatus,
 } from '@/lib/shipping-workflow';
+import { appendDeliveryAttempt } from '@/lib/delivery-attempts';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can, authorize } from '@/lib/authorization';
@@ -312,6 +314,30 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           orderId: id,
           companyId,
           allowNegativeStock: country.allowNegativeStock,
+          userId: user.id,
+        });
+      }
+
+      // THE KNOCK THAT PRODUCED THIS STATUS, WRITTEN HERE AND NOT BY THE
+      // BROWSER.
+      //
+      // The failure modal used to POST the attempt and then PATCH the
+      // transition, as two requests: an append-only audit row could outlive
+      // a transition that failed or that somebody abandoned, and the success
+      // path simply never sent the first request at all — so the table held
+      // failures only. Both are fixed by the row being written where the
+      // status is, in one transaction, for the same reason the stock is.
+      const knock = newShippingStatus
+        ? attemptForShippingStatus(newShippingStatus, { failureReason: deliveryFailureReason })
+        : null;
+      if (knock) {
+        await appendDeliveryAttempt(tx, {
+          orderId: id,
+          companyId,
+          result: knock.result,
+          failureReason: knock.failureReason,
+          note: shippingNote ?? null,
+          deliveryProviderId: order.deliveryProviderId,
           userId: user.id,
         });
       }

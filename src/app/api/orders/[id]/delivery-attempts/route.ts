@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
-import { DELIVERY_ATTEMPT_RESULTS } from '@/lib/shipping-workflow';
+import { DELIVERY_ATTEMPT_RESULTS, type DeliveryAttemptResult } from '@/lib/shipping-workflow';
 import { logAudit } from '@/lib/audit';
 import { can, authorize } from '@/lib/authorization';
+import { appendDeliveryAttempt } from '@/lib/delivery-attempts';
 
 /**
  * GET  /api/orders/[id]/delivery-attempts — chronological attempt history
@@ -78,24 +79,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       }
     }
 
-    const last = await db.deliveryAttempt.findFirst({
-      where: { orderId: id },
-      orderBy: { attemptNumber: 'desc' },
-      select: { attemptNumber: true },
+    const created = await appendDeliveryAttempt(db, {
+      orderId: id,
+      companyId,
+      result: result as DeliveryAttemptResult,
+      failureReason: result === 'FAILED' ? failureReason!.trim() : null,
+      note,
+      deliveryProviderId: providerId,
+      userId: user.id,
     });
-    const attemptNumber = (last?.attemptNumber ?? 0) + 1;
-
-    const attempt = await db.deliveryAttempt.create({
-      data: {
-        companyId,
-        orderId: id,
-        deliveryProviderId: providerId,
-        deliveryAgentId: user.id,
-        attemptNumber,
-        result,
-        failureReason: result === 'FAILED' ? failureReason!.trim() : null,
-        note: note?.trim() || null,
-      },
+    const attemptNumber = created.attemptNumber;
+    const attempt = await db.deliveryAttempt.findUniqueOrThrow({
+      where: { id: created.id },
       include: {
         agent: { select: { id: true, name: true } },
         provider: { select: { id: true, name: true, code: true } },

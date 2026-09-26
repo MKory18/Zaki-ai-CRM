@@ -14,24 +14,8 @@ import { Input, Textarea, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { apiFetch } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
+import { ATTEMPT_RESULT_AR } from '@/lib/shipping-workflow';
 import { RiArchiveDrawerLine, RiArchiveLine, RiArrowGoBackLine, RiCloseCircleLine, RiHistoryLine, RiMapPinLine, RiNumbersLine, RiShipLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
-
-/** Delivery attempt outcomes, stored as codes and read as words. */
-const ATTEMPT_RESULT_AR: Record<string, string> = {
-  DELIVERED: 'سُلّم',
-  PARTIALLY_DELIVERED: 'سُلّم جزئياً',
-  FAILED: 'فشل',
-  FAILED_DELIVERY: 'فشل التوصيل',
-  CUSTOMER_NOT_AVAILABLE: 'العميل غير متواجد',
-  PHONE_UNREACHABLE: 'الهاتف مغلق',
-  WRONG_ADDRESS: 'عنوان خاطئ',
-  CUSTOMER_REFUSED: 'العميل رفض الاستلام',
-  ADDRESS_NOT_FOUND: 'العنوان غير موجود',
-  AREA_NOT_SERVICED: 'المنطقة خارج التغطية',
-  CUSTOMER_REQUESTED_DELAY: 'العميل طلب التأجيل',
-  RESCHEDULED: 'أُعيدت جدولته',
-  OTHER: 'أخرى',
-};
 
 
 const SHIPPING_STATE: Record<string, { ar: string; en: string; cls: string }> = {
@@ -84,7 +68,7 @@ const NEXT_ACTIONS: Record<string, { to: string; labelAr: string; labelEn: strin
   ],
   FAILED_DELIVERY: [
     { to: 'RETURN_REQUESTED', labelAr: 'طلب إرجاع', labelEn: 'Return', cls: 'border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)]' },
-    { to: 'SHIPPED', labelAr: 'إعادة شحن', labelEn: 'Retry RiShipLine', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' },
+    { to: 'SHIPPED', labelAr: 'إعادة شحن', labelEn: 'Reship', cls: 'border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]' },
   ],
   RETURN_REQUESTED: [{ to: 'RETURNED', labelAr: 'تم الإرجاع', labelEn: 'Returned', cls: 'border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]' }],
 };
@@ -122,6 +106,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
   const [deliveryFee, setDeliveryFee] = useState('');
   const [failureReason, setFailureReason] = useState('');
   const [returnReason, setReturnReason] = useState('');
+  const [attemptResult, setAttemptResult] = useState('');
   const [note, setNote] = useState('');
 
   useEffect(() => {
@@ -201,7 +186,10 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
     return result.ok;
   };
 
-  /** Record a delivery attempt; returns ok so sequences can abort on failure */
+  /**
+   * An attempt that does NOT end the order — see the modal below. Outcomes
+   * are never recorded from here; the server writes those with the status.
+   */
   const recordAttempt = async (result: string): Promise<boolean> => {
     setActionLoading('attempt');
     setFeedback(null);
@@ -209,7 +197,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
       const res = await apiFetch(`/api/orders/${order.id}/delivery-attempts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result, failureReason, note }),
+        body: JSON.stringify({ result, note }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -290,7 +278,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
                 transition(a.to);
               }}
               disabled={actionLoading !== null}
-              className={`min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-colors cursor-pointer disabled:opacity-50 ${a.cls}`}
+              className={`min-h-11 md:min-h-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-colors cursor-pointer disabled:opacity-50 ${a.cls}`}
             >
               {a.to === 'DELIVERED' ? <RiArchiveDrawerLine className="w-4 h-4" /> : a.to === 'FAILED_DELIVERY' ? <RiCloseCircleLine className="w-4 h-4" /> : a.to === 'RETURNED' || a.to === 'RETURN_REQUESTED' ? <RiArrowGoBackLine className="icon-mirror w-4 h-4" /> : <RiShipLine className="w-4 h-4" />}
               {ar ? a.labelAr : a.labelEn}
@@ -328,11 +316,24 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
 
       {/* Delivery attempts (append-only history) */}
       <div className="border-t border-[var(--sys-border)] pt-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2 flex items-center gap-1.5">
-          <RiHistoryLine className="w-4 h-4" />
-          {ar ? 'سجل الشحن والتوصيل' : 'Shipping & Delivery Timeline'}
-          {loading && <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-[var(--sys-destructive)]" />}
-        </p>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-bold uppercase tracking-wider text-[var(--sys-muted)] flex items-center gap-1.5">
+            <RiHistoryLine className="w-4 h-4" />
+            {ar ? 'سجل الشحن والتوصيل' : 'Shipping & Delivery Timeline'}
+            {loading && <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-[var(--sys-destructive)]" />}
+          </p>
+          {canEdit && ['SHIPPED', 'OUT_FOR_DELIVERY'].includes(order?.shippingStatus) && (
+            <button
+              type="button"
+              onClick={() => { setNote(''); setAttemptResult(''); setOpenForm('attempt'); }}
+              disabled={actionLoading !== null}
+              className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border-strong)] px-3 py-1.5 text-xs font-bold text-[var(--sys-foreground)] transition-colors cursor-pointer hover:bg-[var(--sys-surface)] disabled:opacity-50"
+            >
+              <RiTimerLine className="w-4 h-4" />
+              {ar ? 'تسجيل محاولة' : 'Log an attempt'}
+            </button>
+          )}
+        </div>
         {attempts.length === 0 ? (
           <p className="text-xs text-[var(--sys-muted)] py-1.5">{ar ? 'لا محاولات توصيل بعد.' : 'No delivery attempts yet.'}</p>
         ) : (
@@ -360,6 +361,49 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
       </div>
 
       {/* ─── Forms ─── */}
+
+      {/*
+        AN ATTEMPT THAT IS NOT AN OUTCOME.
+        «Knocked, nobody home, agreed to come back tomorrow» is most of what a
+        hard round consists of, and it does not end the order — so it had no
+        transition button, and therefore no way into the product at all. The
+        endpoint for it existed and nothing could reach it.
+        Only results that leave the order out for delivery are offered. A
+        delivery that truly failed belongs on «فشل التوصيل», which records the
+        attempt and moves the order in one step.
+      */}
+      <Modal isOpen={openForm === 'attempt'} onClose={() => setOpenForm(null)} title={ar ? 'تسجيل محاولة توصيل' : 'Log a Delivery Attempt'} maxWidth="md">
+        <div className="space-y-3" dir={isRtl ? 'rtl' : 'ltr'}>
+          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            {ar
+              ? 'للمحاولة التي لم تُنهِ الطلب — يبقى الطلب خارجاً للتوصيل. إن فشل التوصيل نهائياً فاستخدم «فشل التوصيل».'
+              : 'For an attempt that did not end the order — it stays out for delivery. If the delivery failed for good, use «Failed».'}
+          </p>
+          <Select label={ar ? 'النتيجة *' : 'Result *'} value={attemptResult} onChange={(e) => setAttemptResult(e.target.value)}>
+            <option value="">— {ar ? 'اختر' : 'Select'} —</option>
+            <option value="RESCHEDULED">{ar ? ATTEMPT_RESULT_AR.RESCHEDULED : 'Rescheduled'}</option>
+            <option value="OTHER">{ar ? ATTEMPT_RESULT_AR.OTHER : 'Other'}</option>
+          </Select>
+          <Textarea
+            label={attemptResult === 'OTHER' ? `${ar ? 'ملاحظة (إلزامية)' : 'Note (required)'} *` : ar ? 'ملاحظة' : 'Note'}
+            rows={2} value={note} onChange={(e) => setNote(e.target.value)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => setOpenForm(null)}>{ar ? 'إلغاء' : 'Cancel'}</Button>
+            <Button
+              size="sm" loading={actionLoading === 'attempt'}
+              disabled={!attemptResult || (attemptResult === 'OTHER' && note.trim().length < 5)}
+              onClick={async () => {
+                const ok = await recordAttempt(attemptResult);
+                if (ok) { setNote(''); setAttemptResult(''); setOpenForm(null); }
+              }}
+            >
+              {ar ? 'تسجيل' : 'Log'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <Modal isOpen={openForm === 'fail'} onClose={() => setOpenForm(null)} title={ar ? 'تسجيل فشل التوصيل' : 'Record Delivery Failure'} maxWidth="md">
         <div className="space-y-3" dir={isRtl ? 'rtl' : 'ltr'}>
           <Select label={ar ? 'سبب الفشل *' : 'Failure Reason *'} value={failureReason} onChange={(e) => setFailureReason(e.target.value)}>
@@ -376,10 +420,10 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
               size="sm" loading={actionLoading === 'transition'}
               disabled={!failureReason || (failureReason === 'OTHER' && note.trim().length < 5)}
               onClick={async () => {
-                // 1. record attempt 2. transition — abort the sequence on first
-                // failure and keep the modal open so the user can retry
-                const attemptOk = await recordAttempt('FAILED');
-                if (!attemptOk) return;
+                // One request. The attempt row is appended by the server in
+                // the same transaction as the status change — it used to be
+                // POSTed from here first, which could leave a permanent audit
+                // row for a transition that then failed.
                 const transitionOk = await transition('FAILED_DELIVERY', { deliveryFailureReason: failureReason, shippingNote: note });
                 if (transitionOk) {
                   setNote(''); setFailureReason('');

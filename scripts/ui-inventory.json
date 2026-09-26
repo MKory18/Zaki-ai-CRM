@@ -180,12 +180,12 @@
     "tabs": 0
   },
   "src/components/orders/ShippingSection.tsx": {
-    "buttons": 8,
-    "inputs": 5,
+    "buttons": 11,
+    "inputs": 6,
     "columns": 0,
     "cards": 0,
-    "modals": 3,
-    "icons": 9,
+    "modals": 4,
+    "icons": 10,
     "links": 0,
     "tabs": 0
   },
