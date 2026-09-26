@@ -174,7 +174,7 @@ export function CustomersScreen() {
                     <span className="font-bold text-[var(--sys-success)]">{c.deliveredOrders}</span>
                   </div>
                   <div className="bg-[var(--sys-destructive-soft)] p-1.5 rounded-lg">
-                    <span className="text-[var(--sys-destructive)] block">ملغي</span>
+                    <span className="text-[var(--sys-destructive)] block">ملغى</span>
                     <span className="font-bold text-[var(--sys-destructive)]">{c.cancelledOrders}</span>
                   </div>
                 </div>

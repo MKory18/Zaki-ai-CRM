@@ -5,7 +5,8 @@ import { apiJson } from '@/lib/api-client';
 import { ChangeRequestReview } from '@/components/orders/ChangeRequestReview';
 import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { changeFieldLabel } from '@/lib/change-request-fields';
-import { deriveCoreState, STATE_LABEL_AR } from '@/lib/order-state';
+import { deriveCoreState } from '@/lib/order-state';
+import { OrderStateChip } from '@/components/ui/StatusChip';
 import { ROLE_LABELS, type UserRole } from '@/types/auth';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowLeftLine, RiCheckboxCircleLine, RiFileEditLine, RiLoader4Line } from '@remixicon/react';
@@ -163,7 +164,7 @@ export function ChangeRequestsScreen() {
 
       {rows.map((r) => {
         const role = ROLE_LABELS[r.requestedRole as UserRole]?.ar ?? r.requestedRole;
-        const state = STATE_LABEL_AR[deriveCoreState(r.order)];
+        const state = deriveCoreState(r.order);
         return (
           <article key={r.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-3">
             <header className="flex flex-wrap items-center gap-2">
@@ -175,7 +176,9 @@ export function ChangeRequestsScreen() {
                 )}
               </span>
               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{r.order.orderNumber}</span>
-              <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">{state}</span>
+              {/* The one chip. Drawn here by hand it was always grey, so a
+                  cancelled order and a delivered one looked the same. */}
+              <OrderStateChip state={state} />
               {tab === 'PENDING' && r.blocking && (
                 <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]">
                   يوقف تقدّم الطلب

@@ -1319,6 +1319,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/ui/EmptyState.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 1,
+    "tabs": 0
+  },
   "src/components/ui/Input.tsx": {
     "buttons": 0,
     "inputs": 3,
@@ -1356,6 +1366,16 @@
     "cards": 0,
     "modals": 0,
     "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/Toast.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
     "links": 0,
     "tabs": 0
   },

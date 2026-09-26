@@ -132,7 +132,7 @@ describe('the stages of an order', () => {
   it('shows a cancelled order as closed, not as waiting somewhere', () => {
     const s = byKey(orderStages(base({ confirmationStatus: 'CANCELLED' })));
     expect(s.CLOSED.status).toBe('CURRENT');
-    expect(s.CLOSED.facts).toContainEqual({ label: 'النتيجة', value: 'ملغي' });
+    expect(s.CLOSED.facts).toContainEqual({ label: 'النتيجة', value: 'ملغى' });
     expect(s.TRANSIT.status).toBe('SKIPPED');
   });
 

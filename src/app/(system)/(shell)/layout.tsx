@@ -1,6 +1,7 @@
 import React from 'react';
 import { Shell } from '@/components/shell/Shell';
 import { ConfirmProvider } from '@/components/ui/Confirm';
+import { ToastProvider } from '@/components/ui/Toast';
 import { AiDock } from '@/components/ai/AiDock';
 import { can } from '@/lib/authorization';
 import { requireShellContext } from '@/lib/page-guard';
@@ -36,6 +37,11 @@ export default async function ShellLayout({ children }: { children: React.ReactN
       {/* One dialog for the whole app: every screen that needs to ask
           before doing something asks in here, not in a browser box. */}
       <ConfirmProvider>
+        {/* One place a screen says what just happened — beside the one
+            place it asks before doing something. A message that appears at
+            the top of a long form, after a button at the bottom, is a
+            message nobody sees. */}
+        <ToastProvider>
         {children}
         {/*
           The assistant lives HERE and not on a page.
@@ -50,6 +56,7 @@ export default async function ShellLayout({ children }: { children: React.ReactN
           company, the store and the permissions itself.
         */}
         {can(user, 'ai.use') && <AiDock />}
+        </ToastProvider>
       </ConfirmProvider>
     </Shell>
   );

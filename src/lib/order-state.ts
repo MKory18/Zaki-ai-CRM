@@ -346,6 +346,16 @@ export function rateOf(part: number, whole: number): number | null {
 /** The core states an order can actually be in today, for a filter dropdown. */
 export const FILTERABLE_STATES: CoreState[] = CORE_STATES.filter((s) => whereForState(s) !== null);
 
+/**
+ * ONE WORD PER STATE, AND IT LIVES HERE.
+ *
+ * There were three copies. This one, a second inside OrderStateBadge with
+ * its own colours, and a third in ui/Badge keyed on the LEGACY `status`
+ * column. Six of the sixteen states were spelled differently between the
+ * first two, so the same order read «مسلَّم» on the orders list and «تم
+ * التسليم» on its own detail view, and «قيد التحويل» in one place and «نقل
+ * بين شركات» in another. Nobody chose that; each screen chose once.
+ */
 export const STATE_LABEL_AR: Record<CoreState, string> = {
   NEW: 'جديد',
   CLAIMED: 'قيد التأكيد',
@@ -360,7 +370,41 @@ export const STATE_LABEL_AR: Record<CoreState, string> = {
   POSTPONED: 'مؤجل',
   IN_TRANSFER: 'قيد التحويل',
   RETURNED: 'مرتجع',
-  CANCELLED: 'ملغي',
+  CANCELLED: 'ملغى',
   NEEDS_REVIEW: 'يحتاج مراجعة',
   VOIDED: 'مُبطَل',
+};
+
+/**
+ * WHAT EACH STATE MEANS, AS A COLOUR.
+ *
+ * Beside the word rather than inside a component, because it is the same
+ * kind of fact: DELIVERED is good and RETURNED is bad wherever they are
+ * drawn, and a screen that decides that for itself is how the orders list
+ * came to paint «مشحون» in one colour and the detail view in another.
+ *
+ * Four tones and no more. There is no informational blue — the action
+ * colour is already in the blue family, and a chip painted the same family
+ * as a button is a chip people try to press.
+ */
+export type StateTone = 'neutral' | 'good' | 'warn' | 'bad';
+
+export const STATE_TONE: Record<CoreState, StateTone> = {
+  NEW: 'neutral',
+  CLAIMED: 'neutral',
+  CONFIRMED: 'good',
+  PREPARING: 'neutral',
+  READY_TO_SHIP: 'neutral',
+  SHIPPED: 'neutral',
+  DELIVERED: 'good',
+  // Some of it came back. That is not a failure and not a success.
+  PARTIALLY_DELIVERED: 'warn',
+  WAITING_RETURN: 'warn',
+  NO_ANSWER: 'warn',
+  POSTPONED: 'warn',
+  IN_TRANSFER: 'warn',
+  RETURNED: 'bad',
+  CANCELLED: 'bad',
+  NEEDS_REVIEW: 'warn',
+  VOIDED: 'bad',
 };

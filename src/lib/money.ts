@@ -119,7 +119,45 @@ export function computeCod(input: CodInput): CodBreakdown {
   return { subtotal, discount, deliveryFee, cod, revenue, addOns, discountShares, lineTotals };
 }
 
-/** Format for display with the currency's minor unit (tabular Arabic UI). */
+/**
+ * EXACT, AND MACHINE-SAFE. Do not add separators to this one.
+ *
+ * It fills waybill fields and a CSV column a courier imports: «37500.000».
+ * A thousands separator inside a CSV cell is a broken column, and inside a
+ * courier's amount field it is a number that fails to parse. This is the
+ * figure as a MACHINE must read it.
+ */
 export function formatMoney(value: number, currencyCode: string, minorUnit: number): string {
   return `${roundMinor(value, minorUnit).toFixed(minorUnit)} ${currencyCode}`;
+}
+
+/**
+ * AND THE SAME FIGURE AS A PERSON READS IT: «37,500.000 JOD».
+ *
+ * Three things, all of which were missing on the ninety-one places that
+ * printed money with a bare `.toFixed(2)`:
+ *
+ *   SEPARATORS. «1500000.00» and «150000.00» are the same shape at a
+ *   glance. Somebody approving a payout reads the shape, not the digits.
+ *
+ *   WESTERN DIGITS, GUARANTEED. The grouping is done by hand rather than by
+ *   `toLocaleString`, so no locale is consulted and «١٬٥٠٠» cannot happen —
+ *   `ar-EG` renders Arabic-Indic digits, and a figure that changes numeral
+ *   system between two screens is a figure nobody trusts.
+ *
+ *   A FIXED POSITION FOR THE CODE. Always after the number. The caller
+ *   renders it inside an LTR box, so a right-to-left paragraph cannot move
+ *   «JOD» to the front of «37,500» on one screen and not on another.
+ */
+export function moneyText(value: number, currencyCode: string | null | undefined, minorUnit: number): string {
+  const n = Number.isFinite(value) ? roundMinor(value, minorUnit) : 0;
+  const fixed = Math.abs(n).toFixed(minorUnit);
+  const [whole, fraction] = fixed.split('.');
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const sign = n < 0 ? '-' : '';
+  const number = fraction ? `${sign}${grouped}.${fraction}` : `${sign}${grouped}`;
+  // Without a currency the amount is printed bare rather than dressed in a
+  // code that might be wrong; a missing currency is a loading state, not a
+  // licence to assume dollars.
+  return currencyCode ? `${number} ${currencyCode}` : number;
 }

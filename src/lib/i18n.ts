@@ -227,7 +227,7 @@ export const translations = {
     SHIPPED: 'تم الشحن',
     OUT_FOR_DELIVERY: 'خرج للتوصيل',
     DELIVERED: 'تم التوصيل',
-    CANCELLED: 'ملغي',
+    CANCELLED: 'ملغى',
     RETURNED: 'مرتجع',
     FAILED_DELIVERY: 'فشل التوصيل',
     ACTIVE: 'نشط',

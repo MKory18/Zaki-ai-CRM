@@ -47,7 +47,7 @@ export interface TimelineEvent {
 const STATUS_VALUE_AR: Record<string, string> = {
   NEW: 'جديد', IN_PROGRESS: 'قيد التأكيد', NO_ANSWER: 'لا يرد',
   FOLLOW_UP_REQUIRED: 'يحتاج متابعة', POSTPONED: 'مؤجل', CONFIRMED: 'مؤكد',
-  REJECTED: 'مرفوض', CANCELLED: 'ملغي',
+  REJECTED: 'مرفوض', CANCELLED: 'ملغى',
   NOT_READY: 'غير جاهز', READY_FOR_SHIPPING: 'جاهز للشحن', PACKING: 'قيد التغليف',
   READY_FOR_PICKUP: 'جاهز للاستلام', SHIPPED: 'مشحون', OUT_FOR_DELIVERY: 'خرج للتوصيل',
   DELIVERED: 'مسلَّم', PARTIALLY_DELIVERED: 'مسلَّم جزئياً', FAILED_DELIVERY: 'فشل التوصيل',

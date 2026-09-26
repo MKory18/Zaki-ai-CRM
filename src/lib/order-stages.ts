@@ -204,7 +204,7 @@ export function orderStages(
           state === 'DELIVERED' ? 'سُلّم'
           : state === 'PARTIALLY_DELIVERED' ? 'سُلّم جزئياً'
           : state === 'RETURNED' ? 'مرتجع'
-          : state === 'CANCELLED' ? 'ملغي'
+          : state === 'CANCELLED' ? 'ملغى'
           : state === 'VOIDED' ? 'مُبطَل'
           : null;
         if (ending) facts.push({ label: 'النتيجة', value: ending });
