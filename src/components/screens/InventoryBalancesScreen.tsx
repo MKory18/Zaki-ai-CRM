@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { findRoute, routeLabel } from '@/lib/route-registry';
 import { RiArrowUpDownLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { OpeningStockCountBanner } from '@/components/inventory/OpeningStockCount';
 
 export function InventoryBalancesScreen() {
   const { t } = useApp();
@@ -102,6 +103,11 @@ export function InventoryBalancesScreen() {
           </Button></>
             }
           />
+
+        {/* Before anything else, once: the store's stock has never been
+            counted. It is not a warning that repeats — the server refuses the
+            count after the first movement and this disappears with it. */}
+        <OpeningStockCountBanner onCounted={loadData} />
 
         {/* Every product and what it holds. 105 cards need a way in, so the
             search comes before them rather than after the scroll. */}

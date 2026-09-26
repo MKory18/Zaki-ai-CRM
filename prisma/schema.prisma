@@ -383,10 +383,16 @@ model ProductionBatch {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  /// Set when this batch came from the opening physical count at cutover.
+  /// The count's batches ARE its lines: quantity and unit cost live here and
+  /// nowhere else, so there is no second copy of them to drift.
+  openingCountId      String?
+
   company            Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   product            Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
   inventoryMovements InventoryMovement[]
   costLines          ProductionBatchCost[]
+  openingCount       StockOpeningCount?    @relation(fields: [openingCountId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, batchNumber])
   @@index([companyId, productId])
@@ -396,6 +402,43 @@ model ProductionBatch {
 /// One named cost on a production batch — "قالب", "أجرة عامل", "شحن المواد".
 /// The four fixed buckets on the batch stay for the batches that use them;
 /// a batch's total is those four plus these lines.
+/// THE SIGNED PHYSICAL COUNT OF STOCK AT CUTOVER.
+///
+/// A physical count already existed: the «الجرد» door on `/api/inventory`
+/// takes a counted quantity and a written reason, works out the difference,
+/// and enters any surplus at the cost of the stock already there rather than
+/// at zero — its own comment explains that units at zero cost overstate the
+/// profit of everything sold afterwards. None of that is rebuilt.
+///
+/// What this adds is what the cutover asks for and that door cannot answer:
+/// WHO COUNTED, and the fact that this particular count is the one the
+/// business started from. One row per store, ever.
+///
+/// There is no `Warehouse` in this system — stock belongs to a STORE
+/// (`ProductionBatch.storeId`), and a store here is a separate business with
+/// its own shelf. So «stock per warehouse» is stock per store, which for the
+/// launch scope is one count for صحة بلس.
+model StockOpeningCount {
+  id            String   @id @default(uuid())
+  companyId     String
+  storeId       String   @unique
+  /// The person who physically counted. Free text: the keeper holding the
+  /// shelf may have no login, and a user id here would turn «who counted»
+  /// into «who typed».
+  countedByName String
+  countedAt     DateTime
+  note          String?
+  /// The system user who entered it. Distinct from countedByName by design.
+  recordedById  String
+  createdAt     DateTime @default(now())
+
+  store   Store             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  batches ProductionBatch[]
+
+  @@index([companyId, countedAt])
+  @@map("stock_opening_counts")
+}
+
 model ProductionBatchCost {
   id        String   @id @default(uuid())
   companyId String
@@ -1574,6 +1617,8 @@ model Store {
   products        Product[]
   customers       Customer[]
   notifications   Notification[]
+  /// The one signed physical count of stock this store started from.
+  stockOpeningCount StockOpeningCount?
   pages           StorePage[]
   menus           StoreMenu[]
   redirects       StoreRedirect[]

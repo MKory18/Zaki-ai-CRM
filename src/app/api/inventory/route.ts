@@ -148,6 +148,7 @@ export async function POST(req: Request) {
       const result = await db.$transaction((tx) =>
         receiveStock(tx, {
           companyId,
+          storeId,
           productId: product.id,
           quantity: input.quantity,
           unitCost: input.unitCost,
@@ -198,6 +199,7 @@ export async function POST(req: Request) {
         });
         await receiveStock(tx, {
           companyId,
+          storeId,
           productId: product.id,
           quantity: difference,
           unitCost: existing?.costPerUnit ?? 0,

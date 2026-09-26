@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dashboardFiles } from './guard-source';
+import { dashboardFiles, stripComments } from './guard-source';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -43,7 +43,11 @@ describe('a list of records', () => {
     const offenders: string[] = [];
     for (const { rel, src } of dashboardFiles()) {
       if (rel === THE_TABLE || MATRICES.includes(rel)) continue;
-      const n = (src.match(/<table\b/g) ?? []).length;
+      // Comments stripped first. A guard that reads its own prose fails on
+      // itself — `guard-source.ts` says this has happened four times in this
+      // work, and this was the fifth: a component explaining WHY it does not
+      // hand-write a table was reported for hand-writing one.
+      const n = (stripComments(src).match(/<table\b/g) ?? []).length;
       if (n) offenders.push(`${rel}: ${n}`);
     }
     expect(offenders, `جدولٌ مكتوبٌ باليد:\n${offenders.join('\n')}`).toEqual([]);

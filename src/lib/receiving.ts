@@ -19,6 +19,19 @@ type Tx = Prisma.TransactionClient | typeof prismaDb;
 
 export interface ReceiveInput {
   companyId: string;
+  /**
+   * Which store's shelf these units land on.
+   *
+   * The column existed and nothing wrote it here, so every batch and every
+   * movement this function created belonged to no store. The BALANCE survived
+   * that — `/api/inventory` filters the PRODUCT by store and then sums all of
+   * that product's batches — but the movements ledger filters the movement
+   * itself with a strict `inStore`, so a receiving simply did not appear in
+   * it. Measured: 0 of 135 movements are unplaced today, because
+   * `place-stock-in-stores.ts` backfilled them and nothing has been received
+   * since. The next receiving would have been the first invisible one.
+   */
+  storeId?: string | null;
   productId: string;
   quantity: number;
   /** Cost of one unit in this delivery; opens its own batch. */
@@ -46,6 +59,7 @@ export async function receiveStock(tx: Tx, input: ReceiveInput) {
   const batch = await tx.productionBatch.create({
     data: {
       companyId: input.companyId,
+      storeId: input.storeId ?? null,
       productId: input.productId,
       batchNumber: input.batchNumber?.trim() || (await nextBatchNumber(tx, input.companyId)),
       quantityProduced: input.quantity,
@@ -65,6 +79,7 @@ export async function receiveStock(tx: Tx, input: ReceiveInput) {
   const movement = await tx.inventoryMovement.create({
     data: {
       companyId: input.companyId,
+      storeId: input.storeId ?? null,
       productId: input.productId,
       batchId: batch.id,
       type: 'PRODUCTION',
