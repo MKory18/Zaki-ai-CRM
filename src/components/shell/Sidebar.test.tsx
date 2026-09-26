@@ -18,7 +18,7 @@ import { join } from 'node:path';
 vi.mock('next/navigation', () => ({ usePathname: () => '/orders' }));
 
 import { Sidebar } from './Sidebar';
-import { RAIL_KEY, railed, setRailed } from '@/lib/sidebar-rail';
+import { RAIL_COOKIE, railed, setRailed } from '@/lib/sidebar-rail';
 
 const GROUPS = [
   {
@@ -32,8 +32,9 @@ const GROUPS = [
 ];
 
 beforeEach(() => {
-  localStorage.clear();
+  document.cookie = `${RAIL_COOKIE}=; path=/; max-age=0`;
   document.documentElement.removeAttribute('data-rail');
+  document.querySelector('[data-sys-theme]')?.removeAttribute('data-rail');
 });
 
 afterEach(() => {
@@ -45,7 +46,7 @@ describe('what the browser remembers about the menu', () => {
   it('is one character, and it survives the next visit', () => {
     expect(railed()).toBe(false);
     setRailed(true);
-    expect(localStorage.getItem(RAIL_KEY)).toBe('1');
+    expect(document.cookie).toContain(`${RAIL_COOKIE}=1`);
     expect(railed(), 'الطيّ يُنسى بين الزيارات').toBe(true);
     setRailed(false);
     expect(railed()).toBe(false);
@@ -58,20 +59,14 @@ describe('what the browser remembers about the menu', () => {
     expect(document.documentElement.getAttribute('data-rail')).toBeNull();
   });
 
-  it('and a browser that refuses storage still gets a working menu', () => {
-    const get = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+  it('and a browser that refuses cookies still gets a working menu', () => {
+    const spy = vi.spyOn(document, 'cookie', 'set').mockImplementation(() => {
       throw new Error('blocked');
     });
-    const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('blocked');
-    });
-    expect(() => railed()).not.toThrow();
-    expect(railed(), 'المتصفح الرافض يبدأ مطويّاً بلا سبب').toBe(false);
     expect(() => setRailed(true)).not.toThrow();
     // Folding still worked for this visit, even unremembered.
     expect(document.documentElement.getAttribute('data-rail')).toBe('1');
-    get.mockRestore();
-    set.mockRestore();
+    spy.mockRestore();
   });
 });
 
@@ -80,12 +75,20 @@ describe('the width', () => {
     // A `useEffect` cannot beat the paint: the server has no way to know
     // what this browser remembered, so the wide menu renders, paints, then
     // snaps 204px narrower — every page load, forever.
-    const shell = readFileSync(join(process.cwd(), 'src/components/shell/Shell.tsx'), 'utf8');
-    expect(shell, 'لا نصّ يسبق الرسم').toContain('RAIL_SCRIPT');
+    // A COOKIE, read by the server, so the attribute is in the HTML the
+    // browser parses. It was an inline script; React objects to one on
+    // every page load — «Scripts inside React components are never
+    // executed when rendering on the client» — and that error then hides
+    // real ones. Moving the tag to the server layout did not silence it.
+    const layout = readFileSync(join(process.cwd(), 'src/app/(system)/layout.tsx'), 'utf8');
+    expect(layout, 'العرض لا يُرسم من الخادم').toContain('RAIL_COOKIE');
+    expect(layout, 'نصٌّ يطبع خطأً في كل تحميل').not.toContain('<script');
 
-    const rail = readFileSync(join(process.cwd(), 'src/lib/sidebar-rail.ts'), 'utf8');
-    expect(rail).toMatch(/RAIL_SCRIPT = `try\{/);
-    expect(rail, 'خطأ تخزين يوقف الصفحة').toContain('catch(e){}');
+    const shell = readFileSync(join(process.cwd(), 'src/components/shell/Shell.tsx'), 'utf8');
+    expect(shell, 'نصٌّ داخل مكوّنٍ عميل').not.toContain('<script');
+
+    const frame = readFileSync(join(process.cwd(), 'src/app/(system)/SystemFrame.tsx'), 'utf8');
+    expect(frame, 'الإطار لا يحمل الحالة').toContain('data-rail');
   });
 
   it('and the menu and the page read the SAME variable for it', () => {
@@ -97,7 +100,7 @@ describe('the width', () => {
 
   it('and folding is a desk’s affair — a drawer laid over a phone gains nothing by being narrow', () => {
     const css = readFileSync(join(process.cwd(), 'src/app/(system)/system.css'), 'utf8');
-    const at = css.indexOf("html[data-rail='1']");
+    const at = css.indexOf("[data-rail='1']");
     const mediaAt = css.lastIndexOf('@media (min-width: 768px)', at);
     expect(mediaAt, 'الطيّ يسري على الهاتف أيضاً').toBeGreaterThan(-1);
     expect(css.slice(mediaAt, at), 'قاعدة الطيّ خارج استعلام الشاشة').not.toContain('}\n}');

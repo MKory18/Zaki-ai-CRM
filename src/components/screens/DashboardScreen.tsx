@@ -16,6 +16,8 @@ import Link from 'next/link';
 import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiEqualLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiSubtractLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const PERIODS = [
   { key: 'today', ar: 'اليوم', en: 'Today' },
@@ -112,12 +114,15 @@ export function DashboardScreen() {
     { icon: '⚠️', label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', sub: analytics?.rankings?.highestRejection?.rejectedOrders ?? 0, subSuffix: locale === 'ar' ? 'رفض' : 'rejected', name: analytics?.rankings?.highestRejection?.name, tint: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]', text: 'text-[var(--sys-destructive)]' },
   ];
 
-  const profitFlow = [
-    { label: locale === 'ar' ? 'إيراد التوصيل' : 'Delivered Revenue', value: `+${fmt(fin.deliveredRevenue)}`, cls: 'text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-0' },
-    { label: locale === 'ar' ? 'تكلفة البضاعة' : 'COGS', value: `-${fmt(fin.costOfGoodsSold)}`, cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
-    { label: locale === 'ar' ? 'الشحن' : 'Shipping', value: `-${fmt(fin.shippingCosts)}`, cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
-    { label: locale === 'ar' ? 'العمولات' : 'Commissions', value: `-${fmt(fin.commission)}`, cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
-    { label: locale === 'ar' ? 'المصروفات' : 'Expenses', value: `-${fmt(fin.operationalExpenses)}`, cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
+  // `value` is a NODE, not a string. It used to be `` `+${fmt(x)}` `` —
+  // and once `fmt` returned a <Money> element instead of a string, the
+  // equation row printed «+[object Object]» across the dashboard.
+  const profitFlow: { label: string; value: React.ReactNode; cls: string }[] = [
+    { label: locale === 'ar' ? 'إيراد التوصيل' : 'Delivered Revenue', value: (<>+{fmt(fin.deliveredRevenue)}</>), cls: 'text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-0' },
+    { label: locale === 'ar' ? 'تكلفة البضاعة' : 'COGS', value: (<>−{fmt(fin.costOfGoodsSold)}</>), cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
+    { label: locale === 'ar' ? 'الشحن' : 'Shipping', value: (<>−{fmt(fin.shippingCosts)}</>), cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
+    { label: locale === 'ar' ? 'العمولات' : 'Commissions', value: (<>−{fmt(fin.commission)}</>), cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
+    { label: locale === 'ar' ? 'المصروفات' : 'Expenses', value: (<>−{fmt(fin.operationalExpenses)}</>), cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
   ];
 
   return (
@@ -433,27 +438,16 @@ export function DashboardScreen() {
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-start text-xs">
-                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3 text-start">{t.thOrderNumber}</th>
-                    <th className="px-6 py-3 text-start">{t.thProduct}</th>
-                    <th className="px-6 py-3 text-start">{t.thTotal}</th>
-                    <th className="px-6 py-3 text-start">{t.status}</th>
-                    <th className="px-6 py-3 text-start">{t.thModerator}</th>
-                    <th className="px-6 py-3 text-start">{t.thDate}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {analytics?.orders?.slice(0, 8).map((order: any) => (
-                    <tr
-                      key={order.id}
-                      className="hover:bg-[var(--sys-surface)] transition-colors cursor-pointer"
-                      onClick={() => setSelectedOrderId(order.id)}
-                    >
-                      <td className="px-6 py-3 font-bold text-[var(--sys-destructive)]">{order.orderNumber}</td>
-                      <td className="px-6 py-3">
-                        <div className="flex items-center gap-2.5">
+                            <Rows
+                rows={analytics?.orders?.slice(0, 8)}
+                keyOf={(order: any) => order.id}
+                onRowClick={(order: any) => setSelectedOrderId(order.id)}
+                columns={[
+                  { key: 'c0', label: t.thOrderNumber, primary: true,
+                    render: (order: any) => (order.orderNumber) },
+                  { key: 'c1', label: t.thProduct, primary: true,
+                    render: (order: any) => (
+                  <><div className="flex items-center gap-2.5">
                           <ProductThumb
                             src={order.productImageSnapshot || order.product?.image}
                             alt={order.productNameSnapshot || order.product?.name}
@@ -467,20 +461,23 @@ export function DashboardScreen() {
                               {order.customer?.fullName} • {order.quantity} {t.units}
                             </p>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3 font-bold text-[var(--sys-heading)]" dir="ltr">
-                        {fmt(order.totalAmount)}
-                      </td>
-                      <td className="px-6 py-3"><OrderStatusBadge status={order.status} /></td>
-                      <td className="px-6 py-3 text-[var(--sys-foreground)]">{order.moderator?.name || '—'}</td>
-                      <td className="px-6 py-3 text-[var(--sys-muted)] whitespace-nowrap">
-                        {format(new Date(order.createdAt), 'MMM d, HH:mm')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </div></>
+                ) },
+                  { key: 'c2', label: t.thTotal,
+                    render: (order: any) => (fmt(order.totalAmount)) },
+                  { key: 'c3', label: t.status,
+                    render: (order: any) => (
+                  <><OrderStatusBadge status={order.status} /></>
+                ) },
+                  { key: 'c4', label: t.thModerator,
+                    render: (order: any) => (order.moderator?.name || '—') },
+                  { key: 'c5', label: t.thDate,
+                    render: (order: any) => (format(new Date(order.createdAt), 'MMM d, HH:mm')) },
+                ]}
+                empty={
+                  <EmptyState title="لا طلبات بعد" why="آخرُ ثمانية طلبات تظهر هنا. فراغُها يعني أنّ لا طلبَ وصل هذا المتجر بعد." />
+                }
+              />
             </div>
           </CardContent>
         </Card>

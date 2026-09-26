@@ -16,6 +16,7 @@ import { RiAlertLine, RiCheckboxCircleLine, RiCopperCoinLine, RiDownload2Line, R
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SkeletonRows } from '@/components/ui/Skeleton';
+import { Rows } from '@/components/ui/Rows';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -237,59 +238,47 @@ export function PerformanceScreen() {
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3.5">المنتج</th>
-                    <th className="px-6 py-3.5">الطلبات</th>
-                    <th className="px-6 py-3.5">مؤكد</th>
-                    <th className="px-6 py-3.5">موصَّل</th>
-                    <th className="px-6 py-3.5">مرفوض</th>
-                    <th className="px-6 py-3.5">إيراد الموصَّل</th>
-                    <th className="px-6 py-3.5">كلفة البضاعة</th>
-                    <th className="px-6 py-3.5">كلفة الشحن</th>
-                    <th className="px-6 py-3.5">صافي الربح</th>
-                    <th className="px-6 py-3.5">هامش الربح</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {analytics?.productStats?.map((prod: any) => (
-                    <tr key={prod.id} className="hover:bg-[var(--sys-surface)] transition-colors">
-                      <td className="px-6 py-3.5">
-                        <span className="font-bold text-[var(--sys-heading)] block">{prod.name}</span>
-                        <span className="font-mono text-xs text-[var(--sys-muted)]">{prod.sku}</span>
-                      </td>
-                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">{prod.totalOrders}</td>
-                      <td className="px-6 py-3.5 font-bold text-[var(--sys-success)]">
-                        {prod.confirmedOrders}
-                      </td>
-                      <td className="px-6 py-3.5 font-bold text-[var(--sys-success)]">
-                        {prod.deliveredOrders}
-                      </td>
-                      <td className="px-6 py-3.5 font-bold text-[var(--sys-destructive)]">
-                        {prod.rejectedOrders}
-                      </td>
-                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
-                        <Money value={prod.revenue} />
-                      </td>
-                      <td className="px-6 py-3.5 text-[var(--sys-destructive)] font-medium">
-                        <Money value={-prod.cogs} />
-                      </td>
-                      <td className="px-6 py-3.5 text-[var(--sys-destructive)] font-medium">
-                        <Money value={-prod.shippingCost} />
-                      </td>
-                      <td className="px-6 py-3.5 font-black text-[var(--sys-heading)]">
-                        <Money value={prod.netProfit} />
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <span className="font-bold text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] px-2 py-0.5 rounded-lg text-xs">
+                            <Rows
+                rows={(analytics?.productStats ?? [])}
+                keyOf={(prod: any) => prod.id}
+                columns={[
+                  { key: 'c0', label: "المنتج", primary: true,
+                    render: (prod: any) => (
+                  <><span className="font-bold text-[var(--sys-heading)] block">{prod.name}</span>
+                        <span className="font-mono text-xs text-[var(--sys-muted)]">{prod.sku}</span></>
+                ) },
+                  { key: 'c1', label: "الطلبات", primary: true,
+                    render: (prod: any) => (prod.totalOrders) },
+                  { key: 'c2', label: "مؤكد",
+                    render: (prod: any) => (prod.confirmedOrders) },
+                  { key: 'c3', label: "موصَّل",
+                    render: (prod: any) => (prod.deliveredOrders) },
+                  { key: 'c4', label: "مرفوض",
+                    render: (prod: any) => (prod.rejectedOrders) },
+                  { key: 'c5', label: "إيراد الموصَّل",
+                    render: (prod: any) => (
+                  <><Money value={prod.revenue} /></>
+                ) },
+                  { key: 'c6', label: "كلفة البضاعة",
+                    render: (prod: any) => (
+                  <><Money value={-prod.cogs} /></>
+                ) },
+                  { key: 'c7', label: "كلفة الشحن",
+                    render: (prod: any) => (
+                  <><Money value={-prod.shippingCost} /></>
+                ) },
+                  { key: 'c8', label: "صافي الربح",
+                    render: (prod: any) => (
+                  <><Money value={prod.netProfit} /></>
+                ) },
+                  { key: 'c9', label: "هامش الربح",
+                    render: (prod: any) => (
+                  <><span className="font-bold text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] px-2 py-0.5 rounded-lg text-xs">
                           {prod.profitMargin}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </span></>
+                ) },
+                ]}
+              />
             </div>
           </CardContent>
         </Card>

@@ -14,8 +14,10 @@ import Link from 'next/link';
 import { ProductOffers } from '@/components/products/ProductOffers';
 import { ProductStock } from '@/components/products/ProductStock';
 import { format } from 'date-fns';
-import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiPriceTag3Line, RiShoppingCartLine, RiStackLine, RiStarLine } from '@remixicon/react';
+import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiShoppingCartLine, RiStackLine, RiStarLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export function ProductDetailScreen() {
   const params = useParams();
@@ -307,30 +309,31 @@ export function ProductDetailScreen() {
             action={<Link href="/manufacturing"><Button size="sm" variant="outline">إدارة التشغيلات</Button></Link>}
           />
           <CardContent className="p-0 overflow-x-auto">
-            <table className="w-full text-left rtl:text-right text-xs">
-              <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-3">الرقم</th>
-                  <th className="px-6 py-3">الكمية</th>
-                  <th className="px-6 py-3">المتبقي</th>
-                  <th className="px-6 py-3">التكلفة الكلية</th>
-                  <th className="px-6 py-3">تكلفة الوحدة</th>
-                  <th className="px-6 py-3">التاريخ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--sys-border)]">
-                {product.batches?.map((b: any) => (
-                  <tr key={b.id} className="hover:bg-[var(--sys-surface)]">
-                    <td className="px-6 py-3 font-mono font-bold text-[var(--sys-destructive)]">{b.batchNumber}</td>
-                    <td className="px-6 py-3">{b.quantityProduced}</td>
-                    <td className="px-6 py-3 font-bold text-[var(--sys-success)]">{b.quantityRemaining}</td>
-                    <td className="px-6 py-3"><Money value={b.totalProductionCost} /></td>
-                    <td className="px-6 py-3"><Money value={b.costPerUnit} className="font-black text-[var(--sys-heading)]" /></td>
-                    <td className="px-6 py-3 text-[var(--sys-muted)]">{format(new Date(b.productionDate), 'yyyy-MM-dd')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        <Rows
+              rows={(product.batches ?? [])}
+              keyOf={(b: any) => b.id}
+              columns={[
+                { key: 'c0', label: "الرقم", primary: true,
+                  render: (b: any) => (b.batchNumber) },
+                { key: 'c1', label: "الكمية", primary: true,
+                  render: (b: any) => (b.quantityProduced) },
+                { key: 'c2', label: "المتبقي",
+                  render: (b: any) => (b.quantityRemaining) },
+                { key: 'c3', label: "التكلفة الكلية",
+                  render: (b: any) => (
+                  <><Money value={b.totalProductionCost} /></>
+                ) },
+                { key: 'c4', label: "تكلفة الوحدة",
+                  render: (b: any) => (
+                  <><Money value={b.costPerUnit} className="font-black text-[var(--sys-heading)]" /></>
+                ) },
+                { key: 'c5', label: "التاريخ",
+                  render: (b: any) => (format(new Date(b.productionDate), 'yyyy-MM-dd')) },
+              ]}
+              empty={
+                <EmptyState title="لا تشغيلاتِ إنتاجٍ لهذا المنتج" why="التشغيلة هي ما تُحسب منه كلفةُ الوحدة. بلا واحدةٍ بكلفة، ربحُ هذا المنتج إجماليٌّ لا صافٍ." />
+              }
+            />
           </CardContent>
         </Card>
 
@@ -350,30 +353,33 @@ export function ProductDetailScreen() {
             title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><RiArrowUpCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" /><span>أحدث الطلبات على هذا المنتج</span></span>}
           />
           <CardContent className="p-0 overflow-x-auto">
-            <table className="w-full text-left rtl:text-right text-xs">
-              <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-3">الطلب</th>
-                  <th className="px-6 py-3">العميل</th>
-                  <th className="px-6 py-3">المبلغ</th>
-                  <th className="px-6 py-3">الحالة</th>
-                  <th className="px-6 py-3">المودريتور</th>
-                  <th className="px-6 py-3">التاريخ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--sys-border)]">
-                {product.orders?.map((o: any) => (
-                  <tr key={o.id} className="hover:bg-[var(--sys-surface)]">
-                    <td className="px-6 py-3 font-bold text-[var(--sys-destructive)]">{o.orderNumber}</td>
-                    <td className="px-6 py-3">{o.customer?.fullName} <span className="text-[var(--sys-muted)]">— {o.customer?.city}</span></td>
-                    <td className="px-6 py-3"><Money value={o.totalAmount} className="font-bold" /></td>
-                    <td className="px-6 py-3"><OrderStatusBadge status={o.status} /></td>
-                    <td className="px-6 py-3 text-[var(--sys-muted-foreground)]">{o.moderator?.name || '—'}</td>
-                    <td className="px-6 py-3 text-[var(--sys-muted)]">{format(new Date(o.createdAt), 'MMM d')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        <Rows
+              rows={(product.orders ?? [])}
+              keyOf={(o: any) => o.id}
+              columns={[
+                { key: 'c0', label: "الطلب", primary: true,
+                  render: (o: any) => (o.orderNumber) },
+                { key: 'c1', label: "العميل", primary: true,
+                  render: (o: any) => (
+                  <>{o.customer?.fullName} <span className="text-[var(--sys-muted)]">— {o.customer?.city}</span></>
+                ) },
+                { key: 'c2', label: "المبلغ",
+                  render: (o: any) => (
+                  <><Money value={o.totalAmount} className="font-bold" /></>
+                ) },
+                { key: 'c3', label: "الحالة",
+                  render: (o: any) => (
+                  <><OrderStatusBadge status={o.status} /></>
+                ) },
+                { key: 'c4', label: "المودريتور",
+                  render: (o: any) => (o.moderator?.name || '—') },
+                { key: 'c5', label: "التاريخ",
+                  render: (o: any) => (format(new Date(o.createdAt), 'MMM d')) },
+              ]}
+              empty={
+                <EmptyState title="لا طلبات على هذا المنتج بعد" why="آخرُ طلباته تظهر هنا. فراغُها يعني أنّ لا أحد طلبه — أو أنّه لم يُنشر بعد." />
+              }
+            />
           </CardContent>
         </Card>
       </div>

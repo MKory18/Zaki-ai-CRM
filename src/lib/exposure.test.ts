@@ -134,7 +134,6 @@ describe('what the browser is allowed to remember', () => {
     'landing/OrderForm.tsx': 'which campaign a visitor arrived from',
     'shell/Sidebar.tsx': 'which menu groups this person leaves open',
     'shell/IdleGuard.tsx': 'a timestamp, shared between this account’s open tabs',
-    'lib/sidebar-rail.ts': 'one character: whether this browser leaves the sidebar folded',
     'ui/SavedViews.tsx': 'a name and a query string — a question to re-ask, never an answer or a record id',
   };
 

@@ -15,6 +15,8 @@ import { ZERO_SUMMARY, type ProfitSummary } from '@/lib/profit-summary';
 import { RiAddCircleLine, RiArrowRightDownLine, RiArrowUpCircleLine, RiFileList3Line, RiMoneyDollarCircleLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SkeletonRows } from '@/components/ui/Skeleton';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export function FinanceProfitScreen() {
   const { t } = useApp();
@@ -198,36 +200,29 @@ export function FinanceProfitScreen() {
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right text-xs">
-                <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3.5">التاريخ</th>
-                    <th className="px-6 py-3.5">البند</th>
-                    <th className="px-6 py-3.5">النوع</th>
-                    <th className="px-6 py-3.5">المبلغ</th>
-                    <th className="px-6 py-3.5">ملاحظات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--sys-border)]">
-                  {data?.expenses?.map((e: any) => (
-                    <tr key={e.id} className="hover:bg-[var(--sys-surface)] transition-colors">
-                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)] font-mono">
-                        {format(new Date(e.expenseDate), 'MMM d, yyyy')}
-                      </td>
-                      <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">{e.title}</td>
-                      <td className="px-6 py-3.5">
-                        <Badge variant="purple">{e.category}</Badge>
-                      </td>
-                      <td className="px-6 py-3.5 font-bold text-[var(--sys-destructive)]">
-                        <Money value={e.amount} currency={data?.currency} />
-                      </td>
-                      <td className="px-6 py-3.5 text-[var(--sys-muted-foreground)] max-w-sm truncate">
-                        {e.notes || '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            <Rows
+                rows={(data?.expenses ?? [])}
+                keyOf={(e: any) => e.id}
+                columns={[
+                  { key: 'c0', label: "التاريخ", primary: true,
+                    render: (e: any) => (format(new Date(e.expenseDate), 'MMM d, yyyy')) },
+                  { key: 'c1', label: "البند", primary: true,
+                    render: (e: any) => (e.title) },
+                  { key: 'c2', label: "النوع",
+                    render: (e: any) => (
+                  <><Badge variant="purple">{e.category}</Badge></>
+                ) },
+                  { key: 'c3', label: "المبلغ",
+                    render: (e: any) => (
+                  <><Money value={e.amount} currency={data?.currency} /></>
+                ) },
+                  { key: 'c4', label: "ملاحظات",
+                    render: (e: any) => (e.notes || '—') },
+                ]}
+                empty={
+                  <EmptyState title="لا مصاريف مسجَّلة في هذه الفترة" why="المصروف يُخصم مباشرةً من صافي الربح. سجّله وقتَ حدوثه، لا في آخر الشهر." />
+                }
+              />
             </div>
           </CardContent>
         </Card>

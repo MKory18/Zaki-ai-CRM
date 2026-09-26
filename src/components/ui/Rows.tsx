@@ -42,7 +42,8 @@ export interface Column<T> {
 
 export interface RowsProps<T> {
   columns: Column<T>[];
-  rows: T[];
+  /** Absent while the request is in the air; drawn as empty. */
+  rows: T[] | null | undefined;
   keyOf: (row: T) => string;
   onRowClick?: (row: T) => void;
   /** Said when there is nothing — never an empty frame with no explanation. */
@@ -67,7 +68,19 @@ export interface RowsProps<T> {
 }
 
 export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, selection, alert }: RowsProps<T>) {
-  if (rows.length === 0) {
+  /**
+   * A LIST THAT HAS NOT ARRIVED IS NOT A CRASH.
+   *
+   * `rows.length` on an undefined list took the dashboard down with
+   * «Cannot read properties of undefined» — the orders come from
+   * `analytics?.orders?.slice(…)`, which is undefined until the request
+   * lands. Every screen that fetches has that moment, and a shared table
+   * that dies in it is a trap set for every future caller.
+   *
+   * Nothing is invented: an absent list draws exactly what an empty one
+   * draws, which is the truth of the situation.
+   */
+  if (!rows || rows.length === 0) {
     return (
       <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
         {empty ?? (

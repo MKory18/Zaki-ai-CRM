@@ -294,7 +294,7 @@ html[lang="ar"] td {
  *
  * `--shell-nav` is read by two places — the sidebar's own width and the
  * margin that keeps the page clear of it — so they cannot disagree. The
- * attribute is set before the first paint by RAIL_SCRIPT (see
+ * attribute is RENDERED by the server from a cookie (see
  * src/lib/sidebar-rail.ts); doing it in React would paint 280px and then
  * snap to 76px on every single page load.
  *
@@ -306,26 +306,26 @@ html[lang="ar"] td {
 }
 
 @media (min-width: 768px) {
-  html[data-rail='1'] {
+  [data-rail='1'] {
     --shell-nav: 76px;
   }
 
   /* Anything that only makes sense beside a label: the label itself, the
      group headings, the wordmark, the footer's sentence. */
-  html[data-rail='1'] .rail-hide {
+  [data-rail='1'] .rail-hide {
     display: none;
   }
 
   /* Folded, the icons centre themselves rather than sitting against the
      right edge with their labels' empty space beside them. */
-  html[data-rail='1'] .rail-center {
+  [data-rail='1'] .rail-center {
     justify-content: center;
   }
 
   /* The headings are gone, so sixty icons would run together as one
      undifferentiated column. A hairline keeps the ten groups legible as
      groups — which is how anybody remembers where a screen lives. */
-  html[data-rail='1'] .sidebar-scroll > div + div {
+  [data-rail='1'] .sidebar-scroll > div + div {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
     /* Derived from the rail's own text colour, not from a background

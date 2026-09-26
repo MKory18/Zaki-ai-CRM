@@ -17,6 +17,8 @@ import { RiAddCircleLine, RiCursorLine, RiDeleteBinLine, RiExternalLinkLine, RiE
 import { PageHeader } from '@/components/ui/PageHeader';
 import { routeLabel } from '@/lib/route-registry';
 import { SkeletonRows } from '@/components/ui/Skeleton';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export function LandingPagesScreen() {
   const tell = useTell();
@@ -167,42 +169,35 @@ export function LandingPagesScreen() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] text-xs uppercase">
-                      <th className="px-4 py-3 text-start">الصفحة</th>
-                      <th className="px-4 py-3 text-start">المنتج</th>
-                      <th className="px-4 py-3 text-start">الحالة</th>
-                      <th className="px-4 py-3 text-start">الرابط</th>
-                      {/* الزيارات والطلبات والتحويل تُقرأ في «لوحة الأداء»،
-                          حيث تُقارن بالجهاز والحملة والمدى الزمني. رقمان
-                          لنفس الشيء في شاشتين يختلفان يوماً ما. */}
-                      <th className="px-4 py-3 text-start">أُنشئت</th>
-                      <th className="px-4 py-3 text-start">إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pages.map((lp: any) => (
-                      <tr key={lp.id} className="border-t border-[var(--sys-border)] hover:bg-[var(--sys-surface)]">
-                        <td className="px-4 py-3 font-semibold text-[var(--sys-heading)]">{lp.name}</td>
-                        <td className="px-4 py-3 text-[var(--sys-foreground)]">{lp.product?.name || '—'}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant={lp.isPublished ? 'success' : 'default'}>
+                                <Rows
+                  rows={pages}
+                  keyOf={(lp: any) => lp.id}
+                  columns={[
+                    { key: 'c0', label: "الصفحة", primary: true,
+                      render: (lp: any) => (lp.name) },
+                    { key: 'c1', label: "المنتج", primary: true,
+                      render: (lp: any) => (lp.product?.name || '—') },
+                    { key: 'c2', label: "الحالة",
+                      render: (lp: any) => (
+                  <><Badge variant={lp.isPublished ? 'success' : 'default'}>
                             {lp.isPublished ? 'منشورة' : 'مسودة'}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3" dir="ltr">
-                          {lp.isPublished ? (
+                          </Badge></>
+                ) },
+                    { key: 'c3', label: "الرابط",
+                      render: (lp: any) => (
+                  <>{lp.isPublished ? (
                             <a href={`/lp/${lp.slug}`} target="_blank" rel="noopener noreferrer" className="text-[var(--sys-primary)] hover:underline flex items-center gap-1">
                               /lp/{lp.slug} <RiExternalLinkLine className="icon-mirror w-4 h-4" />
                             </a>
                           ) : (
                             <span className="text-[var(--sys-muted)]">/lp/{lp.slug}</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{formatDate(lp.createdAt)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
+                          )}</>
+                ) },
+                    { key: 'c4', label: "أُنشئت",
+                      render: (lp: any) => (formatDate(lp.createdAt)) },
+                    { key: 'c5', label: "إجراءات",
+                      render: (lp: any) => (
+                  <><div className="flex items-center gap-1">
                             <button title="تحرير" onClick={() => (window.location.href = `/growth/landing-pages/${lp.id}`)}
                               className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]"><RiPencilLine className="w-4 h-4" /></button>
                             <button title={lp.isPublished ? 'إلغاء النشر' : 'نشر'} disabled={busyId === lp.id}
@@ -224,12 +219,13 @@ export function LandingPagesScreen() {
                             </button>
                             <button title="حذف" onClick={() => setDeleting(lp)}
                               className="p-1.5 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><RiDeleteBinLine className="w-4 h-4" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </div></>
+                ) },
+                  ]}
+                  empty={
+                    <EmptyState title="لا صفحاتِ هبوطٍ بعد" why="صفحةُ الهبوط تُنشئ طلباً داخل النظام مباشرةً. أنشئ واحدةً من الزرّ أعلاه واربطها بمنتج." />
+                  }
+                />
               </div>
             )}
           </CardContent>

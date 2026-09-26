@@ -9,7 +9,6 @@ import { OfflineWatch } from './OfflineWatch';
 import { Watermark } from './Watermark';
 import { IdleGuard } from './IdleGuard';
 import { CommandPalette, useCommandPalette } from './CommandPalette';
-import { RAIL_SCRIPT } from '@/lib/sidebar-rail';
 import { BulkProvider } from './BulkBar';
 import { StoreCurrencyProvider } from '@/context/StoreCurrency';
 
@@ -43,11 +42,6 @@ export function Shell({
         print but a hardcoded «$». */}
     <StoreCurrencyProvider code={context.currencyCode}>
     <div className="min-h-screen bg-[var(--sys-surface)] flex flex-col">
-      {/* Before the first paint: was the sidebar left folded? React cannot
-          answer that — the server does not know this browser — and answering
-          it a frame late means every page load paints a 280px sidebar and
-          then snaps it to 76px. See src/lib/sidebar-rail.ts. */}
-      <script dangerouslySetInnerHTML={{ __html: RAIL_SCRIPT }} />
 
       {/* Registers the worker, and says when the line is down — which
           matters because the worker queues NOTHING. */}

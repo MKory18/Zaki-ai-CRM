@@ -130,10 +130,10 @@ describe('an open, empty box', () => {
     open();
     expect(screen.queryByText('اطوِ القائمة إلى شريط')).toBeTruthy();
     cleanup();
-    localStorage.setItem('osm.sidebar.rail', '1');
+    document.cookie = 'osm_rail=1; path=/';
     open();
     expect(screen.queryByText('وسّع القائمة'), 'الأمر يعِد بطيِّ قائمةٍ مطويّة').toBeTruthy();
-    localStorage.clear();
+    document.cookie = 'osm_rail=; path=/; max-age=0';
   });
 });
 

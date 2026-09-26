@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { SystemFrame } from './SystemFrame';
 import { getCurrentUser } from '@/lib/auth';
 import { themeByKey } from '@/lib/system-themes';
+import { cookies } from 'next/headers';
+import { RAIL_COOKIE } from '@/lib/sidebar-rail';
 import { AppProvider } from '@/context/AppContext';
 import { GlobalTrackingProvider } from '@/components/tracking/GlobalTrackingProvider';
 
@@ -36,13 +38,21 @@ export const viewport: Viewport = {
  */
 export default async function SystemLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
+  /**
+   * Was the sidebar left folded? A cookie, read here, so the attribute is
+   * in the HTML the browser parses — no script, no flash, and no «Scripts
+   * inside React components are never executed» in the console on every
+   * page load. See src/lib/sidebar-rail.ts.
+   */
+  const railed = (await cookies()).get(RAIL_COOKIE)?.value === '1';
 
   return (
-    <SystemFrame theme={user?.systemTheme}>
+    <SystemFrame theme={user?.systemTheme} railed={railed}>
       {/* The status bar takes the colour of the theme this person chose, so
           an installed app does not wear the default's colour above a dark
           screen. */}
       <meta name="theme-color" content={themeByKey(user?.systemTheme).vars.sidebar} />
+
       <AppProvider initialUser={user}>
         {/* The engine starts empty. Pixels are registered by the selling
             page that renders — a landing page or a storefront page — with

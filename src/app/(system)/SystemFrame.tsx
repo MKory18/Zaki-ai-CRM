@@ -15,10 +15,20 @@ import { sanitizeTheme } from '@/lib/system-themes';
  * Unknown or missing falls back to the default rather than to nothing: a
  * stored typo must not render a screen with no colours at all.
  */
-export function SystemFrame({ children, theme }: { children: React.ReactNode; theme?: string | null }) {
+export function SystemFrame({
+  children,
+  theme,
+  railed,
+}: {
+  children: React.ReactNode;
+  theme?: string | null;
+  /** Folded sidebar, from this browser's cookie. Rendered, never scripted. */
+  railed?: boolean;
+}) {
   return (
     <div
       data-sys-theme={sanitizeTheme(theme)}
+      data-rail={railed ? '1' : undefined}
       className={`${systemFontVars} flex min-h-screen flex-col bg-[var(--sys-background)] text-[var(--sys-foreground)]`}
     >
       <style>{`:root{--font-arabic:${arabic.style.fontFamily};--font-public-sans:${publicSans.style.fontFamily}}`}</style>
