@@ -83,7 +83,7 @@ export function JobsScreen() {
 
       <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
         المهام تعمل في عملية مستقلة عن المتصفح:{' '}
-        <code className="font-mono text-caption bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg px-1.5 py-0.5" dir="ltr">
+        <code className="font-mono text-xs bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg px-1.5 py-0.5" dir="ltr">
           npx tsx scripts/worker.ts
         </code>
         . إن لم تكن تعمل، ستظهر المهام هنا «متأخرة».
@@ -130,7 +130,7 @@ export function JobsScreen() {
                         <CheckCircle2 className="w-4 h-4 text-[var(--sys-success)]" />
                       )}
                       <span className="text-sm font-medium text-[var(--sys-heading)]" dir="ltr">{job.name}</span>
-                      <span className="text-caption text-[var(--sys-muted)]">{job.schedule}</span>
+                      <span className="text-xs text-[var(--sys-muted)]">{job.schedule}</span>
                     </div>
                     <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{job.description}</p>
                   </div>
@@ -235,7 +235,7 @@ export function JobsScreen() {
                       <td className="px-3 py-2 text-[var(--sys-foreground)]" dir="ltr">{run.jobName}</td>
                       <td className="px-3 py-2">
                         <span
-                          className={`text-caption px-2 py-0.5 rounded-full border ${
+                          className={`text-xs px-2 py-0.5 rounded-full border ${
                             run.status === 'SUCCEEDED'
                               ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
                               : run.status === 'FAILED'
@@ -247,7 +247,7 @@ export function JobsScreen() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
-                        {new Date(run.startedAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}
+                        {new Date(run.startedAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}
                       </td>
                       <td className="px-3 py-2 tabular-nums text-[var(--sys-foreground)]">{run.processed}</td>
                       <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{run.error ?? run.detail ?? '—'}</td>

@@ -42,11 +42,11 @@ function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-caption font-medium text-[var(--sys-muted-foreground)]">{label}</p>
+      <p className="mb-1 text-xs font-medium text-[var(--sys-muted-foreground)]">{label}</p>
       <div className="flex items-center gap-1">
         <code
           dir="ltr"
-          className="min-w-0 flex-1 truncate rounded-md border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-1.5 text-caption text-[var(--sys-heading)]"
+          className="min-w-0 flex-1 truncate rounded-md border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2 py-1.5 text-xs text-[var(--sys-heading)]"
           title={value}
         >
           {value}
@@ -179,7 +179,7 @@ export function StoreDomainScreen() {
             اشترِ النطاق من أي مُسجِّل تختاره، ثم اربطه من تبويب «ربط نطاق موجود» — الخطوات هي نفسها
             أيًّا كان المُسجِّل.
           </p>
-          <p className="mt-2 text-caption text-[var(--sys-muted)]">
+          <p className="mt-2 text-xs text-[var(--sys-muted)]">
             لا نعرض لك تعليمات مُسجِّل بعينه: القيم المطلوبة واحدة، ومكان إدخالها يختلف من لوحة إلى أخرى.
           </p>
           <Button className="mt-3" size="sm" variant="secondary" onClick={() => setTab('connect')}>
@@ -217,7 +217,7 @@ export function StoreDomainScreen() {
               </div>
             </label>
             {!data.storefrontEnabled && (
-              <p className="mt-2 text-caption text-[var(--sys-warning)]">
+              <p className="mt-2 text-xs text-[var(--sys-warning)]">
                 واجهة هذا المتجر مطفأة — النطاق لن يعرض شيئاً حتى تُشغّلها من «البلدان والمتاجر».
               </p>
             )}
@@ -240,7 +240,7 @@ export function StoreDomainScreen() {
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`rounded-full px-2.5 py-0.5 text-caption font-bold ${
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
                           verified
                             ? 'bg-[var(--sys-success)]/10 text-[var(--sys-success)]'
                             : last.status === 'FAILED'
@@ -250,12 +250,12 @@ export function StoreDomainScreen() {
                       >
                         {verified ? 'متحقَّق' : last.status === 'FAILED' ? 'فشل' : 'بانتظار'}
                       </span>
-                      <span className="text-caption text-[var(--sys-muted-foreground)]">
-                        آخر فحص: {new Date(last.checkedAt).toLocaleString('ar')}
+                      <span className="text-xs text-[var(--sys-muted-foreground)]">
+                        آخر فحص: {new Date(last.checkedAt).toLocaleString('ar-u-nu-latn')}
                       </span>
                     </div>
                     <p className="text-xs leading-relaxed text-[var(--sys-foreground)]">{last.detail}</p>
-                    <ul className="space-y-1 text-caption">
+                    <ul className="space-y-1 text-xs">
                       <li className={last.ownership ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}>
                         {last.ownership ? '✓' : '○'} ملكية النطاق (سجل TXT)
                       </li>
@@ -281,13 +281,13 @@ export function StoreDomainScreen() {
 
               <div className={CARD}>
                 <p className="text-sm font-bold text-[var(--sys-heading)]">السجلّات المطلوبة</p>
-                <p className="mb-3 mt-1 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+                <p className="mb-3 mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                   أضف سجل TXT، <strong>وواحداً</strong> من سجلّي التوجيه (أيّهما يقبله مُسجِّلك لهذا
                   النطاق)، في لوحة إدارة النطاق، ثم اضغط «تحقّق الآن». انتشار السجلّات قد يستغرق من
                   دقائق إلى ساعات.
                 </p>
                 {data.records.length === 0 || !data.target ? (
-                  <p className="rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3 text-caption leading-relaxed text-[var(--sys-warning)]">
+                  <p className="rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3 text-xs leading-relaxed text-[var(--sys-warning)]">
                     لم يُضبط عنوان التطبيق على الخادم بعد (<code dir="ltr">APP_DOMAIN</code> أو{' '}
                     <code dir="ltr">APP_PUBLIC_IP</code>)، فلا يمكن إخبارك بقيمة التوجيه المطلوبة — لن نخترع لك
                     قيمة تُخرج متجرك عن الخدمة. اضبطها على الخادم وستظهر هنا.
@@ -307,7 +307,7 @@ export function StoreDomainScreen() {
                             rather than leaving the seller to find out from a
                             registrar's refusal. */}
                         {record.note && (
-                          <p className="mt-1.5 text-caption text-[var(--sys-muted)]">{record.note}</p>
+                          <p className="mt-1.5 text-xs text-[var(--sys-muted)]">{record.note}</p>
                         )}
                       </div>
                     ))}

@@ -272,7 +272,7 @@ export function FinanceProfitScreen() {
                     </span>
                     <span className="ms-auto tabular-nums font-bold text-[var(--sys-success)]">
                       {Number(p.netProfit).toFixed(2)}
-                      <span className="text-caption text-[var(--sys-muted)] font-normal">
+                      <span className="text-xs text-[var(--sys-muted)] font-normal">
                         {' '}صافي · {p.profitMargin ?? 0}%
                       </span>
                     </span>
@@ -294,7 +294,7 @@ export function FinanceProfitScreen() {
         <form onSubmit={handleRecordExpense} className="space-y-4">
           <Input
             label="البند *"
-            placeholder="مثلاً: حملة تيك توك رقم ٤"
+            placeholder="مثلاً: حملة تيك توك رقم 4"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required

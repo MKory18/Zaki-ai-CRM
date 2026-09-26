@@ -226,7 +226,7 @@ function Queue({
                           {m.statementLine?.barcode ?? '—'}
                         </span>
                         {(m.statementLine?.merchantRef ?? m.order?.merchantRef) && (
-                          <span className="block text-caption text-[var(--sys-muted)]">
+                          <span className="block text-xs text-[var(--sys-muted)]">
                             {m.statementLine?.merchantRef ?? m.order?.merchantRef}
                           </span>
                         )}

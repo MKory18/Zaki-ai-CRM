@@ -59,7 +59,7 @@ export function AssistantsTable({
 
   return (
     <div className="space-y-3">
-      <p className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+      <p className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
         كل مساعد يقرأ ما هو مكتوب في سطره فقط — الخدمة ترفض جلب غيره، فالسطر وعدٌ يحفظه الكود لا وصفٌ
         على برومبت. ولا مساعد، مهما كان نطاقه، ينقل حالة طلب أو يسجّل حركة صندوق أو يغيّر سعراً أو
         يعتمد تسوية.
@@ -80,11 +80,11 @@ export function AssistantsTable({
               <tr key={a.key} className="align-top">
                 <td className="px-3 py-2.5">
                   <p className="font-semibold text-[var(--sys-heading)]">{a.label}</p>
-                  <p className="mt-0.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">{a.note}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{a.note}</p>
                 </td>
                 <td className="px-3 py-2.5 whitespace-nowrap text-[var(--sys-foreground)]">
                   {a.who}
-                  <span className="mt-0.5 block text-caption text-[var(--sys-muted)]" dir="ltr">{a.needs}</span>
+                  <span className="mt-0.5 block text-xs text-[var(--sys-muted)]" dir="ltr">{a.needs}</span>
                 </td>
                 <td className="px-3 py-2.5">
                   {a.scopes.length === 0 && !a.optionalScopes ? (
@@ -95,7 +95,7 @@ export function AssistantsTable({
                     </span>
                   )}
                   {a.optionalScopes && (
-                    <span className="mt-0.5 block text-caption text-[var(--sys-muted)]">
+                    <span className="mt-0.5 block text-xs text-[var(--sys-muted)]">
                       {enabled.length === 0 ? 'ولا مجال مؤشَّر' : `مؤشَّر: ${enabled.map((s) => SCOPE_LABEL_AR[s as AiScope]).join(' · ')}`}
                     </span>
                   )}
@@ -120,7 +120,7 @@ export function AssistantsTable({
       {/* The one assistant whose reach is a decision rather than a job. */}
       <section className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
         <h3 className="text-sm font-bold text-[var(--sys-heading)]">ما يقرؤه مركز الذكاء</h3>
-        <p className="mb-3 mt-0.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="mb-3 mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           يبدأ بلا مجال واحد. أشّر ما تسمح له بقراءته — وغير المؤشَّر لا يُجلَب أصلاً، فلا يمكن
           استخراجه بسؤال ذكي.
         </p>
@@ -141,13 +141,13 @@ export function AssistantsTable({
               />
               <span>
                 <span className="block text-xs font-semibold text-[var(--sys-heading)]">{SCOPE_LABEL_AR[scope]}</span>
-                <span className="block text-caption leading-relaxed text-[var(--sys-muted-foreground)]">{SCOPE_NOTE_AR[scope]}</span>
+                <span className="block text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{SCOPE_NOTE_AR[scope]}</span>
               </span>
             </label>
           ))}
         </div>
         {msg && (
-          <p className={`mt-2 text-caption ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>
+          <p className={`mt-2 text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>
         )}
       </section>
     </div>

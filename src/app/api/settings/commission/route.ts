@@ -135,7 +135,7 @@ export async function POST(req: Request) {
 
     // A rate is a percentage: bands over 100 would never be reached.
     if (input.metric === 'DELIVERY_RATE' && input.tiers?.some((t) => t.from > 100)) {
-      return NextResponse.json({ error: 'نسبة التسليم من ٠ إلى ١٠٠ — راجع الشرائح' }, { status: 400 });
+      return NextResponse.json({ error: 'نسبة التسليم من 0 إلى 100 — راجع الشرائح' }, { status: 400 });
     }
 
     // A span nobody can close pays nothing: a metric counted per order has

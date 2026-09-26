@@ -58,7 +58,7 @@ interface Payload {
 
 const PERIODS = [
   { key: 'this_month', label: 'هذا الشهر' },
-  { key: 'last_30', label: 'آخر ٣٠ يوماً' },
+  { key: 'last_30', label: 'آخر 30 يوماً' },
   { key: 'last_month', label: 'الشهر الماضي' },
   { key: 'all', label: 'كل الوقت' },
 ] as const;
@@ -173,7 +173,7 @@ export function CampaignsScreen() {
               <button
                 key={p.key}
                 onClick={() => setPeriod(p.key)}
-                className={`rounded-md px-2.5 py-1 text-caption font-semibold transition ${
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                   period === p.key ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]'
                 }`}
               >
@@ -194,7 +194,7 @@ export function CampaignsScreen() {
       </div>
 
       {syncMsg && (
-        <p className="rounded-lg bg-[var(--sys-surface)] px-3 py-2 text-caption text-[var(--sys-foreground)]">{syncMsg}</p>
+        <p className="rounded-lg bg-[var(--sys-surface)] px-3 py-2 text-xs text-[var(--sys-foreground)]">{syncMsg}</p>
       )}
 
       {/* The shop's whole picture, so nobody adds the column up by hand. */}
@@ -237,7 +237,7 @@ export function CampaignsScreen() {
       )}
 
       {data && (
-        <p className="text-caption leading-relaxed text-[var(--sys-muted)]">
+        <p className="text-xs leading-relaxed text-[var(--sys-muted)]">
           «الفرق» هو الإيراد ناقص الإنفاق الإعلاني فقط — ليس الربح: كلفة البضاعة والتوصيل والعمولة
           محسوبة في شاشة الأرباح. و«الإيراد» هو المحصَّل فعلاً حيث نعرفه وإجمالي الطلب حيث لا نعرفه،
           نفس التعريف في كل الشاشات.
@@ -279,9 +279,9 @@ function Stat({ label, value, tone, hint }: { label: string; value: string; tone
     tone === 'good' ? 'text-[var(--sys-success)]' : tone === 'bad' ? 'text-[var(--sys-destructive)]' : tone === 'warn' ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-heading)]';
   return (
     <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
-      <p className="text-caption font-semibold text-[var(--sys-muted-foreground)]">{label}</p>
+      <p className="text-xs font-semibold text-[var(--sys-muted-foreground)]">{label}</p>
       <p className={`mt-0.5 text-base font-bold tabular-nums ${colour}`} dir="ltr">{value}</p>
-      {hint && <p className="mt-0.5 text-caption text-[var(--sys-muted)]">{hint}</p>}
+      {hint && <p className="mt-0.5 text-xs text-[var(--sys-muted)]">{hint}</p>}
     </div>
   );
 }
@@ -299,11 +299,11 @@ function Row({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-bold text-[var(--sys-heading)]">{c.name}</span>
-            <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-caption font-semibold text-[var(--sys-muted-foreground)]">
+            <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-xs font-semibold text-[var(--sys-muted-foreground)]">
               {platformLabel(c.platform)}
             </span>
             <span
-              className={`rounded-lg px-1.5 py-0.5 text-caption font-semibold ${
+              className={`rounded-lg px-1.5 py-0.5 text-xs font-semibold ${
                 c.status === 'ACTIVE' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
                 : c.status === 'PAUSED' ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'
                 : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
@@ -312,7 +312,7 @@ function Row({
               {statusLabel(c.status)}
             </span>
           </div>
-          <p className="mt-1 text-caption text-[var(--sys-muted-foreground)]">
+          <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
             {c.landingPage ? c.landingPage.name : 'واجهة المتجر'} · الرمز {c.code}
           </p>
         </div>
@@ -322,7 +322,7 @@ function Row({
             <button
               onClick={onLink}
               title={c.adAccount ? 'غيّر الربط بميتا' : 'اربطها بحملة في ميتا'}
-              className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-caption font-semibold transition ${
+              className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-semibold transition ${
                 c.spendSource === 'SYNCED'
                   ? 'border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
                   : 'border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]'
@@ -335,7 +335,7 @@ function Row({
           <button
             onClick={onCopy}
             title="انسخ رابط الإعلان"
-            className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-caption font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+            className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
           >
             {copied ? <Check className="h-3 w-3 text-[var(--sys-success)]" /> : <Link2 className="h-3 w-3" />}
             {copied ? 'نُسخ' : 'رابط الإعلان'}
@@ -367,7 +367,7 @@ function Row({
         <Cell label="كلفة الواصل" value={fmt(c.money.costPerDelivered)} unit={currency} />
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-[var(--sys-muted-foreground)]">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--sys-muted-foreground)]">
         <span>طلبات <b className="text-[var(--sys-heading)]">{c.funnel.brought}</b></span>
         <span>مؤكدة <b className="text-[var(--sys-heading)]">{c.funnel.confirmed}</b>{c.funnel.confirmationRate !== null && ` (${c.funnel.confirmationRate}%)`}</span>
         <span>وصلت <b className="text-[var(--sys-heading)]">{c.funnel.delivered}</b>{c.funnel.deliveryRate !== null && ` (${c.funnel.deliveryRate}%)`}</span>
@@ -378,7 +378,7 @@ function Row({
         )}
       </div>
 
-      <p className="mt-1.5 truncate font-mono text-caption text-[var(--sys-muted)]" dir="ltr" title={c.link}>
+      <p className="mt-1.5 truncate font-mono text-xs text-[var(--sys-muted)]" dir="ltr" title={c.link}>
         {c.link}
       </p>
     </div>
@@ -390,12 +390,12 @@ function Cell({ label, value, unit, tone, icon }: { label: string; value: string
     tone === 'good' ? 'text-[var(--sys-success)]' : tone === 'bad' ? 'text-[var(--sys-destructive)]' : tone === 'warn' ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-heading)]';
   return (
     <div>
-      <p className="text-caption text-[var(--sys-muted)]">{label}</p>
+      <p className="text-xs text-[var(--sys-muted)]">{label}</p>
       <p className={`flex items-center gap-0.5 text-xs font-bold tabular-nums ${colour}`} dir="ltr">
         {icon === 'up' && <TrendingUp className="h-3 w-3" />}
         {icon === 'down' && <TrendingDown className="h-3 w-3" />}
         {value}
-        {unit && value !== '—' && <span className="text-caption font-normal text-[var(--sys-muted)]">{unit}</span>}
+        {unit && value !== '—' && <span className="text-xs font-normal text-[var(--sys-muted)]">{unit}</span>}
       </p>
     </div>
   );
@@ -488,7 +488,7 @@ function Editor({
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="مثلاً: عرض رمضان — فيديو ١"
+              placeholder="مثلاً: عرض رمضان — فيديو 1"
               className={INPUT}
             />
           </Field>
@@ -545,7 +545,7 @@ function Editor({
           </Field>
 
           {campaign && (
-            <p className="rounded-lg bg-[var(--sys-surface)] p-2 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+            <p className="rounded-lg bg-[var(--sys-surface)] p-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
               الرمز <b className="font-mono">{campaign.code}</b> لا يتغيّر — فهو مطبوع على كل طلب جاءت به
               هذه الحملة. حملة تحتاج رمزاً جديداً هي حملة جديدة.
             </p>
@@ -572,9 +572,9 @@ const INPUT =
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-caption font-semibold text-[var(--sys-foreground)]">{label}</label>
+      <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">{label}</label>
       {children}
-      {hint && <p className="mt-0.5 text-caption text-[var(--sys-muted)]">{hint}</p>}
+      {hint && <p className="mt-0.5 text-xs text-[var(--sys-muted)]">{hint}</p>}
     </div>
   );
 }
@@ -649,14 +649,14 @@ function LinkDialog({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="mb-3 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="mb-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           بعدها يأتي الإنفاق تلقائياً. الربط بالمعرّف لا بالاسم — فتغيير اسم الحملة في ميتا
           لن يقطعه.
         </p>
 
         {accounts.length > 1 && (
           <div className="mb-3">
-            <label className="mb-1 block text-caption font-semibold text-[var(--sys-foreground)]">الحساب الإعلاني</label>
+            <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">الحساب الإعلاني</label>
             <select value={accountId} onChange={(e) => { setAccountId(e.target.value); setChosen(''); }} className={INPUT}>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.accountName ?? a.accountId}</option>
@@ -665,14 +665,14 @@ function LinkDialog({
           </div>
         )}
 
-        {error && <p className="mb-2 rounded-lg bg-[var(--sys-destructive-soft)] p-2 text-caption text-[var(--sys-destructive)]">{error}</p>}
+        {error && <p className="mb-2 rounded-lg bg-[var(--sys-destructive-soft)] p-2 text-xs text-[var(--sys-destructive)]">{error}</p>}
 
         {remote === null && !error ? (
           <div className="flex h-24 items-center justify-center text-[var(--sys-muted-foreground)]">
             <Loader2 className="h-4 w-4 animate-spin" />
           </div>
         ) : remote && remote.length === 0 ? (
-          <p className="rounded-lg bg-[var(--sys-surface)] p-3 text-caption text-[var(--sys-muted-foreground)]">
+          <p className="rounded-lg bg-[var(--sys-surface)] p-3 text-xs text-[var(--sys-muted-foreground)]">
             لا حملات في هذا الحساب.
           </p>
         ) : (
@@ -688,9 +688,9 @@ function LinkDialog({
               >
                 <span className="min-w-0">
                   <span className="block truncate text-xs font-semibold text-[var(--sys-foreground)]">{r.name}</span>
-                  <span className="block font-mono text-caption text-[var(--sys-muted)]" dir="ltr">{r.id}</span>
+                  <span className="block font-mono text-xs text-[var(--sys-muted)]" dir="ltr">{r.id}</span>
                 </span>
-                <span className={`shrink-0 rounded-lg px-1.5 py-0.5 text-caption font-semibold ${
+                <span className={`shrink-0 rounded-lg px-1.5 py-0.5 text-xs font-semibold ${
                   r.status === 'ACTIVE' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'
                 }`}>
                   {r.status === 'ACTIVE' ? 'تعمل' : 'متوقفة'}
@@ -714,7 +714,7 @@ function LinkDialog({
         </div>
 
         {campaign.spendSource === 'SYNCED' && (
-          <p className="mt-2 text-caption leading-relaxed text-[var(--sys-muted)]">
+          <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted)]">
             فكّ الربط يعيد الإنفاق للإدخال اليدوي، ولا يمسح الرقم المسحوب — هو مصروف حقيقي حدث.
           </p>
         )}

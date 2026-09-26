@@ -121,7 +121,7 @@ export function CustomersScreen() {
             placeholder="بحث بالاسم، رقم الهاتف، المحافظة..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)] shadow-card"
+            className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2 text-xs bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)] shadow-raised"
           />
         </div>
 
@@ -164,7 +164,7 @@ export function CustomersScreen() {
                   {c.altPhone && <span className="text-[var(--sys-muted)]">بديل: {c.altPhone}</span>}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--sys-border)] text-center text-caption">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--sys-border)] text-center text-xs">
                   <div className="bg-[var(--sys-surface)] p-1.5 rounded-lg">
                     <span className="text-[var(--sys-muted)] block">الكل</span>
                     <span className="font-bold text-[var(--sys-heading)]">{c.totalOrders}</span>

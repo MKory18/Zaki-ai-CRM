@@ -46,7 +46,7 @@ const ATTEMPT_RESULT_AR: Record<string, string> = {
 
 const SHIPPING_STATE: Record<string, { ar: string; en: string; cls: string }> = {
   NOT_READY: { ar: 'غير جاهز', en: 'Not Ready', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
-  READY_FOR_SHIPPING: { ar: 'جاهز للشحن', en: 'Ready for Shipping', cls: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-info)]/50' },
+  READY_FOR_SHIPPING: { ar: 'جاهز للشحن', en: 'Ready for Shipping', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-muted-foreground)]/50' },
   PACKING: { ar: 'تغليف', en: 'Packing', cls: 'bg-indigo-50 text-indigo-700 border-indigo-300' },
   READY_FOR_PICKUP: { ar: 'جاهز للاستلام', en: 'Ready for Pickup', cls: 'bg-cyan-50 text-cyan-700 border-cyan-300' },
   SHIPPED: { ar: 'تم الشحن', en: 'Shipped', cls: 'bg-violet-50 text-violet-700 border-violet-300' },
@@ -242,14 +242,14 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
   const actions = NEXT_ACTIONS[order?.shippingStatus] ?? [];
 
   return (
-    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-card" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-raised" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
           <Truck className="w-4 h-4 text-[var(--sys-destructive)]" />
           {ar ? 'الشحن والتوصيل' : 'Shipping & Delivery'}
         </h4>
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 text-caption font-bold ${st.cls}`}>
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 text-xs font-bold ${st.cls}`}>
           {ar ? st.ar : st.en}
         </span>
       </div>
@@ -266,21 +266,21 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
 
       {/* Failure/return reasons */}
       {order.shippingStatus === 'FAILED_DELIVERY' && order.deliveryFailureReason && (
-        <p className="mb-3 text-caption text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1.5">
+        <p className="mb-3 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1.5">
           ⚠️ {ar ? 'سبب الفشل:' : 'Failure reason:'}{' '}
           {(FAILURE_REASONS as any)[order.deliveryFailureReason]?.[ar ? 'ar' : 'en'] ?? order.deliveryFailureReason}
           {order.deliveryNote ? ` — ${order.deliveryNote}` : ''}
         </p>
       )}
       {order.returnReason && ['RETURN_REQUESTED', 'RETURNED'].includes(order.shippingStatus) && (
-        <p className="mb-3 text-caption text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-orange-200 rounded-lg px-2.5 py-1.5">
+        <p className="mb-3 text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-orange-200 rounded-lg px-2.5 py-1.5">
           ↩️ {ar ? 'سبب الإرجاع:' : 'Return reason:'}{' '}
           {(RETURN_REASONS as any)[order.returnReason]?.[ar ? 'ar' : 'en'] ?? order.returnReason}
         </p>
       )}
 
       {!canEdit && (
-        <p className="mb-3 text-caption text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg px-2.5 py-2">
+        <p className="mb-3 text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg px-2.5 py-2">
           الشحن والتوصيل للعرض فقط — تحريكه من صلاحية فريق الشحن.
         </p>
       )}
@@ -298,7 +298,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
                 transition(a.to);
               }}
               disabled={actionLoading !== null}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-caption font-bold rounded-lg border-2 transition-colors cursor-pointer disabled:opacity-50 ${a.cls}`}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-colors cursor-pointer disabled:opacity-50 ${a.cls}`}
             >
               {a.to === 'DELIVERED' ? <PackageCheck className="w-3.5 h-3.5" /> : a.to === 'FAILED_DELIVERY' ? <XCircle className="w-3.5 h-3.5" /> : a.to === 'RETURNED' || a.to === 'RETURN_REQUESTED' ? <Undo2 className="w-3.5 h-3.5" /> : <Ship className="w-3.5 h-3.5" />}
               {ar ? a.labelAr : a.labelEn}
@@ -308,7 +308,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
             <button
               onClick={() => { setTrackingNumber(order.trackingNumber || ''); setDeliveryFee(order.deliveryFee ? String(order.deliveryFee) : ''); setOpenForm('tracking'); }}
               disabled={actionLoading !== null}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-caption font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
             >
               <Hash className="w-3.5 h-3.5" />{ar ? 'رقم التتبع' : 'Tracking'}
             </button>
@@ -336,17 +336,17 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
 
       {/* Delivery attempts (append-only history) */}
       <div className="border-t border-slate-100 pt-3">
-        <p className="text-caption font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2 flex items-center gap-1.5">
+        <p className="text-xs font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2 flex items-center gap-1.5">
           <History className="w-3 h-3" />
           {ar ? 'سجل الشحن والتوصيل' : 'Shipping & Delivery Timeline'}
           {loading && <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-[var(--sys-destructive)]" />}
         </p>
         {attempts.length === 0 ? (
-          <p className="text-caption text-[var(--sys-muted)] py-1.5">{ar ? 'لا محاولات توصيل بعد.' : 'No delivery attempts yet.'}</p>
+          <p className="text-xs text-[var(--sys-muted)] py-1.5">{ar ? 'لا محاولات توصيل بعد.' : 'No delivery attempts yet.'}</p>
         ) : (
           <div className="space-y-1.5">
             {attempts.map((att: any) => (
-              <div key={att.id} className={`p-2 rounded-lg border text-caption ${
+              <div key={att.id} className={`p-2 rounded-lg border text-xs ${
                 att.result === 'DELIVERED' ? 'bg-[var(--sys-success-soft)]/60 border-[var(--sys-success)]/40' : att.result === 'FAILED' ? 'bg-[var(--sys-destructive-soft)]/60 border-[var(--sys-destructive-border)]' : 'bg-[var(--sys-surface)] border-[var(--sys-border)]'
               }`}>
                 <div className="flex items-center justify-between flex-wrap gap-1">
@@ -478,7 +478,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
 function Info({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="rounded-lg bg-[var(--sys-surface)] px-2.5 py-2">
-      <p className="text-caption text-[var(--sys-muted)]">{label}</p>
+      <p className="text-xs text-[var(--sys-muted)]">{label}</p>
       <p className={`text-xs font-bold text-[var(--sys-foreground)] truncate ${mono ? 'font-mono' : ''}`} dir={mono ? 'ltr' : undefined}>{value}</p>
     </div>
   );

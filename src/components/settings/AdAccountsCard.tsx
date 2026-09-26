@@ -150,12 +150,12 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
         <Megaphone className="h-4 w-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">حسابات الإعلانات</h2>
         {storeName && (
-          <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-caption font-semibold text-[var(--sys-foreground)]">
+          <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-xs font-semibold text-[var(--sys-foreground)]">
             متجر {storeName}
           </span>
         )}
       </div>
-      <p className="mb-3 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+      <p className="mb-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
         اربط حساباتك الإعلانية ليأتي الإنفاق تلقائياً بدل أن تكتبه. كل شيء آخر في شاشة الحملات
         محسوب من طلباتك أصلاً. الحساب يُربط بالمتجر المختار من الأعلى — بدّل المتجر لتربط حساب متجر آخر.
       </p>
@@ -172,23 +172,23 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[var(--sys-heading)]">
                     {a.accountName ?? a.accountId}
-                    <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-caption font-semibold text-[var(--sys-foreground)]">
+                    <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-xs font-semibold text-[var(--sys-foreground)]">
                       {labelOf(a.platform)}
                     </span>
                     <span
-                      className={`rounded-lg px-1.5 py-0.5 text-caption font-semibold ${
+                      className={`rounded-lg px-1.5 py-0.5 text-xs font-semibold ${
                         a.status === 'CONNECTED' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
                       }`}
                     >
                       {a.status === 'CONNECTED' ? 'متصل' : 'يحتاج انتباهاً'}
                     </span>
                   </p>
-                  <p className="mt-0.5 font-mono text-caption text-[var(--sys-muted)]" dir="ltr">
+                  <p className="mt-0.5 font-mono text-xs text-[var(--sys-muted)]" dir="ltr">
                     {a.accountId} · ••••{a.tokenHint ?? ''}
                   </p>
-                  <p className="mt-0.5 text-caption text-[var(--sys-muted-foreground)]">
+                  <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
                     {a._count.campaigns} حملة مربوطة
-                    {a.lastSyncAt && ` · آخر سحب ${new Date(a.lastSyncAt).toLocaleString('ar')}`}
+                    {a.lastSyncAt && ` · آخر سحب ${new Date(a.lastSyncAt).toLocaleString('ar-u-nu-latn')}`}
                   </p>
                 </div>
                 <button
@@ -204,7 +204,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   reads "token has expired" can fix it; one who reads "sync
                   failed" cannot. */}
               {a.status !== 'CONNECTED' && a.lastError && (
-                <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-[var(--sys-destructive-soft)] p-1.5 text-caption leading-relaxed text-[var(--sys-destructive)]">
+                <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-[var(--sys-destructive-soft)] p-1.5 text-xs leading-relaxed text-[var(--sys-destructive)]">
                   <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
                   {a.lastError}
                 </p>
@@ -225,9 +225,9 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   key={p.platform}
                   type="button"
                   onClick={() => pick(p.platform)}
-                  className={`flex-1 rounded-md px-2 py-1.5 text-caption font-semibold transition ${
+                  className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition ${
                     p.platform === active.platform
-                      ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-card'
+                      ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-raised'
                       : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
                   }`}
                 >
@@ -238,7 +238,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
           )}
 
           <div>
-            <label className="mb-1 block text-caption font-semibold text-[var(--sys-foreground)]">رقم الحساب الإعلاني</label>
+            <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">رقم الحساب الإعلاني</label>
             <input
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
@@ -250,7 +250,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
 
           {active.fields.map((f) => (
             <div key={f.key}>
-              <label className="mb-1 block text-caption font-semibold text-[var(--sys-foreground)]">{f.label}</label>
+              <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">{f.label}</label>
               <input
                 type={f.secret ? 'password' : 'text'}
                 value={values[f.key] ?? ''}
@@ -260,11 +260,11 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                 dir="ltr"
                 autoComplete="off"
               />
-              {f.hint && <p className="mt-1 text-caption leading-relaxed text-[var(--sys-muted)]">{f.hint}</p>}
+              {f.hint && <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted)]">{f.hint}</p>}
             </div>
           ))}
 
-          <p className="text-caption leading-relaxed text-[var(--sys-muted)]">
+          <p className="text-xs leading-relaxed text-[var(--sys-muted)]">
             تُشفَّر قبل الحفظ ولا تُعرَض بعدها أبداً، ولا تُكتب في سجل التدقيق. نتحقق منها مع{' '}
             {active.short} قبل الحفظ — بيانات تُحفظ بلا تجربة هي بيانات تفشل ليلاً بلا أن ينتبه أحد.
           </p>
@@ -275,7 +275,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
           </Button>
 
           {msg && (
-            <p className={`text-caption font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>
+            <p className={`text-xs font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>
           )}
         </div>
       )}
@@ -288,21 +288,21 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
           <button
             type="button"
             onClick={() => setHowOpen((v) => !v)}
-            className="mt-2 flex items-center gap-1 text-caption font-semibold text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
+            className="mt-2 flex items-center gap-1 text-xs font-semibold text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
           >
             <ChevronDown className={`h-3 w-3 transition ${howOpen ? 'rotate-180' : ''}`} />
             من أين أحصل على بيانات {active.short}؟
           </button>
 
           {howOpen && (
-            <ol className="mt-2 space-y-2 rounded-lg bg-[var(--sys-surface)] p-3 text-caption leading-relaxed text-[var(--sys-foreground)]">
+            <ol className="mt-2 space-y-2 rounded-lg bg-[var(--sys-surface)] p-3 text-xs leading-relaxed text-[var(--sys-foreground)]">
               <li>
                 افتح{' '}
                 <a
                   href={active.help.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-0.5 text-[var(--sys-info)] hover:underline"
+                  className="inline-flex items-center gap-0.5 text-[var(--sys-muted-foreground)] hover:underline"
                 >
                   {active.help.urlLabel} <ExternalLink className="h-2.5 w-2.5" />
                 </a>
@@ -321,7 +321,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
   );
 }
 
-const ARABIC_INDEX = ['١.', '٢.', '٣.', '٤.', '٥.'];
+const ARABIC_INDEX = ['1.', '2.', '3.', '4.', '5.'];
 
 /** Shape of the id, which is the one thing that is not a credential. */
 const ACCOUNT_PLACEHOLDER: Record<string, string> = {

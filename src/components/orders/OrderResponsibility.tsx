@@ -97,7 +97,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
     'w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
   return (
-    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-card space-y-3">
+    <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <UserCheck className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
@@ -107,7 +107,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
               <span className="font-bold">{holder.name}</span>
               {heldByMe && <span className="text-xs text-[var(--sys-success)]"> (أنت)</span>}
               {order.claimedAt && (
-                <span className="text-caption text-[var(--sys-muted)]"> · منذ {arDateShort(order.claimedAt)}</span>
+                <span className="text-xs text-[var(--sys-muted)]"> · منذ {arDateShort(order.claimedAt)}</span>
               )}
             </p>
           ) : (
@@ -121,7 +121,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => { setOpen(open === 'release' ? null : 'release'); setError(null); }}
-              className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
             >
               <UserMinus className="w-3.5 h-3.5" />
               سحبه منه
@@ -130,7 +130,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
               onClick={() => { setOpen(open === 'transfer' ? null : 'transfer'); setError(null); }}
               disabled={candidates.length === 0}
               title={candidates.length === 0 ? 'لا يوجد زميل بنفس الرتبة' : undefined}
-              className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
             >
               <ArrowLeftRight className="w-3.5 h-3.5" />
               تحويل لزميل
@@ -168,7 +168,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
             />
           </label>
 
-          {error && <p className="text-caption text-[var(--sys-destructive)]">{error}</p>}
+          {error && <p className="text-xs text-[var(--sys-destructive)]">{error}</p>}
 
           <div className="flex gap-2">
             <button

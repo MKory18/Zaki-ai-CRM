@@ -1,33 +1,31 @@
 /**
- * THREE LOOKS FOR THE SYSTEM — AND ONE MEANING FOR EVERY COLOUR.
+ * THE LOOKS OF THE SYSTEM — AND ONE MEANING FOR EVERY COLOUR.
  *
- * BLACK AND SKY, QUIETLY.
+ * THE BRAND. Zakai.io: a navy wordmark, a cyan-to-petrol mark. Petrol is
+ * the action on light surfaces, cyan the action on dark ones, glow the
+ * highlight a focus ring uses. The identity appears at the door — login,
+ * the country and store pickers, the splash — and nowhere else. On a screen
+ * showing orders, money or stock there is no gradient and no glow: the
+ * brand earns attention at the door; inside, the numbers do.
  *
- * One accent and no other hue: the greys are actually grey — no blue cast,
- * no warm cast, nothing competing — and the single colour in the system is
- * a calm sky blue that means "this is the action". A palette with two
- * personalities makes people hunt for the button; a palette with one makes
- * the button the only coloured thing on the page, which is the whole job.
- *
- * Quiet is a measurement, not a mood. The accent sits around 195° at a
- * lightness deep enough to carry white text, rather than the bright cyan
- * that reads as "sky" on a swatch and as a headache on a screen somebody
- * stares at for nine hours.
- *
- * The rule that makes a theme switch safe rather than merely pretty: the
- * SEMANTIC colours keep their meaning in all three. Amber is always "needs
+ * ROLES, NOT COLOURS. Nothing here is named for what it looks like. A theme
+ * moves the SURFACES; the meanings do not move. Amber is always "needs
  * attention", red is always "late, or money lost", green is always
- * "collected", and the accent is always "this is the action". Only the
- * SURFACES move — page, card, border, text.
+ * "collected", and the accent is always "this is the action".
  *
- * That is not decoration. People here work at speed and read colour before
- * they read words; a theme that made red mean something else in the dark
- * palette would make somebody miss a late shipment at four in the afternoon
- * because they switched theme at lunch.
+ * THERE IS NO BLUE "INFO". It would sit beside the brand cyan and blur the
+ * one line that matters — the line between something to press and something
+ * to read. An informational note is surface-2 with secondary text.
  *
- * Each semantic colour is therefore tuned per theme for CONTRAST — a red
- * that is legible on a dark surface is not the same red that is legible on
- * a white one — and never re-assigned. Same meaning, readable everywhere.
+ * TEXT ON THE CYAN ACCENT IS NAVY, NEVER WHITE. White on cyan measures
+ * 2.4:1 and fails; navy measures 7.4:1. The dark theme's accent-contrast is
+ * therefore near-black, and system-themes.test.ts refuses anything else.
+ *
+ * EVERY PAIR IS MEASURED. Each text/background combination clears WCAG AA
+ * 4.5:1 in all three palettes, and every chart series clears 3:1 against
+ * the card it is drawn on. Where a brand hex could not clear the gate on a
+ * given surface, it was walked along its own hue until it did — the gate is
+ * the rule, the hex was the starting point.
  *
  * The store's own look is a separate family entirely (`--lp-*`, see
  * landing-theme.ts). Nothing here may reach a shop, and nothing there may
@@ -53,150 +51,201 @@ export const SYS_VARS = [
   'card',
   'surface',
   'surface-strong',
+  'border',
+  'border-strong',
   'heading',
   'foreground',
   'muted-foreground',
   'muted',
-  'border',
-  'border-strong',
   'primary',
   'primary-foreground',
+  'primary-hover',
   'primary-soft',
+  'focus',
+  'warning',
+  'warning-soft',
   'destructive',
   'destructive-soft',
   'destructive-border',
   'success',
   'success-soft',
-  'warning',
-  'warning-soft',
-  'info',
-  'info-soft',
+  'chart-1',
+  'chart-2',
+  'chart-3',
+  'chart-4',
+  'chart-5',
+  'chart-6',
   'sidebar',
   'sidebar-foreground',
   'scrollbar',
   'scrollbar-hover',
-  // Depth, per theme, because a shadow that works on white is
-  // invisible on black and a shadow that works on black is a bruise
-  // on white.
-  'shadow',
+  // Depth, per theme, because a shadow that works on white is invisible on
+  // black. Three levels and no more: flat is the absence of both.
   'shadow-raised',
+  'shadow-overlay',
 ] as const;
 
 export type SysVar = (typeof SYS_VARS)[number];
 
+/**
+ * THE SIX CHART SERIES.
+ *
+ * Derived from the brand and deliberately EXCLUDING the three semantic
+ * hues, so a line on a chart is never mistaken for a warning. Each one is
+ * tuned per theme until it clears 3:1 on the surface it is drawn on.
+ */
+export const CHART_SERIES = ['chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5', 'chart-6'] as const;
+
 export const SYSTEM_THEMES: SystemTheme[] = [
-  {
-    key: 'day',
-    ar: 'نهاري',
-    note: 'أسود على أبيض وسماويّ هادئ — للمكاتب المضيئة وللشاشات التي تُقرأ من بعيد.',
-    dark: false,
-    vars: {
-      background: '#f6f7f8',
-      card: '#ffffff',
-      surface: '#f6f7f8',
-      'surface-strong': '#edeef0',
-      heading: '#0e1013',
-      foreground: '#3b3f45',
-      'muted-foreground': '#6b7078',
-      muted: '#9aa0a8',
-      border: '#e3e5e8',
-      'border-strong': '#cdd0d5',
-      primary: '#17708f',
-      'primary-foreground': '#ffffff',
-      'primary-soft': '#eaf3f7',
-      destructive: '#c2413f',
-      'destructive-soft': '#fbeceb',
-      'destructive-border': '#f0cfcd',
-      success: '#2e7d52',
-      'success-soft': '#eaf4ee',
-      warning: '#9a6a1f',
-      'warning-soft': '#f9f2e4',
-      info: '#4a5580',
-      'info-soft': '#eeeff5',
-      sidebar: '#0e1013',
-      'sidebar-foreground': '#d5d8dc',
-      scrollbar: '#cdd0d5',
-      'scrollbar-hover': '#9aa0a8',
-      shadow: '0 1px 2px rgb(14 16 19 / 0.05), 0 1px 3px rgb(14 16 19 / 0.07)',
-      'shadow-raised': '0 2px 6px rgb(14 16 19 / 0.06), 0 10px 28px rgb(14 16 19 / 0.12)',
-    },
-  },
   {
     key: 'ops',
     ar: 'غرفة العمليات',
-    note: 'أسود شبه تام وسماويّ مرفوع — لمن يجلس أمام الشاشة اليوم كلّه.',
+    note: 'ليل عميق وسماويّ برّاق — الافتراضي، ولمن يجلس أمام الشاشة اليوم كلّه.',
     dark: true,
     vars: {
-      background: '#0b0c0e',
-      card: '#131518',
-      surface: '#17191d',
-      'surface-strong': '#1f2228',
-      heading: '#eceef1',
-      foreground: '#c0c4ca',
-      'muted-foreground': '#8b9098',
-      muted: '#696e76',
-      border: '#262a30',
-      'border-strong': '#363b43',
-      primary: '#4fb3dc',
-      'primary-foreground': '#06181f',
-      'primary-soft': '#10242d',
-      destructive: '#f0736f',
-      'destructive-soft': '#2a1514',
-      'destructive-border': '#4a2523',
-      success: '#4cc98a',
-      'success-soft': '#10251a',
-      warning: '#e3ad63',
-      'warning-soft': '#261e12',
-      info: '#9aa4cf',
-      'info-soft': '#181a24',
-      sidebar: '#08090b',
-      'sidebar-foreground': '#c0c4ca',
-      scrollbar: '#262a30',
-      'scrollbar-hover': '#363b43',
-      shadow: '0 1px 2px rgb(0 0 0 / 0.55)',
-      'shadow-raised': '0 2px 8px rgb(0 0 0 / 0.45), 0 14px 36px rgb(0 0 0 / 0.65)',
+      background: '#050F1F',
+      card: '#0A1A2E',
+      surface: '#0F2438',
+      'surface-strong': '#16304A',
+      border: '#1C3A52',
+      'border-strong': '#486276',
+      heading: '#E6F1F4',
+      foreground: '#E6F1F4',
+      'muted-foreground': '#9FB6C2',
+      muted: '#6f8493',
+      primary: '#36B5CC',
+      'primary-foreground': '#04182B',
+      'primary-hover': '#60DADB',
+      'primary-soft': '#0e2a3e',
+      focus: '#60DADB',
+      warning: '#E8973A',
+      'warning-soft': '#20262f',
+      destructive: '#e65e52',
+      'destructive-soft': '#202132',
+      'destructive-border': '#55313a',
+      success: '#4FB865',
+      'success-soft': '#112a34',
+      'chart-1': '#36B5CC',
+      'chart-2': '#2c6f8c',
+      'chart-3': '#8E7CC3',
+      'chart-4': '#C9A36A',
+      'chart-5': '#7A93A6',
+      'chart-6': '#C97A94',
+      sidebar: '#0A1A2E',
+      'sidebar-foreground': '#9FB6C2',
+      scrollbar: '#1C3A52',
+      'scrollbar-hover': '#597183',
+      'shadow-raised': '0 1px 2px rgb(0 0 0 / 0.55)',
+      'shadow-overlay': '0 2px 8px rgb(0 0 0 / 0.45), 0 16px 40px rgb(0 0 0 / 0.65)',
+    },
+  },
+  {
+    key: 'day',
+    ar: 'نهاري',
+    note: 'أبيض ونيليّ وبترولي — للمكاتب المضيئة وللشاشات التي تُقرأ من بعيد.',
+    dark: false,
+    vars: {
+      background: '#FFFFFF',
+      card: '#F4F8FA',
+      surface: '#E9F0F3',
+      'surface-strong': '#DCE7EC',
+      border: '#D5E1E6',
+      'border-strong': '#a9bac5',
+      heading: '#0C3252',
+      foreground: '#0C3252',
+      'muted-foreground': '#4A6272',
+      muted: '#80929e',
+      primary: '#1A6382',
+      'primary-foreground': '#FFFFFF',
+      'primary-hover': '#176079',
+      'primary-soft': '#e9f1f4',
+      focus: '#1A6382',
+      warning: '#9A5B12',
+      'warning-soft': '#f0f0ee',
+      destructive: '#B42318',
+      'destructive-soft': '#f1edef',
+      'destructive-border': '#deb0ad',
+      success: '#1E7A3A',
+      'success-soft': '#e9f2f0',
+      'chart-1': '#2e9aad',
+      'chart-2': '#1A6382',
+      'chart-3': '#8E7CC3',
+      'chart-4': '#a48456',
+      'chart-5': '#758d9f',
+      'chart-6': '#c1758e',
+      sidebar: '#F4F8FA',
+      'sidebar-foreground': '#4A6272',
+      scrollbar: '#D5E1E6',
+      'scrollbar-hover': '#99acba',
+      'shadow-raised': '0 1px 2px rgb(12 50 82 / 0.06), 0 1px 3px rgb(12 50 82 / 0.08)',
+      'shadow-overlay': '0 2px 6px rgb(12 50 82 / 0.07), 0 12px 32px rgb(12 50 82 / 0.14)',
     },
   },
   {
     key: 'calm',
     ar: 'هادئ',
-    note: 'رماديّ فاتح وتباين أقل — لمن يتعب من الأبيض الصريح.',
+    note: 'ورقيّ دافئ وتباين أقلّ — لمن يتعب من الأبيض الصريح.',
     dark: false,
     vars: {
-      background: '#f2f4f6',
-      card: '#fafbfc',
-      surface: '#eef1f4',
-      'surface-strong': '#e5e9ed',
-      heading: '#1b1f24',
-      foreground: '#464b52',
-      'muted-foreground': '#676d75',
-      muted: '#9aa1a9',
-      border: '#dde2e7',
-      'border-strong': '#c8cfd6',
-      primary: '#1d6d88',
-      'primary-foreground': '#fafbfc',
-      'primary-soft': '#e7f0f4',
-      destructive: '#b64a48',
-      'destructive-soft': '#f7ebea',
-      'destructive-border': '#e8cdcc',
-      success: '#35795a',
-      'success-soft': '#e9f2ec',
-      warning: '#8e6726',
-      'warning-soft': '#f6f0e3',
-      info: '#4f5a80',
-      'info-soft': '#edeef4',
-      sidebar: '#1b1f24',
-      'sidebar-foreground': '#dde2e7',
-      scrollbar: '#c8cfd6',
-      'scrollbar-hover': '#9aa1a9',
-      shadow: '0 1px 2px rgb(27 31 36 / 0.04), 0 1px 3px rgb(27 31 36 / 0.06)',
-      'shadow-raised': '0 2px 6px rgb(27 31 36 / 0.05), 0 10px 28px rgb(27 31 36 / 0.10)',
+      background: '#F6F2EA',
+      card: '#EFE9DE',
+      surface: '#E6DECF',
+      'surface-strong': '#DDD3C2',
+      border: '#D8CEBC',
+      'border-strong': '#abaca5',
+      heading: '#0C3252',
+      foreground: '#0C3252',
+      'muted-foreground': '#566369',
+      muted: '#878e8e',
+      primary: '#1A6382',
+      'primary-foreground': '#FFFFFF',
+      'primary-hover': '#176079',
+      'primary-soft': '#e4e2d9',
+      focus: '#1A6382',
+      warning: '#8e5410',
+      'warning-soft': '#eae2d4',
+      destructive: '#B42318',
+      'destructive-soft': '#ecdfd4',
+      'destructive-border': '#dba69b',
+      success: '#1c7036',
+      'success-soft': '#e4e3d6',
+      'chart-1': '#2a8e9f',
+      'chart-2': '#1A6382',
+      'chart-3': '#8877bb',
+      'chart-4': '#9d7f53',
+      'chart-5': '#708799',
+      'chart-6': '#b97088',
+      sidebar: '#EFE9DE',
+      'sidebar-foreground': '#566369',
+      scrollbar: '#D8CEBC',
+      'scrollbar-hover': '#9b9f9c',
+      'shadow-raised': '0 1px 2px rgb(12 50 82 / 0.05), 0 1px 3px rgb(12 50 82 / 0.07)',
+      'shadow-overlay': '0 2px 6px rgb(12 50 82 / 0.06), 0 12px 32px rgb(12 50 82 / 0.12)',
     },
   },
 ];
 
+/**
+ * WHAT THE PICKER OFFERS — three palettes and one instruction.
+ *
+ * `auto` is not a palette. It is "use the one the device is in", resolved
+ * by a media query in the stylesheet rather than by a script, so a phone in
+ * night mode opens dark on the FIRST paint instead of flashing white at
+ * somebody at four in the morning.
+ */
+export const AUTO_THEME = 'auto';
+
+export const THEME_CHOICES: { key: string; ar: string; note: string }[] = [
+  ...SYSTEM_THEMES.map((t) => ({ key: t.key, ar: t.ar, note: t.note })),
+  { key: AUTO_THEME, ar: 'تلقائي', note: 'يتبع الجهاز — داكنٌ ليلاً، فاتحٌ نهاراً.' },
+];
+
 /** The one everybody gets until they choose. */
-export const DEFAULT_THEME = 'day';
+export const DEFAULT_THEME = 'ops';
+
+/** Which palette `auto` resolves to, by the device's own setting. */
+export const AUTO_DARK = 'ops';
+export const AUTO_LIGHT = 'day';
 
 export function themeByKey(key: string | null | undefined): SystemTheme {
   return SYSTEM_THEMES.find((t) => t.key === key) ?? SYSTEM_THEMES.find((t) => t.key === DEFAULT_THEME)!;
@@ -204,6 +253,7 @@ export function themeByKey(key: string | null | undefined): SystemTheme {
 
 /** Only a key this build knows — a stored typo must not blank the screen. */
 export function sanitizeTheme(raw: unknown): string {
+  if (raw === AUTO_THEME) return AUTO_THEME;
   return SYSTEM_THEMES.some((t) => t.key === raw) ? (raw as string) : DEFAULT_THEME;
 }
 

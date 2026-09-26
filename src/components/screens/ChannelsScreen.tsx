@@ -31,15 +31,15 @@ const KIND_AR: Record<string, string> = {
 };
 
 const KIND_TONE: Record<string, string> = {
-  LANDING_PAGE: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-border)]',
-  FACEBOOK: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-border)]',
+  LANDING_PAGE: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
+  FACEBOOK: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
   INSTAGRAM: 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border-[#fbcfe8]',
   TIKTOK: 'bg-[var(--sys-surface-strong)] text-[#0f172a] border-[var(--sys-border)]',
   WHATSAPP: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[#a7f3d0]',
   TELEGRAM: 'bg-[var(--sys-surface)] text-[#0284c7] border-[#bae6fd]',
   PHONE: 'bg-[var(--sys-surface)] text-[#475569] border-[var(--sys-border)]',
   SHEET: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]',
-  WEBSITE: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[#ddd6fe]',
+  WEBSITE: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[#ddd6fe]',
   OTHER: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
 };
 
@@ -190,7 +190,7 @@ export function ChannelsScreen() {
               </select>
             </label>
           </div>
-          <p className="text-caption text-[var(--sys-muted)]">
+          <p className="text-xs text-[var(--sys-muted)]">
             عدة قنوات قد تشترك بمنصة واحدة — هكذا تعرف كم جاء من تيكتوك كلها، وكم من كل صفحة فيها.
           </p>
           <div className="flex gap-2">
@@ -221,7 +221,7 @@ export function ChannelsScreen() {
             {editing === c.id ? (
               <div className="flex flex-wrap items-end gap-2">
                 <label className="flex-1 min-w-[180px]">
-                  <span className="block text-caption text-[var(--sys-muted-foreground)] mb-1">الاسم</span>
+                  <span className="block text-xs text-[var(--sys-muted-foreground)] mb-1">الاسم</span>
                   <input
                     value={editDraft.name}
                     onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
@@ -230,7 +230,7 @@ export function ChannelsScreen() {
                   />
                 </label>
                 <label className="w-40">
-                  <span className="block text-caption text-[var(--sys-muted-foreground)] mb-1">المنصة</span>
+                  <span className="block text-xs text-[var(--sys-muted-foreground)] mb-1">المنصة</span>
                   <select
                     value={editDraft.kind}
                     onChange={(e) => setEditDraft({ ...editDraft, kind: e.target.value })}
@@ -257,13 +257,13 @@ export function ChannelsScreen() {
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`text-caption px-2 py-0.5 rounded-md border ${KIND_TONE[c.kind] ?? KIND_TONE.OTHER}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-md border ${KIND_TONE[c.kind] ?? KIND_TONE.OTHER}`}>
                   {KIND_AR[c.kind] ?? c.kind}
                 </span>
                 <span className={`text-sm font-medium ${c.isActive ? 'text-[var(--sys-heading)]' : 'text-[var(--sys-muted)] line-through'}`}>
                   {c.name}
                 </span>
-                <span className="text-caption text-[var(--sys-muted)] tabular-nums">
+                <span className="text-xs text-[var(--sys-muted)] tabular-nums">
                   {c.orders} طلب
                   {total > 0 && c.orders > 0 && ` · ${Math.round((c.orders / total) * 100)}%`}
                 </span>
@@ -279,7 +279,7 @@ export function ChannelsScreen() {
                   <button
                     onClick={() => patch(c.id, { isActive: !c.isActive })}
                     disabled={busy === c.id}
-                    className="text-caption px-2 py-1 rounded-md border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
+                    className="text-xs px-2 py-1 rounded-md border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
                   >
                     {c.isActive ? 'إيقاف' : 'تفعيل'}
                   </button>
@@ -300,7 +300,7 @@ export function ChannelsScreen() {
         ))}
       </div>
 
-      <p className="text-caption text-[var(--sys-muted)]">
+      <p className="text-xs text-[var(--sys-muted)]">
         القناة التي عليها طلبات لا تُحذف — تُوقَف فتختفي من قوائم الاختيار وتبقى في الإحصاءات.
       </p>
     </div>

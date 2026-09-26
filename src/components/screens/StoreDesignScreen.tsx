@@ -171,9 +171,9 @@ export function StoreDesignScreen() {
             <LayoutTemplate className="h-4 w-4 text-[#b8256e]" />
             الصفحة الرئيسية لـ«{data.store.name}»
           </h1>
-          <p className="mt-0.5 text-caption text-[#697586]">
+          <p className="mt-0.5 text-xs text-[#697586]">
             {data.publishedAt
-              ? `آخر نشر: ${new Date(data.publishedAt).toLocaleString('ar')}`
+              ? `آخر نشر: ${new Date(data.publishedAt).toLocaleString('ar-u-nu-latn')}`
               : 'لم تُنشر بعد — متجرك يعرض قائمة المنتجات العادية'}
             {data.hasUnpublished && ' · فيها تغييرات غير منشورة'}
           </p>
@@ -200,7 +200,7 @@ export function StoreDesignScreen() {
       </header>
 
       {!data.store.storefrontEnabled && (
-        <p className="border-b border-[#f59e0b]/40 bg-[#f59e0b]/10 px-4 py-2 text-caption text-[#92400e]">
+        <p className="border-b border-[#f59e0b]/40 bg-[#f59e0b]/10 px-4 py-2 text-xs text-[#92400e]">
           واجهة هذا المتجر مطفأة — انشر ما شئت، لن يراه أحد حتى تُشغّلها من «البلدان والمتاجر».
         </p>
       )}

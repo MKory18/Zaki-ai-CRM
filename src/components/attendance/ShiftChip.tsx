@@ -105,7 +105,7 @@ export function ShiftChip() {
           // work on — so the counter they asked for was invisible to the
           // two roles it was built for. It shows from a phone up now; only
           // the very narrowest layout drops it.
-          className="hidden sm:inline text-caption text-[var(--sys-muted-foreground)] tabular-nums whitespace-nowrap"
+          className="hidden sm:inline text-xs text-[var(--sys-muted-foreground)] tabular-nums whitespace-nowrap"
           title="يُحتسب من ساعة الخادم"
         >
           {counter}
@@ -114,7 +114,7 @@ export function ShiftChip() {
 
       {state.leftAt ? (
         <span
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] text-caption text-[var(--sys-muted-foreground)]"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
           title="انتهى دوامك اليوم"
         >
           <Check className="w-3.5 h-3.5" />
@@ -127,7 +127,7 @@ export function ShiftChip() {
           onClick={() => (confirming ? press('CHECK_OUT') : setConfirming(true))}
           onBlur={() => setConfirming(false)}
           title={`في الدوام منذ ${elapsed === null ? '—' : humanMinutes(elapsed)} · الدوام ${state.hours?.start}—${state.hours?.end}`}
-          className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-caption font-semibold tabular-nums transition-colors disabled:opacity-60 ${
+          className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-semibold tabular-nums transition-colors disabled:opacity-60 ${
             confirming
               ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
               : 'border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)]/50'
@@ -146,7 +146,7 @@ export function ShiftChip() {
           disabled={busy}
           onClick={() => press('CHECK_IN')}
           title={`سجّل بداية دوامك · الدوام ${state.hours?.start}—${state.hours?.end}`}
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-[var(--sys-border)] text-caption font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-[var(--sys-border)] text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] transition-colors disabled:opacity-60"
         >
           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogIn className="w-3.5 h-3.5" />}
           استلمت

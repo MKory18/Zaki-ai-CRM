@@ -238,14 +238,14 @@ export function LandingPageDetailScreen() {
                     dir="ltr"
                     placeholder="shop.example.com"
                   />
-                  <p className="mt-1 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                     وجّه النطاق إلى هذا الخادم بسجل <code dir="ltr">A</code> أو{' '}
                     <code dir="ltr">CNAME</code> عند مزوّد النطاق، ثم اكتبه هنا. الصفحة
                     تبقى تعمل على <code dir="ltr">/lp/{lp.slug}</code> في الحالتين، فالنطاق
                     باب إضافي لا بديل — وخطأ في الـDNS لا يوقف صفحة تعمل.
                   </p>
                   {lp.domain && (
-                    <p className="mt-1 text-caption text-[var(--sys-success)]" dir="ltr">
+                    <p className="mt-1 text-xs text-[var(--sys-success)]" dir="ltr">
                       https://{lp.domain}
                     </p>
                   )}
@@ -257,7 +257,7 @@ export function LandingPageDetailScreen() {
                     <option value="">— اختر منتجًا —</option>
                     {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </Select>
-                  <p className="text-caption text-[var(--sys-muted-foreground)] mt-1">السعر يُؤخذ من المنتج في قاعدة البيانات — لا يُقبل من المتصفح أبدًا.</p>
+                  <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">السعر يُؤخذ من المنتج في قاعدة البيانات — لا يُقبل من المتصفح أبدًا.</p>
                 </div>
                 <div className="flex items-center justify-between">
                   {saveMsg && <span className="text-xs text-[var(--sys-foreground)]">{saveMsg}</span>}
@@ -296,7 +296,7 @@ export function LandingPageDetailScreen() {
                   <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-bold">✓</span>
                   <div>
                     <p className="text-sm font-semibold text-[var(--sys-heading)]">نموذج الطلب مفعل</p>
-                    <p className="text-caption text-[var(--sys-muted-foreground)]">يظهر تلقائيًا أسفل الصفحة لكل زائر — بدون أي إعداد إضافي. المنتج والسعر يؤخذان من قاعدة البيانات.</p>
+                    <p className="text-xs text-[var(--sys-muted-foreground)]">يظهر تلقائيًا أسفل الصفحة لكل زائر — بدون أي إعداد إضافي. المنتج والسعر يؤخذان من قاعدة البيانات.</p>
                   </div>
                 </div>
               </CardContent>
@@ -310,7 +310,7 @@ export function LandingPageDetailScreen() {
                 <h3 className="font-semibold text-[var(--sys-heading)] flex items-center gap-2">
                   <Gift className="w-4 h-4 text-[var(--sys-primary)]" /> عروض المنتج
                 </h3>
-                <p className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+                <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                   العروض تُدار من صفحة المنتج نفسه، وهذه الصفحة تقرأ منها مباشرة —
                   فتغيير السعر هناك يصل إلى هنا وإلى كل مكان يبيع نفس المنتج.
                 </p>
@@ -321,7 +321,7 @@ export function LandingPageDetailScreen() {
                     </Button>
                   </a>
                 ) : (
-                  <p className="text-caption text-[var(--sys-warning)]">
+                  <p className="text-xs text-[var(--sys-warning)]">
                     اربط الصفحة بمنتج أولاً حتى تظهر عروضه عليها.
                   </p>
                 )}
@@ -336,7 +336,7 @@ export function LandingPageDetailScreen() {
                     <Gift className="w-4 h-4 text-[var(--sys-primary)]" /> المنتجات المقترحة بعد الطلب
                   </h3>
                 </div>
-                <p className="text-caption text-[var(--sys-muted-foreground)]">تظهر في شاشة النجاح بعد الطلب — يمكن للعميل إضافتها إلى نفس الطلب خلال 30 دقيقة.</p>
+                <p className="text-xs text-[var(--sys-muted-foreground)]">تظهر في شاشة النجاح بعد الطلب — يمكن للعميل إضافتها إلى نفس الطلب خلال 30 دقيقة.</p>
                 <div className="flex gap-2">
                   <Select value={recProductId} onChange={(e: any) => setRecProductId(e.target.value)}>
                     <option value="">— اختر منتجًا —</option>
@@ -357,7 +357,7 @@ export function LandingPageDetailScreen() {
                         <span className="text-xs text-[var(--sys-muted)]">{i + 1}.</span>
                         <span className="flex-1 truncate text-sm text-[var(--sys-heading)]">{r.product?.name}</span>
                         <span className="text-xs font-bold text-[var(--sys-primary)]" dir="ltr">{r.product?.basePrice ?? '—'}</span>
-                        {!r.isActive && <span className="text-caption text-[var(--sys-warning)]">معطّل</span>}
+                        {!r.isActive && <span className="text-xs text-[var(--sys-warning)]">معطّل</span>}
                         <button title="حذف" onClick={() => deleteRecommendation(r.id)} className="p-1 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}

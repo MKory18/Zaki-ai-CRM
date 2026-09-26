@@ -58,7 +58,7 @@ export function Header({
         <Store className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
         <div className="leading-tight min-w-0">
           <p className="text-xs font-semibold text-[var(--sys-heading)] truncate max-w-[160px]">{context.storeName}</p>
-          <p className="text-caption text-[var(--sys-muted-foreground)] truncate">
+          <p className="text-xs text-[var(--sys-muted-foreground)] truncate">
             {context.countryName} · {context.currencyCode}
             {context.storePaused && <span className="text-[var(--sys-destructive)]"> · موقوف</span>}
           </p>
@@ -109,7 +109,7 @@ export function Header({
 
         <div className="text-left leading-tight hidden sm:block">
           <p className="text-xs font-semibold text-[var(--sys-heading)]">{userName}</p>
-          <p className="text-caption text-[var(--sys-muted-foreground)]">
+          <p className="text-xs text-[var(--sys-muted-foreground)]">
             {ROLE_LABELS[userRole as keyof typeof ROLE_LABELS]?.ar ?? userRole}
           </p>
         </div>

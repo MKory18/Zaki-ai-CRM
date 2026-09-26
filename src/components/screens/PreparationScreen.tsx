@@ -180,7 +180,7 @@ export function PreparationScreen() {
                           type="button"
                           onClick={() => setReviewing(l.pendingChangeRequestId!)}
                           title="طلب تعديل بانتظار البتّ — راجعه قبل التغليف"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] text-caption font-semibold text-[var(--sys-warning)] hover:border-[var(--sys-warning)]"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] text-xs font-semibold text-[var(--sys-warning)] hover:border-[var(--sys-warning)]"
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-[var(--sys-warning)] animate-pulse" aria-hidden />
                           طلب تعديل

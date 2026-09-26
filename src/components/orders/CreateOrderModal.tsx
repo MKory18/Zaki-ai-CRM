@@ -220,7 +220,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
           <div className="flex items-center justify-between flex-wrap gap-2">
             <SectionTitle icon={UserCheck} title="1. بيانات العميل" color="bg-red-100 text-[var(--sys-destructive)]" />
             {existingCustomerAlert?.exists && (
-              <span className="text-caption font-bold text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/60 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              <span className="text-xs font-bold text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/60 px-2.5 py-1 rounded-full flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 عميل موجود — {existingCustomerAlert.name} ({existingCustomerAlert.totalOrders} طلب سابق)
               </span>
@@ -244,7 +244,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                 />
               </div>
               {existingCustomerAlert && (
-                <p className={`text-caption mt-1 flex items-center gap-1 ${existingCustomerAlert.exists ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-success)]'}`}>
+                <p className={`text-xs mt-1 flex items-center gap-1 ${existingCustomerAlert.exists ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-success)]'}`}>
                   {existingCustomerAlert.exists ? (
                     <>
                       <CheckCircle2 className="w-3 h-3" /> تم ربط البيانات بملف العميل تلقائياً
@@ -274,7 +274,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                 ))}
               </Select>
               {regions.length === 0 && (
-                <p className="mt-1 text-caption text-[var(--sys-destructive)]">
+                <p className="mt-1 text-xs text-[var(--sys-destructive)]">
                   لا توجد محافظات لهذا البلد — أضفها من الإعدادات ← البلدان والمتاجر والمحافظ.
                 </p>
               )}
@@ -332,7 +332,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                 ))}
               </Select>
               {channels.length === 0 && (
-                <p className="text-caption text-[var(--sys-muted)] mt-1">
+                <p className="text-xs text-[var(--sys-muted)] mt-1">
                   لا قنوات بعد — تُضاف من الإعدادات ← قنوات الطلبات.
                 </p>
               )}

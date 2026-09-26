@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { DEFAULT_THEME, SYSTEM_THEMES, SYS_VARS, sanitizeTheme, themeByKey } from './system-themes';
+import {
+  AUTO_DARK,
+  AUTO_LIGHT,
+  AUTO_THEME,
+  CHART_SERIES,
+  DEFAULT_THEME,
+  SYSTEM_THEMES,
+  SYS_VARS,
+  sanitizeTheme,
+  themeByKey,
+} from './system-themes';
 
 /**
  * THREE LOOKS, ONE MEANING PER COLOUR.
@@ -49,13 +59,13 @@ const contrast = (a: string, b: string) => {
 };
 
 describe('the palettes', () => {
-  it('there are three, and the default is one of them', () => {
+  it('there are three palettes, and the default is one of them', () => {
     expect(SYSTEM_THEMES).toHaveLength(3);
     expect(themeByKey(DEFAULT_THEME).key).toBe(DEFAULT_THEME);
   });
 
   /** Everything in the list that is a colour. The rest is depth. */
-  const DEPTH = ['shadow', 'shadow-raised'];
+  const DEPTH = ['shadow-raised', 'shadow-overlay'];
 
   it('every theme defines every colour — a missing one renders invisible text', () => {
     for (const theme of SYSTEM_THEMES) {
@@ -75,7 +85,7 @@ describe('the palettes', () => {
         expect(theme.vars[name], `${theme.key}: --sys-${name}`).toMatch(/\d+px .*rgb\(/);
       }
     }
-    const resting = SYSTEM_THEMES.map((t) => t.vars.shadow);
+    const resting = SYSTEM_THEMES.map((t) => t.vars['shadow-raised']);
     expect(new Set(resting).size, 'الأقلمة الثلاث تتقاسم ظلاً واحداً').toBe(SYSTEM_THEMES.length);
   });
 
@@ -154,70 +164,62 @@ describe('legible in the theme it lives in', () => {
 });
 
 /**
- * BLACK AND SKY, AND NOTHING ELSE.
+ * THE BRAND, AND THE ONE LINE IT MUST NOT BLUR.
  *
- * The identity was asked for in three words - black, sky, quiet - and three
- * words are exactly what gets lost the next time somebody adds a theme or
- * "warms up" a grey. So each of the three is a number here.
+ * Zakai.io is navy, petrol and cyan. That puts the action colour in the
+ * blue family — which is exactly why a blue "info" colour cannot exist
+ * beside it: a notice painted the same family as a button is a notice
+ * people try to press. An informational strip is surface-2 with secondary
+ * text, and this refuses any re-introduction of the fourth colour.
  */
-describe('black and sky', () => {
-  /** How far a colour is from grey, as an absolute channel spread. */
-  const cast = (hex: string) => {
-    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-    return (Math.max(...c) - Math.min(...c)) / 255;
-  };
-
-  /** How vivid, for the one colour that is allowed to be. */
-  const vivid = (hex: string) => {
-    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-    const mx = Math.max(...c);
-    return mx === 0 ? 0 : (mx - Math.min(...c)) / mx;
-  };
-
-  const NEUTRALS = [
-    'background', 'card', 'surface', 'surface-strong', 'heading', 'foreground',
-    'muted-foreground', 'muted', 'border', 'border-strong',
-  ] as const;
-
-  it('the greys are grey - no blue cast, no warm cast, nothing competing', () => {
+describe('the brand, and what it forbids', () => {
+  it('has no informational colour at all — not in the list, not in the sheet', () => {
+    expect([...SYS_VARS].filter((v) => v.startsWith('info'))).toEqual([]);
     for (const theme of SYSTEM_THEMES) {
-      for (const name of NEUTRALS) {
-        expect(
-          cast(theme.vars[name]),
-          `${theme.key}: --sys-${name} (${theme.vars[name]}) يحمل لوناً`
-        ).toBeLessThan(0.07);
-      }
+      expect(Object.keys(theme.vars).filter((v) => v.startsWith('info')), theme.key).toEqual([]);
     }
+    expect(css(), 'لونٌ معلوماتيّ عاد إلى ورقة الأنماط').not.toContain('--sys-info');
   });
 
-  it('and the one colour in the system is a sky blue', () => {
-    for (const theme of SYSTEM_THEMES) {
-      const h = hue(theme.vars.primary);
-      expect(h, `${theme.key}: اللون المميّز ليس سماوياً`).toBeGreaterThan(185);
-      expect(h, `${theme.key}: اللون المميّز ليس سماوياً`).toBeLessThan(205);
-    }
+  it('puts NAVY on the cyan accent in the dark theme, never white', () => {
+    // White on the brand cyan measures 2.4:1 and fails outright; the navy
+    // the brand already owns measures over 7:1. This is the single pair
+    // most likely to be "tidied" back to white by somebody who has not
+    // measured it.
+    const dark = SYSTEM_THEMES.find((t) => t.dark)!;
+    expect(contrast(dark.vars['primary-foreground'], dark.vars.primary)).toBeGreaterThan(4.5);
+    expect(luminance(dark.vars['primary-foreground']), 'الكتابة على السماويّ صارت فاتحة').toBeLessThan(0.1);
   });
 
-  it('quiet, which is a measurement: deep enough to carry its own label', () => {
-    // The failure this prevents is the bright cyan that reads as "sky" on a
-    // swatch and cannot hold white text, so somebody "fixes" it by making
-    // the label grey and now the button has no label anybody can read.
-    for (const theme of SYSTEM_THEMES) {
+  it('and never puts an accent on white that cannot be read', () => {
+    for (const theme of SYSTEM_THEMES.filter((t) => !t.dark)) {
       expect(
-        contrast(theme.vars.primary, theme.vars.card),
-        `${theme.key}: اللون المميّز لا يُقرأ ككتابة على البطاقة`
+        contrast(theme.vars.primary, theme.vars.background),
+        `${theme.key}: لون الفعل لا يُقرأ على الخلفية`
       ).toBeGreaterThan(4.5);
     }
   });
 
-  it('and a note never reads as an action', () => {
-    // Info is a blue too, now that the action is. If they end up equally
-    // vivid, an informational strip looks like something to press.
+  it('gives every theme six chart series, none of them a semantic hue', () => {
+    for (const theme of SYSTEM_THEMES) {
+      const series = CHART_SERIES.map((k) => theme.vars[k]);
+      expect(new Set(series).size, `${theme.key}: سلسلتان بلونٍ واحد`).toBe(6);
+      for (const semantic of [theme.vars.warning, theme.vars.destructive, theme.vars.success]) {
+        expect(series, `${theme.key}: سلسلة بلونٍ دلاليّ`).not.toContain(semantic);
+      }
+      // And each one has to be visible on the surface it is drawn on.
+      for (const c of series) {
+        expect(contrast(c, theme.vars.card), `${theme.key}: سلسلة باهتة على البطاقة`).toBeGreaterThan(3);
+      }
+    }
+  });
+
+  it('and a focus ring that can be seen on the page it sits on', () => {
     for (const theme of SYSTEM_THEMES) {
       expect(
-        Math.abs(vivid(theme.vars.primary) - vivid(theme.vars.info)),
-        `${theme.key}: التنبيه المعلوماتي يشبه زرّ الفعل`
-      ).toBeGreaterThan(0.15);
+        contrast(theme.vars.focus, theme.vars.background),
+        `${theme.key}: حلقة التركيز غير مرئية`
+      ).toBeGreaterThan(3);
     }
   });
 });
@@ -235,8 +237,24 @@ describe('the stylesheet matches the palettes', () => {
     }
   });
 
+  it('and تلقائي resolves on the FIRST paint, by media query, not by script', () => {
+    // A theme applied by script flashes the default first. A phone in night
+    // mode would be shown a white screen at four in the morning, every time.
+    const text = css();
+    expect(text, 'لا كتلة للوضع التلقائي').toContain("[data-sys-theme='auto']");
+    expect(text, 'الوضع التلقائي لا يسأل الجهاز').toContain('@media (prefers-color-scheme: light)');
+    const light = SYSTEM_THEMES.find((t) => t.key === AUTO_LIGHT)!;
+    const dark = SYSTEM_THEMES.find((t) => t.key === AUTO_DARK)!;
+    // A light device is overridden explicitly...
+    const auto = text.slice(text.indexOf('@media (prefers-color-scheme: light)'));
+    expect(auto, 'الوضع التلقائي لا يحمل القلم الفاتح').toContain(`--sys-background: ${light.vars.background};`);
+    // ...and a dark one inherits the default, which must BE the dark palette,
+    // or `auto` would silently mean something else.
+    expect(DEFAULT_THEME, 'الافتراضي لم يعد القلم الذي يرثه الوضع التلقائي').toBe(dark.key);
+  });
+
   it('and :root is the default, so a page with no attribute still has colours', () => {
-    expect(css()).toMatch(/:root,\s*\n\[data-sys-theme='day'\]/);
+    expect(css()).toMatch(/:root,\s*\n\[data-sys-theme='ops'\]/);
   });
 });
 

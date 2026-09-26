@@ -11,15 +11,15 @@ import type { CoreState } from '@/lib/order-state';
  */
 
 const LABELS: Record<CoreState, { ar: string; cls: string }> = {
-  NEW: { ar: 'جديد', cls: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-blue-100' },
-  CLAIMED: { ar: 'قيد التأكيد', cls: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-purple-100' },
+  NEW: { ar: 'جديد', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-blue-100' },
+  CLAIMED: { ar: 'قيد التأكيد', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-purple-100' },
   NO_ANSWER: { ar: 'لا يرد', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30' },
   POSTPONED: { ar: 'مؤجل', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30' },
   CONFIRMED: { ar: 'مؤكد', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/30' },
   PREPARING: { ar: 'قيد التجهيز', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border)]' },
-  READY_TO_SHIP: { ar: 'جاهز للشحن', cls: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-blue-100' },
-  SHIPPED: { ar: 'مشحون', cls: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-purple-100' },
-  IN_TRANSFER: { ar: 'نقل بين شركات', cls: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-purple-100' },
+  READY_TO_SHIP: { ar: 'جاهز للشحن', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-blue-100' },
+  SHIPPED: { ar: 'مشحون', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-purple-100' },
+  IN_TRANSFER: { ar: 'نقل بين شركات', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-purple-100' },
   WAITING_RETURN: { ar: 'بانتظار الإرجاع', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30' },
   DELIVERED: { ar: 'تم التسليم', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/30' },
   PARTIALLY_DELIVERED: { ar: 'تسليم جزئي', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30' },
@@ -50,7 +50,7 @@ export function OrderStateBadge({
   if (state === 'CANCELLED' && beforeShipping !== undefined) {
     return (
       <span
-        className={`inline-block text-caption px-2 py-0.5 rounded-md border whitespace-nowrap ${
+        className={`inline-block text-xs px-2 py-0.5 rounded-md border whitespace-nowrap ${
           beforeShipping
             ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30'
             : 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]'
@@ -67,7 +67,7 @@ export function OrderStateBadge({
   }
   return (
     <span
-      className={`inline-block text-caption px-2 py-0.5 rounded-md border whitespace-nowrap ${
+      className={`inline-block text-xs px-2 py-0.5 rounded-md border whitespace-nowrap ${
         cfg?.cls ?? 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
       }`}
     >

@@ -122,7 +122,7 @@ export function StoreMenusScreen() {
           >
             {MENU_AR[key].label}
             {(menus[key]?.length ?? 0) > 0 && (
-              <span className="rounded-full bg-[var(--sys-surface-strong)] px-1.5 text-caption text-[var(--sys-muted-foreground)]">
+              <span className="rounded-full bg-[var(--sys-surface-strong)] px-1.5 text-xs text-[var(--sys-muted-foreground)]">
                 {menus[key].length}
               </span>
             )}
@@ -131,7 +131,7 @@ export function StoreMenusScreen() {
       </nav>
 
       <div className={CARD}>
-        <p className="mb-3 text-caption text-[var(--sys-muted)]">{MENU_AR[open].hint}</p>
+        <p className="mb-3 text-xs text-[var(--sys-muted)]">{MENU_AR[open].hint}</p>
 
         <div className="space-y-2">
           {items.length === 0 && (
@@ -239,7 +239,7 @@ export function StoreMenusScreen() {
                   </div>
                 </div>
                 {matchedPage && (
-                  <p className="text-caption text-[var(--sys-muted)]" dir="ltr">
+                  <p className="text-xs text-[var(--sys-muted)]" dir="ltr">
                     {item.href}
                     {!matchedPage.isPublished && (
                       <span dir="rtl" className="ms-2 text-[var(--sys-warning)]">
@@ -267,7 +267,7 @@ export function StoreMenusScreen() {
             احفظ «{MENU_AR[open].label}»
           </Button>
         </div>
-        <p className="mt-2 text-caption leading-relaxed text-[var(--sys-muted)]">
+        <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted)]">
           الرابط الخارجي يبدأ بـ https. مسار داخلي يبدأ بشرطة مائلة واحدة — شرطتان تعني موقعاً آخر، وهي مرفوضة.
         </p>
       </div>

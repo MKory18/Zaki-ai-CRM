@@ -259,7 +259,7 @@ export function ProductsScreen() {
                   <X className="w-4 h-4" />
                 </button>
               )}
-              <span className="absolute -bottom-5 start-1 text-caption text-[var(--sys-muted)]">
+              <span className="absolute -bottom-5 start-1 text-xs text-[var(--sys-muted)]">
                 {filteredProducts.length} من أصل {products.length} منتج
               </span>
             </div>
@@ -293,7 +293,7 @@ export function ProductsScreen() {
                         </td>
                         <td className="px-6 py-3">
                           <span className="font-bold text-[var(--sys-heading)] block">{productName(p, locale)}</span>
-                          <span className="text-caption text-[var(--sys-muted)]">
+                          <span className="text-xs text-[var(--sys-muted)]">
                             {p.images?.length || 0} صورة • {p.offers?.length || 0} عرض
                           </span>
                         </td>
@@ -377,7 +377,7 @@ export function ProductsScreen() {
 
           {/* Basic Information */}
           <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)] space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">1. المعلومات الأساسية</h4>
+            <h4 className="text-xs font-bold text-[var(--sys-foreground)]">1. المعلومات الأساسية</h4>
             <Input
               label="اسم المنتج *"
               placeholder="مثال: كريم إزالة الندبات الألماني الأصلي"
@@ -432,7 +432,7 @@ export function ProductsScreen() {
                     <span className={`block text-sm font-bold ${sourceType === key ? 'text-[var(--sys-primary)]' : 'text-[var(--sys-heading)]'}`}>
                       {title}
                     </span>
-                    <span className="mt-0.5 block text-caption leading-relaxed text-[var(--sys-muted-foreground)]">{hint}</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{hint}</span>
                   </button>
                 ))}
               </div>
@@ -464,7 +464,7 @@ export function ProductsScreen() {
                 size="sm"
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-caption"
+                className="text-xs"
               >
                 <ImagePlus className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
                 اختيار صور
@@ -491,7 +491,7 @@ export function ProductsScreen() {
                       className="w-full h-20 object-cover"
                     />
                     {primaryIndex === idx && (
-                      <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-caption font-bold px-1.5 py-0.5 rounded-lg flex items-center space-x-0.5">
+                      <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-xs font-bold px-1.5 py-0.5 rounded-lg flex items-center space-x-0.5">
                         <Star className="w-2.5 h-2.5" />
                         <span>رئيسية</span>
                       </span>
@@ -507,7 +507,7 @@ export function ProductsScreen() {
                       <button
                         type="button"
                         onClick={() => setPrimaryIndex(idx)}
-                        className="absolute bottom-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-sidebar)]/60 text-[var(--sys-primary-foreground)] text-caption px-1.5 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        className="absolute bottom-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-sidebar)]/60 text-[var(--sys-primary-foreground)] text-xs px-1.5 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
                         رئيسية
                       </button>
@@ -519,7 +519,7 @@ export function ProductsScreen() {
           </div>
 
           {/* Inventory info hint */}
-          <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] rounded-lg text-caption text-[var(--sys-primary)]">
+          <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] rounded-lg text-xs text-[var(--sys-primary)]">
             بعد إنشاء المنتج أضف تشغيلات الإنتاج من صفحة <Link href="/manufacturing" className="underline font-semibold">تشغيلات الإنتاج</Link> لحساب تكلفة الوحدة والمخزون تلقائياً.
           </div>
 
@@ -573,7 +573,7 @@ export function ProductsScreen() {
                 src={editProduct.images?.find((i: any) => i.isPrimary)?.url || editProduct.images?.[0]?.url}
                 size="md"
               />
-              <div className="text-caption text-[var(--sys-primary)]">
+              <div className="text-xs text-[var(--sys-primary)]">
                 <p className="font-bold">إدارة الصور</p>
                 <p>
                   {editProduct.images?.length || 0} صورة — للتعديل والتبديل والحذف افتح{' '}

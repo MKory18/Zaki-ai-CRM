@@ -171,7 +171,7 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
                 <div key={c.key} className="flex items-baseline justify-between gap-3">
                   {/* Every field says what it is. A bare number on a card is
                       a number somebody has to count columns to identify. */}
-                  <dt className="shrink-0 text-caption text-[var(--sys-muted-foreground)]">{c.label}</dt>
+                  <dt className="shrink-0 text-xs text-[var(--sys-muted-foreground)]">{c.label}</dt>
                   <dd className={`min-w-0 text-xs text-[var(--sys-foreground)] ${c.className ?? ''}`}>
                     {c.render(row)}
                   </dd>

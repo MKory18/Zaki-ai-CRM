@@ -41,7 +41,7 @@ interface Batch {
 }
 
 const STATUS: Record<string, { ar: string; cls: string }> = {
-  READY: { ar: 'قيد التجميع', cls: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-border)]' },
+  READY: { ar: 'قيد التجميع', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]' },
   SHIPPED: { ar: 'سُلّمت للشركة', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]' },
   CLOSED: { ar: 'مغلقة', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]' },
 };
@@ -258,7 +258,7 @@ export function ShippingBatchesScreen() {
           <button
             key={key}
             onClick={() => setFilter(key as typeof filter)}
-            className={`px-3 py-1.5 text-caption font-semibold rounded-lg border transition-colors ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
               filter === key
                 ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]'
                 : 'bg-[var(--sys-card)] text-[var(--sys-foreground)] border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
@@ -269,7 +269,7 @@ export function ShippingBatchesScreen() {
         ))}
         <button
           onClick={() => setAddingOrder(true)}
-          className="ms-auto inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-caption font-semibold hover:bg-[var(--sys-primary)]"
+          className="ms-auto inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:bg-[var(--sys-primary)]"
           title="زبون اتصل وطلب — يُنشأ مؤكداً ويذهب مباشرة إلى التجهيز"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -302,10 +302,10 @@ export function ShippingBatchesScreen() {
               <li key={b.id} className="p-4 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-bold text-[var(--sys-heading)] text-sm" dir="ltr">{b.batchNumber}</span>
-                  <span className={`text-caption px-2 py-0.5 rounded-md border ${tone.cls}`}>{tone.ar}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-md border ${tone.cls}`}>{tone.ar}</span>
 
                   {b.provider && (
-                    <span className="inline-flex items-center gap-1 text-caption text-[var(--sys-muted-foreground)]">
+                    <span className="inline-flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)]">
                       {b.provider.kind === 'AGENT' ? (
                         <Bike className="w-3 h-3 text-[var(--sys-primary)]" />
                       ) : (
@@ -315,21 +315,21 @@ export function ShippingBatchesScreen() {
                     </span>
                   )}
 
-                  <span className="text-caption text-[var(--sys-muted)] tabular-nums">
+                  <span className="text-xs text-[var(--sys-muted)] tabular-nums">
                     {b._count.orders} طلب
                   </span>
 
-                  <span className="ms-auto text-caption text-[var(--sys-muted)]">
+                  <span className="ms-auto text-xs text-[var(--sys-muted)]">
                     {b.shippedAt ? `سُلّمت ${arDateShort(b.shippedAt)}` : `أُنشئت ${arDateShort(b.createdAt)}`}
                     {b.creator?.name && ` · ${b.creator.name}`}
                   </span>
                 </div>
 
-                {b.notes && <p className="text-caption text-[var(--sys-muted-foreground)]">{b.notes}</p>}
+                {b.notes && <p className="text-xs text-[var(--sys-muted-foreground)]">{b.notes}</p>}
 
                 {result?.batchId === b.id && (
                   <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5 space-y-1">
-                    <p className="text-caption font-bold text-[var(--sys-heading)]">
+                    <p className="text-xs font-bold text-[var(--sys-heading)]">
                       رُحّل {result.summary.sent}
                       {result.summary.skipped > 0 && ` · تُخطّي ${result.summary.skipped}`}
                       {result.summary.failed > 0 && ` · فشل ${result.summary.failed}`}
@@ -337,7 +337,7 @@ export function ShippingBatchesScreen() {
                     {result.summary.outcomes
                       .filter((o) => !o.ok)
                       .map((o) => (
-                        <p key={o.orderId} className="text-caption text-[var(--sys-muted-foreground)]">
+                        <p key={o.orderId} className="text-xs text-[var(--sys-muted-foreground)]">
                           <span className="font-mono" dir="ltr">{o.orderNumber}</span>
                           {' — '}
                           {o.skipped === 'ALREADY_SENT'
@@ -350,7 +350,7 @@ export function ShippingBatchesScreen() {
                         </p>
                       ))}
                     {result.summary.outcomes.filter((o) => o.ok).length > 0 && (
-                      <p className="text-caption text-[var(--sys-success)]">
+                      <p className="text-xs text-[var(--sys-success)]">
                         الباركودات محفوظة على الطلبات — تظهر على البوليصة وتُتابَع بها الحالة.
                       </p>
                     )}
@@ -361,7 +361,7 @@ export function ShippingBatchesScreen() {
                   <button
                     onClick={() => printBatch(b)}
                     disabled={busy === b.id || b._count.orders === 0}
-                    className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+                    className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
                     {busy === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
                     طباعة بوالص الدفعة
@@ -371,7 +371,7 @@ export function ShippingBatchesScreen() {
                     onClick={() => void openVerify(b)}
                     disabled={busy === b.id || b._count.orders === 0}
                     title="امسح كل طرد قبل تسليمه — يقول لك إن كان من هذه الدفعة"
-                    className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+                    className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
                     <ScanLine className="w-3.5 h-3.5" />
                     تحقّق من الطرود
@@ -381,7 +381,7 @@ export function ShippingBatchesScreen() {
                     onClick={() => printBatch(b, 'pdf')}
                     disabled={busy === b.id || b._count.orders === 0}
                     title="نفس البوالص كملف PDF — الحفظ لا يعلّم الطلبات مطبوعة"
-                    className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+                    className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
                     <Download className="w-3.5 h-3.5" />
                     PDF
@@ -391,7 +391,7 @@ export function ShippingBatchesScreen() {
                     onClick={() => printBatch(b, 'csv')}
                     disabled={busy === b.id || b._count.orders === 0}
                     title="ملف للرفع الجماعي عند شركات الشحن التي تقبله بدل الورق"
-                    className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+                    className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
                     <Download className="w-3.5 h-3.5" />
                     CSV
@@ -411,7 +411,7 @@ export function ShippingBatchesScreen() {
                     <button
                       onClick={() => dispatch(b)}
                       disabled={busy === b.id || b._count.orders === 0}
-                      className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-primary)] text-[var(--sys-primary)] font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+                      className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-primary)] text-[var(--sys-primary)] font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
                     >
                       {busy === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Barcode className="w-3.5 h-3.5" />}
                       رحّل إلى الشركة واجلب الباركود
@@ -421,7 +421,7 @@ export function ShippingBatchesScreen() {
                   {b.status === 'READY' && b.provider && !b.provider.apiEnabled && (
                     <span
                       title="هذه الشركة غير مربوطة بنظامها — البوليصة تُطبع من عندنا والباركود يُدخَل يدوياً عند استلامه."
-                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2.5 py-1.5 text-caption text-[var(--sys-muted-foreground)]"
+                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2.5 py-1.5 text-xs text-[var(--sys-muted-foreground)]"
                     >
                       <Barcode className="h-3.5 w-3.5" />
                       يدوية — اطبع البوالص
@@ -432,7 +432,7 @@ export function ShippingBatchesScreen() {
                     <button
                       onClick={() => setStatus(b, 'SHIPPED')}
                       disabled={busy === b.id}
-                      className="text-caption px-2.5 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
+                      className="text-xs px-2.5 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <Send className="w-3.5 h-3.5" />
                       سُلّمت للشركة
@@ -443,7 +443,7 @@ export function ShippingBatchesScreen() {
                     <button
                       onClick={() => setStatus(b, 'CLOSED')}
                       disabled={busy === b.id}
-                      className="text-caption px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)] inline-flex items-center gap-1.5 disabled:opacity-50"
+                      className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)] inline-flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <Lock className="w-3.5 h-3.5" />
                       أغلق الدفعة

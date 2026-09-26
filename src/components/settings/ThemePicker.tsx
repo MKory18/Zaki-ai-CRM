@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Check, Palette } from 'lucide-react';
-import { SYSTEM_THEMES, sanitizeTheme } from '@/lib/system-themes';
+import { AUTO_DARK, AUTO_LIGHT, AUTO_THEME, THEME_CHOICES, sanitizeTheme, themeByKey } from '@/lib/system-themes';
 
 /**
  * CHOOSING HOW THE SYSTEM LOOKS.
@@ -58,21 +58,29 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
       <h3 className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-[var(--sys-foreground)]">
         <Palette className="h-3.5 w-3.5 text-[var(--sys-primary)]" /> مظهر النظام
       </h3>
-      <p className="mb-2 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+      <p className="mb-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
         اختيارك أنت وحدك، ويتبعك بين الأجهزة. ألوان المعاني لا تتغيّر بين المظاهر: الأحمر متأخر أو
         خسارة، والأخضر محصَّل، والكهرماني يحتاج انتباهاً — يتغيّر السطح فقط. ولا يمسّ هذا شكل متجرك
         إطلاقاً.
       </p>
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        {SYSTEM_THEMES.map((theme) => {
-          const active = theme.key === chosen;
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {THEME_CHOICES.map((choice) => {
+          const active = choice.key === chosen;
+          /*
+           * `تلقائي` is not a palette, it is an instruction — so its swatch
+           * shows the two it can resolve to, split down the middle. A single
+           * swatch would have to pick one and lie about the other.
+           */
+          const auto = choice.key === AUTO_THEME;
+          const theme = auto ? themeByKey(AUTO_DARK) : themeByKey(choice.key);
+          const other = themeByKey(AUTO_LIGHT);
           return (
             <button
-              key={theme.key}
+              key={choice.key}
               type="button"
               disabled={busy}
-              onClick={() => pick(theme.key)}
+              onClick={() => pick(choice.key)}
               className={`rounded-lg border p-2.5 text-right transition disabled:opacity-60 ${
                 active
                   ? 'border-[var(--sys-primary)] ring-1 ring-[var(--sys-primary)]'
@@ -80,7 +88,7 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
               }`}
             >
               <span className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-[var(--sys-heading)]">{theme.ar}</span>
+                <span className="text-xs font-semibold text-[var(--sys-heading)]">{choice.ar}</span>
                 {active && <Check className="h-3.5 w-3.5 text-[var(--sys-primary)]" />}
               </span>
 
@@ -93,13 +101,19 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
                   className="h-full flex-1 rounded-sm border"
                   style={{ background: theme.vars.card, borderColor: theme.vars.border }}
                 />
+                {auto && (
+                  <span
+                    className="h-full flex-1 rounded-sm border"
+                    style={{ background: other.vars.background, borderColor: other.vars.border }}
+                  />
+                )}
                 {(['primary', 'destructive', 'warning', 'success'] as const).map((k) => (
                   <span key={k} className="h-3 w-3 rounded-full" style={{ background: theme.vars[k] }} />
                 ))}
               </span>
 
-              <span className="mt-1.5 block text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
-                {theme.note}
+              <span className="mt-1.5 block text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                {choice.note}
               </span>
             </button>
           );
@@ -107,7 +121,7 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
       </div>
 
       {failed && (
-        <p className="mt-2 text-caption text-[var(--sys-warning)]">
+        <p className="mt-2 text-xs text-[var(--sys-warning)]">
           طُبِّق المظهر هنا، لكن تعذّر حفظه — سيعود إلى السابق على جهاز آخر.
         </p>
       )}

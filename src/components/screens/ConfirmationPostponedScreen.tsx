@@ -76,7 +76,7 @@ export function ConfirmationPostponedScreen() {
                   {o.customer.fullName} · {o.customer.city}
                 </td>
                 <td className="px-4 py-2 text-[var(--sys-foreground)]" dir="ltr">
-                  {o.dueAt ? new Date(o.dueAt).toLocaleDateString('ar-EG') : '—'}
+                  {o.dueAt ? new Date(o.dueAt).toLocaleDateString('ar-u-nu-latn') : '—'}
                 </td>
                 <td className="px-4 py-2 tabular-nums">
                   {o.daysRemaining === null ? (

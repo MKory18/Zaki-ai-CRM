@@ -330,7 +330,7 @@ export function WhatsAppInboxScreen() {
                     className="w-full pl-9 rtl:pr-9 rtl:pl-3 py-2 text-xs rounded-lg border border-[var(--sys-border)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                   />
                 </div>
-                <div className="flex gap-1 text-caption font-semibold">
+                <div className="flex gap-1 text-xs font-semibold">
                   {(['OPEN', 'CLOSED'] as const).map((s) => (
                     <button key={s} onClick={() => setStatusFilter(s)}
                       className={`px-3 py-1 rounded-full ${statusFilter === s ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)]'}`}>
@@ -368,11 +368,11 @@ export function WhatsAppInboxScreen() {
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-sm font-semibold text-[var(--sys-heading)] truncate">{c.customerName || c.customerPhone}</span>
                           {c.unreadCount > 0 && (
-                            <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-caption font-bold flex items-center justify-center">{c.unreadCount}</span>
+                            <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-bold flex items-center justify-center">{c.unreadCount}</span>
                           )}
                         </div>
                         <p className="text-xs text-[var(--sys-muted-foreground)] truncate mt-0.5">{c.lastMessagePreview || '—'}</p>
-                        {c.assignedTo && <p className="text-caption text-[var(--sys-muted)] mt-0.5">مُسندة إلى: {c.assignedTo.name}</p>}
+                        {c.assignedTo && <p className="text-xs text-[var(--sys-muted)] mt-0.5">مُسندة إلى: {c.assignedTo.name}</p>}
                       </div>
                     </button>
                   ))
@@ -393,22 +393,22 @@ export function WhatsAppInboxScreen() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-[var(--sys-heading)] truncate">{selected.customerName || selected.customerPhone}</p>
-                      <p className="text-caption text-[var(--sys-muted-foreground)] truncate" dir="ltr">{selected.customerPhone}</p>
+                      <p className="text-xs text-[var(--sys-muted-foreground)] truncate" dir="ltr">{selected.customerPhone}</p>
                     </div>
                     <button onClick={toggleStatus}
-                      className={`shrink-0 px-3 py-1.5 rounded-lg text-caption font-semibold ${selected.status === 'OPEN' ? 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]' : 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]'}`}>
+                      className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold ${selected.status === 'OPEN' ? 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]' : 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]'}`}>
                       {selected.status === 'OPEN' ? 'إغلاق المحادثة' : 'إعادة فتح'}
                     </button>
                   </div>
 
                   {canAssign && (
                     <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--sys-surface)] bg-[var(--sys-surface)]">
-                      <span className="text-caption text-[var(--sys-muted-foreground)] shrink-0">مُسندة إلى:</span>
+                      <span className="text-xs text-[var(--sys-muted-foreground)] shrink-0">مُسندة إلى:</span>
                       <select
                         value={selected.assignedUserId || ''}
                         disabled={assigning}
                         onChange={(e) => assign(e.target.value || null)}
-                        className="text-caption border border-[var(--sys-border)] rounded-lg px-2 py-1 bg-[var(--sys-card)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
+                        className="text-xs border border-[var(--sys-border)] rounded-lg px-2 py-1 bg-[var(--sys-card)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                       >
                         <option value="">غير معين</option>
                         {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -425,13 +425,13 @@ export function WhatsAppInboxScreen() {
                     ) : (
                       messages.map((m) => (
                         <div key={m.id} className={`flex ${m.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[75%] rounded-lg px-3.5 py-2 text-sm shadow-card ${m.direction === 'OUTBOUND' ? 'bg-[#d9fdd3] text-[var(--sys-heading)]' : 'bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[#eef1f5]'}`}>
+                          <div className={`max-w-[75%] rounded-lg px-3.5 py-2 text-sm shadow-raised ${m.direction === 'OUTBOUND' ? 'bg-[#d9fdd3] text-[var(--sys-heading)]' : 'bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[#eef1f5]'}`}>
                             {m.messageType !== 'TEXT' && !m.text && (
-                              <span className="text-caption font-semibold text-[var(--sys-muted-foreground)]">[{m.messageType}]</span>
+                              <span className="text-xs font-semibold text-[var(--sys-muted-foreground)]">[{m.messageType}]</span>
                             )}
                             <p className="whitespace-pre-wrap break-words" dir="auto">{m.text || ''}</p>
                             <div className="flex items-center gap-1 justify-end mt-0.5">
-                              <span className="text-caption text-[var(--sys-muted)]">{new Date(m.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-xs text-[var(--sys-muted)]">{new Date(m.createdAt).toLocaleTimeString('ar-u-nu-latn', { hour: '2-digit', minute: '2-digit' })}</span>
                               {m.direction === 'OUTBOUND' && (
                                 m.status === 'READ' ? <CheckCheck className="w-3 h-3 text-[#53bdeb]" />
                                 : m.status === 'FAILED' ? <X className="w-3 h-3 text-[var(--sys-destructive)]" />
@@ -476,10 +476,10 @@ export function WhatsAppInboxScreen() {
                     </div>
                   )}
                   {selected.status === 'CLOSED' && (
-                    <div className="border-t border-[var(--sys-surface-strong)] p-3 text-center text-caption text-[var(--sys-muted-foreground)]">المحادثة مغلقة — أعد فتحها للإرسال</div>
+                    <div className="border-t border-[var(--sys-surface-strong)] p-3 text-center text-xs text-[var(--sys-muted-foreground)]">المحادثة مغلقة — أعد فتحها للإرسال</div>
                   )}
                   {!canSend && (
-                    <div className="border-t border-[var(--sys-surface-strong)] p-3 text-center text-caption text-[var(--sys-muted-foreground)]">ليس لديك صلاحية لإرسال الرسائل</div>
+                    <div className="border-t border-[var(--sys-surface-strong)] p-3 text-center text-xs text-[var(--sys-muted-foreground)]">ليس لديك صلاحية لإرسال الرسائل</div>
                   )}
                 </>
               )}
@@ -496,41 +496,41 @@ export function WhatsAppInboxScreen() {
                       {(selected.customerName || selected.customerPhone).slice(0, 2)}
                     </div>
                     <p className="mt-2 font-bold text-sm text-[var(--sys-heading)]">{selected.customerName || 'عميل غير مرتبط'}</p>
-                    <p className="text-caption text-[var(--sys-muted-foreground)] flex items-center justify-center gap-1 mt-1" dir="ltr">
+                    <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center justify-center gap-1 mt-1" dir="ltr">
                       <Phone className="w-3 h-3" /> {selected.customerPhone}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-caption font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2">المحادثات</p>
+                    <p className="text-xs font-bold text-[var(--sys-muted)] mb-2">المحادثات</p>
                     <p className="text-xs text-[var(--sys-muted-foreground)]">{convCountByPhone[selected.customerPhone] || 1} محادثة (مفتوحة)</p>
                     {selected.customerId ? (
                       <Link href={`/customers?search=${encodeURIComponent(selected.customerPhone)}`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-primary)] hover:underline">
                         <User className="w-3 h-3" /> فتح العميل
                       </Link>
                     ) : (
-                      <p className="mt-2 text-caption text-[var(--sys-muted)]">عميل غير مرتبط</p>
+                      <p className="mt-2 text-xs text-[var(--sys-muted)]">عميل غير مرتبط</p>
                     )}
                   </div>
 
                   <div>
-                    <p className="text-caption font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2">الطلبات الأخيرة</p>
+                    <p className="text-xs font-bold text-[var(--sys-muted)] mb-2">الطلبات الأخيرة</p>
                     {selected.customerId ? (
                       recentOrders.length === 0 ? (
-                        <p className="text-caption text-[var(--sys-muted)]">لا توجد طلبات</p>
+                        <p className="text-xs text-[var(--sys-muted)]">لا توجد طلبات</p>
                       ) : (
                         <div className="space-y-1.5">
                           {recentOrders.map((o: any) => (
                             <Link key={o.id} href={`/orders/${o.id}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[var(--sys-surface)] hover:bg-[var(--sys-primary-soft)] text-xs">
                               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">#{o.orderNumber}</span>
-                              <span className="text-caption text-[var(--sys-muted-foreground)]">{o.status}</span>
+                              <span className="text-xs text-[var(--sys-muted-foreground)]">{o.status}</span>
                               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{o.totalAmount} {o.currency}</span>
                             </Link>
                           ))}
                         </div>
                       )
                     ) : (
-                      <p className="text-caption text-[var(--sys-muted)] flex items-center gap-1"><ShoppingBag className="w-3 h-3" /> لا يوجد عميل مرتبط</p>
+                      <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><ShoppingBag className="w-3 h-3" /> لا يوجد عميل مرتبط</p>
                     )}
                   </div>
                 </div>

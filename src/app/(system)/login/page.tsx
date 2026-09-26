@@ -73,7 +73,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <Card className="shadow-card">
+        <Card className="shadow-raised">
           <CardContent className="p-6 space-y-4">
             {wasIdle && !error && (
               <div

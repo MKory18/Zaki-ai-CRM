@@ -564,10 +564,10 @@ export function LandingPageEditorScreen() {
                 <span className="text-xs font-normal text-[#697586]" dir="ltr">/lp/{lp.slug}</span>
               </h1>
             </div>
-            <span className={`rounded-full px-2 py-0.5 text-caption font-semibold ${lp.isPublished ? 'bg-[#e6f9ee] text-[#00a651]' : 'bg-[#fff7e6] text-[#b8860b]'}`}>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${lp.isPublished ? 'bg-[#e6f9ee] text-[#00a651]' : 'bg-[#fff7e6] text-[#b8860b]'}`}>
               {lp.isPublished ? 'منشورة' : 'مسودة'}
             </span>
-            {dirty && <span className="text-caption text-[#ffab00]">● تغييرات غير محفوظة</span>}
+            {dirty && <span className="text-xs text-[#ffab00]">● تغييرات غير محفوظة</span>}
           </div>
           <div className="flex items-center gap-2">
             {/* Which way this page is authored. Both are kept on the row, so
@@ -577,7 +577,7 @@ export function LandingPageEditorScreen() {
                 <button
                   key={m}
                   onClick={() => { setMode(m); setDirty(true); }}
-                  className={`cursor-pointer rounded-md px-2.5 py-1 text-caption font-bold transition ${
+                  className={`cursor-pointer rounded-md px-2.5 py-1 text-xs font-bold transition ${
                     mode === m ? 'bg-[#b8256e] text-white' : 'text-[#697586] hover:text-[#b8256e]'
                   }`}
                 >
@@ -657,17 +657,17 @@ export function LandingPageEditorScreen() {
           {/* RIGHT COLUMN (second on a phone): the tools, folded away. */}
           <div className="order-2 space-y-3 rounded-lg border border-[#e3e8ef] bg-white p-3 lg:order-2">
             <div>
-              <p className="mb-1.5 text-caption font-semibold uppercase tracking-wider text-[#697586]">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[#697586]">
                 اكتب الـHTML بالذكاء الاصطناعي
               </p>
-              <p className="mb-2 text-caption leading-relaxed text-[#697586]">
+              <p className="mb-2 text-xs leading-relaxed text-[#697586]">
                 هذا البرومبت يشرح كل قيود النظام — ما يُحذف عند الحفظ، وكيف تربط
                 الأزرار بنموذج الطلب الحقيقي. الصقه في أي مساعد ذكاء اصطناعي.
               </p>
               <HtmlPromptButtons />
             </div>
 
-            <p className="mb-2 mt-4 text-caption font-semibold uppercase tracking-wider text-[#697586]">إدراج</p>
+            <p className="mb-2 mt-4 text-xs font-semibold text-[#697586]">إدراج</p>
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
               {INSERT_SNIPPETS.map((item) => (
                 <button
@@ -680,27 +680,27 @@ export function LandingPageEditorScreen() {
               ))}
             </div>
 
-            <p className="mb-2 mt-4 text-caption font-semibold uppercase tracking-wider text-[#697586]">متغيرات</p>
+            <p className="mb-2 mt-4 text-xs font-semibold text-[#697586]">متغيرات</p>
             <div className="relative">
               <Button variant="outline" size="sm" className="w-full" onClick={() => setVarOpen((v) => !v)}>
                 <Type className="h-3.5 w-3.5" /> إدراج متغير
               </Button>
               {varOpen && (
-                <div className="absolute z-10 mt-1 w-full rounded-lg border border-[#e3e8ef] bg-white py-1 shadow-raised">
+                <div className="absolute z-10 mt-1 w-full rounded-lg border border-[#e3e8ef] bg-white py-1 shadow-overlay">
                   {VARIABLES.map((v) => (
                     <button
                       key={v.value}
                       className="block w-full cursor-pointer px-3 py-1.5 text-right text-xs text-[#364152] hover:bg-[#f8fafc]"
                       onClick={() => { insertAtCursor(v.value); setVarOpen(false); }}
                     >
-                      {v.label} <span className="font-mono text-caption text-[#9aa4b2]" dir="ltr">{v.value}</span>
+                      {v.label} <span className="font-mono text-xs text-[#9aa4b2]" dir="ltr">{v.value}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            <p className="mb-2 mt-4 text-caption font-semibold uppercase tracking-wider text-[#697586]">الصور</p>
+            <p className="mb-2 mt-4 text-xs font-semibold text-[#697586]">الصور</p>
             <input
               ref={imageInputRef}
               type="file"
@@ -715,11 +715,11 @@ export function LandingPageEditorScreen() {
 
             {/* ─── Zaki Actions documentation ─── */}
             <details className="mt-4 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] p-2.5">
-              <summary className="cursor-pointer text-caption font-bold text-[#364152]">📚 توثيق Zaki Actions</summary>
-              <div className="mt-2 space-y-3 text-caption leading-relaxed text-[#697586]" dir="ltr">
+              <summary className="cursor-pointer text-xs font-bold text-[#364152]">📚 توثيق Zaki Actions</summary>
+              <div className="mt-2 space-y-3 text-xs leading-relaxed text-[#697586]" dir="ltr">
                 <div>
                   <p className="font-bold text-[#364152]">Actions</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-caption text-[#c9d1d9]">{`<button data-zaki-action="order">
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-xs text-[#c9d1d9]">{`<button data-zaki-action="order">
   اطلب الآن
 </button>
 <button data-zaki-action="scroll-order">…</button>
@@ -729,13 +729,13 @@ export function LandingPageEditorScreen() {
                 </div>
                 <div>
                   <p className="font-bold text-[#364152]">Fixed Button</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-caption text-[#c9d1d9]">{`data-zaki-position="fixed-bottom"
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-xs text-[#c9d1d9]">{`data-zaki-position="fixed-bottom"
   | "fixed-top" | "floating"`}</pre>
                   <p>position فقط — لا لون ولا خط إلا إن طلبتها.</p>
                 </div>
                 <div>
                   <p className="font-bold text-[#364152]">Styling (اختياري)</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-caption text-[#c9d1d9]">{`data-zaki-bg="#16a34a"
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-xs text-[#c9d1d9]">{`data-zaki-bg="#16a34a"
 data-zaki-color="#fff"
 data-zaki-font-size="20px"
 data-zaki-font-weight="700"
@@ -749,7 +749,7 @@ data-zaki-z-index="9999"`}</pre>
                 </div>
                 <div>
                   <p className="font-bold text-[#364152]">Placeholders</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-caption text-[#c9d1d9]">{`<div data-zaki-product></div>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-lg bg-[#121926] p-2 font-mono text-xs text-[#c9d1d9]">{`<div data-zaki-product></div>
 <div data-zaki-offers></div>
 <div data-zaki-recommendations></div>
 <div data-zaki-order-form></div>
@@ -759,7 +759,7 @@ data-zaki-z-index="9999"`}</pre>
                 </div>
               </div>
             </details>
-            <p className="mt-3 text-caption leading-relaxed text-[#697586]">
+            <p className="mt-3 text-xs leading-relaxed text-[#697586]">
               العناصر المدرجة هي placeholders — تُحوَّل للعناصر الحقيقية في الصفحة المنشورة. نموذج الطلب الموثوق يعمل خارج HTML المخصص دائمًا.
             </p>
           </div>
@@ -781,7 +781,7 @@ data-zaki-z-index="9999"`}</pre>
                 >
                   <Palette className="h-3.5 w-3.5" /> CSS
                 </button>
-                <span className="mr-auto text-caption text-[#5b6474]">{tab === 'html' ? `${lineCount(html)} سطر` : `${lineCount(css)} سطر`}</span>
+                <span className="mr-auto text-xs text-[#5b6474]">{tab === 'html' ? `${lineCount(html)} سطر` : `${lineCount(css)} سطر`}</span>
                 {/* The editor starts small and grows when asked. A code box
                     that owns the screen by default hides the preview, which
                     is the thing you are actually editing against. */}
@@ -842,7 +842,7 @@ data-zaki-z-index="9999"`}</pre>
                   title="معاينة الصفحة"
                   sandbox="allow-scripts"
                   srcDoc={previewDoc}
-                  className="h-full min-h-[400px] rounded-lg border border-[#e3e8ef] bg-white shadow-card"
+                  className="h-full min-h-[400px] rounded-lg border border-[#e3e8ef] bg-white shadow-raised"
                   style={{ width: DEVICE_WIDTHS[device], maxWidth: '100%' }}
                 />
               </div>
@@ -851,7 +851,7 @@ data-zaki-z-index="9999"`}</pre>
 
           {/* Page settings — beneath the tools, same column. */}
           <div className="order-3 rounded-lg border border-[#e3e8ef] bg-white p-4 lg:order-3">
-            <p className="mb-3 text-caption font-semibold uppercase tracking-wider text-[#697586]">إعدادات الصفحة</p>
+            <p className="mb-3 text-xs font-semibold text-[#697586]">إعدادات الصفحة</p>
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-semibold text-[#364152]">عرض الصفحة</label>
@@ -904,22 +904,22 @@ data-zaki-z-index="9999"`}</pre>
                   <option value="Georgia, serif">Georgia</option>
                 </Select>
               </div>
-              <p className="text-caption leading-relaxed text-[#697586]">
+              <p className="text-xs leading-relaxed text-[#697586]">
                 الإعدادات تُطبَّق كأنماط أساسية — CSS المخصص لك يتجاوزها دائمًا عند التعارض.
               </p>
             </div>
 
             {/* ─── Tracking (centralized in Settings) ─── */}
             <div className="mt-6 border-t border-[#e3e8ef] pt-4">
-              <p className="mb-2 text-caption font-semibold uppercase tracking-wider text-[#697586]">التتبع والإعلانات</p>
-              <p className="text-caption leading-relaxed text-[#697586]">
+              <p className="mb-2 text-xs font-semibold text-[#697586]">التتبع والإعلانات</p>
+              <p className="text-xs leading-relaxed text-[#697586]">
                 أكواد التتبع (Meta / TikTok / Snapchat / Google) تُدار في مكان واحد لكل صفحاتك.
               </p>
               <a
                 href="/settings/tracking"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#b8256e] px-3 py-1.5 text-caption font-bold text-white transition hover:bg-[#b8256e]/90"
+                className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#b8256e] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#b8256e]/90"
               >
                 إدارة البكسلات من الإعدادات ←
               </a>
@@ -984,7 +984,7 @@ function CodePane({
     >
       <div
         ref={gutter}
-        className="h-full shrink-0 select-none overflow-hidden border-l border-[#202939] bg-[#0d1117] px-2 py-3 text-right font-mono text-caption leading-5 text-[#5b6474]"
+        className="h-full shrink-0 select-none overflow-hidden border-l border-[#202939] bg-[#0d1117] px-2 py-3 text-right font-mono text-xs leading-5 text-[#5b6474]"
       >
         {Array.from({ length: lines }, (_, i) => (
           <div key={i}>{i + 1}</div>

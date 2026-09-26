@@ -48,7 +48,7 @@ function ResetForm() {
   }
 
   return (
-    <Card className="shadow-card">
+    <Card className="shadow-raised">
       <CardContent className="p-6 space-y-4">
         {error && (
           <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">

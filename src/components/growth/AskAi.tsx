@@ -87,7 +87,7 @@ export function AskAi() {
         <Brain className="w-4 h-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">اسأل الذكاء عن أرقامك</h2>
         <span
-          className="inline-flex items-center gap-1.5 text-caption text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg px-2 py-0.5"
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg px-2 py-0.5"
           title={info.housePrompt ? `برومبت ثابت: ${info.housePrompt}` : 'لا برومبت ثابت'}
         >
           <Cpu className="w-3 h-3 text-[var(--sys-muted)]" />
@@ -95,7 +95,7 @@ export function AskAi() {
         </span>
         <Link
           href="/settings/ai"
-          className="ms-auto inline-flex items-center gap-1 text-caption text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
+          className="ms-auto inline-flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
         >
           <Settings2 className="w-3.5 h-3.5" />
           غيّر النموذج
@@ -114,7 +114,7 @@ export function AskAi() {
         )}
 
         <div>
-          <p className="text-caption text-[var(--sys-muted-foreground)] mb-1.5">ما الذي يُسمح له بقراءته:</p>
+          <p className="text-xs text-[var(--sys-muted-foreground)] mb-1.5">ما الذي يُسمح له بقراءته:</p>
           <div className="flex flex-wrap gap-1.5">
             {info.sources.map((s) => {
               const on = picked.includes(s.id);
@@ -124,7 +124,7 @@ export function AskAi() {
                   type="button"
                   onClick={() => toggle(s.id)}
                   title={s.detail}
-                  className={`px-2.5 py-1 text-caption rounded-lg border transition-colors ${
+                  className={`px-2.5 py-1 text-xs rounded-lg border transition-colors ${
                     on
                       ? 'bg-[var(--sys-primary-soft)] border-[var(--sys-primary-soft)] text-[var(--sys-primary)] font-semibold'
                       : 'bg-[var(--sys-card)] border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)]/40'
@@ -156,14 +156,14 @@ export function AskAi() {
             type="button"
             onClick={ask}
             disabled={busy || !question.trim() || picked.length === 0}
-            className="inline-flex items-center gap-1.5 h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-caption font-semibold hover:bg-[var(--sys-primary)] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:bg-[var(--sys-primary)] disabled:opacity-50"
           >
             {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             حلّل
           </button>
-          <span className="text-caption text-[var(--sys-muted)]">Ctrl + Enter</span>
+          <span className="text-xs text-[var(--sys-muted)]">Ctrl + Enter</span>
           {picked.length === 0 && (
-            <span className="text-caption text-[var(--sys-warning)]">اختر مصدر بيانات واحداً على الأقل.</span>
+            <span className="text-xs text-[var(--sys-warning)]">اختر مصدر بيانات واحداً على الأقل.</span>
           )}
         </div>
 
@@ -174,7 +174,7 @@ export function AskAi() {
         {answer && (
           <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3">
             <p className="text-xs text-[var(--sys-foreground)] whitespace-pre-wrap leading-relaxed">{answer}</p>
-            <p className="text-caption text-[var(--sys-muted)] mt-2">
+            <p className="text-xs text-[var(--sys-muted)] mt-2">
               مبني على أرقام الثلاثين يوماً الماضية المعروضة أعلاه — راجِعه قبل التنفيذ.
             </p>
           </div>

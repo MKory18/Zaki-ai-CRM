@@ -204,14 +204,19 @@ describe('the size of text', () => {
   it('and never smaller than the floor', () => {
     // The guard is on the token, because the pixels live in one place now.
     const globals = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
-    const m = /--text-caption:\s*([0-9.]+)rem/.exec(globals);
-    expect(m, 'اختفت درجة أصغر حجم').toBeTruthy();
-    expect(Number(m![1]) * 16, 'أصغر حجم نزل تحت ١١ بكسل').toBeGreaterThanOrEqual(11);
+    // The scale is 12 · 13 · 14 · 16 · 20 · 24 · 32, and 12 is the floor.
+    // Anything named below it is a step somebody added by hand.
+    for (const m of globals.matchAll(/--text-([\w-]+):\s*([0-9.]+)rem/g)) {
+      if (m[1].includes('--')) continue;
+      expect(Number(m[2]) * 16, `--text-${m[1]} تحت أرضيّة ١٢ بكسل`).toBeGreaterThanOrEqual(12);
+    }
+    expect(globals, 'درجة ١٣ بكسل مفقودة').toContain('--text-note: 0.8125rem');
+    expect(globals, 'درجة ٣٢ بكسل مفقودة').toContain('--text-display: 2rem');
   });
 
   it('and the floor leaves room for Arabic to breathe', () => {
     const globals = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
-    const m = /--text-caption--line-height:\s*([0-9.]+)/.exec(globals);
+    const m = /--text-note--line-height:\s*([0-9.]+)/.exec(globals);
     expect(m, 'أصغر حجم بلا ارتفاع سطر').toBeTruthy();
     expect(Number(m![1])).toBeGreaterThanOrEqual(1.5);
   });
@@ -222,7 +227,8 @@ describe('the size of text', () => {
     const globals = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
     const theme = /@theme\s*\{([^}]*)\}/.exec(globals);
     expect(theme, 'اختفت كتلة السلّم').toBeTruthy();
-    const ADDED = ['--text-caption', '--shadow-card', '--shadow-raised'];
+    const ADDED = ['--text-note', '--text-display', '--radius-card', '--radius-sheet',
+      '--ease-standard', '--shadow-raised', '--shadow-overlay'];
     for (const line of theme![1].split('\n')) {
       const name = /(--[\w-]+):/.exec(line);
       if (!name) continue;
@@ -251,7 +257,7 @@ describe('depth', () => {
     const offenders: string[] = [];
     for (const { rel, src } of systemFiles()) {
       for (const m of src.matchAll(SHADOW)) {
-        if (m[1] === 'card' || m[1] === 'raised' || m[1] === 'none') continue;
+        if (m[1] === 'raised' || m[1] === 'none') continue;
         // A 9999px spread is not depth: it is the trick that dims
         // everything outside a cut-out, over a camera viewfinder.
         if (m[1].includes('9999px')) continue;
@@ -266,9 +272,9 @@ describe('depth', () => {
     // colour into the utility instead of into the theme puts it straight
     // back where it was: one shadow, and a theme where it does nothing.
     const globals = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
-    expect(globals, 'ظلّ البطاقة لم يعد يتبع القلم').toMatch(/--shadow-card:\s*var\(--sys-shadow\)/);
+    expect(globals, 'الظلّ المرفوع لم يعد يتبع القلم').toMatch(/--shadow-raised:\s*var\(--sys-shadow-raised\)/);
     expect(globals, 'ظلّ الطبقة العائمة لم يعد يتبع القلم').toMatch(
-      /--shadow-raised:\s*var\(--sys-shadow-raised\)/
+      /--shadow-overlay:\s*var\(--sys-shadow-overlay\)/
     );
   });
 

@@ -199,7 +199,7 @@ export function CommissionSettingsScreen() {
                         ? r.appliesToUserName
                         : ROLES.find((x) => x.value === r.appliesToRole)?.label ?? r.appliesToRole ?? '—'}
                     </td>
-                    <td className="px-3 py-2 text-caption text-[var(--sys-muted-foreground)]">
+                    <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
                       {METRIC_LABEL_AR[r.metric] ?? r.metric}
                       {r.period !== 'PER_ORDER' && ` · ${PERIOD_LABEL_AR[r.period] ?? r.period}`}
                     </td>
@@ -271,7 +271,7 @@ export function CommissionSettingsScreen() {
                     {t.payable > 0 && canPay && (
                       <button
                         onClick={() => setPaying({ id: t.userId, name: t.name })}
-                        className="h-7 rounded-lg border border-[var(--sys-primary)] px-2.5 text-caption font-medium text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
+                        className="h-7 rounded-lg border border-[var(--sys-primary)] px-2.5 text-xs font-medium text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
                       >
                         صرف
                       </button>
@@ -470,7 +470,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             </select>
           </label>
           {userId && (
-            <p className="col-span-2 -mt-1 text-caption text-[var(--sys-muted-foreground)]">
+            <p className="col-span-2 -mt-1 text-xs text-[var(--sys-muted-foreground)]">
               قاعدة باسم موظف تتجاوز قاعدة دوره.
             </p>
           )}
@@ -504,7 +504,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
           </label>
         </div>
 
-        <p className="rounded-lg bg-[var(--sys-surface)] px-2.5 py-2 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg bg-[var(--sys-surface)] px-2.5 py-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           {perOrder
             ? 'تُحتسب مع كل طلب مسلَّم، لحظة تسليمه.'
             : `تُحتسب بعد انتهاء ${PERIOD_LABEL_AR[period]} — لأن العدد لا يُعرف قبل أن ينتهي.`}
@@ -597,7 +597,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
                 dir="ltr"
               />
             </label>
-            <p className="col-span-2 rounded-lg bg-[var(--sys-surface)] px-2.5 py-2 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+            <p className="col-span-2 rounded-lg bg-[var(--sys-surface)] px-2.5 py-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
               مكافأة واحدة عند بلوغ الهدف، مهما زاد العدد عليه — وتُدفع فوق أي قاعدة شرائح أخرى، لا بدلاً
               منها.
             </p>
@@ -618,7 +618,7 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             </label>
 
             <div className="rounded-lg border border-[var(--sys-border)] p-2 space-y-2">
-              <div className="grid grid-cols-[1fr_1fr_1fr_1.2fr_auto] gap-1.5 text-caption font-medium text-[var(--sys-muted-foreground)]">
+              <div className="grid grid-cols-[1fr_1fr_1fr_1.2fr_auto] gap-1.5 text-xs font-medium text-[var(--sys-muted-foreground)]">
                 <span>من {isRate ? '%' : ''}</span>
                 <span>إلى (فارغ = فما فوق)</span>
                 <span>القيمة</span>
@@ -684,9 +684,9 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
-            <span className="mt-1 block text-caption text-[var(--sys-muted)]">
+            <span className="mt-1 block text-xs text-[var(--sys-muted)]">
               {isRate
-                ? 'نسبة تسليم ١٠٠٪ من طلبين ليست أداءً — يُقاس الحد على عدد الطلبات لا على النسبة.'
+                ? 'نسبة تسليم 100٪ من طلبين ليست أداءً — يُقاس الحد على عدد الطلبات لا على النسبة.'
                 : 'أقل من هذا العدد لا تستحق القاعدة شيئاً.'}
             </span>
           </label>

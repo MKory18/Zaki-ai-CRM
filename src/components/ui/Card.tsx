@@ -12,7 +12,7 @@ export function Card({ children, className, onClick }: CardProps) {
     <div
       onClick={onClick}
       className={clsx(
-        'bg-[var(--sys-card)] rounded-lg shadow-card transition-all',
+        'bg-[var(--sys-card)] rounded-lg shadow-raised transition-all',
         className
       )}
     >
@@ -84,12 +84,12 @@ export function KpiCard({
     emerald: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)]',
     amber: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]',
     rose: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]',
-    purple: 'bg-[var(--sys-primary-soft)] text-[var(--sys-info)] border-[var(--sys-primary-soft)]',
+    purple: 'bg-[var(--sys-primary-soft)] text-[var(--sys-muted-foreground)] border-[var(--sys-primary-soft)]',
     slate: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',
   };
 
   return (
-    <div className="bg-[var(--sys-card)] rounded-lg p-6 shadow-card">
+    <div className="bg-[var(--sys-card)] rounded-lg p-6 shadow-raised">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-[var(--sys-muted-foreground)] uppercase tracking-wider">{title}</span>
         {Icon && (

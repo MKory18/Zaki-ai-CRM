@@ -74,7 +74,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
           <BadgeCheck className="h-4 w-4 text-[var(--sys-primary)]" />
           هوية المتجر
         </p>
-        <p className="mt-0.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           تُكتب هنا مرة واحدة، وتقرؤها صفحات المتجر والبوالص واختيار المتجر.
         </p>
       </div>
@@ -100,7 +100,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
             placeholder="0999 000 000"
             className="mt-1 block h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-left text-sm focus:border-[var(--sys-primary)] focus:outline-none"
           />
-          <span className="mt-1 block text-caption text-[var(--sys-muted)]">يظهر للزبون في المتجر وتذييل الصفحات، ويُطبع على البوليصة.</span>
+          <span className="mt-1 block text-xs text-[var(--sys-muted)]">يظهر للزبون في المتجر وتذييل الصفحات، ويُطبع على البوليصة.</span>
         </label>
       </div>
       <div className="flex items-center gap-2">

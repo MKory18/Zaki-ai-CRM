@@ -175,7 +175,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
             <label className="block text-xs font-medium text-[var(--sys-foreground)]">
               1. الصق نص الطلب
             </label>
-            <Button size="sm" variant="outline" onClick={handlePaste} className="text-caption">
+            <Button size="sm" variant="outline" onClick={handlePaste} className="text-xs">
               <ClipboardPaste className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
               لصق من الحافظة
             </Button>
@@ -212,7 +212,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 <CheckCircle2 className="w-4 h-4 text-[var(--sys-destructive)]" />
                 <span>2. تأكيد البيانات المستخرجة (قابلة للتعديل)</span>
               </h4>
-              <span className="text-caption font-mono text-[var(--sys-muted)] bg-[var(--sys-card)] px-2 py-0.5 rounded-lg border">
+              <span className="text-xs font-mono text-[var(--sys-muted)] bg-[var(--sys-card)] px-2 py-0.5 rounded-lg border">
                 {result.engine === 'ai' ? 'OpenRouter AI' : 'Smart Parser'}
               </span>
             </div>
@@ -242,7 +242,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               ))}
             </Select>
             {p.governorate && !regionNames.includes(p.governorate) && (
-              <p className="text-caption text-[var(--sys-warning)]">
+              <p className="text-xs text-[var(--sys-warning)]">
                 «{p.governorate}» ليست من محافظات {countryName ?? 'البلد الحالي'} — اختر المحافظة الصحيحة.
               </p>
             )}

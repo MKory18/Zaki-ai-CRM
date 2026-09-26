@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
           <h1 className="text-2xl font-semibold text-[var(--sys-heading)]">استعادة كلمة المرور</h1>
         </div>
 
-        <Card className="shadow-card">
+        <Card className="shadow-raised">
           <CardContent className="p-6 space-y-4">
             {error && (
               <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
@@ -60,10 +60,10 @@ export default function ForgotPasswordPage() {
                 </p>
                 {devToken && (
                   <div className="bg-[var(--sys-surface)] rounded-lg p-2.5 border border-[var(--sys-border)]">
-                    <p className="text-caption text-[var(--sys-muted-foreground)] mb-1">وضع التطوير — رابط إعادة التعيين:</p>
+                    <p className="text-xs text-[var(--sys-muted-foreground)] mb-1">وضع التطوير — رابط إعادة التعيين:</p>
                     <Link
                       href={`/reset-password?token=${devToken}`}
-                      className="text-[var(--sys-primary)] font-mono text-caption break-all hover:underline"
+                      className="text-[var(--sys-primary)] font-mono text-xs break-all hover:underline"
                     >
                       /reset-password?token={devToken.slice(0, 20)}...
                     </Link>

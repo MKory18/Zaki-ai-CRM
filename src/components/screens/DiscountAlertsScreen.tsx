@@ -83,9 +83,9 @@ export function DiscountAlertsScreen() {
             onChange={(e) => setDays(Number(e.target.value))}
             className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
-            <option value={7}>آخر ٧ أيام</option>
-            <option value={30}>آخر ٣٠ يوماً</option>
-            <option value={90}>آخر ٩٠ يوماً</option>
+            <option value={7}>آخر 7 أيام</option>
+            <option value={30}>آخر 30 يوماً</option>
+            <option value={90}>آخر 90 يوماً</option>
           </select>
         </label>
         {data && (
@@ -93,7 +93,7 @@ export function DiscountAlertsScreen() {
             <input type="checkbox" checked={onlyNotable} onChange={(e) => setOnlyNotable(e.target.checked)} />
             الخصومات الكبيرة فقط (فوق {data.notableThreshold}%)
             {data.totals.notable > 0 && (
-              <span className="text-caption px-2 py-0.5 rounded-full bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] tabular-nums">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] tabular-nums">
                 {data.totals.notable}
               </span>
             )}
@@ -213,7 +213,7 @@ export function DiscountAlertsScreen() {
                   hideOnPhone: true,
                   render: (r) => (
                     <span className="whitespace-nowrap text-xs text-[var(--sys-muted-foreground)]">
-                      {new Date(r.createdAt).toLocaleDateString('ar', { dateStyle: 'short' })}
+                      {new Date(r.createdAt).toLocaleDateString('ar-u-nu-latn', { dateStyle: 'short' })}
                     </span>
                   ),
                 },

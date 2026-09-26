@@ -123,7 +123,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     swatch: '#0d9488',
     theme: { accent: '#0d9488', mood: 'calm', font: 'almarai', corners: 'soft' },
     bricks: [
-      b('announcement', {}, { text: 'منتج أصلي — استرجاع خلال ١٤ يوماً' }),
+      b('announcement', {}, { text: 'منتج أصلي — استرجاع خلال 14 يوماً' }),
       b('hero'),
       b('benefits', {}, { title: 'ماذا يفعل؟', items: [{ title: '', text: '' }, { title: '', text: '' }, { title: '', text: '' }] }),
       b('trust'),
@@ -276,7 +276,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     swatch: '#059669',
     theme: { accent: '#059669', mood: 'clean', font: 'rubik', corners: 'soft' },
     bricks: [
-      b('announcement', {}, { text: 'أكثر من ١٠٠٠ عميل' }),
+      b('announcement', {}, { text: 'أكثر من 1000 عميل' }),
       b('hero', { space: 'normal' }),
       b('reviews', { ...bg('#f0fdf4'), space: 'roomy' }),
       b('benefits'),

@@ -183,7 +183,7 @@ export function AssistantDialog({
           </section>
         )}
 
-        <p className="text-caption text-[var(--sys-muted)] border-t border-[var(--sys-border)] pt-2">
+        <p className="text-xs text-[var(--sys-muted)] border-t border-[var(--sys-border)] pt-2">
           اقتراح فقط. التأكيد والإلغاء والتأجيل والسعر تبقى قرارك أنت — لا يغيّر المساعد شيئاً في الطلب.
         </p>
       </div>

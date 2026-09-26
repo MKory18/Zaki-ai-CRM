@@ -202,7 +202,7 @@ export function IssueDialog({
             onChange={(e) => setNote(e.target.value)}
             rows={3}
             className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
-            placeholder="مثال: رقم الهاتف ٨ أرقام فقط"
+            placeholder="مثال: رقم الهاتف 8 أرقام فقط"
           />
         </Field>
         <Buttons onCancel={onClose} busy={busy} submitLabel="فتح الإشكال" />

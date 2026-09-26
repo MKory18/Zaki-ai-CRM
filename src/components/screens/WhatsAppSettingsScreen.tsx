@@ -76,8 +76,8 @@ export function WhatsAppSettingsScreen() {
     { label: 'رقم الهاتف', value: c?.phoneNumber ? <span dir="ltr">{c.phoneNumber}</span> : '—' },
     { label: 'WABA ID', value: c?.wabaId || (conn?.envConfigured ? 'من متغيرات البيئة' : '—') },
     { label: 'Phone Number ID', value: c?.phoneNumberId || (conn?.envConfigured ? 'من متغيرات البيئة' : '—') },
-    { label: 'آخر Webhook', value: c?.lastWebhookAt ? new Date(c.lastWebhookAt).toLocaleString('ar-EG') : 'لا يوجد' },
-    { label: 'آخر رسالة', value: c?.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString('ar-EG') : 'لا يوجد' },
+    { label: 'آخر Webhook', value: c?.lastWebhookAt ? new Date(c.lastWebhookAt).toLocaleString('ar-u-nu-latn') : 'لا يوجد' },
+    { label: 'آخر رسالة', value: c?.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString('ar-u-nu-latn') : 'لا يوجد' },
     { label: 'آخر خطأ', value: c?.lastError || 'لا يوجد' },
   ];
 
@@ -86,7 +86,7 @@ export function WhatsAppSettingsScreen() {
       <div className="p-6 space-y-6 max-w-2xl">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">إعدادات واتساب</h1>
+            <h1 className="text-2xl font-bold text-[var(--sys-heading)]">إعدادات واتساب</h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">ربط رقم WhatsApp Business واحد مشترك لكل الموظفين</p>
           </div>
           <Link href="/growth/whatsapp/inbox" className="text-xs font-semibold text-[var(--sys-primary)] hover:underline">
@@ -101,7 +101,7 @@ export function WhatsAppSettingsScreen() {
             <p className={`font-bold text-sm ${status === 'CONNECTED' ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
               {status === 'CONNECTED' ? '🟢 متصل' : '🟡 يحتاج إعداد'}
             </p>
-            <p className="text-caption text-[var(--sys-muted-foreground)]">
+            <p className="text-xs text-[var(--sys-muted-foreground)]">
               {status === 'CONNECTED'
                 ? 'الاتصال بواتساب يعمل عبر WhatsApp Business Cloud API'
                 : conn?.envConfigured
@@ -159,7 +159,7 @@ export function WhatsAppSettingsScreen() {
                 <span className="text-[var(--sys-muted-foreground)]">{desc}</span>
               </div>
             ))}
-            <div className="mt-3 p-3 rounded-lg bg-[var(--sys-surface)] border border-[#eef1f5] text-caption text-[var(--sys-muted-foreground)] flex gap-2">
+            <div className="mt-3 p-3 rounded-lg bg-[var(--sys-surface)] border border-[#eef1f5] text-xs text-[var(--sys-muted-foreground)] flex gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-[var(--sys-primary)]" />
               <span>
                 لا تُدخل أي بيانات سرية هنا في الواجهة — كل البيانات من متغيرات بيئة الخادم فقط، ولا يتم عرض Access Token مطلقًا.

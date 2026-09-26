@@ -1,5 +1,5 @@
 import './system.css';
-import { tajawal, publicSans, systemFontVars } from './fonts';
+import { arabic, publicSans, systemFontVars } from './fonts';
 import { sanitizeTheme } from '@/lib/system-themes';
 
 /**
@@ -21,7 +21,7 @@ export function SystemFrame({ children, theme }: { children: React.ReactNode; th
       data-sys-theme={sanitizeTheme(theme)}
       className={`${systemFontVars} flex min-h-screen flex-col bg-[var(--sys-background)] text-[var(--sys-foreground)]`}
     >
-      <style>{`:root{--font-arabic:${tajawal.style.fontFamily};--font-public-sans:${publicSans.style.fontFamily}}`}</style>
+      <style>{`:root{--font-arabic:${arabic.style.fontFamily};--font-public-sans:${publicSans.style.fontFamily}}`}</style>
       {children}
     </div>
   );

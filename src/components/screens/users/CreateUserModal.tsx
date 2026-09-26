@@ -126,7 +126,7 @@ export function CreateUserModal({
    * and being told nothing is how somebody decides the page is broken.
    */
   const missing = [
-    name.trim().length < 3 ? 'الاسم (٣ أحرف على الأقل)' : null,
+    name.trim().length < 3 ? 'الاسم (3 أحرف على الأقل)' : null,
     email.trim() === '' ? 'البريد الإلكتروني' : null,
     passwordProblems(password).length > 0
       ? `كلمة المرور (${passwordProblems(password).map((r) => r.ar).join('، ')})`
@@ -171,7 +171,7 @@ export function CreateUserModal({
                 return (
                   <li
                     key={rule.key}
-                    className={`flex items-center gap-1 text-caption ${met ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted)]'}`}
+                    className={`flex items-center gap-1 text-xs ${met ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted)]'}`}
                   >
                     {met ? <Check className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5" />}
                     {rule.ar}
@@ -197,7 +197,7 @@ export function CreateUserModal({
             anybody any more: commission comes from the rules — per store,
             with effective dates — and accrues on delivery. Asking for a
             number here that changes nothing is worse than not asking. */}
-        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             العمولة لا تُضبط من هنا. تُحسب من <span className="font-bold text-[var(--sys-foreground)]">قواعد العمولة</span>
             {' '}لكل متجر، بتواريخ سريان، وتُستحق عند التسليم.
         </p>
@@ -208,7 +208,7 @@ export function CreateUserModal({
             الدول التي يعمل فيها
           </p>
           {countries.length === 0 ? (
-            <p className="text-caption text-[var(--sys-muted)]">لا توجد دول معرّفة بعد.</p>
+            <p className="text-xs text-[var(--sys-muted)]">لا توجد دول معرّفة بعد.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {countries.map((c) => (
@@ -220,7 +220,7 @@ export function CreateUserModal({
                     className="w-4 h-4 accent-[var(--sys-primary)] cursor-pointer"
                   />
                   {c.name}
-                  <span className="text-caption text-[var(--sys-muted)] font-mono" dir="ltr">{c.code}</span>
+                  <span className="text-xs text-[var(--sys-muted)] font-mono" dir="ltr">{c.code}</span>
                 </label>
               ))}
             </div>
@@ -232,18 +232,18 @@ export function CreateUserModal({
                 <StoreIcon className="w-4 h-4 text-[var(--sys-primary)]" />
                 المتاجر
               </p>
-              <p className="text-caption text-[var(--sys-muted)]">
+              <p className="text-xs text-[var(--sys-muted)]">
                 اتركها فارغة ليصل إلى كل متاجر الدولة، أو اختر متاجر بعينها.
               </p>
               {selectedCountries.map((c) => (
                 <div key={c.id} className="rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-2.5">
-                  <p className="text-caption font-bold text-[var(--sys-foreground)] mb-1.5">{c.name}</p>
+                  <p className="text-xs font-bold text-[var(--sys-foreground)] mb-1.5">{c.name}</p>
                   {c.stores.length === 0 ? (
-                    <p className="text-caption text-[var(--sys-muted)]">لا متاجر في هذه الدولة بعد.</p>
+                    <p className="text-xs text-[var(--sys-muted)]">لا متاجر في هذه الدولة بعد.</p>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                       {c.stores.map((s) => (
-                        <label key={s.id} className="flex items-center gap-1.5 text-caption text-[var(--sys-heading)] cursor-pointer">
+                        <label key={s.id} className="flex items-center gap-1.5 text-xs text-[var(--sys-heading)] cursor-pointer">
                           <input
                             type="checkbox"
                             checked={storeIds.includes(s.id)}
@@ -271,12 +271,12 @@ export function CreateUserModal({
               stores — pressing "create" and seeing nothing happen is how
               «ما بنشء موظف» was reported. */}
           {error ? (
-            <span role="alert" className="me-auto text-caption font-medium text-[var(--sys-destructive)]">
+            <span role="alert" className="me-auto text-xs font-medium text-[var(--sys-destructive)]">
               {error}
             </span>
           ) : (
             !ready && (
-              <span className="me-auto text-caption text-[var(--sys-warning)]">
+              <span className="me-auto text-xs text-[var(--sys-warning)]">
                 ناقص: {missing.join('، ')}
               </span>
             )

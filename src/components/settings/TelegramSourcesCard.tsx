@@ -117,7 +117,7 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
       void tell({
         title: 'نتيجة اختبار المجموعة',
         body: r.lastMessage
-          ? `آخر رسالة: ${new Date(r.lastMessage.createdAt).toLocaleString('ar')} — الحالة: ${STATUS_LABELS[r.lastMessage.processingStatus] || r.lastMessage.processingStatus}`
+          ? `آخر رسالة: ${new Date(r.lastMessage.createdAt).toLocaleString('ar-u-nu-latn')} — الحالة: ${STATUS_LABELS[r.lastMessage.processingStatus] || r.lastMessage.processingStatus}`
           : 'لا توجد رسائل مستلمة من هذه المجموعة بعد',
       });
     }, 'تعذر الاختبار');
@@ -157,18 +157,18 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
                 <tr key={s.id} className="hover:bg-[var(--sys-surface)]">
                   <td className="px-4 py-3">
                     <p className="font-semibold text-[var(--sys-heading)]">{s.chatTitle || 'بدون عنوان'}</p>
-                    <p className="font-mono text-caption text-[var(--sys-muted-foreground)]" dir="ltr">{s.chatId}{s.topicId ? ` • topic ${s.topicId}` : ''}</p>
-                    {s.topicName && <p className="text-caption text-[var(--sys-muted-foreground)]">الموضوع: {s.topicName}</p>}
+                    <p className="font-mono text-xs text-[var(--sys-muted-foreground)]" dir="ltr">{s.chatId}{s.topicId ? ` • topic ${s.topicId}` : ''}</p>
+                    {s.topicName && <p className="text-xs text-[var(--sys-muted-foreground)]">الموضوع: {s.topicName}</p>}
                   </td>
                   <td className="px-4 py-3 font-semibold text-[var(--sys-foreground)]">{s.storeName ?? '—'}</td>
                   <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{s.chatType === 'supergroup' ? 'مجموعة فائقة' : s.chatType === 'group' ? 'مجموعة' : 'قناة'}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-caption font-semibold ${s.isActive ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.isActive ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)]'}`}>
                       {s.isActive ? 'مفعل' : 'معطل'}
                     </span>
                   </td>
                   <td className="px-4 py-3 font-semibold text-[var(--sys-heading)]">{s.ordersCount}</td>
-                  <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar') : '—'}</td>
+                  <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar-u-nu-latn') : '—'}</td>
                   {canManage && (
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -213,7 +213,7 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
             </div>
           </div>
           {formError && <p className="text-xs text-[var(--sys-destructive)]">{formError}</p>}
-          <p className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             تأكد من إضافة البوت إلى المجموعة ومن تفعيل Privacy Mode المناسب. اترك Topic ID فارغًا لربط المجموعة بالكامل.
           </p>
           <div className="flex justify-end gap-2 pt-2">

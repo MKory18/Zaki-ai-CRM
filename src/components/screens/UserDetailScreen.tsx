@@ -195,24 +195,24 @@ export function UserDetailScreen() {
                   {user.email}
                 </p>
               </div>
-              <span className={`text-caption font-bold rounded-full border-2 px-3 py-1 ${statusCls[user.status] || ''}`}>
+              <span className={`text-xs font-bold rounded-full border-2 px-3 py-1 ${statusCls[user.status] || ''}`}>
                 {user.status}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-5 text-xs">
               <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-                <p className="text-caption text-[var(--sys-muted)] flex items-center gap-1"><ShieldCheck className="w-3 h-3" />{ar ? 'الرتبة' : 'Role'}</p>
+                <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><ShieldCheck className="w-3 h-3" />{ar ? 'الرتبة' : 'Role'}</p>
                 <p className="font-bold text-[var(--sys-heading)]">{user.role}</p>
               </div>
               <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-                <p className="text-caption text-[var(--sys-muted)] flex items-center gap-1"><Clock className="w-3 h-3" />{ar ? 'آخر دخول' : 'Last Login'}</p>
+                <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><Clock className="w-3 h-3" />{ar ? 'آخر دخول' : 'Last Login'}</p>
                 <p className="font-bold text-[var(--sys-heading)]">
                   {user.lastLoginAt ? format(new Date(user.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—'}
                 </p>
               </div>
               <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-                <p className="text-caption text-[var(--sys-muted)]">{ar ? 'تاريخ التسجيل' : 'Created'}</p>
+                <p className="text-xs text-[var(--sys-muted)]">{ar ? 'تاريخ التسجيل' : 'Created'}</p>
                 <p className="font-bold text-[var(--sys-heading)]">{format(new Date(user.createdAt), 'yyyy-MM-dd')}</p>
               </div>
               {userId && <UserPhoneField userId={userId} initial={user.phone ?? null} canEdit={userCan(currentUser, 'users.edit')} />}
@@ -283,10 +283,10 @@ export function UserDetailScreen() {
             )}
             <div className="flex flex-col sm:flex-row sm:items-end gap-3">
               <div className="flex-1 space-y-1">
-                <p className="text-caption text-[var(--sys-muted)]">{ar ? 'الدور الحالي' : 'Current role'}</p>
+                <p className="text-xs text-[var(--sys-muted)]">{ar ? 'الدور الحالي' : 'Current role'}</p>
                 <p className="text-sm font-bold text-[var(--sys-heading)]">{user.role}</p>
                 {effectivePermsCount !== null && (
-                  <p className="text-caption text-[var(--sys-muted-foreground)]">
+                  <p className="text-xs text-[var(--sys-muted-foreground)]">
                     {ar ? `${effectivePermsCount} صلاحية فعّالة` : `${effectivePermsCount} effective permissions`}
                   </p>
                 )}
@@ -343,15 +343,15 @@ export function UserDetailScreen() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
               <div className="rounded-lg border border-[var(--sys-border)] px-3 py-4">
                 <p className="text-2xl font-black text-[var(--sys-destructive)]">{user.workload?.assigned ?? 0}</p>
-                <p className="text-caption text-[var(--sys-muted-foreground)] mt-1">{ar ? 'طلبات مسندة' : 'Assigned Orders'}</p>
+                <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{ar ? 'طلبات مسندة' : 'Assigned Orders'}</p>
               </div>
               <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-4">
                 <p className="text-2xl font-black text-[var(--sys-heading)]">{user.workload?.claimed ?? 0}</p>
-                <p className="text-caption text-[var(--sys-muted-foreground)] mt-1">{ar ? 'طلبات مستلمة' : 'Claimed Orders'}</p>
+                <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{ar ? 'طلبات مستلمة' : 'Claimed Orders'}</p>
               </div>
               <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-4">
                 <p className="text-2xl font-black text-[var(--sys-heading)]">{user.workload?.created ?? 0}</p>
-                <p className="text-caption text-[var(--sys-muted-foreground)] mt-1">{ar ? 'طلبات منشأة' : 'Created Orders'}</p>
+                <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{ar ? 'طلبات منشأة' : 'Created Orders'}</p>
               </div>
             </div>
           </CardContent>
@@ -720,7 +720,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                           <tr key={r.key} className="hover:bg-[var(--sys-surface)]/60">
                             <td className="px-3 py-2 min-w-[160px]">
                               <p className="font-medium text-[var(--sys-heading)]">{ar ? r.ar : r.en}</p>
-                              <p className="text-caption text-[var(--sys-muted)] font-mono" dir="ltr">{r.key}</p>
+                              <p className="text-xs text-[var(--sys-muted)] font-mono" dir="ltr">{r.key}</p>
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               {r.roleEffect ? (
@@ -815,11 +815,11 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                         <p className="text-xs font-medium text-[var(--sys-heading)] truncate">
                           {ar ? item?.ar ?? o.permission : item?.en ?? o.permission}
                         </p>
-                        <p className="text-caption text-[var(--sys-muted)] font-mono" dir="ltr">{o.permission}</p>
+                        <p className="text-xs text-[var(--sys-muted)] font-mono" dir="ltr">{o.permission}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span
-                          className={`text-caption font-bold rounded-lg px-2 py-0.5 border ${
+                          className={`text-xs font-bold rounded-lg px-2 py-0.5 border ${
                             o.effect === 'DENY'
                               ? 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]'
                               : 'text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-[var(--sys-success-soft)]'
@@ -828,7 +828,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                           {o.effect === 'DENY' ? `DENY آ· ${ar ? 'منع' : 'deny'}` : `ALLOW آ· ${ar ? 'إضافة' : 'allow'}`}
                         </span>
                         {o.effect === 'ALLOW' && scopeLabel && (
-                          <span className="text-caption text-[var(--sys-muted-foreground)]">{scopeLabel}</span>
+                          <span className="text-xs text-[var(--sys-muted-foreground)]">{scopeLabel}</span>
                         )}
                         {canEdit && (
                           <Button
@@ -936,14 +936,14 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
 
               {draftKey && draftScope === 'CATEGORY' && (
                 <div className="rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-3">
-                  {categoriesError && <p className="text-caption text-[var(--sys-destructive)]">{categoriesError}</p>}
+                  {categoriesError && <p className="text-xs text-[var(--sys-destructive)]">{categoriesError}</p>}
                   {!categoriesError && categories.length === 0 && (
-                    <p className="text-caption text-[var(--sys-muted)]">{ar ? 'لا توجد فئات بعد' : 'No categories yet'}</p>
+                    <p className="text-xs text-[var(--sys-muted)]">{ar ? 'لا توجد فئات بعد' : 'No categories yet'}</p>
                   )}
                   {categories.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                       {categories.map((c) => (
-                        <label key={c.id} className="flex items-center gap-1.5 text-caption text-[var(--sys-heading)] cursor-pointer">
+                        <label key={c.id} className="flex items-center gap-1.5 text-xs text-[var(--sys-heading)] cursor-pointer">
                           <input
                             type="checkbox"
                             checked={draftScopeIds.includes(c.id)}
@@ -969,8 +969,8 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                       className="ps-8 text-xs"
                     />
                   </div>
-                  {productLoading && <p className="text-caption text-[var(--sys-muted)]">{ar ? 'جارِ البحث…' : 'Searching…'}</p>}
-                  {productsError && <p className="text-caption text-[var(--sys-destructive)]">{productsError}</p>}
+                  {productLoading && <p className="text-xs text-[var(--sys-muted)]">{ar ? 'جارِ البحث…' : 'Searching…'}</p>}
+                  {productsError && <p className="text-xs text-[var(--sys-destructive)]">{productsError}</p>}
                   {productResults.length > 0 && (
                     <div className="max-h-36 overflow-y-auto rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] divide-y divide-[var(--sys-surface)]">
                       {productResults.map((p) => (
@@ -982,7 +982,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                           className="w-full text-start px-3 py-2 text-xs text-[var(--sys-heading)] hover:bg-[var(--sys-surface)] cursor-pointer disabled:opacity-50"
                         >
                           {p.name}{' '}
-                          <span className="text-caption text-[var(--sys-muted)] font-mono" dir="ltr">{p.sku}</span>
+                          <span className="text-xs text-[var(--sys-muted)] font-mono" dir="ltr">{p.sku}</span>
                         </button>
                       ))}
                     </div>
@@ -994,7 +994,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                         return (
                           <span
                             key={id}
-                            className="inline-flex items-center gap-1 text-caption font-medium bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5"
+                            className="inline-flex items-center gap-1 text-xs font-medium bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5"
                           >
                             {prod?.name ?? id}
                             <button type="button" onClick={() => toggleScopeId(id)} className="cursor-pointer hover:text-[var(--sys-destructive)]">

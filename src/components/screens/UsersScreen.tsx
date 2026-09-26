@@ -168,7 +168,7 @@ export function UsersScreen() {
         )}
 
         {/* Filters */}
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-card grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative sm:col-span-2">
             <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
             <input
@@ -222,7 +222,7 @@ export function UsersScreen() {
                     <tr key={u.id} className="hover:bg-[var(--sys-surface)] transition-colors">
                       <td className="px-6 py-3.5">
                         <p className="font-bold text-[var(--sys-heading)]">{u.name}</p>
-                        <p className="text-caption text-[var(--sys-muted)]">{u.email}</p>
+                        <p className="text-xs text-[var(--sys-muted)]">{u.email}</p>
                       </td>
                       <td className="px-6 py-3.5">
                         <Badge variant={u.role === 'PENDING_USER' ? 'warning' : u.role === 'SUPER_ADMIN' ? 'purple' : 'info'}>
@@ -243,7 +243,7 @@ export function UsersScreen() {
                       </td>
                       <td className="px-6 py-3.5 text-right rtl:text-left">
                         <div className="flex items-center gap-1.5 justify-end rtl:justify-start">
-                          <Button size="sm" variant="outline" onClick={() => openManage(u)} className="text-caption">
+                          <Button size="sm" variant="outline" onClick={() => openManage(u)} className="text-xs">
                             <ShieldCheck className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
                             إدارة
                           </Button>
@@ -251,7 +251,7 @@ export function UsersScreen() {
                             size="sm"
                             variant="outline"
                             onClick={() => (window.location.href = `/admin/users/${u.id}`)}
-                            className="text-caption"
+                            className="text-xs"
                             title="الدور والصلاحيات والوصول"
                           >
                             <KeyRound className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
@@ -331,7 +331,7 @@ export function UsersScreen() {
 
             {/* Status actions */}
             <div className="border border-[var(--sys-border)] rounded-lg p-4 space-y-3 bg-[var(--sys-surface)]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">حالة الحساب</h4>
+              <h4 className="text-xs font-bold text-[var(--sys-foreground)]">حالة الحساب</h4>
               <div className="flex flex-wrap gap-2">
                 {manageUser.status === 'PENDING' && (
                   <Button size="sm" variant="success" loading={actionLoading} onClick={() => handleAction('changeStatus', { status: 'ACTIVE' })}>
@@ -386,7 +386,7 @@ export function UsersScreen() {
                   إنهاء الجلسات (Force Logout)
                 </Button>
               </div>
-              <p className="text-caption text-[var(--sys-muted-foreground)]">
+              <p className="text-xs text-[var(--sys-muted-foreground)]">
                 إيقاف/تعطيل الحساب ينهي جميع الجلسات النشطة فوراً عبر إبطال التوكن الحالي.
               </p>
             </div>

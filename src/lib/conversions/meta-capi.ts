@@ -175,7 +175,7 @@ export function explainCapiError(e: unknown): string {
     return 'ميتا أوقفت الطلبات مؤقتاً لكثرتها. ستُعاد المحاولة تلقائياً.';
   }
   if (/event_time|7 days|older than/i.test(msg)) {
-    return 'ميتا ترفض حدثاً أقدم من ٧ أيام. الطلب تأخّر تسليمه أكثر من النافذة.';
+    return 'ميتا ترفض حدثاً أقدم من 7 أيام. الطلب تأخّر تسليمه أكثر من النافذة.';
   }
   return msg;
 }

@@ -138,15 +138,15 @@ export function BlacklistScreen() {
                   <td className="px-3 py-2 text-xs">
                     {b.reason}
                     {!b.active && b.releaseReason && (
-                      <span className="block text-caption text-[var(--sys-success)] mt-0.5">
+                      <span className="block text-xs text-[var(--sys-success)] mt-0.5">
                         فُك: {b.releaseReason} — {b.releasedByName ?? '—'}
                       </span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
                     {b.blockedByName ?? '—'}
-                    <span className="block text-caption text-[var(--sys-muted)]">
-                      {new Date(b.createdAt).toLocaleDateString('ar', { dateStyle: 'short' })}
+                    <span className="block text-xs text-[var(--sys-muted)]">
+                      {new Date(b.createdAt).toLocaleDateString('ar-u-nu-latn', { dateStyle: 'short' })}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-left">
@@ -233,7 +233,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
             className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
-          <span className="block text-caption text-[var(--sys-muted)] mt-1">
+          <span className="block text-xs text-[var(--sys-muted)] mt-1">
             يُطابَق بصيغته المجرّدة، فلا يهم كيف كُتب.
           </span>
         </label>
@@ -255,7 +255,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
             required
             minLength={3}
             rows={3}
-            placeholder="مثال: رفض الاستلام ٣ مرات متتالية"
+            placeholder="مثال: رفض الاستلام 3 مرات متتالية"
             className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
         </label>

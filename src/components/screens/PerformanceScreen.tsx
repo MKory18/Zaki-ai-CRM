@@ -258,7 +258,7 @@ export function PerformanceScreen() {
                     <tr key={prod.id} className="hover:bg-[var(--sys-surface)] transition-colors">
                       <td className="px-6 py-3.5">
                         <span className="font-bold text-[var(--sys-heading)] block">{prod.name}</span>
-                        <span className="font-mono text-caption text-[var(--sys-muted)]">{prod.sku}</span>
+                        <span className="font-mono text-xs text-[var(--sys-muted)]">{prod.sku}</span>
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">{prod.totalOrders}</td>
                       <td className="px-6 py-3.5 font-bold text-[var(--sys-success)]">
@@ -357,7 +357,7 @@ export function PerformanceScreen() {
                     />
                     <span className="ms-auto tabular-nums font-bold text-[var(--sys-heading)]">
                       {c.metrics.successRate ?? '—'}%
-                      <span className="text-caption text-[var(--sys-muted)] font-normal"> نجاح</span>
+                      <span className="text-xs text-[var(--sys-muted)] font-normal"> نجاح</span>
                     </span>
                   </li>
                 ))}
@@ -400,14 +400,14 @@ function Rank({
   const tone = warn ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-primary)]';
   return (
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] p-4 rounded-lg">
-      <span className={`text-caption font-bold ${tone} inline-flex items-center gap-1.5`}>
+      <span className={`text-xs font-bold ${tone} inline-flex items-center gap-1.5`}>
         {icon}
         {label}
       </span>
       <p className="font-bold text-[var(--sys-heading)] text-sm mt-1.5 line-clamp-1" title={name}>
         {name || '—'}
       </p>
-      <p className="text-caption text-[var(--sys-muted-foreground)] font-semibold mt-0.5 tabular-nums">{note}</p>
+      <p className="text-xs text-[var(--sys-muted-foreground)] font-semibold mt-0.5 tabular-nums">{note}</p>
     </div>
   );
 }

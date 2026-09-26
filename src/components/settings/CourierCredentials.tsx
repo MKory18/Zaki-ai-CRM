@@ -133,7 +133,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
             حساب {status.name} على {status.adapterCode}
           </p>
           {status.hasCredentials ? (
-            <p className="mt-0.5 text-caption text-[var(--sys-muted-foreground)]">
+            <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
               محفوظ ومشفَّر
               {status.emailHint && <> · الدخول <span dir="ltr">{status.emailHint}</span></>}
               {status.accountCompanyId !== null && <> · رقم الشركة {status.accountCompanyId}</>}
@@ -141,7 +141,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
               {status.savedBy && <> · {status.savedBy}</>}
             </p>
           ) : (
-            <p className="mt-0.5 text-caption text-[var(--sys-muted-foreground)]">
+            <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
               لا حساب محفوظ — الشحنات تُنشأ يدوياً حتى تُدخله.
             </p>
           )}
@@ -175,7 +175,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
 
       {test && (
         <p
-          className={`flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-caption ${
+          className={`flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-xs ${
             test.ok
               ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border border-[var(--sys-success-soft)]'
               : 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border border-[var(--sys-destructive-border)]'
@@ -191,7 +191,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
       )}
 
       {!status.encryptionAvailable && (
-        <p className="flex items-start gap-2 rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] p-2.5 text-caption leading-relaxed text-[var(--sys-warning)]">
+        <p className="flex items-start gap-2 rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] p-2.5 text-xs leading-relaxed text-[var(--sys-warning)]">
           <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           مفتاح التشفير غير مُهيّأ على الخادم. أضف <code dir="ltr">APP_ENCRYPTION_KEY</code> إلى
           ملف <code dir="ltr">.env</code> ثم أعد التشغيل — كلمة المرور لن تُحفظ بلا تشفير.
@@ -199,7 +199,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
       )}
 
       {status.hasCredentials && status.readable === false && (
-        <p className="flex items-start gap-2 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-caption leading-relaxed text-[var(--sys-destructive)]">
+        <p className="flex items-start gap-2 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs leading-relaxed text-[var(--sys-destructive)]">
           <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           الحساب محفوظ لكن لا يمكن فكّ تشفيره — غالباً تغيّر مفتاح التشفير. الشحنات
           تُنشأ يدوياً حتى تُدخله من جديد.
@@ -207,13 +207,13 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
       )}
 
       {status.hasCredentials && status.readable && (
-        <p className="flex items-center gap-2 text-caption text-[var(--sys-success)]">
+        <p className="flex items-center gap-2 text-xs text-[var(--sys-success)]">
           <ShieldCheck className="h-3.5 w-3.5" /> الحساب سليم — الشحنات تُنشأ آلياً.
         </p>
       )}
 
-      {done && <p className="flex items-center gap-1.5 text-caption text-[var(--sys-success)]"><Check className="h-3.5 w-3.5" />{done}</p>}
-      {error && !open && <p className="text-caption text-[var(--sys-destructive)]">{error}</p>}
+      {done && <p className="flex items-center gap-1.5 text-xs text-[var(--sys-success)]"><Check className="h-3.5 w-3.5" />{done}</p>}
+      {error && !open && <p className="text-xs text-[var(--sys-destructive)]">{error}</p>}
 
       <Modal
         isOpen={open}
@@ -289,7 +289,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
             onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
           />
 
-          <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+          <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             الحقول المطلوبة هي ما تطلبه الشركة على كل شحنة — بدون أيٍّ منها تُرفض
             الشحنة عندهم لا عندنا. كلمة المرور تُشفَّر قبل أن تُكتب، ولا يُعيدها أي
             طلب بعد ذلك: لتغييرها تُدخلها من جديد.

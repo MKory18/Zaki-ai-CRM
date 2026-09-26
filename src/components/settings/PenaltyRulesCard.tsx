@@ -160,7 +160,7 @@ export function PenaltyRulesCard() {
                 type="button"
                 disabled={busy}
                 onClick={() => toggle(r)}
-                className="ms-auto rounded-lg border border-[var(--sys-border)] px-2 py-0.5 text-caption text-[var(--sys-muted-foreground)]"
+                className="ms-auto rounded-lg border border-[var(--sys-border)] px-2 py-0.5 text-xs text-[var(--sys-muted-foreground)]"
               >
                 {r.isActive ? 'أوقفها' : 'شغّلها'}
               </button>
@@ -171,7 +171,7 @@ export function PenaltyRulesCard() {
         <div className="rounded-lg border border-[var(--sys-border)] p-2.5">
           <div className="flex flex-wrap items-end gap-2">
             <label className="block">
-              <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">النوع</span>
+              <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">النوع</span>
               <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value })} className={`${FIELD} w-36`}>
                 {kinds.map((k) => (
                   <option key={k.key} value={k.key}>{k.ar}</option>
@@ -179,7 +179,7 @@ export function PenaltyRulesCard() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">الدور</span>
+              <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">الدور</span>
               <select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className={`${FIELD} w-32`}>
                 <option value="">كل الأدوار</option>
                 {roles.map((r) => (
@@ -188,7 +188,7 @@ export function PenaltyRulesCard() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">لكل {kind?.unitAr}</span>
+              <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">لكل {kind?.unitAr}</span>
               <input
                 type="number"
                 min={0}
@@ -200,7 +200,7 @@ export function PenaltyRulesCard() {
               />
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">العملة</span>
+              <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">العملة</span>
               <input
                 value={draft.currencyCode}
                 onChange={(e) => setDraft({ ...draft, currencyCode: e.target.value })}
@@ -211,7 +211,7 @@ export function PenaltyRulesCard() {
               />
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">سماح ({kind?.unitAr})</span>
+              <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">سماح ({kind?.unitAr})</span>
               <input
                 type="number"
                 min={0}
@@ -222,7 +222,7 @@ export function PenaltyRulesCard() {
               />
             </label>
             <label className="block">
-              <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">سقف الفترة</span>
+              <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">سقف الفترة</span>
               <input
                 type="number"
                 min={0}
@@ -239,9 +239,9 @@ export function PenaltyRulesCard() {
             </Button>
           </div>
 
-          {kind && <p className="mt-2 text-caption leading-relaxed text-[var(--sys-muted)]">{kind.sourceAr}</p>}
+          {kind && <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted)]">{kind.sourceAr}</p>}
           {!draft.periodCap && (
-            <p className="mt-1 flex items-start gap-1 text-caption leading-relaxed text-[var(--sys-warning)]">
+            <p className="mt-1 flex items-start gap-1 text-xs leading-relaxed text-[var(--sys-warning)]">
               <ShieldQuestion className="mt-px h-3 w-3 shrink-0" />
               بلا سقف، قاعدةٌ بالدقيقة قد تأكل راتباً كاملاً على مرضٍ واحد.
             </p>

@@ -406,7 +406,7 @@ export function PermissionsScreen() {
                           {role.companyId === null ? (ar ? 'دور نظامي' : 'System') : (ar ? 'دور شركة' : 'Company')}
                         </Badge>
                       </div>
-                      <p className="text-caption text-[var(--sys-muted)] mt-1">
+                      <p className="text-xs text-[var(--sys-muted)] mt-1">
                         {ar ? 'أُنشئ' : 'Created'} {format(new Date(role.createdAt), 'yyyy-MM-dd')}
                       </p>
                     </div>
@@ -424,7 +424,7 @@ export function PermissionsScreen() {
 
                   <div className="flex items-center gap-1.5 mt-4">
                     {isSuperAdminRole ? (
-                      <span className="text-caption text-[var(--sys-muted)]" title={ar ? 'وصول كامل مركزيًا' : 'Central full access'}>
+                      <span className="text-xs text-[var(--sys-muted)]" title={ar ? 'وصول كامل مركزيًا' : 'Central full access'}>
                         {ar ? 'قراءة فقط' : 'Read-only'}
                       </span>
                     ) : (
@@ -514,7 +514,7 @@ export function PermissionsScreen() {
                       <span className="text-xs font-bold text-[var(--sys-heading)]">
                         {ar ? MODULE_LABELS[m.module]?.ar ?? m.module : MODULE_LABELS[m.module]?.en ?? m.module}
                         {moduleActive > 0 && (
-                          <span className="ms-2 text-caption font-bold text-[var(--sys-success)] bg-[var(--sys-success-soft)] rounded-md px-1.5 py-0.5">
+                          <span className="ms-2 text-xs font-bold text-[var(--sys-success)] bg-[var(--sys-success-soft)] rounded-md px-1.5 py-0.5">
                             {moduleActive}
                           </span>
                         )}
@@ -538,7 +538,7 @@ export function PermissionsScreen() {
                                   <span className="text-xs text-[var(--sys-heading)] font-medium truncate">
                                     {ar ? item.ar : item.en}
                                   </span>
-                                  <span className="text-caption text-[var(--sys-muted)] font-mono hidden sm:inline truncate" dir="ltr">{item.key}</span>
+                                  <span className="text-xs text-[var(--sys-muted)] font-mono hidden sm:inline truncate" dir="ltr">{item.key}</span>
                                 </label>
                                 {d && item.scopes && item.scopes.length > 1 && (
                                   <div className="w-44 shrink-0">
@@ -558,11 +558,11 @@ export function PermissionsScreen() {
                               {d && d.scope === 'CATEGORY' && (
                                 <div className="mt-2 ms-6 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-3">
                                   {categories.length === 0 ? (
-                                    <p className="text-caption text-[var(--sys-muted)]">{ar ? 'لا توجد فئات بعد' : 'No categories yet'}</p>
+                                    <p className="text-xs text-[var(--sys-muted)]">{ar ? 'لا توجد فئات بعد' : 'No categories yet'}</p>
                                   ) : (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                                       {categories.map((c) => (
-                                        <label key={c.id} className="flex items-center gap-1.5 text-caption text-[var(--sys-heading)] cursor-pointer">
+                                        <label key={c.id} className="flex items-center gap-1.5 text-xs text-[var(--sys-heading)] cursor-pointer">
                                           <input
                                             type="checkbox"
                                             checked={d.scopeIds.includes(c.id)}
@@ -589,7 +589,7 @@ export function PermissionsScreen() {
                                       className="ps-8 text-xs"
                                     />
                                   </div>
-                                  {productLoading && <p className="text-caption text-[var(--sys-muted)]">{ar ? 'جارِ البحث…' : 'Searching…'}</p>}
+                                  {productLoading && <p className="text-xs text-[var(--sys-muted)]">{ar ? 'جارِ البحث…' : 'Searching…'}</p>}
                                   {productResults.length > 0 && (
                                     <div className="max-h-36 overflow-y-auto rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] divide-y divide-[var(--sys-surface)]">
                                       {productResults.slice(0, (productPage + 1) * 10).map((p) => (
@@ -604,7 +604,7 @@ export function PermissionsScreen() {
                                       {(productPage + 1) * 10 < productResults.length && (
                                         <button
                                           onClick={() => setProductPage((p) => p + 1)}
-                                          className="w-full px-3 py-2 text-caption font-bold text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] cursor-pointer"
+                                          className="w-full px-3 py-2 text-xs font-bold text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] cursor-pointer"
                                         >
                                           {ar ? 'تحميل المزيد' : 'Load more'}
                                         </button>
@@ -616,7 +616,7 @@ export function PermissionsScreen() {
                                       {d.scopeIds.map((id) => {
                                         const prod = productResults.find((p) => p.id === id);
                                         return (
-                                          <span key={id} className="inline-flex items-center gap-1 text-caption font-medium bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5">
+                                          <span key={id} className="inline-flex items-center gap-1 text-xs font-medium bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5">
                                             {prod?.name ?? id}
                                             <button onClick={() => toggleScopeId(item.key, id)} className="cursor-pointer hover:text-[var(--sys-destructive)]">
                                               <X className="w-3 h-3" />

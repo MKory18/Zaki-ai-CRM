@@ -155,7 +155,7 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
           <tbody key={section.label} className="divide-y divide-[var(--sys-border)]">
             <tr className="bg-[var(--sys-primary-soft)]/60">
               <td colSpan={HEADS.length} className="px-4 py-1.5">
-                <span className="inline-flex items-center gap-1.5 text-caption font-bold text-[var(--sys-muted-foreground)]">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--sys-muted-foreground)]">
                   {section.icon}
                   {section.label}
                 </span>
@@ -182,7 +182,7 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
                 >
                   {r.daysPresent === 0 ? <span className="text-[var(--sys-border-strong)]">0</span> : r.daysPresent}
                   {r.daysWithoutWork > 0 && (
-                    <span className="text-caption text-[var(--sys-warning)] font-normal"> ({r.daysWithoutWork} بلا شغل)</span>
+                    <span className="text-xs text-[var(--sys-warning)] font-normal"> ({r.daysWithoutWork} بلا شغل)</span>
                   )}
                 </td>
                 <td
@@ -200,10 +200,10 @@ export function TeamPerformanceTable({ rows, totals }: { rows: TeamRow[] | null;
                 >
                   {r.daysLate}
                   {r.daysLate > 0 && (
-                    <span className="text-caption font-normal"> ({clock(r.totalLateMinutes)})</span>
+                    <span className="text-xs font-normal"> ({clock(r.totalLateMinutes)})</span>
                   )}
                   {r.daysLateEstimated > 0 && (
-                    <span className="text-caption text-[var(--sys-muted)] font-normal"> ≈</span>
+                    <span className="text-xs text-[var(--sys-muted)] font-normal"> ≈</span>
                   )}
                 </td>
                 <Text value={clock(r.avgPresentMinutes)} />

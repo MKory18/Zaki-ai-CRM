@@ -91,7 +91,7 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
             <Webhook className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
             رابط استقبال الحالات
           </p>
-          <p className="mt-0.5 text-caption text-[var(--sys-muted-foreground)]">
+          <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             {!status.configured ? (
               <>لا رابط بعد — الحالات تصل بالاستطلاع كل دقيقتين.</>
             ) : status.lastSeenAt ? (
@@ -114,14 +114,14 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
       {/* Shown once. Reloading this screen will not bring it back. */}
       {url && (
         <div className="space-y-1.5 rounded-lg border border-[var(--sys-primary-soft)] bg-[var(--sys-primary-soft)] p-2.5">
-          <p className="flex items-center gap-1.5 text-caption font-semibold text-[var(--sys-primary)]">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--sys-primary)]">
             <AlertTriangle className="h-3.5 w-3.5" />
             انسخه الآن — لن يُعرَض مرة أخرى.
           </p>
           <div className="flex items-center gap-1.5">
             <code
               dir="ltr"
-              className="flex-1 truncate rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 py-1.5 text-caption text-[var(--sys-foreground)]"
+              className="flex-1 truncate rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 py-1.5 text-xs text-[var(--sys-foreground)]"
             >
               {url}
             </code>
@@ -134,14 +134,14 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
               {copied ? <Check className="h-3.5 w-3.5 text-[var(--sys-success)]" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
           </div>
-          <p className="text-caption text-[var(--sys-muted-foreground)]">
+          <p className="text-xs text-[var(--sys-muted-foreground)]">
             أرسله لشركة الشحن ليضيفوه عندهم. الرابط كلمة سرّ: من يملكه يستطيع إرسال
             حالات باسمهم — لا تنشره في مجموعة.
           </p>
         </div>
       )}
 
-      {error && <p className="text-caption text-[var(--sys-destructive)]">{error}</p>}
+      {error && <p className="text-xs text-[var(--sys-destructive)]">{error}</p>}
     </div>
   );
 }

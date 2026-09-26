@@ -176,7 +176,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
 
             {input && (
               <label className="block">
-                <span className="mb-1 block text-caption font-semibold text-[var(--sys-foreground)]">
+                <span className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">
                   {input.label}
                   {input.required && <span className="text-[var(--sys-destructive)]"> *</span>}
                 </span>

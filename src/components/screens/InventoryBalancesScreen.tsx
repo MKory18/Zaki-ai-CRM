@@ -117,7 +117,7 @@ export function InventoryBalancesScreen() {
             placeholder="ابحث باسم المنتج أو رمزه…"
             className="w-full min-w-0 h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
-          <p className="mt-1.5 text-caption text-[var(--sys-muted-foreground)]">
+          <p className="mt-1.5 text-xs text-[var(--sys-muted-foreground)]">
             {visible.length} من {stockSummary.length} منتج
           </p>
         </div>
@@ -139,7 +139,7 @@ export function InventoryBalancesScreen() {
                     </a>
                     {/* Which door adds to this one — the question you ask
                         the moment you see it is empty. */}
-                    <span className="mt-1 inline-block rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-caption font-semibold text-[var(--sys-foreground)]">
+                    <span className="mt-1 inline-block rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-xs font-semibold text-[var(--sys-foreground)]">
                       {s.sourceType === 'PURCHASED' ? 'جاهز — يُستلم' : 'مصنّع — تشغيلة'}
                     </span>
                   </div>
@@ -150,15 +150,15 @@ export function InventoryBalancesScreen() {
 
                 <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
                   <div className="bg-[var(--sys-surface)] p-2 rounded-lg">
-                    <span className="text-[var(--sys-muted)] block text-caption">دخل</span>
+                    <span className="text-[var(--sys-muted)] block text-xs">دخل</span>
                     <span className="font-bold text-[var(--sys-heading)]">{s.produced}</span>
                   </div>
                   <div className="bg-[var(--sys-destructive-soft)] p-2 rounded-lg">
-                    <span className="text-[var(--sys-destructive)] block text-caption">خرج</span>
+                    <span className="text-[var(--sys-destructive)] block text-xs">خرج</span>
                     <span className="font-bold text-[var(--sys-destructive)]">{s.sold}</span>
                   </div>
                   <div className="bg-[var(--sys-destructive-soft)] p-2 rounded-lg">
-                    <span className="text-[var(--sys-destructive)] block text-caption">متبقٍّ</span>
+                    <span className="text-[var(--sys-destructive)] block text-xs">متبقٍّ</span>
                     <span className="font-black text-[var(--sys-destructive)]">{s.remaining}</span>
                   </div>
                 </div>
@@ -233,7 +233,7 @@ export function InventoryBalancesScreen() {
                   : 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]'
             }`}
           >
-            <p className="text-caption font-medium text-[var(--sys-muted-foreground)]">الفرق الذي سيُسجَّل</p>
+            <p className="text-xs font-medium text-[var(--sys-muted-foreground)]">الفرق الذي سيُسجَّل</p>
             <p
               className={`mt-0.5 text-lg font-black tabular-nums ${
                 difference === 0 ? 'text-[var(--sys-muted-foreground)]' : difference > 0 ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'
@@ -242,7 +242,7 @@ export function InventoryBalancesScreen() {
             >
               {difference > 0 ? `+${difference}` : difference}
             </p>
-            <p className="mt-0.5 text-caption text-[var(--sys-muted-foreground)]">
+            <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
               {difference === 0
                 ? 'الجرد مطابق — لن يُسجَّل شيء.'
                 : difference > 0
@@ -262,7 +262,7 @@ export function InventoryBalancesScreen() {
 
           {countError && <p className="text-xs text-[var(--sys-destructive)]">{countError}</p>}
 
-          <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+          <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             إضافة بضاعة جديدة لا تتم من هنا: ما تصنعه يدخل من «تشغيلات الإنتاج»
             ببنود كلفته، وما تشتريه جاهزاً من «استلام بضاعة جاهزة» بسعر شرائه.
             البضاعة التي تدخل بلا تكلفة تخفض متوسط التكلفة وتُظهر ربحاً لم يتحقق.

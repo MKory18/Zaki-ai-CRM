@@ -84,7 +84,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
             <StoreIcon className="h-4 w-4 text-[var(--sys-primary)]" />
             واجهة متجر {store.name}
           </p>
-          <p className="mt-0.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+          <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             يعرض منتجات هذا المتجر ويستقبل الطلبات بنفس مسار صفحات الهبوط —
             نفس العروض، نفس نموذج الطلب، نفس التحقق.
           </p>
@@ -95,7 +95,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
             href={`/s/${store.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex shrink-0 items-center gap-1.5 text-caption font-bold text-[var(--sys-primary)] hover:underline"
+            className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold text-[var(--sys-primary)] hover:underline"
           >
             <ExternalLink className="h-3.5 w-3.5" /> افتح المتجر
           </a>
@@ -113,7 +113,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
       </label>
 
       {!enabled && (
-        <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+        <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           مغلق الآن: الرابط يقرأ كأنه غير موجود، ولا يقبل طلبات. متجر غير مفتوح
           لا يجوز أن يكون قابلاً للتصفّح.
         </p>
@@ -167,7 +167,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           the seller would otherwise change a colour and see nothing move.
           The logo and the support phone still count — waybills print them. */}
       {store.type === 'SINGLE_PRODUCT' && store.landingPageId && (
-        <p className="rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-caption leading-relaxed text-[var(--sys-foreground)]">
+        <p className="rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-foreground)]">
           واجهة هذا المتجر صفحة هبوط — ألوانها وخطها ونصوصها تُعدَّل من{' '}
           <a href="/growth/single-product-stores" className="font-semibold text-[var(--sys-primary)] hover:underline">
             متجر Single Product ← صمّم الواجهة

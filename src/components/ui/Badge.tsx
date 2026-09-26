@@ -16,8 +16,8 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
     success: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success-soft)]',
     warning: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]',
     danger: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]',
-    info: 'bg-[var(--sys-info-soft)] text-[var(--sys-info)] border-[var(--sys-info)]',
-    purple: 'bg-[var(--sys-surface)] text-[var(--sys-info)] border-[var(--sys-info-soft)]',
+    info: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-muted-foreground)]',
+    purple: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-surface)]',
     outline: 'bg-transparent text-[var(--sys-foreground)] border-[var(--sys-border)]',
   };
 

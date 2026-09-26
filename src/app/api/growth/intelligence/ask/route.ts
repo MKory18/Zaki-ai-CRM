@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const want = new Set(parsed.data.sources ?? ['SALES', 'PRODUCTS', 'TEAM']);
 
     const analytics = await getCompanyAnalytics({ companyId, storeId }, { period: '30d' });
-    const context: Record<string, unknown> = { currency: country.currencyCode, window: 'آخر ٣٠ يوماً' };
+    const context: Record<string, unknown> = { currency: country.currencyCode, window: 'آخر 30 يوماً' };
 
     if (want.has('SALES')) context.sales = analytics.aiContext;
     if (want.has('PRODUCTS')) {

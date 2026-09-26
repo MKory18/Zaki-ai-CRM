@@ -144,7 +144,7 @@ export function IdleGuard() {
           data-testid="idle-warning"
           className="fixed inset-x-0 bottom-0 z-[70] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
         >
-          <div className="mx-auto flex max-w-md items-center gap-3 rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-card)] p-3 shadow-raised">
+          <div className="mx-auto flex max-w-md items-center gap-3 rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-card)] p-3 shadow-overlay">
             <Lock className="h-5 w-5 shrink-0 text-[var(--sys-warning)]" />
             <p className="flex-1 text-sm text-[var(--sys-foreground)]">
               {phase === 'expired' ? (

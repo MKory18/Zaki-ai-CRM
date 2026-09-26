@@ -206,7 +206,7 @@ export function LabelSizePicker({
               className={`${INPUT} w-16`}
               aria-label="العرض بالمليمتر"
             />
-            <span className="text-caption text-[var(--sys-muted)]">×</span>
+            <span className="text-xs text-[var(--sys-muted)]">×</span>
             <input
               type="number"
               min={40}
@@ -224,7 +224,7 @@ export function LabelSizePicker({
 
   return (
     <div className={className}>
-      <label className="block text-caption text-[var(--sys-muted-foreground)] mb-1">مقاس البوليصة</label>
+      <label className="block text-xs text-[var(--sys-muted-foreground)] mb-1">مقاس البوليصة</label>
       {select}
       {stored.key === 'custom' && (
         <div className="grid grid-cols-2 gap-2 mt-2" dir="ltr">
@@ -254,7 +254,7 @@ export function LabelSizePicker({
           Drawn to the real proportions, and to real millimetres where the
           screen can (`mm` is a CSS unit), so choosing is looking. */}
       <SizePreview />
-      <p className="text-caption text-[var(--sys-muted)] mt-1">يُحفظ على هذا الجهاز ويُستعمل في كل شاشات الطباعة.</p>
+      <p className="text-xs text-[var(--sys-muted)] mt-1">يُحفظ على هذا الجهاز ويُستعمل في كل شاشات الطباعة.</p>
     </div>
   );
 }
@@ -299,7 +299,7 @@ function SizePreview() {
           ))}
         </div>
       </div>
-      <figcaption className="text-caption leading-relaxed text-[var(--sys-muted-foreground)]">
+      <figcaption className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
         {label}
         <span className="block" dir="ltr" data-testid="preview-mm">
           {dims.width}×{dims.height} mm

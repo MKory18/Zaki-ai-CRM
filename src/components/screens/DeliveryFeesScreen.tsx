@@ -214,7 +214,7 @@ export function DeliveryFeesScreen() {
                         <span
                           dir="rtl"
                           title="لا نملك رمز هذه المحافظة لدى الشركة — بدونه لا تُنشأ الشحنة آلياً. اطلبه منهم أو ارفع قائمة مناطقهم."
-                          className="inline-flex items-center gap-1 rounded-full border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] px-2 py-0.5 text-caption text-[var(--sys-warning)]"
+                          className="inline-flex items-center gap-1 rounded-full border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] px-2 py-0.5 text-xs text-[var(--sys-warning)]"
                         >
                           بلا رمز
                         </span>
@@ -357,7 +357,7 @@ function BulkFillDialog({
           </label>
         </div>
 
-        <p className="text-caption text-[var(--sys-muted)]">
+        <p className="text-xs text-[var(--sys-muted)]">
           {regions.map((r) => r.name).join(' · ')}
         </p>
 

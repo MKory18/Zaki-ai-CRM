@@ -70,7 +70,7 @@ describe('bands', () => {
       ...base, metric: 'DELIVERY_RATE', tiers: [{ from: 150, to: null, value: 1 }],
     });
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toContain('١٠٠');
+    expect((await res.json()).error).toContain('100');
   });
 });
 

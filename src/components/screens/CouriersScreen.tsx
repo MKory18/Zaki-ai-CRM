@@ -228,7 +228,7 @@ export function CouriersScreen() {
               <option value="COMPANY">شركة شحن</option>
               <option value="AGENT">مندوب</option>
             </select>
-            <span className="block text-caption text-[var(--sys-muted)] mt-1">
+            <span className="block text-xs text-[var(--sys-muted)] mt-1">
               المندوب فوري وتسويته يدوية، وهو الوحيد الذي يمكن سحب الشحنة منه مباشرة.
             </span>
           </label>
@@ -247,7 +247,7 @@ export function CouriersScreen() {
                   <option key={p.code} value={p.code}>{p.name}</option>
                 ))}
               </select>
-              <span className="block text-caption text-[var(--sys-muted)] mt-1">
+              <span className="block text-xs text-[var(--sys-muted)] mt-1">
                 {COURIER_PLATFORMS.find((p) => p.code === form.adapterCode)?.needs}
               </span>
             </label>
@@ -282,7 +282,7 @@ export function CouriersScreen() {
               <button
                 onClick={() => placeHere(c)}
                 disabled={busy}
-                className="rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-card)] px-3 py-1 text-caption text-[var(--sys-warning)] hover:border-[var(--sys-warning)] disabled:opacity-50"
+                className="rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-card)] px-3 py-1 text-xs text-[var(--sys-warning)] hover:border-[var(--sys-warning)] disabled:opacity-50"
               >
                 أسنِدها لهذا المتجر
               </button>
@@ -323,7 +323,7 @@ export function CouriersScreen() {
                   )}
                 </td>
                 <td className="px-4 py-2">
-                  <span className={`text-caption px-2 py-0.5 rounded-full border ${
+                  <span className={`text-xs px-2 py-0.5 rounded-full border ${
                     c.kind === 'AGENT'
                       ? 'bg-[var(--sys-primary-soft)] border-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
                       : 'bg-[var(--sys-surface)] border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
@@ -336,7 +336,7 @@ export function CouriersScreen() {
                   {/* Which platform it runs on, under its own code — the two
                       belong together and neither is the other. */}
                   {c.adapterCode && (
-                    <span dir="ltr" className="mt-0.5 block text-caption text-[var(--sys-muted)]">
+                    <span dir="ltr" className="mt-0.5 block text-xs text-[var(--sys-muted)]">
                       {COURIER_PLATFORMS.find((p) => p.code === c.adapterCode)?.name ?? c.adapterCode}
                     </span>
                   )}

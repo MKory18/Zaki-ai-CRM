@@ -83,7 +83,7 @@ export function AiDock() {
     const question = (text ?? q).trim();
     if (!question || busy) return;
 
-    const at = new Date().toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+    const at = new Date().toLocaleTimeString('ar-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
     setMsgs((m) => [...m, { role: 'user', content: question, at }]);
     setQ('');
     setBusy(true);
@@ -101,7 +101,7 @@ export function AiDock() {
           content: res.ok
             ? json.answer || 'لم يصل جواب.'
             : json.error || 'تعذر الوصول إلى المساعد. تأكد من إعداده في الإعدادات.',
-          at: new Date().toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' }),
+          at: new Date().toLocaleTimeString('ar-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
     } catch {
@@ -121,7 +121,7 @@ export function AiDock() {
         onClick={() => setOpen(true)}
         title="المساعد الذكي"
         aria-label="افتح المساعد الذكي"
-        className="fixed bottom-4 start-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] shadow-raised transition hover:bg-[var(--sys-heading)] active:scale-95"
+        className="fixed bottom-4 start-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] shadow-overlay transition hover:bg-[var(--sys-heading)] active:scale-95"
       >
         <Bot className="h-5 w-5" />
         {/* A quiet mark that there is something to come back to. */}
@@ -138,7 +138,7 @@ export function AiDock() {
       // A panel, not an overlay. It has a width and a height and sits in
       // the corner — the CRM behind it stays readable and clickable, which
       // is the whole difference between an assistant and an interruption.
-      className="fixed bottom-4 start-4 z-40 flex h-[min(32rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-raised"
+      className="fixed bottom-4 start-4 z-40 flex h-[min(32rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-overlay"
     >
       <header className="flex items-center justify-between border-b border-[var(--sys-border)] bg-[var(--sys-heading)] px-3 py-2">
         <span className="flex items-center gap-2 text-xs font-bold text-[var(--sys-primary-foreground)]">
@@ -179,7 +179,7 @@ export function AiDock() {
           <div className="pt-4 text-center">
             <Bot className="mx-auto h-7 w-7 text-[var(--sys-border-strong)]" />
             <p className="mt-2 text-xs font-semibold text-[var(--sys-foreground)]">اسأل عن أرقامك</p>
-            <p className="mx-auto mt-1 max-w-[16rem] text-caption leading-relaxed text-[var(--sys-muted)]">
+            <p className="mx-auto mt-1 max-w-[16rem] text-xs leading-relaxed text-[var(--sys-muted)]">
               يرى بيانات هذا المتجر وحده، وبحدود صلاحياتك.
             </p>
             <div className="mt-3 space-y-1.5">
@@ -188,7 +188,7 @@ export function AiDock() {
                   key={o}
                   type="button"
                   onClick={() => void ask(o)}
-                  className="block w-full rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-caption text-[var(--sys-foreground)] transition hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+                  className="block w-full rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-xs text-[var(--sys-foreground)] transition hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                 >
                   {o}
                 </button>
@@ -199,14 +199,14 @@ export function AiDock() {
           msgs.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
               <div
-                className={`max-w-[85%] rounded-lg px-3 py-2 text-caption leading-relaxed ${
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
                   m.role === 'user'
                     ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]'
                     : 'bg-[var(--sys-surface-strong)] text-[var(--sys-heading)]'
                 }`}
               >
                 <p className="whitespace-pre-wrap">{m.content}</p>
-                <p className={`mt-0.5 text-caption ${m.role === 'user' ? 'text-[var(--sys-primary-foreground)]/60' : 'text-[var(--sys-muted)]'}`}>
+                <p className={`mt-0.5 text-xs ${m.role === 'user' ? 'text-[var(--sys-primary-foreground)]/60' : 'text-[var(--sys-muted)]'}`}>
                   {m.at}
                 </p>
               </div>
@@ -215,7 +215,7 @@ export function AiDock() {
         )}
         {busy && (
           <div className="flex justify-end">
-            <span className="flex items-center gap-1 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-caption text-[var(--sys-muted-foreground)]">
+            <span className="flex items-center gap-1 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
               <Loader2 className="h-3 w-3 animate-spin" /> يقرأ أرقامك…
             </span>
           </div>
@@ -232,7 +232,7 @@ export function AiDock() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="اكتب سؤالك…"
-          className="flex-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-caption text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
+          className="flex-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-xs text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
         />
         <button
           type="submit"

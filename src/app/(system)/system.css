@@ -15,114 +15,196 @@
 
 /* ── THEMES — generated from src/lib/system-themes.ts ──
  *
- * Static rules, not an injected <style>, so the FIRST paint is already
- * the chosen theme. A theme applied by script flashes the default first,
- * and a dashboard that flashes white at somebody who chose the dark one
- * does it every single time they open a page.
+ * Static rules, not an injected <style>, so the FIRST paint is already the
+ * chosen theme. A theme applied by script flashes the default first, and a
+ * dashboard that flashes white at somebody who chose the dark one does it
+ * every single time they open a page.
+ *
+ * `تلقائي` is the same idea one step further, and it is written to cost
+ * nothing: it inherits the default — غرفة العمليات — so a device in night
+ * mode needs no rules of its own at all, and only a LIGHT device overrides.
+ * Repeating both palettes under the auto selector would have been a fourth
+ * and fifth copy of thirty-four variables for no gain.
  *
  * Do not edit by hand: system-themes.ts is the source, and
  * system-themes.test.ts fails if these two disagree.
  */
 :root,
-[data-sys-theme='day'] {
-  --sys-background: #f6f7f8;
-  --sys-card: #ffffff;
-  --sys-surface: #f6f7f8;
-  --sys-surface-strong: #edeef0;
-  --sys-heading: #0e1013;
-  --sys-foreground: #3b3f45;
-  --sys-muted-foreground: #6b7078;
-  --sys-muted: #9aa0a8;
-  --sys-border: #e3e5e8;
-  --sys-border-strong: #cdd0d5;
-  --sys-primary: #17708f;
-  --sys-primary-foreground: #ffffff;
-  --sys-primary-soft: #eaf3f7;
-  --sys-destructive: #c2413f;
-  --sys-destructive-soft: #fbeceb;
-  --sys-destructive-border: #f0cfcd;
-  --sys-success: #2e7d52;
-  --sys-success-soft: #eaf4ee;
-  --sys-warning: #9a6a1f;
-  --sys-warning-soft: #f9f2e4;
-  --sys-info: #4a5580;
-  --sys-info-soft: #eeeff5;
-  --sys-sidebar: #0e1013;
-  --sys-sidebar-foreground: #d5d8dc;
-  --sys-scrollbar: #cdd0d5;
-  --sys-scrollbar-hover: #9aa0a8;
-  --sys-shadow: 0 1px 2px rgb(14 16 19 / 0.05), 0 1px 3px rgb(14 16 19 / 0.07);
-  --sys-shadow-raised: 0 2px 6px rgb(14 16 19 / 0.06), 0 10px 28px rgb(14 16 19 / 0.12);
+[data-sys-theme='ops'] {
+  --sys-background: #050F1F;
+  --sys-card: #0A1A2E;
+  --sys-surface: #0F2438;
+  --sys-surface-strong: #16304A;
+  --sys-border: #1C3A52;
+  --sys-border-strong: #486276;
+  --sys-heading: #E6F1F4;
+  --sys-foreground: #E6F1F4;
+  --sys-muted-foreground: #9FB6C2;
+  --sys-muted: #6f8493;
+  --sys-primary: #36B5CC;
+  --sys-primary-foreground: #04182B;
+  --sys-primary-hover: #60DADB;
+  --sys-primary-soft: #0e2a3e;
+  --sys-focus: #60DADB;
+  --sys-warning: #E8973A;
+  --sys-warning-soft: #20262f;
+  --sys-destructive: #e65e52;
+  --sys-destructive-soft: #202132;
+  --sys-destructive-border: #55313a;
+  --sys-success: #4FB865;
+  --sys-success-soft: #112a34;
+  --sys-chart-1: #36B5CC;
+  --sys-chart-2: #2c6f8c;
+  --sys-chart-3: #8E7CC3;
+  --sys-chart-4: #C9A36A;
+  --sys-chart-5: #7A93A6;
+  --sys-chart-6: #C97A94;
+  --sys-sidebar: #0A1A2E;
+  --sys-sidebar-foreground: #9FB6C2;
+  --sys-scrollbar: #1C3A52;
+  --sys-scrollbar-hover: #597183;
+  --sys-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.55);
+  --sys-shadow-overlay: 0 2px 8px rgb(0 0 0 / 0.45), 0 16px 40px rgb(0 0 0 / 0.65);
 }
 
-[data-sys-theme='ops'] {
-  --sys-background: #0b0c0e;
-  --sys-card: #131518;
-  --sys-surface: #17191d;
-  --sys-surface-strong: #1f2228;
-  --sys-heading: #eceef1;
-  --sys-foreground: #c0c4ca;
-  --sys-muted-foreground: #8b9098;
-  --sys-muted: #696e76;
-  --sys-border: #262a30;
-  --sys-border-strong: #363b43;
-  --sys-primary: #4fb3dc;
-  --sys-primary-foreground: #06181f;
-  --sys-primary-soft: #10242d;
-  --sys-destructive: #f0736f;
-  --sys-destructive-soft: #2a1514;
-  --sys-destructive-border: #4a2523;
-  --sys-success: #4cc98a;
-  --sys-success-soft: #10251a;
-  --sys-warning: #e3ad63;
-  --sys-warning-soft: #261e12;
-  --sys-info: #9aa4cf;
-  --sys-info-soft: #181a24;
-  --sys-sidebar: #08090b;
-  --sys-sidebar-foreground: #c0c4ca;
-  --sys-scrollbar: #262a30;
-  --sys-scrollbar-hover: #363b43;
-  --sys-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
-  --sys-shadow-raised: 0 2px 8px rgb(0 0 0 / 0.45), 0 14px 36px rgb(0 0 0 / 0.65);
+[data-sys-theme='day'] {
+  --sys-background: #FFFFFF;
+  --sys-card: #F4F8FA;
+  --sys-surface: #E9F0F3;
+  --sys-surface-strong: #DCE7EC;
+  --sys-border: #D5E1E6;
+  --sys-border-strong: #a9bac5;
+  --sys-heading: #0C3252;
+  --sys-foreground: #0C3252;
+  --sys-muted-foreground: #4A6272;
+  --sys-muted: #80929e;
+  --sys-primary: #1A6382;
+  --sys-primary-foreground: #FFFFFF;
+  --sys-primary-hover: #176079;
+  --sys-primary-soft: #e9f1f4;
+  --sys-focus: #1A6382;
+  --sys-warning: #9A5B12;
+  --sys-warning-soft: #f0f0ee;
+  --sys-destructive: #B42318;
+  --sys-destructive-soft: #f1edef;
+  --sys-destructive-border: #deb0ad;
+  --sys-success: #1E7A3A;
+  --sys-success-soft: #e9f2f0;
+  --sys-chart-1: #2e9aad;
+  --sys-chart-2: #1A6382;
+  --sys-chart-3: #8E7CC3;
+  --sys-chart-4: #a48456;
+  --sys-chart-5: #758d9f;
+  --sys-chart-6: #c1758e;
+  --sys-sidebar: #F4F8FA;
+  --sys-sidebar-foreground: #4A6272;
+  --sys-scrollbar: #D5E1E6;
+  --sys-scrollbar-hover: #99acba;
+  --sys-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.06), 0 1px 3px rgb(12 50 82 / 0.08);
+  --sys-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.07), 0 12px 32px rgb(12 50 82 / 0.14);
 }
 
 [data-sys-theme='calm'] {
-  --sys-background: #f2f4f6;
-  --sys-card: #fafbfc;
-  --sys-surface: #eef1f4;
-  --sys-surface-strong: #e5e9ed;
-  --sys-heading: #1b1f24;
-  --sys-foreground: #464b52;
-  --sys-muted-foreground: #676d75;
-  --sys-muted: #9aa1a9;
-  --sys-border: #dde2e7;
-  --sys-border-strong: #c8cfd6;
-  --sys-primary: #1d6d88;
-  --sys-primary-foreground: #fafbfc;
-  --sys-primary-soft: #e7f0f4;
-  --sys-destructive: #b64a48;
-  --sys-destructive-soft: #f7ebea;
-  --sys-destructive-border: #e8cdcc;
-  --sys-success: #35795a;
-  --sys-success-soft: #e9f2ec;
-  --sys-warning: #8e6726;
-  --sys-warning-soft: #f6f0e3;
-  --sys-info: #4f5a80;
-  --sys-info-soft: #edeef4;
-  --sys-sidebar: #1b1f24;
-  --sys-sidebar-foreground: #dde2e7;
-  --sys-scrollbar: #c8cfd6;
-  --sys-scrollbar-hover: #9aa1a9;
-  --sys-shadow: 0 1px 2px rgb(27 31 36 / 0.04), 0 1px 3px rgb(27 31 36 / 0.06);
-  --sys-shadow-raised: 0 2px 6px rgb(27 31 36 / 0.05), 0 10px 28px rgb(27 31 36 / 0.10);
+  --sys-background: #F6F2EA;
+  --sys-card: #EFE9DE;
+  --sys-surface: #E6DECF;
+  --sys-surface-strong: #DDD3C2;
+  --sys-border: #D8CEBC;
+  --sys-border-strong: #abaca5;
+  --sys-heading: #0C3252;
+  --sys-foreground: #0C3252;
+  --sys-muted-foreground: #566369;
+  --sys-muted: #878e8e;
+  --sys-primary: #1A6382;
+  --sys-primary-foreground: #FFFFFF;
+  --sys-primary-hover: #176079;
+  --sys-primary-soft: #e4e2d9;
+  --sys-focus: #1A6382;
+  --sys-warning: #8e5410;
+  --sys-warning-soft: #eae2d4;
+  --sys-destructive: #B42318;
+  --sys-destructive-soft: #ecdfd4;
+  --sys-destructive-border: #dba69b;
+  --sys-success: #1c7036;
+  --sys-success-soft: #e4e3d6;
+  --sys-chart-1: #2a8e9f;
+  --sys-chart-2: #1A6382;
+  --sys-chart-3: #8877bb;
+  --sys-chart-4: #9d7f53;
+  --sys-chart-5: #708799;
+  --sys-chart-6: #b97088;
+  --sys-sidebar: #EFE9DE;
+  --sys-sidebar-foreground: #566369;
+  --sys-scrollbar: #D8CEBC;
+  --sys-scrollbar-hover: #9b9f9c;
+  --sys-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.05), 0 1px 3px rgb(12 50 82 / 0.07);
+  --sys-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.06), 0 12px 32px rgb(12 50 82 / 0.12);
+}
+
+/* تلقائي on a light device. On a dark one it already has what it needs. */
+@media (prefers-color-scheme: light) {
+  [data-sys-theme='auto'] {
+    --sys-background: #FFFFFF;
+    --sys-card: #F4F8FA;
+    --sys-surface: #E9F0F3;
+    --sys-surface-strong: #DCE7EC;
+    --sys-border: #D5E1E6;
+    --sys-border-strong: #a9bac5;
+    --sys-heading: #0C3252;
+    --sys-foreground: #0C3252;
+    --sys-muted-foreground: #4A6272;
+    --sys-muted: #80929e;
+    --sys-primary: #1A6382;
+    --sys-primary-foreground: #FFFFFF;
+    --sys-primary-hover: #176079;
+    --sys-primary-soft: #e9f1f4;
+    --sys-focus: #1A6382;
+    --sys-warning: #9A5B12;
+    --sys-warning-soft: #f0f0ee;
+    --sys-destructive: #B42318;
+    --sys-destructive-soft: #f1edef;
+    --sys-destructive-border: #deb0ad;
+    --sys-success: #1E7A3A;
+    --sys-success-soft: #e9f2f0;
+    --sys-chart-1: #2e9aad;
+    --sys-chart-2: #1A6382;
+    --sys-chart-3: #8E7CC3;
+    --sys-chart-4: #a48456;
+    --sys-chart-5: #758d9f;
+    --sys-chart-6: #c1758e;
+    --sys-sidebar: #F4F8FA;
+    --sys-sidebar-foreground: #4A6272;
+    --sys-scrollbar: #D5E1E6;
+    --sys-scrollbar-hover: #99acba;
+    --sys-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.06), 0 1px 3px rgb(12 50 82 / 0.08);
+    --sys-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.07), 0 12px 32px rgb(12 50 82 / 0.14);
+  }
 }
 
 body {
   background-color: var(--sys-background);
   color: var(--sys-foreground);
-  font-family: var(--font-public-sans), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /*
+   * ONE FAMILY FOR BOTH SCRIPTS.
+   *
+   * IBM Plex Sans Arabic carries Arabic and Latin, so a label and the
+   * order number beside it sit on one baseline at one weight. The Latin
+   * face stays as the fallback, not as a second voice.
+   */
+  font-family: var(--font-arabic), var(--font-public-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 
+  /*
+   * TABULAR FIGURES EVERYWHERE, BY DEFAULT.
+   *
+   * Every screen here is a column of numbers, and proportional digits make
+   * a column of them ragged: a 1 is narrower than a 7, so totals do not
+   * line up and the eye cannot scan down. This is the single most useful
+   * typographic decision in the product, and it belongs on body rather
+   * than on the forty places that remembered to ask for it.
+   */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 /* Headings and key values use the darker primary text tone */
@@ -131,11 +213,50 @@ h1, h2, h3, h4, h5, h6, strong {
   font-weight: 600;
 }
 
-/* Arabic native typography: proper font, line-height and letter spacing */
+/*
+ * ARABIC: ROOM TO BREATHE, AND NOTHING THAT BREAKS THE JOINING.
+ *
+ * `letter-spacing` on Arabic is not decoration, it is damage: the script
+ * joins its letters, and spacing them apart severs the joins and leaves a
+ * word looking like a row of unrelated marks. `text-transform` is meaningless
+ * — Arabic has no case — but it is inherited onto Latin sitting inside an
+ * Arabic line, so it is refused too.
+ *
+ * Both are forced off here rather than merely avoided in the screens, so a
+ * utility class added in a hurry cannot do it anyway.
+ */
 html[lang="ar"] body {
-  font-family: var(--font-arabic), "Cairo", "Tajawal", "Segoe UI", sans-serif;
-  line-height: 1.8;
+  font-family: var(--font-arabic), var(--font-public-sans), "Segoe UI", sans-serif;
+  line-height: 1.65;
   letter-spacing: 0;
+}
+
+html[lang="ar"] *:lang(ar),
+html[lang="ar"] body,
+html[lang="ar"] p,
+html[lang="ar"] span,
+html[lang="ar"] div,
+html[lang="ar"] label,
+html[lang="ar"] th,
+html[lang="ar"] td,
+html[lang="ar"] button,
+html[lang="ar"] h1,
+html[lang="ar"] h2,
+html[lang="ar"] h3,
+html[lang="ar"] h4,
+html[lang="ar"] h5,
+html[lang="ar"] h6 {
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+/*
+ * The one exception, and it is Latin: the English tagline under the
+ * wordmark. It is marked `lang="en"` and opts back in explicitly.
+ */
+html[lang="ar"] [lang="en"].tracking-wide {
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
 }
 html[lang="ar"] h1,
 html[lang="ar"] h2,

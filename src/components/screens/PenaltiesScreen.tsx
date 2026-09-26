@@ -146,7 +146,7 @@ export function PenaltiesScreen() {
               <li key={row.id} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm font-semibold text-[var(--sys-heading)]">{row.user.name}</span>
-                  <span className={`rounded-lg border px-1.5 py-0.5 text-caption ${st.cls}`}>{st.ar}</span>
+                  <span className={`rounded-lg border px-1.5 py-0.5 text-xs ${st.cls}`}>{st.ar}</span>
                 </div>
 
                 <p className="mt-1 text-xs text-[var(--sys-foreground)]">
@@ -158,7 +158,7 @@ export function PenaltiesScreen() {
 
                 {/* The arithmetic, printed. Nobody should have to trust a
                     number that took money from somebody. */}
-                <p className="mt-1 text-caption text-[var(--sys-muted-foreground)]">
+                <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
                   <span className="tabular-nums">{row.units}</span> {unitAr(row.kind)} ·{' '}
                   المحتسَب <span className="tabular-nums">{row.chargedUnits}</span> ·{' '}
                   <span className="font-semibold tabular-nums text-[var(--sys-heading)]" dir="ltr">
@@ -167,7 +167,7 @@ export function PenaltiesScreen() {
                 </p>
 
                 {row.decisionNote && (
-                  <p className="mt-1 rounded-lg bg-[var(--sys-surface)] px-2 py-1 text-caption text-[var(--sys-muted-foreground)]">
+                  <p className="mt-1 rounded-lg bg-[var(--sys-surface)] px-2 py-1 text-xs text-[var(--sys-muted-foreground)]">
                     السبب: {row.decisionNote}
                   </p>
                 )}
@@ -180,7 +180,7 @@ export function PenaltiesScreen() {
                           type="button"
                           disabled={busy === row.id}
                           onClick={() => decide(row, 'apply')}
-                          className="flex items-center gap-1 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-2.5 py-1 text-caption font-medium text-[var(--sys-destructive)] disabled:opacity-60"
+                          className="flex items-center gap-1 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-2.5 py-1 text-xs font-medium text-[var(--sys-destructive)] disabled:opacity-60"
                         >
                           <Check className="h-3 w-3" /> اعتمد الخصم
                         </button>
@@ -188,7 +188,7 @@ export function PenaltiesScreen() {
                           type="button"
                           disabled={busy === row.id}
                           onClick={() => setAsking({ row, action: 'waive' })}
-                          className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-caption text-[var(--sys-foreground)] disabled:opacity-60"
+                          className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs text-[var(--sys-foreground)] disabled:opacity-60"
                         >
                           <X className="h-3 w-3" /> ألغِ
                         </button>
@@ -199,13 +199,13 @@ export function PenaltiesScreen() {
                         type="button"
                         disabled={busy === row.id}
                         onClick={() => setAsking({ row, action: 'reverse' })}
-                        className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-caption text-[var(--sys-foreground)] disabled:opacity-60"
+                        className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs text-[var(--sys-foreground)] disabled:opacity-60"
                       >
                         <RotateCcw className="h-3 w-3" /> ارتجاع
                       </button>
                     )}
                     {row.status === 'APPLIED' && row.payslipId && (
-                      <span className="text-caption text-[var(--sys-muted)]">
+                      <span className="text-xs text-[var(--sys-muted)]">
                         سُوّي مع صرفية — تصحيحه حركة جديدة لا تعديل للماضي.
                       </span>
                     )}

@@ -99,7 +99,7 @@ export function ContactButtons({
   };
 
   const btn = `inline-flex items-center justify-center rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:border-[var(--sys-primary)]/50 transition-colors ${
-    compact ? 'h-7 w-7' : 'h-8 px-2 gap-1 text-caption'
+    compact ? 'h-7 w-7' : 'h-8 px-2 gap-1 text-xs'
   }`;
 
   // Turned off means written but not offered — a template kept for next
@@ -158,12 +158,12 @@ export function ContactButtons({
              * exactly where an agent would be reading it from.
              * Desk: the ordinary dropdown under the button.
              */
-            className="fixed inset-x-2 bottom-2 z-40 max-h-[60vh] overflow-y-auto rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-raised p-1.5 sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-full sm:end-0 sm:z-30 sm:mt-1 sm:w-72 sm:max-h-none sm:shadow-raised"
+            className="fixed inset-x-2 bottom-2 z-40 max-h-[60vh] overflow-y-auto rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-overlay p-1.5 sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-full sm:end-0 sm:z-30 sm:mt-1 sm:w-72 sm:max-h-none sm:shadow-overlay"
           >
             {templates === null ? (
-              <p className="p-2 text-caption text-[var(--sys-muted)]">جارٍ التحميل…</p>
+              <p className="p-2 text-xs text-[var(--sys-muted)]">جارٍ التحميل…</p>
             ) : shown.length === 0 ? (
-              <p className="p-2 text-caption text-[var(--sys-muted)]">
+              <p className="p-2 text-xs text-[var(--sys-muted)]">
                 لا رسائل جاهزة لهذه القناة — أضِفها من إعدادات النظام.
               </p>
             ) : (
@@ -174,10 +174,10 @@ export function ContactButtons({
                   onClick={() => send(t)}
                   className="w-full text-start p-2.5 sm:p-2 rounded-lg hover:bg-[var(--sys-primary-soft)] active:bg-[var(--sys-primary-soft)] transition-colors"
                 >
-                  <span className="block text-caption font-semibold text-[var(--sys-heading)]">{t.name}</span>
+                  <span className="block text-xs font-semibold text-[var(--sys-heading)]">{t.name}</span>
                   {/* The filled text, not the template: what the customer will
                       actually read is the only useful preview. */}
-                  <span className="block text-caption text-[var(--sys-muted-foreground)] line-clamp-2 mt-0.5">
+                  <span className="block text-xs text-[var(--sys-muted-foreground)] line-clamp-2 mt-0.5">
                     {fillTemplate(t.body, context)}
                   </span>
                 </button>

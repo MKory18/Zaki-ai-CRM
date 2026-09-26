@@ -291,7 +291,7 @@ export function TrackingScreen() {
                 <>
                   {STATUS_LABEL[o.shippingStatus] ?? o.shippingStatus}
                   {o.deliveryFailureReason && (
-                    <span className="block text-caption text-[var(--sys-destructive)]">
+                    <span className="block text-xs text-[var(--sys-destructive)]">
                       {o.deliveryFailureReason}
                     </span>
                   )}
@@ -307,10 +307,10 @@ export function TrackingScreen() {
                 >
                   {o.daysInTransit ?? '—'}
                   {o.lateThresholdDays > 0 && (
-                    <span className="text-caption text-[var(--sys-muted)]"> / {o.lateThresholdDays}</span>
+                    <span className="text-xs text-[var(--sys-muted)]"> / {o.lateThresholdDays}</span>
                   )}
                   {o.late && o.daysInTransit !== null && (
-                    <span className="block text-caption font-medium">{lateLabel(o.daysInTransit)}</span>
+                    <span className="block text-xs font-medium">{lateLabel(o.daysInTransit)}</span>
                   )}
                 </span>
               ),

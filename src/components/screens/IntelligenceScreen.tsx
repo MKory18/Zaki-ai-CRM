@@ -119,7 +119,7 @@ export function IntelligenceScreen() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-sm font-medium text-[var(--sys-heading)]">{f.title}</h3>
-                        <span className={`text-caption px-2 py-0.5 rounded-full border ${tone.chip}`}>{tone.label}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${tone.chip}`}>{tone.label}</span>
                       </div>
 
                       {/* The number it rests on, so the claim can be checked. */}

@@ -58,7 +58,7 @@ export const campaignCodeSchema = z
   .string()
   .trim()
   .toUpperCase()
-  .regex(/^[A-Z0-9]{3,16}$/, 'الرمز حروف إنجليزية وأرقام فقط، من ٣ إلى ١٦ خانة');
+  .regex(/^[A-Z0-9]{3,16}$/, 'الرمز حروف إنجليزية وأرقام فقط، من 3 إلى 16 خانة');
 
 export const campaignInputSchema = z.object({
   name: z.string().trim().min(2, 'اسم الحملة مطلوب').max(80),

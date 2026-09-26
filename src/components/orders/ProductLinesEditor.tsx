@@ -187,7 +187,7 @@ export function ProductLinesEditor({
             </div>
 
             {lockedByOffer && (
-              <p className="text-caption text-[var(--sys-muted)]">
+              <p className="text-xs text-[var(--sys-muted)]">
                 الكمية والسعر من العرض — غيّرهما بإلغاء العرض من القائمة أعلاه.
               </p>
             )}
@@ -200,7 +200,7 @@ export function ProductLinesEditor({
           type="button"
           onClick={() => onChange([...lines, newLine()])}
           disabled={disabled}
-          className="text-caption px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--sys-primary)] text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
+          className="text-xs px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--sys-primary)] text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
         >
           <Plus className="w-3.5 h-3.5" />
           أضف منتجاً آخر

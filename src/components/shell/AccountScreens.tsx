@@ -15,7 +15,7 @@ export function PendingScreen() {
 
   return (
     <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-lg shadow-card p-8 text-center space-y-6">
+      <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-lg shadow-raised p-8 text-center space-y-6">
         <div className="mx-auto w-16 h-16 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
           <Clock className="w-8 h-8 text-[var(--sys-destructive)]" />
         </div>
@@ -69,7 +69,7 @@ export function BlockedScreen({ status }: { status: string }) {
 
   return (
     <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-lg shadow-card p-8 text-center space-y-6">
+      <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-lg shadow-raised p-8 text-center space-y-6">
         <div className="mx-auto w-16 h-16 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
           <ShieldX className="w-8 h-8 text-[var(--sys-destructive)]" />
         </div>

@@ -100,7 +100,7 @@ export function BatchCostDialog({
   return (
     <Modal isOpen onClose={onClose} title={`كلفة التشغيلة ${batch.batchNumber}`}>
       <div className="space-y-4">
-        <p className="text-caption text-[var(--sys-muted-foreground)]">
+        <p className="text-xs text-[var(--sys-muted-foreground)]">
           {batch.product?.name} · أُنتج {batch.quantityProduced} قطعة، بِيع منها {batch.quantitySold}.
           تسري الكلفة على المخزون المتبقي وعلى الطلبات الجديدة — الطلبات المكتوبة سابقاً
           تحمل كلفتها وقت البيع ولا تتغيّر. ولا تتأثر الكميات.
@@ -109,7 +109,7 @@ export function BatchCostDialog({
         <div className="grid grid-cols-2 gap-3">
           {BUCKETS.map((b) => (
             <label key={b.key} className="block">
-              <span className="block text-caption text-[var(--sys-muted-foreground)] mb-1">{b.label}</span>
+              <span className="block text-xs text-[var(--sys-muted-foreground)] mb-1">{b.label}</span>
               <input
                 type="number"
                 min={0}
@@ -125,18 +125,18 @@ export function BatchCostDialog({
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-caption text-[var(--sys-muted-foreground)]">بنود إضافية</span>
+            <span className="text-xs text-[var(--sys-muted-foreground)]">بنود إضافية</span>
             <button
               type="button"
               onClick={() => setLines([...lines, { label: '', amount: 0 }])}
               disabled={lines.length >= 30}
-              className="inline-flex items-center gap-1 text-caption text-[var(--sys-primary)] hover:underline disabled:opacity-50"
+              className="inline-flex items-center gap-1 text-xs text-[var(--sys-primary)] hover:underline disabled:opacity-50"
             >
               <Plus className="w-3 h-3" /> بند
             </button>
           </div>
           {lines.length === 0 ? (
-            <p className="text-caption text-[var(--sys-muted)]">لا بنود إضافية — «قالب»، «أجرة عامل»، «شحن المواد».</p>
+            <p className="text-xs text-[var(--sys-muted)]">لا بنود إضافية — «قالب»، «أجرة عامل»، «شحن المواد».</p>
           ) : (
             <div className="space-y-2">
               {lines.map((line, i) => (
@@ -176,20 +176,20 @@ export function BatchCostDialog({
 
         {/* The number every margin in the system is built on. */}
         <div className="flex items-center justify-between rounded-lg bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] px-3 py-2.5">
-          <span className="text-caption text-[var(--sys-muted-foreground)]">
+          <span className="text-xs text-[var(--sys-muted-foreground)]">
             الكلفة الكلية <span className="font-bold text-[var(--sys-heading)] tabular-nums">{total.toFixed(2)}</span>
           </span>
           <span className="text-xs">
             كلفة الوحدة{' '}
             <span className="font-black text-[var(--sys-primary)] tabular-nums">{perUnit.toFixed(2)}</span>
             {batch.costPerUnit > 0 && Math.abs(perUnit - batch.costPerUnit) > 0.005 && (
-              <span className="text-caption text-[var(--sys-muted)]"> (كانت {batch.costPerUnit.toFixed(2)})</span>
+              <span className="text-xs text-[var(--sys-muted)]"> (كانت {batch.costPerUnit.toFixed(2)})</span>
             )}
           </span>
         </div>
 
         <label className="block">
-          <span className="block text-caption text-[var(--sys-muted-foreground)] mb-1">سبب التعديل</span>
+          <span className="block text-xs text-[var(--sys-muted-foreground)] mb-1">سبب التعديل</span>
           <input
             value={reason}
             onChange={(e) => setReason(e.target.value)}

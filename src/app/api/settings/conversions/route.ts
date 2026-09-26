@@ -120,7 +120,7 @@ export async function POST(req: Request) {
     const eventName = validateEventName(parsed.data.eventName);
     if (!eventName) {
       return NextResponse.json(
-        { error: 'اسم الحدث: حروف إنجليزية وأرقام وشرطة سفلية فقط، يبدأ بحرف، ٣ إلى ٤٠ خانة' },
+        { error: 'اسم الحدث: حروف إنجليزية وأرقام وشرطة سفلية فقط، يبدأ بحرف، 3 إلى 40 خانة' },
         { status: 400 }
       );
     }

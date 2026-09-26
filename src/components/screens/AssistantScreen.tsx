@@ -182,7 +182,7 @@ export function AssistantScreen() {
         {summaryData && (
           <div className="space-y-4">
             {/* Executive Summary Card */}
-            <Card className="border-[var(--sys-primary-soft)] bg-gradient-to-br from-[var(--sys-primary)]/10 to-[var(--sys-info)]/5">
+            <Card className="border-[var(--sys-primary-soft)] bg-gradient-to-br from-[var(--sys-primary)]/10 to-[var(--sys-muted-foreground)]/5">
               <CardHeader
                 title={
                   <div className="flex items-center justify-between">
@@ -198,7 +198,7 @@ export function AssistantScreen() {
                 subtitle="Aggregated business intelligence summary calculated from real orders & production costs"
               />
               <CardContent className="space-y-4">
-                <p className="text-sm font-medium text-[var(--sys-heading)] leading-relaxed bg-[var(--sys-card)]/80 p-4 rounded-lg border border-[var(--sys-primary-soft)]/60 shadow-card">
+                <p className="text-sm font-medium text-[var(--sys-heading)] leading-relaxed bg-[var(--sys-card)]/80 p-4 rounded-lg border border-[var(--sys-primary-soft)]/60 shadow-raised">
                   {summaryData.summaryText}
                 </p>
 
@@ -206,27 +206,27 @@ export function AssistantScreen() {
                 {metrics && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-center text-xs">
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-caption text-[var(--sys-muted)] block">Orders</span>
+                      <span className="text-xs text-[var(--sys-muted)] block">Orders</span>
                       <strong className="text-[var(--sys-heading)] font-bold">{metrics.total_orders}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-caption text-[var(--sys-muted)] block">Confirmed</span>
+                      <span className="text-xs text-[var(--sys-muted)] block">Confirmed</span>
                       <strong className="text-[var(--sys-destructive)] font-bold">{metrics.confirmed_orders}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-caption text-[var(--sys-muted)] block">Delivered</span>
+                      <span className="text-xs text-[var(--sys-muted)] block">Delivered</span>
                       <strong className="text-[var(--sys-destructive)] font-bold">{metrics.delivered_orders}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-caption text-[var(--sys-muted)] block">Delivered Revenue</span>
+                      <span className="text-xs text-[var(--sys-muted)] block">Delivered Revenue</span>
                       <strong className="text-[var(--sys-heading)] font-bold">${metrics.revenue?.toFixed(2)}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-caption text-[var(--sys-muted)] block">Real Net Profit</span>
+                      <span className="text-xs text-[var(--sys-muted)] block">Real Net Profit</span>
                       <strong className="text-[var(--sys-destructive)] font-black">${metrics.net_profit?.toFixed(2)}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-caption text-[var(--sys-muted)] block">Confirm Rate</span>
+                      <span className="text-xs text-[var(--sys-muted)] block">Confirm Rate</span>
                       <strong className="text-[var(--sys-destructive)] font-bold">{metrics.confirmation_rate}%</strong>
                     </div>
                   </div>
@@ -235,9 +235,9 @@ export function AssistantScreen() {
                 {/* 3 Pillars: Observations, Risks, Recommendations */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   {/* Key Observations */}
-                  <div className="bg-[var(--sys-info-soft)]/70 border border-[var(--sys-info)]/30 rounded-lg p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-info)] flex items-center space-x-1.5 mb-2.5">
-                      <Lightbulb className="w-4 h-4 text-[var(--sys-info)]" />
+                  <div className="bg-[var(--sys-surface)]/70 border border-[var(--sys-muted-foreground)]/30 rounded-lg p-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)] flex items-center space-x-1.5 mb-2.5">
+                      <Lightbulb className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
                       <span>ملاحظات</span>
                     </h4>
                     <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
@@ -307,13 +307,13 @@ export function AssistantScreen() {
                 }`}
               >
                 {m.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center shrink-0 shadow-card">
+                  <div className="w-8 h-8 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center shrink-0 shadow-raised">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-xl rounded-lg px-4 py-3 text-xs leading-relaxed shadow-card ${
+                  className={`max-w-xl rounded-lg px-4 py-3 text-xs leading-relaxed shadow-raised ${
                     m.role === 'user'
                       ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] rounded-tr-none'
                       : 'bg-[var(--sys-surface)] text-[var(--sys-heading)] rounded-tl-none whitespace-pre-wrap'
@@ -321,7 +321,7 @@ export function AssistantScreen() {
                 >
                   <p>{m.content}</p>
                   <span
-                    className={`text-caption block mt-1 text-right ${
+                    className={`text-xs block mt-1 text-right ${
                       m.role === 'user' ? 'text-[var(--sys-primary-foreground)]/80' : 'text-[var(--sys-muted)]'
                     }`}
                   >
@@ -346,7 +346,7 @@ export function AssistantScreen() {
           </CardContent>
 
           {/* Quick Prompts Bar */}
-          <div className="px-4 py-2 bg-[var(--sys-surface)] border-t border-[var(--sys-border)] flex items-center space-x-2 rtl:space-x-reverse overflow-x-auto text-caption">
+          <div className="px-4 py-2 bg-[var(--sys-surface)] border-t border-[var(--sys-border)] flex items-center space-x-2 rtl:space-x-reverse overflow-x-auto text-xs">
             <span className="text-[var(--sys-muted)] shrink-0 font-medium">Try asking:</span>
             {suggestedQuestions.map((sq, i) => (
               <button

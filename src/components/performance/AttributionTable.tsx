@@ -106,7 +106,7 @@ export function AttributionTable({
               <td className="px-4 py-3 whitespace-nowrap">
                 <span className="font-semibold text-[var(--sys-heading)]">{r.name}</span>
                 {r.kind && (
-                  <span className="text-caption text-[var(--sys-muted)] block">{KIND_AR[r.kind] ?? r.kind}</span>
+                  <span className="text-xs text-[var(--sys-muted)] block">{KIND_AR[r.kind] ?? r.kind}</span>
                 )}
               </td>
               <Num value={r.brought} />

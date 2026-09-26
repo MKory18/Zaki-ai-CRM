@@ -114,7 +114,7 @@ export function ConfirmationQueueScreen() {
           />
         </div>
         <p className="mt-4 text-xs text-[var(--sys-muted)]">
-          الأولوية للطلبات المؤجلة المستحقة خلال {data.leadDays} يوم، ثم الأقدم. يُحرَّر أي طلب بلا محاولة اتصال بعد ٩٠
+          الأولوية للطلبات المؤجلة المستحقة خلال {data.leadDays} يوم، ثم الأقدم. يُحرَّر أي طلب بلا محاولة اتصال بعد 90
           دقيقة عمل.
         </p>
       </div>

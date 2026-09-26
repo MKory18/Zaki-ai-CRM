@@ -176,7 +176,7 @@ export function TelegramOrdersScreen() {
                 <s.icon className={`w-5 h-5 ${s.color}`} />
                 <div>
                   <p className="text-lg font-bold text-[var(--sys-heading)]">{status?.stats?.[s.key] ?? 0}</p>
-                  <p className="text-caption text-[var(--sys-muted-foreground)]">{s.label}</p>
+                  <p className="text-xs text-[var(--sys-muted-foreground)]">{s.label}</p>
                 </div>
               </CardContent>
             </Card>
@@ -219,7 +219,7 @@ export function TelegramOrdersScreen() {
                     <tr key={m.id} className="hover:bg-[var(--sys-surface)]">
                       <td className="px-4 py-3 max-w-[280px]">
                         <p className="truncate text-[var(--sys-heading)]">{m.text || '—'}</p>
-                        <p className="text-caption text-[var(--sys-muted-foreground)]">{m.senderName || 'مجهول'}</p>
+                        <p className="text-xs text-[var(--sys-muted-foreground)]">{m.senderName || 'مجهول'}</p>
                       </td>
                       <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{m.source?.chatTitle || m.chatId}</td>
                       <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{m.threadName || m.source?.topicName || (m.threadId ? m.threadId : '—')}</td>
@@ -227,15 +227,15 @@ export function TelegramOrdersScreen() {
                         {m.pageName ? <span className="text-[var(--sys-heading)] font-semibold">{m.pageName}</span> : '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-caption font-semibold ${STATUS_COLORS[m.processingStatus] || ''}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[m.processingStatus] || ''}`}>
                           {STATUS_LABELS[m.processingStatus] || m.processingStatus}
                         </span>
-                        {m.reviewReason && <p className="text-caption text-[var(--sys-destructive)] mt-0.5">{REVIEW_REASONS[m.reviewReason] || m.reviewReason}</p>}
+                        {m.reviewReason && <p className="text-xs text-[var(--sys-destructive)] mt-0.5">{REVIEW_REASONS[m.reviewReason] || m.reviewReason}</p>}
                       </td>
                       <td className="px-4 py-3">
                         {m.order ? <span className="font-mono text-[var(--sys-primary)] font-semibold" dir="ltr">{m.order.orderNumber}</span> : '—'}
                       </td>
-                      <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{new Date(m.createdAt).toLocaleString('ar')}</td>
+                      <td className="px-4 py-3 text-[var(--sys-muted-foreground)]">{new Date(m.createdAt).toLocaleString('ar-u-nu-latn')}</td>
                       <td className="px-4 py-3 text-left">
                         {['NEEDS_REVIEW', 'FAILED'].includes(m.processingStatus) && canManage && (
                           <Button size="sm" variant="outline" disabled={busyId === m.id} onClick={() => retryMessage(m)}>

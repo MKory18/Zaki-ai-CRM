@@ -56,7 +56,7 @@ export function ConfirmationCounter() {
   if (!counter?.kind) return null;
 
   const busy = counter.count > 0;
-  const chip = `flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-caption font-semibold tabular-nums ${
+  const chip = `flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold tabular-nums ${
     busy ? 'border-[var(--sys-primary-soft)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'border-[var(--sys-border)] bg-[var(--sys-card)] text-[var(--sys-muted-foreground)]'
   }`;
 

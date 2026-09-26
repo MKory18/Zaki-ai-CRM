@@ -127,11 +127,11 @@ export function InventoryMovementsScreen() {
               {data.movements.map((m) => (
                 <tr key={m.id}>
                   <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] whitespace-nowrap">
-                    {new Date(m.createdAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}
+                    {new Date(m.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}
                   </td>
                   <td className="px-3 py-2 text-[var(--sys-heading)]">
                     {m.product?.name ?? '—'}
-                    {m.product?.sku && <span className="block text-caption text-[var(--sys-muted)]" dir="ltr">{m.product.sku}</span>}
+                    {m.product?.sku && <span className="block text-xs text-[var(--sys-muted)]" dir="ltr">{m.product.sku}</span>}
                   </td>
                   <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">{TYPE_AR[m.type] ?? m.type}</td>
                   <td className="px-3 py-2">

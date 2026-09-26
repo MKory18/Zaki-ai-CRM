@@ -50,7 +50,7 @@ const FIELD =
 function Line({ label, value, strong, warn }: { label: string; value: string; strong?: boolean; warn?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
-      <span className={`text-caption ${warn ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-muted-foreground)]'}`}>{label}</span>
+      <span className={`text-xs ${warn ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-muted-foreground)]'}`}>{label}</span>
       <span
         className={`tabular-nums ${strong ? 'text-sm font-bold text-[var(--sys-heading)]' : 'text-xs text-[var(--sys-foreground)]'}`}
         dir="ltr"
@@ -153,13 +153,13 @@ export function UserSalary({
 
   return (
     <div className="col-span-full rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-      <p className="mb-1.5 flex items-center gap-1 text-caption text-[var(--sys-muted)]">
+      <p className="mb-1.5 flex items-center gap-1 text-xs text-[var(--sys-muted)]">
         <Banknote className="h-3 w-3" /> الراتب
       </p>
 
       <div className="flex flex-wrap items-end gap-2">
         <label className="block">
-          <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">المبلغ</span>
+          <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">المبلغ</span>
           <input
             type="number"
             min={0}
@@ -172,7 +172,7 @@ export function UserSalary({
           />
         </label>
         <label className="block">
-          <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">العملة</span>
+          <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">العملة</span>
           <input
             value={currency}
             disabled={!canEdit}
@@ -207,11 +207,11 @@ export function UserSalary({
       </div>
 
       {!amount && (
-        <p className="mt-1 text-caption text-[var(--sys-muted)]">
+        <p className="mt-1 text-xs text-[var(--sys-muted)]">
           لا راتب مسجّل. الخصومات المعتمدة تبقى مستحقة ولا تُطرح من شيء حتى يُسجَّل راتب.
         </p>
       )}
-      {msg && <p className={`mt-1 text-caption ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>}
+      {msg && <p className={`mt-1 text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>}
 
       {paying && (
         <Modal isOpen onClose={() => setPaying(false)} title="صرف الراتب" maxWidth="md">
@@ -224,7 +224,7 @@ export function UserSalary({
 
           {data && (
             <div className="space-y-3" dir="rtl">
-              <p className="text-caption text-[var(--sys-muted-foreground)]">
+              <p className="text-xs text-[var(--sys-muted-foreground)]">
                 الفترة{' '}
                 <span dir="ltr" className="tabular-nums">
                   {data.period.start.slice(0, 10)} ← {data.period.end.slice(0, 10)}
@@ -232,7 +232,7 @@ export function UserSalary({
               </p>
 
               {data.period.paid && (
-                <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2 text-caption text-[var(--sys-destructive)]">
+                <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2 text-xs text-[var(--sys-destructive)]">
                   صُرف راتب هذه الفترة من قبل. شهرٌ يُصرف مرتين هو شهرٌ يُصرف مرتين.
                 </p>
               )}
@@ -259,7 +259,7 @@ export function UserSalary({
               </div>
 
               {data.commission.length > 0 && (
-                <p className="text-caption text-[var(--sys-muted-foreground)]">
+                <p className="text-xs text-[var(--sys-muted-foreground)]">
                   وله عمولة مستحقة لم تُصرف:{' '}
                   {data.commission.map((c) => (
                     <span key={c.currencyCode} className="ms-1 tabular-nums text-[var(--sys-heading)]" dir="ltr">
@@ -272,7 +272,7 @@ export function UserSalary({
 
               <div className="flex flex-wrap items-end gap-2">
                 <label className="block">
-                  <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">من محفظة</span>
+                  <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">من محفظة</span>
                   <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className={`${FIELD} w-40`}>
                     <option value="">اختر…</option>
                     {wallets.map((w) => (
@@ -284,7 +284,7 @@ export function UserSalary({
                 </label>
                 {!sameCurrency && (
                   <label className="block">
-                    <span className="mb-0.5 block text-caption text-[var(--sys-muted-foreground)]">
+                    <span className="mb-0.5 block text-xs text-[var(--sys-muted-foreground)]">
                       سعر الصرف ({wallet?.currencyCode ?? '؟'} لكل {data.preview.currencyCode})
                     </span>
                     <input
@@ -301,7 +301,7 @@ export function UserSalary({
               </div>
 
               {leaves !== null && wallet && (
-                <p className="rounded-lg bg-[var(--sys-surface)] px-2 py-1.5 text-caption text-[var(--sys-foreground)]">
+                <p className="rounded-lg bg-[var(--sys-surface)] px-2 py-1.5 text-xs text-[var(--sys-foreground)]">
                   يخرج من المحفظة{' '}
                   <span className="font-semibold tabular-nums" dir="ltr">
                     {leaves.toFixed(3)} {wallet.currencyCode}

@@ -26,21 +26,46 @@
  * and loses nothing it had.
  */
 @theme {
-  --text-caption: 0.6875rem; /* 11px */
-  --text-caption--line-height: 1.6;
+  /*
+   * THE TWO STEPS TAILWIND'S LADDER DOES NOT HAVE.
+   *
+   * The type scale is 12 · 13 · 14 · 16 · 20 · 24 · 32. Tailwind supplies
+   * 12 (xs), 14 (sm), 16 (base), 20 (xl) and 24 (2xl); 13 and 32 are
+   * named here. Nothing below 12: nine-pixel Arabic is not small text, it
+   * is a smudge — the script carries meaning in the marks above and below
+   * the letters, and at that size they merge into the line.
+   *
+   * `note` is a caption, a helper line, a table's secondary column.
+   * `display` is the one figure a KPI card exists to show.
+   */
+  --text-note: 0.8125rem; /* 13px */
+  --text-note--line-height: 1.6;
+  --text-display: 2rem; /* 32px */
+  --text-display--line-height: 1.2;
 
   /*
-   * Two elevations, both of which read the theme. `card` is a surface at
-   * rest; `raised` is something floating over it - a dialog, a dropdown,
-   * a bar pinned above the page. There is no third, because a third is how
-   * eight of them happened.
-   *
-   * They resolve through --sys-shadow, so the dark theme gets a shadow
-   * that is actually visible on black instead of a 10%-black one that is
-   * visible on nothing.
+   * RADIUS: 6 on a control, 10 on a card, 16 on a sheet, full on a chip.
+   * Tailwind's `md` is already 6, so only the other two are named.
    */
-  --shadow-card: var(--sys-shadow);
+  --radius-card: 0.625rem; /* 10px */
+  --radius-sheet: 1rem; /* 16px */
+
+  /*
+   * ONE EASING CURVE for every transition in the product. Durations come
+   * from Tailwind's own 100/150/200/300; the curve is the part that makes
+   * unrelated movements feel like one system.
+   */
+  --ease-standard: cubic-bezier(0.2, 0, 0.1, 1);
+
+  /*
+   * THREE ELEVATIONS AND NO MORE: flat is the absence of both of these.
+   * `raised` is a surface at rest that needs an edge; `overlay` is
+   * something floating over the page — a dialog, a dropdown, a sheet.
+   * Both resolve through the theme, so the dark palette gets a shadow that
+   * is actually visible on black.
+   */
   --shadow-raised: var(--sys-shadow-raised);
+  --shadow-overlay: var(--sys-shadow-overlay);
 }
 
 /* RTL: reversed spacing for the space-x utilities */

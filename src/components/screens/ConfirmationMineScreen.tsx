@@ -288,7 +288,7 @@ export function ConfirmationMineScreen() {
                     previousOrders={order.previousOrders}
                   />
                   {order.risk && (
-                    <span className={`text-caption px-2 py-0.5 rounded-md border ${RISK_LABEL[order.risk.tier].cls}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-md border ${RISK_LABEL[order.risk.tier].cls}`}>
                       {RISK_LABEL[order.risk.tier].text} · {Math.round(order.risk.returnRate * 100)}% مرتجع من{' '}
                       {order.risk.orders} طلب
                     </span>
@@ -320,7 +320,7 @@ export function ConfirmationMineScreen() {
                 {order.postponedUntil && (
                   <p className="text-xs text-[var(--sys-warning)]">
                     مؤجل حتى{' '}
-                    <span dir="ltr">{new Date(order.postponedUntil).toLocaleDateString('ar-EG')}</span>
+                    <span dir="ltr">{new Date(order.postponedUntil).toLocaleDateString('ar-u-nu-latn')}</span>
                     {order.postponePreferredTime && ` · ${order.postponePreferredTime}`} · تأجيل رقم{' '}
                     {order.postponeCount}
                   </p>
@@ -356,7 +356,7 @@ export function ConfirmationMineScreen() {
                       {order.noAnswerCount}/{data.noAnswerLimit}
                     </span>
                   </Action>
-                  <span className="text-caption text-[var(--sys-muted)]">
+                  <span className="text-xs text-[var(--sys-muted)]">
                     {remaining === 0
                       ? 'بلغ الحد'
                       : remaining === 1
@@ -547,7 +547,7 @@ function ResponseClock({
   if (firstActionAt && claimedAt) {
     const took = Math.max(0, Math.round((+new Date(firstActionAt) - +new Date(claimedAt)) / 60000));
     return (
-      <span className="text-caption px-2 py-0.5 rounded-md border bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)] tabular-nums">
+      <span className="text-xs px-2 py-0.5 rounded-md border bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)] tabular-nums">
         رددت خلال {humanMinutes(took)}
       </span>
     );
@@ -558,7 +558,7 @@ function ResponseClock({
   const late = waiting >= 30;
   return (
     <span
-      className={`text-caption px-2 py-0.5 rounded-md border tabular-nums ${
+      className={`text-xs px-2 py-0.5 rounded-md border tabular-nums ${
         late
           ? 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]'
           : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30'
@@ -597,14 +597,14 @@ function SectionHead({
       <h2 className="text-sm font-bold text-[var(--sys-heading)]">
         {title} ({value.trim() ? `${count} من ${total}` : total})
       </h2>
-      {note && <span className="text-caption text-[var(--sys-muted)]">{note}</span>}
+      {note && <span className="text-xs text-[var(--sys-muted)]">{note}</span>}
       <div className="relative ms-auto">
         <Search className="w-3.5 h-3.5 text-[var(--sys-muted)] absolute top-1/2 -translate-y-1/2 end-2.5" />
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="رقم الهاتف أو الطلب أو الاسم"
-          className="h-8 w-56 ps-2.5 pe-8 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-caption text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
+          className="h-8 w-56 ps-2.5 pe-8 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
         />
         {value && (
           <button

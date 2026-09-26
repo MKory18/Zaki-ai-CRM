@@ -53,7 +53,7 @@ function Row({ person, bars }: { person: Person; bars: BoardData['bars'] }) {
         <td className="px-3 py-2 font-medium text-[var(--sys-heading)]">{person.name}</td>
         <td className="px-3 py-2">
           {unmeasured ? (
-            <span className="text-caption text-[var(--sys-muted)]">
+            <span className="text-xs text-[var(--sys-muted)]">
               العيّنة {s.sample} — الحد الأدنى {s.minSample}
             </span>
           ) : (
@@ -74,7 +74,7 @@ function Row({ person, bars }: { person: Person; bars: BoardData['bars'] }) {
                   ((b.key === 'delivery_rate' && b.value < bars.deliveryRate) ||
                     (b.key === 'issues_rate' && b.value > bars.issuesRate));
                 return (
-                  <li key={b.key} className="flex items-baseline justify-between gap-2 text-caption">
+                  <li key={b.key} className="flex items-baseline justify-between gap-2 text-xs">
                     <span className={low ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-muted-foreground)]'}>{b.ar}</span>
                     <span className="tabular-nums text-[var(--sys-foreground)]">
                       {b.points === null ? 'لا يُقاس' : `${b.points} من ${b.weight}`}
@@ -119,7 +119,7 @@ export function ScoreBoard() {
 
   return (
     <div className="space-y-3" dir="rtl">
-      <p className="text-caption text-[var(--sys-muted-foreground)]">
+      <p className="text-xs text-[var(--sys-muted-foreground)]">
         {PERIOD_AR[data.window.period]} · الأعلى أولاً. لا توجد قائمة معلنة للأسوأ، ولا زرّ يقلب
         الترتيب — السكور أداة قياس، ولوحةُ فشلٍ تجعل الناس تتجنّب المركز الأخير بدل أن ترفع الرقم.
       </p>
@@ -130,7 +130,7 @@ export function ScoreBoard() {
             {r.ar}
           </h3>
           <table className="w-full text-sm">
-            <thead className="text-caption text-[var(--sys-muted)]">
+            <thead className="text-xs text-[var(--sys-muted)]">
               <tr>
                 <th className="w-10 px-3 py-1.5 text-right font-medium">#</th>
                 <th className="px-3 py-1.5 text-right font-medium">الموظف</th>

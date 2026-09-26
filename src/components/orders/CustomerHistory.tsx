@@ -62,7 +62,7 @@ export function CustomerHistoryButton({
           setOpen(true);
         }}
         title={previousOrders > 0 ? `${previousOrders} طلب سابق لهذا العميل` : 'عميل جديد — لا طلبات سابقة'}
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-caption ${
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs ${
           previousOrders > 0
             ? 'bg-[var(--sys-surface)] border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)]'
             : 'bg-[var(--sys-card)] border-[var(--sys-border)] text-[var(--sys-muted)] hover:border-[var(--sys-primary)]'
@@ -106,7 +106,7 @@ export function CustomerHistoryModal({
 
       {history && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className={`text-caption px-2 py-0.5 rounded-md border ${RISK[history.risk.tier].cls}`}>
+          <span className={`text-xs px-2 py-0.5 rounded-md border ${RISK[history.risk.tier].cls}`}>
             {RISK[history.risk.tier].text} · {Math.round(history.risk.returnRate * 100)}% مرتجع من {history.risk.orders} طلب
           </span>
           <span className="text-xs text-[var(--sys-muted-foreground)]">
@@ -114,7 +114,7 @@ export function CustomerHistoryModal({
             {history.customer.cancelledOrders}
           </span>
           {history.risk.requiresPrepaymentOrApproval && (
-            <span className="flex items-center gap-1 text-caption text-[var(--sys-destructive)]">
+            <span className="flex items-center gap-1 text-xs text-[var(--sys-destructive)]">
               <ShieldAlert className="w-3 h-3" /> يتطلب دفعاً مسبقاً أو موافقة مشرف
             </span>
           )}
@@ -147,7 +147,7 @@ export function CustomerHistoryModal({
                 {o.items.map((i) => `${i.productName} × ${i.quantity + i.freeQuantity}`).join(' · ')}
               </p>
               {(o.rejectionReason || o.returnReason) && (
-                <p className="mt-1 text-caption text-[var(--sys-destructive)]">{o.returnReason ?? o.rejectionReason}</p>
+                <p className="mt-1 text-xs text-[var(--sys-destructive)]">{o.returnReason ?? o.rejectionReason}</p>
               )}
             </article>
           ))}

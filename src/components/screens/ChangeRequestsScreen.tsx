@@ -140,12 +140,12 @@ export function ChangeRequestsScreen() {
             type="button"
             onClick={() => setTab(key)}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              tab === key ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-card' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
+              tab === key ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
             }`}
           >
             {label}
             <span
-              className={`tabular-nums rounded-lg px-1.5 text-caption ${
+              className={`tabular-nums rounded-lg px-1.5 text-xs ${
                 lists[key].length > 0 ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
               }`}
             >
@@ -175,14 +175,14 @@ export function ChangeRequestsScreen() {
                 )}
               </span>
               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{r.order.orderNumber}</span>
-              <span className="text-caption px-2 py-0.5 rounded-md bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">{state}</span>
+              <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">{state}</span>
               {tab === 'PENDING' && r.blocking && (
-                <span className="text-caption px-2 py-0.5 rounded-md bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]">
+                <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]">
                   يوقف تقدّم الطلب
                 </span>
               )}
               {tab === 'PENDING' && r.overdue && (
-                <span className="text-caption px-2 py-0.5 rounded-md bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
+                <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
                   تجاوز مهلة المراجعة
                 </span>
               )}

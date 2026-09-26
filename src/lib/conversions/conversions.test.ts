@@ -236,7 +236,7 @@ describe('explaining a failure to a seller', () => {
   });
 
   it('names the late-delivery case, which is nobody\'s mistake', () => {
-    expect(explainCapiError(new CapiError('event_time is older than 7 days'))).toContain('٧ أيام');
+    expect(explainCapiError(new CapiError('event_time is older than 7 days'))).toContain('7 أيام');
   });
 
   it('passes Meta\'s own words through when we did not anticipate them', () => {
