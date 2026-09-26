@@ -23,8 +23,8 @@ import { apiFetch } from '@/lib/api-client';
 import { format } from 'date-fns';
 import { ar as arLocale } from 'date-fns/locale';
 import { FILTERABLE_STATES, STATE_LABEL_AR } from '@/lib/order-state';
-import { formatMoney } from '@/lib/money';
 import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiFilter3Line, RiMagicLine, RiPhoneLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 export function OrdersScreen() {
   const { t, currentUser, locale } = useApp();
@@ -608,11 +608,12 @@ export function OrdersScreen() {
 
                       {/* The money and the two things you do with a row. */}
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <span className="font-bold text-[var(--sys-heading)] text-sm tabular-nums" dir="ltr">
-                          {currency.code
-                            ? formatMoney(Number(order.totalAmount || 0), currency.code, currency.minorUnit)
-                            : Number(order.totalAmount || 0).toFixed(2)}
-                        </span>
+                        <Money
+                          value={order.totalAmount}
+                          currency={currency.code || undefined}
+                          minorUnit={currency.code ? currency.minorUnit : undefined}
+                          className="font-bold text-[var(--sys-heading)] text-sm"
+                        />
                         <span onClick={(e) => e.stopPropagation()}>
                           <CustomerHistoryButton
                             customerId={order.customer?.id}

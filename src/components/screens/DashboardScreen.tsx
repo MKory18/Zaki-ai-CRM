@@ -14,6 +14,7 @@ import { productName } from '@/lib/product-name';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { RiAddCircleLine, RiAlertLine, RiArchiveDrawerLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCheckboxCircleLine, RiCloseCircleLine, RiEqualLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiSendPlaneLine, RiShoppingBagLine, RiSparkling2Line, RiStackLine, RiSubtractLine, RiTimerLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 const PERIODS = [
   { key: 'today', ar: 'اليوم', en: 'Today' },
@@ -89,11 +90,9 @@ export function DashboardScreen() {
   };
   const rates = analytics?.rates ?? { confirmationRate: 0, deliveryRate: 0 };
 
-  const fmt = (n: number) =>
-    `$${n.toLocaleString('ar-u-nu-latn', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+  // Was a hardcoded «$» with a locale's own grouping. The store may be
+  // Jordanian or Syrian, and `<Money>` knows which it is.
+  const fmt = (n: number) => <Money value={n} />;
 
   const statusTiles = [
     { label: t.NEW, value: counts.new, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-primary)]' },
@@ -410,7 +409,7 @@ export function DashboardScreen() {
                         {mod.confirmationRate}%
                       </span>
                       <p className="text-xs font-semibold text-[var(--sys-foreground)] mt-1" dir="ltr">
-                        ${mod.sales.toFixed(2)}
+                        <Money value={mod.sales} />
                       </p>
                     </div>
                   </div>

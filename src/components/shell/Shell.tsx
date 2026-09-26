@@ -11,6 +11,7 @@ import { IdleGuard } from './IdleGuard';
 import { CommandPalette, useCommandPalette } from './CommandPalette';
 import { RAIL_SCRIPT } from '@/lib/sidebar-rail';
 import { BulkProvider } from './BulkBar';
+import { StoreCurrencyProvider } from '@/context/StoreCurrency';
 
 /** Frame for every contract screen: fixed RTL sidebar + context header. */
 export function Shell({
@@ -37,6 +38,10 @@ export function Shell({
 
   return (
     <BulkProvider>
+    {/* Which currency every figure on every screen is in. The header chip
+        has been printing it all along; four money screens had nothing to
+        print but a hardcoded «$». */}
+    <StoreCurrencyProvider code={context.currencyCode}>
     <div className="min-h-screen bg-[var(--sys-surface)] flex flex-col">
       {/* Before the first paint: was the sidebar left folded? React cannot
           answer that — the server does not know this browser — and answering
@@ -88,6 +93,7 @@ export function Shell({
       <Watermark viewer={viewer} />
       <IdleGuard />
     </div>
+    </StoreCurrencyProvider>
     </BulkProvider>
   );
 }

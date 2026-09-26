@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { RiAddCircleLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 /**
  * WHAT THIS RUN ACTUALLY COST.
@@ -177,13 +178,13 @@ export function BatchCostDialog({
         {/* The number every margin in the system is built on. */}
         <div className="flex items-center justify-between rounded-lg bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] px-3 py-2.5">
           <span className="text-xs text-[var(--sys-muted-foreground)]">
-            الكلفة الكلية <span className="font-bold text-[var(--sys-heading)] tabular-nums">{total.toFixed(2)}</span>
+            الكلفة الكلية <Money value={total} className="font-bold text-[var(--sys-heading)]" />
           </span>
           <span className="text-xs">
             كلفة الوحدة{' '}
-            <span className="font-black text-[var(--sys-primary)] tabular-nums">{perUnit.toFixed(2)}</span>
+            <Money value={perUnit} className="font-black text-[var(--sys-primary)]" />
             {batch.costPerUnit > 0 && Math.abs(perUnit - batch.costPerUnit) > 0.005 && (
-              <span className="text-xs text-[var(--sys-muted)]"> (كانت {batch.costPerUnit.toFixed(2)})</span>
+              <span className="text-xs text-[var(--sys-muted)]"> (كانت <Money value={batch.costPerUnit} />)</span>
             )}
           </span>
         </div>

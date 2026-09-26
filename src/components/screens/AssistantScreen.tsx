@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
 import { findRoute } from '@/lib/route-registry';
 import { RiArrowUpCircleLine, RiCheckboxCircleLine, RiErrorWarningLine, RiLightbulbLine, RiMoneyDollarCircleLine, RiRefreshLine, RiRobot2Line, RiSendPlaneLine, RiShieldFlashLine, RiSparkling2Line, RiUserLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -207,11 +208,11 @@ export function AssistantScreen() {
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
                       <span className="text-xs text-[var(--sys-muted)] block">Delivered Revenue</span>
-                      <strong className="text-[var(--sys-heading)] font-bold">${metrics.revenue?.toFixed(2)}</strong>
+                      <Money value={metrics.revenue} className="text-[var(--sys-heading)] font-bold" />
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
                       <span className="text-xs text-[var(--sys-muted)] block">Real Net Profit</span>
-                      <strong className="text-[var(--sys-destructive)] font-black">${metrics.net_profit?.toFixed(2)}</strong>
+                      <Money value={metrics.net_profit} className="text-[var(--sys-destructive)] font-black" />
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
                       <span className="text-xs text-[var(--sys-muted)] block">Confirm Rate</span>

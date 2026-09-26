@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { RiAddCircleLine, RiArrowDownSLine, RiArrowUpSLine, RiDeleteBinLine, RiEyeOffLine, RiLoader4Line, RiMagicLine, RiPencilLine, RiPriceTag3Line, RiStarLine } from '@remixicon/react';
+import { moneyText } from '@/lib/money';
+import { minorUnitFor } from '@/lib/currencies';
 
 /**
  * A product's offers, edited where the product is.
@@ -168,7 +170,7 @@ export function ProductOffers({
     await load();
   }
 
-  const money = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${currency}`;
+  const money = (n: number) => moneyText(Number(n), currency, minorUnitFor(currency) ?? 2);
 
   return (
     <Card>

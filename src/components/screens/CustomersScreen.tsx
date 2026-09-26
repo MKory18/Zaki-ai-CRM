@@ -10,6 +10,7 @@ import { useRegions } from '@/hooks/useRegions';
 import { useApp } from '@/context/AppContext';
 import { format } from 'date-fns';
 import { RiAddCircleLine, RiCalendarLine, RiMapPinLine, RiPhoneLine, RiSearchLine, RiShoppingBagLine, RiUserLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 export function CustomersScreen() {
   const { t } = useApp();
@@ -148,7 +149,7 @@ export function CustomersScreen() {
                     </p>
                   </div>
                   <span className="text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-md">
-                    ${(c.totalPurchaseValue ?? 0).toFixed(2)}
+                    <Money value={c.totalPurchaseValue ?? 0} />
                   </span>
                 </div>
 
@@ -204,7 +205,7 @@ export function CustomersScreen() {
               <div>
                 <span className="text-[var(--sys-muted)]">إجمالي المشتريات:</span>
                 <p className="font-bold text-[var(--sys-destructive)] text-sm">
-                  ${(selectedCustomer.totalPurchaseValue ?? 0).toFixed(2)}
+                  <Money value={selectedCustomer.totalPurchaseValue ?? 0} />
                 </p>
               </div>
               <div>
@@ -231,7 +232,7 @@ export function CustomersScreen() {
                     <span className="text-[var(--sys-muted-foreground)] ml-2 rtl:ml-0 rtl:mr-2">{ord.product?.name}</span>
                   </div>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                    <span className="font-bold text-[var(--sys-heading)]">${ord.totalAmount.toFixed(2)}</span>
+                    <Money value={ord.totalAmount} className="font-bold text-[var(--sys-heading)]" />
                     <OrderStatusBadge status={ord.status} />
                   </div>
                 </div>

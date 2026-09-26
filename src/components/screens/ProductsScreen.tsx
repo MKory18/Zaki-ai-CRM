@@ -13,6 +13,7 @@ import { useApp } from '@/context/AppContext';
 import { productName } from '@/lib/product-name';
 import Link from 'next/link';
 import { RiAddCircleLine, RiArchiveLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiPencilLine, RiPriceTag3Line, RiSearchLine, RiStarLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 export function ProductsScreen() {
   const { t, locale } = useApp();
@@ -295,7 +296,7 @@ export function ProductsScreen() {
                           {p.analytics?.totalRemaining ?? 0}
                         </td>
                         <td className="px-6 py-3 text-[var(--sys-heading)]">
-                          ${p.analytics?.avgCostPerUnit?.toFixed(2) || '0.00'}
+                          <Money value={p.analytics?.avgCostPerUnit ?? 0} />
                         </td>
                         <td className="px-6 py-3 text-[var(--sys-primary)] font-medium">
                           {p.analytics?.totalSold ?? 0}

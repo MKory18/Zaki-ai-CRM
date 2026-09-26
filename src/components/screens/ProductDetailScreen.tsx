@@ -15,6 +15,7 @@ import { ProductOffers } from '@/components/products/ProductOffers';
 import { ProductStock } from '@/components/products/ProductStock';
 import { format } from 'date-fns';
 import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiPriceTag3Line, RiShoppingCartLine, RiStackLine, RiStarLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 export function ProductDetailScreen() {
   const params = useParams();
@@ -244,11 +245,11 @@ export function ProductDetailScreen() {
                 <div className="pt-2 border-t border-[var(--sys-border)] grid grid-cols-2 gap-2 text-center">
                   <div className="bg-[var(--sys-surface)] p-2 rounded-lg">
                     <span className="text-[var(--sys-muted)] block">السعر الأساسي</span>
-                    <span className="font-bold text-[var(--sys-heading)]">${product.basePrice?.toFixed(2)}</span>
+                    <Money value={product.basePrice} className="font-bold text-[var(--sys-heading)]" />
                   </div>
                   <div className="bg-[var(--sys-surface)] p-2 rounded-lg">
                     <span className="text-[var(--sys-muted)] block">متوسط تكلفة الوحدة</span>
-                    <span className="font-bold text-[var(--sys-heading)]">${analytics?.avgCostPerUnit}</span>
+                    <Money value={analytics?.avgCostPerUnit} className="font-bold text-[var(--sys-heading)]" />
                   </div>
                 </div>
               </CardContent>
@@ -259,11 +260,11 @@ export function ProductDetailScreen() {
               <CardContent className="grid grid-cols-2 gap-2 text-center text-xs">
                 <div className="bg-[var(--sys-surface)] p-2.5 rounded-lg">
                   <span className="text-[var(--sys-primary)] block">الإيراد</span>
-                  <span className="font-black text-[var(--sys-primary)]">${analytics?.revenue?.toFixed(2)}</span>
+                  <Money value={analytics?.revenue} className="font-black text-[var(--sys-primary)]" />
                 </div>
                 <div className="bg-[var(--sys-destructive-soft)] p-2.5 rounded-lg">
                   <span className="text-[var(--sys-destructive)] block">صافي الربح</span>
-                  <span className="font-black text-[var(--sys-destructive)]">${analytics?.netProfit?.toFixed(2)}</span>
+                  <Money value={analytics?.netProfit} className="font-black text-[var(--sys-destructive)]" />
                 </div>
                 <div className="bg-[var(--sys-surface)] p-2.5 rounded-lg">
                   <span className="text-[var(--sys-muted)] block">إجمالي الطلبات</span>
@@ -323,8 +324,8 @@ export function ProductDetailScreen() {
                     <td className="px-6 py-3 font-mono font-bold text-[var(--sys-destructive)]">{b.batchNumber}</td>
                     <td className="px-6 py-3">{b.quantityProduced}</td>
                     <td className="px-6 py-3 font-bold text-[var(--sys-success)]">{b.quantityRemaining}</td>
-                    <td className="px-6 py-3">${b.totalProductionCost?.toFixed(2)}</td>
-                    <td className="px-6 py-3 font-black text-[var(--sys-heading)]">${b.costPerUnit?.toFixed(2)}</td>
+                    <td className="px-6 py-3"><Money value={b.totalProductionCost} /></td>
+                    <td className="px-6 py-3"><Money value={b.costPerUnit} className="font-black text-[var(--sys-heading)]" /></td>
                     <td className="px-6 py-3 text-[var(--sys-muted)]">{format(new Date(b.productionDate), 'yyyy-MM-dd')}</td>
                   </tr>
                 ))}
@@ -365,7 +366,7 @@ export function ProductDetailScreen() {
                   <tr key={o.id} className="hover:bg-[var(--sys-surface)]">
                     <td className="px-6 py-3 font-bold text-[var(--sys-destructive)]">{o.orderNumber}</td>
                     <td className="px-6 py-3">{o.customer?.fullName} <span className="text-[var(--sys-muted)]">— {o.customer?.city}</span></td>
-                    <td className="px-6 py-3 font-bold">${o.totalAmount.toFixed(2)}</td>
+                    <td className="px-6 py-3"><Money value={o.totalAmount} className="font-bold" /></td>
                     <td className="px-6 py-3"><OrderStatusBadge status={o.status} /></td>
                     <td className="px-6 py-3 text-[var(--sys-muted-foreground)]">{o.moderator?.name || '—'}</td>
                     <td className="px-6 py-3 text-[var(--sys-muted)]">{format(new Date(o.createdAt), 'MMM d')}</td>

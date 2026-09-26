@@ -3,6 +3,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import { moneyText } from '@/lib/money';
+import { useStoreCurrency } from '@/context/StoreCurrency';
 
 /**
  * EVERY FIGURE IN THE PRODUCT, DRAWN THE SAME WAY.
@@ -32,13 +33,18 @@ import { moneyText } from '@/lib/money';
 export function Money({
   value,
   currency,
-  minorUnit = 2,
+  minorUnit,
   tone,
   size = 'inherit',
   className,
 }: {
   value: number | string | null | undefined;
-  /** The store's currency code. Absent prints the number bare, never a guess. */
+  /**
+   * Usually omitted: the selected store's currency is the default, taken
+   * from the shell. Pass one only for a figure that is genuinely in
+   * another currency — and outside the shell there is no default, so an
+   * amount prints bare rather than dressed in a code that might be wrong.
+   */
   currency?: string | null;
   minorUnit?: number;
   tone?: 'owed' | 'lost' | 'collected';
@@ -46,8 +52,13 @@ export function Money({
   size?: 'inherit' | 'figure';
   className?: string;
 }) {
+  const store = useStoreCurrency();
   const n = Number(value ?? 0);
-  const text = moneyText(Number.isFinite(n) ? n : 0, currency, minorUnit);
+  // `currency === null` is a deliberate "print it bare"; `undefined` means
+  // "whatever this store is in".
+  const code = currency !== undefined ? currency : store?.code ?? null;
+  const digits = minorUnit ?? (currency !== undefined ? 2 : store?.minorUnit ?? 2);
+  const text = moneyText(Number.isFinite(n) ? n : 0, code, digits);
 
   return (
     <span

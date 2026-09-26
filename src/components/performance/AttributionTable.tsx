@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Money } from '@/components/ui/Money';
 
 /**
  * Who brought the business, and what became of it.
@@ -117,10 +118,10 @@ export function AttributionTable({
               <Num value={r.returned} tone={r.returned > 0 ? 'text-[var(--sys-warning)]' : undefined} />
               <Rate value={r.deliveryRate} />
               <td className="px-4 py-3 text-center tabular-nums font-bold text-[var(--sys-heading)]" dir="ltr">
-                {r.revenue.toFixed(2)}
+                <Money value={r.revenue} />
               </td>
               <td className="px-4 py-3 text-center tabular-nums font-semibold text-[var(--sys-primary)]" dir="ltr">
-                {r.revenuePerOrder === null ? '—' : r.revenuePerOrder.toFixed(2)}
+                {r.revenuePerOrder === null ? '—' : <Money value={r.revenuePerOrder} />}
               </td>
             </tr>
           ))}
@@ -139,10 +140,10 @@ export function AttributionTable({
             <Num value={totals?.returned ?? 0} bold />
             <Rate value={totals?.deliveryRate ?? null} bold />
             <td className="px-4 py-3 text-center tabular-nums font-black text-[var(--sys-heading)]" dir="ltr">
-              {(totals?.revenue ?? 0).toFixed(2)}
+              <Money value={totals?.revenue ?? 0} />
             </td>
             <td className="px-4 py-3 text-center tabular-nums font-bold text-[var(--sys-primary)]" dir="ltr">
-              {totals?.revenuePerOrder != null ? totals.revenuePerOrder.toFixed(2) : '—'}
+              {totals?.revenuePerOrder != null ? <Money value={totals.revenuePerOrder} /> : '—'}
             </td>
           </tr>
         </tfoot>

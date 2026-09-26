@@ -6,6 +6,8 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { RiArrowLeftRightLine, RiBuilding4Line, RiInboxArchiveLine, RiLoader4Line, RiLockLine, RiStackLine } from '@remixicon/react';
+import { moneyText } from '@/lib/money';
+import { minorUnitFor } from '@/lib/currencies';
 
 /**
  * What this product has, what it cost, and the one door that adds more.
@@ -68,7 +70,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
   }
 
   const money = (n: number) =>
-    `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${stock.currencyCode}`;
+    moneyText(Number(n), stock.currencyCode, minorUnitFor(stock.currencyCode) ?? 2);
   const made = stock.sourceType === 'MANUFACTURED';
 
   return (

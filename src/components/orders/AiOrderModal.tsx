@@ -8,6 +8,7 @@ import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
 import { RiArchiveLine, RiCheckboxCircleLine, RiClipboardLine, RiErrorWarningLine, RiMagicLine, RiMapPinLine, RiPhoneLine, RiSparkling2Line, RiUserLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 interface AiOrderModalProps {
   isOpen: boolean;
@@ -303,7 +304,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               </Button>
               <Button onClick={handleConfirm} loading={saving}>
                 <RiCheckboxCircleLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
-                تسجيل الطلب (${finalPrice})
+                تسجيل الطلب (<Money value={finalPrice} />)
               </Button>
             </div>
           </div>

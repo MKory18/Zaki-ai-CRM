@@ -13,6 +13,7 @@ import { userCan } from '@/lib/can';
 import { ScoreBoard } from '@/components/performance/ScoreBoard';
 import { findRoute } from '@/lib/route-registry';
 import { RiAlertLine, RiCheckboxCircleLine, RiCopperCoinLine, RiDownload2Line, RiEBike2Line, RiTrophyLine, RiTruckLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -207,7 +208,7 @@ export function PerformanceScreen() {
             icon={<RiCopperCoinLine className="w-4 h-4" />}
             label="الأكثر ربحاً"
             name={analytics?.rankings?.mostProfitable?.name}
-            note={`صافي ${(analytics?.rankings?.mostProfitable?.netProfit || 0).toFixed(2)}$`}
+            note={<>صافي <Money value={analytics?.rankings?.mostProfitable?.netProfit || 0} /></>}
           />
           <Rank
             icon={<RiCheckboxCircleLine className="w-4 h-4" />}
@@ -271,16 +272,16 @@ export function PerformanceScreen() {
                         {prod.rejectedOrders}
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
-                        ${prod.revenue.toFixed(2)}
+                        <Money value={prod.revenue} />
                       </td>
                       <td className="px-6 py-3.5 text-[var(--sys-destructive)] font-medium">
-                        -${prod.cogs.toFixed(2)}
+                        <Money value={-prod.cogs} />
                       </td>
                       <td className="px-6 py-3.5 text-[var(--sys-destructive)] font-medium">
-                        -${prod.shippingCost.toFixed(2)}
+                        <Money value={-prod.shippingCost} />
                       </td>
                       <td className="px-6 py-3.5 font-black text-[var(--sys-heading)]">
-                        ${prod.netProfit.toFixed(2)}
+                        <Money value={prod.netProfit} />
                       </td>
                       <td className="px-6 py-3.5">
                         <span className="font-bold text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] px-2 py-0.5 rounded-lg text-xs">
@@ -394,7 +395,7 @@ function Rank({
   icon: React.ReactNode;
   label: string;
   name?: string;
-  note: string;
+  note: React.ReactNode;
   warn?: boolean;
 }) {
   const tone = warn ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-primary)]';

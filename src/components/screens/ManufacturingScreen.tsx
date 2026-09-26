@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import { BatchCostDialog, type BatchForCost } from '@/components/production/BatchCostDialog';
 import { format } from 'date-fns';
 import { RiAddCircleLine, RiBuilding4Line, RiCalculatorLine, RiCalendarLine, RiDeleteBinLine, RiStackLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 /**
  * The costs that keep coming back, offered instead of typed.
@@ -211,12 +212,12 @@ export function ManufacturingScreen() {
                         </span>
                       </td>
                       <td className="px-6 py-3.5 font-bold text-[var(--sys-heading)]">
-                        {b.totalProductionCost.toFixed(2)} {currency}
+                        <Money value={b.totalProductionCost} currency={currency} />
                       </td>
                       <td className="px-6 py-3.5">
                         {b.costPerUnit > 0 ? (
                           <span className="font-black text-[var(--sys-heading)] bg-[var(--sys-surface)] px-2.5 py-1 rounded-md text-xs tabular-nums">
-                            {b.costPerUnit.toFixed(2)} {currency}
+                            <Money value={b.costPerUnit} currency={currency} />
                           </span>
                         ) : (
                           <button
@@ -421,7 +422,7 @@ export function ManufacturingScreen() {
             <div className="flex items-center space-x-2">
               <RiCalculatorLine className="w-5 h-5 text-[var(--sys-destructive)]" />
               <div>
-                <p className="font-bold text-[var(--sys-heading)]">الكلفة الكلية: {totalProductionCost.toFixed(2)}</p>
+                <p className="font-bold text-[var(--sys-heading)]">الكلفة الكلية: <Money value={totalProductionCost} /></p>
                 <p className="text-[var(--sys-muted-foreground)]">
                   المعادلة: تصنيع ({manufacturingCost}) + تغليف ({packagingCost}) + مواد خام ({rawMaterialCost})
                 </p>
@@ -431,7 +432,7 @@ export function ManufacturingScreen() {
             <div className="text-right">
               <span className="text-[var(--sys-muted-foreground)] block">تكلفة الوحدة المحسوبة:</span>
               <span className="text-xl font-black text-[var(--sys-destructive)] block">
-                ${costPerUnit}
+                <Money value={costPerUnit} />
               </span>
             </div>
           </div>
