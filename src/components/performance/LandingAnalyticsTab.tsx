@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Eye, ShoppingBag, Percent, Info, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { RiEyeLine, RiInformationLine, RiLoader4Line, RiPercentLine, RiShoppingBagLine } from '@remixicon/react';
 
 /**
  * تحليلات صفحات الهبوط — for the screen's one date window.
@@ -49,7 +49,7 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
   if (!data) {
     return (
       <div className="flex h-40 items-center justify-center text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <RiLoader4Line className="h-4 w-4 animate-spin" />
       </div>
     );
   }
@@ -62,14 +62,14 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
   return (
     <div className="space-y-4" dir="rtl">
       <div className="grid grid-cols-3 gap-3">
-        <Tile icon={<Eye className="h-3.5 w-3.5" />} label="المشاهدات" value={fmt(data.totals.views)} />
-        <Tile icon={<ShoppingBag className="h-3.5 w-3.5" />} label="الطلبات" value={fmt(data.totals.orders)} />
-        <Tile icon={<Percent className="h-3.5 w-3.5" />} label="نسبة التحويل" value={pct(data.totals.conversion)} />
+        <Tile icon={<RiEyeLine className="h-4 w-4" />} label="المشاهدات" value={fmt(data.totals.views)} />
+        <Tile icon={<RiShoppingBagLine className="h-4 w-4" />} label="الطلبات" value={fmt(data.totals.orders)} />
+        <Tile icon={<RiPercentLine className="h-4 w-4" />} label="نسبة التحويل" value={pct(data.totals.conversion)} />
       </div>
 
       {partial && (
         <p className="flex items-start gap-1.5 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-foreground)]">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <RiInformationLine className="mt-0.5 h-4 w-4 shrink-0" />
           {data.countingSince
             ? `المشاهدات تُعدّ يومياً منذ ${data.countingSince}. عمود الطلبات يشمل المدة كلها، أما نسبة التحويل فتُحسب من طلبات الأيام التي عُدّت فيها المشاهدات فقط.`
             : 'لم تُسجَّل مشاهدات بعد — تُعدّ من أول زيارة لصفحة منشورة. الطلبات تظهر من الآن.'}

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
-import { AlertCircle, UserPlus, ShieldCheck, Clock } from 'lucide-react';
+import { RiErrorWarningLine, RiShieldCheckLine, RiTimerLine, RiUserAddLine } from '@remixicon/react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -69,14 +69,14 @@ export default function RegisterPage() {
           <CardContent className="p-6 space-y-4">
             {error && (
               <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+                <RiErrorWarningLine className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {success && (
               <div className="p-3 bg-[var(--sys-success-soft)] border border-[var(--sys-success-soft)] text-[var(--sys-success)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
-                <ShieldCheck className="w-4 h-4 shrink-0" />
+                <RiShieldCheckLine className="w-4 h-4 shrink-0" />
                 <span>{success}</span>
               </div>
             )}
@@ -134,13 +134,13 @@ export default function RegisterPage() {
               />
 
               <Button type="submit" loading={loading} className="w-full">
-                <UserPlus className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+                <RiUserAddLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 إنشاء الحساب
               </Button>
             </form>
 
             <div className="p-3 bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg flex items-start space-x-2 rtl:space-x-reverse text-xs text-[var(--sys-foreground)]">
-              <Clock className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
+              <RiTimerLine className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
               <span>
                 بعد التسجيل يكون حسابك بحالة <strong className="text-[var(--sys-heading)]">بانتظار الموافقة</strong>،
                 ويقوم مدير النظام بتعيين دورك وتنشيط حسابك قبل الوصول للوحدات.

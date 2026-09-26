@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi } from '@/lib/screen-api';
-import { RefreshCw, Settings, ShieldAlert, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiRefreshLine, RiSettings3Line, RiShieldFlashLine } from '@remixicon/react';
 
 export function WhatsAppSettingsScreen() {
   const { currentUser } = useApp();
@@ -60,7 +60,7 @@ export function WhatsAppSettingsScreen() {
       <>
         <div className="p-8">
           <div className="max-w-md mx-auto mt-20 text-center p-8 bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]">
-            <ShieldAlert className="w-10 h-10 mx-auto text-[var(--sys-primary)]" />
+            <RiShieldFlashLine className="w-6 h-6 mx-auto text-[var(--sys-primary)]" />
             <h2 className="mt-4 font-bold text-[var(--sys-heading)]">ليس لديك صلاحية لإدارة واتساب</h2>
           </div>
         </div>
@@ -112,12 +112,12 @@ export function WhatsAppSettingsScreen() {
           <div className="flex gap-2">
             <button onClick={() => runAction('test')} disabled={busy !== null}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs font-semibold text-[var(--sys-heading)] hover:bg-[var(--sys-surface)] disabled:opacity-50">
-              {busy === 'test' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              {busy === 'test' ? <RiRefreshLine className="w-4 h-4 animate-spin" /> : <RiCheckboxCircleLine className="w-4 h-4" />}
               اختبار الاتصال
             </button>
             <button onClick={() => runAction('reconnect')} disabled={busy !== null}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:opacity-90 disabled:opacity-50">
-              {busy === 'reconnect' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              {busy === 'reconnect' ? <RiRefreshLine className="w-4 h-4 animate-spin" /> : <RiRefreshLine className="w-4 h-4" />}
               إعادة الاتصال
             </button>
           </div>
@@ -125,7 +125,7 @@ export function WhatsAppSettingsScreen() {
 
         {message && (
           <div className={`p-3 rounded-lg text-xs flex items-center gap-2 ${message.type === 'success' ? 'bg-[var(--sys-success-soft)] border border-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]'}`}>
-            {message.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+            {message.type === 'success' ? <RiCheckboxCircleLine className="w-4 h-4" /> : <RiCloseCircleLine className="w-4 h-4" />}
             {message.text}
           </div>
         )}
@@ -160,7 +160,7 @@ export function WhatsAppSettingsScreen() {
               </div>
             ))}
             <div className="mt-3 p-3 rounded-lg bg-[var(--sys-surface)] border border-[#eef1f5] text-xs text-[var(--sys-muted-foreground)] flex gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-[var(--sys-primary)]" />
+              <RiErrorWarningLine className="w-4 h-4 shrink-0 text-[var(--sys-primary)]" />
               <span>
                 لا تُدخل أي بيانات سرية هنا في الواجهة — كل البيانات من متغيرات بيئة الخادم فقط، ولا يتم عرض Access Token مطلقًا.
                 بعد إضافة البيانات: أعد تشغيل الخادم، اضغط [إعادة الاتصال]، ثم سجّل رابط الويبهوك في تطبيق Meta:

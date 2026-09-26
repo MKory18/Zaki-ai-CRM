@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { History, Shield, User, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { findRoute } from '@/lib/route-registry';
+import { RiFileTextLine, RiHistoryLine, RiShieldLine, RiUserLine } from '@remixicon/react';
 
 export function AuditScreen() {
   const { t } = useApp();
@@ -38,7 +38,7 @@ export function AuditScreen() {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2">
-            <History className="w-6 h-6 text-[var(--sys-foreground)]" />
+            <RiHistoryLine className="w-6 h-6 text-[var(--sys-foreground)]" />
             <span>{findRoute('/control/audit')?.label}</span>
           </h1>
           <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
@@ -54,7 +54,7 @@ export function AuditScreen() {
                 <thead className="bg-[var(--sys-surface)] border-b border-[var(--sys-border)] text-[var(--sys-muted-foreground)] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Timestamp</th>
-                    <th className="px-6 py-3.5">User</th>
+                    <th className="px-6 py-3.5">RiUserLine</th>
                     <th className="px-6 py-3.5">Action</th>
                     <th className="px-6 py-3.5">Entity</th>
                     <th className="px-6 py-3.5">Entity ID</th>

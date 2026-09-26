@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Clock, ShieldX, LogOut, RefreshCw, MailCheck } from 'lucide-react';
 import { signOut } from '@/lib/sign-out';
+import { RiLogoutBoxLine, RiMailCheckLine, RiRefreshLine, RiShieldCrossLine, RiTimerLine } from '@remixicon/react';
 
 /** Account-state screens for PENDING / SUSPENDED / DISABLED users. */
 
@@ -17,7 +17,7 @@ export function PendingScreen() {
     <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-lg shadow-raised p-8 text-center space-y-6">
         <div className="mx-auto w-16 h-16 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
-          <Clock className="w-8 h-8 text-[var(--sys-destructive)]" />
+          <RiTimerLine className="w-6 h-6 text-[var(--sys-destructive)]" />
         </div>
 
         <div>
@@ -32,7 +32,7 @@ export function PendingScreen() {
 
         <div className="bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-4 text-xs text-[var(--sys-muted-foreground)] space-y-1">
           <p className="flex items-center justify-center space-x-2 rtl:space-x-reverse text-[var(--sys-heading)]">
-            <MailCheck className="w-4 h-4 text-[var(--sys-warning)]" />
+            <RiMailCheckLine className="w-4 h-4 text-[var(--sys-warning)]" />
             <span>حالتك الحالية: قيد المراجعة (PENDING)</span>
           </p>
           <p>لن تتمكن من الوصول للطلبات أو العملاء أو المنتجات أو التقارير حتى يتم تنشيط حسابك.</p>
@@ -48,14 +48,14 @@ export function PendingScreen() {
             }}
             className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded-lg bg-[var(--sys-card)] text-[var(--sys-heading)] border border-[var(--sys-border)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer"
           >
-            <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
+            <RiRefreshLine className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
             <span>تحديث الحالة</span>
           </button>
           <button
             onClick={handleLogout}
             className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-destructive)]/85 transition-colors cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
+            <RiLogoutBoxLine className="icon-mirror w-4 h-4" />
             <span>تسجيل الخروج</span>
           </button>
         </div>
@@ -71,7 +71,7 @@ export function BlockedScreen({ status }: { status: string }) {
     <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-lg shadow-raised p-8 text-center space-y-6">
         <div className="mx-auto w-16 h-16 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
-          <ShieldX className="w-8 h-8 text-[var(--sys-destructive)]" />
+          <RiShieldCrossLine className="w-6 h-6 text-[var(--sys-destructive)]" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-[var(--sys-heading)]">
@@ -85,7 +85,7 @@ export function BlockedScreen({ status }: { status: string }) {
           onClick={handleLogout}
           className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-destructive)]/85 transition-colors cursor-pointer"
         >
-          <LogOut className="w-4 h-4" />
+          <RiLogoutBoxLine className="icon-mirror w-4 h-4" />
           <span>تسجيل الخروج</span>
         </button>
       </div>

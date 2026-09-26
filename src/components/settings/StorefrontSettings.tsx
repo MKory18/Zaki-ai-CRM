@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Store as StoreIcon, Loader2, ExternalLink, Check, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
 import { STORE_TYPE_LABEL } from '@/lib/store-types';
+import { RiCheckLine, RiExternalLinkLine, RiLoader4Line, RiPaletteLine, RiStore2Line } from '@remixicon/react';
 
 /**
  * Turning a store's public face on, and what it says about itself.
@@ -81,7 +81,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
-            <StoreIcon className="h-4 w-4 text-[var(--sys-primary)]" />
+            <RiStore2Line className="h-4 w-4 text-[var(--sys-primary)]" />
             واجهة متجر {store.name}
           </p>
           <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
@@ -97,7 +97,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
             rel="noopener noreferrer"
             className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold text-[var(--sys-primary)] hover:underline"
           >
-            <ExternalLink className="h-3.5 w-3.5" /> افتح المتجر
+            <RiExternalLinkLine className="icon-mirror h-4 w-4" /> افتح المتجر
           </a>
         )}
       </div>
@@ -188,7 +188,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
         className="flex items-center justify-between gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
       >
         <span className="flex items-center gap-1.5">
-          <Palette className="h-3.5 w-3.5" />
+          <RiPaletteLine className="h-4 w-4" />
           الألوان والخطوط والترويسة والتذييل وشكل الدفع
         </span>
         <span className="font-semibold">في «واجهة المتجر ← القوالب» ←</span>
@@ -197,13 +197,13 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
       <div className="flex flex-wrap items-center justify-end gap-2">
         {msg && (
           <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-            {msg.ok && <Check className="mb-0.5 mr-1 inline h-3.5 w-3.5" />}
+            {msg.ok && <RiCheckLine className="mb-0.5 mr-1 inline h-4 w-4" />}
             {msg.text}
           </span>
         )}
         <Button variant="outline" size="sm" onClick={reset} disabled={saving}>تراجع</Button>
         <Button size="sm" onClick={save} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} احفظ
+          {saving ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiCheckLine className="h-4 w-4" />} احفظ
         </Button>
       </div>
     </div>

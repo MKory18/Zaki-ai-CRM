@@ -4,9 +4,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { ChevronDown, ListTree, List } from 'lucide-react';
 import type { NavGroup } from '@/lib/route-registry';
 import { iconFor } from './icons';
+import { RiArrowDownSLine, RiListSettingsLine, RiTreeLine } from '@remixicon/react';
 
 const OPEN_GROUPS_KEY = 'osm.sidebar.open';
 const PINNED_KEY = 'osm.sidebar.pinned';
@@ -163,14 +163,17 @@ export function Sidebar({
                     {group.label}
                     {!isOpen && <span className="text-[var(--sys-border-strong)] tabular-nums">{count}</span>}
                   </span>
-                  <ChevronDown
-                    className={clsx('w-3.5 h-3.5 transition-transform', isOpen ? '' : '-rotate-90')}
+                  <RiArrowDownSLine
+                    className={clsx('w-4 h-4 transition-transform', isOpen ? '' : '-rotate-90')}
                   />
                 </button>
               )}
               {isOpen && group.routes.map((route) => {
-                const Icon = iconFor(route.icon);
                 const isActive = pathname === route.path || pathname.startsWith(route.path + '/');
+                // Line at rest, filled on the one you are on. Four items of
+                // the same shape, one of them slightly brighter, is a
+                // difference people miss; a filled glyph is not.
+                const Icon = iconFor(route.icon, isActive);
                 return (
                   <Link
                     key={route.path}
@@ -207,7 +210,7 @@ export function Sidebar({
           onClick={togglePinned}
           className="shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[var(--sys-heading)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-muted)] transition-colors"
         >
-          {pinned ? <List className="w-3.5 h-3.5" /> : <ListTree className="w-3.5 h-3.5" />}
+          {pinned ? <RiListSettingsLine className="w-4 h-4" /> : <RiTreeLine className="w-4 h-4" />}
           {pinned ? 'اطوِ القوائم' : 'اعرض كل القوائم'}
         </button>
       </aside>

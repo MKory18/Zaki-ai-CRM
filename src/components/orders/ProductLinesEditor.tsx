@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Plus, Trash2, Minus } from 'lucide-react';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { amount, type Currency } from '@/lib/format';
+import { RiAddCircleLine, RiDeleteBinLine, RiSubtractLine } from '@remixicon/react';
 
 /**
  * The products on one order.
@@ -122,7 +122,7 @@ export function ProductLinesEditor({
                   title="احذف هذا المنتج من الطلب"
                   className="h-9 w-9 rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] shrink-0 disabled:opacity-40"
                 >
-                  <Trash2 className="w-4 h-4 mx-auto" />
+                  <RiDeleteBinLine className="w-4 h-4 mx-auto" />
                 </button>
               )}
             </div>
@@ -151,7 +151,7 @@ export function ProductLinesEditor({
                   disabled={disabled || lockedByOffer}
                   className="h-9 w-9 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
                 >
-                  <Minus className="w-3.5 h-3.5 mx-auto" />
+                  <RiSubtractLine className="w-4 h-4 mx-auto" />
                 </button>
                 <input
                   type="number" min={1} dir="ltr"
@@ -166,7 +166,7 @@ export function ProductLinesEditor({
                   disabled={disabled || lockedByOffer}
                   className="h-9 w-9 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] disabled:opacity-40"
                 >
-                  <Plus className="w-3.5 h-3.5 mx-auto" />
+                  <RiAddCircleLine className="w-4 h-4 mx-auto" />
                 </button>
               </div>
 
@@ -202,7 +202,7 @@ export function ProductLinesEditor({
           disabled={disabled}
           className="text-xs px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--sys-primary)] text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <RiAddCircleLine className="w-4 h-4" />
           أضف منتجاً آخر
         </button>
         <span className="text-xs text-[var(--sys-muted-foreground)]">

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, Sparkles } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { RiLoader4Line, RiSparkling2Line } from '@remixicon/react';
 
 /**
  * THE ROUND, SUGGESTED — beside the list, never instead of it.
@@ -50,7 +50,7 @@ export function PickingAssistant() {
           disabled={busy}
           className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] disabled:opacity-60 cursor-pointer"
         >
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-[var(--sys-primary)]" />}
+          {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiSparkling2Line className="w-4 h-4 text-[var(--sys-primary)]" />}
           {busy ? 'جارٍ…' : 'رتّب لي الجولة'}
         </button>
       </div>

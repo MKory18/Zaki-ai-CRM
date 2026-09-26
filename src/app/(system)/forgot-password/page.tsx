@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
-import { AlertCircle, KeyRound, ShieldCheck } from 'lucide-react';
+import { RiErrorWarningLine, RiKey2Line, RiShieldCheckLine } from '@remixicon/react';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
           <CardContent className="p-6 space-y-4">
             {error && (
               <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+                <RiErrorWarningLine className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
             {success && (
               <div className="p-3 bg-[var(--sys-success-soft)] border border-[var(--sys-success-soft)] text-[var(--sys-success)] text-xs rounded-lg space-y-2">
                 <p className="flex items-center space-x-2 rtl:space-x-reverse">
-                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <RiShieldCheckLine className="w-4 h-4 shrink-0" />
                   <span>{success}</span>
                 </p>
                 {devToken && (
@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
                 className="bg-[var(--sys-card)]"
               />
               <Button type="submit" loading={loading} className="w-full">
-                <KeyRound className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+                <RiKey2Line className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 إرسال رابط إعادة التعيين
               </Button>
             </form>

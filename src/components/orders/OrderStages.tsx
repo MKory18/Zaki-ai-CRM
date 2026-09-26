@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Check, Minus } from 'lucide-react';
 import { arDateShort } from '@/lib/format';
 import { humanMinutes, type Stage } from '@/lib/order-stages';
+import { RiCheckLine, RiSubtractLine } from '@remixicon/react';
 
 /**
  * The order's journey.
@@ -60,7 +60,7 @@ export function OrderStages({ stages }: { stages: Stage[] }) {
                           : 'bg-[var(--sys-card)] text-[var(--sys-border-strong)] border border-dashed border-[var(--sys-border)]'
                   }`}
                 >
-                  {done ? <Check className="w-3.5 h-3.5" /> : skipped ? <Minus className="w-3.5 h-3.5" /> : i + 1}
+                  {done ? <RiCheckLine className="w-4 h-4" /> : skipped ? <RiSubtractLine className="w-4 h-4" /> : i + 1}
                 </span>
 
                 <span

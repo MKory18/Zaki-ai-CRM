@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { WifiOff } from 'lucide-react';
+import { RiWifiOffLine } from '@remixicon/react';
 
 /**
  * REGISTERING THE WORKER, AND SAYING WHEN THE LINE IS DOWN.
@@ -82,7 +82,7 @@ export function OfflineWatch() {
       dir="rtl"
       className="sticky top-0 z-50 flex items-center gap-2 bg-[var(--sys-destructive)] px-3 py-2 text-xs text-[var(--sys-primary-foreground)]"
     >
-      <WifiOff className="h-4 w-4 shrink-0" />
+      <RiWifiOffLine className="h-4 w-4 shrink-0" />
       <span>
         <strong>لا اتصال.</strong> لا شيء يُحفَظ الآن — أي إجراء تضغطه لن يُرسَل لاحقاً، أعِده بعد
         عودة الاتصال.

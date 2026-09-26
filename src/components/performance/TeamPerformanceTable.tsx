@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PhoneCall, ShieldCheck, UserCog } from 'lucide-react';
+import { RiPhoneLine, RiShieldCheckLine, RiUserSettingsLine } from '@remixicon/react';
 
 /**
  * The confirmation desk, by person, for the span of days chosen above.
@@ -46,18 +46,18 @@ const GROUPS: { roles: string[]; label: string; icon: React.ReactNode }[] = [
   {
     roles: ['CONFIRMATION_AGENT'],
     label: 'موظفو التأكيد',
-    icon: <PhoneCall className="w-3.5 h-3.5 text-[var(--sys-primary)]" />,
+    icon: <RiPhoneLine className="w-4 h-4 text-[var(--sys-primary)]" />,
   },
   {
     roles: ['CONFIRMATION_SUPERVISOR'],
     label: 'مشرفو التأكيد',
-    icon: <ShieldCheck className="w-3.5 h-3.5 text-[var(--sys-primary)]" />,
+    icon: <RiShieldCheckLine className="w-4 h-4 text-[var(--sys-primary)]" />,
   },
 ];
 
 const OTHERS = {
   label: 'أدوار أخرى لامست طلبات التأكيد',
-  icon: <UserCog className="w-3.5 h-3.5 text-[var(--sys-muted)]" />,
+  icon: <RiUserSettingsLine className="w-4 h-4 text-[var(--sys-muted)]" />,
 };
 
 /** Minutes as something sayable: ٤٥ د، ٢ س ١٠ د، ١ ي ٣ س. */

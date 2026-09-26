@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Signpost, Loader2, Plus, Trash2, Check, Power, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
+import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiLoader4Line, RiShutDownLine, RiSignpostLine, RiSparkling2Line } from '@remixicon/react';
 
 /**
  * OLD ADDRESSES THAT STILL ARRIVE.
@@ -105,7 +105,7 @@ export function StoreRoutesScreen() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -118,7 +118,7 @@ export function StoreRoutesScreen() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <Signpost className="h-5 w-5 text-[var(--sys-primary)]" />
+            <RiSignpostLine className="h-5 w-5 text-[var(--sys-primary)]" />
             المسارات
           </h1>
           <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
@@ -128,12 +128,12 @@ export function StoreRoutesScreen() {
         <div className="flex items-center gap-2">
           {msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-              {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
+              {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
           )}
           <Button size="sm" disabled={busy || !!adding} onClick={() => setAdding({ from: '/lp/', to: '/lp/', kind: 302 })}>
-            <Plus className="h-3.5 w-3.5" /> تحويل جديد
+            <RiAddCircleLine className="h-4 w-4" /> تحويل جديد
           </Button>
         </div>
       </header>
@@ -142,7 +142,7 @@ export function StoreRoutesScreen() {
       {suggestions.length > 0 && (
         <section className="space-y-2 rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3">
           <p className="flex items-center gap-1.5 text-xs font-bold text-[var(--sys-warning)]">
-            <Sparkles className="h-3.5 w-3.5" />
+            <RiSparkling2Line className="h-4 w-4" />
             {suggestions.length === 1 ? 'اقتراح ينتظر قرارك' : `${suggestions.length} اقتراحات تنتظر قرارك`}
           </p>
           <p className="text-xs leading-relaxed text-[var(--sys-warning)]">
@@ -240,7 +240,7 @@ export function StoreRoutesScreen() {
                       title={row.isActive ? 'أوقفه' : 'شغّله'}
                       className="rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-40"
                     >
-                      <Power className="h-4 w-4" />
+                      <RiShutDownLine className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
@@ -249,7 +249,7 @@ export function StoreRoutesScreen() {
                       title="حذف"
                       className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10 disabled:opacity-40"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <RiDeleteBinLine className="h-4 w-4" />
                     </button>
                   </div>
                 </td>

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, RotateCcw, Wallet as WalletIcon, Pencil, Trash2, Power, Check, X} from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { useConfirm } from '@/components/ui/Confirm';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAddCircleLine, RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiShutDownLine, RiWallet3Line } from '@remixicon/react';
 
 /**
  * /finance/wallets — balances and the movement ledger. A recorded movement is
@@ -166,17 +166,17 @@ export function WalletsScreen() {
           onClick={() => setCreating(true)}
           className="h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 shrink-0"
         >
-          <Plus className="w-3.5 h-3.5" /> محفظة جديدة
+          <RiAddCircleLine className="w-4 h-4" /> محفظة جديدة
         </button>
       </div>
 
       {!wallets ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : wallets.length === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <WalletIcon className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
+          <RiWallet3Line className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا توجد محافظ بعد — أنشئ واحدة من الزر أعلاه.
         </p>
       ) : (
@@ -225,14 +225,14 @@ export function WalletsScreen() {
                     title="احفظ"
                     className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] disabled:opacity-40"
                   >
-                    <Check className="w-4 h-4" />
+                    <RiCheckLine className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setRenaming(false)}
                     title="ألغِ"
                     className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
                   >
-                    <X className="w-4 h-4" />
+                    <RiCloseLine className="w-4 h-4" />
                   </button>
                 </span>
               ) : (
@@ -247,7 +247,7 @@ export function WalletsScreen() {
                       title="عدّل الاسم"
                       className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <RiPencilLine className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() =>
@@ -264,15 +264,15 @@ export function WalletsScreen() {
                           : 'text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)]'
                       }`}
                     >
-                      <Power className="w-4 h-4" />
+                      <RiShutDownLine className="w-4 h-4" />
                     </button>
-                    <button
+                    <button aria-label="احذف"
                       onClick={removeWallet}
                       disabled={busy}
                       title="احذف"
                       className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-40"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <RiDeleteBinLine className="w-4 h-4" />
                     </button>
                     <span className="mx-1 h-5 w-px bg-[var(--sys-border)]" />
                   </>
@@ -282,14 +282,14 @@ export function WalletsScreen() {
                   onClick={() => setRecordOpen(true)}
                   className="h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  <Plus className="w-3.5 h-3.5" /> حركة جديدة
+                  <RiAddCircleLine className="w-4 h-4" /> حركة جديدة
                 </button>
               </span>
             </div>
 
             {!movements ? (
               <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-12">
-                <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+                <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
               </div>
             ) : movements.length === 0 ? (
               <p className="text-sm text-[var(--sys-muted-foreground)] py-10 text-center">لا حركات بعد.</p>
@@ -333,7 +333,7 @@ export function WalletsScreen() {
                             onClick={() => setReverseFor(m)}
                             className="text-xs text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1"
                           >
-                            <RotateCcw className="w-3 h-3" /> قيد عكسي
+                            <RiArrowGoBackLine className="icon-mirror w-4 h-4" /> قيد عكسي
                           </button>
                         )}
                       </td>

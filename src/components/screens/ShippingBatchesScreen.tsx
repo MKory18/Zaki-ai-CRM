@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Barcode, Boxes, Truck, Bike, Loader2, Printer, Send, Lock, Download, Plus, ScanLine } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import type { DispatchSummary } from '@/lib/courier-dispatch';
 import { arDateShort } from '@/lib/format';
@@ -10,6 +9,7 @@ import { describeRefused, openWaybills, WaybillError } from '@/components/labels
 import { useTell } from '@/components/ui/Confirm';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { ScanSheet } from '@/components/scan/ScanButton';
+import { RiAddCircleLine, RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader4Line, RiLockLine, RiPrinterLine, RiQrScan2Line, RiSendPlaneLine, RiStackLine, RiTruckLine } from '@remixicon/react';
 
 /**
  * /ops/batches — the handovers to the couriers.
@@ -224,7 +224,7 @@ export function ShippingBatchesScreen() {
   if (!batches) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -240,7 +240,7 @@ export function ShippingBatchesScreen() {
     <div className="max-w-4xl space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-          <Boxes className="w-6 h-6 text-[var(--sys-primary)]" />
+          <RiStackLine className="w-6 h-6 text-[var(--sys-primary)]" />
           دفعات الشحن
         </h1>
         <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
@@ -272,7 +272,7 @@ export function ShippingBatchesScreen() {
           className="ms-auto inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:bg-[var(--sys-primary)]"
           title="زبون اتصل وطلب — يُنشأ مؤكداً ويذهب مباشرة إلى التجهيز"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <RiAddCircleLine className="w-4 h-4" />
           أضف طلباً مؤكداً
         </button>
 
@@ -307,9 +307,9 @@ export function ShippingBatchesScreen() {
                   {b.provider && (
                     <span className="inline-flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)]">
                       {b.provider.kind === 'AGENT' ? (
-                        <Bike className="w-3 h-3 text-[var(--sys-primary)]" />
+                        <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" />
                       ) : (
-                        <Truck className="w-3 h-3 text-[var(--sys-muted)]" />
+                        <RiTruckLine className="w-4 h-4 text-[var(--sys-muted)]" />
                       )}
                       {b.provider.name}
                     </span>
@@ -363,7 +363,7 @@ export function ShippingBatchesScreen() {
                     disabled={busy === b.id || b._count.orders === 0}
                     className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
-                    {busy === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
+                    {busy === b.id ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiPrinterLine className="w-4 h-4" />}
                     طباعة بوالص الدفعة
                   </button>
 
@@ -373,7 +373,7 @@ export function ShippingBatchesScreen() {
                     title="امسح كل طرد قبل تسليمه — يقول لك إن كان من هذه الدفعة"
                     className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
-                    <ScanLine className="w-3.5 h-3.5" />
+                    <RiQrScan2Line className="w-4 h-4" />
                     تحقّق من الطرود
                   </button>
 
@@ -383,7 +383,7 @@ export function ShippingBatchesScreen() {
                     title="نفس البوالص كملف PDF — الحفظ لا يعلّم الطلبات مطبوعة"
                     className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <RiDownload2Line className="w-4 h-4" />
                     PDF
                   </button>
 
@@ -393,11 +393,11 @@ export function ShippingBatchesScreen() {
                     title="ملف للرفع الجماعي عند شركات الشحن التي تقبله بدل الورق"
                     className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <RiDownload2Line className="w-4 h-4" />
                     CSV
                   </button>
 
-                  {/* Send the orders to the courier and take their barcodes.
+                  {/* RiSendPlaneLine the orders to the courier and take their barcodes.
                       Separate from marking the batch handed over: one is a
                       call to their server, the other is our own record, and
                       a courier's API being down must not stop a warehouse
@@ -413,7 +413,7 @@ export function ShippingBatchesScreen() {
                       disabled={busy === b.id || b._count.orders === 0}
                       className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-primary)] text-[var(--sys-primary)] font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
                     >
-                      {busy === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Barcode className="w-3.5 h-3.5" />}
+                      {busy === b.id ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiBarcodeLine className="w-4 h-4" />}
                       رحّل إلى الشركة واجلب الباركود
                     </button>
                   )}
@@ -423,7 +423,7 @@ export function ShippingBatchesScreen() {
                       title="هذه الشركة غير مربوطة بنظامها — البوليصة تُطبع من عندنا والباركود يُدخَل يدوياً عند استلامه."
                       className="inline-flex items-center gap-1 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-2.5 py-1.5 text-xs text-[var(--sys-muted-foreground)]"
                     >
-                      <Barcode className="h-3.5 w-3.5" />
+                      <RiBarcodeLine className="h-4 w-4" />
                       يدوية — اطبع البوالص
                     </span>
                   )}
@@ -434,7 +434,7 @@ export function ShippingBatchesScreen() {
                       disabled={busy === b.id}
                       className="text-xs px-2.5 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
                     >
-                      <Send className="w-3.5 h-3.5" />
+                      <RiSendPlaneLine className="icon-mirror w-4 h-4" />
                       سُلّمت للشركة
                     </button>
                   )}
@@ -445,7 +445,7 @@ export function ShippingBatchesScreen() {
                       disabled={busy === b.id}
                       className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)] inline-flex items-center gap-1.5 disabled:opacity-50"
                     >
-                      <Lock className="w-3.5 h-3.5" />
+                      <RiLockLine className="w-4 h-4" />
                       أغلق الدفعة
                     </button>
                   )}

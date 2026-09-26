@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Loader2, Play, RotateCcw, XCircle } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAlertLine, RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiPlayLine, RiTimerLine } from '@remixicon/react';
 
 /**
  * /admin/jobs — is anything quietly not running?
@@ -91,7 +91,7 @@ export function JobsScreen() {
 
       {overdue.length > 0 && (
         <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <RiAlertLine className="w-4 h-4 shrink-0" />
           {overdue.length} مهمة تجاوزت موعدها — تحقّق من أن المجدول يعمل.
         </p>
       )}
@@ -101,7 +101,7 @@ export function JobsScreen() {
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
         <>
@@ -123,11 +123,11 @@ export function JobsScreen() {
                   <div className="min-w-[240px]">
                     <div className="flex items-center gap-2">
                       {job.last?.status === 'FAILED' ? (
-                        <XCircle className="w-4 h-4 text-[var(--sys-destructive)]" />
+                        <RiCloseCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                       ) : job.overdue ? (
-                        <Clock className="w-4 h-4 text-[var(--sys-warning)]" />
+                        <RiTimerLine className="w-4 h-4 text-[var(--sys-warning)]" />
                       ) : (
-                        <CheckCircle2 className="w-4 h-4 text-[var(--sys-success)]" />
+                        <RiCheckboxCircleLine className="w-4 h-4 text-[var(--sys-success)]" />
                       )}
                       <span className="text-sm font-medium text-[var(--sys-heading)]" dir="ltr">{job.name}</span>
                       <span className="text-xs text-[var(--sys-muted)]">{job.schedule}</span>
@@ -179,7 +179,7 @@ export function JobsScreen() {
                     }}
                     className="h-8 px-3 rounded-lg border border-[var(--sys-border)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
                   >
-                    {running === job.name ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                    {running === job.name ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiPlayLine className="w-4 h-4" />}
                     شغّلها الآن
                   </button>
 
@@ -205,7 +205,7 @@ export function JobsScreen() {
                       }}
                       className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 text-xs font-medium text-[var(--sys-destructive)] disabled:opacity-50"
                     >
-                      <RotateCcw className="h-3.5 w-3.5" />
+                      <RiArrowGoBackLine className="icon-mirror h-4 w-4" />
                       أعد تفعيلها
                     </button>
                   )}

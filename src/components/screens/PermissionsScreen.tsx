@@ -19,9 +19,7 @@ import {
   type ScopeValue, type CatalogItem,
 } from '@/lib/permission-catalog';
 import { format } from 'date-fns';
-import {
-  ShieldCheck, Search, Plus, Pencil, Copy, Trash2, ChevronDown, ChevronUp, Users, KeyRound, X, RotateCcw,
-} from 'lucide-react';
+import { RiAddCircleLine, RiArrowDownSLine, RiArrowGoBackLine, RiArrowUpSLine, RiCloseLine, RiDeleteBinLine, RiFileCopyLine, RiGroupLine, RiKey2Line, RiPencilLine, RiSearchLine, RiShieldCheckLine } from '@remixicon/react';
 
 interface RolePerm { permission: string; scope: string; scopeIds?: unknown }
 interface RoleRow {
@@ -336,7 +334,7 @@ export function PermissionsScreen() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center gap-2">
-              <ShieldCheck className="w-6 h-6 text-[var(--sys-primary)]" />
+              <RiShieldCheckLine className="w-6 h-6 text-[var(--sys-primary)]" />
               {ar ? 'الأدوار والصلاحيات' : 'Roles & Permissions'}
             </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
@@ -347,7 +345,7 @@ export function PermissionsScreen() {
           </div>
           <div className="flex items-center gap-2">
             <div className="relative w-52">
-              <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[var(--sys-muted)]" />
+              <RiSearchLine className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[var(--sys-muted)]" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -357,7 +355,7 @@ export function PermissionsScreen() {
             </div>
             {canCreate && (
               <Button onClick={openCreate}>
-                <Plus className="w-4 h-4" />
+                <RiAddCircleLine className="w-4 h-4" />
                 {ar ? 'دور جديد' : 'New Role'}
               </Button>
             )}
@@ -382,7 +380,7 @@ export function PermissionsScreen() {
         {roles && filteredRoles.length === 0 && !loadError && (
           <Card>
             <CardContent className="text-center py-12">
-              <ShieldCheck className="w-10 h-10 text-[var(--sys-border-strong)] mx-auto mb-3" />
+              <RiShieldCheckLine className="w-6 h-6 text-[var(--sys-border-strong)] mx-auto mb-3" />
               <p className="text-sm text-[var(--sys-muted-foreground)]">
                 {search ? (ar ? 'لا نتائج مطابقة للبحث' : 'No roles match your search') : (ar ? 'لا توجد أدوار بعد' : 'No roles yet')}
               </p>
@@ -412,14 +410,14 @@ export function PermissionsScreen() {
                     </div>
                     {isSuperAdminRole && (
                       <span title={ar ? 'وصول كامل مركزيًا' : 'Central full access'} className="cursor-help">
-                        <Badge variant="purple"><ShieldCheck className="w-3 h-3 me-1" />{ar ? 'وصول كامل مركزيًا' : 'Full access'}</Badge>
+                        <Badge variant="purple"><RiShieldCheckLine className="w-4 h-4 me-1" />{ar ? 'وصول كامل مركزيًا' : 'Full access'}</Badge>
                       </span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-3 mt-3 text-xs text-[var(--sys-muted-foreground)]">
-                    <span className="inline-flex items-center gap-1"><Users className="w-3.5 h-3.5" />{role.usersCount} {ar ? 'مستخدم' : 'users'}</span>
-                    <span className="inline-flex items-center gap-1"><KeyRound className="w-3.5 h-3.5" />{role.permissionsCount} {ar ? 'صلاحية' : 'permissions'}</span>
+                    <span className="inline-flex items-center gap-1"><RiGroupLine className="w-4 h-4" />{role.usersCount} {ar ? 'مستخدم' : 'users'}</span>
+                    <span className="inline-flex items-center gap-1"><RiKey2Line className="w-4 h-4" />{role.permissionsCount} {ar ? 'صلاحية' : 'permissions'}</span>
                   </div>
 
                   <div className="flex items-center gap-1.5 mt-4">
@@ -431,17 +429,17 @@ export function PermissionsScreen() {
                       <>
                         {canEditThis && (
                           <Button variant="outline" size="sm" onClick={() => openEdit(role)}>
-                            <Pencil className="w-3.5 h-3.5" />{ar ? 'تعديل' : 'Edit'}
+                            <RiPencilLine className="w-4 h-4" />{ar ? 'تعديل' : 'Edit'}
                           </Button>
                         )}
                         {canCreate && (
                           <Button variant="outline" size="sm" onClick={() => openDuplicate(role)}>
-                            <Copy className="w-3.5 h-3.5" />{ar ? 'نسخ' : 'Duplicate'}
+                            <RiFileCopyLine className="w-4 h-4" />{ar ? 'نسخ' : 'Duplicate'}
                           </Button>
                         )}
                         {canDeleteThis && (
                           <Button variant="outline" size="sm" className="text-[var(--sys-destructive)]" onClick={() => { setDeletingRole(role); setReplacementRoleId(''); setDeleteError(null); }}>
-                            <Trash2 className="w-3.5 h-3.5" />{ar ? 'حذف' : 'Delete'}
+                            <RiDeleteBinLine className="w-4 h-4" />{ar ? 'حذف' : 'Delete'}
                           </Button>
                         )}
                       </>
@@ -472,7 +470,7 @@ export function PermissionsScreen() {
 
             <div className="flex items-center justify-between gap-3">
               <div className="relative flex-1 max-w-xs">
-                <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[var(--sys-muted)]" />
+                <RiSearchLine className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[var(--sys-muted)]" />
                 <Input
                   value={moduleSearch}
                   onChange={(e) => setModuleSearch(e.target.value)}
@@ -483,7 +481,7 @@ export function PermissionsScreen() {
               <div className="flex items-center gap-2">
                 {editingRole && defaultsAvailable && (
                   <Button variant="outline" size="sm" onClick={restoreDefaults} loading={restoring}>
-                    <RotateCcw className="w-3.5 h-3.5" />
+                    <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
                     {ar ? 'إرجاع للافتراضي' : 'Restore defaults'}
                   </Button>
                 )}
@@ -519,7 +517,7 @@ export function PermissionsScreen() {
                           </span>
                         )}
                       </span>
-                      {open ? <ChevronUp className="w-4 h-4 text-[var(--sys-muted)]" /> : <ChevronDown className="w-4 h-4 text-[var(--sys-muted)]" />}
+                      {open ? <RiArrowUpSLine className="w-4 h-4 text-[var(--sys-muted)]" /> : <RiArrowDownSLine className="w-4 h-4 text-[var(--sys-muted)]" />}
                     </button>
                     {open && (
                       <div className="divide-y divide-[var(--sys-surface)]">
@@ -581,7 +579,7 @@ export function PermissionsScreen() {
                               {d && d.scope === 'SPECIFIC' && (
                                 <div className="mt-2 ms-6 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-3 space-y-2">
                                   <div className="relative">
-                                    <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-3.5 h-3.5 text-[var(--sys-muted)]" />
+                                    <RiSearchLine className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[var(--sys-muted)]" />
                                     <Input
                                       value={productQuery}
                                       onChange={(e) => setProductQuery(e.target.value)}
@@ -619,7 +617,7 @@ export function PermissionsScreen() {
                                           <span key={id} className="inline-flex items-center gap-1 text-xs font-medium bg-[var(--sys-primary-soft)] text-[var(--sys-primary)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5">
                                             {prod?.name ?? id}
                                             <button onClick={() => toggleScopeId(item.key, id)} className="cursor-pointer hover:text-[var(--sys-destructive)]">
-                                              <X className="w-3 h-3" />
+                                              <RiCloseLine className="w-4 h-4" />
                                             </button>
                                           </span>
                                         );

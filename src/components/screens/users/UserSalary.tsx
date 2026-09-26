@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Banknote, Loader2, Wallet } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { RiCashLine, RiLoader4Line, RiWallet3Line } from '@remixicon/react';
 
 /**
  * WHAT THIS PERSON IS PAID, AND PAYING IT.
@@ -154,7 +154,7 @@ export function UserSalary({
   return (
     <div className="col-span-full rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
       <p className="mb-1.5 flex items-center gap-1 text-xs text-[var(--sys-muted)]">
-        <Banknote className="h-3 w-3" /> الراتب
+        <RiCashLine className="h-4 w-4" /> الراتب
       </p>
 
       <div className="flex flex-wrap items-end gap-2">
@@ -201,7 +201,7 @@ export function UserSalary({
             onClick={openPay}
             className="flex h-10 items-center gap-1 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-xs text-[var(--sys-foreground)]"
           >
-            <Wallet className="h-3.5 w-3.5" /> اصرف الراتب
+            <RiWallet3Line className="h-4 w-4" /> اصرف الراتب
           </button>
         )}
       </div>
@@ -217,7 +217,7 @@ export function UserSalary({
         <Modal isOpen onClose={() => setPaying(false)} title="صرف الراتب" maxWidth="md">
           {!data && !payError && (
             <p className="flex items-center justify-center gap-2 py-6 text-sm text-[var(--sys-muted-foreground)]">
-              <Loader2 className="h-4 w-4 animate-spin" /> جارٍ الحساب…
+              <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ الحساب…
             </p>
           )}
           {payError && <p className="text-sm text-[var(--sys-destructive)]">{payError}</p>}

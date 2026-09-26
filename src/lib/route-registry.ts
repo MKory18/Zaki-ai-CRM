@@ -39,7 +39,9 @@ export type PermissionCheck = (user: SessionUser, permission: string) => boolean
 export interface RouteDef {
   path: string;
   label: string;
-  icon: string; // lucide-react icon name
+  /** A NAME, not a component: a route is data. src/components/shell/icons.ts
+   *  turns it into a glyph, and decides line or fill. */
+  icon: string;
   permissions: string[] | null;
 }
 

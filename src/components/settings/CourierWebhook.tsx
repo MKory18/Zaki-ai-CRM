@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Check, Copy, Loader2, RefreshCw, Webhook } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
 import { copyText } from '@/lib/clipboard';
+import { RiAlertLine, RiCheckLine, RiExchangeLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine } from '@remixicon/react';
 
 /**
  * The address the courier pushes statuses to.
@@ -88,7 +88,7 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-xs font-bold text-[var(--sys-heading)]">
-            <Webhook className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
+            <RiExchangeLine className="h-4 w-4 text-[var(--sys-primary)]" />
             رابط استقبال الحالات
           </p>
           <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
@@ -106,7 +106,7 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={mint} disabled={busy}>
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiRefreshLine className="h-4 w-4" />}
           {status.configured ? 'رابط جديد' : 'أنشئ الرابط'}
         </Button>
       </div>
@@ -115,7 +115,7 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
       {url && (
         <div className="space-y-1.5 rounded-lg border border-[var(--sys-primary-soft)] bg-[var(--sys-primary-soft)] p-2.5">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--sys-primary)]">
-            <AlertTriangle className="h-3.5 w-3.5" />
+            <RiAlertLine className="h-4 w-4" />
             انسخه الآن — لن يُعرَض مرة أخرى.
           </p>
           <div className="flex items-center gap-1.5">
@@ -131,7 +131,7 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
               title="انسخ"
               className="shrink-0 cursor-pointer rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-1.5 text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
             >
-              {copied ? <Check className="h-3.5 w-3.5 text-[var(--sys-success)]" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiFileCopyLine className="h-4 w-4" />}
             </button>
           </div>
           <p className="text-xs text-[var(--sys-muted-foreground)]">

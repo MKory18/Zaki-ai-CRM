@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Globe, Loader2, Check, Copy, RefreshCw, ShieldCheck, ShieldAlert, ShieldQuestion, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import type { DomainCheck } from '@/lib/domain-verify';
+import { RiCheckLine, RiDeleteBinLine, RiEarthLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiShieldFlashLine, RiShieldKeyholeLine } from '@remixicon/react';
 
 /**
  * THE SHOP'S OWN ADDRESS.
@@ -62,7 +62,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
           className="shrink-0 rounded-md border border-[var(--sys-border)] p-1.5 text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
           aria-label={`انسخ ${label}`}
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-[var(--sys-success)]" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiFileCopyLine className="h-4 w-4" />}
         </button>
       </div>
     </div>
@@ -128,7 +128,7 @@ export function StoreDomainScreen() {
   if (loading || !data) {
     return (
       <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -141,7 +141,7 @@ export function StoreDomainScreen() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <Globe className="h-5 w-5 text-[var(--sys-primary)]" />
+            <RiEarthLine className="h-5 w-5 text-[var(--sys-primary)]" />
             نطاق المتجر
           </h1>
           <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
@@ -150,7 +150,7 @@ export function StoreDomainScreen() {
         </div>
         {msg && (
           <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-            {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
+            {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
             {msg.text}
           </span>
         )}
@@ -201,7 +201,7 @@ export function StoreDomainScreen() {
                   onChange={(e) => setDraft(e.target.value)}
                 />
                 <Button size="sm" disabled={busy || draft.trim() === (data.domain ?? '')} onClick={() => void bind()}>
-                  {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} اربطه
+                  {busy && <RiLoader4Line className="h-4 w-4 animate-spin" />} اربطه
                 </Button>
                 {data.domain && (
                   <button
@@ -211,7 +211,7 @@ export function StoreDomainScreen() {
                     className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10 disabled:opacity-40"
                     title="افصل النطاق"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <RiDeleteBinLine className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -229,7 +229,7 @@ export function StoreDomainScreen() {
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-bold text-[var(--sys-heading)]">حالة التحقّق</p>
                   <Button size="sm" variant="secondary" disabled={busy} onClick={() => void check()}>
-                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiRefreshLine className="h-4 w-4" />}
                     تحقّق الآن
                   </Button>
                 </div>
@@ -264,11 +264,11 @@ export function StoreDomainScreen() {
                       </li>
                       <li className="flex items-center gap-1.5 text-[var(--sys-muted-foreground)]">
                         {last.ssl === 'VALID' ? (
-                          <ShieldCheck className="h-3.5 w-3.5 text-[var(--sys-success)]" />
+                          <RiShieldCheckLine className="h-4 w-4 text-[var(--sys-success)]" />
                         ) : last.ssl === 'INVALID' ? (
-                          <ShieldAlert className="h-3.5 w-3.5 text-[var(--sys-destructive)]" />
+                          <RiShieldFlashLine className="h-4 w-4 text-[var(--sys-destructive)]" />
                         ) : (
-                          <ShieldQuestion className="h-3.5 w-3.5 text-[var(--sys-muted)]" />
+                          <RiShieldKeyholeLine className="h-4 w-4 text-[var(--sys-muted)]" />
                         )}
                         شهادة SSL:{' '}
                         {last.ssl === 'VALID' ? 'صالحة' : last.ssl === 'INVALID' ? 'غير صالحة' : 'غير معروفة'}

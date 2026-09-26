@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Globe2, Loader2, Phone } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { RiCheckLine, RiEarthLine, RiLoader4Line, RiPhoneLine } from '@remixicon/react';
 
 /**
  * WHAT BELONGS TO THE EMPLOYEE, ON THE EMPLOYEE'S PAGE.
@@ -100,7 +100,7 @@ export function UserGeoAccessSection({ userId, canEdit }: { userId: string; canE
     <Card>
       <CardContent className="p-5">
         <h3 className="mb-1 flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)]">
-          <Globe2 className="h-3.5 w-3.5" /> البلدان والمتاجر
+          <RiEarthLine className="h-4 w-4" /> البلدان والمتاجر
         </h3>
         <p className="mb-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           البلد وحده يفتح كل متاجره؛ اختيار متاجر بعينها يحصره فيها. ومن يملك صلاحية إدارة البلدان والمتاجر
@@ -108,7 +108,7 @@ export function UserGeoAccessSection({ userId, canEdit }: { userId: string; canE
         </p>
 
         {countries === null ? (
-          <div className="flex h-16 items-center justify-center text-[var(--sys-muted-foreground)]"><Loader2 className="h-4 w-4 animate-spin" /></div>
+          <div className="flex h-16 items-center justify-center text-[var(--sys-muted-foreground)]"><RiLoader4Line className="h-4 w-4 animate-spin" /></div>
         ) : (
           <div className="space-y-2">
             {countries.map((c) => {
@@ -147,7 +147,7 @@ export function UserGeoAccessSection({ userId, canEdit }: { userId: string; canE
         {canEdit && (
           <div className="mt-3 flex items-center gap-2">
             <Button size="sm" onClick={save} disabled={busy || !dirty}>
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiCheckLine className="h-4 w-4" />}
               احفظ الوصول
             </Button>
             {msg && <span className={`text-xs font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</span>}
@@ -188,7 +188,7 @@ export function UserPhoneField({ userId, initial, canEdit }: { userId: string; i
 
   return (
     <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-      <p className="flex items-center gap-1 text-xs text-[var(--sys-muted)]"><Phone className="h-3 w-3" /> الهاتف</p>
+      <p className="flex items-center gap-1 text-xs text-[var(--sys-muted)]"><RiPhoneLine className="h-4 w-4" /> الهاتف</p>
       {canEdit ? (
         <div className="mt-1 flex items-center gap-1.5">
           <input
@@ -200,7 +200,7 @@ export function UserPhoneField({ userId, initial, canEdit }: { userId: string; i
             className="h-8 min-w-0 flex-1 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs font-bold text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
           />
           <Button size="sm" variant="outline" onClick={save} disabled={busy || phone.trim() === saved.trim()}>
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'حفظ'}
+            {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : 'حفظ'}
           </Button>
         </div>
       ) : (

@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut, Menu, Repeat, Search, Store } from 'lucide-react';
 import { apiFetch } from '@/lib/api-client';
 import { signOut } from '@/lib/sign-out';
 import { NotificationBell } from '@/components/shell/NotificationBell';
 import { ConfirmationCounter } from './ConfirmationCounter';
 import { ShiftChip } from '@/components/attendance/ShiftChip';
 import { ROLE_LABELS } from '@/types/auth';
+import { RiLogoutBoxLine, RiMenuLine, RiRepeatLine, RiSearchLine, RiStore2Line } from '@remixicon/react';
 
 export interface ShellContextInfo {
   storeName: string;
@@ -45,7 +45,7 @@ export function Header({
   return (
     <header className="sticky top-0 z-30 h-[72px] bg-[var(--sys-card)] border-b border-[var(--sys-border)] flex items-center gap-3 px-4 md:px-6">
       <button onClick={onMenuClick} className="md:hidden p-2 rounded-lg hover:bg-[var(--sys-surface)]" aria-label="القائمة">
-        <Menu className="w-5 h-5 text-[var(--sys-foreground)]" />
+        <RiMenuLine className="w-5 h-5 text-[var(--sys-foreground)]" />
       </button>
 
       {/* Country + store context, always visible: every request carries it */}
@@ -55,7 +55,7 @@ export function Header({
           scrolls sideways into grey. The name already truncates; it just
           had no room in which to. */}
       <div className="flex min-w-0 shrink items-center gap-2 px-3 py-2 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)]">
-        <Store className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
+        <RiStore2Line className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
         <div className="leading-tight min-w-0">
           <p className="text-xs font-semibold text-[var(--sys-heading)] truncate max-w-[160px]">{context.storeName}</p>
           <p className="text-xs text-[var(--sys-muted-foreground)] truncate">
@@ -69,7 +69,7 @@ export function Header({
             className="mr-1 p-1.5 rounded-md text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-card)]"
             title="تبديل البلد أو المتجر"
           >
-            <Repeat className="w-4 h-4" />
+            <RiRepeatLine className="w-4 h-4" />
           </Link>
         )}
       </div>
@@ -81,7 +81,7 @@ export function Header({
           customer is not the same thing as a box only the owner has. */}
       {canSearch && (
       <form onSubmit={submitSearch} className="hidden md:flex flex-1 max-w-md items-center relative">
-        <Search className="w-4 h-4 text-[var(--sys-muted)] absolute right-3" />
+        <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute right-3" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -113,12 +113,12 @@ export function Header({
             {ROLE_LABELS[userRole as keyof typeof ROLE_LABELS]?.ar ?? userRole}
           </p>
         </div>
-        <button
+        <button aria-label="تسجيل الخروج"
           onClick={logout}
           className="p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
           title="تسجيل الخروج"
         >
-          <LogOut className="w-5 h-5" />
+          <RiLogoutBoxLine className="icon-mirror w-5 h-5" />
         </button>
       </div>
     </header>

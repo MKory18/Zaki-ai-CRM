@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Tag, Plus, Pencil, Trash2, Star, Loader2, ChevronUp, ChevronDown, Wand2, EyeOff,
-} from 'lucide-react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
+import { RiAddCircleLine, RiArrowDownSLine, RiArrowUpSLine, RiDeleteBinLine, RiEyeOffLine, RiLoader4Line, RiMagicLine, RiPencilLine, RiPriceTag3Line, RiStarLine } from '@remixicon/react';
 
 /**
  * A product's offers, edited where the product is.
@@ -177,7 +175,7 @@ export function ProductOffers({
       <CardHeader
         title={
           <span className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-[var(--sys-primary)]" />
+            <RiPriceTag3Line className="w-4 h-4 text-[var(--sys-primary)]" />
             <span>عروض المنتج</span>
           </span>
         }
@@ -186,7 +184,7 @@ export function ProductOffers({
             <div className="flex items-center gap-2">
               {offers?.length === 0 && basePrice > 0 && (
                 <Button size="sm" variant="outline" onClick={generate} disabled={busy}>
-                  <Wand2 className="w-3.5 h-3.5" /> توليد سريع
+                  <RiMagicLine className="w-4 h-4" /> توليد سريع
                 </Button>
               )}
               <Button
@@ -207,7 +205,7 @@ export function ProductOffers({
                   })
                 }
               >
-                <Plus className="w-3.5 h-3.5" /> عرض جديد
+                <RiAddCircleLine className="w-4 h-4" /> عرض جديد
               </Button>
             </div>
           )
@@ -225,7 +223,7 @@ export function ProductOffers({
 
         {offers === null ? (
           <p className="flex items-center gap-2 text-xs text-[var(--sys-muted-foreground)]">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" /> جارٍ التحميل…
+            <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
           </p>
         ) : offers.length === 0 ? (
           <p className="text-xs text-[var(--sys-muted)]">
@@ -255,7 +253,7 @@ export function ProductOffers({
                         className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
                         title="لأعلى"
                       >
-                        <ChevronUp className="w-3 h-3" />
+                        <RiArrowUpSLine className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => move(i, 1)}
@@ -263,7 +261,7 @@ export function ProductOffers({
                         className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
                         title="لأسفل"
                       >
-                        <ChevronDown className="w-3 h-3" />
+                        <RiArrowDownSLine className="w-4 h-4" />
                       </button>
                     </div>
                   )}
@@ -271,8 +269,8 @@ export function ProductOffers({
                   <div className="min-w-0 flex-1 basis-[55%]">
                     <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
                       <span className="truncate">{o.name}</span>
-                      {o.isDefault && <Star className="w-3.5 h-3.5 shrink-0 fill-[var(--sys-warning)] text-[var(--sys-warning)]" />}
-                      {inactive && <EyeOff className="w-3.5 h-3.5 shrink-0 text-[var(--sys-muted)]" />}
+                      {o.isDefault && <RiStarLine className="w-4 h-4 shrink-0 fill-[var(--sys-warning)] text-[var(--sys-warning)]" />}
+                      {inactive && <RiEyeOffLine className="w-4 h-4 shrink-0 text-[var(--sys-muted)]" />}
                     </p>
                     {/* Every run of digits + Latin currency is isolated, or
                         Arabic bidi reorders "100 USD · 50 USD/قطعة" into
@@ -303,7 +301,7 @@ export function ProductOffers({
                           disabled={busy}
                           className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                         >
-                          <Star className="w-4 h-4" />
+                          <RiStarLine className="w-4 h-4" />
                         </button>
                       )}
                       <button
@@ -312,7 +310,7 @@ export function ProductOffers({
                         disabled={busy}
                         className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                       >
-                        <EyeOff className="w-4 h-4" />
+                        <RiEyeOffLine className="w-4 h-4" />
                       </button>
                       <button
                         title="تعديل"
@@ -320,7 +318,7 @@ export function ProductOffers({
                         disabled={busy}
                         className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)]"
                       >
-                        <Pencil className="w-4 h-4" />
+                        <RiPencilLine className="w-4 h-4" />
                       </button>
                       <button
                         title="حذف"
@@ -328,7 +326,7 @@ export function ProductOffers({
                         disabled={busy}
                         className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <RiDeleteBinLine className="w-4 h-4" />
                       </button>
                     </div>
                   )}
@@ -402,7 +400,7 @@ export function ProductOffers({
             <div className="flex justify-end gap-2">
               <Button variant="secondary" size="sm" onClick={() => setDraft(null)}>إلغاء</Button>
               <Button size="sm" onClick={save} disabled={busy || !draft.name?.trim()}>
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} حفظ العرض
+                {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiAddCircleLine className="w-4 h-4" />} حفظ العرض
               </Button>
             </div>
           </div>

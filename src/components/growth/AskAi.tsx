@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Brain, Cpu, Loader2, Send, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 import { apiJson } from '@/lib/api-client';
+import { RiBrainLine, RiCpuLine, RiEqualizer2Line, RiLoader4Line, RiSendPlaneLine } from '@remixicon/react';
 
 /**
  * ASKING THE AI ABOUT THIS COMPANY.
@@ -84,20 +84,20 @@ export function AskAi() {
   return (
     <section className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
       <header className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-[var(--sys-border)]">
-        <Brain className="w-4 h-4 text-[var(--sys-primary)]" />
+        <RiBrainLine className="w-4 h-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">اسأل الذكاء عن أرقامك</h2>
         <span
           className="inline-flex items-center gap-1.5 text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg px-2 py-0.5"
           title={info.housePrompt ? `برومبت ثابت: ${info.housePrompt}` : 'لا برومبت ثابت'}
         >
-          <Cpu className="w-3 h-3 text-[var(--sys-muted)]" />
+          <RiCpuLine className="w-4 h-4 text-[var(--sys-muted)]" />
           {info.provider} · <span dir="ltr">{info.model}</span>
         </span>
         <Link
           href="/settings/ai"
           className="ms-auto inline-flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
         >
-          <Settings2 className="w-3.5 h-3.5" />
+          <RiEqualizer2Line className="w-4 h-4" />
           غيّر النموذج
         </Link>
       </header>
@@ -158,7 +158,7 @@ export function AskAi() {
             disabled={busy || !question.trim() || picked.length === 0}
             className="inline-flex items-center gap-1.5 h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:bg-[var(--sys-primary)] disabled:opacity-50"
           >
-            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiSendPlaneLine className="icon-mirror w-4 h-4" />}
             حلّل
           </button>
           <span className="text-xs text-[var(--sys-muted)]">Ctrl + Enter</span>

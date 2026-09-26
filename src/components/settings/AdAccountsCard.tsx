@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Megaphone, Loader2, Trash2, AlertTriangle, Plug, ExternalLink, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
+import { RiAlertLine, RiArrowDownSLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiMegaphoneLine, RiPlugLine } from '@remixicon/react';
 
 /**
  * CONNECTING THE PLACES THE SPEND COMES FROM.
@@ -147,7 +147,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
   return (
     <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
       <div className="mb-1 flex items-center gap-2">
-        <Megaphone className="h-4 w-4 text-[var(--sys-primary)]" />
+        <RiMegaphoneLine className="h-4 w-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">حسابات الإعلانات</h2>
         {storeName && (
           <span className="rounded-lg bg-[var(--sys-surface-strong)] px-1.5 py-0.5 text-xs font-semibold text-[var(--sys-foreground)]">
@@ -162,7 +162,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
 
       {accounts === null ? (
         <div className="flex h-16 items-center justify-center text-[var(--sys-muted-foreground)]">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <RiLoader4Line className="h-4 w-4 animate-spin" />
         </div>
       ) : accounts.length > 0 ? (
         <div className="mb-3 space-y-2">
@@ -196,7 +196,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   title="فصل"
                   className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <RiDeleteBinLine className="h-4 w-4" />
                 </button>
               </div>
 
@@ -205,7 +205,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   failed" cannot. */}
               {a.status !== 'CONNECTED' && a.lastError && (
                 <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-[var(--sys-destructive-soft)] p-1.5 text-xs leading-relaxed text-[var(--sys-destructive)]">
-                  <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
+                  <RiAlertLine className="mt-px h-4 w-4 shrink-0" />
                   {a.lastError}
                 </p>
               )}
@@ -270,7 +270,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
           </p>
 
           <Button size="sm" onClick={connect} disabled={busy || !ready}>
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plug className="h-3.5 w-3.5" />}
+            {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiPlugLine className="h-4 w-4" />}
             اربط الحساب
           </Button>
 
@@ -290,7 +290,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
             onClick={() => setHowOpen((v) => !v)}
             className="mt-2 flex items-center gap-1 text-xs font-semibold text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
           >
-            <ChevronDown className={`h-3 w-3 transition ${howOpen ? 'rotate-180' : ''}`} />
+            <RiArrowDownSLine className={`h-4 w-4 transition ${howOpen ? 'rotate-180' : ''}`} />
             من أين أحصل على بيانات {active.short}؟
           </button>
 
@@ -304,7 +304,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-0.5 text-[var(--sys-muted-foreground)] hover:underline"
                 >
-                  {active.help.urlLabel} <ExternalLink className="h-2.5 w-2.5" />
+                  {active.help.urlLabel} <RiExternalLinkLine className="icon-mirror h-4 w-4" />
                 </a>
               </li>
               {active.help.steps.map((s, i) => (

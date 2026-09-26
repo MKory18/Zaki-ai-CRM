@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Radio, Plus, Pencil, Trash2, Loader2, Check, X } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { RiAddCircleLine, RiBroadcastLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 
 /**
  * /settings/channels — where this shop's orders come from.
@@ -134,7 +134,7 @@ export function ChannelsScreen() {
   if (!channels) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -146,7 +146,7 @@ export function ChannelsScreen() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-            <Radio className="w-6 h-6 text-[var(--sys-primary)]" />
+            <RiBroadcastLine className="w-6 h-6 text-[var(--sys-primary)]" />
             قنوات الطلبات
           </h1>
           <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
@@ -158,7 +158,7 @@ export function ChannelsScreen() {
             onClick={() => { setAdding(true); setError(null); }}
             className="px-3 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
           >
-            <Plus className="w-4 h-4" />
+            <RiAddCircleLine className="w-4 h-4" />
             قناة جديدة
           </button>
         )}
@@ -246,13 +246,13 @@ export function ChannelsScreen() {
                   disabled={busy === c.id}
                   className="h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                 >
-                  <Check className="w-3.5 h-3.5" />
+                  <RiCheckLine className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setEditing(null)}
                   className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <RiCloseLine className="w-4 h-4" />
                 </button>
               </div>
             ) : (
@@ -274,7 +274,7 @@ export function ChannelsScreen() {
                     className="p-1.5 rounded-md text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)]"
                     title="تعديل"
                   >
-                    <Pencil className="w-3.5 h-3.5" />
+                    <RiPencilLine className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => patch(c.id, { isActive: !c.isActive })}
@@ -290,7 +290,7 @@ export function ChannelsScreen() {
                       className="p-1.5 rounded-md text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       title="حذف — لا طلبات عليها"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <RiDeleteBinLine className="w-4 h-4" />
                     </button>
                   )}
                 </div>

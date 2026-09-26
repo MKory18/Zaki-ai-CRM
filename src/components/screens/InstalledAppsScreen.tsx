@@ -2,12 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  Blocks, Loader2, CheckCircle2, XCircle, Clock, RotateCw, ShieldCheck, AlertTriangle,
-} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
+import { RiAlertLine, RiArrowGoForwardLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLayoutMasonryLine, RiLoader4Line, RiShieldCheckLine, RiTimerLine } from '@remixicon/react';
 
 /**
  * /apps/installed — what is connected, and whether it is hearing us.
@@ -67,7 +65,7 @@ export function InstalledAppsScreen() {
   if (!shelf || !deliveries) {
     return (
       <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -80,7 +78,7 @@ export function InstalledAppsScreen() {
     <div className="max-w-5xl space-y-5">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-[var(--sys-heading)]">
-          <Blocks className="h-6 w-6 text-[var(--sys-primary)]" />
+          <RiLayoutMasonryLine className="h-6 w-6 text-[var(--sys-primary)]" />
           التطبيقات المثبتة
         </h1>
         <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">ما هو موصول بشركتك الآن، وسجلّ ما أُرسل إليه.</p>
@@ -109,7 +107,7 @@ export function InstalledAppsScreen() {
                 </span>
               </div>
               <p className={`mt-2 flex items-center gap-1.5 text-xs ${a.configured ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
-                {a.configured ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                {a.configured ? <RiShieldCheckLine className="h-4 w-4" /> : <RiAlertLine className="h-4 w-4" />}
                 {a.configured ? 'مهيَّأ' : 'غير مهيَّأ'}
               </p>
               <Link href={a.settingsPath} className="mt-2 inline-block text-xs font-bold text-[var(--sys-primary)] hover:underline">
@@ -163,7 +161,7 @@ export function InstalledAppsScreen() {
               </button>
             ))}
             <Button size="sm" variant="outline" onClick={load}>
-              <RotateCw className="h-3.5 w-3.5" /> تحديث
+              <RiArrowGoForwardLine className="icon-mirror h-4 w-4" /> تحديث
             </Button>
           </div>
         </div>
@@ -180,9 +178,9 @@ export function InstalledAppsScreen() {
                   onClick={() => setOpen(open === d.id ? null : d.id)}
                   className="flex w-full cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 p-3 text-start hover:bg-[var(--sys-surface)]"
                 >
-                  {d.status === 'OK' && <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--sys-success)]" />}
-                  {d.status === 'FAILED' && <XCircle className="h-4 w-4 shrink-0 text-[var(--sys-destructive)]" />}
-                  {d.status === 'PENDING' && <Clock className="h-4 w-4 shrink-0 text-[var(--sys-warning)]" />}
+                  {d.status === 'OK' && <RiCheckboxCircleLine className="h-4 w-4 shrink-0 text-[var(--sys-success)]" />}
+                  {d.status === 'FAILED' && <RiCloseCircleLine className="h-4 w-4 shrink-0 text-[var(--sys-destructive)]" />}
+                  {d.status === 'PENDING' && <RiTimerLine className="h-4 w-4 shrink-0 text-[var(--sys-warning)]" />}
 
                   <span className="font-mono text-xs font-bold text-[var(--sys-heading)]" dir="ltr">{d.event}</span>
                   <span className="text-xs text-[var(--sys-muted-foreground)]">{d.appCode}</span>

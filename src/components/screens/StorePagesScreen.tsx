@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { FileText, Loader2, Plus, Trash2, ExternalLink, ShieldAlert, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { PAGE_KIND_AR, REQUIRED_FOR_ADS, type PageKind } from '@/lib/store-pages';
+import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiExternalLinkLine, RiFileTextLine, RiLoader4Line, RiShieldFlashLine } from '@remixicon/react';
 
 /**
  * THE SHOP'S OWN PAGES.
@@ -132,7 +132,7 @@ export function StorePagesScreen() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -142,7 +142,7 @@ export function StorePagesScreen() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <FileText className="h-5 w-5 text-[var(--sys-primary)]" />
+            <RiFileTextLine className="h-5 w-5 text-[var(--sys-primary)]" />
             صفحات المتجر
           </h1>
           <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
@@ -152,12 +152,12 @@ export function StorePagesScreen() {
         <div className="flex items-center gap-2">
           {msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-              {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
+              {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
           )}
           <Button size="sm" onClick={() => void add()} disabled={saving}>
-            <Plus className="h-3.5 w-3.5" /> صفحة جديدة
+            <RiAddCircleLine className="h-4 w-4" /> صفحة جديدة
           </Button>
         </div>
       </header>
@@ -165,7 +165,7 @@ export function StorePagesScreen() {
       {/* The thing that stops a campaign, said in words. */}
       {missing.length > 0 && (
         <div className="flex items-start gap-2 rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sys-warning)]" />
+          <RiShieldFlashLine className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sys-warning)]" />
           <div className="text-xs leading-relaxed text-[var(--sys-warning)]">
             <p className="font-bold">
               {missing.length === REQUIRED_FOR_ADS.length
@@ -207,7 +207,7 @@ export function StorePagesScreen() {
                     className="rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)]"
                     title="افتحها كما يراها الزبون"
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <RiExternalLinkLine className="icon-mirror h-4 w-4" />
                   </a>
                 )}
                 <Button variant="secondary" size="sm" onClick={() => (openId === page.id ? setOpenId(null) : open(page))}>
@@ -220,7 +220,7 @@ export function StorePagesScreen() {
                     className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10"
                     title="حذف"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <RiDeleteBinLine className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -276,7 +276,7 @@ export function StorePagesScreen() {
                       إلغاء
                     </Button>
                     <Button size="sm" disabled={saving} onClick={() => void save()}>
-                      {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} حفظ
+                      {saving && <RiLoader4Line className="h-4 w-4 animate-spin" />} حفظ
                     </Button>
                   </div>
                 </div>

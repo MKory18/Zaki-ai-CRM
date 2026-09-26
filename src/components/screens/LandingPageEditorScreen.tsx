@@ -14,15 +14,12 @@ import {
   type LandingSection, parseSections, ensureForm, starterSections,
 } from '@/lib/landing-sections';
 import { useHistory } from '@/lib/use-history';
-import {
-  ArrowRight, Save, Eye, Globe, Code2, Palette, Monitor, Tablet, Smartphone,
-  Image as ImageIcon, Package, MousePointerClick, Gift, ListPlus, Type, Upload, Loader2,
-  Maximize2, Minimize2, Undo2, Redo2 } from 'lucide-react';
+import { RiArchiveLine, RiArrowGoBackLine, RiArrowGoForwardLine, RiArrowRightLine, RiCodeSLine, RiComputerLine, RiCursorLine, RiEarthLine, RiEyeLine, RiFullscreenExitLine, RiFullscreenLine, RiGiftLine, RiImageLine, RiInputMethodLine, RiLoader4Line, RiPaletteLine, RiPlayListAddLine, RiSaveLine, RiSmartphoneLine, RiTabletLine, RiUpload2Line } from '@remixicon/react';
 
 /**
  * CUSTOM LANDING PAGE EDITOR — Phase 1
  *
- *   Header:  Back | page name | Save Draft | Preview | Publish
+ *   Header:  Back | page name | RiSaveLine Draft | Preview | Publish
  *   LEFT:    Insert toolbar (product/image/button/order form/offers/recommendations)
  *   CENTER:  HTML tab | CSS tab  +  live preview (desktop/tablet/mobile)
  *   RIGHT:   Page settings (width/background/direction/font)
@@ -48,12 +45,12 @@ const DEVICE_WIDTHS: Record<Device, string> = {
 // ── Insert snippets (data-zaki-* placeholders — rendered by the public
 //    pipeline later; inert in Phase 1 by design) ──
 const INSERT_SNIPPETS: { label: string; icon: any; snippet: string }[] = [
-  { label: 'المنتج', icon: Package, snippet: '<div data-zaki-product>\n  <h2 class="product-title">{{product.name}}</h2>\n  <img class="product-image" src="{{product.image}}" alt="{{product.name}}">\n  <p class="product-desc">{{product.description}}</p>\n</div>' },
-  { label: 'صورة', icon: ImageIcon, snippet: '<img src="https://example.com/image.webp" alt="" class="lp-img">' },
-  { label: 'زر الطلب', icon: MousePointerClick, snippet: '<button data-zaki-order class="lp-btn">اطلب الآن</button>' },
-  { label: 'نموذج الطلب', icon: ListPlus, snippet: '<div data-zaki-order-form></div>' },
-  { label: 'العروض', icon: Gift, snippet: '<div data-zaki-offers></div>' },
-  { label: 'منتجات مقترحة', icon: Package, snippet: '<div data-zaki-recommendations></div>' },
+  { label: 'المنتج', icon: RiArchiveLine, snippet: '<div data-zaki-product>\n  <h2 class="product-title">{{product.name}}</h2>\n  <img class="product-image" src="{{product.image}}" alt="{{product.name}}">\n  <p class="product-desc">{{product.description}}</p>\n</div>' },
+  { label: 'صورة', icon: RiImageLine, snippet: '<img src="https://example.com/image.webp" alt="" class="lp-img">' },
+  { label: 'زر الطلب', icon: RiCursorLine, snippet: '<button data-zaki-order class="lp-btn">اطلب الآن</button>' },
+  { label: 'نموذج الطلب', icon: RiPlayListAddLine, snippet: '<div data-zaki-order-form></div>' },
+  { label: 'العروض', icon: RiGiftLine, snippet: '<div data-zaki-offers></div>' },
+  { label: 'منتجات مقترحة', icon: RiArchiveLine, snippet: '<div data-zaki-recommendations></div>' },
 ];
 
 const VARIABLES = [
@@ -536,7 +533,7 @@ export function LandingPageEditorScreen() {
     return (
       <>
         <div className="flex h-[60vh] items-center justify-center text-sm text-[#697586]">
-          <Loader2 className="h-5 w-5 animate-spin" /> جارٍ تحميل المحرر...
+          <RiLoader4Line className="h-5 w-5 animate-spin" /> جارٍ تحميل المحرر...
         </div>
       </>
     );
@@ -556,11 +553,11 @@ export function LandingPageEditorScreen() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e8ef] bg-white px-4 py-3">
           <div className="flex items-center gap-3">
             <Button variant="secondary" size="sm" onClick={() => router.push(`/growth/landing-pages/${lp.id}`)}>
-              <ArrowRight className="h-4 w-4" /> Landing Pages
+              <RiArrowRightLine className="icon-mirror h-4 w-4" /> Landing Pages
             </Button>
             <div>
               <h1 className="flex items-center gap-2 text-base font-bold text-[#121926]">
-                <Globe className="h-4 w-4 text-[#b8256e]" /> {lp.name}
+                <RiEarthLine className="h-4 w-4 text-[#b8256e]" /> {lp.name}
                 <span className="text-xs font-normal text-[#697586]" dir="ltr">/lp/{lp.slug}</span>
               </h1>
             </div>
@@ -590,27 +587,27 @@ export function LandingPageEditorScreen() {
                 already gives a textarea its own undo. */}
             {mode === 'BLOCKS' && (
               <div className="flex rounded-lg border border-[#e3e8ef] p-0.5">
-                <button
+                <button aria-label="تراجع"
                   onClick={history.undo}
                   disabled={!history.canUndo}
                   title="تراجع — Ctrl+Z"
                   className="cursor-pointer rounded-md p-1.5 text-[#697586] hover:text-[#b8256e] disabled:cursor-default disabled:opacity-30"
                 >
-                  <Undo2 className="h-4 w-4" />
+                  <RiArrowGoBackLine className="icon-mirror h-4 w-4" />
                 </button>
-                <button
+                <button aria-label="إعادة"
                   onClick={history.redo}
                   disabled={!history.canRedo}
                   title="إعادة — Ctrl+Shift+Z"
                   className="cursor-pointer rounded-md p-1.5 text-[#697586] hover:text-[#b8256e] disabled:cursor-default disabled:opacity-30"
                 >
-                  <Redo2 className="h-4 w-4" />
+                  <RiArrowGoForwardLine className="icon-mirror h-4 w-4" />
                 </button>
               </div>
             )}
             {saveMsg && <span className={`text-xs ${saveMsg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{saveMsg.text}</span>}
             <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} حفظ
+              {saving ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiSaveLine className="h-4 w-4" />} حفظ
             </Button>
             {/* A preview, not a visit: opened with the signed preview token, so
                 it loads no pixel and counts no view — the published address
@@ -630,10 +627,10 @@ export function LandingPageEditorScreen() {
                 }
               }}
             >
-              <Eye className="h-4 w-4" /> معاينة
+              <RiEyeLine className="h-4 w-4" /> معاينة
             </Button>
             <Button variant={lp.isPublished ? 'outline' : 'success'} size="sm" onClick={togglePublish} disabled={publishing}>
-              {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
+              {publishing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiEarthLine className="h-4 w-4" />}
               {lp.isPublished ? 'إلغاء النشر' : 'نشر'}
             </Button>
           </div>
@@ -683,7 +680,7 @@ export function LandingPageEditorScreen() {
             <p className="mb-2 mt-4 text-xs font-semibold text-[#697586]">متغيرات</p>
             <div className="relative">
               <Button variant="outline" size="sm" className="w-full" onClick={() => setVarOpen((v) => !v)}>
-                <Type className="h-3.5 w-3.5" /> إدراج متغير
+                <RiInputMethodLine className="h-4 w-4" /> إدراج متغير
               </Button>
               {varOpen && (
                 <div className="absolute z-10 mt-1 w-full rounded-lg border border-[#e3e8ef] bg-white py-1 shadow-overlay">
@@ -710,7 +707,7 @@ export function LandingPageEditorScreen() {
               onChange={(e) => e.target.files && uploadImages(e.target.files)}
             />
             <Button variant="outline" size="sm" className="w-full" onClick={() => imageInputRef.current?.click()} disabled={uploading}>
-              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} رفع صورة
+              {uploading ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiUpload2Line className="h-4 w-4" />} رفع صورة
             </Button>
 
             {/* ─── Zaki Actions documentation ─── */}
@@ -773,13 +770,13 @@ data-zaki-z-index="9999"`}</pre>
                   onClick={() => setTab('html')}
                   className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'html' ? 'bg-[#1a2232] text-white' : 'text-[#697586] hover:text-white'}`}
                 >
-                  <Code2 className="h-3.5 w-3.5" /> HTML
+                  <RiCodeSLine className="h-4 w-4" /> HTML
                 </button>
                 <button
                   onClick={() => setTab('css')}
                   className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${tab === 'css' ? 'bg-[#1a2232] text-white' : 'text-[#697586] hover:text-white'}`}
                 >
-                  <Palette className="h-3.5 w-3.5" /> CSS
+                  <RiPaletteLine className="h-4 w-4" /> CSS
                 </button>
                 <span className="mr-auto text-xs text-[#5b6474]">{tab === 'html' ? `${lineCount(html)} سطر` : `${lineCount(css)} سطر`}</span>
                 {/* The editor starts small and grows when asked. A code box
@@ -790,7 +787,7 @@ data-zaki-z-index="9999"`}</pre>
                   title={full ? 'تصغير المحرر' : 'ملء الشاشة'}
                   className="cursor-pointer rounded-lg p-1 text-[#697586] hover:text-white"
                 >
-                  {full ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                  {full ? <RiFullscreenExitLine className="h-4 w-4" /> : <RiFullscreenLine className="h-4 w-4" />}
                 </button>
               </div>
               {tab === 'html' ? (
@@ -817,7 +814,7 @@ data-zaki-z-index="9999"`}</pre>
                 <span className="text-xs font-semibold text-[#364152]">معاينة مباشرة</span>
                 <div className="flex items-center gap-1">
                   {([
-                    ['desktop', Monitor], ['tablet', Tablet], ['mobile', Smartphone],
+                    ['desktop', RiComputerLine], ['tablet', RiTabletLine], ['mobile', RiSmartphoneLine],
                   ] as [Device, any][]).map(([d, Icon]) => (
                     <button
                       key={d}
@@ -829,7 +826,7 @@ data-zaki-z-index="9999"`}</pre>
                     </button>
                   ))}
                   <Button variant="ghost" size="sm" onClick={() => setPreviewKey((k) => k + 1)} title="تحديث">
-                    <Eye className="h-3.5 w-3.5" />
+                    <RiEyeLine className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

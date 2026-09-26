@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, BadgePercent, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Rows } from '@/components/ui/Rows';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAlertLine, RiDiscountPercentLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * /control/discount-alerts — what was given away, and by whom.
@@ -105,11 +105,11 @@ export function DiscountAlertsScreen() {
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : data.totals.orders === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <BadgePercent className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
+          <RiDiscountPercentLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا خصومات في هذه المدة.
         </p>
       ) : (
@@ -198,7 +198,7 @@ export function DiscountAlertsScreen() {
                     <span
                       className={`tabular-nums ${r.notable ? 'font-semibold text-[var(--sys-destructive)]' : 'text-[var(--sys-muted-foreground)]'}`}
                     >
-                      {r.notable && <AlertTriangle className="ml-1 inline h-3 w-3 align-[-1px]" />}
+                      {r.notable && <RiAlertLine className="ml-1 inline h-4 w-4 align-[-1px]" />}
                       {r.share}%
                     </span>
                   ),

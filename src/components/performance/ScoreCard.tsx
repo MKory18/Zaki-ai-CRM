@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Medal, TrendingDown } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import type { ScoreResult, ScoredBand } from '@/lib/performance-score';
+import { RiArrowDownCircleLine, RiLoader4Line, RiMedalLine } from '@remixicon/react';
 
 /**
  * THE CARD, SPELLED OUT.
@@ -85,7 +85,7 @@ function BandLine({ band, bars }: { band: ScoredBand; bars: CardData['bars'] }) 
       </div>
       {low && (
         <p className="mt-1 flex items-center gap-1 text-xs text-[var(--sys-destructive)]">
-          <TrendingDown className="h-3 w-3" /> دون العتبة التي حدّدها المتجر
+          <RiArrowDownCircleLine className="h-4 w-4" /> دون العتبة التي حدّدها المتجر
         </p>
       )}
     </li>
@@ -114,7 +114,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
   if (!data) {
     return (
       <p className="flex items-center justify-center gap-2 py-8 text-sm text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ الحساب…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ الحساب…
       </p>
     );
   }
@@ -148,7 +148,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
         <>
           {data.rank && (
             <p className="flex items-center gap-1.5 pt-3 text-xs text-[var(--sys-muted-foreground)]">
-              <Medal className="h-3.5 w-3.5 text-[var(--sys-warning)]" />
+              <RiMedalLine className="h-4 w-4 text-[var(--sys-warning)]" />
               ترتيبك <span className="font-semibold tabular-nums text-[var(--sys-heading)]">{data.rank.position}</span> من{' '}
               <span className="tabular-nums">{data.rank.of}</span> في دورك بهذا المتجر
             </p>

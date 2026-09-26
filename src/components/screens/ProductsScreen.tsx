@@ -11,20 +11,8 @@ import { Badge } from '@/components/ui/Badge';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { useApp } from '@/context/AppContext';
 import { productName } from '@/lib/product-name';
-import {
-  Package,
-  Plus,
-  Layers,
-  Tag,
-  ImagePlus,
-  X,
-  Star,
-  Trash2,
-  ArrowUpRight,
-  Search,
-  Pencil,
-} from 'lucide-react';
 import Link from 'next/link';
+import { RiAddCircleLine, RiArchiveLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiPencilLine, RiPriceTag3Line, RiSearchLine, RiStarLine } from '@remixicon/react';
 
 export function ProductsScreen() {
   const { t, locale } = useApp();
@@ -48,7 +36,7 @@ export function ProductsScreen() {
   const [primaryIndex, setPrimaryIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Search
+  // RiSearchLine
   const [search, setSearch] = useState('');
   const filteredProducts = products.filter((p) => {
     if (!search.trim()) return true;
@@ -219,7 +207,7 @@ export function ProductsScreen() {
           <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <Link href="/manufacturing">
               <Button variant="outline" size="sm" className="flex items-center space-x-1">
-                <Layers className="w-4 h-4" />
+                <RiFoldersLine className="w-4 h-4" />
                 <span>تشغيلات الإنتاج</span>
               </Button>
             </Link>
@@ -228,7 +216,7 @@ export function ProductsScreen() {
               onClick={() => setCreateModalOpen(true)}
               className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
             >
-              <Plus className="w-4 h-4" />
+              <RiAddCircleLine className="w-4 h-4" />
               <span>إضافة منتج</span>
             </Button>
           </div>
@@ -241,9 +229,9 @@ export function ProductsScreen() {
             subtitle="الصور، المخزون، التكلفة، المبيعات والأرباح لكل منتج — عدّل أو احذف مباشرة"
           />
           <CardContent className="pt-4">
-            {/* Search bar */}
+            {/* RiSearchLine bar */}
             <div className="relative max-w-md mb-4">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
+              <RiSearchLine className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
               <input
                 type="text"
                 placeholder="بحث بالاسم (عربي/إنجليزي) أو SKU..."
@@ -256,7 +244,7 @@ export function ProductsScreen() {
                   onClick={() => setSearch('')}
                   className="absolute end-3 top-1/2 -translate-y-1/2 text-[var(--sys-muted)] hover:text-[var(--sys-foreground)] cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <RiCloseLine className="w-4 h-4" />
                 </button>
               )}
               <span className="absolute -bottom-5 start-1 text-xs text-[var(--sys-muted)]">
@@ -321,7 +309,7 @@ export function ProductsScreen() {
                               className="p-2"
                               title="التفاصيل والصور"
                             >
-                              <ArrowUpRight className="w-3.5 h-3.5" />
+                              <RiArrowRightUpLine className="icon-mirror w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
@@ -330,7 +318,7 @@ export function ProductsScreen() {
                               className="p-2 bg-[var(--sys-surface)] text-[var(--sys-primary)] border-[var(--sys-primary-soft)] hover:bg-[var(--sys-surface-strong)]"
                               title="تعديل المنتج"
                             >
-                              <Pencil className="w-3.5 h-3.5" />
+                              <RiPencilLine className="w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
@@ -339,7 +327,7 @@ export function ProductsScreen() {
                               className="p-2"
                               title="حذف المنتج"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <RiDeleteBinLine className="w-4 h-4" />
                             </Button>
                           </div>
                         </td>
@@ -466,7 +454,7 @@ export function ProductsScreen() {
                 onClick={() => fileInputRef.current?.click()}
                 className="text-xs"
               >
-                <ImagePlus className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                <RiImageAddLine className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                 اختيار صور
               </Button>
             </div>
@@ -492,7 +480,7 @@ export function ProductsScreen() {
                     />
                     {primaryIndex === idx && (
                       <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-xs font-bold px-1.5 py-0.5 rounded-lg flex items-center space-x-0.5">
-                        <Star className="w-2.5 h-2.5" />
+                        <RiStarLine className="w-4 h-4" />
                         <span>رئيسية</span>
                       </span>
                     )}
@@ -501,7 +489,7 @@ export function ProductsScreen() {
                       onClick={() => removeFile(idx)}
                       className="absolute top-1 right-1 rtl:right-auto rtl:left-1 bg-[var(--sys-card)]/90 text-[var(--sys-destructive)] rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     >
-                      <X className="w-3 h-3" />
+                      <RiCloseLine className="w-4 h-4" />
                     </button>
                     {primaryIndex !== idx && (
                       <button
@@ -597,7 +585,7 @@ export function ProductsScreen() {
               إلغاء
             </Button>
             <Button type="submit" loading={editLoading} className="bg-[var(--sys-primary)] hover:bg-[var(--sys-primary)]/85">
-              <Pencil className="w-4 h-4" />
+              <RiPencilLine className="w-4 h-4" />
               حفظ التعديلات
             </Button>
           </div>

@@ -29,20 +29,7 @@ import { UserGeoAccessSection, UserPhoneField } from '@/components/screens/users
 import { UserCommissionCurrency } from '@/components/screens/users/UserCommissionCurrency';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { format } from 'date-fns';
-import {
-  User as UserIcon,
-  Mail,
-  ShieldCheck,
-  Clock,
-  ArrowRight,
-  ShoppingBag,
-  UserCheck,
-  KeyRound,
-  Plus,
-  Trash2,
-  Search,
-  X,
-} from 'lucide-react';
+import { RiAddCircleLine, RiArrowRightLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiShoppingBagLine, RiTimerLine, RiUserFollowLine, RiUserLine } from '@remixicon/react';
 
 /** A role picked by name (the fallback list), not by its row id. */
 const BY_NAME = 'name:';
@@ -176,7 +163,7 @@ export function UserDetailScreen() {
       <div className="space-y-6" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between gap-3">
           <Button variant="outline" size="sm" onClick={() => router.push('/admin/users')}>
-            <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+            <RiArrowRightLine className="icon-mirror w-4 h-4" />
             {ar ? 'عودة للموظفين' : 'Back to Employees'}
           </Button>
         </div>
@@ -186,12 +173,12 @@ export function UserDetailScreen() {
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="w-14 h-14 rounded-lg bg-[var(--sys-destructive-soft)] border-2 border-[var(--sys-destructive-border)] flex items-center justify-center shrink-0">
-                <UserIcon className="w-7 h-7 text-[var(--sys-destructive)]" />
+                <RiUserLine className="w-6 h-6 text-[var(--sys-destructive)]" />
               </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg font-bold text-[var(--sys-heading)] truncate">{user.name}</h1>
                 <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center gap-1.5 mt-0.5" dir="ltr">
-                  <Mail className="w-3 h-3" />
+                  <RiMailLine className="w-4 h-4" />
                   {user.email}
                 </p>
               </div>
@@ -202,11 +189,11 @@ export function UserDetailScreen() {
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-5 text-xs">
               <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-                <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><ShieldCheck className="w-3 h-3" />{ar ? 'الرتبة' : 'Role'}</p>
+                <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><RiShieldCheckLine className="w-4 h-4" />{ar ? 'الرتبة' : 'Role'}</p>
                 <p className="font-bold text-[var(--sys-heading)]">{user.role}</p>
               </div>
               <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
-                <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><Clock className="w-3 h-3" />{ar ? 'آخر دخول' : 'Last Login'}</p>
+                <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><RiTimerLine className="w-4 h-4" />{ar ? 'آخر دخول' : 'Last Login'}</p>
                 <p className="font-bold text-[var(--sys-heading)]">
                   {user.lastLoginAt ? format(new Date(user.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—'}
                 </p>
@@ -268,7 +255,7 @@ export function UserDetailScreen() {
         <Card>
           <CardContent className="p-5">
             <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5" />
+              <RiKey2Line className="w-4 h-4" />
               {ar ? 'الدور والصلاحيات' : 'Role & Permissions'}
             </h3>
             {roleFlash && (
@@ -654,7 +641,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
       <Card>
         <CardContent className="p-5">
           <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" />
+            <RiShieldCheckLine className="w-4 h-4" />
             {ar ? 'الصلاحيات الفعّالة' : 'Effective Permissions'}
           </h3>
 
@@ -696,7 +683,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
               ) : (
                 <>
                   <div className="relative max-w-xs mb-3">
-                    <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-3.5 h-3.5 text-[var(--sys-muted)]" />
+                    <RiSearchLine className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[var(--sys-muted)]" />
                     <Input
                       value={tableSearch}
                       onChange={(e) => setTableSearch(e.target.value)}
@@ -772,12 +759,12 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
         <CardContent className="p-5">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5" />
+              <RiKey2Line className="w-4 h-4" />
               {ar ? 'استثناءات المستخدم' : 'User Overrides'}
             </h3>
             {canEdit && !isFullAccess && (
               <Button size="sm" onClick={openAddModal}>
-                <Plus className="w-3.5 h-3.5" />
+                <RiAddCircleLine className="w-4 h-4" />
                 {ar ? 'إضافة استثناء' : 'Add override'}
               </Button>
             )}
@@ -838,7 +825,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                             loading={removing === o.permission}
                             onClick={() => removeOverride(o.permission)}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <RiDeleteBinLine className="w-4 h-4" />
                             {ar ? 'إزالة' : 'Remove'}
                           </Button>
                         )}
@@ -961,7 +948,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
               {draftKey && draftScope === 'SPECIFIC' && (
                 <div className="rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] p-3 space-y-2">
                   <div className="relative">
-                    <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 w-3.5 h-3.5 text-[var(--sys-muted)]" />
+                    <RiSearchLine className="absolute top-1/2 -translate-y-1/2 start-2.5 w-4 h-4 text-[var(--sys-muted)]" />
                     <Input
                       value={productQuery}
                       onChange={(e) => setProductQuery(e.target.value)}
@@ -998,7 +985,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                           >
                             {prod?.name ?? id}
                             <button type="button" onClick={() => toggleScopeId(id)} className="cursor-pointer hover:text-[var(--sys-destructive)]">
-                              <X className="w-3 h-3" />
+                              <RiCloseLine className="w-4 h-4" />
                             </button>
                           </span>
                         );

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, ArrowLeft, Check, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { changeFieldLabel } from '@/lib/change-request-fields';
+import { RiAlertLine, RiArrowLeftLine, RiCheckLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * ONE CHANGE REQUEST, DECIDED.
@@ -113,7 +113,7 @@ export function ChangeRequestReview({
                     </p>
                     <div className="flex items-center gap-2 text-xs flex-wrap">
                       <span className="text-[var(--sys-muted)] line-through">{show(change?.from)}</span>
-                      <ArrowLeft className="w-3.5 h-3.5 text-[var(--sys-primary)] shrink-0" />
+                      <RiArrowLeftLine className="icon-mirror w-4 h-4 text-[var(--sys-primary)] shrink-0" />
                       <span className="font-semibold text-[var(--sys-heading)]">{show(change?.to)}</span>
                     </div>
                   </div>
@@ -140,7 +140,7 @@ export function ChangeRequestReview({
             </label>
 
             <p className="flex items-start gap-1.5 text-xs text-[var(--sys-muted-foreground)]">
-              <AlertTriangle className="w-3.5 h-3.5 text-[var(--sys-warning)] shrink-0 mt-0.5" />
+              <RiAlertLine className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
               الموافقة تسجّل القرار ولا تكتب التعديل بعد — يظهر بعدها في «بانتظار التطبيق» بطلبات
               التعديل، ومن هناك يُطبَّق بزرّ واحد عبر مسار المال نفسه، لا بنسخ حقل.
             </p>
@@ -162,11 +162,11 @@ export function ChangeRequestReview({
             disabled={!!busy || !row || !note.trim()}
             title={!note.trim() ? 'الرفض يتطلب سبباً' : undefined}
           >
-            {busy === 'REJECTED' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+            {busy === 'REJECTED' ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiCloseLine className="w-4 h-4" />}
             رفض
           </Button>
           <Button size="sm" onClick={() => decide('APPROVED')} disabled={!!busy || !row}>
-            {busy === 'APPROVED' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            {busy === 'APPROVED' ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiCheckLine className="w-4 h-4" />}
             موافقة
           </Button>
         </div>

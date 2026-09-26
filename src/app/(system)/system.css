@@ -297,6 +297,22 @@ html[lang="ar"] td {
   background: var(--sys-sidebar-scrollbar-hover);
 }
 
+/*
+ * MIRRORING, BY LIST, NOT BY BLANKET.
+ *
+ * An arrow, a back, a send, a chevron and an undo all point somewhere, and
+ * on a right-to-left screen they point the wrong way unless they are
+ * flipped. A magnifier, a clock, a play triangle, a phone, a chart and a
+ * logo do NOT: flipped, they are simply wrong — a mirrored clock reads as a
+ * clock running backwards, and a mirrored logo reads as a forgery.
+ *
+ * So the flip is a class carried by the glyphs that earn it, listed beside
+ * the icon map, rather than a rule on every svg in the document.
+ */
+[dir="rtl"] .icon-mirror {
+  transform: scaleX(-1);
+}
+
 /* RTL Helpers */
 [dir="rtl"] {
   text-align: right;

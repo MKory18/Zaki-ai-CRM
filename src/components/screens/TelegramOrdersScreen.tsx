@@ -7,10 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { useApp } from '@/context/AppContext';
-import {
-  Send, Settings, RefreshCw, CheckCircle2, XCircle,
-  AlertCircle, MessageSquare, ShoppingBag, RotateCcw,
-} from 'lucide-react';
+import { RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiMessage3Line, RiRefreshLine, RiSendPlaneLine, RiSettings3Line, RiShoppingBagLine } from '@remixicon/react';
 
 interface TelegramMsg {
   id: string;
@@ -120,17 +117,17 @@ export function TelegramOrdersScreen() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-              <Send className="w-5 h-5 text-[#229ED9]" /> تكامل تيليجرام
+              <RiSendPlaneLine className="icon-mirror w-5 h-5 text-[#229ED9]" /> تكامل تيليجرام
             </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">تحويل رسائل مجموعات تيليجرام إلى طلبات تلقائيًا</p>
           </div>
           <div className="flex items-center gap-2">
             {canManage && (
               <Link href="/settings/telegram">
-                <Button variant="outline" size="sm"><Settings className="w-4 h-4 ml-1" /> الإعدادات</Button>
+                <Button variant="outline" size="sm"><RiSettings3Line className="w-4 h-4 ml-1" /> الإعدادات</Button>
               </Link>
             )}
-            <Button variant="ghost" size="sm" onClick={() => loadAll()}><RefreshCw className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => loadAll()}><RiRefreshLine className="w-4 h-4" /></Button>
           </div>
         </div>
 
@@ -166,10 +163,10 @@ export function TelegramOrdersScreen() {
         {/* Order processing stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { key: 'CREATED', label: 'تم الإنشاء', icon: ShoppingBag, color: 'text-[var(--sys-success)]' },
-            { key: 'NEEDS_REVIEW', label: 'قيد المراجعة', icon: MessageSquare, color: 'text-[var(--sys-destructive)]' },
-            { key: 'IGNORED', label: 'تم التجاهل', icon: CheckCircle2, color: 'text-[var(--sys-muted-foreground)]' },
-            { key: 'FAILED', label: 'فشل', icon: XCircle, color: 'text-[var(--sys-destructive)]' },
+            { key: 'CREATED', label: 'تم الإنشاء', icon: RiShoppingBagLine, color: 'text-[var(--sys-success)]' },
+            { key: 'NEEDS_REVIEW', label: 'قيد المراجعة', icon: RiMessage3Line, color: 'text-[var(--sys-destructive)]' },
+            { key: 'IGNORED', label: 'تم التجاهل', icon: RiCheckboxCircleLine, color: 'text-[var(--sys-muted-foreground)]' },
+            { key: 'FAILED', label: 'فشل', icon: RiCloseCircleLine, color: 'text-[var(--sys-destructive)]' },
           ].map((s) => (
             <Card key={s.key}>
               <CardContent className="p-4 flex items-center gap-3">
@@ -239,7 +236,7 @@ export function TelegramOrdersScreen() {
                       <td className="px-4 py-3 text-left">
                         {['NEEDS_REVIEW', 'FAILED'].includes(m.processingStatus) && canManage && (
                           <Button size="sm" variant="outline" disabled={busyId === m.id} onClick={() => retryMessage(m)}>
-                            <RotateCcw className="w-3 h-3 ml-1" /> إعادة المعالجة
+                            <RiArrowGoBackLine className="icon-mirror w-4 h-4 ml-1" /> إعادة المعالجة
                           </Button>
                         )}
                       </td>

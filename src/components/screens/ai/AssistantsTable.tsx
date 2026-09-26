@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheck, ShieldOff } from 'lucide-react';
 import {
   ASSISTANTS, AI_SCOPES, SCOPE_LABEL_AR, SCOPE_NOTE_AR, type AiScope,
 } from '@/lib/ai-assistants';
+import { RiShieldCheckLine, RiShieldCrossLine } from '@remixicon/react';
 
 /**
  * EVERY ASSISTANT, AND WHAT IT IS ALLOWED TO SEE.
@@ -103,11 +103,11 @@ export function AssistantsTable({
                 <td className="px-3 py-2.5 whitespace-nowrap">
                   {a.pii ? (
                     <span className="inline-flex items-center gap-1 text-[var(--sys-warning)]">
-                      <ShieldCheck className="h-3 w-3" /> نعم
+                      <RiShieldCheckLine className="h-4 w-4" /> نعم
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[var(--sys-success)]">
-                      <ShieldOff className="h-3 w-3" /> لا — أبداً
+                      <RiShieldCrossLine className="h-4 w-4" /> لا — أبداً
                     </span>
                   )}
                 </td>

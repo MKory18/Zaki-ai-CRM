@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { GitCompare, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiGitBranchLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * /finance/matching — the outcome of matching, read as four queues: agreed,
@@ -107,7 +107,7 @@ export function MatchingScreen() {
           }}
           className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
         >
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitCompare className="w-4 h-4" />}
+          {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiGitBranchLine className="w-4 h-4" />}
           تشغيل المطابقة
         </button>
       </div>
@@ -116,7 +116,7 @@ export function MatchingScreen() {
 
       {!selected ? null : !matches ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : matches.length === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">

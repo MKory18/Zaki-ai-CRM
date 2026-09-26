@@ -13,18 +13,7 @@ import { Input, Textarea, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { apiFetch } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
-import {
-  Truck,
-  Package,
-  PackageCheck,
-  Ship,
-  MapPin,
-  XCircle,
-  Undo2,
-  Clock,
-  History,
-  Hash,
-} from 'lucide-react';
+import { RiArchiveDrawerLine, RiArchiveLine, RiArrowGoBackLine, RiCloseCircleLine, RiHistoryLine, RiMapPinLine, RiNumbersLine, RiShipLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 
 /** Delivery attempt outcomes, stored as codes and read as words. */
 const ATTEMPT_RESULT_AR: Record<string, string> = {
@@ -94,7 +83,7 @@ const NEXT_ACTIONS: Record<string, { to: string; labelAr: string; labelEn: strin
   ],
   FAILED_DELIVERY: [
     { to: 'RETURN_REQUESTED', labelAr: '↩️ طلب إرجاع', labelEn: '↩️ Return', cls: 'border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)]' },
-    { to: 'SHIPPED', labelAr: '🔁 إعادة شحن', labelEn: '🔁 Retry Ship', cls: 'border-violet-300 text-violet-700 hover:bg-violet-50' },
+    { to: 'SHIPPED', labelAr: '🔁 إعادة شحن', labelEn: '🔁 Retry RiShipLine', cls: 'border-violet-300 text-violet-700 hover:bg-violet-50' },
   ],
   RETURN_REQUESTED: [{ to: 'RETURNED', labelAr: '↩️ تم الإرجاع', labelEn: '↩️ Returned', cls: 'border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]' }],
 };
@@ -246,7 +235,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
-          <Truck className="w-4 h-4 text-[var(--sys-destructive)]" />
+          <RiTruckLine className="w-4 h-4 text-[var(--sys-destructive)]" />
           {ar ? 'الشحن والتوصيل' : 'Shipping & Delivery'}
         </h4>
         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 text-xs font-bold ${st.cls}`}>
@@ -300,7 +289,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
               disabled={actionLoading !== null}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-colors cursor-pointer disabled:opacity-50 ${a.cls}`}
             >
-              {a.to === 'DELIVERED' ? <PackageCheck className="w-3.5 h-3.5" /> : a.to === 'FAILED_DELIVERY' ? <XCircle className="w-3.5 h-3.5" /> : a.to === 'RETURNED' || a.to === 'RETURN_REQUESTED' ? <Undo2 className="w-3.5 h-3.5" /> : <Ship className="w-3.5 h-3.5" />}
+              {a.to === 'DELIVERED' ? <RiArchiveDrawerLine className="w-4 h-4" /> : a.to === 'FAILED_DELIVERY' ? <RiCloseCircleLine className="w-4 h-4" /> : a.to === 'RETURNED' || a.to === 'RETURN_REQUESTED' ? <RiArrowGoBackLine className="icon-mirror w-4 h-4" /> : <RiShipLine className="w-4 h-4" />}
               {ar ? a.labelAr : a.labelEn}
             </button>
           ))}
@@ -310,7 +299,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
               disabled={actionLoading !== null}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
             >
-              <Hash className="w-3.5 h-3.5" />{ar ? 'رقم التتبع' : 'Tracking'}
+              <RiNumbersLine className="w-4 h-4" />{ar ? 'رقم التتبع' : 'Tracking'}
             </button>
           )}
         </div>
@@ -337,7 +326,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
       {/* Delivery attempts (append-only history) */}
       <div className="border-t border-slate-100 pt-3">
         <p className="text-xs font-bold uppercase tracking-wider text-[var(--sys-muted)] mb-2 flex items-center gap-1.5">
-          <History className="w-3 h-3" />
+          <RiHistoryLine className="w-4 h-4" />
           {ar ? 'سجل الشحن والتوصيل' : 'Shipping & Delivery Timeline'}
           {loading && <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-[var(--sys-destructive)]" />}
         </p>

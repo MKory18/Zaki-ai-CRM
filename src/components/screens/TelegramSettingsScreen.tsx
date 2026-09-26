@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi } from '@/lib/screen-api';
-import { Send, RefreshCw, CheckCircle2, XCircle, Copy } from 'lucide-react';
 import { copyText } from '@/lib/clipboard';
 import { TelegramSourcesCard } from '@/components/settings/TelegramSourcesCard';
+import { RiCheckboxCircleLine, RiCloseCircleLine, RiFileCopyLine, RiRefreshLine, RiSendPlaneLine } from '@remixicon/react';
 
 export function TelegramSettingsScreen() {
   const { currentUser } = useApp();
@@ -58,7 +58,7 @@ export function TelegramSettingsScreen() {
     <div className="flex items-center justify-between py-2.5 border-b border-[var(--sys-surface-strong)] last:border-0">
       <span className="text-xs text-[var(--sys-muted-foreground)]">{label}</span>
       <span className={`text-xs font-semibold flex items-center gap-1.5 ${ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-        {ok ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+        {ok ? <RiCheckboxCircleLine className="w-4 h-4" /> : <RiCloseCircleLine className="w-4 h-4" />}
         {value ?? (ok ? 'مضبوط' : 'غير مضبوط')}
       </span>
     </div>
@@ -70,13 +70,13 @@ export function TelegramSettingsScreen() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-              <Send className="w-5 h-5 text-[#229ED9]" /> إعدادات تيليجرام
+              <RiSendPlaneLine className="icon-mirror w-5 h-5 text-[#229ED9]" /> إعدادات تيليجرام
             </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">حالة اتصال البوت والويبهوك (لا تُعرض أي مفاتيح سرية هنا أبدًا)</p>
           </div>
           <div className="flex gap-2">
             <Link href="/growth/telegram/orders"><Button variant="outline" size="sm">رجوع</Button></Link>
-            <Button variant="ghost" size="sm" onClick={load}><RefreshCw className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={load}><RiRefreshLine className="w-4 h-4" /></Button>
           </div>
         </div>
 
@@ -108,7 +108,7 @@ export function TelegramSettingsScreen() {
                       {status?.webhookUrl || '— لم يتم ضبط APP_URL —'}
                     </code>
                     {status?.webhookUrl && (
-                      <Button variant="outline" size="sm" onClick={copyWebhook}><Copy className="w-3.5 h-3.5 ml-1" />{copied ? 'تم النسخ' : 'نسخ'}</Button>
+                      <Button variant="outline" size="sm" onClick={copyWebhook}><RiFileCopyLine className="w-4 h-4 ml-1" />{copied ? 'تم النسخ' : 'نسخ'}</Button>
                     )}
                   </div>
                 </div>

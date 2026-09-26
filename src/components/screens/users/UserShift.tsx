@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Clock4 } from 'lucide-react';
+import { RiTimerLine } from '@remixicon/react';
 
 /**
  * WHEN THIS PERSON STARTS, AND WHEN THEY HAND OVER.
@@ -95,7 +95,7 @@ export function UserShift({
   return (
     <div className="col-span-full rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
       <p className="mb-1.5 flex items-center gap-1 text-xs text-[var(--sys-muted)]">
-        <Clock4 className="h-3 w-3" /> الدوام
+        <RiTimerLine className="h-4 w-4" /> الدوام
       </p>
 
       <div className="flex flex-wrap items-end gap-2">

@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronDown, ChevronLeft, Loader2, PackageCheck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { ChangeRequestReview } from '@/components/orders/ChangeRequestReview';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { RejectDialog } from '@/components/screens/confirmation/ActionDialogs';
-import { Pencil, XCircle } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { PickingAssistant } from '@/components/screens/ops/PickingAssistant';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiArchiveDrawerLine, RiArrowDownSLine, RiArrowLeftSLine, RiCloseCircleLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 
 /**
  * /ops/preparation — grouped BY PRODUCT, collapsible. Orders, required,
@@ -86,7 +85,7 @@ export function PreparationScreen() {
   if (!data) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -117,7 +116,7 @@ export function PreparationScreen() {
             className="w-full flex items-center gap-3 p-4 text-right hover:bg-[var(--sys-surface)]"
           >
             <span className="w-9 h-9 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
-              <PackageCheck className="w-4 h-4 text-[var(--sys-primary)]" />
+              <RiArchiveDrawerLine className="w-4 h-4 text-[var(--sys-primary)]" />
             </span>
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-semibold text-[var(--sys-heading)] truncate">{g.productName}</span>
@@ -126,7 +125,7 @@ export function PreparationScreen() {
                 {g.shortage > 0 && <span className="text-[var(--sys-destructive)]"> · نقص {g.shortage}</span>}
               </span>
             </span>
-            {open[g.productId] ? <ChevronDown className="w-4 h-4 text-[var(--sys-muted-foreground)]" /> : <ChevronLeft className="w-4 h-4 text-[var(--sys-muted-foreground)]" />}
+            {open[g.productId] ? <RiArrowDownSLine className="w-4 h-4 text-[var(--sys-muted-foreground)]" /> : <RiArrowLeftSLine className="icon-mirror w-4 h-4 text-[var(--sys-muted-foreground)]" />}
           </button>
 
           {open[g.productId] && (
@@ -162,7 +161,7 @@ export function PreparationScreen() {
                           title="افتح الطلب وعدّله — ما لم تكن بوليصته قد طُبعت"
                           className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
                         >
-                          <Pencil className="w-3.5 h-3.5" />
+                          <RiPencilLine className="w-4 h-4" />
                         </button>
                       )}
                       {mayCancel && (
@@ -172,7 +171,7 @@ export function PreparationScreen() {
                           title="ألغِ الطلب — يعود المحجوز من بضاعته إلى المخزون"
                           className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                         >
-                          <XCircle className="w-3.5 h-3.5" />
+                          <RiCloseCircleLine className="w-4 h-4" />
                         </button>
                       )}
                       {l.pendingChangeRequestId && (

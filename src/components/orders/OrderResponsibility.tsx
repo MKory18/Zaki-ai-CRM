@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { UserCheck, UserMinus, ArrowLeftRight, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
+import { RiArrowLeftRightLine, RiLoader4Line, RiUserFollowLine, RiUserUnfollowLine } from '@remixicon/react';
 
 /**
  * Whose hands the order is in.
@@ -100,7 +100,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <UserCheck className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
+          <RiUserFollowLine className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
           {holder ? (
             <p className="text-sm text-[var(--sys-heading)]">
               <span className="text-[var(--sys-muted-foreground)] text-xs">بين يدي </span>
@@ -123,7 +123,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
               onClick={() => { setOpen(open === 'release' ? null : 'release'); setError(null); }}
               className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
             >
-              <UserMinus className="w-3.5 h-3.5" />
+              <RiUserUnfollowLine className="w-4 h-4" />
               سحبه منه
             </button>
             <button
@@ -132,7 +132,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
               title={candidates.length === 0 ? 'لا يوجد زميل بنفس الرتبة' : undefined}
               className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 disabled:opacity-40"
             >
-              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <RiArrowLeftRightLine className="icon-mirror w-4 h-4" />
               تحويل لزميل
             </button>
           </div>
@@ -176,7 +176,7 @@ export function OrderResponsibility({ order, currentUserId, onChanged }: Props) 
               disabled={busy}
               className="text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
             >
-              {busy && <Loader2 className="w-3 h-3 animate-spin" />}
+              {busy && <RiLoader4Line className="w-4 h-4 animate-spin" />}
               {open === 'release' ? 'أعِده للطابور' : 'حوّل الطلب'}
             </button>
             <button

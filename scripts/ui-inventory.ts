@@ -43,10 +43,12 @@ export interface Counts {
 export const KINDS = ['buttons', 'inputs', 'columns', 'cards', 'modals', 'icons', 'links', 'tabs'] as const;
 
 /**
- * The lucide icons in use, by name, so a renamed import is not mistaken for
- * a deleted icon and an added one is not mistaken for a rename.
+ * The icons in use, by name, so a renamed import is not mistaken for a
+ * deleted icon and an added one is not mistaken for a rename. Both families
+ * are read: the dashboard is Remix, and a seller's own pages are not this
+ * migration's business.
  */
-const ICON_IMPORT = /import\s*\{([^}]*)\}\s*from\s*'lucide-react'/g;
+const ICON_IMPORT = /import\s*\{([^}]*)\}\s*from\s*'(?:@remixicon\/react|lucide-react)'/g;
 
 function countIcons(src: string): number {
   let total = 0;

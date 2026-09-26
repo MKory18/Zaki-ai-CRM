@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import {
@@ -11,6 +10,7 @@ import {
   type MessageTemplate,
   type Situation,
 } from '@/lib/message-templates';
+import { RiAddCircleLine, RiArrowDownSLine, RiCheckLine, RiDeleteBinLine, RiLoader4Line, RiMessage3Line } from '@remixicon/react';
 
 /**
  * THE SENTENCES SENT TO CUSTOMERS, FILED BY THE MOMENT THEY BELONG TO.
@@ -156,7 +156,7 @@ export function MessageTemplatesCard() {
               <span className="text-xs tabular-nums text-[var(--sys-muted)]">
                 {mine.length === 0 ? 'لا قوالب' : `${live} من ${mine.length} مفعّلة`}
               </span>
-              <ChevronDown className={`h-3.5 w-3.5 text-[var(--sys-muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
+              <RiArrowDownSLine className={`h-4 w-4 text-[var(--sys-muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
@@ -220,7 +220,7 @@ export function MessageTemplatesCard() {
                         aria-label="احذف القالب"
                         className="rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <RiDeleteBinLine className="h-4 w-4" />
                       </button>
                     </div>
 
@@ -258,7 +258,7 @@ export function MessageTemplatesCard() {
                 ))}
 
                 <Button variant="outline" size="sm" onClick={() => add(s.key)}>
-                  <Plus className="h-3.5 w-3.5" />
+                  <RiAddCircleLine className="h-4 w-4" />
                   قالب في «{s.ar}»
                 </Button>
               </div>
@@ -269,12 +269,12 @@ export function MessageTemplatesCard() {
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
         <Button size="sm" onClick={save} disabled={busy}>
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />}
+          {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiMessage3Line className="h-4 w-4" />}
           احفظ القوالب
         </Button>
         {saved && (
           <span className="inline-flex items-center gap-1 text-xs text-[var(--sys-success)]">
-            <Check className="h-3.5 w-3.5" /> تم الحفظ
+            <RiCheckLine className="h-4 w-4" /> تم الحفظ
           </span>
         )}
         {data.sample && (

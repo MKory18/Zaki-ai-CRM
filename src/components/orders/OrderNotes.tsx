@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageSquareText, Send, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
+import { RiChatQuoteLine, RiLoader4Line, RiSendPlaneLine } from '@remixicon/react';
 
 /**
  * The conversation about an order, between the people working it.
@@ -96,7 +96,7 @@ export function OrderNotes({ orderId }: { orderId: string }) {
   return (
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised">
       <div className="flex items-center gap-2 mb-4">
-        <MessageSquareText className="w-4 h-4 text-[var(--sys-primary)]" />
+        <RiChatQuoteLine className="w-4 h-4 text-[var(--sys-primary)]" />
         <h4 className="text-xs font-black text-[var(--sys-foreground)]">ملاحظات داخلية</h4>
         {notes && notes.length > 0 && (
           <span className="text-xs font-medium text-[var(--sys-muted)] tabular-nums">{notes.length}</span>
@@ -105,7 +105,7 @@ export function OrderNotes({ orderId }: { orderId: string }) {
 
       {notes === null ? (
         <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1.5 py-2">
-          <Loader2 className="w-3 h-3 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </p>
       ) : notes.length === 0 ? (
         <p className="text-xs text-[var(--sys-muted)] py-2">لا ملاحظات بعد — اكتب أول واحدة.</p>
@@ -162,7 +162,7 @@ export function OrderNotes({ orderId }: { orderId: string }) {
             className="h-9 w-9 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] disabled:opacity-30 flex items-center justify-center shrink-0"
             title="أضف الملاحظة (Enter)"
           >
-            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiSendPlaneLine className="icon-mirror w-4 h-4" />}
           </button>
         </div>
         <p className="text-xs text-[var(--sys-muted)] mt-1.5">

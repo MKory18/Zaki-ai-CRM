@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Building2, Check, Loader2, Settings } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PerformanceSettingsCard } from '@/components/settings/PerformanceSettingsCard';
 import { PenaltyRulesCard } from '@/components/settings/PenaltyRulesCard';
+import { RiBuildingLine, RiCheckLine, RiLoader4Line, RiSettings3Line } from '@remixicon/react';
 
 /**
  * SYSTEM SETTINGS — what belongs to the company as a whole, and only that.
@@ -70,7 +70,7 @@ export function SystemSettingsScreen() {
     <div className="max-w-3xl space-y-4" dir="rtl">
       <div>
         <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-          <Settings className="h-5 w-5 text-[var(--sys-primary)]" /> إعدادات النظام
+          <RiSettings3Line className="h-5 w-5 text-[var(--sys-primary)]" /> إعدادات النظام
         </h1>
         <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
           ما يخصّ الشركة كلها. العملة والبلد في «البلدان والمتاجر والمحافظ»، والذكاء الاصطناعي في شاشته.
@@ -81,14 +81,14 @@ export function SystemSettingsScreen() {
         <CardHeader
           title={
             <span className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-[var(--sys-primary)]" /> بيانات الشركة
+              <RiBuildingLine className="h-4 w-4 text-[var(--sys-primary)]" /> بيانات الشركة
             </span>
           }
         />
         <CardContent>
           {loading ? (
             <div className="flex h-16 items-center justify-center text-[var(--sys-muted-foreground)]">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <RiLoader4Line className="h-4 w-4 animate-spin" />
             </div>
           ) : (
             <form onSubmit={save} className="flex flex-wrap items-end gap-3">
@@ -96,7 +96,7 @@ export function SystemSettingsScreen() {
                 <Input label="اسم الشركة" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
               </div>
               <Button type="submit" disabled={busy || !dirty || name.trim().length < 2}>
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiCheckLine className="h-4 w-4" />}
                 احفظ
               </Button>
               {msg && (

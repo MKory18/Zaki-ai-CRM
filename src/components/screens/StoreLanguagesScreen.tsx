@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Languages, Loader2, Check, Info } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import type { StoreLanguage } from '@/lib/store-languages';
+import { RiCheckLine, RiGlobalLine, RiInformationLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * WHAT THE SHOP SPEAKS, AND WHICH WAY IT READS.
@@ -70,7 +70,7 @@ export function StoreLanguagesScreen() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -82,7 +82,7 @@ export function StoreLanguagesScreen() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <Languages className="h-5 w-5 text-[var(--sys-primary)]" />
+            <RiGlobalLine className="h-5 w-5 text-[var(--sys-primary)]" />
             لغة المتجر
           </h1>
           <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
@@ -91,7 +91,7 @@ export function StoreLanguagesScreen() {
         </div>
         {msg && (
           <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-            {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
+            {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
             {msg.text}
           </span>
         )}
@@ -129,7 +129,7 @@ export function StoreLanguagesScreen() {
 
         <div className="mt-3 flex items-center gap-2">
           <Button size="sm" disabled={busy || language === saved} onClick={() => void save()}>
-            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} حفظ
+            {busy && <RiLoader4Line className="h-4 w-4 animate-spin" />} حفظ
           </Button>
           {language !== saved && (
             <Button variant="secondary" size="sm" onClick={() => setLanguage(saved)}>تراجع</Button>
@@ -144,7 +144,7 @@ export function StoreLanguagesScreen() {
           make work. */}
       <div className={`${CARD} border-[var(--sys-border)]`}>
         <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
-          <Info className="h-4 w-4 text-[var(--sys-muted-foreground)]" />
+          <RiInformationLine className="h-4 w-4 text-[var(--sys-muted-foreground)]" />
           لغات إضافية — غير متاحة بعد، وهذا ما تحتاجه
         </p>
         <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">

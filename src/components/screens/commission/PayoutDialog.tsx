@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Loader2, Wallet as WalletIcon } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { apiJson } from '@/lib/api-client';
+import { RiLoader4Line, RiWallet3Line } from '@remixicon/react';
 
 /**
  * HANDING OVER THE MONEY.
@@ -99,7 +99,7 @@ export function PayoutDialog({
     <Modal isOpen onClose={onClose} title={`صرف عمولة ${userName}`}>
       {!owed ? (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-[var(--sys-muted-foreground)]">
-          <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : owed.length === 0 ? (
         <p className="py-8 text-center text-sm text-[var(--sys-muted-foreground)]">
@@ -178,7 +178,7 @@ export function PayoutDialog({
           {wallet && leaving !== null && (
             <div className="rounded-lg border border-[var(--sys-border)] px-3 py-2.5">
               <p className="flex items-center gap-1.5 text-xs text-[var(--sys-muted-foreground)]">
-                <WalletIcon className="h-3 w-3" /> سيخرج من «{wallet.name}»
+                <RiWallet3Line className="h-4 w-4" /> سيخرج من «{wallet.name}»
               </p>
               <p className="text-lg font-black text-[var(--sys-destructive)] tabular-nums" dir="ltr">
                 {leaving.toFixed(3)} {wallet.currencyCode}

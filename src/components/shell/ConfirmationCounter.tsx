@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Hourglass, PhoneCall } from 'lucide-react';
+import { RiHourglassLine, RiPhoneLine } from '@remixicon/react';
 
 /**
  * A NUMBER IN THE HEADER, FOR THE TWO PEOPLE WHO NEED ONE.
@@ -63,7 +63,7 @@ export function ConfirmationCounter() {
   if (counter.kind === 'POOL') {
     return (
       <Link href="/confirmation/queue" className={`${chip} hover:border-[var(--sys-primary)]`} title="طلبات تنتظر السحب">
-        <PhoneCall className="h-3.5 w-3.5" />
+        <RiPhoneLine className="h-4 w-4" />
         <span className="hidden sm:inline">بانتظار السحب</span>
         {counter.count}
       </Link>
@@ -72,7 +72,7 @@ export function ConfirmationCounter() {
 
   return (
     <span className={chip} title="طلباتك التي لم تُؤكَّد بعد">
-      <Hourglass className="h-3.5 w-3.5" />
+      <RiHourglassLine className="h-4 w-4" />
       <span className="hidden sm:inline">طلباتك بانتظار التأكيد</span>
       {counter.count}
     </span>

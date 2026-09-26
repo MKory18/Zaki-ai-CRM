@@ -325,7 +325,7 @@ describe('no new hardcoded colour in a system screen', () => {
 describe('a semantic colour keeps its meaning on every screen', () => {
   it('the assistant does not paint its recommendations as losses', () => {
     const src = readFileSync(join(process.cwd(), 'src/components/screens/AssistantScreen.tsx'), 'utf8');
-    const i = src.indexOf('<CheckCircle2');
+    const i = src.indexOf('<RiCheckboxCircleLine');
     expect(i, 'the recommendations box is gone').toBeGreaterThan(0);
     const box = src.slice(src.lastIndexOf('<div className="bg-[var(--sys-', i), i);
     expect(box.length, 'could not find the box markup').toBeGreaterThan(20);
@@ -334,7 +334,7 @@ describe('a semantic colour keeps its meaning on every screen', () => {
 
   it('and still paints its risks as risks', () => {
     const src = readFileSync(join(process.cwd(), 'src/components/screens/AssistantScreen.tsx'), 'utf8');
-    const i = src.indexOf('<ShieldAlert');
+    const i = src.indexOf('<RiShieldFlashLine');
     const box = src.slice(src.lastIndexOf('<div className="bg-[var(--sys-', i), i);
     expect(box.length, 'could not find the box markup').toBeGreaterThan(20);
     expect(box).toContain('sys-destructive');

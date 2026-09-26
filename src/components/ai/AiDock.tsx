@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Bot, X, Send, Loader2, Minus, Trash2 } from 'lucide-react';
+import { RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiRobot2Line, RiSendPlaneLine, RiSubtractLine } from '@remixicon/react';
 
 /**
  * THE ASSISTANT, WHEREVER YOU ARE.
@@ -123,7 +123,7 @@ export function AiDock() {
         aria-label="افتح المساعد الذكي"
         className="fixed bottom-4 start-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] shadow-overlay transition hover:bg-[var(--sys-heading)] active:scale-95"
       >
-        <Bot className="h-5 w-5" />
+        <RiRobot2Line className="h-5 w-5" />
         {/* A quiet mark that there is something to come back to. */}
         {msgs.length > 0 && (
           <span className="absolute -end-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-[var(--sys-card)] bg-[var(--sys-primary)]" />
@@ -142,7 +142,7 @@ export function AiDock() {
     >
       <header className="flex items-center justify-between border-b border-[var(--sys-border)] bg-[var(--sys-heading)] px-3 py-2">
         <span className="flex items-center gap-2 text-xs font-bold text-[var(--sys-primary-foreground)]">
-          <Bot className="h-4 w-4" /> المساعد الذكي
+          <RiRobot2Line className="h-4 w-4" /> المساعد الذكي
         </span>
         <span className="flex items-center gap-0.5">
           {msgs.length > 0 && (
@@ -152,7 +152,7 @@ export function AiDock() {
               title="ابدأ محادثة جديدة"
               className="rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <RiDeleteBinLine className="h-4 w-4" />
             </button>
           )}
           <button
@@ -161,7 +161,7 @@ export function AiDock() {
             title="تصغير"
             className="rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
           >
-            <Minus className="h-3.5 w-3.5" />
+            <RiSubtractLine className="h-4 w-4" />
           </button>
           <button
             type="button"
@@ -169,7 +169,7 @@ export function AiDock() {
             title="إغلاق ومسح"
             className="rounded-lg p-1 text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
           >
-            <X className="h-3.5 w-3.5" />
+            <RiCloseLine className="h-4 w-4" />
           </button>
         </span>
       </header>
@@ -177,7 +177,7 @@ export function AiDock() {
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
         {msgs.length === 0 ? (
           <div className="pt-4 text-center">
-            <Bot className="mx-auto h-7 w-7 text-[var(--sys-border-strong)]" />
+            <RiRobot2Line className="mx-auto h-6 w-6 text-[var(--sys-border-strong)]" />
             <p className="mt-2 text-xs font-semibold text-[var(--sys-foreground)]">اسأل عن أرقامك</p>
             <p className="mx-auto mt-1 max-w-[16rem] text-xs leading-relaxed text-[var(--sys-muted)]">
               يرى بيانات هذا المتجر وحده، وبحدود صلاحياتك.
@@ -216,7 +216,7 @@ export function AiDock() {
         {busy && (
           <div className="flex justify-end">
             <span className="flex items-center gap-1 rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
-              <Loader2 className="h-3 w-3 animate-spin" /> يقرأ أرقامك…
+              <RiLoader4Line className="h-4 w-4 animate-spin" /> يقرأ أرقامك…
             </span>
           </div>
         )}
@@ -234,12 +234,12 @@ export function AiDock() {
           placeholder="اكتب سؤالك…"
           className="flex-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-xs text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
         />
-        <button
+        <button aria-label="إرسال"
           type="submit"
           disabled={busy || !q.trim()}
           className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] transition disabled:opacity-40"
         >
-          <Send className="h-3.5 w-3.5" />
+          <RiSendPlaneLine className="icon-mirror h-4 w-4" />
         </button>
       </form>
     </div>

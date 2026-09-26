@@ -7,17 +7,7 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
-import {
-  Sparkles,
-  Wand2,
-  CheckCircle2,
-  AlertCircle,
-  User,
-  Phone,
-  MapPin,
-  Package,
-  ClipboardPaste,
-} from 'lucide-react';
+import { RiArchiveLine, RiCheckboxCircleLine, RiClipboardLine, RiErrorWarningLine, RiMagicLine, RiMapPinLine, RiPhoneLine, RiSparkling2Line, RiUserLine } from '@remixicon/react';
 
 interface AiOrderModalProps {
   isOpen: boolean;
@@ -164,7 +154,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       <div className="space-y-5">
         {error && (
           <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+            <RiErrorWarningLine className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -176,7 +166,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               1. الصق نص الطلب
             </label>
             <Button size="sm" variant="outline" onClick={handlePaste} className="text-xs">
-              <ClipboardPaste className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+              <RiClipboardLine className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
               لصق من الحافظة
             </Button>
           </div>
@@ -198,7 +188,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
           />
           <div className="flex justify-end mt-3">
             <Button onClick={handleParse} loading={parsing}>
-              <Wand2 className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+              <RiMagicLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
               تحليل الطلب بالذكاء الاصطناعي
             </Button>
           </div>
@@ -209,7 +199,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
           <div className="border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]/40 rounded-lg p-4 space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--sys-destructive-border)] pb-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-2 rtl:space-x-reverse">
-                <CheckCircle2 className="w-4 h-4 text-[var(--sys-destructive)]" />
+                <RiCheckboxCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                 <span>2. تأكيد البيانات المستخرجة (قابلة للتعديل)</span>
               </h4>
               <span className="text-xs font-mono text-[var(--sys-muted)] bg-[var(--sys-card)] px-2 py-0.5 rounded-lg border">
@@ -298,7 +288,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                     : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <RiSparkling2Line className="w-4 h-4 mt-0.5 shrink-0" />
                 <span>
                   تمت مطابقة «{result.parsed.productQuery}» مع: <strong>{result.matchedProduct.name}</strong>
                   {result.suggestedOfferName && <> — العرض المقترح: {result.suggestedOfferName}</>}
@@ -312,7 +302,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 إلغاء
               </Button>
               <Button onClick={handleConfirm} loading={saving}>
-                <CheckCircle2 className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+                <RiCheckboxCircleLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 تسجيل الطلب (${finalPrice})
               </Button>
             </div>

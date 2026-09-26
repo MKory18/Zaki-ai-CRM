@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Phone, PhoneOff, Search, ShieldAlert, Sparkles, X, XCircle } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
@@ -16,6 +15,7 @@ import {
   type PostponeValue,
 } from './confirmation/ActionDialogs';
 import { AssistantDialog } from './confirmation/AssistantDialog';
+import { RiAlertLine, RiChat3Line, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLoader4Line, RiPencilLine, RiPhoneLine, RiPhoneLockLine, RiSearchLine, RiShieldFlashLine, RiSparkling2Line, RiTimerLine } from '@remixicon/react';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
@@ -223,7 +223,7 @@ export function ConfirmationMineScreen() {
   if (!data) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -328,7 +328,7 @@ export function ConfirmationMineScreen() {
 
                 {order.risk?.requiresPrepaymentOrApproval && (
                   <p className="flex items-center gap-2 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-2">
-                    <ShieldAlert className="w-4 h-4" /> عميل عالي الخطورة: يتطلب دفعاً مسبقاً أو موافقة المشرف.
+                    <RiShieldFlashLine className="w-4 h-4" /> عميل عالي الخطورة: يتطلب دفعاً مسبقاً أو موافقة المشرف.
                   </p>
                 )}
 
@@ -339,7 +339,7 @@ export function ConfirmationMineScreen() {
                       unit — without leaving the queue. The fields she has no
                       authority over are not shown, and are refused by the
                       server even if they were. */}
-                  <Action onClick={() => setOpenOrderId(order.id)} icon={<Pencil className="w-3.5 h-3.5" />}>
+                  <Action onClick={() => setOpenOrderId(order.id)} icon={<RiPencilLine className="w-4 h-4" />}>
                     افتح وعدّل
                   </Action>
 
@@ -347,7 +347,7 @@ export function ConfirmationMineScreen() {
                   <Action
                     onClick={() => logAttempt(order, 'PHONE', 'NO_ANSWER')}
                     busy={busyId === order.id}
-                    icon={<PhoneOff className="w-3.5 h-3.5" />}
+                    icon={<RiPhoneLockLine className="w-4 h-4" />}
                     danger={remaining <= 1}
                   >
                     لا يرد
@@ -364,31 +364,31 @@ export function ConfirmationMineScreen() {
                         : `متبقٍ ${remaining} محاولات قبل الإغلاق التلقائي`}
                   </span>
 
-                  <Action onClick={() => callCustomer(order)} busy={busyId === order.id} icon={<Phone className="w-3.5 h-3.5" />}>
+                  <Action onClick={() => callCustomer(order)} busy={busyId === order.id} icon={<RiPhoneLine className="w-4 h-4" />}>
                     اتصال
                   </Action>
 
-                  <Action onClick={() => logAttempt(order, 'WHATSAPP', 'ANSWERED')} busy={busyId === order.id} icon={<MessageCircle className="w-3.5 h-3.5" />}>
+                  <Action onClick={() => logAttempt(order, 'WHATSAPP', 'ANSWERED')} busy={busyId === order.id} icon={<RiChat3Line className="w-4 h-4" />}>
                     واتساب
                   </Action>
-                  <Action onClick={() => setDialog({ kind: 'postpone', order })} busy={busyId === order.id} icon={<Clock className="w-3.5 h-3.5" />}>
+                  <Action onClick={() => setDialog({ kind: 'postpone', order })} busy={busyId === order.id} icon={<RiTimerLine className="w-4 h-4" />}>
                     تأجيل {order.postponeCount > 0 && `(${order.postponeCount})`}
                   </Action>
-                  <Action onClick={() => setDialog({ kind: 'reject', order })} busy={busyId === order.id} danger icon={<XCircle className="w-3.5 h-3.5" />}>
+                  <Action onClick={() => setDialog({ kind: 'reject', order })} busy={busyId === order.id} danger icon={<RiCloseCircleLine className="w-4 h-4" />}>
                     ألغِ
                   </Action>
 
-                  <Action onClick={() => setDialog({ kind: 'issue', order })} busy={busyId === order.id} icon={<AlertTriangle className="w-3.5 h-3.5" />}>
+                  <Action onClick={() => setDialog({ kind: 'issue', order })} busy={busyId === order.id} icon={<RiAlertLine className="w-4 h-4" />}>
                     إشكال إدخال
                   </Action>
 
                   {/* Reads this order and this customer's history, and says
                       what it would open with. It changes nothing — every
                       button that does is on either side of it. */}
-                  <Action onClick={() => setDialog({ kind: 'assist', order })} icon={<Sparkles className="w-3.5 h-3.5" />}>
+                  <Action onClick={() => setDialog({ kind: 'assist', order })} icon={<RiSparkling2Line className="w-4 h-4" />}>
                     مساعدة
                   </Action>
-                  <Action primary onClick={() => confirm(order)} busy={busyId === order.id} icon={<CheckCircle2 className="w-3.5 h-3.5" />}>
+                  <Action primary onClick={() => confirm(order)} busy={busyId === order.id} icon={<RiCheckboxCircleLine className="w-4 h-4" />}>
                     تأكيد الطلب
                   </Action>
                 </footer>
@@ -599,7 +599,7 @@ function SectionHead({
       </h2>
       {note && <span className="text-xs text-[var(--sys-muted)]">{note}</span>}
       <div className="relative ms-auto">
-        <Search className="w-3.5 h-3.5 text-[var(--sys-muted)] absolute top-1/2 -translate-y-1/2 end-2.5" />
+        <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute top-1/2 -translate-y-1/2 end-2.5" />
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -613,7 +613,7 @@ function SectionHead({
             aria-label="امسح البحث"
             className="absolute top-1/2 -translate-y-1/2 start-1.5 text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
           >
-            <X className="w-3.5 h-3.5" />
+            <RiCloseLine className="w-4 h-4" />
           </button>
         )}
       </div>

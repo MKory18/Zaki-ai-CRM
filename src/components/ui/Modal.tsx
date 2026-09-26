@@ -2,8 +2,8 @@
 
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
 import clsx from 'clsx';
+import { RiCloseLine } from '@remixicon/react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -82,7 +82,7 @@ export function Modal({
             aria-label="إغلاق"
             className="p-1 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-heading)] hover:bg-[var(--sys-border)] transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <RiCloseLine className="w-5 h-5" />
           </button>
         </div>
         <div className="p-6 overflow-y-auto flex-1">{children}</div>

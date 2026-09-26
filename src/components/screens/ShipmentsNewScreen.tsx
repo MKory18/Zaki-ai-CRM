@@ -2,10 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAsk } from '@/components/ui/Confirm';
-import { AlertTriangle, Loader2, PauseCircle, RotateCcw, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAlertLine, RiArrowGoBackLine, RiLoader4Line, RiPauseCircleLine, RiTruckLine } from '@remixicon/react';
 
 /**
  * /ops/shipments/new — pick a courier, filter, review each row's COD and its
@@ -191,7 +191,7 @@ export function ShipmentsNewScreen() {
 
       {!rows ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
         <>
@@ -257,7 +257,7 @@ export function ShipmentsNewScreen() {
                       <div className="space-y-1">
                         {r.blocks.map((b) => (
                           <p key={b.code} className={`text-xs flex items-center gap-1 ${b.hard ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-warning)]'}`}>
-                            <AlertTriangle className="w-3 h-3" /> {b.message}
+                            <RiAlertLine className="w-4 h-4" /> {b.message}
                           </p>
                         ))}
                         {!r.hardBlocked && (
@@ -294,11 +294,11 @@ export function ShipmentsNewScreen() {
                       }`}
                     >
                       {holding === r.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <RiLoader4Line className="w-4 h-4 animate-spin" />
                       ) : view === 'held' ? (
-                        <RotateCcw className="w-3 h-3" />
+                        <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
                       ) : (
-                        <PauseCircle className="w-3 h-3" />
+                        <RiPauseCircleLine className="w-4 h-4" />
                       )}
                       {view === 'held' ? 'أرجِعه' : 'أجّل'}
                     </button>
@@ -317,7 +317,7 @@ export function ShipmentsNewScreen() {
                       left the empty message short of the table and the last
                       column hanging off the end of the row. */}
                   <td colSpan={7} className="px-4 py-6 text-center text-sm text-[var(--sys-muted-foreground)]">
-                    <Truck className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
+                    <RiTruckLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
                     لا توجد طلبات مؤكدة جاهزة للشحن بهذه الفلاتر.
                   </td>
                 </tr>

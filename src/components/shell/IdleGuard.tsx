@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { EyeOff, Lock } from 'lucide-react';
 import { idleState, secondsLeft, type IdleState } from '@/lib/exposure';
 import { signOut } from '@/lib/sign-out';
+import { RiEyeOffLine, RiLockLine } from '@remixicon/react';
 
 /**
  * A PHONE LEFT ON A COUNTER.
@@ -133,7 +133,7 @@ export function IdleGuard() {
           data-testid="backgrounded"
           className="fixed inset-0 z-[65] flex items-center justify-center bg-[var(--sys-surface)]/90 backdrop-blur-2xl"
         >
-          <EyeOff className="h-8 w-8 text-[var(--sys-muted)]" />
+          <RiEyeOffLine className="h-6 w-6 text-[var(--sys-muted)]" />
         </div>
       )}
 
@@ -145,7 +145,7 @@ export function IdleGuard() {
           className="fixed inset-x-0 bottom-0 z-[70] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
         >
           <div className="mx-auto flex max-w-md items-center gap-3 rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-card)] p-3 shadow-overlay">
-            <Lock className="h-5 w-5 shrink-0 text-[var(--sys-warning)]" />
+            <RiLockLine className="h-5 w-5 shrink-0 text-[var(--sys-warning)]" />
             <p className="flex-1 text-sm text-[var(--sys-foreground)]">
               {phase === 'expired' ? (
                 'انتهت الجلسة — جارٍ تسجيل الخروج…'

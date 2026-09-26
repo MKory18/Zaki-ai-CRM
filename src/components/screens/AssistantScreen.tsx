@@ -6,19 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
 import { findRoute } from '@/lib/route-registry';
-import {
-  Sparkles,
-  RefreshCw,
-  Send,
-  AlertCircle,
-  Lightbulb,
-  ShieldAlert,
-  CheckCircle2,
-  TrendingUp,
-  DollarSign,
-  User,
-  Bot,
-} from 'lucide-react';
+import { RiArrowUpCircleLine, RiCheckboxCircleLine, RiErrorWarningLine, RiLightbulbLine, RiMoneyDollarCircleLine, RiRefreshLine, RiRobot2Line, RiSendPlaneLine, RiShieldFlashLine, RiSparkling2Line, RiUserLine } from '@remixicon/react';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -159,7 +147,7 @@ export function AssistantScreen() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2">
-              <Sparkles className="w-6 h-6 text-[var(--sys-destructive)]" />
+              <RiSparkling2Line className="w-6 h-6 text-[var(--sys-destructive)]" />
               <span>{findRoute('/assistant')?.label}</span>
             </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
@@ -173,7 +161,7 @@ export function AssistantScreen() {
             loading={generating}
             className="flex items-center space-x-1.5"
           >
-            <Sparkles className="w-4 h-4" />
+            <RiSparkling2Line className="w-4 h-4" />
             <span>أعد توليد الملخّص</span>
           </Button>
         </div>
@@ -187,7 +175,7 @@ export function AssistantScreen() {
                 title={
                   <div className="flex items-center justify-between">
                     <span className="flex items-center space-x-2">
-                      <Sparkles className="w-5 h-5 text-[var(--sys-primary)]" />
+                      <RiSparkling2Line className="w-5 h-5 text-[var(--sys-primary)]" />
                       <span>ملخّص اليوم ({summaryData.date})</span>
                     </span>
                     <span className="text-xs font-mono font-medium text-[var(--sys-muted)]">
@@ -237,7 +225,7 @@ export function AssistantScreen() {
                   {/* Key Observations */}
                   <div className="bg-[var(--sys-surface)]/70 border border-[var(--sys-muted-foreground)]/30 rounded-lg p-4">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)] flex items-center space-x-1.5 mb-2.5">
-                      <Lightbulb className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
+                      <RiLightbulbLine className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
                       <span>ملاحظات</span>
                     </h4>
                     <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
@@ -253,7 +241,7 @@ export function AssistantScreen() {
                   {/* Risks */}
                   <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-lg p-4">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
-                      <ShieldAlert className="w-4 h-4 text-[var(--sys-destructive)]" />
+                      <RiShieldFlashLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                       <span>مخاطر تحتاج تدخّلاً</span>
                     </h4>
                     <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
@@ -269,7 +257,7 @@ export function AssistantScreen() {
                   {/* Recommendations */}
                   <div className="bg-[var(--sys-success-soft)]/70 border border-[var(--sys-success)]/30 rounded-lg p-4">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-success)] flex items-center space-x-1.5 mb-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-[var(--sys-success)]" />
+                      <RiCheckboxCircleLine className="w-4 h-4 text-[var(--sys-success)]" />
                       <span>توصيات</span>
                     </h4>
                     <ul className="space-y-2 text-xs text-[var(--sys-foreground)]">
@@ -293,7 +281,7 @@ export function AssistantScreen() {
             Said here so nobody rebuilds it a third time. */}
         <Card className="flex flex-col h-[550px]">
           <CardHeader
-            title={<span className="flex items-center space-x-2"><Bot className="w-5 h-5 text-[var(--sys-primary)]" /><span>اسأل عن أرقامك</span></span>}
+            title={<span className="flex items-center space-x-2"><RiRobot2Line className="w-5 h-5 text-[var(--sys-primary)]" /><span>اسأل عن أرقامك</span></span>}
             subtitle="Ask strategic questions; AI calculates responses from live verified database context"
           />
 
@@ -308,7 +296,7 @@ export function AssistantScreen() {
               >
                 {m.role === 'assistant' && (
                   <div className="w-8 h-8 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center shrink-0 shadow-raised">
-                    <Bot className="w-4 h-4" />
+                    <RiRobot2Line className="w-4 h-4" />
                   </div>
                 )}
 
@@ -339,7 +327,7 @@ export function AssistantScreen() {
 
             {chatLoading && (
               <div className="flex items-center space-x-2 text-xs text-[var(--sys-muted)]">
-                <Bot className="w-4 h-4 text-[var(--sys-primary)] animate-spin" />
+                <RiRobot2Line className="w-4 h-4 text-[var(--sys-primary)] animate-spin" />
                 <span>يقرأ أرقام متجرك…</span>
               </div>
             )}
@@ -376,7 +364,7 @@ export function AssistantScreen() {
                 className="flex-1 px-4 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
               <Button type="submit" size="sm" loading={chatLoading}>
-                <Send className="w-4 h-4" />
+                <RiSendPlaneLine className="icon-mirror w-4 h-4" />
               </Button>
             </form>
           </div>

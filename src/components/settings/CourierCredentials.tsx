@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { KeyRound, Loader2, ShieldCheck, ShieldAlert, Trash2, Check, PlugZap, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
+import { RiCheckLine, RiCloseCircleLine, RiDeleteBinLine, RiKey2Line, RiLoader4Line, RiPlug2Line, RiShieldCheckLine, RiShieldFlashLine } from '@remixicon/react';
 
 /**
  * Where a courier account is entered — and the only place it is.
@@ -119,7 +119,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
   if (!status) {
     return (
       <p className="flex items-center gap-2 text-xs text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" /> جارٍ القراءة…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ القراءة…
       </p>
     );
   }
@@ -129,7 +129,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-xs font-bold text-[var(--sys-heading)]">
-            <KeyRound className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
+            <RiKey2Line className="h-4 w-4 text-[var(--sys-primary)]" />
             حساب {status.name} على {status.adapterCode}
           </p>
           {status.hasCredentials ? (
@@ -152,22 +152,22 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
               first real batch fails with the parcels already packed. */}
           {status.hasCredentials && (
             <Button size="sm" variant="outline" onClick={runTest} disabled={testing}>
-              {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlugZap className="h-3.5 w-3.5" />}
+              {testing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiPlug2Line className="h-4 w-4" />}
               اختبر الاتصال
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={() => setOpen(true)} disabled={!status.encryptionAvailable}>
-            <KeyRound className="h-3.5 w-3.5" /> {status.hasCredentials ? 'تغيير الحساب' : 'إدخال الحساب'}
+            <RiKey2Line className="h-4 w-4" /> {status.hasCredentials ? 'تغيير الحساب' : 'إدخال الحساب'}
           </Button>
           {status.hasCredentials && (
-            <button
+            <button aria-label="حذف الحساب"
               type="button"
               onClick={clear}
               disabled={saving}
               title="حذف الحساب"
               className="cursor-pointer rounded-lg p-2 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
             >
-              <Trash2 className="h-4 w-4" />
+              <RiDeleteBinLine className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -182,9 +182,9 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
           }`}
         >
           {test.ok ? (
-            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <RiCheckLine className="mt-0.5 h-4 w-4 shrink-0" />
           ) : (
-            <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <RiCloseCircleLine className="mt-0.5 h-4 w-4 shrink-0" />
           )}
           {test.message}
         </p>
@@ -192,7 +192,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
 
       {!status.encryptionAvailable && (
         <p className="flex items-start gap-2 rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] p-2.5 text-xs leading-relaxed text-[var(--sys-warning)]">
-          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <RiShieldFlashLine className="mt-0.5 h-4 w-4 shrink-0" />
           مفتاح التشفير غير مُهيّأ على الخادم. أضف <code dir="ltr">APP_ENCRYPTION_KEY</code> إلى
           ملف <code dir="ltr">.env</code> ثم أعد التشغيل — كلمة المرور لن تُحفظ بلا تشفير.
         </p>
@@ -200,7 +200,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
 
       {status.hasCredentials && status.readable === false && (
         <p className="flex items-start gap-2 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs leading-relaxed text-[var(--sys-destructive)]">
-          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <RiShieldFlashLine className="mt-0.5 h-4 w-4 shrink-0" />
           الحساب محفوظ لكن لا يمكن فكّ تشفيره — غالباً تغيّر مفتاح التشفير. الشحنات
           تُنشأ يدوياً حتى تُدخله من جديد.
         </p>
@@ -208,11 +208,11 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
 
       {status.hasCredentials && status.readable && (
         <p className="flex items-center gap-2 text-xs text-[var(--sys-success)]">
-          <ShieldCheck className="h-3.5 w-3.5" /> الحساب سليم — الشحنات تُنشأ آلياً.
+          <RiShieldCheckLine className="h-4 w-4" /> الحساب سليم — الشحنات تُنشأ آلياً.
         </p>
       )}
 
-      {done && <p className="flex items-center gap-1.5 text-xs text-[var(--sys-success)]"><Check className="h-3.5 w-3.5" />{done}</p>}
+      {done && <p className="flex items-center gap-1.5 text-xs text-[var(--sys-success)]"><RiCheckLine className="h-4 w-4" />{done}</p>}
       {error && !open && <p className="text-xs text-[var(--sys-destructive)]">{error}</p>}
 
       <Modal
@@ -302,7 +302,7 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
               إلغاء
             </Button>
             <Button type="submit" loading={saving}>
-              <ShieldCheck className="h-4 w-4" /> احفظ مشفَّراً
+              <RiShieldCheckLine className="h-4 w-4" /> احفظ مشفَّراً
             </Button>
           </div>
         </form>

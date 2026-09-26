@@ -7,12 +7,9 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
-import {
-  Globe, Upload, Copy, ExternalLink, ArrowRight, Plus, Trash2, Pencil,
-  Loader2, FileCode, MonitorPlay, Gift, Gauge,
-} from 'lucide-react';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
+import { RiAddCircleLine, RiArrowRightLine, RiComputerLine, RiDashboard3Line, RiDeleteBinLine, RiEarthLine, RiExternalLinkLine, RiFileCodeLine, RiFileCopyLine, RiGiftLine, RiLoader4Line, RiPencilLine, RiUpload2Line } from '@remixicon/react';
 
 export function LandingPageDetailScreen() {
   const tell = useTell();
@@ -187,13 +184,13 @@ export function LandingPageDetailScreen() {
               stands. The title gets its own line rather than being squeezed
               to "تحري.." between a button and a badge. */}
           <Button variant="secondary" size="sm" onClick={() => (window.location.href = '/growth/landing-pages')}>
-            <ArrowRight className="w-4 h-4" /> رجوع
+            <RiArrowRightLine className="icon-mirror w-4 h-4" /> رجوع
           </Button>
           <Badge variant={lp.isPublished ? 'success' : 'warning'}>{lp.isPublished ? 'منشورة' : 'مسودة'}</Badge>
 
           <div className="order-last min-w-0 basis-full sm:order-none sm:basis-auto">
             <h1 className="text-lg sm:text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-              <Globe className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-[var(--sys-primary)]" />
+              <RiEarthLine className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-[var(--sys-primary)]" />
               تحرير صفحة الهبوط
             </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-0.5 truncate">{lp.name}</p>
@@ -201,7 +198,7 @@ export function LandingPageDetailScreen() {
 
           <div className="flex flex-1 items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => (window.location.href = `/growth/landing-pages/${lpId}/editor`)}>
-              <Pencil className="w-4 h-4" /> المحرّر
+              <RiPencilLine className="w-4 h-4" /> المحرّر
             </Button>
             <Button size="sm" onClick={togglePublish} variant={lp.isPublished ? 'outline' : 'success'}>
               {lp.isPublished ? 'إلغاء النشر' : 'نشر الصفحة'}
@@ -262,7 +259,7 @@ export function LandingPageDetailScreen() {
                 <div className="flex items-center justify-between">
                   {saveMsg && <span className="text-xs text-[var(--sys-foreground)]">{saveMsg}</span>}
                   <Button onClick={save} disabled={saving}>
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />} حفظ التعديلات
+                    {saving ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiFileCodeLine className="w-4 h-4" />} حفظ التعديلات
                   </Button>
                 </div>
               </CardContent>
@@ -283,7 +280,7 @@ export function LandingPageDetailScreen() {
                   onChange={(e) => e.target.files?.[0] && uploadHtml(e.target.files[0])}
                 />
                 <Button onClick={() => fileRef.current?.click()}>
-                  <Upload className="w-4 h-4" /> رفع ملف HTML
+                  <RiUpload2Line className="w-4 h-4" /> رفع ملف HTML
                 </Button>
                 {uploadMsg && <p className="text-xs text-[var(--sys-foreground)]">{uploadMsg}</p>}
               </CardContent>
@@ -308,7 +305,7 @@ export function LandingPageDetailScreen() {
             <Card>
               <CardContent className="p-4 space-y-2">
                 <h3 className="font-semibold text-[var(--sys-heading)] flex items-center gap-2">
-                  <Gift className="w-4 h-4 text-[var(--sys-primary)]" /> عروض المنتج
+                  <RiGiftLine className="w-4 h-4 text-[var(--sys-primary)]" /> عروض المنتج
                 </h3>
                 <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                   العروض تُدار من صفحة المنتج نفسه، وهذه الصفحة تقرأ منها مباشرة —
@@ -317,7 +314,7 @@ export function LandingPageDetailScreen() {
                 {lp.productId ? (
                   <a href={`/products/${lp.productId}`}>
                     <Button variant="outline" size="sm">
-                      <Gift className="w-4 h-4" /> إدارة عروض هذا المنتج
+                      <RiGiftLine className="w-4 h-4" /> إدارة عروض هذا المنتج
                     </Button>
                   </a>
                 ) : (
@@ -333,7 +330,7 @@ export function LandingPageDetailScreen() {
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-[var(--sys-heading)] flex items-center gap-2">
-                    <Gift className="w-4 h-4 text-[var(--sys-primary)]" /> المنتجات المقترحة بعد الطلب
+                    <RiGiftLine className="w-4 h-4 text-[var(--sys-primary)]" /> المنتجات المقترحة بعد الطلب
                   </h3>
                 </div>
                 <p className="text-xs text-[var(--sys-muted-foreground)]">تظهر في شاشة النجاح بعد الطلب — يمكن للعميل إضافتها إلى نفس الطلب خلال 30 دقيقة.</p>
@@ -345,7 +342,7 @@ export function LandingPageDetailScreen() {
                     ))}
                   </Select>
                   <Button size="sm" onClick={addRecommendation} disabled={recSaving || !recProductId}>
-                    {recSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} إضافة
+                    {recSaving ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiAddCircleLine className="w-4 h-4" />} إضافة
                   </Button>
                 </div>
                 {recs.length === 0 ? (
@@ -358,7 +355,7 @@ export function LandingPageDetailScreen() {
                         <span className="flex-1 truncate text-sm text-[var(--sys-heading)]">{r.product?.name}</span>
                         <span className="text-xs font-bold text-[var(--sys-primary)]" dir="ltr">{r.product?.basePrice ?? '—'}</span>
                         {!r.isActive && <span className="text-xs text-[var(--sys-warning)]">معطّل</span>}
-                        <button title="حذف" onClick={() => deleteRecommendation(r.id)} className="p-1 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><Trash2 className="w-4 h-4" /></button>
+                        <button title="حذف" onClick={() => deleteRecommendation(r.id)} className="p-1 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><RiDeleteBinLine className="w-4 h-4" /></button>
                       </div>
                     ))}
                   </div>
@@ -371,10 +368,10 @@ export function LandingPageDetailScreen() {
                 <h3 className="font-semibold text-[var(--sys-heading)]">الرابط العام</h3>
                 <div className="flex items-center gap-2" dir="ltr">
                   <code className="flex-1 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg px-3 py-2 truncate">{publicUrl}</code>
-                  <Button variant="secondary" size="sm" onClick={copyUrl}><Copy className="w-4 h-4" /> {copied ? 'تم' : 'نسخ'}</Button>
+                  <Button variant="secondary" size="sm" onClick={copyUrl}><RiFileCopyLine className="w-4 h-4" /> {copied ? 'تم' : 'نسخ'}</Button>
                   {lp.isPublished && (
                     <a href={`/lp/${lp.slug}`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="sm"><ExternalLink className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="sm"><RiExternalLinkLine className="icon-mirror w-4 h-4" /></Button>
                     </a>
                   )}
                 </div>
@@ -387,7 +384,7 @@ export function LandingPageDetailScreen() {
                   className="flex items-center justify-between gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                 >
                   <span className="flex items-center gap-1.5">
-                    <Gauge className="h-3.5 w-3.5" />
+                    <RiDashboard3Line className="h-4 w-4" />
                     الزيارات والطلبات ونسبة التحويل
                   </span>
                   <span className="font-semibold">في لوحة الأداء ←</span>
@@ -401,7 +398,7 @@ export function LandingPageDetailScreen() {
             <Card className="h-full">
               <CardContent className="p-4 flex flex-col h-full">
                 <h3 className="font-semibold text-[var(--sys-heading)] flex items-center gap-2 mb-3">
-                  <MonitorPlay className="w-5 h-5 text-[var(--sys-primary)]" /> معاينة آمنة
+                  <RiComputerLine className="w-5 h-5 text-[var(--sys-primary)]" /> معاينة آمنة
                 </h3>
                 {previewToken ? (
                   /**

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
-import { AlertTriangle, Download, Truck, Bike, Trophy, Coins, CheckCircle2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { DateRange } from '@/components/ui/DateRange';
 import { TeamPerformanceTable } from '@/components/performance/TeamPerformanceTable';
@@ -13,6 +12,7 @@ import { LandingAnalyticsTab } from '@/components/performance/LandingAnalyticsTa
 import { userCan } from '@/lib/can';
 import { ScoreBoard } from '@/components/performance/ScoreBoard';
 import { findRoute } from '@/lib/route-registry';
+import { RiAlertLine, RiCheckboxCircleLine, RiCopperCoinLine, RiDownload2Line, RiEBike2Line, RiTrophyLine, RiTruckLine } from '@remixicon/react';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -156,7 +156,7 @@ export function PerformanceScreen() {
               onClick={handleExport}
               className="flex items-center space-x-1"
             >
-              <Download className="w-4 h-4" />
+              <RiDownload2Line className="w-4 h-4" />
               <span>تصدير CSV</span>
             </Button>
           </div>
@@ -198,31 +198,31 @@ export function PerformanceScreen() {
         {/* The five headlines, read at a glance before any table. */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <Rank
-            icon={<Trophy className="w-3.5 h-3.5" />}
+            icon={<RiTrophyLine className="w-4 h-4" />}
             label="الأكثر طلباً"
             name={analytics?.rankings?.mostRequested?.name}
             note={`${analytics?.rankings?.mostRequested?.totalOrders || 0} طلب`}
           />
           <Rank
-            icon={<Coins className="w-3.5 h-3.5" />}
+            icon={<RiCopperCoinLine className="w-4 h-4" />}
             label="الأكثر ربحاً"
             name={analytics?.rankings?.mostProfitable?.name}
             note={`صافي ${(analytics?.rankings?.mostProfitable?.netProfit || 0).toFixed(2)}$`}
           />
           <Rank
-            icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+            icon={<RiCheckboxCircleLine className="w-4 h-4" />}
             label="الأكثر تأكيداً"
             name={analytics?.rankings?.mostConfirmed?.name}
             note={`${analytics?.rankings?.mostConfirmed?.confirmedOrders || 0} مؤكد`}
           />
           <Rank
-            icon={<Truck className="w-3.5 h-3.5" />}
+            icon={<RiTruckLine className="w-4 h-4" />}
             label="الأكثر توصيلاً"
             name={analytics?.rankings?.mostDelivered?.name}
             note={`${analytics?.rankings?.mostDelivered?.deliveredOrders || 0} موصَّل`}
           />
           <Rank
-            icon={<AlertTriangle className="w-3.5 h-3.5" />}
+            icon={<RiAlertLine className="w-4 h-4" />}
             label="الأكثر رفضاً"
             name={analytics?.rankings?.highestRejection?.name}
             note={`${analytics?.rankings?.highestRejection?.rejectedOrders || 0} مرفوض`}
@@ -342,9 +342,9 @@ export function PerformanceScreen() {
                   <li key={c.provider.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-xs">
                     <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--sys-heading)] min-w-[130px]">
                       {c.provider.kind === 'AGENT' ? (
-                        <Bike className="w-3.5 h-3.5 text-[var(--sys-primary)]" />
+                        <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" />
                       ) : (
-                        <Truck className="w-3.5 h-3.5 text-[var(--sys-muted)]" />
+                        <RiTruckLine className="w-4 h-4 text-[var(--sys-muted)]" />
                       )}
                       {c.provider.name}
                     </span>

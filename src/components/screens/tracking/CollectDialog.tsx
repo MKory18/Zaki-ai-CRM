@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { HandCoins } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { RiHandCoinLine } from '@remixicon/react';
 
 /**
  * "استلمت منه" — settling a مندوب, or a company that sends no file, by hand.
@@ -190,7 +190,7 @@ export function CollectDialog({
             disabled={saving || !walletId}
             className="h-10 px-4 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
           >
-            <HandCoins className="w-4 h-4" />
+            <RiHandCoinLine className="w-4 h-4" />
             {saving ? 'جارٍ التسجيل…' : 'استلمت منه'}
           </button>
         </div>

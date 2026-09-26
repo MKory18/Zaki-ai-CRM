@@ -2,7 +2,7 @@
 
 import React from 'react';
 import clsx from 'clsx';
-import { Package } from 'lucide-react';
+import { RiArchiveLine } from '@remixicon/react';
 
 /**
  * Product thumbnail with professional default placeholder.
@@ -35,7 +35,7 @@ export function ProductThumb({
           className
         )}
       >
-        <Package className={clsx('text-[var(--sys-border-strong)]', size === 'xs' ? 'w-3.5 h-3.5' : 'w-5 h-5')} />
+        <RiArchiveLine className={clsx('text-[var(--sys-border-strong)]', size === 'xs' ? 'w-3.5 h-3.5' : 'w-5 h-5')} />
       </div>
     );
   }

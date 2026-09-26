@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ListTree, Loader2, Plus, Trash2, Check, Eye, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
 import { MENU_AR, MENU_KEYS, storePageHref, type MenuItem, type MenuKey } from '@/lib/store-menus';
+import { RiAddCircleLine, RiArrowDownLine, RiArrowUpLine, RiCheckLine, RiDeleteBinLine, RiEyeLine, RiEyeOffLine, RiLoader4Line, RiTreeLine } from '@remixicon/react';
 
 /**
  * THE SHOP'S FIVE MENUS.
@@ -83,7 +83,7 @@ export function StoreMenusScreen() {
   if (loading || !menus) {
     return (
       <div className="flex items-center gap-2 p-6 text-sm text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -95,7 +95,7 @@ export function StoreMenusScreen() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <ListTree className="h-5 w-5 text-[var(--sys-primary)]" />
+            <RiTreeLine className="h-5 w-5 text-[var(--sys-primary)]" />
             قوائم المتجر
           </h1>
           <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
@@ -104,7 +104,7 @@ export function StoreMenusScreen() {
         </div>
         {msg && (
           <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-            {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
+            {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
             {msg.text}
           </span>
         )}
@@ -200,7 +200,7 @@ export function StoreMenusScreen() {
                       }}
                       className={`rounded-lg p-1.5 hover:bg-[var(--sys-surface-strong)] ${item.visible ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted)]'}`}
                     >
-                      {item.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      {item.visible ? <RiEyeLine className="h-4 w-4" /> : <RiEyeOffLine className="h-4 w-4" />}
                     </button>
                     <button
                       type="button"
@@ -213,7 +213,7 @@ export function StoreMenusScreen() {
                       className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
                       aria-label="حرّكه لأعلى"
                     >
-                      <ArrowUp className="h-4 w-4" />
+                      <RiArrowUpLine className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
@@ -226,7 +226,7 @@ export function StoreMenusScreen() {
                       className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)] disabled:opacity-30"
                       aria-label="حرّكه لأسفل"
                     >
-                      <ArrowDown className="h-4 w-4" />
+                      <RiArrowDownLine className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
@@ -234,7 +234,7 @@ export function StoreMenusScreen() {
                       className="rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/10"
                       aria-label="حذف"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <RiDeleteBinLine className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -260,10 +260,10 @@ export function StoreMenusScreen() {
             disabled={items.length >= 30}
             onClick={() => edit(open, [...items, { label: '', href: '', visible: true }])}
           >
-            <Plus className="h-3.5 w-3.5" /> أضف عنصراً
+            <RiAddCircleLine className="h-4 w-4" /> أضف عنصراً
           </Button>
           <Button size="sm" disabled={savingKey === open} onClick={() => void save(open)}>
-            {savingKey === open && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {savingKey === open && <RiLoader4Line className="h-4 w-4 animate-spin" />}
             احفظ «{MENU_AR[open].label}»
           </Button>
         </div>

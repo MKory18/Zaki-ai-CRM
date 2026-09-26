@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Boxes, Factory, PackagePlus, Loader2, Lock, ArrowLeftRight } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
+import { RiArrowLeftRightLine, RiBuilding4Line, RiInboxArchiveLine, RiLoader4Line, RiLockLine, RiStackLine } from '@remixicon/react';
 
 /**
  * What this product has, what it cost, and the one door that adds more.
@@ -61,7 +61,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
     return (
       <Card>
         <CardContent className="flex items-center gap-2 p-4 text-xs text-[var(--sys-muted-foreground)]">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> جارٍ تحميل المخزون…
+          <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ تحميل المخزون…
         </CardContent>
       </Card>
     );
@@ -76,7 +76,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
       <CardHeader
         title={
           <span className="flex items-center gap-2">
-            <Boxes className="h-4 w-4 text-[var(--sys-primary)]" />
+            <RiStackLine className="h-4 w-4 text-[var(--sys-primary)]" />
             <span>المخزون والتكلفة</span>
             <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-xs font-bold text-[var(--sys-foreground)]">
               {made ? 'منتج مصنّع' : 'منتج جاهز'}
@@ -90,7 +90,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
             // invented manufacturing costs into the cost reports.
             <Link href={made ? '/manufacturing' : '/inventory/receiving'}>
               <Button size="sm" variant="outline">
-                {made ? <Factory className="h-3.5 w-3.5" /> : <PackagePlus className="h-3.5 w-3.5" />}
+                {made ? <RiBuilding4Line className="h-4 w-4" /> : <RiInboxArchiveLine className="h-4 w-4" />}
                 {made ? 'تشغيلة إنتاج' : 'إضافة مخزون'}
               </Button>
             </Link>
@@ -103,7 +103,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
           <Tile
             label="محجوز لطلبات"
             value={String(stock.reserved)}
-            icon={<Lock className="h-3 w-3" />}
+            icon={<RiLockLine className="h-4 w-4" />}
             tone={stock.reserved > 0 ? 'hold' : 'plain'}
           />
           <Tile
@@ -130,7 +130,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
           href="/inventory/movements"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--sys-primary)] hover:underline"
         >
-          <ArrowLeftRight className="h-3 w-3" /> سجل حركات هذا المخزون
+          <RiArrowLeftRightLine className="icon-mirror h-4 w-4" /> سجل حركات هذا المخزون
         </Link>
       </CardContent>
     </Card>

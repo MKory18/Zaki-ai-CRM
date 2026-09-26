@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Loader2, Plus, Pencil, Trash2, Radar } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAsk, useConfirm } from '@/components/ui/Confirm';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { SCOPE_CHOICES, scopeChoice, type TrackingPlatform, type TrackingScope } from '@/lib/tracking/tracking-types';
 import { validateTrackingPixelId, pixelIdHint } from '@/lib/tracking/tracking-validation';
+import { RiAddCircleLine, RiAlertLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiRadarLine } from '@remixicon/react';
 
 /**
  * بكسل التتبع — every pixel the company's selling pages load, on one panel.
@@ -150,7 +150,7 @@ export function TrackingPixelsSection() {
   return (
     <section id="tracking" dir="rtl" className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 sm:p-6">
       <div className="mb-1 flex items-center gap-2">
-        <Radar className="h-4 w-4 text-[var(--sys-primary)]" />
+        <RiRadarLine className="h-4 w-4 text-[var(--sys-primary)]" />
         <h1 className="text-base font-bold text-[var(--sys-heading)]">بكسل التتبع والحملات</h1>
       </div>
       <p className="mb-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
@@ -159,7 +159,7 @@ export function TrackingPixelsSection() {
       </p>
 
       <div className="mb-4 flex items-start gap-2 rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] px-3 py-2.5">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sys-warning)]" />
+        <RiAlertLine className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sys-warning)]" />
         <p className="text-xs leading-relaxed text-amber-900">
           كل بكسل إضافي سكربت آخر يحمّله متصفح الزبون قبل أن تكتمل الصفحة — أضف ما تحتاجه فعلاً، وعطّل ما لم تعد
           تستعمله بدل أن تتركه يعمل.
@@ -196,7 +196,7 @@ export function TrackingPixelsSection() {
 
       {pixels === null ? (
         <div className="flex h-20 items-center justify-center text-[var(--sys-muted-foreground)]">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <RiLoader4Line className="h-4 w-4 animate-spin" />
         </div>
       ) : (
         <div className="space-y-2">
@@ -243,10 +243,10 @@ export function TrackingPixelsSection() {
                     {p.enabled ? 'تعطيل' : 'تفعيل'}
                   </button>
                   <button type="button" onClick={() => void rename(p)} title="تعديل الاسم" className="rounded-md p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
-                    <Pencil className="h-3.5 w-3.5" />
+                    <RiPencilLine className="h-4 w-4" />
                   </button>
                   <button type="button" onClick={() => void remove(p)} title="حذف" className="rounded-md p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <RiDeleteBinLine className="h-4 w-4" />
                   </button>
                 </div>
               )}
@@ -276,7 +276,7 @@ export function TrackingPixelsSection() {
                 ))}
               </select>
               <Button type="submit" variant="outline" disabled={busy || !newId.trim()} className="h-10">
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiAddCircleLine className="h-4 w-4" />}
                 أضف
               </Button>
             </form>

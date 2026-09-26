@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { BadgeCheck, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { StoreBrandField } from './StoreBrandField';
+import { RiLoader4Line, RiVerifiedBadgeLine } from '@remixicon/react';
 
 /**
  * WHO THE STORE IS — its name, logo, favicon and support phone.
@@ -71,7 +71,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
     <div className="space-y-4 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
       <div>
         <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
-          <BadgeCheck className="h-4 w-4 text-[var(--sys-primary)]" />
+          <RiVerifiedBadgeLine className="h-4 w-4 text-[var(--sys-primary)]" />
           هوية المتجر
         </p>
         <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
@@ -110,7 +110,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
           disabled={!changed || saving || name.trim().length < 2}
           className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-[var(--sys-primary)] px-4 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-40"
         >
-          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          {saving && <RiLoader4Line className="h-4 w-4 animate-spin" />}
           حفظ
         </button>
         {msg && <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</span>}

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiLoader4Line } from '@remixicon/react';
 
 /**
  * /confirmation/postponed — order, customer, due date, days remaining,
@@ -42,7 +42,7 @@ export function ConfirmationPostponedScreen() {
   if (!data) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }

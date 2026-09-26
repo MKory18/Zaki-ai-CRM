@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle2, FilePen, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { ChangeRequestReview } from '@/components/orders/ChangeRequestReview';
 import { useConfirm, useTell } from '@/components/ui/Confirm';
@@ -9,6 +8,7 @@ import { changeFieldLabel } from '@/lib/change-request-fields';
 import { deriveCoreState, STATE_LABEL_AR } from '@/lib/order-state';
 import { ROLE_LABELS, type UserRole } from '@/types/auth';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiArrowLeftLine, RiCheckboxCircleLine, RiFileEditLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * /control/change-requests — the review queue, in its two halves.
@@ -115,7 +115,7 @@ export function ChangeRequestsScreen() {
   if (!lists) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -169,9 +169,9 @@ export function ChangeRequestsScreen() {
             <header className="flex flex-wrap items-center gap-2">
               <span className="w-8 h-8 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
                 {tab === 'PENDING' ? (
-                  <FilePen className="w-4 h-4 text-[var(--sys-primary)]" />
+                  <RiFileEditLine className="w-4 h-4 text-[var(--sys-primary)]" />
                 ) : (
-                  <CheckCircle2 className="w-4 h-4 text-[var(--sys-success)]" />
+                  <RiCheckboxCircleLine className="w-4 h-4 text-[var(--sys-success)]" />
                 )}
               </span>
               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{r.order.orderNumber}</span>
@@ -202,7 +202,7 @@ export function ChangeRequestsScreen() {
                   {value?.from !== undefined && (
                     <>
                       <span className="text-[var(--sys-muted)] line-through">{show(value.from)}</span>
-                      <ArrowLeft className="w-3.5 h-3.5 text-[var(--sys-primary)] shrink-0" />
+                      <RiArrowLeftLine className="icon-mirror w-4 h-4 text-[var(--sys-primary)] shrink-0" />
                     </>
                   )}
                   <span className="font-semibold text-[var(--sys-heading)]">{show(value?.to)}</span>
@@ -234,7 +234,7 @@ export function ChangeRequestsScreen() {
                   disabled={applying === r.id}
                   className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                 >
-                  {applying === r.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {applying === r.id && <RiLoader4Line className="w-4 h-4 animate-spin" />}
                   طبّق التعديل على الطلب
                 </button>
               )}

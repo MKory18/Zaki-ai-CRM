@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, Loader2, Search } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiArrowDownLine, RiArrowUpLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 
 /**
  * /inventory/movements — how the stock got to where it is.
@@ -71,7 +71,7 @@ export function InventoryMovementsScreen() {
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">بحث</span>
           <div className="relative">
-            <Search className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
+            <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
@@ -102,7 +102,7 @@ export function InventoryMovementsScreen() {
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : data.movements.length === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
@@ -140,7 +140,7 @@ export function InventoryMovementsScreen() {
                         m.quantity >= 0 ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'
                       }`}
                     >
-                      {m.quantity >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                      {m.quantity >= 0 ? <RiArrowUpLine className="w-4 h-4" /> : <RiArrowDownLine className="w-4 h-4" />}
                       {Math.abs(m.quantity)}
                     </span>
                   </td>

@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Loader2, Save, Wand2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAlertLine, RiLoader4Line, RiMagicLine, RiSaveLine } from '@remixicon/react';
 
 /**
  * /settings/delivery-fees — one row per courier per region: the fee, the
@@ -108,7 +108,7 @@ export function DeliveryFeesScreen() {
   if (!data) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -135,7 +135,7 @@ export function DeliveryFeesScreen() {
             onClick={() => setBulkOpen(true)}
             className="h-10 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
           >
-            <Wand2 className="w-3.5 h-3.5" /> عبّئ الفارغة ({missing.length})
+            <RiMagicLine className="w-4 h-4" /> عبّئ الفارغة ({missing.length})
           </button>
         )}
       </div>
@@ -145,7 +145,7 @@ export function DeliveryFeesScreen() {
           blank cell and a known cause. */}
       {missing.length > 0 && (
         <p className="text-sm text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg p-3 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <RiAlertLine className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
             <b>{missing.length}</b> محافظة بلا أجرة عند هذه الشركة — أي طلب إليها سيتوقف في شاشة إنشاء
             الشحنة برسالة «لا توجد أجرة توصيل لهذه المحافظة».
@@ -226,7 +226,7 @@ export function DeliveryFeesScreen() {
                         disabled={busy === r.id}
                         className="inline-flex items-center gap-1 text-xs text-[var(--sys-primary)] hover:underline disabled:opacity-50"
                       >
-                        <Save className="w-3.5 h-3.5" />
+                        <RiSaveLine className="w-4 h-4" />
                         {saved === r.id ? 'تم الحفظ' : current ? 'تحديث' : 'إضافة'}
                       </button>
                     </td>

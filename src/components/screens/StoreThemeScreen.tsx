@@ -1,11 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Palette, Loader2, Check, PanelTop, ShoppingBag, CreditCard,
-  PanelBottom, LayoutTemplate, ExternalLink, Image as ImageIcon, ListTree,
-  LayoutGrid, Download, Upload, Loader2 as Spinner,
-} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
@@ -14,6 +9,7 @@ import {
   CHECKOUT_FIELDS, DEFAULT_STORE_THEME, MANDATORY_CHECKOUT_FIELDS,
   checkoutOrder, type CheckoutField, type StoreTheme,
 } from '@/lib/store-theme';
+import { RiBankCardLine, RiCheckLine, RiDownload2Line, RiExternalLinkLine, RiImageLine, RiLayoutBottomLine, RiLayoutGridLine, RiLayoutLine, RiLayoutTopLine, RiLoader4Line, RiPaletteLine, RiShoppingBagLine, RiTreeLine, RiUpload2Line } from '@remixicon/react';
 
 /**
  * THE STORE'S TEMPLATE — one screen, six tabs.
@@ -44,13 +40,13 @@ const SWATCHES = [
 type TabKey = 'gallery' | 'general' | 'chrome' | 'product' | 'checkout' | 'cart' | 'home';
 
 const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: 'gallery', label: 'معرض القوالب', icon: LayoutGrid },
-  { key: 'general', label: 'عام', icon: Palette },
-  { key: 'chrome', label: 'الترويسة والتذييل', icon: PanelTop },
-  { key: 'product', label: 'إعدادات المنتج', icon: ShoppingBag },
-  { key: 'checkout', label: 'الدفع', icon: CreditCard },
-  { key: 'cart', label: 'شريط السلة السفلي', icon: PanelBottom },
-  { key: 'home', label: 'الصفحة الرئيسية', icon: LayoutTemplate },
+  { key: 'gallery', label: 'معرض القوالب', icon: RiLayoutGridLine },
+  { key: 'general', label: 'عام', icon: RiPaletteLine },
+  { key: 'chrome', label: 'الترويسة والتذييل', icon: RiLayoutTopLine },
+  { key: 'product', label: 'إعدادات المنتج', icon: RiShoppingBagLine },
+  { key: 'checkout', label: 'الدفع', icon: RiBankCardLine },
+  { key: 'cart', label: 'شريط السلة السفلي', icon: RiLayoutBottomLine },
+  { key: 'home', label: 'الصفحة الرئيسية', icon: RiLayoutLine },
 ];
 
 const COLOR_FIELDS: { key: keyof NonNullable<StoreTheme['colors']>; label: string; hint: string }[] = [
@@ -199,7 +195,7 @@ export function StoreThemeScreen() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -209,7 +205,7 @@ export function StoreThemeScreen() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-            <Palette className="h-5 w-5 text-[#b8256e]" />
+            <RiPaletteLine className="h-5 w-5 text-[#b8256e]" />
             قالب المتجر
           </h1>
           <p className="mt-0.5 text-xs text-[#697586]">
@@ -219,7 +215,7 @@ export function StoreThemeScreen() {
         <div className="flex items-center gap-2">
           {msg && (
             <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
-              {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
+              {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
           )}
@@ -227,7 +223,7 @@ export function StoreThemeScreen() {
             تراجع
           </Button>
           <Button size="sm" disabled={!dirty || saving} onClick={() => void save()}>
-            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} حفظ
+            {saving && <RiLoader4Line className="h-4 w-4 animate-spin" />} حفظ
           </Button>
         </div>
       </header>
@@ -264,11 +260,11 @@ export function StoreThemeScreen() {
               <div className="flex flex-wrap items-center gap-2">
                 <a href="/api/store/templates?export=1" download>
                   <Button variant="secondary" size="sm">
-                    <Download className="h-3.5 w-3.5" /> صدّر قالبي
+                    <RiDownload2Line className="h-4 w-4" /> صدّر قالبي
                   </Button>
                 </a>
                 <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#e3e8ef] px-3 py-1.5 text-xs font-bold text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]">
-                  <Upload className="h-3.5 w-3.5" /> استورد ملفاً
+                  <RiUpload2Line className="h-4 w-4" /> استورد ملفاً
                   <input
                     type="file"
                     accept="application/json,.json"
@@ -304,7 +300,7 @@ export function StoreThemeScreen() {
                   disabled={!!installing}
                   onClick={() => void install('builtin', t.key)}
                 >
-                  {installing === t.key && <Spinner className="h-3.5 w-3.5 animate-spin" />}
+                  {installing === t.key && <RiLoader4Line className="h-4 w-4 animate-spin" />}
                   ثبّته كمسوّدة
                 </Button>
               </div>
@@ -332,13 +328,13 @@ export function StoreThemeScreen() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={store.logo} alt="" className="h-7 w-7 rounded-lg object-contain" />
                 ) : (
-                  <ImageIcon className="h-4 w-4" />
+                  <RiImageLine className="h-4 w-4" />
                 )}
                 الشعار والأيقونة المفضّلة ورقم الدعم
                 {!store?.logo && <span className="text-[#9aa4b2]">— لم يُضبط بعد</span>}
               </span>
               <span className="flex items-center gap-1 font-semibold">
-                في «البلدان والمتاجر» <ExternalLink className="h-3 w-3" />
+                في «البلدان والمتاجر» <RiExternalLinkLine className="icon-mirror h-4 w-4" />
               </span>
             </a>
             <p className={HINT}>
@@ -532,7 +528,7 @@ export function StoreThemeScreen() {
               className="flex items-center justify-between gap-2 rounded-lg border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2.5 text-xs text-[#364152] hover:border-[#b8256e] hover:text-[#b8256e]"
             >
               <span className="flex items-center gap-1.5">
-                <ListTree className="h-3.5 w-3.5" />
+                <RiTreeLine className="h-4 w-4" />
                 روابط التذييل
               </span>
               <span className="font-semibold">في «القوائم» ←</span>

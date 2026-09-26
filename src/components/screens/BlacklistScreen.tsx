@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Ban, Loader2, Plus, Search, Undo2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAddCircleLine, RiArrowGoBackLine, RiForbidLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 
 /**
  * /control/blacklist — who may not order again.
@@ -78,7 +78,7 @@ export function BlacklistScreen() {
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">بحث</span>
           <div className="relative">
-            <Search className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
+            <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
@@ -96,7 +96,7 @@ export function BlacklistScreen() {
           onClick={() => setAdding(true)}
           className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5"
         >
-          <Plus className="w-4 h-4" /> حظر رقم
+          <RiAddCircleLine className="w-4 h-4" /> حظر رقم
         </button>
       </form>
 
@@ -105,11 +105,11 @@ export function BlacklistScreen() {
 
       {!blocks ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <Ban className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
+          <RiForbidLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           {activeCount === 0 ? 'لا أرقام محظورة.' : 'لا نتائج مطابقة.'}
         </p>
       ) : (
@@ -155,7 +155,7 @@ export function BlacklistScreen() {
                         onClick={() => setReleasing(b)}
                         className="text-xs text-[var(--sys-success)] hover:underline inline-flex items-center gap-1"
                       >
-                        <Undo2 className="w-3 h-3" /> فك الحظر
+                        <RiArrowGoBackLine className="icon-mirror w-4 h-4" /> فك الحظر
                       </button>
                     ) : (
                       <span className="text-xs text-[var(--sys-muted)]">مفكوك</span>

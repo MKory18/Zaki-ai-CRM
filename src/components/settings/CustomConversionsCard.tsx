@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Target, Loader2, Trash2, AlertTriangle, Plug, ChevronDown, Plus, Check, KeyRound,
-} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
+import { RiAddCircleLine, RiAlertLine, RiArrowDownSLine, RiCheckLine, RiDeleteBinLine, RiFocus3Line, RiKey2Line, RiLoader4Line, RiPlugLine } from '@remixicon/react';
 
 /**
  * THE CONVERSIONS THE SELLER DECIDES ON.
@@ -268,7 +266,7 @@ export function CustomConversionsCard() {
   return (
     <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4" dir="rtl">
       <div className="mb-1 flex items-center gap-2">
-        <Target className="h-4 w-4 text-[var(--sys-primary)]" />
+        <RiFocus3Line className="h-4 w-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-bold text-[var(--sys-heading)]">التحويلات المخصّصة</h2>
       </div>
       <p className="mb-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
@@ -278,7 +276,7 @@ export function CustomConversionsCard() {
 
       {pixels === null ? (
         <div className="flex h-16 items-center justify-center text-[var(--sys-muted-foreground)]">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <RiLoader4Line className="h-4 w-4 animate-spin" />
         </div>
       ) : pixels.length === 0 ? (
         <p className="rounded-lg bg-[var(--sys-surface)] p-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
@@ -306,7 +304,7 @@ export function CustomConversionsCard() {
             {connected ? (
               <>
                 <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--sys-success)]">
-                  <Check className="h-3.5 w-3.5" />
+                  <RiCheckLine className="h-4 w-4" />
                   واجهة التحويلات مربوطة
                   <span className="font-mono text-xs text-[var(--sys-muted)]" dir="ltr">••••{pixel?.capiTokenHint}</span>
                   <button
@@ -314,7 +312,7 @@ export function CustomConversionsCard() {
                     className="mr-auto rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                     title="فصل"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <RiDeleteBinLine className="h-4 w-4" />
                   </button>
                 </p>
                 <div className="mt-2">
@@ -367,7 +365,7 @@ export function CustomConversionsCard() {
             ) : (
               <>
                 <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-[var(--sys-foreground)]">
-                  <KeyRound className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
+                  <RiKey2Line className="h-4 w-4 text-[var(--sys-primary)]" />
                   رمز واجهة التحويلات
                 </label>
                 <input
@@ -398,7 +396,7 @@ export function CustomConversionsCard() {
                   onClick={saveToken}
                   disabled={busy === 'token' || token.trim().length < 20}
                 >
-                  {busy === 'token' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plug className="h-3.5 w-3.5" />}
+                  {busy === 'token' ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiPlugLine className="h-4 w-4" />}
                   اربط
                 </Button>
               </>
@@ -453,14 +451,14 @@ export function CustomConversionsCard() {
                           title="حذف"
                           className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <RiDeleteBinLine className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
 
                     {c.stats.matchQuality !== null && c.stats.matchQuality < 0.4 && (
                       <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-[var(--sys-warning-soft)] p-1.5 text-xs leading-relaxed text-[var(--sys-warning)]">
-                        <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
+                        <RiAlertLine className="mt-px h-4 w-4 shrink-0" />
                         جودة المطابقة منخفضة — الأحداث تصل لكن ميتا تربط قليلاً منها بأشخاص. تحقّق أن
                         أرقام الهواتف مخزّنة كاملة.
                       </p>
@@ -473,7 +471,7 @@ export function CustomConversionsCard() {
           {/* ── Add one ── */}
           {!showForm ? (
             <Button size="sm" variant="outline" onClick={() => setAdding(true)} className="w-full gap-1.5">
-              <Plus className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
+              <RiAddCircleLine className="h-4 w-4 text-[var(--sys-primary)]" />
               أضف تحويلاً
             </Button>
           ) : (
@@ -544,7 +542,7 @@ export function CustomConversionsCard() {
 
                   <div className="flex gap-2">
                     <Button size="sm" onClick={create} disabled={busy === 'create' || !ready}>
-                      {busy === 'create' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                      {busy === 'create' ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : null}
                       أضف
                     </Button>
                     {mine.length > 0 && (
@@ -571,7 +569,7 @@ export function CustomConversionsCard() {
         onClick={() => setHowOpen((v) => !v)}
         className="mt-2 flex items-center gap-1 text-xs font-semibold text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
       >
-        <ChevronDown className={`h-3 w-3 transition ${howOpen ? 'rotate-180' : ''}`} />
+        <RiArrowDownSLine className={`h-4 w-4 transition ${howOpen ? 'rotate-180' : ''}`} />
         كيف أُشغّلها؟
       </button>
 

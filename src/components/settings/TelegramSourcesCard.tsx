@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, Power, FlaskConical } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { screenApi as crmApi } from '@/lib/screen-api';
+import { RiAddCircleLine, RiDeleteBinLine, RiFlaskLine, RiShutDownLine } from '@remixicon/react';
 
 /**
  * WHICH TELEGRAM GROUPS AND TOPICS BECOME ORDERS — configuration, on the
@@ -131,7 +131,7 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
       <CardContent className="p-0">
         {canManage && (
           <div className="flex justify-end px-4 pb-2">
-            <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="ml-1 h-4 w-4" /> إضافة مصدر</Button>
+            <Button size="sm" onClick={() => setAddOpen(true)}><RiAddCircleLine className="ml-1 h-4 w-4" /> إضافة مصدر</Button>
           </div>
         )}
         {error && <p className="mx-4 mb-2 rounded-lg bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs text-[var(--sys-destructive)]">{error}</p>}
@@ -172,16 +172,16 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
                   {canManage && (
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button disabled={busyId === s.id} onClick={() => void testSource(s)} title="اختبار" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"><FlaskConical className="h-4 w-4" /></button>
+                        <button disabled={busyId === s.id} onClick={() => void testSource(s)} title="اختبار" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"><RiFlaskLine className="h-4 w-4" /></button>
                         <button
                           disabled={busyId === s.id}
                           onClick={() => void act(s, () => crmApi(`/api/telegram/sources/${s.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: !s.isActive }) }), 'تعذر التحديث')}
                           title={s.isActive ? 'تعطيل' : 'تفعيل'}
                           className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface-strong)]"
                         >
-                          <Power className="h-4 w-4" />
+                          <RiShutDownLine className="h-4 w-4" />
                         </button>
-                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded-lg p-1.5 text-rose-500 hover:bg-[var(--sys-destructive-soft)]"><Trash2 className="h-4 w-4" /></button>
+                        <button disabled={busyId === s.id} onClick={() => void deleteSource(s)} title="حذف" className="rounded-lg p-1.5 text-rose-500 hover:bg-[var(--sys-destructive-soft)]"><RiDeleteBinLine className="h-4 w-4" /></button>
                       </div>
                     </td>
                   )}

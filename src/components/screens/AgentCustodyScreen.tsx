@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Bike, Package, Wallet, Loader2, ChevronLeft, AlertTriangle } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { amount, arDateShort, type Currency } from '@/lib/format';
+import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiWallet3Line } from '@remixicon/react';
 
 /**
  * /finance/agents — what each agent is holding.
@@ -92,7 +92,7 @@ export function AgentCustodyScreen() {
   if (!agents) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -106,13 +106,13 @@ export function AgentCustodyScreen() {
           onClick={() => setOpen(null)}
           className="text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1"
         >
-          <ChevronLeft className="w-4 h-4 rotate-180" />
+          <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
           كل المندوبين
         </button>
 
         <div>
           <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-            <Bike className="w-6 h-6 text-[var(--sys-primary)]" />
+            <RiEBike2Line className="w-6 h-6 text-[var(--sys-primary)]" />
             عهدة {open.agent.name}
           </h1>
           <p className="text-xs text-[var(--sys-muted-foreground)] mt-1" dir="ltr">{open.agent.code}</p>
@@ -123,7 +123,7 @@ export function AgentCustodyScreen() {
         <Section
           title="ما زال بيده"
           subtitle="طلبات خرجت معه ولم تُغلق بعد — بضاعة، لا مال"
-          icon={Package}
+          icon={RiArchiveLine}
           orders={open.inHand}
           money={money}
           showFee={false}
@@ -132,7 +132,7 @@ export function AgentCustodyScreen() {
         <Section
           title="حصّله ولم يسلّمه"
           subtitle="سُلّمت وقُبض ثمنها، ولم تصل إلينا بعد"
-          icon={Wallet}
+          icon={RiWallet3Line}
           orders={open.owing}
           money={money}
           showFee
@@ -145,7 +145,7 @@ export function AgentCustodyScreen() {
     <div className="max-w-4xl space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-          <Bike className="w-6 h-6 text-[var(--sys-primary)]" />
+          <RiEBike2Line className="w-6 h-6 text-[var(--sys-primary)]" />
           عهدة المندوبين
         </h1>
         <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
@@ -172,7 +172,7 @@ export function AgentCustodyScreen() {
               >
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                   <span className="font-bold text-[var(--sys-heading)] text-sm inline-flex items-center gap-1.5 min-w-[130px]">
-                    <Bike className="w-4 h-4 text-[var(--sys-primary)]" />
+                    <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" />
                     {agent.name}
                   </span>
 
@@ -292,7 +292,7 @@ function Section({
                 <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
                 {stuck && (
                   <span className="inline-flex items-center gap-1 text-[var(--sys-warning)]">
-                    <AlertTriangle className="w-3 h-3" />
+                    <RiAlertLine className="w-4 h-4" />
                     {STATUS_AR[o.shippingStatus]}
                   </span>
                 )}

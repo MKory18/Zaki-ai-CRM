@@ -7,9 +7,9 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { Boxes, ArrowDownUp, Plus, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { findRoute } from '@/lib/route-registry';
+import { RiAddCircleLine, RiArrowUpDownLine, RiHistoryLine, RiStackLine } from '@remixicon/react';
 
 export function InventoryBalancesScreen() {
   const { t } = useApp();
@@ -103,7 +103,7 @@ export function InventoryBalancesScreen() {
             onClick={() => setAdjustModalOpen(true)}
             className="flex items-center space-x-1.5"
           >
-            <ArrowDownUp className="w-4 h-4" />
+            <RiArrowUpDownLine className="w-4 h-4" />
             <span>جرد مخزون</span>
           </Button>
         </div>

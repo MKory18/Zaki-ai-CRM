@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Inbox, Loader2, PhoneOff, Timer } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiInboxLine, RiLoader4Line, RiPhoneLockLine, RiTimerFlashLine } from '@remixicon/react';
 
 /**
  * /confirmation/queue — agents see NO list: one "pull next" button and a
@@ -73,7 +73,7 @@ export function ConfirmationQueueScreen() {
   if (!data) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -82,7 +82,7 @@ export function ConfirmationQueueScreen() {
     <div className="max-w-3xl mx-auto space-y-4">
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
         <div className="mx-auto w-14 h-14 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
-          <Inbox className="w-7 h-7 text-[var(--sys-primary)]" />
+          <RiInboxLine className="w-6 h-6 text-[var(--sys-primary)]" />
         </div>
         <p className="mt-4 text-4xl font-bold text-[var(--sys-heading)] tabular-nums">{data.waiting}</p>
         <p className="mt-1 text-sm text-[var(--sys-muted-foreground)]">طلب بانتظار التأكيد</p>
@@ -103,12 +103,12 @@ export function ConfirmationQueueScreen() {
 
         <div className="mt-6 grid grid-cols-2 gap-3 text-right">
           <Stat
-            icon={<PhoneOff className="w-4 h-4" />}
+            icon={<RiPhoneLockLine className="w-4 h-4" />}
             label="لديك بلا محاولة اتصال"
             value={`${data.owned.withoutAttempt} / ${data.caps.withoutAttempt}`}
           />
           <Stat
-            icon={<Timer className="w-4 h-4" />}
+            icon={<RiTimerFlashLine className="w-4 h-4" />}
             label="إجمالي ما بيدك"
             value={`${data.owned.total} / ${data.caps.total}`}
           />

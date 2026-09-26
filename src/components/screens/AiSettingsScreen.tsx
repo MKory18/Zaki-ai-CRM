@@ -3,9 +3,9 @@
 import { AssistantsTable } from '@/components/screens/ai/AssistantsTable';
 import { MessageTemplatesCard } from '@/components/settings/MessageTemplatesCard';
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Bot, Check, ChevronDown, KeyRound, Loader2, Plug, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { MAX_PROMPT, missingSlots, type AiJob, type PromptVersion } from '@/lib/ai-prompts';
+import { RiAlertLine, RiArrowDownSLine, RiArrowGoBackLine, RiCheckLine, RiKey2Line, RiLoader4Line, RiPlugLine, RiRobot2Line } from '@remixicon/react';
 
 /**
  * THE AI, AND EVERY WORD THE SYSTEM SAYS TO IT.
@@ -114,7 +114,7 @@ export function AiSettingsScreen() {
   if (!settings) {
     return (
       <div className="flex h-40 items-center justify-center text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <RiLoader4Line className="h-4 w-4 animate-spin" />
       </div>
     );
   }
@@ -125,7 +125,7 @@ export function AiSettingsScreen() {
     <div className="max-w-3xl space-y-4" dir="rtl">
       <div>
         <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-          <Bot className="h-5 w-5 text-[var(--sys-primary)]" /> الذكاء الاصطناعي والنصوص
+          <RiRobot2Line className="h-5 w-5 text-[var(--sys-primary)]" /> الذكاء الاصطناعي والنصوص
         </h1>
         <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
           أي نموذج تستعمل، وبأي كلمات يخاطبه النظام.
@@ -191,7 +191,7 @@ export function AiSettingsScreen() {
 
         <div className="mt-3">
           <label className="mb-1 flex items-center gap-1 text-xs font-semibold text-[var(--sys-foreground)]">
-            <KeyRound className="h-3 w-3" /> مفتاح الوصول
+            <RiKey2Line className="h-4 w-4" /> مفتاح الوصول
           </label>
           <input
             type="password"
@@ -219,7 +219,7 @@ export function AiSettingsScreen() {
             disabled={testing || !settings.hasKey}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
           >
-            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plug className="h-3.5 w-3.5" />}
+            {testing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiPlugLine className="h-4 w-4" />}
             اختبار الاتصال
           </button>
           {!settings.hasKey && <span className="text-xs text-[var(--sys-muted)]">احفظ المفتاح أولاً.</span>}
@@ -261,7 +261,7 @@ export function AiSettingsScreen() {
                     </span>
                     <span className="mt-0.5 block text-xs text-[var(--sys-muted)]">{job.where}</span>
                   </span>
-                  <ChevronDown className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--sys-muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
+                  <RiArrowDownSLine className={`mt-0.5 h-4 w-4 shrink-0 text-[var(--sys-muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isOpen && (
@@ -293,7 +293,7 @@ export function AiSettingsScreen() {
                           onClick={() => setDrafts({ ...drafts, [job.key]: '' })}
                           className="flex items-center gap-1 text-xs font-semibold text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
                         >
-                          <RotateCcw className="h-3 w-3" /> أعد النص الأصلي
+                          <RiArrowGoBackLine className="icon-mirror h-4 w-4" /> أعد النص الأصلي
                         </button>
                       )}
                     </div>
@@ -319,7 +319,7 @@ export function AiSettingsScreen() {
                                   onClick={() => setDrafts({ ...drafts, [job.key]: v.text })}
                                   className="flex items-center gap-1 text-xs font-semibold text-[var(--sys-primary)]"
                                 >
-                                  <RotateCcw className="h-3 w-3" /> استرجع
+                                  <RiArrowGoBackLine className="icon-mirror h-4 w-4" /> استرجع
                                 </button>
                               </div>
                               {/* Restoring puts it in the box; the save button
@@ -339,7 +339,7 @@ export function AiSettingsScreen() {
                         and fails silently otherwise. */}
                     {missing.length > 0 && (
                       <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-[var(--sys-warning-soft)] p-1.5 text-xs leading-relaxed text-[var(--sys-warning)]">
-                        <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
+                        <RiAlertLine className="mt-px h-4 w-4 shrink-0" />
                         <span>
                           نصّك لا يحتوي {missing.join('، ')} — لن تصل الأرقام إلى النموذج، وسيجيب من
                           عنده. أضفها حيث تريد أن تُدرَج.
@@ -367,7 +367,7 @@ export function AiSettingsScreen() {
 
       <div className={`items-center gap-2 ${tab === 'assistants' ? 'hidden' : 'flex'}`}>
         <Button onClick={save} disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiCheckLine className="h-4 w-4" />}
           احفظ الإعدادات والنصوص
         </Button>
         {msg && (

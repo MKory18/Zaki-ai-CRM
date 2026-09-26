@@ -12,30 +12,8 @@ import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { productName } from '@/lib/product-name';
 import { format } from 'date-fns';
-import {
-  DollarSign,
-  TrendingUp,
-  CheckCircle,
-  Truck,
-  Plus,
-  Sparkles,
-  Award,
-  AlertTriangle,
-  Flame,
-  ArrowRight,
-  Wallet,
-  Boxes,
-  Percent,
-  ShoppingBag,
-  Clock,
-  XCircle,
-  PackageCheck,
-  Send,
-  Minus,
-  Plus as PlusIcon,
-  Equal,
-} from 'lucide-react';
 import Link from 'next/link';
+import { RiAddCircleLine, RiAlertLine, RiArchiveDrawerLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCheckboxCircleLine, RiCloseCircleLine, RiEqualLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiSendPlaneLine, RiShoppingBagLine, RiSparkling2Line, RiStackLine, RiSubtractLine, RiTimerLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 
 const PERIODS = [
   { key: 'today', ar: 'اليوم', en: 'Today' },
@@ -179,12 +157,12 @@ export function DashboardScreen() {
               onClick={() => setAiModalOpen(true)}
               className="items-center gap-1.5 text-[var(--sys-primary)] border-[var(--sys-primary)]/35 hover:bg-[var(--sys-primary-soft)]"
             >
-              <Sparkles className="w-4 h-4" />
+              <RiSparkling2Line className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
             </Button>
 
             <Button onClick={() => setCreateModalOpen(true)} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85 items-center">
-              <Plus className="w-4 h-4" />
+              <RiAddCircleLine className="w-4 h-4" />
               <span>طلب سريع</span>
             </Button>
           </div>
@@ -196,7 +174,7 @@ export function DashboardScreen() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="p-2.5 rounded-lg bg-[var(--sys-card)]/10 border border-[var(--sys-card)]/15 shrink-0">
-                  <Sparkles className="w-5 h-5 text-[var(--sys-warning)]" />
+                  <RiSparkling2Line className="w-5 h-5 text-[var(--sys-warning)]" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -229,7 +207,7 @@ export function DashboardScreen() {
               <Link href="/assistant" className="shrink-0">
                 <Button size="sm" variant="secondary" className="bg-[var(--sys-card)] text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] border-0">
                   {locale === 'ar' ? 'المستشار الذكي' : 'AI Advisor'}
-                  <ArrowRight className={`w-3.5 h-3.5 ${isRtl ? '' : 'rotate-180'}`} />
+                  <RiArrowRightLine className={`icon-mirror w-4 h-4`} />
                 </Button>
               </Link>
             </div>
@@ -243,7 +221,7 @@ export function DashboardScreen() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-[var(--sys-muted-foreground)]">{t.netProfit}</span>
                 <div className="h-14 w-14 rounded-lg bg-[var(--sys-success-soft)] text-[var(--sys-success)] flex items-center justify-center">
-                  <Wallet className="w-6 h-6" />
+                  <RiWallet3Line className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{fmt(fin.netProfit)}</div>
@@ -261,7 +239,7 @@ export function DashboardScreen() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-[var(--sys-muted-foreground)]">{t.deliveredRevenue}</span>
                 <div className="h-14 w-14 rounded-lg bg-[var(--sys-surface-strong)] text-[var(--sys-primary)] flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6" />
+                  <RiArrowUpCircleLine className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{fmt(fin.deliveredRevenue)}</div>
@@ -275,7 +253,7 @@ export function DashboardScreen() {
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[var(--sys-muted-foreground)]">{t.confirmationRate}</span>
               <div className="h-14 w-14 rounded-lg bg-[var(--sys-muted-foreground)]/10 text-[var(--sys-muted-foreground)] flex items-center justify-center">
-                <Percent className="w-6 h-6" />
+                <RiPercentLine className="w-6 h-6" />
               </div>
             </div>
             <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{rates.confirmationRate}%</div>
@@ -288,7 +266,7 @@ export function DashboardScreen() {
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[var(--sys-muted-foreground)]">{t.deliveryRate}</span>
               <div className="h-14 w-14 rounded-lg bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] flex items-center justify-center">
-                <Truck className="w-6 h-6" />
+                <RiTruckLine className="w-6 h-6" />
               </div>
             </div>
             <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{rates.deliveryRate}%</div>
@@ -304,7 +282,7 @@ export function DashboardScreen() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-[var(--sys-destructive)]" />
+                  <RiMoneyDollarCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                   {locale === 'ar' ? 'معادلة صافي الربح الحقيقي' : 'Real Net Profit Breakdown'}
                 </span>
               }
@@ -323,11 +301,11 @@ export function DashboardScreen() {
                       <span className="block text-sm font-black mt-0.5" dir="ltr">{f.value}</span>
                     </div>
                     {i < profitFlow.length - 1 && (
-                      <Minus className="w-3.5 h-3.5 text-[var(--sys-border-strong)] shrink-0" />
+                      <RiSubtractLine className="w-4 h-4 text-[var(--sys-border-strong)] shrink-0" />
                     )}
                   </React.Fragment>
                 ))}
-                <Equal className="w-4 h-4 text-[var(--sys-muted)] shrink-0" />
+                <RiEqualLine className="w-4 h-4 text-[var(--sys-muted)] shrink-0" />
                 <div className="px-4 py-2.5 rounded-lg bg-[var(--sys-primary)] text-center">
                   <span className="block text-xs font-bold text-[var(--sys-primary-foreground)]/80">
                     {locale === 'ar' ? 'صافي الربح' : 'NET PROFIT'}
@@ -358,7 +336,7 @@ export function DashboardScreen() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-[var(--sys-destructive)]" />
+                  <RiFireLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                   {locale === 'ar' ? 'ترتيب المنتجات والأرباح' : 'Product Rankings & Profit'}
                 </span>
               }
@@ -393,7 +371,7 @@ export function DashboardScreen() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-[var(--sys-warning)]" />
+                  <RiAwardLine className="w-4 h-4 text-[var(--sys-warning)]" />
                   {t.moderatorLeaderboard}
                 </span>
               }
@@ -447,7 +425,7 @@ export function DashboardScreen() {
           <CardHeader
             title={
               <span className="flex items-center gap-2">
-                <ShoppingBag className="w-4 h-4 text-[var(--sys-destructive)]" />
+                <RiShoppingBagLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                 {t.recentOrders}
               </span>
             }

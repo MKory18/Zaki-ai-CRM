@@ -10,19 +10,7 @@ import { useRegions } from '@/hooks/useRegions';
 import { productName } from '@/lib/product-name';
 import { ProductLinesEditor, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
 import { amount } from '@/lib/format';
-import {
-  UserCheck,
-  AlertCircle,
-  CheckCircle2,
-  Package,
-  UserCog,
-  StickyNote,
-  Phone,
-  MapPin,
-  DollarSign,
-  Megaphone,
-  Wand2,
-} from 'lucide-react';
+import { RiArchiveLine, RiCheckboxCircleLine, RiErrorWarningLine, RiMagicLine, RiMapPinLine, RiMegaphoneLine, RiMoneyDollarCircleLine, RiPhoneLine, RiStickyNoteLine, RiUserFollowLine, RiUserSettingsLine } from '@remixicon/react';
 
 interface CreateOrderModalProps {
   isOpen: boolean;
@@ -210,7 +198,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       <form onSubmit={handleSubmit} className="space-y-4" dir={isRtl ? 'rtl' : 'ltr'}>
         {error && (
           <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+            <RiErrorWarningLine className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -218,10 +206,10 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         {/* ─── 1. Customer ─── */}
         <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <SectionTitle icon={UserCheck} title="1. بيانات العميل" color="bg-red-100 text-[var(--sys-destructive)]" />
+            <SectionTitle icon={RiUserFollowLine} title="1. بيانات العميل" color="bg-red-100 text-[var(--sys-destructive)]" />
             {existingCustomerAlert?.exists && (
               <span className="text-xs font-bold text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/60 px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <RiCheckboxCircleLine className="w-4 h-4" />
                 عميل موجود — {existingCustomerAlert.name} ({existingCustomerAlert.totalOrders} طلب سابق)
               </span>
             )}
@@ -231,7 +219,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             <div>
               <label className="block text-xs font-medium text-[var(--sys-foreground)] mb-1.5">رقم الهاتف *</label>
               <div className="relative">
-                <Phone className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
+                <RiPhoneLine className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
                 <input
                   type="tel"
                   placeholder="مثال: 0936654998"
@@ -247,11 +235,11 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                 <p className={`text-xs mt-1 flex items-center gap-1 ${existingCustomerAlert.exists ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-success)]'}`}>
                   {existingCustomerAlert.exists ? (
                     <>
-                      <CheckCircle2 className="w-3 h-3" /> تم ربط البيانات بملف العميل تلقائياً
+                      <RiCheckboxCircleLine className="w-4 h-4" /> تم ربط البيانات بملف العميل تلقائياً
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-3 h-3" /> عميل جديد — سيتم إنشاء ملف تلقائياً
+                      <RiCheckboxCircleLine className="w-4 h-4" /> عميل جديد — سيتم إنشاء ملف تلقائياً
                     </>
                   )}
                 </p>
@@ -282,7 +270,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             <div>
               <label className="block text-xs font-medium text-[var(--sys-foreground)] mb-1.5">العنوان *</label>
               <div className="relative">
-                <MapPin className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
+                <RiMapPinLine className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
                 <input
                   placeholder="الشارڡ البناء، المنطقة..."
                   value={customerAddress}
@@ -297,7 +285,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
         {/* ─── 2. المنتجات ─── */}
         <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
-          <SectionTitle icon={Package} title="2. المنتجات" color="bg-[var(--sys-surface-strong)] text-blue-600" />
+          <SectionTitle icon={RiArchiveLine} title="2. المنتجات" color="bg-[var(--sys-surface-strong)] text-blue-600" />
           {/* The same editor the order screen uses, so a line means the same
               thing whether it is typed here or corrected later. */}
           <ProductLinesEditor
@@ -311,7 +299,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
         {/* ─── 3. Assignment & Source ─── */}
         <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
-          <SectionTitle icon={UserCog} title="3. التعيين والمصدر" color="bg-purple-100 text-purple-600" />
+          <SectionTitle icon={RiUserSettingsLine} title="3. التعيين والمصدر" color="bg-purple-100 text-purple-600" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select label="المودريتور المسؤول" value={moderatorId} onChange={(e) => setModeratorId(e.target.value)}>
@@ -342,7 +330,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
         {/* ─── 4. Notes ─── */}
         <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
-          <SectionTitle icon={StickyNote} title="4. الملاحظات" color="bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]" />
+          <SectionTitle icon={RiStickyNoteLine} title="4. الملاحظات" color="bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Textarea label="ملاحظات العميل (وقت التوصيل المفضل...)" placeholder="مثال: يرجى الاتصال قبل الوصول" rows={2} value={customerNotes} onChange={(e) => setCustomerNotes(e.target.value)} />
@@ -357,7 +345,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             onClick={onClose}
             className="text-xs font-medium text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)] cursor-pointer flex items-center gap-1.5"
           >
-            <Wand2 className="w-3.5 h-3.5" />
+            <RiMagicLine className="w-4 h-4" />
             نص حر طويل؟ جرّب الإدخال بالذكاء الاصطناعي من الزر الأخضر
           </button>
 
@@ -366,7 +354,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
               إلغاء
             </Button>
             <Button type="submit" loading={loading} disabled={!ready}>
-              <Megaphone className="w-4 h-4" />
+              <RiMegaphoneLine className="w-4 h-4" />
               إنشاء الطلب ({money(goodsTotal)})
             </Button>
           </div>

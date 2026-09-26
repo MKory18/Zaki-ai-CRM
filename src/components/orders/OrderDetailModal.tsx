@@ -22,25 +22,7 @@ import { OrderNotes } from '@/components/orders/OrderNotes';
 import { orderStages } from '@/lib/order-stages';
 import { useRegions } from '@/hooks/useRegions';
 import { amount, arDateShort, arDateTime, type Currency } from '@/lib/format';
-import {
-  User,
-  Phone,
-  PhoneCall,
-  History,
-  Clock,
-  DollarSign,
-  MapPin,
-  StickyNote,
-  Truck,
-  Save,
-  MessageSquareText,
-  UserCheck,
-  ChevronLeft,
-  ChevronRight,
-  Lock,
-  Pencil,
-  Bike,
-} from 'lucide-react';
+import { RiArrowLeftSLine, RiArrowRightSLine, RiChatQuoteLine, RiEBike2Line, RiHistoryLine, RiLockLine, RiMapPinLine, RiMoneyDollarCircleLine, RiPencilLine, RiPhoneLine, RiSaveLine, RiStickyNoteLine, RiTimerLine, RiTruckLine, RiUserFollowLine, RiUserLine } from '@remixicon/react';
 
 /** Settlement is its own fact, never merged into the delivery status. */
 const SETTLEMENT_AR: Record<string, string> = {
@@ -445,7 +427,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         lockedById: currentUser?.id,
         lockHolder: { id: currentUser?.id, name: currentUser?.name },
         // Refresh the expiry from the server — otherwise lockActive stays false
-        // when the previous lock had already expired and Save never appears
+        // when the previous lock had already expired and RiSaveLine never appears
         lockExpiresAt: lock.lockExpiresAt ?? prev.lockExpiresAt,
       }));
     }
@@ -487,7 +469,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {navLoading === 'next' ? (
             <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[var(--sys-destructive)]" />
           ) : (
-            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+            <RiArrowRightSLine className="icon-mirror w-4 h-4" />
           )}
           <span className="hidden sm:inline">{ar ? 'الطلب التالي' : 'Next Order'}</span>
         </Button>
@@ -506,7 +488,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {navLoading === 'prev' ? (
             <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[var(--sys-destructive)]" />
           ) : (
-            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+            <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
           )}
           <span className="hidden sm:inline">{ar ? 'الطلب السابق' : 'Previous Order'}</span>
         </Button>
@@ -552,9 +534,9 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               {order.deliveryProvider && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-[var(--sys-border)] bg-[var(--sys-surface)] text-xs font-semibold text-[var(--sys-muted-foreground)]">
                   {order.deliveryProvider.kind === 'AGENT' ? (
-                    <Bike className="w-3 h-3 text-[var(--sys-primary)]" />
+                    <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" />
                   ) : (
-                    <Truck className="w-3 h-3 text-[var(--sys-muted)]" />
+                    <RiTruckLine className="w-4 h-4 text-[var(--sys-muted)]" />
                   )}
                   {order.deliveryProvider.name}
                 </span>
@@ -578,7 +560,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
               {editingLockedByOther && (
                 <span className="ms-auto text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1 inline-flex items-center gap-1.5">
-                  <Lock className="w-3 h-3" />
+                  <RiLockLine className="w-4 h-4" />
                   {t.editingBy} {lockHolderName}
                 </span>
               )}
@@ -649,7 +631,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {/* Financial overview */}
           <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-[var(--sys-destructive)]" />
+              <RiMoneyDollarCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" />
               الملخص المالي
             </h4>
 
@@ -753,7 +735,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-2">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-[var(--sys-primary)]" />
+                <RiUserFollowLine className="w-4 h-4 text-[var(--sys-primary)]" />
                 جهة الطلب
               </h4>
               {/* The channel is the order's attribution — which campaign or
@@ -766,7 +748,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                   onClick={() => { setChannelOpen((v) => !v); setChannelDraft(order.channelId ?? ''); }}
                   className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
                 >
-                  <Pencil className="w-3.5 h-3.5" />
+                  <RiPencilLine className="w-4 h-4" />
                   {channelOpen ? 'إغلاق' : 'تعديل'}
                 </button>
               )}
@@ -808,7 +790,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               not just the activity log, so it always matches the state above. */}
           <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised">
             <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[var(--sys-muted)]" />
+              <RiTimerLine className="w-4 h-4 text-[var(--sys-muted)]" />
               سجل الأحداث ({timeline.length})
               {timeline.length > 5 && (
                 <button
@@ -868,7 +850,7 @@ function OrderRegionField({
   if (!editing) {
     return (
       <div className="flex items-start gap-1.5">
-        <MapPin className="w-3.5 h-3.5 text-[var(--sys-muted)] mt-0.5 shrink-0" />
+        <RiMapPinLine className="w-4 h-4 text-[var(--sys-muted)] mt-0.5 shrink-0" />
         <div className="flex-1">
           <p className="text-xs text-[var(--sys-muted)]">المحافظة</p>
           <div className="flex items-center gap-2">
@@ -894,7 +876,7 @@ function OrderRegionField({
 
   return (
     <div className="flex items-start gap-1.5">
-      <MapPin className="w-3.5 h-3.5 text-[var(--sys-muted)] mt-0.5 shrink-0" />
+      <RiMapPinLine className="w-4 h-4 text-[var(--sys-muted)] mt-0.5 shrink-0" />
       <div className="flex-1">
         <p className="text-xs text-[var(--sys-muted)] mb-1">المحافظة</p>
         <div className="flex items-center gap-2">

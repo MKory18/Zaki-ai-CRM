@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Bike, Truck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { RiAlertLine, RiEBike2Line, RiTruckLine } from '@remixicon/react';
 
 /**
  * Moving a parcel to another courier, from the tracking screen.
@@ -90,7 +90,7 @@ export function TransferDialog({
             </>
           ) : (
             <span className="flex gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <RiAlertLine className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
                 لا يمكن تبديل شركة الشحن بعد الإسناد. سيُطلب <b>إرجاع الشحنة</b> من الشركة الحالية،
                 ويُنشأ <b>طلب بديل</b> يدخل تجهيز الشحنة ليُسنَد من جديد. الطلب الأصلي يبقى بسجله
@@ -119,7 +119,7 @@ export function TransferDialog({
 
         {to && (
           <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center gap-1.5">
-            {to.kind === 'AGENT' ? <Bike className="w-3.5 h-3.5 text-[var(--sys-primary)]" /> : <Truck className="w-3.5 h-3.5" />}
+            {to.kind === 'AGENT' ? <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" /> : <RiTruckLine className="w-4 h-4" />}
             ستذهب إلى {to.name}
           </p>
         )}

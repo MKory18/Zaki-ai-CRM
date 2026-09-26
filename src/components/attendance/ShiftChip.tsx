@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { LogIn, Loader2, Check } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
+import { RiCheckLine, RiLoader4Line, RiLoginBoxLine } from '@remixicon/react';
 
 /**
  * THE SHIFT, IN THE HEADER.
@@ -117,7 +117,7 @@ export function ShiftChip() {
           className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)]"
           title="انتهى دوامك اليوم"
         >
-          <Check className="w-3.5 h-3.5" />
+          <RiCheckLine className="w-4 h-4" />
           سلّمت
         </span>
       ) : onShift ? (
@@ -134,7 +134,7 @@ export function ShiftChip() {
           }`}
         >
           {busy ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <RiLoader4Line className="w-4 h-4 animate-spin" />
           ) : (
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--sys-success)]" aria-hidden />
           )}
@@ -148,7 +148,7 @@ export function ShiftChip() {
           title={`سجّل بداية دوامك · الدوام ${state.hours?.start}—${state.hours?.end}`}
           className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-[var(--sys-border)] text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] transition-colors disabled:opacity-60"
         >
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogIn className="w-3.5 h-3.5" />}
+          {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiLoginBoxLine className="icon-mirror w-4 h-4" />}
           استلمت
         </button>
       )}

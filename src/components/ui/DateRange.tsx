@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { CalendarDays, ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { addMonths, format, isAfter, isBefore, isSameDay, startOfMonth, startOfWeek, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { RiArrowLeftSLine, RiArrowRightSLine, RiCalendar2Line, RiCloseLine } from '@remixicon/react';
 
 /**
  * Picking a span of days, in Arabic.
@@ -97,7 +97,7 @@ export function DateRange({
         onClick={() => setOpen((v) => !v)}
         className="w-full h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] inline-flex items-center gap-2 hover:border-[var(--sys-primary)]/50"
       >
-        <CalendarDays className="w-3.5 h-3.5 text-[var(--sys-muted)] shrink-0" />
+        <RiCalendar2Line className="w-4 h-4 text-[var(--sys-muted)] shrink-0" />
         <span className="truncate flex-1 text-start">{summary}</span>
         {(value.from || value.to) && (
           <span
@@ -117,7 +117,7 @@ export function DateRange({
             }}
             className="text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] shrink-0"
           >
-            <X className="w-3.5 h-3.5" />
+            <RiCloseLine className="w-4 h-4" />
           </span>
         )}
       </button>
@@ -152,7 +152,7 @@ export function DateRange({
               className="p-1.5 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
               aria-label="الشهر السابق"
             >
-              <ChevronRight className="w-4 h-4" />
+              <RiArrowRightSLine className="icon-mirror w-4 h-4" />
             </button>
             <span className="text-xs font-bold text-[var(--sys-heading)]">
               {format(month, 'MMMM yyyy', { locale: ar })}
@@ -163,7 +163,7 @@ export function DateRange({
               className="p-1.5 rounded-lg text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
               aria-label="الشهر التالي"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
             </button>
           </div>
 

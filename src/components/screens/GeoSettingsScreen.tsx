@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Globe, Loader2, Plus, Store } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { currencyLabel } from '@/lib/currencies';
 import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from '@/components/ui/CurrencyPicker';
 import { StorefrontSettings } from '@/components/settings/StorefrontSettings';
 import { StoreIdentityCard } from '@/components/settings/StoreIdentityCard';
 import { STORE_TYPE_LABEL, storeTypeLabel } from '@/lib/store-types';
+import { RiAddCircleLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
 
 /**
  * /settings/geo — countries, their stores and their regions in one screen.
@@ -102,7 +102,7 @@ export function GeoSettingsScreen() {
   if (!countries) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -118,7 +118,7 @@ export function GeoSettingsScreen() {
           onClick={() => setAdding('country')}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium"
         >
-          <Plus className="w-4 h-4" /> بلد جديد
+          <RiAddCircleLine className="w-4 h-4" /> بلد جديد
         </button>
       </div>
 
@@ -140,7 +140,7 @@ export function GeoSettingsScreen() {
         <section key={c.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg">
           <header className="flex items-center gap-3 p-4 border-b border-[var(--sys-border)]">
             <span className="w-10 h-10 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
-              <Globe className="w-5 h-5 text-[var(--sys-primary)]" />
+              <RiEarthLine className="w-5 h-5 text-[var(--sys-primary)]" />
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-[var(--sys-heading)]">
@@ -220,7 +220,7 @@ export function GeoSettingsScreen() {
                   {s.logo ? (
                     <img src={s.logo} alt="" className="h-full w-full object-contain" />
                   ) : (
-                    <Store className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
+                    <RiStore2Line className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
                   )}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -291,7 +291,7 @@ export function GeoSettingsScreen() {
                   onClick={() => setAdding(c.id)}
                   className="w-full flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                 >
-                  <Plus className="w-4 h-4" /> متجر في {c.name}
+                  <RiAddCircleLine className="w-4 h-4" /> متجر في {c.name}
                 </button>
               )}
             </li>

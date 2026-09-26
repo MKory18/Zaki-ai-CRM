@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, Loader2, RotateCcw, ShieldQuestion, X } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { userCan } from '@/lib/can';
 import { useApp } from '@/context/AppContext';
 import { Modal } from '@/components/ui/Modal';
+import { RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiLoader4Line, RiShieldKeyholeLine } from '@remixicon/react';
 
 /**
  * WHAT THE SYSTEM PROPOSED, AND WHAT A PERSON DECIDES.
@@ -105,7 +105,7 @@ export function PenaltiesScreen() {
     <div className="max-w-4xl space-y-3" dir="rtl">
       <div>
         <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-          <ShieldQuestion className="h-5 w-5 text-[var(--sys-primary)]" /> الخصومات
+          <RiShieldKeyholeLine className="h-5 w-5 text-[var(--sys-primary)]" /> الخصومات
         </h1>
         <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           النظام يقترح، وأنت تقرّر. لا خصم يصير مالاً بلا قرار إنسان — ولا يُقترح خصمٌ على وصولٍ
@@ -132,7 +132,7 @@ export function PenaltiesScreen() {
 
       {!data ? (
         <p className="flex items-center justify-center gap-2 py-10 text-sm text-[var(--sys-muted-foreground)]">
-          <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
         </p>
       ) : data.penalties.length === 0 ? (
         <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
@@ -182,7 +182,7 @@ export function PenaltiesScreen() {
                           onClick={() => decide(row, 'apply')}
                           className="flex items-center gap-1 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-2.5 py-1 text-xs font-medium text-[var(--sys-destructive)] disabled:opacity-60"
                         >
-                          <Check className="h-3 w-3" /> اعتمد الخصم
+                          <RiCheckLine className="h-4 w-4" /> اعتمد الخصم
                         </button>
                         <button
                           type="button"
@@ -190,7 +190,7 @@ export function PenaltiesScreen() {
                           onClick={() => setAsking({ row, action: 'waive' })}
                           className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs text-[var(--sys-foreground)] disabled:opacity-60"
                         >
-                          <X className="h-3 w-3" /> ألغِ
+                          <RiCloseLine className="h-4 w-4" /> ألغِ
                         </button>
                       </>
                     )}
@@ -201,7 +201,7 @@ export function PenaltiesScreen() {
                         onClick={() => setAsking({ row, action: 'reverse' })}
                         className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs text-[var(--sys-foreground)] disabled:opacity-60"
                       >
-                        <RotateCcw className="h-3 w-3" /> ارتجاع
+                        <RiArrowGoBackLine className="icon-mirror h-4 w-4" /> ارتجاع
                       </button>
                     )}
                     {row.status === 'APPLIED' && row.payslipId && (

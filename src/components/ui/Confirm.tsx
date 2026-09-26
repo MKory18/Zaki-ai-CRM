@@ -1,9 +1,9 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Info, Check, Copy } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from './Button';
+import { RiAlertLine, RiCheckLine, RiFileCopyLine, RiInformationLine } from '@remixicon/react';
 
 /**
  * ASKING BEFORE, AND TELLING AFTER — inside the app.
@@ -164,7 +164,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                   danger ? 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]' : 'bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]'
                 }`}
               >
-                {danger ? <AlertTriangle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+                {danger ? <RiAlertLine className="h-4 w-4" /> : <RiInformationLine className="h-4 w-4" />}
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-[var(--sys-heading)]">{open.options.title}</p>
@@ -213,7 +213,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                   className={`${FIELD} font-mono text-xs`}
                 />
                 <Button type="button" variant="outline" size="sm" onClick={() => void copy(open.options.value!)}>
-                  {copied ? <Check className="h-3.5 w-3.5 text-[var(--sys-success)]" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiFileCopyLine className="h-4 w-4" />}
                   {copied ? 'نُسخ' : 'انسخ'}
                 </Button>
               </div>

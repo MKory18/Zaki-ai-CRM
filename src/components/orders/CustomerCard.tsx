@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, Pencil, History, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { useRegions } from '@/hooks/useRegions';
+import { RiHistoryLine, RiLoader4Line, RiPencilLine, RiUserLine } from '@remixicon/react';
 
 /**
  * Who the order goes to, and the one button that edits all of it.
@@ -112,7 +112,7 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
-          <User className="w-4 h-4 text-[var(--sys-primary)]" />
+          <RiUserLine className="w-4 h-4 text-[var(--sys-primary)]" />
           معلومات العميل
         </h4>
         <div className="flex items-center gap-1.5">
@@ -120,14 +120,14 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
             onClick={onOpenHistory}
             className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
           >
-            <History className="w-3.5 h-3.5" />
+            <RiHistoryLine className="w-4 h-4" />
             طلبات سابقة ({previous})
           </button>
           <button
             onClick={openForm}
             className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <RiPencilLine className="w-4 h-4" />
             {open ? 'إغلاق' : 'تعديل'}
           </button>
         </div>
@@ -178,7 +178,7 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
               disabled={busy}
               className="text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
             >
-              {busy && <Loader2 className="w-3 h-3 animate-spin" />}
+              {busy && <RiLoader4Line className="w-4 h-4 animate-spin" />}
               حفظ بيانات العميل
             </button>
             <button onClick={() => setOpen(false)} className="text-xs px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">

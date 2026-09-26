@@ -8,16 +8,12 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
-import {
-  Globe, Plus, Pencil, Trash2, Copy, Eye, EyeOff, ExternalLink,
-  CopyPlus,
-  MousePointerClick, Loader2,
-} from 'lucide-react';
 import { screenApi as crmApi, qs } from '@/lib/screen-api';
 import { formatDate } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
+import { RiAddCircleLine, RiCursorLine, RiDeleteBinLine, RiEarthLine, RiExternalLinkLine, RiEyeLine, RiEyeOffLine, RiFileCopy2Line, RiFileCopyLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 
 export function LandingPagesScreen() {
   const tell = useTell();
@@ -72,7 +68,7 @@ export function LandingPagesScreen() {
 
 
   /**
-   * Copy the page, not its results.
+   * RiFileCopyLine the page, not its results.
    *
    * The server decides what carries over — sections, theme and product do;
    * the slug, domain, pixel, published state and the original's view and
@@ -132,7 +128,7 @@ export function LandingPagesScreen() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-[var(--sys-heading)] flex items-center gap-2">
-              <Globe className="w-6 h-6 text-[var(--sys-primary)]" />
+              <RiEarthLine className="w-6 h-6 text-[var(--sys-primary)]" />
               صفحات الهبوط
             </h1>
             <p className="text-sm text-[var(--sys-muted-foreground)] mt-1">
@@ -147,7 +143,7 @@ export function LandingPagesScreen() {
             )}
           </div>
           <Button onClick={() => { setForm({ name: '', slug: '', productId: '', template: 'classic' }); setFormError(null); setCreateOpen(true); }}>
-            <Plus className="w-4 h-4" /> صفحة جديدة
+            <RiAddCircleLine className="w-4 h-4" /> صفحة جديدة
           </Button>
         </div>
 
@@ -200,7 +196,7 @@ export function LandingPagesScreen() {
                         <td className="px-4 py-3" dir="ltr">
                           {lp.isPublished ? (
                             <a href={`/lp/${lp.slug}`} target="_blank" rel="noopener noreferrer" className="text-[var(--sys-primary)] hover:underline flex items-center gap-1">
-                              /lp/{lp.slug} <ExternalLink className="w-3 h-3" />
+                              /lp/{lp.slug} <RiExternalLinkLine className="icon-mirror w-4 h-4" />
                             </a>
                           ) : (
                             <span className="text-[var(--sys-muted)]">/lp/{lp.slug}</span>
@@ -210,15 +206,15 @@ export function LandingPagesScreen() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             <button title="تحرير" onClick={() => (window.location.href = `/growth/landing-pages/${lp.id}`)}
-                              className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]"><Pencil className="w-4 h-4" /></button>
+                              className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]"><RiPencilLine className="w-4 h-4" /></button>
                             <button title={lp.isPublished ? 'إلغاء النشر' : 'نشر'} disabled={busyId === lp.id}
                               onClick={() => togglePublish(lp)}
                               className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)] disabled:opacity-40">
-                              {lp.isPublished ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              {lp.isPublished ? <RiEyeOffLine className="w-4 h-4" /> : <RiEyeLine className="w-4 h-4" />}
                             </button>
                             <button title="نسخ الرابط" onClick={() => copyUrl(lp)}
                               className="p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">
-                              {copiedId === lp.id ? <MousePointerClick className="w-4 h-4 text-[var(--sys-success)]" /> : <Copy className="w-4 h-4" />}
+                              {copiedId === lp.id ? <RiCursorLine className="w-4 h-4 text-[var(--sys-success)]" /> : <RiFileCopyLine className="w-4 h-4" />}
                             </button>
                             {/* A page that converts, wanted again for the next
                                 product. Rebuilding it by hand is how a working
@@ -226,10 +222,10 @@ export function LandingPagesScreen() {
                             <button title="انسخ الصفحة" disabled={busyId === lp.id}
                               onClick={() => duplicate(lp)}
                               className="p-1.5 rounded-lg hover:bg-[var(--sys-primary-soft)] text-[var(--sys-foreground)] hover:text-[var(--sys-primary)] disabled:opacity-40">
-                              <CopyPlus className="w-4 h-4" />
+                              <RiFileCopy2Line className="w-4 h-4" />
                             </button>
                             <button title="حذف" onClick={() => setDeleting(lp)}
-                              className="p-1.5 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><Trash2 className="w-4 h-4" /></button>
+                              className="p-1.5 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><RiDeleteBinLine className="w-4 h-4" /></button>
                           </div>
                         </td>
                       </tr>
@@ -299,7 +295,7 @@ export function LandingPagesScreen() {
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)}>إلغاء</Button>
             <Button onClick={createLandingPage} disabled={saving || form.name.trim().length < 2 || form.slug.trim().length < 3}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} إنشاء
+              {saving ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiAddCircleLine className="w-4 h-4" />} إنشاء
             </Button>
           </div>
         </div>
@@ -313,7 +309,7 @@ export function LandingPagesScreen() {
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setDeleting(null)}>إلغاء</Button>
           <Button variant="danger" onClick={confirmDelete} disabled={deleteLoading}>
-            {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} حذف نهائي
+            {deleteLoading ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiDeleteBinLine className="w-4 h-4" />} حذف نهائي
           </Button>
         </div>
       </Modal>

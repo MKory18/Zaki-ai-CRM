@@ -8,18 +8,10 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { findRoute } from '@/lib/route-registry';
-import {
-  DollarSign,
-  TrendingUp,
-  Receipt,
-  Plus,
-  ArrowDownRight,
-  ShieldCheck,
-  PieChart,
-} from 'lucide-react';
 import { format } from 'date-fns';
 import { apiJson } from '@/lib/api-client';
 import { ZERO_SUMMARY, type ProfitSummary } from '@/lib/profit-summary';
+import { RiAddCircleLine, RiArrowRightDownLine, RiArrowUpCircleLine, RiFileList3Line, RiMoneyDollarCircleLine, RiPieChartLine, RiShieldCheckLine } from '@remixicon/react';
 
 export function FinanceProfitScreen() {
   const { t } = useApp();
@@ -122,7 +114,7 @@ export function FinanceProfitScreen() {
             onClick={() => setExpenseModalOpen(true)}
             className="flex items-center space-x-1.5"
           >
-            <Plus className="w-4 h-4" />
+            <RiAddCircleLine className="w-4 h-4" />
             <span>سجّل مصروفاً</span>
           </Button>
         </div>
@@ -133,14 +125,14 @@ export function FinanceProfitScreen() {
             title="إيراد الموصَّل"
             value={`${summary.totalRevenue.toFixed(2)} ${data?.currency ?? ''}`}
             subtitle="الطلبات المسلَّمة فعلاً، لا المؤكدة"
-            icon={TrendingUp}
+            icon={RiArrowUpCircleLine}
             color="blue"
           />
           <KpiCard
             title="صافي الربح"
             value={`${summary.netProfit.toFixed(2)} ${data?.currency ?? ''}`}
             subtitle={`هامش ${summary.profitMargin}%`}
-            icon={DollarSign}
+            icon={RiMoneyDollarCircleLine}
             color="emerald"
             trend={{ value: `${summary.profitMargin}%`, positive: summary.netProfit >= 0 }}
           />
@@ -148,14 +140,14 @@ export function FinanceProfitScreen() {
             title="كلفة البضاعة"
             value={`${summary.totalCOGS.toFixed(2)} ${data?.currency ?? ''}`}
             subtitle="من كلفة التشغيلات — تُدخَل من شاشة التصنيع"
-            icon={Receipt}
+            icon={RiFileList3Line}
             color="amber"
           />
           <KpiCard
             title="المصاريف التشغيلية"
             value={`${summary.totalOperationalExpenses.toFixed(2)} ${data?.currency ?? ''}`}
             subtitle="إعلانات وشحن ورواتب وما إليها"
-            icon={ArrowDownRight}
+            icon={RiArrowRightDownLine}
             color="rose"
           />
         </div>

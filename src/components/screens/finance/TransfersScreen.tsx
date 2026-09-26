@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Loader2, Repeat } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { readTransfer, transferRefusal, type TransferSide } from '@/lib/transfer-kind';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiArrowLeftLine, RiLoader4Line, RiRepeatLine } from '@remixicon/react';
 
 /**
  * /finance/transfers — moving money between wallets. One transfer writes two
@@ -227,7 +227,7 @@ export function TransfersScreen() {
         {from && to && amountOut && (
           <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 flex items-center gap-2 flex-wrap">
             <span className="tabular-nums">{amountOut} {from.currencyCode}</span>
-            <ArrowLeft className="w-4 h-4 text-[var(--sys-muted)]" />
+            <RiArrowLeftLine className="icon-mirror w-4 h-4 text-[var(--sys-muted)]" />
             <span className="tabular-nums font-medium">
               {crossCurrency && !rate ? '— (أدخل سعر الصرف)' : `${amountIn} ${to.currencyCode}`}
             </span>
@@ -274,7 +274,7 @@ export function TransfersScreen() {
             disabled={saving || !!refusal}
             className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Repeat className="w-4 h-4" />}
+            {saving ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiRepeatLine className="w-4 h-4" />}
             تحويل
           </button>
         </div>
@@ -284,7 +284,7 @@ export function TransfersScreen() {
         <h2 className="text-sm font-medium text-[var(--sys-heading)] px-4 py-3 border-b border-[var(--sys-border)]">آخر التحويلات</h2>
         {!rows ? (
           <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-12">
-            <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+            <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
           </div>
         ) : rows.length === 0 ? (
           <p className="text-sm text-[var(--sys-muted-foreground)] py-10 text-center">لا تحويلات بعد.</p>

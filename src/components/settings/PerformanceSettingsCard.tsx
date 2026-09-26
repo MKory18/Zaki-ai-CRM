@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, Gauge, Loader2, Lock } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import type { PerformanceSettings } from '@/lib/performance-settings';
+import { RiCheckLine, RiDashboard3Line, RiLoader4Line, RiLockLine } from '@remixicon/react';
 
 /**
  * THE BARS — AND THE WEIGHTS, SHOWN AND LOCKED.
@@ -87,7 +87,7 @@ export function PerformanceSettingsCard() {
         {/* Shown, explained, and not a field. */}
         <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
           <p className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-[var(--sys-muted-foreground)]">
-            <Lock className="h-3 w-3" /> الأوزان — مثبّتة بالكود، لا تُعدَّل من هنا ولا من غيره
+            <RiLockLine className="h-4 w-4" /> الأوزان — مثبّتة بالكود، لا تُعدَّل من هنا ولا من غيره
           </p>
           <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
             {weights.map((w) => (
@@ -166,12 +166,12 @@ export function PerformanceSettingsCard() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" onClick={save} disabled={busy}>
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Gauge className="h-3.5 w-3.5" />}
+            {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiDashboard3Line className="h-4 w-4" />}
             احفظ العتبات
           </Button>
           {saved && (
             <span className="inline-flex items-center gap-1 text-xs text-[var(--sys-success)]">
-              <Check className="h-3.5 w-3.5" /> تم الحفظ
+              <RiCheckLine className="h-4 w-4" /> تم الحفظ
             </span>
           )}
         </div>

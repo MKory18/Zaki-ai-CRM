@@ -375,7 +375,7 @@
     "columns": 0,
     "cards": 0,
     "modals": 1,
-    "icons": 1,
+    "icons": 2,
     "links": 0,
     "tabs": 0
   },
@@ -485,7 +485,7 @@
     "columns": 11,
     "cards": 4,
     "modals": 0,
-    "icons": 15,
+    "icons": 14,
     "links": 4,
     "tabs": 0
   },
@@ -555,7 +555,7 @@
     "columns": 7,
     "cards": 0,
     "modals": 3,
-    "icons": 10,
+    "icons": 11,
     "links": 0,
     "tabs": 0
   },
@@ -955,7 +955,7 @@
     "columns": 5,
     "cards": 5,
     "modals": 1,
-    "icons": 12,
+    "icons": 13,
     "links": 0,
     "tabs": 0
   },
@@ -965,7 +965,7 @@
     "columns": 0,
     "cards": 0,
     "modals": 1,
-    "icons": 3,
+    "icons": 4,
     "links": 0,
     "tabs": 0
   },
@@ -1125,7 +1125,7 @@
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 5,
+    "icons": 6,
     "links": 0,
     "tabs": 0
   },

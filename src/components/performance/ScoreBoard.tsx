@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import type { ScoreResult } from '@/lib/performance-score';
+import { RiLoader4Line } from '@remixicon/react';
 
 /**
  * THE SUPERVISOR'S VIEW OF THE SAME NUMBERS.
@@ -112,7 +112,7 @@ export function ScoreBoard() {
   if (!data) {
     return (
       <p className="flex items-center justify-center gap-2 py-8 text-sm text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ الحساب…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ الحساب…
       </p>
     );
   }

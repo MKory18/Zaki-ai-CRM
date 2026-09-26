@@ -1,13 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Megaphone, Plus, Link2, Check, Loader2, Pencil, Trash2, X, TrendingUp, TrendingDown,
-  RefreshCw, Plug,
-} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
 import { CAMPAIGN_PLATFORMS, CAMPAIGN_STATUSES } from '@/lib/campaigns';
+import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLinksLine, RiLoader4Line, RiMegaphoneLine, RiPencilLine, RiPlugLine, RiRefreshLine } from '@remixicon/react';
 
 /**
  * WHAT EACH AD COST, AND WHAT IT BROUGHT BACK.
@@ -161,7 +158,7 @@ export function CampaignsScreen() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-            <Megaphone className="h-5 w-5 text-[var(--sys-primary)]" /> الحملات
+            <RiMegaphoneLine className="h-5 w-5 text-[var(--sys-primary)]" /> الحملات
           </h1>
           <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             تكتب ما أنفقت، والباقي محسوب من طلباتك الفعلية.
@@ -183,12 +180,12 @@ export function CampaignsScreen() {
           </div>
           {(data?.adAccounts?.length ?? 0) > 0 && (
             <Button size="sm" variant="outline" onClick={sync} disabled={syncing}>
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {syncing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiRefreshLine className="h-4 w-4" />}
               اسحب الإنفاق
             </Button>
           )}
           <Button size="sm" onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" /> حملة جديدة
+            <RiAddCircleLine className="h-4 w-4" /> حملة جديدة
           </Button>
         </div>
       </div>
@@ -215,7 +212,7 @@ export function CampaignsScreen() {
 
       {loading && !data ? (
         <div className="flex h-40 items-center justify-center text-sm text-[var(--sys-muted-foreground)]">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <RiLoader4Line className="h-4 w-4 animate-spin" />
         </div>
       ) : data && data.campaigns.length === 0 ? (
         <Empty onCreate={() => setCreating(true)} />
@@ -328,7 +325,7 @@ function Row({
                   : 'border-[var(--sys-border)] text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]'
               }`}
             >
-              <Plug className="h-3 w-3" />
+              <RiPlugLine className="h-4 w-4" />
               {c.spendSource === 'SYNCED' ? 'تلقائي' : 'اربط'}
             </button>
           )}
@@ -337,14 +334,14 @@ function Row({
             title="انسخ رابط الإعلان"
             className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
           >
-            {copied ? <Check className="h-3 w-3 text-[var(--sys-success)]" /> : <Link2 className="h-3 w-3" />}
+            {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiLinksLine className="h-4 w-4" />}
             {copied ? 'نُسخ' : 'رابط الإعلان'}
           </button>
-          <button onClick={onEdit} title="تعديل" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
-            <Pencil className="h-3.5 w-3.5" />
+          <button aria-label="تعديل" onClick={onEdit} title="تعديل" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+            <RiPencilLine className="h-4 w-4" />
           </button>
-          <button onClick={onRemove} title="حذف" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
-            <Trash2 className="h-3.5 w-3.5" />
+          <button aria-label="حذف" onClick={onRemove} title="حذف" className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]">
+            <RiDeleteBinLine className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -392,8 +389,8 @@ function Cell({ label, value, unit, tone, icon }: { label: string; value: string
     <div>
       <p className="text-xs text-[var(--sys-muted)]">{label}</p>
       <p className={`flex items-center gap-0.5 text-xs font-bold tabular-nums ${colour}`} dir="ltr">
-        {icon === 'up' && <TrendingUp className="h-3 w-3" />}
-        {icon === 'down' && <TrendingDown className="h-3 w-3" />}
+        {icon === 'up' && <RiArrowUpCircleLine className="h-4 w-4" />}
+        {icon === 'down' && <RiArrowDownCircleLine className="h-4 w-4" />}
         {value}
         {unit && value !== '—' && <span className="text-xs font-normal text-[var(--sys-muted)]">{unit}</span>}
       </p>
@@ -404,14 +401,14 @@ function Cell({ label, value, unit, tone, icon }: { label: string; value: string
 function Empty({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="rounded-lg border border-dashed border-[var(--sys-border-strong)] p-8 text-center">
-      <Megaphone className="mx-auto h-8 w-8 text-[var(--sys-border-strong)]" />
+      <RiMegaphoneLine className="mx-auto h-6 w-6 text-[var(--sys-border-strong)]" />
       <p className="mt-2 text-sm font-semibold text-[var(--sys-foreground)]">لا حملات بعد</p>
       <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
         أنشئ حملة، انسخ رابطها، والصقه في إعلانك. كل طلب يأتي من ذلك الرابط يُحسب عليها —
         وأنت تكتب ما أنفقت، فترى العائد الحقيقي بدل التخمين.
       </p>
       <Button size="sm" className="mt-3" onClick={onCreate}>
-        <Plus className="h-4 w-4" /> حملة جديدة
+        <RiAddCircleLine className="h-4 w-4" /> حملة جديدة
       </Button>
     </div>
   );
@@ -478,8 +475,8 @@ function Editor({
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-bold text-[var(--sys-heading)]">{campaign ? 'تعديل الحملة' : 'حملة جديدة'}</h2>
-          <button onClick={onClose} className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
-            <X className="h-4 w-4" />
+          <button aria-label="إغلاق" onClick={onClose} className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+            <RiCloseLine className="h-4 w-4" />
           </button>
         </div>
 
@@ -556,7 +553,7 @@ function Editor({
 
         <div className="mt-4 flex gap-2">
           <Button onClick={save} disabled={busy || !form.name.trim()} className="flex-1">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : null}
             {campaign ? 'احفظ' : 'أنشئ الحملة'}
           </Button>
           <Button variant="outline" onClick={onClose}>إلغاء</Button>
@@ -645,8 +642,8 @@ function LinkDialog({
       >
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-sm font-bold text-[var(--sys-heading)]">اربط «{campaign.name}» بحملة في ميتا</h2>
-          <button onClick={onClose} className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
-            <X className="h-4 w-4" />
+          <button aria-label="إغلاق" onClick={onClose} className="rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]">
+            <RiCloseLine className="h-4 w-4" />
           </button>
         </div>
         <p className="mb-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
@@ -669,7 +666,7 @@ function LinkDialog({
 
         {remote === null && !error ? (
           <div className="flex h-24 items-center justify-center text-[var(--sys-muted-foreground)]">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <RiLoader4Line className="h-4 w-4 animate-spin" />
           </div>
         ) : remote && remote.length === 0 ? (
           <p className="rounded-lg bg-[var(--sys-surface)] p-3 text-xs text-[var(--sys-muted-foreground)]">
@@ -702,7 +699,7 @@ function LinkDialog({
 
         <div className="mt-4 flex gap-2">
           <Button onClick={() => save(false)} disabled={busy || !chosen} className="flex-1">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiCheckLine className="h-4 w-4" />}
             اربط
           </Button>
           {campaign.spendSource === 'SYNCED' && (

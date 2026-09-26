@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { PackageCheck } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { RiArchiveDrawerLine } from '@remixicon/react';
 
 /**
  * Settling a parcel at the door.
@@ -195,7 +195,7 @@ export function DeliverDialog({
             disabled={saving || !lines}
             className="h-10 px-4 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-50"
           >
-            <PackageCheck className="w-4 h-4" />
+            <RiArchiveDrawerLine className="w-4 h-4" />
             {saving ? 'جارٍ التسجيل…' : !anyTaken ? 'تسجيل كمرتجع' : allTaken ? 'تسليم كامل' : 'تسليم جزئي'}
           </button>
         </div>

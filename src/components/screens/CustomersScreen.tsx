@@ -8,8 +8,8 @@ import { Modal } from '@/components/ui/Modal';
 import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useRegions } from '@/hooks/useRegions';
 import { useApp } from '@/context/AppContext';
-import { Search, Plus, Phone, User, ShoppingBag, MapPin, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { RiAddCircleLine, RiCalendarLine, RiMapPinLine, RiPhoneLine, RiSearchLine, RiShoppingBagLine, RiUserLine } from '@remixicon/react';
 
 export function CustomersScreen() {
   const { t } = useApp();
@@ -108,14 +108,14 @@ export function CustomersScreen() {
             onClick={() => setCreateModalOpen(true)}
             className="flex items-center space-x-1.5 bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85"
           >
-            <Plus className="w-4 h-4" />
+            <RiAddCircleLine className="w-4 h-4" />
             <span>إضافة عميل</span>
           </Button>
         </div>
 
-        {/* Search */}
+        {/* RiSearchLine */}
         <div className="relative max-w-md">
-          <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
+          <RiSearchLine className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
           <input
             type="text"
             placeholder="بحث بالاسم، رقم الهاتف، المحافظة..."
@@ -137,11 +137,11 @@ export function CustomersScreen() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-bold text-[var(--sys-heading)] text-sm flex items-center space-x-1.5 rtl:space-x-reverse">
-                      <User className="w-3.5 h-3.5 text-[var(--sys-destructive)]" />
+                      <RiUserLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                       <span>{c.fullName}</span>
                     </h3>
                     <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center space-x-1 mt-1">
-                      <MapPin className="w-3 h-3 text-[var(--sys-muted)]" />
+                      <RiMapPinLine className="w-4 h-4 text-[var(--sys-muted)]" />
                       <span>
                         {c.city}، {c.address}
                       </span>
@@ -158,7 +158,7 @@ export function CustomersScreen() {
                     onClick={(e) => e.stopPropagation()}
                     className="inline-flex items-center space-x-1 rtl:space-x-reverse font-mono font-bold text-[var(--sys-heading)] bg-[var(--sys-surface)] px-2 py-1 rounded-lg hover:bg-[var(--sys-border)]"
                   >
-                    <Phone className="w-3 h-3 text-[var(--sys-destructive)]" />
+                    <RiPhoneLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                     <span dir="ltr">{c.rawPhone || c.phone}</span>
                   </a>
                   {c.altPhone && <span className="text-[var(--sys-muted)]">بديل: {c.altPhone}</span>}

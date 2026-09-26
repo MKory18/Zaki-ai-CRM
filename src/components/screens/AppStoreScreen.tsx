@@ -3,14 +3,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTell } from '@/components/ui/Confirm';
 import Link from 'next/link';
-import {
-  LayoutGrid, Loader2, Check, Settings2, Plus, ShieldCheck, Copy, X, AlertTriangle,
-} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { apiJson } from '@/lib/api-client';
 import { copyText } from '@/lib/clipboard';
+import { RiAddCircleLine, RiAlertLine, RiCheckLine, RiCloseLine, RiEqualizer2Line, RiFileCopyLine, RiLayoutGridLine, RiLoader4Line, RiShieldCheckLine } from '@remixicon/react';
 
 /**
  * /apps/store — what this system can be connected to.
@@ -88,7 +86,7 @@ export function AppStoreScreen() {
   if (!shelf) {
     return (
       <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--sys-muted-foreground)]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -98,7 +96,7 @@ export function AppStoreScreen() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-[var(--sys-heading)]">
-            <LayoutGrid className="h-6 w-6 text-[var(--sys-primary)]" />
+            <RiLayoutGridLine className="h-6 w-6 text-[var(--sys-primary)]" />
             متجر التطبيقات
           </h1>
           <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
@@ -107,7 +105,7 @@ export function AppStoreScreen() {
           </p>
         </div>
         <Button size="sm" onClick={() => setRegistering(true)}>
-          <Plus className="h-4 w-4" /> سجّل تطبيقاً
+          <RiAddCircleLine className="h-4 w-4" /> سجّل تطبيقاً
         </Button>
       </div>
 
@@ -142,7 +140,7 @@ export function AppStoreScreen() {
                   card says which. */}
               {a.installed && (
                 <p className={`mt-2 flex items-center gap-1.5 text-xs ${a.configured ? 'text-[var(--sys-success)]' : 'text-[var(--sys-warning)]'}`}>
-                  {a.configured ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                  {a.configured ? <RiShieldCheckLine className="h-4 w-4" /> : <RiAlertLine className="h-4 w-4" />}
                   {a.configured ? 'مهيَّأ ويعمل' : 'مثبَّت لكن غير مهيَّأ — أدخل بياناته'}
                 </p>
               )}
@@ -150,14 +148,14 @@ export function AppStoreScreen() {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {!a.installed ? (
                   <Button size="sm" disabled={!a.canManage || busy === a.code} onClick={() => act(a.code, 'install')}>
-                    {busy === a.code ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                    {busy === a.code ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiAddCircleLine className="h-4 w-4" />}
                     تثبيت
                   </Button>
                 ) : (
                   <>
                     <Link href={a.settingsPath}>
                       <Button size="sm" variant="outline">
-                        <Settings2 className="h-3.5 w-3.5" /> الإعدادات
+                        <RiEqualizer2Line className="h-4 w-4" /> الإعدادات
                       </Button>
                     </Link>
                     <Button
@@ -291,7 +289,7 @@ function RegisterApp({
       <Modal isOpen onClose={onDone} title="سرّ التوقيع" subtitle="يُعرض مرة واحدة فقط">
         <div className="space-y-3">
           <p className="text-xs leading-relaxed text-[var(--sys-foreground)]">
-            احفظه الآن. يوقّع كل ويبهوك بترويسة <code dir="ltr">X-Zaki-Signature</code> بصيغة
+            احفظه الآن. يوقّع كل ويبهوك بترويسة <code dir="ltr">RiCloseLine-Zaki-Signature</code> بصيغة
             {' '}<code dir="ltr">sha256=HMAC(secret, "&lt;timestamp&gt;.&lt;body&gt;")</code>؛
             الوقت داخل النصّ الموقَّع حتى لا يُعاد إرسال طلب مُلتقَط بعد أسبوع بنفس التوقيع.
           </p>
@@ -310,7 +308,7 @@ function RegisterApp({
               }}
               className="shrink-0 cursor-pointer rounded-lg p-2 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-card)]"
             >
-              {copied ? <Check className="h-4 w-4 text-[var(--sys-success)]" /> : <Copy className="h-4 w-4" />}
+              {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiFileCopyLine className="h-4 w-4" />}
             </button>
           </div>
           <div className="flex justify-end">
@@ -376,10 +374,10 @@ function RegisterApp({
 
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="outline" onClick={onClose}>
-            <X className="h-4 w-4" /> إلغاء
+            <RiCloseLine className="h-4 w-4" /> إلغاء
           </Button>
           <Button type="submit" loading={saving} disabled={chosen.length === 0}>
-            <Plus className="h-4 w-4" /> سجّل
+            <RiAddCircleLine className="h-4 w-4" /> سجّل
           </Button>
         </div>
       </form>

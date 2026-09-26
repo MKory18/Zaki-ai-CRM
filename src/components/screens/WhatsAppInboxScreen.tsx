@@ -5,10 +5,7 @@ import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi, qs } from '@/lib/screen-api';
 import { findRoute } from '@/lib/route-registry';
-import {
-  MessageCircle, Send, ChevronRight, Phone, ShoppingBag, User,
-  RefreshCw, Settings, ShieldAlert, Check, X, Search, CheckCheck, AlertCircle,
-} from 'lucide-react';
+import { RiArrowRightSLine, RiChat3Line, RiCheckDoubleLine, RiCheckLine, RiCloseLine, RiErrorWarningLine, RiPhoneLine, RiRefreshLine, RiSearchLine, RiSendPlaneLine, RiSettings3Line, RiShieldFlashLine, RiShoppingBagLine, RiUserLine } from '@remixicon/react';
 
 interface Conversation {
   id: string;
@@ -267,7 +264,7 @@ export function WhatsAppInboxScreen() {
       <>
         <div className="p-8">
           <div className="max-w-md mx-auto mt-20 text-center p-8 bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)]">
-            <ShieldAlert className="w-10 h-10 mx-auto text-[var(--sys-primary)]" />
+            <RiShieldFlashLine className="w-6 h-6 mx-auto text-[var(--sys-primary)]" />
             <h2 className="mt-4 font-bold text-[var(--sys-heading)]">ليس لديك صلاحية لعرض واتساب</h2>
             <p className="mt-2 text-xs text-[var(--sys-muted-foreground)]">تواصل مع مدير الشركة لمنحك صلاحية whatsapp.view</p>
           </div>
@@ -298,17 +295,17 @@ export function WhatsAppInboxScreen() {
           <div className="flex-1 flex items-center justify-center px-6">
             <div className="text-center p-8 bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] max-w-md">
               <div className="w-14 h-14 mx-auto rounded-full bg-[var(--sys-surface)] flex items-center justify-center">
-                <MessageCircle className="w-7 h-7 text-[var(--sys-muted-foreground)]" />
+                <RiChat3Line className="w-6 h-6 text-[var(--sys-muted-foreground)]" />
               </div>
               <h2 className="mt-4 font-bold text-[var(--sys-heading)]">لم يتم ربط WhatsApp بعد</h2>
               <p className="mt-2 text-xs text-[var(--sys-muted-foreground)] leading-relaxed">
                 {conn.envConfigured
                   ? 'تم إعداد البيانات لكن الاتصال غير مفعّل. جرّب إعادة الاتصال من الإعدادات.'
-                  : 'أكمل متغيرات البيئة (Access Token, WABA ID, Phone Number ID, App Secret, Verify Token, Encryption Key) ثم اضغط إعادة الاتصال من صفحة الإعدادات.'}
+                  : 'أكمل متغيرات البيئة (Access Token, WABA ID, RiPhoneLine Number ID, App Secret, Verify Token, Encryption Key) ثم اضغط إعادة الاتصال من صفحة الإعدادات.'}
               </p>
               {canManage && (
                 <Link href="/settings/whatsapp" className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold hover:opacity-90">
-                  <Settings className="w-4 h-4" />
+                  <RiSettings3Line className="w-4 h-4" />
                   إعداد WhatsApp
                 </Link>
               )}
@@ -321,7 +318,7 @@ export function WhatsAppInboxScreen() {
             <div className={`bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] flex flex-col min-h-0 ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
               <div className="p-3 border-b border-[var(--sys-surface-strong)] space-y-2">
                 <div className="relative">
-                  <Search className="absolute top-2.5 left-3 w-4 h-4 text-[var(--sys-muted)] rtl:right-3 rtl:left-auto" />
+                  <RiSearchLine className="absolute top-2.5 left-3 w-4 h-4 text-[var(--sys-muted)] rtl:right-3 rtl:left-auto" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -344,9 +341,9 @@ export function WhatsAppInboxScreen() {
                   <div className="p-6 text-center text-xs text-[var(--sys-muted-foreground)]">جارٍ التحميل...</div>
                 ) : error && !offline ? (
                   <div className="p-4 m-3 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs flex flex-col gap-2">
-                    <span className="flex items-center gap-1.5"><AlertCircle className="w-4 h-4" />{error}</span>
+                    <span className="flex items-center gap-1.5"><RiErrorWarningLine className="w-4 h-4" />{error}</span>
                     <button onClick={() => { setError(null); loadConversations(); }} className="inline-flex items-center gap-1 text-[var(--sys-heading)] font-semibold">
-                      <RefreshCw className="w-3 h-3" /> إعادة المحاولة
+                      <RiRefreshLine className="w-4 h-4" /> إعادة المحاولة
                     </button>
                   </div>
                 ) : offline ? (
@@ -387,7 +384,7 @@ export function WhatsAppInboxScreen() {
               ) : (
                 <>
                   <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--sys-surface-strong)]">
-                    <button className="lg:hidden text-[var(--sys-muted-foreground)]" onClick={() => setMobileView('list')}><ChevronRight className="w-5 h-5 rtl:rotate-180" /></button>
+                    <button className="lg:hidden text-[var(--sys-muted-foreground)]" onClick={() => setMobileView('list')}><RiArrowRightSLine className="icon-mirror w-5 h-5" /></button>
                     <div className="w-9 h-9 rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] flex items-center justify-center text-xs font-bold">
                       {(selected.customerName || selected.customerPhone).slice(0, 2)}
                     </div>
@@ -433,9 +430,9 @@ export function WhatsAppInboxScreen() {
                             <div className="flex items-center gap-1 justify-end mt-0.5">
                               <span className="text-xs text-[var(--sys-muted)]">{new Date(m.createdAt).toLocaleTimeString('ar-u-nu-latn', { hour: '2-digit', minute: '2-digit' })}</span>
                               {m.direction === 'OUTBOUND' && (
-                                m.status === 'READ' ? <CheckCheck className="w-3 h-3 text-[#53bdeb]" />
-                                : m.status === 'FAILED' ? <X className="w-3 h-3 text-[var(--sys-destructive)]" />
-                                : <Check className="w-3 h-3 text-[var(--sys-muted)]" />
+                                m.status === 'READ' ? <RiCheckDoubleLine className="w-4 h-4 text-[#53bdeb]" />
+                                : m.status === 'FAILED' ? <RiCloseLine className="w-4 h-4 text-[var(--sys-destructive)]" />
+                                : <RiCheckLine className="w-4 h-4 text-[var(--sys-muted)]" />
                               )}
                             </div>
                           </div>
@@ -449,10 +446,10 @@ export function WhatsAppInboxScreen() {
                     <div className="border-t border-[var(--sys-surface-strong)] p-3 space-y-2">
                       {sendError && (
                         <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs">
-                          <span className="flex items-center gap-1.5"><AlertCircle className="w-4 h-4 shrink-0" />{sendError}</span>
+                          <span className="flex items-center gap-1.5"><RiErrorWarningLine className="w-4 h-4 shrink-0" />{sendError}</span>
                           {retryText && (
                             <button onClick={retrySend} className="shrink-0 inline-flex items-center gap-1 font-semibold text-[var(--sys-heading)]">
-                              <RefreshCw className="w-3 h-3" /> إعادة الإرسال
+                              <RiRefreshLine className="w-4 h-4" /> إعادة الإرسال
                             </button>
                           )}
                         </div>
@@ -470,7 +467,7 @@ export function WhatsAppInboxScreen() {
                         />
                         <button onClick={sendMessage} disabled={sending || !composing.trim()}
                           className="shrink-0 w-10 h-10 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center disabled:opacity-40 hover:opacity-90">
-                          {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 rtl:rotate-180" />}
+                          {sending ? <RiRefreshLine className="w-4 h-4 animate-spin" /> : <RiSendPlaneLine className="icon-mirror w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -497,7 +494,7 @@ export function WhatsAppInboxScreen() {
                     </div>
                     <p className="mt-2 font-bold text-sm text-[var(--sys-heading)]">{selected.customerName || 'عميل غير مرتبط'}</p>
                     <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center justify-center gap-1 mt-1" dir="ltr">
-                      <Phone className="w-3 h-3" /> {selected.customerPhone}
+                      <RiPhoneLine className="w-4 h-4" /> {selected.customerPhone}
                     </p>
                   </div>
 
@@ -506,7 +503,7 @@ export function WhatsAppInboxScreen() {
                     <p className="text-xs text-[var(--sys-muted-foreground)]">{convCountByPhone[selected.customerPhone] || 1} محادثة (مفتوحة)</p>
                     {selected.customerId ? (
                       <Link href={`/customers?search=${encodeURIComponent(selected.customerPhone)}`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-primary)] hover:underline">
-                        <User className="w-3 h-3" /> فتح العميل
+                        <RiUserLine className="w-4 h-4" /> فتح العميل
                       </Link>
                     ) : (
                       <p className="mt-2 text-xs text-[var(--sys-muted)]">عميل غير مرتبط</p>
@@ -530,7 +527,7 @@ export function WhatsAppInboxScreen() {
                         </div>
                       )
                     ) : (
-                      <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><ShoppingBag className="w-3 h-3" /> لا يوجد عميل مرتبط</p>
+                      <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><RiShoppingBagLine className="w-4 h-4" /> لا يوجد عميل مرتبط</p>
                     )}
                   </div>
                 </div>

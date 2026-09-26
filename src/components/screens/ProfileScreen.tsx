@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { User, Lock, Image as ImageIcon, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ScoreCard } from '@/components/performance/ScoreCard';
 import { ThemePicker } from '@/components/settings/ThemePicker';
+import { RiCheckboxCircleLine, RiErrorWarningLine, RiImageLine, RiLockLine, RiShieldCheckLine, RiUserLine } from '@remixicon/react';
 
 export function ProfileScreen() {
   const { currentUser, refreshUser } = useApp();
@@ -63,7 +63,7 @@ export function ProfileScreen() {
       <div className="space-y-6 max-w-3xl">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2 rtl:space-x-reverse">
-            <User className="w-6 h-6 text-[var(--sys-destructive)]" />
+            <RiUserLine className="w-6 h-6 text-[var(--sys-destructive)]" />
             <span>الملف الشخصي</span>
           </h1>
           <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
@@ -80,9 +80,9 @@ export function ProfileScreen() {
             }`}
           >
             {message.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <RiCheckboxCircleLine className="w-4 h-4 shrink-0" />
             ) : (
-              <AlertCircle className="w-4 h-4 shrink-0" />
+              <RiErrorWarningLine className="w-4 h-4 shrink-0" />
             )}
             <span>{message.text}</span>
           </div>
@@ -181,7 +181,7 @@ export function ProfileScreen() {
                 />
               </div>
               <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center space-x-1.5 rtl:space-x-reverse">
-                <ShieldCheck className="w-3.5 h-3.5 text-[var(--sys-destructive)]" />
+                <RiShieldCheckLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                 <span>تغيير كلمة المرور يُنهي جميع الجلسات النشطة على حسابك.</span>
               </p>
             </CardContent>

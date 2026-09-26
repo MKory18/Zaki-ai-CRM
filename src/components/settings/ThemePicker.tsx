@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Palette } from 'lucide-react';
 import { AUTO_DARK, AUTO_LIGHT, AUTO_THEME, THEME_CHOICES, sanitizeTheme, themeByKey } from '@/lib/system-themes';
+import { RiCheckLine, RiPaletteLine } from '@remixicon/react';
 
 /**
  * CHOOSING HOW THE SYSTEM LOOKS.
@@ -56,7 +56,7 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
   return (
     <section dir="rtl">
       <h3 className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-[var(--sys-foreground)]">
-        <Palette className="h-3.5 w-3.5 text-[var(--sys-primary)]" /> مظهر النظام
+        <RiPaletteLine className="h-4 w-4 text-[var(--sys-primary)]" /> مظهر النظام
       </h3>
       <p className="mb-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
         اختيارك أنت وحدك، ويتبعك بين الأجهزة. ألوان المعاني لا تتغيّر بين المظاهر: الأحمر متأخر أو
@@ -89,7 +89,7 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
             >
               <span className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-[var(--sys-heading)]">{choice.ar}</span>
-                {active && <Check className="h-3.5 w-3.5 text-[var(--sys-primary)]" />}
+                {active && <RiCheckLine className="h-4 w-4 text-[var(--sys-primary)]" />}
               </span>
 
               {/* The real palette, not a name. */}

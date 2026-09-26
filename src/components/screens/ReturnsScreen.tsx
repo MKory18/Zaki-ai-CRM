@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, PackageOpen, ScanLine } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { ScanButton } from '@/components/scan/ScanButton';
+import { RiInboxUnarchiveLine, RiLoader4Line, RiQrScan2Line } from '@remixicon/react';
 
 /**
  * /ops/returns — scan or pick a returned shipment, then record the physical
@@ -63,7 +63,7 @@ export function ReturnsScreen() {
         <label className="flex-1">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">امسح الباركود أو اكتب المرجع</span>
           <div className="relative">
-            <ScanLine className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
+            <RiQrScan2Line className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
@@ -95,11 +95,11 @@ export function ReturnsScreen() {
 
       {!rows ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <PackageOpen className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
+          <RiInboxUnarchiveLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا توجد مرتجعات بانتظار الاستلام.
         </p>
       ) : (

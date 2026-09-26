@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Eye, Lightbulb, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { AskAi } from '@/components/growth/AskAi';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAlertLine, RiCheckboxCircleLine, RiEyeLine, RiLightbulbLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * /growth/intelligence — what is bleeding, and what to do about it.
@@ -74,17 +74,17 @@ export function IntelligenceScreen() {
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحليل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحليل…
         </div>
       ) : data.totalOrders < data.minSample ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <Lightbulb className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
+          <RiLightbulbLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا تكفي البيانات بعد — {data.totalOrders} طلباً فقط. التحليل يحتاج {data.minSample} على الأقل
           حتى لا تكون النسب مجرد ضجيج.
         </p>
       ) : data.findings.length === 0 ? (
         <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-6 text-center">
-          <CheckCircle2 className="w-5 h-5 mx-auto mb-2" />
+          <RiCheckboxCircleLine className="w-5 h-5 mx-auto mb-2" />
           لا شيء يتجاوز حدود الإنذار في {data.totalOrders} طلباً. هذا صمت مقصود، لا تحليل فاشل.
         </p>
       ) : (
@@ -112,9 +112,9 @@ export function IntelligenceScreen() {
                 <div key={f.key} className={`bg-[var(--sys-card)] border rounded-lg p-4 ${tone.border}`}>
                   <div className="flex items-start gap-2">
                     {f.severity === 'ALARM' ? (
-                      <AlertTriangle className="w-4 h-4 text-[var(--sys-destructive)] shrink-0 mt-0.5" />
+                      <RiAlertLine className="w-4 h-4 text-[var(--sys-destructive)] shrink-0 mt-0.5" />
                     ) : (
-                      <Eye className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
+                      <RiEyeLine className="w-4 h-4 text-[var(--sys-warning)] shrink-0 mt-0.5" />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

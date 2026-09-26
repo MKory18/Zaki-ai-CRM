@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
-import { AlertCircle, LockKeyhole } from 'lucide-react';
+import { RiErrorWarningLine, RiLockPasswordLine } from '@remixicon/react';
 
 function ResetForm() {
   const searchParams = useSearchParams();
@@ -52,7 +52,7 @@ function ResetForm() {
       <CardContent className="p-6 space-y-4">
         {error && (
           <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg flex items-center space-x-2 rtl:space-x-reverse">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+            <RiErrorWarningLine className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -75,7 +75,7 @@ function ResetForm() {
             className="bg-[var(--sys-card)]"
           />
           <Button type="submit" loading={loading} className="w-full">
-            <LockKeyhole className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+            <RiLockPasswordLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
             تعيين كلمة المرور الجديدة
           </Button>
         </form>

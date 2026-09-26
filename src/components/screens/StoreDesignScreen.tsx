@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { LayoutTemplate, Loader2, Check, ExternalLink, Rocket, Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { BlockBuilder } from '@/components/landing/blocks/BlockBuilder';
 import type { LandingSection } from '@/lib/landing-sections';
 import type { StoreTheme } from '@/lib/store-theme';
+import { RiCheckLine, RiExternalLinkLine, RiLayoutLine, RiLoader4Line, RiRocketLine, RiSaveLine } from '@remixicon/react';
 
 /**
  * THE SHOP'S HOME PAGE.
@@ -19,7 +19,7 @@ import type { StoreTheme } from '@/lib/store-theme';
  *
  * SAVE, PREVIEW, PUBLISH ARE THREE SEPARATE ACTS, as the contract asks.
  * Preview is the canvas you are already looking at, drawn by the public
- * renderer. Save writes the draft. Publish is the only one a customer feels,
+ * renderer. RiSaveLine writes the draft. Publish is the only one a customer feels,
  * so it asks first and says what it is about to change.
  *
  * THE THEME IS NOT EDITED HERE. It belongs to «القوالب», which is where the
@@ -124,7 +124,7 @@ export function StoreDesignScreen() {
   if (loading || !data) {
     return (
       <div className="flex items-center gap-2 p-6 text-sm text-[#697586]">
-        <Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -136,7 +136,7 @@ export function StoreDesignScreen() {
     return (
       <div className="space-y-4 p-4 sm:p-6" dir="rtl">
         <h1 className="flex items-center gap-2 text-lg font-bold text-[#121926]">
-          <LayoutTemplate className="h-5 w-5 text-[#b8256e]" />
+          <RiLayoutLine className="h-5 w-5 text-[#b8256e]" />
           تصميم الواجهة
         </h1>
         <div className="rounded-lg border border-[#e3e8ef] bg-white p-4">
@@ -149,7 +149,7 @@ export function StoreDesignScreen() {
             {data.store.landingPageId ? (
               <a href={`/growth/landing-pages/${data.store.landingPageId}/editor`}>
                 <Button size="sm">
-                  <ExternalLink className="h-3.5 w-3.5" /> صمّم صفحة الواجهة
+                  <RiExternalLinkLine className="icon-mirror h-4 w-4" /> صمّم صفحة الواجهة
                 </Button>
               </a>
             ) : (
@@ -168,7 +168,7 @@ export function StoreDesignScreen() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e8ef] bg-white px-4 py-3">
         <div>
           <h1 className="flex items-center gap-2 text-base font-bold text-[#121926]">
-            <LayoutTemplate className="h-4 w-4 text-[#b8256e]" />
+            <RiLayoutLine className="h-4 w-4 text-[#b8256e]" />
             الصفحة الرئيسية لـ«{data.store.name}»
           </h1>
           <p className="mt-0.5 text-xs text-[#697586]">
@@ -181,20 +181,20 @@ export function StoreDesignScreen() {
         <div className="flex flex-wrap items-center gap-2">
           {msg && (
             <span className={`text-xs ${msg.ok ? 'text-[#00a651]' : 'text-[#fb323f]'}`}>
-              {msg.ok && <Check className="mb-0.5 ml-1 inline h-3.5 w-3.5" />}
+              {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
           )}
           <a href={`/s/${data.store.slug}`} target="_blank" rel="noopener noreferrer">
             <Button variant="secondary" size="sm">
-              <ExternalLink className="h-3.5 w-3.5" /> المنشورة
+              <RiExternalLinkLine className="icon-mirror h-4 w-4" /> المنشورة
             </Button>
           </a>
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => void save()}>
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} حفظ
+            {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiSaveLine className="h-4 w-4" />} حفظ
           </Button>
           <Button size="sm" disabled={busy} onClick={() => void publish()}>
-            <Rocket className="h-3.5 w-3.5" /> نشر
+            <RiRocketLine className="h-4 w-4" /> نشر
           </Button>
         </div>
       </header>

@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
-import { Check, Circle, Globe, Store as StoreIcon } from 'lucide-react';
 import { PASSWORD_RULES, passwordProblems } from '@/lib/password-rules';
 import { ROLE_LABELS as CANONICAL_LABELS } from '@/types/auth';
+import { RiCheckLine, RiCheckboxBlankCircleLine, RiEarthLine, RiStore2Line } from '@remixicon/react';
 
 /**
  * Creating an employee.
@@ -173,7 +173,7 @@ export function CreateUserModal({
                     key={rule.key}
                     className={`flex items-center gap-1 text-xs ${met ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted)]'}`}
                   >
-                    {met ? <Check className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5" />}
+                    {met ? <RiCheckLine className="h-4 w-4" /> : <RiCheckboxBlankCircleLine className="h-4 w-4" />}
                     {rule.ar}
                   </li>
                 );
@@ -204,7 +204,7 @@ export function CreateUserModal({
 
         <div className="rounded-lg border border-[var(--sys-border)] p-3 space-y-3">
           <p className="text-xs font-bold text-[var(--sys-heading)] flex items-center gap-1.5">
-            <Globe className="w-4 h-4 text-[var(--sys-primary)]" />
+            <RiEarthLine className="w-4 h-4 text-[var(--sys-primary)]" />
             الدول التي يعمل فيها
           </p>
           {countries.length === 0 ? (
@@ -229,7 +229,7 @@ export function CreateUserModal({
           {selectedCountries.length > 0 && (
             <div className="space-y-2 pt-1 border-t border-[var(--sys-border)]">
               <p className="text-xs font-bold text-[var(--sys-heading)] flex items-center gap-1.5 pt-2">
-                <StoreIcon className="w-4 h-4 text-[var(--sys-primary)]" />
+                <RiStore2Line className="w-4 h-4 text-[var(--sys-primary)]" />
                 المتاجر
               </p>
               <p className="text-xs text-[var(--sys-muted)]">

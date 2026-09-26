@@ -3,13 +3,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useConfirm } from '@/components/ui/Confirm';
 import Link from 'next/link';
-import { Bike, Check, Loader2, Pencil, Plus, Store as StoreIcon, Trash2, Truck, X } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { CourierCredentials } from '@/components/settings/CourierCredentials';
 import { CourierWebhook } from '@/components/settings/CourierWebhook';
 import { ContactButtons } from '@/components/orders/ContactButtons';
 import { COURIER_PLATFORMS } from '@/lib/couriers';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiEBike2Line, RiLoader4Line, RiPencilLine, RiStore2Line, RiTruckLine } from '@remixicon/react';
 
 /**
  * /settings/couriers — the shipping companies themselves. Their per-region
@@ -192,7 +192,7 @@ export function CouriersScreen() {
   if (!rows) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -207,7 +207,7 @@ export function CouriersScreen() {
           <Link href="/settings/delivery-fees" className="text-[var(--sys-primary)] hover:underline">أجور التوصيل</Link>.
         </p>
         <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
-          <Plus className="w-4 h-4" /> شركة شحن أو مندوب
+          <RiAddCircleLine className="w-4 h-4" /> شركة شحن أو مندوب
         </button>
       </div>
 
@@ -308,9 +308,9 @@ export function CouriersScreen() {
               <tr key={c.id}>
                 <td className="px-4 py-2 flex items-center gap-2 text-[var(--sys-heading)]">
                   {c.kind === 'AGENT' ? (
-                    <Bike className="w-4 h-4 text-[var(--sys-primary)]" />
+                    <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" />
                   ) : (
-                    <Truck className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
+                    <RiTruckLine className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
                   )}
                   {editing === c.id ? (
                     <input
@@ -392,14 +392,14 @@ export function CouriersScreen() {
                           title="احفظ"
                           className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)] disabled:opacity-40"
                         >
-                          <Check className="h-4 w-4" />
+                          <RiCheckLine className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setEditing(null)}
                           title="ألغِ"
                           className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
                         >
-                          <X className="h-4 w-4" />
+                          <RiCloseLine className="h-4 w-4" />
                         </button>
                       </>
                     ) : (
@@ -409,7 +409,7 @@ export function CouriersScreen() {
                           title="عدّل"
                           className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <RiPencilLine className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => remove(c)}
@@ -417,7 +417,7 @@ export function CouriersScreen() {
                           title="احذف"
                           className="cursor-pointer rounded-lg p-1.5 text-[var(--sys-muted)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-40"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <RiDeleteBinLine className="h-4 w-4" />
                         </button>
                       </>
                     )}

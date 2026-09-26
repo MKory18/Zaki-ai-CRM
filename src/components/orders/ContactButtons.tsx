@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageCircle, MessageSquare, Phone } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { fillTemplate, waNumber, type FillContext, type MessageTemplate } from '@/lib/message-templates';
+import { RiChat3Line, RiMessage3Line, RiPhoneLine } from '@remixicon/react';
 
 /**
  * CALL, SMS, WHATSAPP — from the row the parcel is on.
@@ -114,7 +114,7 @@ export function ContactButtons({
           0000" is how a person reads it, and some phones refuse it as a
           tel: target. The leading + is kept; everything decorative goes. */}
       <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} title="اتصال" className={btn}>
-        <Phone className="w-3.5 h-3.5" />
+        <RiPhoneLine className="w-4 h-4" />
         {!compact && 'اتصال'}
       </a>
       {!plain && (
@@ -129,7 +129,7 @@ export function ContactButtons({
           onClick={() => setOpen(open === 'SMS' ? null : 'SMS')}
           className={`${btn} ${onPhone ? '' : 'opacity-40 cursor-not-allowed'}`}
         >
-          <MessageSquare className="w-3.5 h-3.5" />
+          <RiMessage3Line className="w-4 h-4" />
           {!compact && 'SMS'}
         </button>
       )}
@@ -139,7 +139,7 @@ export function ContactButtons({
         onClick={plain ? openPlainWhatsapp : () => setOpen(open === 'WHATSAPP' ? null : 'WHATSAPP')}
         className={btn}
       >
-        <MessageCircle className="w-3.5 h-3.5" />
+        <RiChat3Line className="w-4 h-4" />
         {!compact && 'واتساب'}
       </button>
 
@@ -152,7 +152,7 @@ export function ContactButtons({
           <div
             dir="rtl"
             /**
-             * Phone: a sheet pinned to the bottom of the SCREEN. The row this
+             * RiPhoneLine: a sheet pinned to the bottom of the SCREEN. The row this
              * button sits in belongs to a table that scrolls sideways, so a
              * menu anchored to the cell lands half off the display — which is
              * exactly where an agent would be reading it from.

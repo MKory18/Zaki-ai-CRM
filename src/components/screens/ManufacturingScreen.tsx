@@ -7,9 +7,9 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { Factory, Plus, Calculator, Calendar, Boxes, Trash2 } from 'lucide-react';
 import { BatchCostDialog, type BatchForCost } from '@/components/production/BatchCostDialog';
 import { format } from 'date-fns';
+import { RiAddCircleLine, RiBuilding4Line, RiCalculatorLine, RiCalendarLine, RiDeleteBinLine, RiStackLine } from '@remixicon/react';
 
 /**
  * The costs that keep coming back, offered instead of typed.
@@ -162,7 +162,7 @@ export function ManufacturingScreen() {
             }}
             className="flex items-center space-x-1.5"
           >
-            <Plus className="w-4 h-4" />
+            <RiAddCircleLine className="w-4 h-4" />
             <span>تشغيلة جديدة</span>
           </Button>
         </div>
@@ -254,7 +254,7 @@ export function ManufacturingScreen() {
         <BatchCostDialog batch={costing} onClose={() => setCosting(null)} onSaved={loadData} />
       )}
 
-      {/* Production Batch Modal with Section 5 Live Formula Calculator */}
+      {/* Production Batch Modal with Section 5 Live Formula RiCalculatorLine */}
       <Modal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
@@ -407,7 +407,7 @@ export function ManufacturingScreen() {
                         onClick={() => setCostLines(costLines.filter((_, n) => n !== i))}
                         className="mb-1 cursor-pointer rounded-lg p-2 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <RiDeleteBinLine className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
@@ -416,10 +416,10 @@ export function ManufacturingScreen() {
             </div>
           </div>
 
-          {/* Section 5 Live Real-time Calculator Box */}
+          {/* Section 5 Live Real-time RiCalculatorLine Box */}
           <div className="p-4 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2">
-              <Calculator className="w-5 h-5 text-[var(--sys-destructive)]" />
+              <RiCalculatorLine className="w-5 h-5 text-[var(--sys-destructive)]" />
               <div>
                 <p className="font-bold text-[var(--sys-heading)]">الكلفة الكلية: {totalProductionCost.toFixed(2)}</p>
                 <p className="text-[var(--sys-muted-foreground)]">

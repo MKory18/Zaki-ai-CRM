@@ -3,10 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MoreHorizontal, X } from 'lucide-react';
 import type { NavGroup } from '@/lib/route-registry';
 import { mobileNav } from '@/lib/mobile-nav';
 import { iconFor } from './icons';
+import { RiCloseLine, RiMoreLine } from '@remixicon/react';
 
 /**
  * THE BOTTOM OF A PHONE.
@@ -72,7 +72,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
                 aria-label="إغلاق"
                 className={`${TAP} -me-2 flex items-center justify-center rounded-lg text-[var(--sys-muted)]`}
               >
-                <X className="h-5 w-5" />
+                <RiCloseLine className="h-5 w-5" />
               </button>
             </div>
 
@@ -115,8 +115,8 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
       >
         <ul className="flex">
           {primary.map((route) => {
-            const Icon = iconFor(route.icon);
             const on = active(route.path);
+            const Icon = iconFor(route.icon, on);
             return (
               <li key={route.path} className="flex-1">
                 <Link
@@ -142,7 +142,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
               aria-expanded={sheet}
               className={`${TAP} flex w-full flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[var(--sys-muted-foreground)]`}
             >
-              <MoreHorizontal className="h-5 w-5" />
+              <RiMoreLine className="h-5 w-5" />
               <span className="text-xs leading-tight">المزيد</span>
             </button>
           </li>

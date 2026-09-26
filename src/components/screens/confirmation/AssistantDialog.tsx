@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, Copy, Loader2, Sparkles } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { apiJson } from '@/lib/api-client';
+import { RiCheckLine, RiFileCopyLine, RiLoader4Line, RiSparkling2Line } from '@remixicon/react';
 
 /**
  * THE SUGGESTION, BESIDE THE FACTS IT WAS MADE FROM.
@@ -155,7 +155,7 @@ export function AssistantDialog({
         {/* Then the suggestion. */}
         {!answer && !failed && (
           <p className="flex items-center gap-2 text-sm text-[var(--sys-muted-foreground)] py-6 justify-center">
-            <Loader2 className="w-4 h-4 animate-spin" /> جارٍ القراءة…
+            <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ القراءة…
           </p>
         )}
 
@@ -167,13 +167,13 @@ export function AssistantDialog({
           <section>
             <div className="flex items-center justify-between mb-1">
               <h4 className="flex items-center gap-1.5 text-xs font-medium text-[var(--sys-foreground)]">
-                <Sparkles className="w-3.5 h-3.5 text-[var(--sys-primary)]" /> اقتراح
+                <RiSparkling2Line className="w-4 h-4 text-[var(--sys-primary)]" /> اقتراح
               </h4>
               <button
                 onClick={copy}
                 className="flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] cursor-pointer"
               >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? <RiCheckLine className="w-4 h-4" /> : <RiFileCopyLine className="w-4 h-4" />}
                 {copied ? 'نُسخ' : 'انسخ'}
               </button>
             </div>

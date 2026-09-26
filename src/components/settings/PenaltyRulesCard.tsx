@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, ShieldQuestion } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { ROLE_LABELS } from '@/types/auth';
+import { RiAddCircleLine, RiLoader4Line, RiShieldKeyholeLine } from '@remixicon/react';
 
 /**
  * THE RULES THAT PROPOSE A DEDUCTION.
@@ -234,7 +234,7 @@ export function PenaltyRulesCard() {
               />
             </label>
             <Button size="sm" onClick={add} disabled={busy || !ready}>
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiAddCircleLine className="h-4 w-4" />}
               أضف قاعدة
             </Button>
           </div>
@@ -242,7 +242,7 @@ export function PenaltyRulesCard() {
           {kind && <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted)]">{kind.sourceAr}</p>}
           {!draft.periodCap && (
             <p className="mt-1 flex items-start gap-1 text-xs leading-relaxed text-[var(--sys-warning)]">
-              <ShieldQuestion className="mt-px h-3 w-3 shrink-0" />
+              <RiShieldKeyholeLine className="mt-px h-4 w-4 shrink-0" />
               بلا سقف، قاعدةٌ بالدقيقة قد تأكل راتباً كاملاً على مرضٍ واحد.
             </p>
           )}

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Loader2, Target } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
+import { RiFocus3Line, RiLoader4Line } from '@remixicon/react';
 
 /**
  * WHERE THE RUNNING SPAN STANDS.
@@ -47,13 +47,13 @@ export function PeriodProgress() {
   return (
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
       <div className="flex items-center gap-1.5 px-4 py-3 border-b border-[var(--sys-border)]">
-        <Target className="w-3.5 h-3.5 text-[var(--sys-primary)]" />
+        <RiFocus3Line className="w-4 h-4 text-[var(--sys-primary)]" />
         <h2 className="text-sm font-medium text-[var(--sys-heading)]">الفترة الجارية</h2>
       </div>
 
       {!rows ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-8">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
         <>

@@ -2,7 +2,6 @@
 
 import { lateLabel } from '@/lib/transit';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Bike, Clock, HandCoins, Loader2, Search, Truck } from 'lucide-react';
 import { ContactButtons } from '@/components/orders/ContactButtons';
 import { TransferDialog } from '@/components/screens/tracking/TransferDialog';
 import { CollectDialog } from '@/components/screens/tracking/CollectDialog';
@@ -10,6 +9,7 @@ import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { Rows } from '@/components/ui/Rows';
+import { RiEBike2Line, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 
 /**
  * /ops/tracking — search by order, reference, barcode, customer or phone.
@@ -135,7 +135,7 @@ export function TrackingScreen() {
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">بحث</span>
           <div className="relative">
-            <Search className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
+            <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
@@ -157,7 +157,7 @@ export function TrackingScreen() {
         <button type="submit" className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
         {data && data.lateCount > 0 && (
           <span className="flex items-center gap-1 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-3 h-10">
-            <Clock className="w-4 h-4" /> {data.lateCount} شحنة متأخرة
+            <RiTimerLine className="w-4 h-4" /> {data.lateCount} شحنة متأخرة
           </span>
         )}
       </form>
@@ -219,7 +219,7 @@ export function TrackingScreen() {
                 onClick={() => setCollecting(true)}
                 className="h-8 px-3 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5 mr-auto"
               >
-                <HandCoins className="w-3.5 h-3.5" /> استلمت منه
+                <RiHandCoinLine className="w-4 h-4" /> استلمت منه
               </button>
             </>
           )}
@@ -228,7 +228,7 @@ export function TrackingScreen() {
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
         <Rows
@@ -274,9 +274,9 @@ export function TrackingScreen() {
                 o.deliveryProvider ? (
                   <span className="inline-flex items-center gap-1 text-[var(--sys-foreground)]">
                     {o.deliveryProvider.kind === 'AGENT' ? (
-                      <Bike className="h-3.5 w-3.5 text-[var(--sys-primary)]" />
+                      <RiEBike2Line className="h-4 w-4 text-[var(--sys-primary)]" />
                     ) : (
-                      <Truck className="h-3.5 w-3.5 text-[var(--sys-muted)]" />
+                      <RiTruckLine className="h-4 w-4 text-[var(--sys-muted)]" />
                     )}
                     {o.deliveryProvider.name}
                   </span>

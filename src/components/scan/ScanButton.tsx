@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, Flashlight, Keyboard, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { cleanScan, makeReader, RecentScans, type Reader } from '@/lib/scanning';
+import { RiCameraLine, RiFlashlightLine, RiKeyboardLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * ONE SCANNER, EVERYWHERE SOMETHING IS SCANNED.
@@ -89,7 +89,7 @@ export function ScanButton({ onScan, title = 'مسح الباركود', continuo
           'h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5 shrink-0'
         }
       >
-        <Camera className="w-4 h-4" />
+        <RiCameraLine className="w-4 h-4" />
         {label}
       </button>
       {open && <ScanSheet onClose={() => setOpen(false)} onScan={onScan} title={title} continuous={continuous} />}
@@ -276,7 +276,7 @@ export function ScanSheet({
 
           {state === 'starting' && (
             <p className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-white">
-              <Loader2 className="h-4 w-4 animate-spin" /> جارٍ فتح الكاميرا…
+              <RiLoader4Line className="h-4 w-4 animate-spin" /> جارٍ فتح الكاميرا…
             </p>
           )}
 
@@ -301,7 +301,7 @@ export function ScanSheet({
                 torch ? 'bg-white text-black' : 'bg-black/50 text-white'
               } inline-flex items-center justify-center`}
             >
-              <Flashlight className="h-5 w-5" />
+              <RiFlashlightLine className="h-5 w-5" />
               <span className="sr-only">الإضاءة</span>
             </button>
           )}
@@ -330,7 +330,7 @@ export function ScanSheet({
         >
           <label className="relative flex-1">
             <span className="sr-only">اكتب المرجع يدوياً</span>
-            <Keyboard className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sys-muted)]" />
+            <RiKeyboardLine className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sys-muted)]" />
             <input
               value={typed}
               onChange={(e) => setTyped(e.target.value)}

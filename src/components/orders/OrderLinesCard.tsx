@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Package, Pencil, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { amount, type Currency } from '@/lib/format';
 import { ProductLinesEditor, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
+import { RiArchiveLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 
 
 /**
@@ -159,7 +159,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
-          <Package className="w-4 h-4 text-[var(--sys-primary)]" />
+          <RiArchiveLine className="w-4 h-4 text-[var(--sys-primary)]" />
           بيانات الطلب
           {offerName && (
             <span className="text-xs font-medium text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] border border-[var(--sys-primary-soft)] rounded-md px-1.5 py-0.5">
@@ -171,7 +171,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
           onClick={openForm}
           className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] inline-flex items-center gap-1.5"
         >
-          <Pencil className="w-3.5 h-3.5" />
+          <RiPencilLine className="w-4 h-4" />
           {open ? 'إغلاق' : 'تعديل'}
         </button>
       </div>
@@ -268,7 +268,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
               disabled={busy}
               className="text-xs px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] font-medium disabled:opacity-50 inline-flex items-center gap-1.5"
             >
-              {busy && <Loader2 className="w-3 h-3 animate-spin" />}
+              {busy && <RiLoader4Line className="w-4 h-4 animate-spin" />}
               حفظ بيانات الطلب
             </button>
             <button onClick={() => setOpen(false)} className="text-xs px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]">

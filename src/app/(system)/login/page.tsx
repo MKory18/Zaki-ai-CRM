@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
-import { AlertCircle, LogIn, Clock, ShieldX } from 'lucide-react';
+import { RiErrorWarningLine, RiLoginBoxLine, RiShieldCrossLine, RiTimerLine } from '@remixicon/react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -93,9 +93,9 @@ export default function LoginPage() {
                 }`}
               >
                 {pendingFlag ? (
-                  <Clock className="w-4 h-4 shrink-0 mt-0.5" />
+                  <RiTimerLine className="w-4 h-4 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <RiErrorWarningLine className="w-4 h-4 shrink-0 mt-0.5" />
                 )}
                 <span>
                   {error}
@@ -146,7 +146,7 @@ export default function LoginPage() {
               </div>
 
               <Button type="submit" loading={loading} className="w-full">
-                <LogIn className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+                <RiLoginBoxLine className="icon-mirror w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 تسجيل الدخول
               </Button>
             </form>

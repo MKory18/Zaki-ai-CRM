@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { useConfirm } from '@/components/ui/Confirm';
+import { RiDeleteBinLine, RiImageAddLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * THE STORE'S LOGO AND FAVICON — one place to set each, used everywhere.
@@ -104,7 +104,7 @@ export function StoreBrandField({
         {value ? (
           <img src={value} alt="" className="h-full w-full object-contain" />
         ) : (
-          <ImagePlus className="h-5 w-5 text-[var(--sys-muted)]" />
+          <RiImageAddLine className="h-5 w-5 text-[var(--sys-muted)]" />
         )}
       </div>
       <div className="min-w-0 flex-1">
@@ -130,7 +130,7 @@ export function StoreBrandField({
           disabled={busy}
           className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-1.5 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
         >
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+          {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiImageAddLine className="h-4 w-4" />}
           {value ? 'تغيير' : copy.upload}
         </button>
         {value && (
@@ -141,7 +141,7 @@ export function StoreBrandField({
             title={copy.removeTitle}
             className="rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)] disabled:opacity-50"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <RiDeleteBinLine className="h-4 w-4" />
           </button>
         )}
       </div>

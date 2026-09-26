@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, FileSpreadsheet, Loader2, Upload } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAlertLine, RiCheckboxCircleLine, RiFileExcel2Line, RiLoader4Line, RiUpload2Line } from '@remixicon/react';
 
 /**
  * /finance/collection — the three sequential steps, in order and visible as
@@ -126,11 +126,11 @@ export function CollectionScreen() {
 
       {!rows ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <FileSpreadsheet className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
+          <RiFileExcel2Line className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
           لا توجد كشوف مستوردة بعد.
         </p>
       ) : (
@@ -170,7 +170,7 @@ export function CollectionScreen() {
                     <td className={`px-3 py-2 tabular-nums ${s.gap.gap === 0 ? 'text-[var(--sys-muted-foreground)]' : 'text-[var(--sys-destructive)] font-medium'}`}>
                       {s.gap.gap}
                       {s.gap.needsExplanation && !s.gap.explained && (
-                        <AlertTriangle className="w-3.5 h-3.5 inline mr-1 align-[-2px]" />
+                        <RiAlertLine className="w-4 h-4 inline mr-1 align-[-2px]" />
                       )}
                     </td>
                     <td className="px-3 py-2 text-xs text-[var(--sys-muted-foreground)] tabular-nums">
@@ -179,7 +179,7 @@ export function CollectionScreen() {
                     <td className="px-3 py-2 text-left whitespace-nowrap">
                       {s.status === 'APPROVED' ? (
                         <span className="text-xs text-[var(--sys-success)] inline-flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> معتمد
+                          <RiCheckboxCircleLine className="w-4 h-4" /> معتمد
                         </span>
                       ) : (
                         <span className="flex gap-3 justify-end">
@@ -357,7 +357,7 @@ function ImportCard({
         disabled={busy || !file || !providerId}
         className="h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50"
       >
-        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+        {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiUpload2Line className="w-4 h-4" />}
         استيراد
       </button>
     </form>

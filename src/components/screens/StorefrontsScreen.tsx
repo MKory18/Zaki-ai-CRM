@@ -2,11 +2,9 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  Store, ExternalLink, Link2, Check, Loader2, AlertTriangle, Globe, Settings2, Paintbrush, Plus, Info,
-} from 'lucide-react';
 import { useConfirm } from '@/components/ui/Confirm';
 import { STORE_TYPE_LABEL } from '@/lib/store-types';
+import { RiAddCircleLine, RiAlertLine, RiBrushLine, RiCheckLine, RiEarthLine, RiEqualizer2Line, RiExternalLinkLine, RiInformationLine, RiLinksLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
 
 /**
  * متجر SINGLE PRODUCT — A STORE WHOSE FRONT IS ONE OF ITS LANDING PAGES.
@@ -125,7 +123,7 @@ export function StorefrontsScreen() {
     <div className="space-y-4" dir="rtl">
       <div>
         <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--sys-heading)]">
-          <Store className="h-5 w-5 text-[var(--sys-primary)]" /> متجر {STORE_TYPE_LABEL.SINGLE_PRODUCT}
+          <RiStore2Line className="h-5 w-5 text-[var(--sys-primary)]" /> متجر {STORE_TYPE_LABEL.SINGLE_PRODUCT}
         </h1>
         <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
           متجر يبيع منتجاً واحداً. واجهته صفحة هبوط من صفحاتك — بكل أقسامها وقوالبها وبكسلاتها وعروض ما
@@ -143,17 +141,17 @@ export function StorefrontsScreen() {
 
       {shops === null ? (
         <div className="flex h-40 items-center justify-center text-[var(--sys-muted-foreground)]">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <RiLoader4Line className="h-4 w-4 animate-spin" />
         </div>
       ) : shops.length === 0 && !loadFailed ? (
         <div className="rounded-lg border border-dashed border-[var(--sys-border-strong)] p-8 text-center">
-          <Store className="mx-auto h-8 w-8 text-[var(--sys-border-strong)]" />
+          <RiStore2Line className="mx-auto h-6 w-6 text-[var(--sys-border-strong)]" />
           <p className="mt-2 text-sm font-semibold text-[var(--sys-foreground)]">لا متاجر {STORE_TYPE_LABEL.SINGLE_PRODUCT} في هذه الدولة</p>
           <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
             أنشئ متجراً من «البلدان والمتاجر» واختر نوعه {STORE_TYPE_LABEL.SINGLE_PRODUCT}، ثم اختر له صفحته هنا.
           </p>
           <Link href="/settings/geo" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-primary)] hover:underline">
-            <Settings2 className="h-3.5 w-3.5" /> البلدان والمتاجر
+            <RiEqualizer2Line className="h-4 w-4" /> البلدان والمتاجر
           </Link>
         </div>
       ) : (
@@ -197,7 +195,7 @@ function Card({
             <img src={shop.logo} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
           ) : (
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--sys-surface-strong)]">
-              <Store className="h-4 w-4 text-[var(--sys-muted)]" />
+              <RiStore2Line className="h-4 w-4 text-[var(--sys-muted)]" />
             </span>
           )}
           <div className="min-w-0">
@@ -208,7 +206,7 @@ function Card({
               </span>
               {shop.domain && (
                 <span className="flex items-center gap-0.5 text-[var(--sys-muted-foreground)]">
-                  <Globe className="h-2.5 w-2.5" /> {shop.domain}
+                  <RiEarthLine className="h-4 w-4" /> {shop.domain}
                 </span>
               )}
             </p>
@@ -240,7 +238,7 @@ function Card({
             لا صفحات هبوط تبيع منتجاً في هذا المتجر بعد.{' '}
             {shop.current ? (
               <Link href="/growth/landing-pages" className="inline-flex items-center gap-0.5 font-semibold text-[var(--sys-primary)] hover:underline">
-                <Plus className="h-3 w-3" /> أنشئ صفحة من قالب
+                <RiAddCircleLine className="h-4 w-4" /> أنشئ صفحة من قالب
               </Link>
             ) : (
               <span>بدّل إلى هذا المتجر من الأعلى لتنشئ صفحته.</span>
@@ -273,11 +271,11 @@ function Card({
                 href={`/growth/landing-pages/${shop.frontPage.id}/editor`}
                 className="inline-flex items-center gap-1 rounded-lg bg-[var(--sys-primary)] px-2.5 py-1 text-xs font-bold text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/90"
               >
-                <Paintbrush className="h-3 w-3" /> صمّم الواجهة
+                <RiBrushLine className="h-4 w-4" /> صمّم الواجهة
               </Link>
             ) : (
               <span className="flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)]">
-                <Info className="h-3 w-3" /> بدّل إلى هذا المتجر من الأعلى لتصمّم صفحته.
+                <RiInformationLine className="h-4 w-4" /> بدّل إلى هذا المتجر من الأعلى لتصمّم صفحته.
               </span>
             )}
             {!shop.frontPage.isPublished && <span className="text-xs font-semibold text-[var(--sys-warning)]">الصفحة غير منشورة</span>}
@@ -295,11 +293,11 @@ function Card({
         // probably pointing at this link right now.
         shop.live ? (
           <p className="mt-2 flex items-start gap-1 rounded-lg bg-[var(--sys-destructive-soft)] p-2 text-xs font-semibold leading-relaxed text-[var(--sys-destructive)]" role="alert">
-            <AlertTriangle className="mt-px h-3 w-3 shrink-0" /> المتجر مفتوح لكن رابطه لا يبيع: {shop.refusal}
+            <RiAlertLine className="mt-px h-4 w-4 shrink-0" /> المتجر مفتوح لكن رابطه لا يبيع: {shop.refusal}
           </p>
         ) : (
           <p className="mt-2 flex items-start gap-1 rounded-lg bg-[var(--sys-warning-soft)] p-2 text-xs leading-relaxed text-[var(--sys-warning)]">
-            <AlertTriangle className="mt-px h-3 w-3 shrink-0" /> قبل أن يُفتح: {shop.refusal}
+            <RiAlertLine className="mt-px h-4 w-4 shrink-0" /> قبل أن يُفتح: {shop.refusal}
           </p>
         )
       )}
@@ -314,14 +312,14 @@ function Card({
           rel="noopener noreferrer"
           className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
         >
-          <ExternalLink className="h-3 w-3" /> افتح المتجر
+          <RiExternalLinkLine className="icon-mirror h-4 w-4" /> افتح المتجر
         </a>
         <button
           type="button"
           onClick={onCopy}
           className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
         >
-          {copied ? <Check className="h-3 w-3 text-[var(--sys-success)]" /> : <Link2 className="h-3 w-3" />}
+          {copied ? <RiCheckLine className="h-4 w-4 text-[var(--sys-success)]" /> : <RiLinksLine className="h-4 w-4" />}
           {copied ? 'نُسخ' : 'انسخ الرابط'}
         </button>
         {/* Name, domain, logo and support phone live in the store's own panel. */}
@@ -329,7 +327,7 @@ function Card({
           href={`/settings/geo?store=${shop.id}`}
           className="flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2 py-1 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
         >
-          <Settings2 className="h-3 w-3" /> الإعدادات والنطاق
+          <RiEqualizer2Line className="h-4 w-4" /> الإعدادات والنطاق
         </a>
       </div>
 

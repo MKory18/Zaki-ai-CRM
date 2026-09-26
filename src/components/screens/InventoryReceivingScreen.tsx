@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, PackagePlus, Search } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { RiInboxArchiveLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 
 /**
  * /inventory/receiving — put stock in.
@@ -85,7 +85,7 @@ export function InventoryReceivingScreen() {
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ابحث عن المنتج</span>
           <div className="relative">
-            <Search className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
+            <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
@@ -111,7 +111,7 @@ export function InventoryReceivingScreen() {
 
       {!products ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
@@ -144,7 +144,7 @@ export function InventoryReceivingScreen() {
                   </td>
                   <td className="px-3 py-2 text-left">
                     <button onClick={() => setActive(p)} className="text-xs text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1">
-                      <PackagePlus className="w-3.5 h-3.5" /> استلام
+                      <RiInboxArchiveLine className="w-4 h-4" /> استلام
                     </button>
                   </td>
                 </tr>

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Coins } from 'lucide-react';
 import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from '@/components/ui/CurrencyPicker';
 import { minorUnitFor } from '@/lib/currencies';
+import { RiCopperCoinLine } from '@remixicon/react';
 
 /**
  * WHAT THIS PERSON'S COMMISSION IS COUNTED IN.
@@ -66,7 +66,7 @@ export function UserCommissionCurrency({
   return (
     <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
       <p className="flex items-center gap-1 text-xs text-[var(--sys-muted)]">
-        <Coins className="h-3 w-3" /> عملة العمولة
+        <RiCopperCoinLine className="h-4 w-4" /> عملة العمولة
       </p>
 
       {canEdit ? (

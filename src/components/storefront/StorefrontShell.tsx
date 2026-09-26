@@ -1,10 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
-import { Phone, ChevronLeft } from 'lucide-react';
 import type { Storefront } from '@/lib/storefront';
 import { storeThemeVars } from '@/lib/store-theme';
 import { BLOCK_CSS, fontHref } from '@/components/landing/blocks/styles';
 import { STOREFRONT_CSS } from './styles';
+import { RiArrowLeftSLine, RiPhoneLine } from '@remixicon/react';
 
 /**
  * The frame every storefront page sits in.
@@ -70,7 +70,7 @@ export function StorefrontShell({
 
           {store.supportPhone && (
             <a className="sf-phone" href={`tel:${store.supportPhone.replace(/[^\d+]/g, '')}`} dir="ltr">
-              <Phone size={15} />
+              <RiPhoneLine size={15} />
               {store.supportPhone}
             </a>
           )}
@@ -80,7 +80,7 @@ export function StorefrontShell({
       {back && (
         <nav className="sf-back">
           <Link href={back.href}>
-            <ChevronLeft size={15} />
+            <RiArrowLeftSLine className="icon-mirror" size={15} />
             {back.label}
           </Link>
         </nav>
@@ -102,7 +102,7 @@ export function StorefrontShell({
         )}
         {store.supportPhone && (
           <a className="lp-footer-phone" href={`tel:${store.supportPhone.replace(/[^\d+]/g, '')}`} dir="ltr">
-            <Phone size={14} />
+            <RiPhoneLine size={14} />
             {store.supportPhone}
           </a>
         )}

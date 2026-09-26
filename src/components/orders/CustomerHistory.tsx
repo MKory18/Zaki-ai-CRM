@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { History, Loader2, ShieldAlert } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { OrderStateBadge } from './OrderStateBadge';
 import { arDate } from '@/lib/format';
+import { RiHistoryLine, RiLoader4Line, RiShieldFlashLine } from '@remixicon/react';
 
 /**
  * "Has this customer ordered before?" — a small counter next to the order
@@ -68,7 +68,7 @@ export function CustomerHistoryButton({
             : 'bg-[var(--sys-card)] border-[var(--sys-border)] text-[var(--sys-muted)] hover:border-[var(--sys-primary)]'
         }`}
       >
-        <History className="w-3 h-3" />
+        <RiHistoryLine className="w-4 h-4" />
         {label}
         <span className="tabular-nums" dir="ltr">{previousOrders}</span>
       </button>
@@ -115,7 +115,7 @@ export function CustomerHistoryModal({
           </span>
           {history.risk.requiresPrepaymentOrApproval && (
             <span className="flex items-center gap-1 text-xs text-[var(--sys-destructive)]">
-              <ShieldAlert className="w-3 h-3" /> يتطلب دفعاً مسبقاً أو موافقة مشرف
+              <RiShieldFlashLine className="w-4 h-4" /> يتطلب دفعاً مسبقاً أو موافقة مشرف
             </span>
           )}
         </div>
@@ -123,7 +123,7 @@ export function CustomerHistoryModal({
 
       {!history ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-10">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : (
         <div className="space-y-2">

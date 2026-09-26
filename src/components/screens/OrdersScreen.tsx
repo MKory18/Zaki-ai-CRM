@@ -19,26 +19,11 @@ import { AiOrderModal } from '@/components/orders/AiOrderModal';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
-import {
-  Search,
-  RotateCcw,
-  Clock,
-  Printer,
-  Filter,
-  Download,
-  Plus,
-  RefreshCw,
-  Phone,
-  ChevronLeft,
-  ChevronRight,
-  Wand2,
-  Bike,
-  Truck,
-} from 'lucide-react';
 import { format } from 'date-fns';
 import { ar as arLocale } from 'date-fns/locale';
 import { FILTERABLE_STATES, STATE_LABEL_AR } from '@/lib/order-state';
 import { formatMoney } from '@/lib/money';
+import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiFilter3Line, RiMagicLine, RiPhoneLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 
 export function OrdersScreen() {
   const { t, currentUser, locale } = useApp();
@@ -47,7 +32,7 @@ export function OrdersScreen() {
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 25, totalPages: 1 });
   const [loading, setLoading] = useState(true);
 
-  // Filter States
+  // RiFilter3Line States
   // What is typed, and what has actually been searched for. They used to be
   // one value, so every keystroke sent a request.
   const [searchInput, setSearchInput] = useState('');
@@ -312,7 +297,7 @@ export function OrdersScreen() {
               onClick={handleExportCSV}
               className="flex items-center space-x-1.5"
             >
-              <Download className="w-4 h-4" />
+              <RiDownload2Line className="w-4 h-4" />
               <span>{t.export}</span>
             </Button>
 
@@ -323,7 +308,7 @@ export function OrdersScreen() {
               className="p-2"
               title="Refresh"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RiRefreshLine className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
 
             <Button
@@ -332,7 +317,7 @@ export function OrdersScreen() {
               onClick={() => setAiModalOpen(true)}
               className="items-center gap-1.5 text-[var(--sys-primary)] border-[var(--sys-primary)]/35 hover:bg-[var(--sys-primary-soft)]"
             >
-              <Wand2 className="w-4 h-4" />
+              <RiMagicLine className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
             </Button>
 
@@ -341,7 +326,7 @@ export function OrdersScreen() {
               onClick={() => setCreateModalOpen(true)}
               className="flex items-center space-x-1.5"
             >
-              <Plus className="w-4 h-4" />
+              <RiAddCircleLine className="w-4 h-4" />
               <span>{t.quickCreateOrder}</span>
             </Button>
           </div>
@@ -351,12 +336,12 @@ export function OrdersScreen() {
             which queue am I in, what am I looking for, and how do I narrow
             it. The old grid mixed all three into six equal cells. */}
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg shadow-raised divide-y divide-[var(--sys-border)]">
-          {/* Search — pressing Enter or the button runs it; it no longer
+          {/* RiSearchLine — pressing Enter or the button runs it; it no longer
               fires on every keystroke, which made a long phone number send
               a request per digit. */}
           <div className="flex flex-wrap items-center gap-2 p-3">
             <div className="relative flex-1 min-w-[220px]">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
+              <RiSearchLine className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
               <input
                 type="text"
                 placeholder="ابحث برقم الطلب، الباركود، اسم العميل، أو الهاتف…"
@@ -367,7 +352,7 @@ export function OrdersScreen() {
               />
             </div>
             <Button onClick={runSearch} className="shrink-0 gap-1.5">
-              <Search className="w-3.5 h-3.5" />
+              <RiSearchLine className="w-4 h-4" />
               بحث
             </Button>
             {/* The camera fills the same box a person types into, and the
@@ -387,12 +372,12 @@ export function OrdersScreen() {
               title="شُحنت منذ 10 أيام أو أكثر ولم تُسلَّم بعد — من تاريخ الشحن"
               className="shrink-0 gap-1.5"
             >
-              <Clock className="w-3.5 h-3.5" />
+              <RiTimerLine className="w-4 h-4" />
               متأخرة 10 أيام+ من الشحن
             </Button>
             {activeFilters > 0 && (
               <Button variant="outline" onClick={resetFilters} className="shrink-0 gap-1.5 text-[var(--sys-destructive)]">
-                <RotateCcw className="w-3.5 h-3.5" />
+                <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
                 إعادة تعيين ({activeFilters})
               </Button>
             )}
@@ -467,7 +452,7 @@ export function OrdersScreen() {
             {canPrint && (
               <>
                 <Button size="sm" variant="outline" onClick={() => void handlePrintLabels('print')} loading={printing}>
-                  <Printer className="w-3.5 h-3.5" />
+                  <RiPrinterLine className="w-4 h-4" />
                   طباعة البوالص
                 </Button>
                 <Button
@@ -477,13 +462,13 @@ export function OrdersScreen() {
                   disabled={printing}
                   title="نفس البوالص كملف PDF — الحفظ لا يعلّم الطلبات مطبوعة"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <RiDownload2Line className="w-4 h-4" />
                   PDF
                 </Button>
               </>
             )}
             <Button size="sm" variant="outline" onClick={handleExportSelected}>
-              <Download className="w-3.5 h-3.5" />
+              <RiDownload2Line className="w-4 h-4" />
               تصدير المحدَّد
             </Button>
             <Button size="sm" variant="outline" onClick={() => setSelected(new Set())}>
@@ -574,9 +559,9 @@ export function OrdersScreen() {
                           {order.deliveryProvider && (
                             <span className="inline-flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)]">
                               {order.deliveryProvider.kind === 'AGENT' ? (
-                                <Bike className="w-3 h-3 text-[var(--sys-primary)]" />
+                                <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" />
                               ) : (
-                                <Truck className="w-3 h-3 text-[var(--sys-muted)]" />
+                                <RiTruckLine className="w-4 h-4 text-[var(--sys-muted)]" />
                               )}
                               {order.deliveryProvider.name}
                             </span>
@@ -652,7 +637,7 @@ export function OrdersScreen() {
                   onClick={() => loadOrders(pagination.page - 1)}
                   className="p-1.5"
                 >
-                  <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+                  <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
                 </Button>
                 <span className="font-medium">
                   صفحة {pagination.page} من {pagination.totalPages || 1}
@@ -664,7 +649,7 @@ export function OrdersScreen() {
                   onClick={() => loadOrders(pagination.page + 1)}
                   className="p-1.5"
                 >
-                  <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+                  <RiArrowRightSLine className="icon-mirror w-4 h-4" />
                 </Button>
               </div>
             </div>

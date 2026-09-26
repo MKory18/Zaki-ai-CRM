@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Lock, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAlertLine, RiLoader4Line, RiLockLine } from '@remixicon/react';
 
 /**
  * /finance/closing — count each wallet at the end of the day against its book
@@ -79,7 +79,7 @@ export function ClosingScreen() {
 
       {!rows ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
@@ -112,7 +112,7 @@ export function ClosingScreen() {
                   )}
                   {r.closing?.status === 'APPROVED' ? (
                     <span className="text-xs text-[var(--sys-success)] inline-flex items-center gap-1">
-                      <Lock className="w-3.5 h-3.5" /> معتمد
+                      <RiLockLine className="w-4 h-4" /> معتمد
                     </span>
                   ) : (
                     <>
@@ -156,7 +156,7 @@ export function ClosingScreen() {
 
               {r.blockedBy && (
                 <p className="mt-3 text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg p-2.5 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <RiAlertLine className="w-4 h-4 shrink-0" />
                   إغلاق {new Date(r.blockedBy.date).toISOString().slice(0, 10)} فيه فرق{' '}
                   <b className="tabular-nums">{r.blockedBy.difference}</b> بلا تفسير — فسّره واعتمده قبل إغلاق هذا اليوم.
                 </p>

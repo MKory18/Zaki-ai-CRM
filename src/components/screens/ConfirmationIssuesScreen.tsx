@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Loader2, PencilLine, Ban, X } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { useRegions } from '@/hooks/useRegions';
 import { arDateTime } from '@/lib/format';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { RiAlertLine, RiCloseLine, RiForbidLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 
 /**
  * /confirmation/issues — entry issues on moderator-entered orders only.
@@ -211,7 +211,7 @@ export function ConfirmationIssuesScreen() {
   if (!issues) {
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+        <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
       </div>
     );
   }
@@ -242,7 +242,7 @@ export function ConfirmationIssuesScreen() {
           <article key={issue.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-2">
             <header className="flex flex-wrap items-center gap-2">
               <span className="w-8 h-8 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4 text-[var(--sys-destructive)]" />
+                <RiAlertLine className="w-4 h-4 text-[var(--sys-destructive)]" />
               </span>
               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{issue.order.orderNumber}</span>
               <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] font-medium">
@@ -408,14 +408,14 @@ export function ConfirmationIssuesScreen() {
                   onClick={() => openCorrection(issue)}
                   className="px-3 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
                 >
-                  <PencilLine className="w-3.5 h-3.5" />
+                  <RiPencilLine className="w-4 h-4" />
                   صحّح البيانات
                 </button>
                 <button
                   onClick={() => { setVoiding(issue.id); setVoidReason(''); setError(null); }}
                   className="px-3 py-1.5 rounded-lg border border-[var(--sys-border)] text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] inline-flex items-center gap-1.5"
                 >
-                  <Ban className="w-3.5 h-3.5" />
+                  <RiForbidLine className="w-4 h-4" />
                   إبطال الطلب (المالك فقط)
                 </button>
               </footer>

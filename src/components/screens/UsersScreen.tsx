@@ -12,21 +12,8 @@ import { CreateUserModal } from './users/CreateUserModal';
 import { useConfirm } from '@/components/ui/Confirm';
 import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '@/types/auth';
 import { findRoute } from '@/lib/route-registry';
-import {
-  Users,
-  Search,
-  ShieldCheck,
-  KeyRound,
-  ShieldOff,
-  Ban,
-  PlayCircle,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
-  UserPlus,
-} from 'lucide-react';
 import { format } from 'date-fns';
+import { RiArrowLeftSLine, RiArrowRightSLine, RiForbidLine, RiGroupLine, RiKey2Line, RiLogoutBoxLine, RiPlayCircleLine, RiRefreshLine, RiSearchLine, RiShieldCheckLine, RiShieldCrossLine, RiUserAddLine } from '@remixicon/react';
 
 /** One source for the Arabic role names — a screen with its own copy is how
  *  two of them ended up blank in the filter. */
@@ -143,7 +130,7 @@ export function UsersScreen() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)] flex items-center space-x-2 rtl:space-x-reverse">
-              <Users className="w-6 h-6 text-[var(--sys-destructive)]" />
+              <RiGroupLine className="w-6 h-6 text-[var(--sys-destructive)]" />
               <span>{findRoute('/admin/users')?.label}</span>
             </h1>
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">
@@ -153,12 +140,12 @@ export function UsersScreen() {
           <div className="flex items-center gap-2">
             {userCan(currentUser, 'users.create') && (
               <Button size="sm" onClick={() => setCreateOpen(true)}>
-                <UserPlus className="w-4 h-4" />
+                <RiUserAddLine className="w-4 h-4" />
                 موظف جديد
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={() => loadUsers(pagination.page)} className="p-2">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RiRefreshLine className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
@@ -170,7 +157,7 @@ export function UsersScreen() {
         {/* Filters */}
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative sm:col-span-2">
-            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
+            <RiSearchLine className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
             <input
               type="text"
               placeholder="بحث بالاسم أو البريد الإلكتروني..."
@@ -201,7 +188,7 @@ export function UsersScreen() {
           </div>
         </div>
 
-        {/* Users Table */}
+        {/* RiGroupLine Table */}
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -244,7 +231,7 @@ export function UsersScreen() {
                       <td className="px-6 py-3.5 text-right rtl:text-left">
                         <div className="flex items-center gap-1.5 justify-end rtl:justify-start">
                           <Button size="sm" variant="outline" onClick={() => openManage(u)} className="text-xs">
-                            <ShieldCheck className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                            <RiShieldCheckLine className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                             إدارة
                           </Button>
                           <Button
@@ -254,7 +241,7 @@ export function UsersScreen() {
                             className="text-xs"
                             title="الدور والصلاحيات والوصول"
                           >
-                            <KeyRound className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                            <RiKey2Line className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                             صفحة الموظف
                           </Button>
                         </div>
@@ -271,13 +258,13 @@ export function UsersScreen() {
               </span>
               <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <Button size="sm" variant="outline" disabled={pagination.page <= 1} onClick={() => loadUsers(pagination.page - 1)} className="p-1.5">
-                  <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+                  <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
                 </Button>
                 <span className="font-medium">
                   صفحة {pagination.page} من {pagination.totalPages || 1}
                 </span>
                 <Button size="sm" variant="outline" disabled={pagination.page >= pagination.totalPages} onClick={() => loadUsers(pagination.page + 1)} className="p-1.5">
-                  <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+                  <RiArrowRightSLine className="icon-mirror w-4 h-4" />
                 </Button>
               </div>
             </div>
@@ -335,13 +322,13 @@ export function UsersScreen() {
               <div className="flex flex-wrap gap-2">
                 {manageUser.status === 'PENDING' && (
                   <Button size="sm" variant="success" loading={actionLoading} onClick={() => handleAction('changeStatus', { status: 'ACTIVE' })}>
-                    <PlayCircle className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                    <RiPlayCircleLine className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                     اعتماد الحساب
                   </Button>
                 )}
                 {manageUser.status !== 'ACTIVE' && manageUser.status !== 'PENDING' && (
                   <Button size="sm" variant="success" loading={actionLoading} onClick={() => handleAction('changeStatus', { status: 'ACTIVE' })}>
-                    <PlayCircle className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                    <RiPlayCircleLine className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                     تنشيط الحساب
                   </Button>
                 )}
@@ -359,7 +346,7 @@ export function UsersScreen() {
                       )
                     }
                   >
-                    <ShieldOff className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                    <RiShieldCrossLine className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                     إيقاف مؤقت
                   </Button>
                 )}
@@ -377,12 +364,12 @@ export function UsersScreen() {
                       )
                     }
                   >
-                    <Ban className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                    <RiForbidLine className="w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                     تعطيل
                   </Button>
                 )}
                 <Button size="sm" variant="outline" loading={actionLoading} onClick={() => handleAction('forceLogout')}>
-                  <LogOut className="w-3.5 h-3.5 ml-1 rtl:ml-0 rtl:mr-1" />
+                  <RiLogoutBoxLine className="icon-mirror w-4 h-4 ml-1 rtl:ml-0 rtl:mr-1" />
                   إنهاء الجلسات (Force Logout)
                 </Button>
               </div>

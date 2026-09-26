@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, Plus, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
+import { RiAddCircleLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * WHAT THIS RUN ACTUALLY COST.
@@ -132,7 +132,7 @@ export function BatchCostDialog({
               disabled={lines.length >= 30}
               className="inline-flex items-center gap-1 text-xs text-[var(--sys-primary)] hover:underline disabled:opacity-50"
             >
-              <Plus className="w-3 h-3" /> بند
+              <RiAddCircleLine className="w-4 h-4" /> بند
             </button>
           </div>
           {lines.length === 0 ? (
@@ -166,7 +166,7 @@ export function BatchCostDialog({
                     className="p-1.5 rounded-lg text-[var(--sys-muted)] hover:text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                     aria-label="احذف البند"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <RiCloseLine className="w-4 h-4" />
                   </button>
                 </div>
               ))}
@@ -208,7 +208,7 @@ export function BatchCostDialog({
             إلغاء
           </Button>
           <Button size="sm" onClick={save} disabled={busy}>
-            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {busy && <RiLoader4Line className="w-4 h-4 animate-spin" />}
             احفظ الكلفة
           </Button>
         </div>

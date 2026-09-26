@@ -2,10 +2,10 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Check, Loader2 } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
 import type { NotificationType } from '@/lib/notification';
+import { RiCheckLine, RiLoader4Line, RiNotification3Line } from '@remixicon/react';
 
 /**
  * The bell.
@@ -166,7 +166,7 @@ export function NotificationBell() {
         aria-label={unread > 0 ? `${unread} إشعار غير مقروء` : 'الإشعارات'}
         className="relative p-2 rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] transition-colors"
       >
-        <Bell className="w-5 h-5" />
+        <RiNotification3Line className="w-5 h-5" />
         {unread > 0 && (
           <span className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-xs font-bold flex items-center justify-center tabular-nums">
             {unread > 99 ? '99+' : unread}
@@ -187,7 +187,7 @@ export function NotificationBell() {
                 disabled={busy}
                 className="text-xs text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1 disabled:opacity-50"
               >
-                {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                {busy ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiCheckLine className="w-4 h-4" />}
                 تعليم الكل كمقروء
               </button>
             )}
@@ -196,7 +196,7 @@ export function NotificationBell() {
           <div className="max-h-[22rem] overflow-y-auto">
             {items === null ? (
               <p className="px-4 py-6 text-xs text-[var(--sys-muted)] flex items-center justify-center gap-1.5">
-                <Loader2 className="w-3 h-3 animate-spin" /> جارٍ التحميل…
+                <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
               </p>
             ) : items.length === 0 ? (
               <p className="px-4 py-6 text-xs text-[var(--sys-muted)] text-center">لا إشعارات.</p>

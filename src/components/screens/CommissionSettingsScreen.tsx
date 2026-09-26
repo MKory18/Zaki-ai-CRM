@@ -12,9 +12,9 @@ import {
   type CommissionMetric, type CommissionPeriod, type CommissionType, type Tier,
 } from '@/lib/commission-rules';
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Loader2, Percent, Plus } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { RiAddCircleLine, RiAlertLine, RiLoader4Line, RiPercentLine } from '@remixicon/react';
 
 /**
  * /settings/commission — commission rules are dated data, not settings. A
@@ -149,7 +149,7 @@ export function CommissionSettingsScreen() {
             onClick={() => setNewOpen(true)}
             className="h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium inline-flex items-center gap-1.5"
           >
-            <Plus className="w-3.5 h-3.5" /> قاعدة جديدة
+            <RiAddCircleLine className="w-4 h-4" /> قاعدة جديدة
           </button>
         </div>
 
@@ -158,7 +158,7 @@ export function CommissionSettingsScreen() {
             the screen says which it is instead of showing a silent zero. */}
         {noRuleInForce && rules && rules.length > 0 && (
           <div className="mb-3 flex items-start gap-2 rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] px-3 py-2.5 text-xs leading-relaxed text-[var(--sys-warning)]">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <RiAlertLine className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               لا قاعدة سارية على هذا المتجر اليوم — القواعد الموجودة إمّا منتهية أو معطّلة، فلا تُحتسب أي
               عمولة. أضف قاعدة سارية ليبدأ الاحتساب.
@@ -168,11 +168,11 @@ export function CommissionSettingsScreen() {
 
         {!rules ? (
           <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-12">
-            <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+            <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
           </div>
         ) : rules.length === 0 ? (
           <p className="text-sm text-[var(--sys-muted-foreground)] py-10 text-center">
-            <Percent className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
+            <RiPercentLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
             لا قواعد بعد — بدون قاعدة لا تُحتسب أي عمولة.
           </p>
         ) : (

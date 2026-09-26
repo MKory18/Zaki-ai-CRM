@@ -10,23 +10,11 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import {
-  ArrowRight,
-  ImagePlus,
-  Star,
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-  Factory,
-  Tag,
-  ShoppingCart,
-  TrendingUp,
-  Boxes,
-} from 'lucide-react';
 import Link from 'next/link';
 import { ProductOffers } from '@/components/products/ProductOffers';
 import { ProductStock } from '@/components/products/ProductStock';
 import { format } from 'date-fns';
+import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiPriceTag3Line, RiShoppingCartLine, RiStackLine, RiStarLine } from '@remixicon/react';
 
 export function ProductDetailScreen() {
   const params = useParams();
@@ -154,7 +142,7 @@ export function ProductDetailScreen() {
               onClick={() => window.history.back()}
               className="text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)] flex items-center space-x-1 rtl:space-x-reverse mb-1.5 cursor-pointer"
             >
-              <ArrowRight className="w-3.5 h-3.5" />
+              <RiArrowRightLine className="icon-mirror w-4 h-4" />
               <span>عودة للمنتجات</span>
             </button>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{product.name}</h1>
@@ -169,7 +157,7 @@ export function ProductDetailScreen() {
             <div>
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleUpload} className="hidden" />
               <Button size="sm" onClick={() => fileInputRef.current?.click()} loading={uploading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
-                <ImagePlus className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+                <RiImageAddLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 رفع صور جديدة
               </Button>
             </div>
@@ -197,7 +185,7 @@ export function ProductDetailScreen() {
                 )}
                 {primary && (
                   <span className="absolute top-3 left-3 rtl:left-auto rtl:right-3 bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] text-xs font-bold px-2 py-1 rounded-lg flex items-center space-x-1 rtl:space-x-reverse">
-                    <Star className="w-3 h-3" />
+                    <RiStarLine className="w-4 h-4" />
                     <span>الصورة الرئيسية</span>
                   </span>
                 )}
@@ -223,20 +211,20 @@ export function ProductDetailScreen() {
                       {canManage && (
                         <div className="absolute inset-0 bg-[var(--sys-sidebar)]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-1 rtl:space-x-reverse">
                           <button onClick={() => setPrimary(img.id)} title="تعيين كرئيسية" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-warning)] hover:bg-[var(--sys-card)] cursor-pointer">
-                            <Star className="w-3 h-3" />
+                            <RiStarLine className="w-4 h-4" />
                           </button>
                           {idx > 0 && !img.isPrimary && (
                             <button onClick={() => moveImage(idx, -1)} title="تحريك يسار" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
-                              <ChevronUp className="w-3 h-3 rotate-[-90deg] rtl:rotate-[270deg]" />
+                              <RiArrowUpSLine className="w-4 h-4 rotate-[-90deg] rtl:rotate-[270deg]" />
                             </button>
                           )}
                           {idx < images.length - 1 && !img.isPrimary && (
                             <button onClick={() => moveImage(idx, 1)} title="تحريك يمين" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-foreground)] hover:bg-[var(--sys-card)] cursor-pointer">
-                              <ChevronDown className="w-3 h-3 rotate-[-90deg] rtl:rotate-[270deg]" />
+                              <RiArrowDownSLine className="w-4 h-4 rotate-[-90deg] rtl:rotate-[270deg]" />
                             </button>
                           )}
                           <button onClick={() => deleteImage(img.id)} title="حذف" className="p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-destructive)] hover:bg-[var(--sys-card)] cursor-pointer">
-                            <Trash2 className="w-3 h-3" />
+                            <RiDeleteBinLine className="w-4 h-4" />
                           </button>
                         </div>
                       )}
@@ -292,17 +280,17 @@ export function ProductDetailScreen() {
               <CardHeader title="المخزون" />
               <CardContent className="grid grid-cols-3 gap-2 text-center text-xs">
                 <div className="bg-[var(--sys-surface)] p-2.5 rounded-lg">
-                  <Boxes className="w-4 h-4 text-[var(--sys-muted)] mx-auto" />
+                  <RiStackLine className="w-4 h-4 text-[var(--sys-muted)] mx-auto" />
                   <span className="text-[var(--sys-muted)] block mt-1">المنتج</span>
                   <span className="font-bold text-[var(--sys-heading)]">{analytics?.totalProduced}</span>
                 </div>
                 <div className="bg-[var(--sys-surface)] p-2.5 rounded-lg">
-                  <ShoppingCart className="w-4 h-4 text-[var(--sys-primary)] mx-auto" />
+                  <RiShoppingCartLine className="w-4 h-4 text-[var(--sys-primary)] mx-auto" />
                   <span className="text-[var(--sys-primary)] block mt-1">المبيع</span>
                   <span className="font-bold text-[var(--sys-primary)]">{analytics?.totalSold}</span>
                 </div>
                 <div className="bg-[var(--sys-success-soft)] p-2.5 rounded-lg">
-                  <Boxes className="w-4 h-4 text-[var(--sys-success)] mx-auto" />
+                  <RiStackLine className="w-4 h-4 text-[var(--sys-success)] mx-auto" />
                   <span className="text-[var(--sys-success)] block mt-1">المتبقي</span>
                   <span className="font-black text-[var(--sys-success)]">{analytics?.totalRemaining}</span>
                 </div>
@@ -314,7 +302,7 @@ export function ProductDetailScreen() {
         {/* Production Batches */}
         <Card>
           <CardHeader
-            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><Factory className="w-4 h-4 text-[var(--sys-destructive)]" /><span>تشغيلات الإنتاج</span></span>}
+            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><RiBuilding4Line className="w-4 h-4 text-[var(--sys-destructive)]" /><span>تشغيلات الإنتاج</span></span>}
             action={<Link href="/manufacturing"><Button size="sm" variant="outline">إدارة التشغيلات</Button></Link>}
           />
           <CardContent className="p-0 overflow-x-auto">
@@ -358,7 +346,7 @@ export function ProductDetailScreen() {
         {/* Recent Orders */}
         <Card>
           <CardHeader
-            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><TrendingUp className="w-4 h-4 text-[var(--sys-destructive)]" /><span>أحدث الطلبات على هذا المنتج</span></span>}
+            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><RiArrowUpCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" /><span>أحدث الطلبات على هذا المنتج</span></span>}
           />
           <CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-left rtl:text-right text-xs">

@@ -2,10 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Globe, Loader2, Plus, Store } from 'lucide-react';
 import { apiJson } from '@/lib/api-client';
 import { storeTypeLabel } from '@/lib/store-types';
 import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from '@/components/ui/CurrencyPicker';
+import { RiAddCircleLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
 
 /**
  * Two explicit steps: country, then store. The server decides what is
@@ -103,7 +103,7 @@ export function EntryPicker() {
     return (
       <Screen>
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-10">
-          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحميل…
+          <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
         {error && <Error message={error} />}
       </Screen>
@@ -128,7 +128,7 @@ export function EntryPicker() {
                 className="w-full flex items-center gap-3 p-4 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] hover:border-[var(--sys-primary)] text-right disabled:opacity-60"
               >
                 <span className="w-10 h-10 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-[var(--sys-primary)]" />
+                  <RiEarthLine className="w-5 h-5 text-[var(--sys-primary)]" />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-semibold text-[var(--sys-heading)]">{c.name}</span>
@@ -182,7 +182,7 @@ export function EntryPicker() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={s.logo} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <Store className="w-5 h-5 text-[var(--sys-primary)]" />
+                  <RiStore2Line className="w-5 h-5 text-[var(--sys-primary)]" />
                 )}
               </span>
               <span className="flex-1 min-w-0">
@@ -263,7 +263,7 @@ function AddCountryForm({ open, onOpen, onDone }: { open: boolean; onOpen: () =>
         onClick={onOpen}
         className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
       >
-        <Plus className="w-4 h-4" /> إضافة بلد
+        <RiAddCircleLine className="w-4 h-4" /> إضافة بلد
       </button>
     );
   }
@@ -331,7 +331,7 @@ function AddStoreForm({
         onClick={onOpen}
         className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
       >
-        <Plus className="w-4 h-4" /> إضافة متجر
+        <RiAddCircleLine className="w-4 h-4" /> إضافة متجر
       </button>
     );
   }
