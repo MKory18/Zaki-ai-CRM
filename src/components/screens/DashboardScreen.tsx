@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Card, CardHeader, CardContent, KpiCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { OrderStatusBadge } from '@/components/ui/Badge';
 import { ProductThumb } from '@/components/ui/ProductThumb';
@@ -94,9 +94,43 @@ export function DashboardScreen() {
   };
   const rates = analytics?.rates ?? { confirmationRate: 0, deliveryRate: 0 };
 
+
   // Was a hardcoded «$» with a locale's own grouping. The store may be
   // Jordanian or Syrian, and `<Money>` knows which it is.
   const fmt = (n: number) => <Money value={n} />;
+
+  /**
+   * THE PREVIOUS PERIOD, SHAPED FOR THE CARD.
+   *
+   * The card wants a value, a label naming the period, and which way it
+   * moved. The DIRECTION is computed here rather than sent, because the
+   * server would have to know which way is good for each figure — and
+   * `goodWhen` already says that at each call site, once.
+   */
+  const priorLabel =
+    period === 'today' ? 'أمس'
+    : period === '7d' ? 'الأسبوع السابق'
+    : period === '30d' ? 'الثلاثين السابقة'
+    : period === 'month' ? 'الشهر الماضي'
+    : 'الفترة السابقة';
+
+  const against = (now: number, before: number | undefined, render: (n: number) => React.ReactNode) => {
+    if (before === undefined || before === null) return undefined;
+    const direction = now > before ? ('up' as const) : now < before ? ('down' as const) : ('flat' as const);
+    // A percentage of a zero base is not a percentage. Say the two figures
+    // and let the arrow carry the direction.
+    const change =
+      before > 0 && now !== before ? `${Math.abs(Math.round(((now - before) / before) * 100))}%` : undefined;
+    return { value: render(before), label: priorLabel, direction, change };
+  };
+
+  const prevRaw = analytics?.previous ?? null;
+  const prev = {
+    netProfit: against(fin.netProfit, prevRaw?.netProfit, (n) => fmt(n)),
+    deliveredRevenue: against(fin.deliveredRevenue, prevRaw?.deliveredRevenue, (n) => fmt(n)),
+    confirmationRate: against(rates.confirmationRate, prevRaw?.confirmationRate, (n) => `${n}%`),
+    deliveryRate: against(rates.deliveryRate, prevRaw?.deliveryRate, (n) => `${n}%`),
+  };
 
   const statusTiles = [
     { label: t.NEW, value: counts.new, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-primary)]' },
@@ -178,160 +212,61 @@ export function DashboardScreen() {
             }
           />
 
-        {/* ─── AI Executive Banner ─── */}
-        {canFinance && (
-          <div className="relative overflow-hidden bg-gradient-to-l rtl:bg-gradient-to-r from-[var(--sys-primary)] to-[var(--sys-heading)] rounded-lg p-5 text-[var(--sys-primary-foreground)] shadow-overlay">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-lg bg-[var(--sys-card)]/10 border border-[var(--sys-card)]/15 shrink-0">
-                  <RiSparkling2Line className="w-5 h-5 text-[var(--sys-warning)]" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[var(--sys-warning)]">
-                      {locale === 'ar' ? 'الملخص التنفيذي الذكي' : 'AI Business Intelligence'}
-                    </span>
-                    <span className="text-xs bg-[var(--sys-card)]/15 px-2 py-0.5 rounded-full font-mono">
-                      {locale === 'ar' ? 'مبني على بيانات حقيقية' : 'Grounded on real data'}
-                    </span>
-                  </div>
-                  <p className="text-sm mt-1.5 max-w-3xl leading-relaxed text-[var(--sys-primary-foreground)]/90">
-                    {locale === 'ar' ? (
-                      <>
-                        إيراد التوصيل <strong className="text-[var(--sys-primary-foreground)]">{fmt(fin.deliveredRevenue)}</strong> — صافي ربح حقيقي{' '}
-                        <strong className="text-[var(--sys-primary-foreground)]">{fmt(fin.netProfit)}</strong> بهامش{' '}
-                        <strong className="text-[var(--sys-primary-foreground)]">{fin.profitMargin}%</strong>. المنتج الأعلى ربحاً:{' '}
-                        <strong className="text-[var(--sys-primary-foreground)]">{productName(analytics?.rankings?.mostProfitable, locale) || '—'}</strong>
-                      </>
-                    ) : (
-                      <>
-                        Delivered revenue <strong className="text-[var(--sys-primary-foreground)]">{fmt(fin.deliveredRevenue)}</strong> — real net profit{' '}
-                        <strong className="text-[var(--sys-primary-foreground)]">{fmt(fin.netProfit)}</strong> at{' '}
-                        <strong className="text-[var(--sys-primary-foreground)]">{fin.profitMargin}%</strong> margin. Top yield:{' '}
-                        <strong className="text-[var(--sys-primary-foreground)]">{productName(analytics?.rankings?.mostProfitable, locale) || '—'}</strong>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <Link href="/assistant" className="inline-flex shrink-0">
-                <Button size="sm" variant="secondary" className="bg-[var(--sys-card)] text-[var(--sys-primary)] hover:bg-[var(--sys-surface)] border-0">
-                  {locale === 'ar' ? 'المستشار الذكي' : 'AI Advisor'}
-                  <RiArrowRightLine className={`icon-mirror w-4 h-4`} />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
-
         {/* ─── What needs a person, before what merely happened ───
              Above the KPIs on purpose: the tiles say how the month is
              going, and this says what is stuck right now. A dashboard
              that leads with the month is read once a month. */}
         <IntelligenceStrip />
 
-        {/* ─── KPI Cards ─── */}
+        {/* ─── The four numbers, from the shared card ───
+             Each one carries the previous period beside it and opens the
+             list behind it. A figure with nothing to compare it against is
+             a figure nobody can act on. */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {canFinance && (
-            <div className="bg-[var(--sys-card)] rounded-lg shadow-raised p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[var(--sys-muted-foreground)]">{t.netProfit}</span>
-                <div className="h-14 w-14 rounded-lg bg-[var(--sys-success-soft)] text-[var(--sys-success)] flex items-center justify-center">
-                  <RiWallet3Line className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{fmt(fin.netProfit)}</div>
-              <div className="mt-1.5 flex items-center gap-1.5">
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-0">
-                  {fin.profitMargin}%
-                </span>
-                <span className="text-xs text-[var(--sys-muted)]">{t.profitMargin}</span>
-              </div>
-            </div>
+            <KpiCard
+              title={t.netProfit}
+              value={fmt(fin.netProfit)}
+              subtitle={`${t.profitMargin} ${fin.profitMargin}%`}
+              icon={RiWallet3Line}
+              previous={prev.netProfit}
+              goodWhen="rising"
+              href="/finance/profit"
+            />
           )}
 
           {canFinance && (
-            <div className="bg-[var(--sys-card)] rounded-lg shadow-raised p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[var(--sys-muted-foreground)]">{t.deliveredRevenue}</span>
-                <div className="h-14 w-14 rounded-lg bg-[var(--sys-surface-strong)] text-[var(--sys-primary)] flex items-center justify-center">
-                  <RiArrowUpCircleLine className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{fmt(fin.deliveredRevenue)}</div>
-              <p className="mt-1.5 text-xs text-[var(--sys-muted)]">
-                {counts.delivered} {locale === 'ar' ? 'طلب موصّل' : 'delivered orders'}
-              </p>
-            </div>
+            <KpiCard
+              title={t.deliveredRevenue}
+              value={fmt(fin.deliveredRevenue)}
+              subtitle={`${counts.delivered} ${locale === 'ar' ? 'طلب موصّل' : 'delivered orders'}`}
+              icon={RiArrowUpCircleLine}
+              previous={prev.deliveredRevenue}
+              goodWhen="rising"
+              href="/orders?state=DELIVERED"
+            />
           )}
 
-          <div className="bg-[var(--sys-card)] rounded-lg shadow-raised p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[var(--sys-muted-foreground)]">{t.confirmationRate}</span>
-              <div className="h-14 w-14 rounded-lg bg-[var(--sys-muted-foreground)]/10 text-[var(--sys-muted-foreground)] flex items-center justify-center">
-                <RiPercentLine className="w-6 h-6" />
-              </div>
-            </div>
-            <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{rates.confirmationRate}%</div>
-            <p className="mt-1.5 text-xs text-[var(--sys-muted)]">
-              {counts.confirmed} / {counts.decided ?? counts.total} {t.decidedOrders}
-            </p>
-          </div>
+          <KpiCard
+            title={t.confirmationRate}
+            value={`${rates.confirmationRate}%`}
+            subtitle={`${counts.confirmed} / ${counts.decided ?? counts.total} ${t.decidedOrders}`}
+            icon={RiPercentLine}
+            previous={prev.confirmationRate}
+            goodWhen="rising"
+            href="/confirmation/queue"
+          />
 
-          <div className="bg-[var(--sys-card)] rounded-lg shadow-raised p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[var(--sys-muted-foreground)]">{t.deliveryRate}</span>
-              <div className="h-14 w-14 rounded-lg bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] flex items-center justify-center">
-                <RiTruckLine className="w-6 h-6" />
-              </div>
-            </div>
-            <div className="mt-2.5 text-2xl font-black text-[var(--sys-heading)]">{rates.deliveryRate}%</div>
-            <p className="mt-1.5 text-xs text-[var(--sys-muted)]">
-              {counts.delivered} / {counts.confirmed} {t.confirmedOrders}
-            </p>
-          </div>
+          <KpiCard
+            title={t.deliveryRate}
+            value={`${rates.deliveryRate}%`}
+            subtitle={`${counts.delivered} / ${counts.confirmed} ${t.confirmedOrders}`}
+            icon={RiTruckLine}
+            previous={prev.deliveryRate}
+            goodWhen="rising"
+            href="/ops/tracking"
+          />
         </div>
-
-        {/* ─── Real Profit Flow (finance only) ─── */}
-        {canFinance && (
-          <Card>
-            <CardHeader
-              title={
-                <span className="flex items-center gap-2">
-                  <RiMoneyDollarCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" />
-                  {locale === 'ar' ? 'معادلة صافي الربح الحقيقي' : 'Real Net Profit Breakdown'}
-                </span>
-              }
-              subtitle={
-                locale === 'ar'
-                  ? 'محسوب من الطلبات الموصّلة فقط — مطروحاً منها التكاليف والشحن والعمولات والمصروفات'
-                  : 'Delivered orders only — minus COGS, shipping, commissions and expenses'
-              }
-            />
-            <CardContent>
-              <div className="flex flex-wrap items-center gap-2">
-                {profitFlow.map((f, i) => (
-                  <React.Fragment key={f.label}>
-                    <div className={`flex-1 min-w-[110px] px-3 py-2.5 rounded-lg border text-center ${f.cls}`}>
-                      <span className="block text-xs font-semibold opacity-75">{f.label}</span>
-                      <span className="block text-sm font-black mt-0.5" dir="ltr">{f.value}</span>
-                    </div>
-                    {i < profitFlow.length - 1 && (
-                      <RiSubtractLine className="w-4 h-4 text-[var(--sys-border-strong)] shrink-0" />
-                    )}
-                  </React.Fragment>
-                ))}
-                <RiEqualLine className="w-4 h-4 text-[var(--sys-muted)] shrink-0" />
-                <div className="px-4 py-2.5 rounded-lg bg-[var(--sys-primary)] text-center">
-                  <span className="block text-xs font-bold text-[var(--sys-primary-foreground)]/80">
-                    {locale === 'ar' ? 'صافي الربح' : 'NET PROFIT'}
-                  </span>
-                  <span className="block text-base font-black text-[var(--sys-primary-foreground)] mt-0.5" dir="ltr">{fmt(fin.netProfit)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* ─── Order Status Tiles ─── */}
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
@@ -443,66 +378,6 @@ export function DashboardScreen() {
           </Card>
         </div>
 
-        {/* ─── Recent Orders ─── */}
-        <Card>
-          <CardHeader
-            title={
-              <span className="flex items-center gap-2">
-                <RiShoppingBagLine className="w-4 h-4 text-[var(--sys-destructive)]" />
-                {t.recentOrders}
-              </span>
-            }
-            action={
-              <Link href="/orders">
-                <Button variant="outline" size="sm">{t.orders}</Button>
-              </Link>
-            }
-          />
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-                            <Rows
-                rows={analytics?.orders?.slice(0, 8)}
-                keyOf={(order: any) => order.id}
-                onRowClick={(order: any) => setSelectedOrderId(order.id)}
-                columns={[
-                  { key: 'c0', label: t.thOrderNumber, primary: true,
-                    render: (order: any) => (order.orderNumber) },
-                  { key: 'c1', label: t.thProduct, primary: true,
-                    render: (order: any) => (
-                  <><div className="flex items-center gap-2.5">
-                          <ProductThumb
-                            src={order.productImageSnapshot || order.product?.image}
-                            alt={order.productNameSnapshot || order.product?.name}
-                            size="sm"
-                          />
-                          <div>
-                            <p className="font-semibold text-[var(--sys-heading)] line-clamp-1 max-w-[200px]">
-                              {order.productNameSnapshot || order.product?.name}
-                            </p>
-                            <p className="text-xs text-[var(--sys-muted)]">
-                              {order.customer?.fullName} • {order.quantity} {t.units}
-                            </p>
-                          </div>
-                        </div></>
-                ) },
-                  { key: 'c2', label: t.thTotal,
-                    render: (order: any) => (fmt(order.totalAmount)) },
-                  { key: 'c3', label: t.status,
-                    render: (order: any) => (
-                  <><OrderStatusBadge status={order.status} /></>
-                ) },
-                  { key: 'c4', label: t.thModerator,
-                    render: (order: any) => (order.moderator?.name || '—') },
-                  { key: 'c5', label: t.thDate,
-                    render: (order: any) => (format(new Date(order.createdAt), 'MMM d, HH:mm')) },
-                ]}
-                empty={
-                  <EmptyState title="لا طلبات بعد" why="آخرُ ثمانية طلبات تظهر هنا. فراغُها يعني أنّ لا طلبَ وصل هذا المتجر بعد." />
-                }
-              />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <CreateOrderModal

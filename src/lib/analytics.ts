@@ -62,6 +62,30 @@ function clampStart(start: Date): Date {
   return start < min ? min : start;
 }
 
+/**
+ * THE WINDOW IMMEDIATELY BEFORE THIS ONE, THE SAME LENGTH.
+ *
+ * Derived from `getDateRange` rather than switched on `period` a second
+ * time, because two switches on the same enum drift: somebody adds a
+ * period to one of them and the comparison quietly keeps answering for a
+ * different span than the figure it sits under.
+ *
+ * «الكل» has no previous — the whole history has nothing before it — and
+ * `last_month` is already a comparison, so neither gets one. Both return
+ * null, and a card with no previous simply does not draw the line.
+ */
+export function previousRange(filter: DateFilter): { start: Date; end: Date } | null {
+  if ((filter.period ?? 'all') === 'all') return null;
+  const { start, end } = getDateRange(filter);
+  if (!start || !end) return null;
+  const span = end.getTime() - start.getTime();
+  if (span <= 0) return null;
+  // Ends one millisecond before this window opens, so no order is counted
+  // in both halves of a comparison.
+  const prevEnd = new Date(start.getTime() - 1);
+  return { start: new Date(prevEnd.getTime() - span), end: prevEnd };
+}
+
 export function getDateRange(filter: DateFilter): { start?: Date; end?: Date } {
   const now = new Date();
   const period = filter.period || 'all';
@@ -139,10 +163,19 @@ function round2(n: number): number {
  */
 export async function getCompanyAnalytics(
   scope: { companyId: string; storeId: string | null },
-  filter: DateFilter = {}
+  filter: DateFilter = {},
+  /**
+   * An explicit window, overriding the filter's.
+   *
+   * Used to run this same function over the PREVIOUS period: the
+   * comparison must be computed by the code that computes the figure, or
+   * the two will drift apart the first time an aggregate changes. Passing
+   * a window is the whole extension — no second aggregation exists.
+   */
+  window?: { start: Date; end: Date }
 ) {
   const { companyId, storeId } = scope;
-  const { start, end } = getDateRange(filter);
+  const { start, end } = window ?? getDateRange(filter);
 
   const dateFilter =
     start && end
