@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
-import { isValidTransition, CONTACT_RESULTS } from '@/lib/confirmation-workflow';
+import { isValidTransition, CONTACT_RESULTS, REJECTION_REASONS } from '@/lib/confirmation-workflow';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can, authorize } from '@/lib/authorization';
@@ -45,12 +45,29 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { result, notes, nextFollowUpDate, callDate } = body;
+    const { result, notes, nextFollowUpDate, callDate, rejectionReason } = body;
 
     // Whitelisted result values only (CONTACT_RESULTS + POSTPONED used by the UI)
     const ALLOWED_CALL_RESULTS = [...CONTACT_RESULTS, 'POSTPONED'] as string[];
     if (!result || !ALLOWED_CALL_RESULTS.includes(result)) {
       return NextResponse.json({ error: 'Call Result is required' }, { status: 400 });
+    }
+
+    /**
+     * CLOSING AN ORDER HERE OBEYS THE SAME RULE AS CLOSING IT ANYWHERE.
+     *
+     * The confirmation screen refuses to reject an order without a structured
+     * reason, and demands a sentence when the reason is «other». This door
+     * closed orders too — and wrote `OTHER` for every one of them, with no
+     * sentence. Two doors to the same shelf, one of them locked.
+     */
+    if (result === 'REJECTED') {
+      if (!rejectionReason || !(REJECTION_REASONS as readonly string[]).includes(rejectionReason)) {
+        return NextResponse.json({ error: 'سبب الإلغاء مطلوب' }, { status: 400 });
+      }
+      if (rejectionReason === 'OTHER' && (!notes || String(notes).trim().length < 5)) {
+        return NextResponse.json({ error: 'سبب «أخرى» يحتاج ملاحظة تشرحه' }, { status: 400 });
+      }
     }
 
     // Optional structured fields — validated before use
@@ -74,7 +91,15 @@ export async function POST(
     if (result === 'CONFIRMED') mappedStatus = 'CONFIRMED';
     else if (result === 'REJECTED') mappedStatus = 'REJECTED';
     else if (result === 'POSTPONED') mappedStatus = 'POSTPONED';
-    else if (result === 'NO_ANSWER' || result === 'BUSY' || result === 'WRONG_NUMBER') mappedStatus = 'NO_ANSWER';
+    // A WRONG NUMBER IS NOT A NO-ANSWER.
+    //
+    // It used to be, so a mistyped number burned three call attempts and then
+    // auto-closed as NO_ANSWER_3_ATTEMPTS — three calls nobody could ever have
+    // answered, and a statistic that says «we cannot reach people» when the
+    // truth is «our numbers are wrong». It closes now, under the reason that
+    // is already in the list for it.
+    else if (result === 'WRONG_NUMBER') mappedStatus = 'REJECTED';
+    else if (result === 'NO_ANSWER' || result === 'BUSY') mappedStatus = 'NO_ANSWER';
     else if (result === 'CALLBACK_REQUESTED') mappedStatus = 'CONTACTING';
 
     const statusWillChange = !!(mappedStatus && mappedStatus !== order.status);
@@ -161,7 +186,19 @@ export async function POST(
             ...(mappedStatus === 'CONFIRMED'
               ? { confirmedAt: new Date(), confirmationStatus: 'CONFIRMED', confirmedById: user.id, version: { increment: 1 } }
               : mappedStatus === 'REJECTED'
-              ? { confirmationStatus: 'REJECTED', rejectionReason: 'OTHER', rejectionNote: notes?.trim() || null, version: { increment: 1 } }
+              ? {
+                  confirmationStatus: 'REJECTED',
+                  // The reason the caller gave, or the one this result already
+                  // IS. It used to write `'OTHER'` for every rejection logged
+                  // from a call — the one value that says nothing — while the
+                  // confirmation screen two clicks away refused to close an
+                  // order without a structured reason. One door demanded it
+                  // and another invented it, and the analysis of why orders
+                  // are lost reads both.
+                  rejectionReason: result === 'WRONG_NUMBER' ? 'WRONG_NUMBER' : (rejectionReason as string),
+                  rejectionNote: notes?.trim() || null,
+                  version: { increment: 1 },
+                }
               : mappedStatus === 'POSTPONED' && nextFollowUp
               ? { confirmationStatus: 'POSTPONED', postponedUntil: nextFollowUp, nextFollowUpAt: nextFollowUp, followUpStatus: 'SCHEDULED', followUpReason: 'POSTPONED', version: { increment: 1 } }
               : mappedStatus === 'NO_ANSWER'

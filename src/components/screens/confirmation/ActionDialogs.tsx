@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { PICKABLE_REJECTION_REASONS, REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
 import { Modal } from '@/components/ui/Modal';
 
 /**
@@ -292,22 +293,21 @@ export function ChangeRequestDialog({
 /**
  * The customer said no.
  *
- * Reasons are a fixed list, not free text, because "ألغى" in a hundred
- * rows tells nobody anything while "السعر مرتفع" repeated forty times is a
- * price decision waiting to be made. The list is the same one the server
- * accepts — an unknown reason is refused there, so a free-text box would
- * only produce errors.
+ * Reasons are a fixed list, not free text, because "ألغى" in a hundred rows
+ * tells nobody anything while "السعر مرتفع" repeated forty times is a price
+ * decision waiting to be made.
+ *
+ * AND THE LIST IS NOT COPIED HERE ANY MORE. This was the THIRD copy of it —
+ * the workflow held ten codes, `ConfirmationActions` held eight, and this
+ * held eight in a different order with different words for two of them. The
+ * comment above it said «the same one the server accepts», and it had already
+ * stopped being that. A reason the server stores and no screen can spell
+ * renders to an Arabic reader as a raw English constant.
  */
-export const REJECT_REASONS = [
-  { value: 'CUSTOMER_CHANGED_MIND', label: 'غيّر رأيه' },
-  { value: 'PRICE_TOO_HIGH', label: 'السعر مرتفع' },
-  { value: 'CUSTOMER_DOES_NOT_WANT_PRODUCT', label: 'لا يريد المنتج' },
-  { value: 'DUPLICATE_ORDER', label: 'طلب مكرر' },
-  { value: 'WRONG_NUMBER', label: 'رقم خاطئ' },
-  { value: 'FAKE_ORDER', label: 'طلب وهمي' },
-  { value: 'OUT_OF_SERVICE_AREA', label: 'خارج نطاق التوصيل' },
-  { value: 'OTHER', label: 'سبب آخر' },
-] as const;
+export const REJECT_REASONS = PICKABLE_REJECTION_REASONS.map((value) => ({
+  value,
+  label: REJECTION_REASON_AR[value] ?? value,
+}));
 
 export function RejectDialog({
   open,

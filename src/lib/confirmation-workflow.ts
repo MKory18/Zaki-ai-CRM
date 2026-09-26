@@ -42,8 +42,62 @@ export const REJECTION_REASONS = [
   // Its own distinct reason: the third no-answer closes the order by rule,
   // so it is never mixed with a customer's refusal in any report.
   'NO_ANSWER_3_ATTEMPTS',
+  // Voiding an entry issue wrote FAKE_ORDER, and an entry issue is a
+  // MODERATOR'S MISTAKE — a wrong number typed, a product mis-picked. Calling
+  // it a fake order accuses a customer of something they did not do, and
+  // every report that counts fake orders counted our own typing errors.
+  // The contract already names this as its own thing: it is one of the
+  // commission exclusions.
+  'MODERATOR_DATA_ERROR',
   'OTHER',
 ] as const;
+
+/**
+ * REASONS A SERVER MAY NOT CHOOSE FOR A PERSON.
+ *
+ * `OTHER` means «none of these, and here is a sentence» — it is only ever a
+ * human's answer, and the door that accepts it demands the sentence with it.
+ * A server writing it fills the record with the one value that says nothing,
+ * and every later analysis of why orders are lost reads it as a real answer.
+ */
+export const HUMAN_ONLY_REJECTION_REASONS = ['OTHER'] as const;
+
+/**
+ * REASONS ONLY THE SYSTEM EVER WRITES.
+ *
+ * Neither is a choice anybody makes: the first is what three unanswered calls
+ * come to, the second is what voiding an entry issue means. They are real
+ * stored values that every report must be able to read — and offering them in
+ * the picker would invite an agent to close an order as «our own mistake»
+ * because it is the shortest way out of a hard call.
+ */
+export const SYSTEM_ONLY_REJECTION_REASONS = ['NO_ANSWER_3_ATTEMPTS', 'MODERATOR_DATA_ERROR'] as const;
+
+/** What a person may choose — the whole list, less what the system owns. */
+export const PICKABLE_REJECTION_REASONS = REJECTION_REASONS.filter(
+  (r) => !(SYSTEM_ONLY_REJECTION_REASONS as readonly string[]).includes(r)
+);
+
+/**
+ * EVERY REASON IN WORDS, INCLUDING THE ONES NOBODY PICKS.
+ *
+ * One map, because the screen used to keep its own copy of eight while the
+ * list here held ten — so a stored value the screen had never heard of
+ * rendered as a raw English constant to an Arabic reader. The same divergence
+ * that the delivery-attempt vocabulary already cost once.
+ */
+export const REJECTION_REASON_AR: Record<string, string> = {
+  PRICE_TOO_HIGH: 'السعر مرتفع',
+  CUSTOMER_CHANGED_MIND: 'غيّر رأيه',
+  CUSTOMER_DOES_NOT_WANT_PRODUCT: 'لا يريد المنتج',
+  DUPLICATE_ORDER: 'طلب مكرّر',
+  WRONG_NUMBER: 'رقم خاطئ',
+  FAKE_ORDER: 'طلب وهميّ',
+  OUT_OF_SERVICE_AREA: 'خارج نطاق التغطية',
+  NO_ANSWER_3_ATTEMPTS: 'أُغلق بعد ثلاث محاولات بلا ردّ',
+  MODERATOR_DATA_ERROR: 'خطأ إدخال من المُعدِّل',
+  OTHER: 'سبب آخر',
+};
 
 /** No-answer attempts before the order closes itself (contract: 1/2/3). */
 export const NO_ANSWER_LIMIT = 3;

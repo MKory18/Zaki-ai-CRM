@@ -82,7 +82,7 @@
   "src/components/orders/ConfirmationActions.tsx": {
     "buttons": 9,
     "inputs": 2,
-    "columns": 8,
+    "columns": 0,
     "cards": 0,
     "modals": 1,
     "icons": 9,

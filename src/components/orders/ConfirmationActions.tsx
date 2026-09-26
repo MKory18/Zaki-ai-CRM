@@ -12,19 +12,17 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { apiFetch } from '@/lib/api-client';
+import { PICKABLE_REJECTION_REASONS, REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
 import { arDateShort, arDateTime } from '@/lib/format';
 import { RiCalendarScheduleLine, RiCheckLine, RiCloseCircleLine, RiHistoryLine, RiPhoneLine, RiPhoneLockLine, RiRefreshLine, RiTimerLine } from '@remixicon/react';
 
-const REJECTION_REASONS: { key: string; ar: string; en: string }[] = [
-  { key: 'PRICE_TOO_HIGH', ar: 'السعر مرتفع', en: 'Price too high' },
-  { key: 'CUSTOMER_CHANGED_MIND', ar: 'غيّر رأيه', en: 'Changed mind' },
-  { key: 'CUSTOMER_DOES_NOT_WANT_PRODUCT', ar: 'لا يريد المنتج', en: 'Does not want product' },
-  { key: 'DUPLICATE_ORDER', ar: 'طلب مكرر', en: 'Duplicate order' },
-  { key: 'WRONG_NUMBER', ar: 'رقم خاطئ', en: 'Wrong number' },
-  { key: 'FAKE_ORDER', ar: 'طلب وهمي', en: 'Fake order' },
-  { key: 'OUT_OF_SERVICE_AREA', ar: 'خارج نطاق التغطية', en: 'Out of service area' },
-  { key: 'OTHER', ar: 'سبب آخر', en: 'Other' },
-];
+// The list and its words live with the rule, in `confirmation-workflow`. A
+// copy here held eight while that held ten, so a stored reason this screen
+// had never heard of rendered as a raw English constant.
+const REASON_OPTIONS = PICKABLE_REJECTION_REASONS.map((key) => ({
+  key,
+  ar: REJECTION_REASON_AR[key] ?? key,
+}));
 
 const RESULTS: Record<string, { ar: string; en: string }> = {
   ANSWERED: { ar: 'أجاب', en: 'Answered' },
@@ -300,8 +298,8 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
             <>
               <Select label={ar ? 'سبب الرفض *' : 'Rejection Reason *'} value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)}>
                 <option value="">— {ar ? 'اختر السبب' : 'Select reason'} —</option>
-                {REJECTION_REASONS.map((r) => (
-                  <option key={r.key} value={r.key}>{ar ? r.ar : r.en}</option>
+                {REASON_OPTIONS.map((r) => (
+                  <option key={r.key} value={r.key}>{r.ar}</option>
                 ))}
               </Select>
               <Textarea

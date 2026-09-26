@@ -37,14 +37,6 @@ const SETTLEMENT_AR: Record<string, string> = {
   CANCELLED: 'ملغى',
 };
 
-const CALL_RESULTS: Record<string, { ar: string; en: string }> = {
-  CONFIRMED: { ar: 'مؤكد — وافق على الطلب', en: 'Confirmed (Agreed & Accepted)' },
-  POSTPONED: { ar: 'مؤجل — سيتصل لاحقاً', en: 'Postponed (Callback later)' },
-  NO_ANSWER: { ar: 'لا يجيب — لم يرد', en: 'No Answer' },
-  REJECTED: { ar: 'مرفوض — ألغى الطلب', en: 'Rejected' },
-  CALLBACK_REQUESTED: { ar: 'طلب منك الاتصال به', en: 'Customer Requested Callback' },
-  WRONG_NUMBER: { ar: 'رقم خاطئ', en: 'Wrong Number' },
-};
 
 interface OrderDetailModalProps {
   orderId: string | null;
@@ -149,11 +141,21 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     }
   }, [isOpen, inEditMode, orderId]);
 
+  /**
+   * THE CALL FORM THAT WAS NOT HERE.
+   *
+   * A result map, three pieces of state and a submit handler for
+   * `/api/orders/[id]/call-logs` lived here and NOTHING RENDERED ANY OF IT —
+   * the form itself had been removed and its machinery left behind. It read
+   * as a feature to anybody looking at the file, and it kept a second door to
+   * closing an order alive in the reader's mind while the real one is in
+   * `ConfirmationActions`.
+   *
+   * Calls are logged where they are made: the confirmation screen, which
+   * demands a structured reason before it will reject anything.
+   */
   const [statusNote, setStatusNote] = useState('');
 
-  const [callResult, setCallResult] = useState('CONFIRMED');
-  const [callNotes, setCallNotes] = useState('');
-  const [nextFollowUpDate, setNextFollowUpDate] = useState('');
 
   // ─── Order data editing form (customer info + price fields) ───
   // Expiry-based lock state (same rule as the render-time check below) but
@@ -302,8 +304,6 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         });
         // Reset in-progress forms so stale input from the previous order never leaks
         setStatusNote('');
-        setCallNotes('');
-        setNextFollowUpDate('');
         setEditForm({
           customerName: data.order.customer?.fullName || '',
           customerPhone: data.order.customer?.rawPhone || data.order.customer?.phone || '',
@@ -344,38 +344,6 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     }
   };
 
-  const handleRecordCall = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!order?.id) return;
-    setActionLoading(true);
-    setActionFeedback(null);
-    try {
-      const res = await apiFetch(`/api/orders/${order.id}/call-logs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          result: callResult,
-          notes: callNotes,
-          nextFollowUpDate: nextFollowUpDate || null,
-          expectedVersion: order.version, // concurrency hint for the status change path
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setActionFeedback({ type: 'success', text: data.warning || 'تم تسجيل نتيجة الاتصال' });
-        await loadOrder(order.id);
-        onRefresh();
-        setCallNotes('');
-        setNextFollowUpDate('');
-      } else {
-        setActionFeedback({ type: 'error', text: data.errorAr || data.error || `HTTP ${res.status}` });
-      }
-    } catch (e: any) {
-      setActionFeedback({ type: 'error', text: e?.message || 'فشل تسجيل الاتصال' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   if (!order && loading) {
     return (

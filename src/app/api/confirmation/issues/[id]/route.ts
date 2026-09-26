@@ -73,7 +73,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           data: {
             confirmationStatus: 'CANCELLED',
             status: 'VOIDED',
-            rejectionReason: 'FAKE_ORDER',
+            // NOT `FAKE_ORDER`: an entry issue is OUR mistake — a number
+            // mistyped, a product mis-picked — and calling it fake accuses a
+            // customer of something they did not do, in every report that
+            // counts fake orders.
+            rejectionReason: 'MODERATOR_DATA_ERROR',
             rejectionNote: parsed.data.note ?? 'إبطال بعد إشكال إدخال',
             version: { increment: 1 },
           },
