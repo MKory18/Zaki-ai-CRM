@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiLoader4Line } from '@remixicon/react';
+import { RiInboxUnarchiveLine, RiLoader4Line } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -31,12 +31,42 @@ interface Row {
 export function ConfirmationPostponedScreen() {
   const [data, setData] = useState<{ leadDays: number; orders: Row[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  /** Hands it to the pool, still postponed. The list reloads without it. */
+  const toQueue = async (o: Row) => {
+    setBusyId(o.id);
+    setError(null);
+    setDone(null);
+    try {
+      await apiJson('/api/confirmation/postponed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: o.id }),
+      });
+      setDone(`${o.orderNumber} في الطابور — ما زال مؤجَّلاً، وأوّل من يسحب يراه كذلك`);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذّرت الإعادة إلى الطابور');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // Named, because handing an order to the pool has to reload the list it
+  // just left — an inline effect body cannot be called a second time.
+  const load = useCallback(
+    () =>
+      apiJson<{ leadDays: number; orders: Row[] }>('/api/confirmation/postponed')
+        .then(setData)
+        .catch((e) => setError(e instanceof Error ? e.message : 'تعذر التحميل')),
+    []
+  );
 
   useEffect(() => {
-    apiJson<{ leadDays: number; orders: Row[] }>('/api/confirmation/postponed')
-      .then(setData)
-      .catch((e) => setError(e instanceof Error ? e.message : 'تعذر التحميل'));
-  }, []);
+    void load();
+  }, [load]);
 
   if (error) {
     return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>;
@@ -54,8 +84,15 @@ export function ConfirmationPostponedScreen() {
       <ScreenTitle />
 
       <p className="text-sm text-[var(--sys-muted-foreground)]">
-        القابل للعمل عليه: المستحق خلال {data.leadDays} يوم أو المتأخر. الباقي للعرض فقط.
+        القابل للعمل عليه: المستحق خلال {data.leadDays} يوم أو المتأخر. الباقي للعرض فقط —
+        وما حان موعدُه يمكن إعادتُه إلى الطابور ليسحبه أوّلُ من يفرغ، ويبقى مؤجَّلاً كما هو.
       </p>
+
+      {done && (
+        <p className="rounded-lg border border-[var(--sys-success)]/40 bg-[var(--sys-success-soft)] p-2.5 text-sm text-[var(--sys-success)]">
+          {done}
+        </p>
+      )}
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
         {/* Eight columns on a 375px screen is every cell wrapped to four
             lines and one row filling the phone. The same definition draws
@@ -108,6 +145,47 @@ export function ConfirmationPostponedScreen() {
               label: 'مرات التأجيل',
               align: 'end',
               render: (o) => <span className="tabular-nums">{o.postponeCount}</span>,
+            },
+            /**
+             * THE ONE ACTION THIS SCREEN WAS MISSING.
+             *
+             * A postponed order KEEPS ITS CLAIM, which is right while the date
+             * is far off — the agent who spoke to the customer should be the
+             * one to ring back — and wrong the moment it comes due: if she is
+             * off that day the order sits where nobody else can reach it,
+             * because the pool only takes unclaimed orders.
+             *
+             * It only appears on a row that is `actionable` — the server's own
+             * word for «due within the lead days». A button on an order due in
+             * three weeks would break the one promise the postpone was made to
+             * keep.
+             *
+             * And it does NOT mark the order new: it stays postponed, with its
+             * date and its count, so whoever pulls it next opens it knowing
+             * this customer asked for Thursday and has asked twice.
+             */
+            {
+              key: 'queue',
+              label: 'إلى الطابور',
+              render: (o) =>
+                o.actionable ? (
+                  <button
+                    type="button"
+                    onClick={() => void toQueue(o)}
+                    disabled={busyId === o.id}
+                    title="أعِدْه إلى الطابور ليسحبه أوّل من يفرغ"
+                    className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] px-2.5 py-1 text-xs font-bold text-[var(--sys-warning)] transition-colors hover:bg-[var(--sys-warning)]/20 disabled:opacity-40"
+                  >
+                    {busyId === o.id ? (
+                      <RiLoader4Line className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <RiInboxUnarchiveLine className="h-4 w-4" aria-hidden />
+                    )}
+                    إلى الطابور
+                  </button>
+                ) : (
+                  <span className="text-xs text-[var(--sys-muted)]">—</span>
+                ),
             },
             // The agent's own name is on a desk's table; on a card it is
             // one more labelled line between her and the phone number.

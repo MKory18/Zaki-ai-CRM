@@ -470,12 +470,12 @@
     "tabs": 0
   },
   "src/components/screens/ConfirmationPostponedScreen.tsx": {
-    "buttons": 0,
+    "buttons": 1,
     "inputs": 0,
-    "columns": 8,
+    "columns": 9,
     "cards": 0,
     "modals": 0,
-    "icons": 1,
+    "icons": 3,
     "links": 0,
     "tabs": 0
   },
