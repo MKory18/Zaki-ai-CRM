@@ -51,7 +51,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { user, companyId, storeId } = await requireContext();
 
     const body = await req.json();
-    const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType } = body;
+    const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType, categoryId } = body;
 
     const existing = await db.product.findFirst({ where: { id, ...inStore(companyId, storeId) } });
     if (!existing || existing.companyId !== companyId) {
@@ -85,6 +85,24 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     }
 
+    /**
+     * A CATEGORY ID THAT DOES NOT RESOLVE IS AN ERROR, NOT A CLEARING.
+     *
+     * This first read `?? null`, so an id belonging to another tenant —
+     * or a typo — quietly UNFILED the product and answered 200. A person
+     * would see the category disappear and have no idea why. Clearing is
+     * a real intention and has its own value: `null`.
+     */
+    let resolvedCategoryId: string | null = null;
+    if (categoryId !== undefined && categoryId !== null) {
+      const cat = await db.category.findFirst({
+        where: { id: categoryId, companyId },
+        select: { id: true },
+      });
+      if (!cat) return NextResponse.json({ error: 'لا تصنيف بهذا المعرّف' }, { status: 400 });
+      resolvedCategoryId = cat.id;
+    }
+
     const updated = await db.product.update({
       where: { id },
       data: {
@@ -94,6 +112,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(description !== undefined ? { description: description?.trim() || null } : {}),
         ...(sourceType === 'PURCHASED' || sourceType === 'MANUFACTURED' ? { sourceType } : {}),
         ...(descriptionEn !== undefined ? { descriptionEn: descriptionEn?.trim() || null } : {}),
+        /**
+         * Its shelf. Absent leaves it alone; null clears it; an id is
+         * checked against THIS company first — a category id in a request
+         * body is a foreign key somebody can type, and filing a product
+         * under another tenant's shelf would expose it to permissions
+         * scoped to that shelf.
+         */
+        ...(categoryId !== undefined ? { categoryId: resolvedCategoryId } : {}),
         ...(basePrice !== undefined ? { basePrice: parseFloat(basePrice) || 0 } : {}),
         ...(status ? { status } : {}),
       },

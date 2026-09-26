@@ -50,6 +50,9 @@ export async function GET(req: Request) {
       where,
       take,
       include: {
+        // The shelf's NAME, not just its id: a list that prints a uuid is
+        // a list nobody reads.
+        category: { select: { id: true, name: true } },
         images: {
           orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
         },
@@ -125,7 +128,7 @@ export async function POST(req: Request) {
     await requirePermission('products.create');
 
     const body = await req.json();
-    const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType } = body;
+    const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType, categoryId } = body;
 
     if (!name || !sku) {
       return NextResponse.json({ error: 'Name and SKU are required' }, { status: 400 });
@@ -141,6 +144,16 @@ export async function POST(req: Request) {
 
     if (existing) {
       return NextResponse.json({ error: 'A product with this SKU already exists' }, { status: 400 });
+    }
+
+    // An id that does not resolve is refused rather than dropped: filing
+    // a product under a shelf that does not exist should say so, not
+    // quietly create it unfiled.
+    let resolvedCategoryId: string | null = null;
+    if (categoryId) {
+      const cat = await db.category.findFirst({ where: { id: categoryId, companyId }, select: { id: true } });
+      if (!cat) return NextResponse.json({ error: 'لا تصنيف بهذا المعرّف' }, { status: 400 });
+      resolvedCategoryId = cat.id;
     }
 
     const product = await db.product.create({
@@ -161,6 +174,13 @@ export async function POST(req: Request) {
         // production cost reports.
         sourceType: sourceType === 'PURCHASED' ? 'PURCHASED' : 'MANUFACTURED',
         status: status || 'ACTIVE',
+        /**
+         * The shelf it sits on. Verified to belong to THIS company before
+         * it is written: a category id from a request body is a foreign
+         * key somebody can type, and a product filed under another
+         * tenant's shelf would be visible to permissions scoped to it.
+         */
+        categoryId: resolvedCategoryId,
       },
     });
 

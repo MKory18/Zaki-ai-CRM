@@ -14,6 +14,7 @@ import { productName } from '@/lib/product-name';
 import Link from 'next/link';
 import { RiAddCircleLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiPencilLine, RiSearchLine, RiStarLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { CategoryPicker } from '@/components/products/CategoryPicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Rows } from '@/components/ui/Rows';
@@ -33,6 +34,7 @@ export function ProductsScreen() {
   const [description, setDescription] = useState('');
   const [basePrice, setBasePrice] = useState(20);
   const [sourceType, setSourceType] = useState<'MANUFACTURED' | 'PURCHASED'>('MANUFACTURED');
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [status, setStatus] = useState('ACTIVE');
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export function ProductsScreen() {
   // Edit modal
   const [editOpen, setEditOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', nameEn: '', sku: '', description: '', descriptionEn: '', basePrice: 0, status: 'ACTIVE' });
+  const [editForm, setEditForm] = useState({ name: '', nameEn: '', sku: '', description: '', descriptionEn: '', basePrice: 0, status: 'ACTIVE' , categoryId: null as string | null });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -68,6 +70,7 @@ export function ProductsScreen() {
       description: p.description || '',
       descriptionEn: p.descriptionEn || '',
       basePrice: p.basePrice || 0,
+      categoryId: p.categoryId ?? null,
       status: p.status || 'ACTIVE',
     });
     setEditError(null);
@@ -158,7 +161,7 @@ export function ProductsScreen() {
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, sku, description, basePrice, status, sourceType }),
+        body: JSON.stringify({ name, sku, description, basePrice, status, sourceType, categoryId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -274,6 +277,13 @@ export function ProductsScreen() {
                       <>
                         <span className="block font-bold text-[var(--sys-heading)]">{productName(p, locale)}</span>
                         <span className="text-xs text-[var(--sys-muted)]">
+                          {/* The shelf, where the name is — not a column of
+                              its own. A category is how a product is FILED,
+                              so it reads as part of what it is rather than
+                              as another field to scan across. */}
+                          {p.category?.name ? (
+                            <span className="text-[var(--sys-muted-foreground)]">{p.category.name} • </span>
+                          ) : null}
                           {p.images?.length || 0} صورة • {p.offers?.length || 0} عرض
                         </span>
                       </>
@@ -438,6 +448,8 @@ export function ProductsScreen() {
                 ))}
               </div>
             </div>
+            <CategoryPicker value={categoryId} onChange={setCategoryId} />
+
             <Textarea
               label="الوصف"
               rows={2}
@@ -567,6 +579,10 @@ export function ProductsScreen() {
             </Select>
           </div>
 
+          <CategoryPicker
+            value={editForm.categoryId}
+            onChange={(categoryId) => setEditForm({ ...editForm, categoryId })}
+          />
           <Textarea label="الوصف بالعربية" rows={2} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
           <Textarea label="الوصف بالإنجليزية" rows={2} dir="ltr" value={editForm.descriptionEn} onChange={(e) => setEditForm({ ...editForm, descriptionEn: e.target.value })} />
 
