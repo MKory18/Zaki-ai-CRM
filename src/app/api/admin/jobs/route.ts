@@ -23,6 +23,7 @@ import { scheduleAr } from '@/lib/jobs/schedule';
  */
 
 const runSchema = z.object({
+  /** A job's name, or `*` for all of them in the order they are declared. */
   job: z.string().trim().min(1).max(80),
   /** 'unpark' lets a job that gave up try again; anything else runs it now. */
   action: z.enum(['run', 'unpark']).optional(),
@@ -93,6 +94,41 @@ export async function POST(req: Request) {
     const parsed = runSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ error: 'اسم المهمة مطلوب' }, { status: 400 });
+    }
+
+    /**
+     * ALL OF THEM, IN ORDER, ONE AT A TIME.
+     *
+     * Sequential rather than parallel, and the order is `JOBS`' own: some
+     * of these feed each other — claims are released before postponed
+     * orders are surfaced, commission accrues before penalties are
+     * proposed — and running them at once would have a job read what the
+     * one before it had not yet written.
+     *
+     * A failure does not stop the run. One courier's API being down is not
+     * a reason to skip accruing commission, and the caller gets a row per
+     * job saying which did what.
+     */
+    if (parsed.data.job === '*') {
+      const results: { job: string; ok: boolean; processed?: number; error?: string }[] = [];
+      for (const j of JOBS) {
+        try {
+          const r = await runJob(j);
+          results.push({ job: j.name, ok: true, processed: r.processed });
+        } catch (e) {
+          results.push({
+            job: j.name,
+            ok: false,
+            error: e instanceof JobSkipped ? 'تُخطّيت' : e instanceof Error ? e.message : 'فشلت',
+          });
+        }
+      }
+      await logAudit({
+        companyId, userId: user.id, action: 'JOB_RUN_ALL',
+        entity: 'JobRun', entityId: 'all',
+        newData: { ran: results.length, failed: results.filter((r) => !r.ok).length },
+      });
+      return NextResponse.json({ ran: results });
     }
 
     const job = jobByName(parsed.data.job);

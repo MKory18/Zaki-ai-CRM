@@ -146,7 +146,10 @@ describe('choosing a vendor', () => {
   it('falls back to a sane default when nothing is set', async () => {
     const s = await aiSettings('c1');
     expect(s.provider).toBe('OPENROUTER');
-    expect(s.model).toBe(AI_PROVIDERS[0].defaultModel);
+    // By ID, not by position: this file reordered the list once so the
+    // newest vendor shows first, and an index silently retargeted the
+    // assertion at a different company's default.
+    expect(s.model).toBe(AI_PROVIDERS.find((p) => p.id === 'OPENROUTER')!.defaultModel);
     expect(s.hasKey).toBe(false);
   });
 

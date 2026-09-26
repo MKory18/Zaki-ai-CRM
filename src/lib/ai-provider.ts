@@ -36,33 +36,77 @@ export interface ProviderInfo {
   keyHelp: string;
 }
 
+/**
+ * THE MODELS EACH VENDOR OFFERS, NEWEST FIRST.
+ *
+ * A list in code goes stale the week a vendor ships something — so this is
+ * a SUGGESTION list, not a whitelist: the model box accepts anything typed
+ * into it, and the names here only save somebody from remembering the
+ * exact spelling of `claude-haiku-4-5-20251001`.
+ *
+ * Ordered newest first and annotated by what each is FOR, because the
+ * choice that matters is not the vendor but the tier: a note classifier
+ * running thousands of times a day and a business analysis run once an
+ * hour should not be the same model, and picking the expensive one for
+ * both is the commonest way an AI bill becomes a surprise.
+ */
 export const AI_PROVIDERS: ProviderInfo[] = [
   {
-    id: 'OPENROUTER',
-    label: 'OpenRouter',
-    defaultModel: 'meta-llama/llama-3.3-70b-instruct:free',
+    id: 'ANTHROPIC',
+    label: 'Anthropic',
+    defaultModel: 'claude-sonnet-5',
     models: [
-      'meta-llama/llama-3.3-70b-instruct:free',
-      'anthropic/claude-sonnet-4.5',
-      'openai/gpt-4o-mini',
+      'claude-opus-5-5',
+      'claude-sonnet-5',
+      'claude-haiku-4-5-20251001',
+      'claude-sonnet-4-5',
+      'claude-haiku-4-5',
     ],
-    keyHelp: 'مفتاح من openrouter.ai — يبدأ بـ sk-or-',
+    keyHelp: 'مفتاح من console.anthropic.com — يبدأ بـ sk-ant-',
   },
   {
     id: 'OPENAI',
     label: 'OpenAI',
     defaultModel: 'gpt-4o-mini',
-    models: ['gpt-4o-mini', 'gpt-4o', 'o4-mini'],
+    models: ['gpt-4o', 'gpt-4o-mini', 'o4-mini', 'o3-mini'],
     keyHelp: 'مفتاح من platform.openai.com — يبدأ بـ sk-',
   },
   {
-    id: 'ANTHROPIC',
-    label: 'Anthropic',
-    defaultModel: 'claude-sonnet-4-5',
-    models: ['claude-sonnet-4-5', 'claude-haiku-4-5', 'claude-opus-4-1'],
-    keyHelp: 'مفتاح من console.anthropic.com — يبدأ بـ sk-ant-',
+    id: 'OPENROUTER',
+    label: 'OpenRouter',
+    /**
+     * The free model stays the default, and that is not a preference.
+     * OpenRouter is what a company with no key falls back to, so this is
+     * the model the product runs on before anybody has paid anyone — and
+     * making it a paid one would turn "AI is not configured yet" into a
+     * bill.
+     */
+    defaultModel: 'meta-llama/llama-3.3-70b-instruct:free',
+    models: [
+      'anthropic/claude-sonnet-4.5',
+      'openai/gpt-4o',
+      'openai/gpt-4o-mini',
+      'meta-llama/llama-3.3-70b-instruct:free',
+    ],
+    keyHelp: 'مفتاح من openrouter.ai — يبدأ بـ sk-or-',
   },
 ];
+
+/**
+ * WHICH TIER A JOB DESERVES.
+ *
+ * Shown beside the model box so the tier is a decision rather than a
+ * default nobody revisited.
+ */
+export const MODEL_TIERS: { match: RegExp; tier: string; note: string }[] = [
+  { match: /opus|gpt-4o(?!-mini)|o3(?!-mini)/i, tier: 'الأعلى', note: 'للتحليل والقرارات — أغلى بكثير، لا يُستعمل لكلّ رسالة' },
+  { match: /sonnet|o4-mini|o3-mini/i, tier: 'متوازن', note: 'الاستخراج والتأكيد والتلخيص' },
+  { match: /haiku|mini|free/i, tier: 'اقتصادي', note: 'التصنيف عالي التكرار — آلاف الرسائل يومياً' },
+];
+
+export function tierOf(model: string): { tier: string; note: string } | null {
+  return MODEL_TIERS.find((t) => t.match.test(model)) ?? null;
+}
 
 export function providerInfo(id: string): ProviderInfo {
   return AI_PROVIDERS.find((p) => p.id === id) ?? AI_PROVIDERS[0];

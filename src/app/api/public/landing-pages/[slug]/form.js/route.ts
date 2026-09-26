@@ -66,7 +66,17 @@ export async function GET(_req: Request, ctx: Ctx) {
     head.textContent = meta.product ? (meta.product.name || '') + ' — ' + price + ' ' + (meta.company.currency || 'USD') : '';
     form.appendChild(head);
 
-    field('full_name', meta.company.name ? 'الاسم الكامل' : 'Full name', 'text');
+    /*
+      Always Arabic, because this form is Arabic. What was here chose the
+      label's language by whether the COMPANY HAS A NAME — which it always
+      does: the field is required with a minimum of two characters. The
+      condition was never false, the English half was unreachable, and the
+      line read as a language switch while being nothing of the kind.
+
+      (No back-ticks in this comment: the whole of this file's body is a
+      template literal, and one would end it.)
+    */
+    field('full_name', 'الاسم الكامل', 'text');
     field('phone', 'الهاتف', 'tel');
     field('address', 'العنوان', 'text');
     field('city', 'المدينة', 'text');

@@ -640,12 +640,12 @@
     "tabs": 0
   },
   "src/components/screens/JobsScreen.tsx": {
-    "buttons": 2,
+    "buttons": 3,
     "inputs": 0,
     "columns": 5,
     "cards": 0,
     "modals": 0,
-    "icons": 8,
+    "icons": 9,
     "links": 0,
     "tabs": 0
   },

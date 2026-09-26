@@ -90,6 +90,10 @@ export function SystemSettingsScreen() {
             <form onSubmit={save} className="flex flex-wrap items-end gap-3">
               <div className="min-w-[220px] flex-1">
                 <Input label="اسم الشركة" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
+                <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                  لا يظهر هذا الاسم لزبائنك: صفحاتُ الهبوط والمتجر تحمل اسمَ المتجر وشعارَه، لا اسمَ الشركة.
+                  هو اسمُ حسابك في المنصّة، وبه تُعرَف شركتك في سجلّ التدقيق.
+                </p>
               </div>
               <Button type="submit" disabled={busy || !dirty || name.trim().length < 2}>
                 {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiCheckLine className="h-4 w-4" />}

@@ -108,14 +108,14 @@ export function AssistantScreen() {
           },
         ]);
       } else {
-        throw new Error('Failed to get answer');
+        throw new Error('تعذّر الحصول على إجابة');
       }
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: 'Sorry, I encountered an issue querying the analytics service.',
+          content: 'تعذّر الوصول إلى الأرقام. حاول مرّة أخرى، وإن تكرّر فالمشكلة في إعداد الذكاء لا في سؤالك.',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -353,7 +353,7 @@ export function AssistantScreen() {
             >
               <input
                 type="text"
-                placeholder="Ask about revenue, top profitable products, moderator performance, or production advice..."
+                placeholder="اسأل عن الإيراد، أو أكثر المنتجات ربحاً، أو أداء المودريتورات، أو التشغيل…"
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
                 className="flex-1 px-4 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"

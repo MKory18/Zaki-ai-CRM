@@ -5,6 +5,7 @@ import { MessageTemplatesCard } from '@/components/settings/MessageTemplatesCard
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { MAX_PROMPT, missingSlots, type AiJob, type PromptVersion } from '@/lib/ai-prompts';
+import { tierOf } from '@/lib/ai-provider';
 import { RiAlertLine, RiArrowDownSLine, RiArrowGoBackLine, RiCheckLine, RiKey2Line, RiLoader4Line, RiPlugLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
@@ -121,6 +122,7 @@ export function AiSettingsScreen() {
   }
 
   const provider = providers.find((p) => p.id === settings.provider);
+  const tier = settings.model ? tierOf(settings.model) : null;
 
   return (
     <div className="max-w-3xl space-y-4" dir="rtl">
@@ -175,13 +177,30 @@ export function AiSettingsScreen() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">النموذج</label>
+            <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]" htmlFor="ai-model">
+              النموذج
+            </label>
+            {/* A list of suggestions, not a closed set: the box still
+                accepts anything, because a vendor ships a new name more
+                often than this file is edited. */}
             <input
+              id="ai-model"
+              list="ai-models"
               value={settings.model}
               onChange={(e) => setSettings({ ...settings, model: e.target.value })}
               className={INPUT}
               dir="ltr"
             />
+            <datalist id="ai-models">
+              {(provider?.models ?? []).map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
+            {tier && (
+              <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted)]">
+                <span className="font-semibold text-[var(--sys-foreground)]">{tier.tier}</span> — {tier.note}
+              </p>
+            )}
           </div>
         </div>
 

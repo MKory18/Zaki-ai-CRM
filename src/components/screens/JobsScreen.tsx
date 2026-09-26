@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
+import { Button } from '@/components/ui/Button';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiPlayLine, RiTimerLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
@@ -64,6 +65,7 @@ export function JobsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [running, setRunning] = useState<string | null>(null);
+  const [allBusy, setAllBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -100,6 +102,56 @@ export function JobsScreen() {
 
       {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
       {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
+
+      {/*
+        ALL OF THEM, IN ORDER.
+
+        The scheduler runs each on its own clock, which is right in normal
+        operation and useless after it has been down: twelve jobs each need
+        a separate click, and the order matters — claims are released before
+        postponed orders are surfaced, commission accrues before penalties
+        are proposed. One button runs them in the order they are declared,
+        server-side, one at a time, and a failure in one does not stop the
+        rest.
+      */}
+      {data && data.jobs.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+          <p className="text-xs text-[var(--sys-muted-foreground)]">
+            بعد توقّف المجدول، تشغيلُها واحدةً واحدةً اثنتا عشرة ضغطة — وبترتيبٍ يهمّ.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            loading={allBusy}
+            onClick={async () => {
+              setAllBusy(true);
+              setError(null);
+              setDone(null);
+              try {
+                const res = await apiJson<{ ran: { job: string; ok: boolean }[] }>('/api/admin/jobs', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ job: '*' }),
+                });
+                const failed = res.ran.filter((r) => !r.ok).length;
+                setDone(
+                  failed === 0
+                    ? `شُغّلت ${res.ran.length} مهمة بالترتيب، كلُّها نجحت.`
+                    : `شُغّلت ${res.ran.length} مهمة — ${failed} منها لم تنجح. راجع «آخر التشغيلات».`
+                );
+                await load();
+              } catch (e) {
+                setError(e instanceof Error ? e.message : 'تعذّر التشغيل');
+              } finally {
+                setAllBusy(false);
+              }
+            }}
+          >
+            <RiPlayLine className="h-4 w-4" />
+            شغّلها كلَّها بالترتيب
+          </Button>
+        </div>
+      )}
 
       {!data ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
