@@ -45,7 +45,7 @@ const KEEP = Number(process.env.BACKUP_KEEP || 14);
 function run(
   cmd: string,
   args: string[],
-  opts: { env?: NodeJS.ProcessEnv; timeoutMs?: number } = {}
+  opts: { env?: Record<string, string | undefined>; timeoutMs?: number } = {}
 ): Promise<{ code: number; stderr: string; stdout: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { env: { ...process.env, ...opts.env }, shell: false });

@@ -240,6 +240,44 @@ describe('the app in the background', () => {
     expect(screen.getByTestId('backgrounded')).toBeTruthy();
   });
 
+  /**
+   * THE TWO WAYS THE CURTAIN COULD OUTLIVE ITS REASON.
+   *
+   * Reported twice from a real screen: «I am away from the site, I come back,
+   * and the scroll does not work until I click inside the screen». The test
+   * below proved the curtain lifts on `visibilitychange` — and that event is
+   * NOT always fired on the way back. Restoring a minimised window can leave
+   * the document visible with no event at all.
+   *
+   * So two rules now. It lifts on any signal that says the person is back,
+   * and — whatever happens — it never swallows a scroll while it is up.
+   */
+  it('lifts on focus, for the return that fires no visibility event', async () => {
+    render(<IdleGuard />);
+    await act(async () => {
+      Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(screen.getByTestId('backgrounded')).toBeTruthy();
+
+    // Back, with no visibilitychange at all.
+    await act(async () => {
+      Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(screen.queryByTestId('backgrounded'), 'الستارة بقيت رغم العودة').toBeNull();
+  });
+
+  it('and never swallows a scroll while it is up', async () => {
+    render(<IdleGuard />);
+    await act(async () => {
+      Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    const cover = screen.getByTestId('backgrounded');
+    expect(cover.className, 'الستارة تبتلع المؤشّر — فهي قفل لا ستارة').toContain('pointer-events-none');
+  });
+
   it('and uncovered on return — it is a curtain, not a lock', async () => {
     render(<IdleGuard />);
     await act(async () => {

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import crypto from 'crypto';
 import { db } from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword, resolveSingleCompanyId } from '@/lib/auth';
 import { ASSIGNABLE_ROLES, UserRole, UserStatus } from '@/types/auth';
 import { logAudit } from '@/lib/audit';
 import { can, requirePermission } from '@/lib/authorization';
@@ -96,12 +96,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         updateData.roleId = roleId;
         updateData.role = roleRow.name; // keep legacy role string in sync
         updateData.permissionsVersion = { increment: 1 }; // invalidate cached grants
-        if (!target.companyId && admin.companyId && admin.role !== 'SUPER_ADMIN') {
-          if (target.status !== 'PENDING') {
-            return NextResponse.json({ error: 'غير مسموح بإسناد حساب من شركة أخرى' }, { status: 403 });
-          }
-          updateData.companyId = admin.companyId;
-        }
         auditAction = 'USER_ROLE_CHANGED';
       } else if (!role || !ASSIGNABLE_ROLES.includes(role as UserRole)) {
         return NextResponse.json({ error: 'الدور غير صالح' }, { status: 400 });
@@ -134,14 +128,43 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         updateData.roleId = named?.id ?? null;
         updateData.permissionsVersion = { increment: 1 };
       }
-      // Adopting a platform-level (companyId: null) account is allowed ONLY for
-      // a PENDING account by a company admin (onboarding). Never for ACTIVE
-      // accounts — that would be cross-tenant account capture.
-      if (!target.companyId && admin.companyId && admin.role !== 'SUPER_ADMIN') {
-        if (target.status !== 'PENDING') {
+      /**
+       * HIRING SOMEBODY PUTS THEM IN THE COMPANY — WHOEVER DOES THE HIRING.
+       *
+       * ONE block, after both branches, reading the name that was actually
+       * assigned. A first version of this fix put a second copy inside the
+       * `roleId` branch, and the two disagreed immediately: the outer one
+       * tested the legacy `role` string, which is `undefined` on the roleId
+       * path, so assigning the SUPER_ADMIN role through it adopted a platform
+       * administrator into a company. A test caught it. Two copies of a rule
+       * about who joins what is exactly the kind of duplication that produces
+       * a hole rather than a conflict.
+       *
+       * WHAT WAS WRONG BEFORE ANY OF THAT. The condition read
+       * `admin.companyId && admin.role !== 'SUPER_ADMIN'` — and the person who
+       * actually approves new staff is the owner, a PLATFORM SUPER_ADMIN with
+       * no company of their own. Both halves were false for them, so an
+       * employee got a role, an ACTIVE account and a working login, and kept
+       * `companyId: null` for ever. Every screen looks a person up with
+       * `{ id, companyId }`, so that employee was invisible to all of them at
+       * once: «الموظف غير موجود» on their page, «المستخدم غير موجود» on their
+       * access, a commission rule for them refused. Only the users list
+       * showed them, because it alone also reads `companyId: null`.
+       *
+       * The company is resolved exactly as `POST /api/users` already resolves
+       * it for the same actor — the existing idea, applied to the door it was
+       * missing from.
+       *
+       * A platform administrator is never adopted: they have no company on
+       * purpose. And a company admin still may not take over an ACTIVE
+       * account from elsewhere — adoption is onboarding, not capture.
+       */
+      const assignedName = (updateData.role as string | undefined) ?? role;
+      if (!target.companyId && !isPrivilegedRoleName(assignedName)) {
+        if (target.status !== 'PENDING' && admin.role !== 'SUPER_ADMIN') {
           return NextResponse.json({ error: 'غير مسموح بإسناد حساب من شركة أخرى' }, { status: 403 });
         }
-        updateData.companyId = admin.companyId;
+        updateData.companyId = admin.companyId ?? (await resolveSingleCompanyId());
       }
       auditAction = 'USER_ROLE_CHANGED';
     } else if (action === 'changeStatus') {

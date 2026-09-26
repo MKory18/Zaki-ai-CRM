@@ -178,8 +178,12 @@ describe('enrolling', () => {
     const { tx } = fakeTx({ totpEnabledAt: new Date() });
     const e = await completeEnrolment(tx, {
       userId: 'u1', secret, code: currentCode(secret, NOW.getTime()), now: NOW,
-    }).catch((x: unknown) => x as TwoFactorRefused);
-    expect(e.code).toBe('ALREADY_ENROLLED');
+    }).then(
+      () => null,
+      (x: unknown) => x as TwoFactorRefused
+    );
+    expect(e, 'قُبل تسجيلٌ ثانٍ').toBeInstanceOf(TwoFactorRefused);
+    expect(e!.code).toBe('ALREADY_ENROLLED');
   });
 });
 
@@ -199,10 +203,12 @@ describe('checking the second factor', () => {
   it('refuses a code already spent', async () => {
     const code = currentCode(secret, NOW.getTime());
     const { tx } = fakeTx({ ...enrolled, totpLastStep: stepAt(NOW.getTime()) });
-    const e = await checkSecondFactor(tx, { userId: 'u1', code, now: NOW }).catch(
+    const e = await checkSecondFactor(tx, { userId: 'u1', code, now: NOW }).then(
+      () => null,
       (x: unknown) => x as TwoFactorRefused
     );
-    expect(e.code).toBe('BAD_CODE');
+    expect(e, 'قُبل رمزٌ مصروف').toBeInstanceOf(TwoFactorRefused);
+    expect(e!.code).toBe('BAD_CODE');
   });
 
   it('accepts a recovery code, spends it, and says how many are left', async () => {
@@ -232,18 +238,22 @@ describe('checking the second factor', () => {
     // `findMany` is filtered to unused; a spent one is simply not there.
     const { tx } = fakeTx({ ...enrolled }, []);
     void hash;
-    const e = await checkSecondFactor(tx, { userId: 'u1', code: 'ABCDE-FGHJK', now: NOW }).catch(
+    const e = await checkSecondFactor(tx, { userId: 'u1', code: 'ABCDE-FGHJK', now: NOW }).then(
+      () => null,
       (x: unknown) => x as TwoFactorRefused
     );
-    expect(e.code).toBe('BAD_CODE');
+    expect(e).toBeInstanceOf(TwoFactorRefused);
+    expect(e!.code).toBe('BAD_CODE');
   });
 
   it('refuses when the account has none enrolled', async () => {
     const { tx } = fakeTx({ totpSecretEnc: null, totpEnabledAt: null, totpLastStep: null });
-    const e = await checkSecondFactor(tx, { userId: 'u1', code: '123456', now: NOW }).catch(
+    const e = await checkSecondFactor(tx, { userId: 'u1', code: '123456', now: NOW }).then(
+      () => null,
       (x: unknown) => x as TwoFactorRefused
     );
-    expect(e.code).toBe('NOT_ENROLLED');
+    expect(e).toBeInstanceOf(TwoFactorRefused);
+    expect(e!.code).toBe('NOT_ENROLLED');
   });
 
   /**
@@ -254,10 +264,12 @@ describe('checking the second factor', () => {
    */
   it('says so when the secret cannot be decrypted', async () => {
     const { tx } = fakeTx({ totpSecretEnc: 'garbage', totpEnabledAt: new Date(), totpLastStep: null });
-    const e = await checkSecondFactor(tx, { userId: 'u1', code: '123456', now: NOW }).catch(
+    const e = await checkSecondFactor(tx, { userId: 'u1', code: '123456', now: NOW }).then(
+      () => null,
       (x: unknown) => x as TwoFactorRefused
     );
-    expect(e.code).toBe('NO_ENCRYPTION_KEY');
+    expect(e).toBeInstanceOf(TwoFactorRefused);
+    expect(e!.code).toBe('NO_ENCRYPTION_KEY');
   });
 
   it('and a wrong code spends nothing', async () => {

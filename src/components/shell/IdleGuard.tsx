@@ -107,6 +107,25 @@ export function IdleGuard() {
     const onVisibility = () => setCovered(document.hidden);
     document.addEventListener('visibilitychange', onVisibility);
 
+    /**
+     * THREE TRIGGERS, ONE ANSWER: `document.hidden`.
+     *
+     * Reported twice: «I am away from the site, I come back, and the scroll
+     * does not work until I click inside the screen». The curtain's own test
+     * proves it lifts on `visibilitychange` — and that event IS NOT ALWAYS
+     * FIRED on the way back. Restoring a minimised window, or returning from
+     * another application, can leave the document visible with no event at
+     * all, and the curtain stayed up over a page that was on screen.
+     *
+     * So `focus` and `pageshow` ask the same question rather than answering a
+     * different one. A first version let `focus` only ever LIFT the curtain,
+     * and a mutation run showed that branch could not be reached: a hidden
+     * document does not receive window focus. One handler is the smaller and
+     * truer shape.
+     */
+    window.addEventListener('focus', onVisibility);
+    window.addEventListener('pageshow', onVisibility);
+
     const id = setInterval(() => {
       const now = Date.now();
       const state = idleState(lastActive.current, now);
@@ -122,6 +141,8 @@ export function IdleGuard() {
       for (const event of WATCHED) window.removeEventListener(event, touch);
       window.removeEventListener('storage', fromOtherTab);
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onVisibility);
+      window.removeEventListener('pageshow', onVisibility);
       clearInterval(id);
     };
   }, [touch]);
@@ -131,7 +152,16 @@ export function IdleGuard() {
       {covered && (
         <div
           data-testid="backgrounded"
-          className="fixed inset-0 z-[65] flex items-center justify-center bg-[var(--sys-surface)]/90 backdrop-blur-2xl"
+          /**
+           * `pointer-events-none`: A CURTAIN, NOT A LOCK.
+           *
+           * Without it this box swallowed the wheel, so for as long as it was
+           * up — including any moment it outlived its reason — the page could
+           * not be scrolled, and a click was what made it go away. It hides
+           * the content from a task-switcher thumbnail; it was never meant to
+           * stop the person holding the phone.
+           */
+          className="pointer-events-none fixed inset-0 z-[65] flex items-center justify-center bg-[var(--sys-surface)]/90 backdrop-blur-2xl"
         >
           <RiEyeOffLine className="h-6 w-6 text-[var(--sys-muted)]" />
         </div>

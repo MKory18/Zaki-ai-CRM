@@ -32,8 +32,21 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Forbidden: missing required permission team.monitor' }, { status: 403 });
     }
 
+    /**
+     * ASKING ABOUT YOURSELF NEEDS NO COMPANY SCOPE.
+     *
+     * A platform SUPER_ADMIN has no company of their own by design, and this
+     * lookup scoped every person — including the person asking — to the
+     * company the context resolved FOR them. So the owner's own profile page
+     * reported «الموظف غير موجود» about the owner, on every load.
+     *
+     * `own` is already computed two lines above, for the permission check.
+     * Somebody is always allowed to see themselves, and is always findable by
+     * their own id. For anybody ELSE the company scope stays exactly as it
+     * was — that is the tenant boundary, not a convenience.
+     */
     const person = await db.user.findFirst({
-      where: { id: asked, companyId },
+      where: own ? { id: asked } : { id: asked, companyId },
       select: { id: true, name: true, role: true, commissionCurrency: true },
     });
     if (!person) return NextResponse.json({ error: 'الموظف غير موجود' }, { status: 404 });
