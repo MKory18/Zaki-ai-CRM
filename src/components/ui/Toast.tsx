@@ -116,11 +116,25 @@ function Line({ toast, onDone }: { toast: Toast; onDone: (id: number) => void })
   const { cls, Icon } = LOOK[toast.tone];
   const leaves = toast.tone === 'done';
 
+  /**
+   * THE DISMISSER IN A REF, SO THE COUNTDOWN CANNOT BE RESTARTED FROM OUTSIDE.
+   *
+   * `drop` is stable today, and listing it was correct. But a countdown whose
+   * correctness depends on the CALLER passing a stable function is a countdown
+   * that breaks silently: an arrow written in place above would make every
+   * arriving toast reset the timer of every toast already on screen, nothing
+   * would throw, and the messages would simply stop leaving.
+   */
+  const onDoneRef = useRef(onDone);
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  });
+
   useEffect(() => {
     if (!leaves) return;
-    const id = setTimeout(() => onDone(toast.id), LIVE_MS);
+    const id = setTimeout(() => onDoneRef.current(toast.id), LIVE_MS);
     return () => clearTimeout(id);
-  }, [leaves, onDone, toast.id]);
+  }, [leaves, toast.id]);
 
   return (
     <div
