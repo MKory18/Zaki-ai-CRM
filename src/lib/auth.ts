@@ -188,9 +188,12 @@ export async function resolveSingleCompanyId(): Promise<string> {
  * Permission checks live in './authorization' (single source of truth).
  * Re-exported here so existing imports keep compiling — do not re-implement.
  */
-import { can as _can, requirePermission as _requirePermission } from './authorization';
-export const hasPermission: (user: SessionUser, permission: Permission) => boolean = _can;
+import { requirePermission as _requirePermission } from './authorization';
 export const requirePermission: (permission: Permission) => Promise<SessionUser> = _requirePermission;
+// `hasPermission` was a second exported name for `can()`, imported by
+// nobody. Two names for the permission check is the question «which of
+// these is the real one?» asked of the most sensitive function here.
+// Call `can()` from './authorization'.
 
 /** Builds the HTTP-only session cookie settings */
 export function sessionCookieOptions(remember: boolean) {

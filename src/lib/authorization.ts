@@ -49,13 +49,13 @@ async function resolveGrants(user: SessionUser): Promise<EffectiveGrants> {
 }
 
 /** Pre-compute and attach grants for a session user (used by getCurrentUser). */
-export async function hydrateGrants(user: SessionUser): Promise<SessionUser> {
-  if (!grantsOf(user)) {
-    const computed = await computeEffectiveGrants({ id: user.id, role: user.role, roleId: (user as any).roleId ?? null });
-    attachGrants(user, computed);
-  }
-  return user;
-}
+/*
+ * `hydrateGrants` stood here: attach a session's grants if they are
+ * missing. Nothing called it — `getCurrentUser` attaches them, and the
+ * one place that copes with their absence is the fallback inside `can()`
+ * below, which is where that case is actually handled. A second, unused
+ * net is a net somebody trusts without hanging it.
+ */
 
 // ─────────────────────────────────────────────────────
 // can() — the ONLY permission check (sync; grants are session-attached)

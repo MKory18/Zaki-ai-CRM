@@ -123,10 +123,6 @@ export function applyQueueFilter(
 }
 
 /** Does this user see all orders company-wide (vs. only their own)? */
-export function hasGlobalOrderView(user: SessionUser): boolean {
-  return getPermissionScope(user, 'orders.view')?.scope === 'ALL_COMPANY';
-}
-
 // ─────────────────────────────────────────────────────
 // Order-scoped authorization (DB-verified)
 // ─────────────────────────────────────────────────────
@@ -182,19 +178,24 @@ export async function assertOrderAccess(
 // ─────────────────────────────────────────────────────
 
 /** Permissions granted to a role (used by /roles matrix + user management) */
-export function permissionsForRole(role: UserRole): Permission[] {
-  return ROLE_PERMISSIONS[role] ?? [];
-}
-
-/** Default role for new registrations — never administrative */
-export const DEFAULT_REGISTRATION_ROLE: UserRole = 'PENDING_USER';
-
-/** Roles with financial authority (for separation-of-duties checks) */
-export const FINANCE_HOLDING_ROLES: UserRole[] = [
-  'ACCOUNTANT',
-  'SUPER_ADMIN',
-  'COMPANY_ADMIN',
-];
+/*
+ * THREE THINGS NOTHING READ.
+ *
+ *   `permissionsForRole(role)` — one line over `ROLE_PERMISSIONS[role]`,
+ *   which is itself only a fallback for a session that arrives without
+ *   attached grants. A named wrapper made the legacy table look like an
+ *   answer somebody should ask for.
+ *
+ *   `DEFAULT_REGISTRATION_ROLE` — registration writes 'PENDING_USER'
+ *   where it creates the row; this constant was never the thing it wrote.
+ *
+ *   `FINANCE_HOLDING_ROLES` — «roles with financial authority, for
+ *   separation-of-duties checks». No check ever read it. Separation of
+ *   duties here is done by permissions — settlement.upload and
+ *   settlement.review are held by different people — and a constant that
+ *   merely DECLARES a policy nothing enforces reads like a control that
+ *   exists. It does not.
+ */
 
 /**
  * System-wide configurable lock settings (Decision 2).

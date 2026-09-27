@@ -87,3 +87,27 @@ describe('one query decides which offers may be bought', () => {
     }
   });
 });
+
+/**
+ * ONE NAME FOR THE PERMISSION CHECK.
+ *
+ * `auth.ts` exported `hasPermission` as a second name for `can()`, and
+ * `rbac.ts` exported `permissionsForRole` over the legacy role table.
+ * Nobody imported either. Two names for the most sensitive function in
+ * the system is the question «which of these is the real one?», and the
+ * wrong answer is a permission check that reads a table instead of the
+ * session's grants.
+ */
+describe('one permission check, under one name', () => {
+  it('and no second name is exported for it', () => {
+    const auth = read('src/lib/auth.ts');
+    expect(auth, 'اسمٌ ثانٍ لفحص الصلاحية').not.toMatch(/export const hasPermission/);
+    const rbac = read('src/lib/rbac.ts');
+    expect(rbac, 'غلافٌ ثانٍ فوق جدول الأدوار').not.toMatch(/export function permissionsForRole/);
+  });
+
+  it('and nothing calls one that is not there', () => {
+    const callers = FILES.filter((f) => /hasPermission\(|permissionsForRole\(|hydrateGrants\(/.test(read(f)));
+    expect(callers, 'نداء لفاحص محذوف: ' + callers.join(' | ')).toEqual([]);
+  });
+});
