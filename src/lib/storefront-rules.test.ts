@@ -31,12 +31,26 @@ describe('a Single Product store', () => {
   const single = (over: Partial<StorefrontFacts>) => facts({ type: 'SINGLE_PRODUCT', ...over });
 
   it('opens on a published front page that sells', () => {
-    expect(openRefusal(single({ frontPage: { isPublished: true, productActive: true }, sellableProducts: 5 }))).toBeNull();
+    expect(openRefusal(single({ frontPage: { isPublished: true, hasProduct: true, productActive: true }, sellableProducts: 5 }))).toBeNull();
   });
 
   it('refuses an unpublished front page, and one whose product is off', () => {
-    expect(openRefusal(single({ frontPage: { isPublished: false, productActive: true } }))).toContain('غير منشورة');
-    expect(openRefusal(single({ frontPage: { isPublished: true, productActive: false } }))).toContain('غير فعّال');
+    expect(openRefusal(single({ frontPage: { isPublished: false, hasProduct: true, productActive: true } }))).toContain('غير منشورة');
+    expect(openRefusal(single({ frontPage: { isPublished: true, hasProduct: true, productActive: false } }))).toContain('غير فعّال');
+  });
+
+  /**
+   * A PAGE WITH NO PRODUCT AT ALL IS NOT A PAGE WITH A STOPPED PRODUCT.
+   *
+   * The picker no longer hides product-less pages — hiding them was read as
+   * «صفحات الهبوط ما بتظهر» — so one can now be picked, and the refusal has
+   * to send the seller to the right screen: link a product, not re-activate
+   * one that does not exist.
+   */
+  it('refuses a front page with no product, and says so in its own words', () => {
+    const said = openRefusal(single({ frontPage: { isPublished: true, hasProduct: false, productActive: false } }));
+    expect(said).toContain('بلا منتج');
+    expect(said, 'يخلط بين «بلا منتج» و«منتجه موقوف»').not.toContain('غير فعّال');
   });
 
   it('without a front page, opens on its own products — and is told to pick a page', () => {
@@ -64,7 +78,7 @@ describe('an address another store also holds', () => {
   it('is refused for either type, however ready the store is', () => {
     expect(openRefusal(facts({ slugShared: true }))).toContain('slug');
     expect(
-      openRefusal(facts({ type: 'SINGLE_PRODUCT', slugShared: true, frontPage: { isPublished: true, productActive: true } }))
+      openRefusal(facts({ type: 'SINGLE_PRODUCT', slugShared: true, frontPage: { isPublished: true, hasProduct: true, productActive: true } }))
     ).toContain('slug');
   });
 });

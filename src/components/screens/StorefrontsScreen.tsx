@@ -43,6 +43,7 @@ interface Shop {
   tagline: string | null;
   domain: string | null;
   currency: string;
+  countryId: string;
   path: string;
   current: boolean;
   frontPage: PageOption | null;
@@ -109,6 +110,44 @@ export function StorefrontsScreen() {
     await send(shop, { live: !shop.live });
   }
 
+  /**
+   * OPEN ONE OF THIS STORE'S SCREENS — SWITCHING INTO IT ON THE WAY.
+   *
+   * «صمّم الواجهة» used to be replaced, on any store that was not the
+   * selected one, by a sentence telling the seller to go up to the store
+   * switcher and come back. That is a button that does not work, and it
+   * was reported as exactly that: «صمّم الواجهة غير فعال».
+   *
+   * The card already knows which store it is. The editor, the design and
+   * the template screens all read the SELECTED store, so the only thing
+   * missing was the switch — which is one call, the same one the switcher
+   * in the header makes. The card says it will switch before it does.
+   *
+   * A full navigation, not a router push: the selection lives in a cookie
+   * that the server reads while rendering, and a client-side transition
+   * would arrive at the new screen with the old store still in context.
+   */
+  async function openFor(shop: Shop, href: string) {
+    if (!shop.current) {
+      try {
+        const res = await fetch('/api/context', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ countryId: shop.countryId, storeId: shop.id }),
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          toast.failed(j.error || 'تعذّر التبديل إلى هذا المتجر');
+          return;
+        }
+      } catch {
+        toast.failed('تعذّر التبديل إلى هذا المتجر');
+        return;
+      }
+    }
+    window.location.href = href;
+  }
+
   async function copyLink(shop: Shop) {
     const url = shop.domain ? `https://${shop.domain}` : `${window.location.origin}${shop.path}`;
     try {
@@ -159,6 +198,7 @@ export function StorefrontsScreen() {
               onToggle={() => void toggle(s)}
               onCopy={() => void copyLink(s)}
               onPick={(id) => void send(s, { landingPageId: id })}
+              onOpen={(href) => void openFor(s, href)}
             />
           ))}
         </div>
@@ -175,9 +215,12 @@ export function StorefrontsScreen() {
 }
 
 function Card({
-  shop, busy, copied, onToggle, onCopy, onPick,
+  shop, busy, copied, onToggle, onCopy, onPick, onOpen,
 }: {
-  shop: Shop; busy: boolean; copied: boolean; onToggle: () => void; onCopy: () => void; onPick: (id: string | null) => void;
+  shop: Shop; busy: boolean; copied: boolean; onToggle: () => void; onCopy: () => void;
+  onPick: (id: string | null) => void;
+  /** Opens one of this store's screens, switching into the store first. */
+  onOpen: (href: string) => void;
 }) {
   const url = shop.domain ? `https://${shop.domain}` : shop.path;
   return (
@@ -229,14 +272,14 @@ function Card({
         </label>
         {shop.pages.length === 0 ? (
           <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-            لا صفحات هبوط تبيع منتجاً في هذا المتجر بعد.{' '}
-            {shop.current ? (
-              <Link href="/store/landing-pages" className="inline-flex items-center gap-0.5 font-semibold text-[var(--sys-primary)] hover:underline">
-                <RiAddCircleLine className="h-4 w-4" /> أنشئ صفحة من قالب
-              </Link>
-            ) : (
-              <span>بدّل إلى هذا المتجر من الأعلى لتنشئ صفحته.</span>
-            )}
+            لا صفحاتِ هبوطٍ في هذا المتجر بعد.{' '}
+            <button
+              type="button"
+              onClick={() => onOpen('/store/landing-pages')}
+              className="tap-safe inline-flex items-center gap-0.5 font-semibold text-[var(--sys-primary)] hover:underline"
+            >
+              <RiAddCircleLine className="h-4 w-4" /> أنشئ صفحة من قالب
+            </button>
           </p>
         ) : (
           <select
@@ -260,18 +303,13 @@ function Card({
         )}
         {shop.frontPage && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {shop.current ? (
-              <Link
-                href={`/store/landing-pages/${shop.frontPage.id}/editor`}
-                className="inline-flex items-center gap-1 rounded-lg bg-[var(--sys-primary)] px-2.5 py-1 text-xs font-bold text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/90"
-              >
-                <RiBrushLine className="h-4 w-4" /> صمّم الواجهة
-              </Link>
-            ) : (
-              <span className="flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)]">
-                <RiInformationLine className="h-4 w-4" /> بدّل إلى هذا المتجر من الأعلى لتصمّم صفحته.
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={() => onOpen(`/store/landing-pages/${shop.frontPage!.id}/editor`)}
+              className="tap-safe inline-flex items-center gap-1 rounded-lg bg-[var(--sys-primary)] px-2.5 py-1 text-xs font-bold text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/90"
+            >
+              <RiBrushLine className="h-4 w-4" /> صمّم الواجهة
+            </button>
             {!shop.frontPage.isPublished && <span className="text-xs font-semibold text-[var(--sys-warning)]">الصفحة غير منشورة</span>}
           </div>
         )}
@@ -339,23 +377,25 @@ function Card({
         store, so the same links from another card would silently edit the
         wrong shop.
       */}
-      {shop.current ? (
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--sys-surface-strong)] pt-2 text-xs">
-          <span className="text-[var(--sys-muted)]">مظهر المتجر:</span>
-          <a href="/store/design" className="flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
-            <RiPaletteLine className="h-4 w-4" /> التصميم
-          </a>
-          <a href="/store/themes" className="flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
-            <RiLayoutGridLine className="h-4 w-4" /> القوالب
-          </a>
-          <a href={`/settings/geo?store=${shop.id}`} className="flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
-            <RiImageLine className="h-4 w-4" /> الشعار والأيقونة
-          </a>
-          {!shop.logo && <span className="text-[var(--sys-warning)]">لا شعار بعد</span>}
-        </div>
-      ) : (
-        <p className="mt-2 border-t border-[var(--sys-surface-strong)] pt-2 text-xs text-[var(--sys-muted)]">
-          بدّل إلى هذا المتجر من الأعلى لتفتح تصميمه وقوالبه وشعاره.
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--sys-surface-strong)] pt-2 text-xs">
+        <span className="text-[var(--sys-muted)]">مظهر المتجر:</span>
+        <button type="button" onClick={() => onOpen('/store/design')} className="tap-safe flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
+          <RiPaletteLine className="h-4 w-4" /> التصميم
+        </button>
+        <button type="button" onClick={() => onOpen('/store/themes')} className="tap-safe flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
+          <RiLayoutGridLine className="h-4 w-4" /> القوالب
+        </button>
+        <button type="button" onClick={() => onOpen(`/settings/geo?store=${shop.id}`)} className="tap-safe flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
+          <RiImageLine className="h-4 w-4" /> الشعار والأيقونة
+        </button>
+        {!shop.logo && <span className="text-[var(--sys-warning)]">لا شعار بعد</span>}
+      </div>
+
+      {/* Said before it happens, not after: opening any of these while
+          standing in another store moves the whole dashboard into this one. */}
+      {!shop.current && (
+        <p className="mt-1 flex items-center gap-1 text-xs text-[var(--sys-muted)]">
+          <RiInformationLine className="h-4 w-4 shrink-0" /> فتحُ أيٍّ منها يبدّل متجرك الحالي إلى «{shop.name}».
         </p>
       )}
 

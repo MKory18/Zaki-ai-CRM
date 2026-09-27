@@ -42,6 +42,9 @@ export async function GET() {
       select: {
         id: true, name: true, slug: true, logo: true, type: true, status: true, companyId: true,
         storefrontEnabled: true, tagline: true, supportPhone: true, domain: true, landingPageId: true,
+        // Switching INTO this store needs its country: the selection is a
+        // country and a store together, never a store alone.
+        countryId: true,
         country: { select: { currencyCode: true } },
         landingPages: {
           orderBy: { createdAt: 'desc' },
@@ -71,12 +74,20 @@ export async function GET() {
         ]);
         const refusal = openRefusal(facts);
         const front = s.landingPages.find((p) => p.id === s.landingPageId) ?? null;
-        // The pages that can front it — and the current front even if its
-        // product has since been removed, so the picker shows what is really
-        // there instead of "not picked yet".
-        const pages = s.landingPages
-          .filter((p) => p.productId || p.id === s.landingPageId)
-          .map(({ productId: _p, ...page }) => page);
+        /**
+         * EVERY PAGE THIS STORE HAS — none hidden.
+         *
+         * This used to drop any page with no product, on the reasoning that
+         * such a page cannot sell. What a seller saw was «ليش ما بظهر
+         * صفحات الهبوط»: pages they had made, missing from the one screen
+         * that picks a front, with nothing saying why.
+         *
+         * A page that cannot sell is not a page to hide, it is a page to
+         * LABEL — the option says «(بلا منتج)» and picking it produces a
+         * refusal that names the reason. Hiding it removed the fact and
+         * left the seller to conclude the feature was broken.
+         */
+        const pages = s.landingPages.map(({ productId: _p, ...page }) => page);
         return {
           id: s.id,
           name: s.name,
@@ -87,6 +98,7 @@ export async function GET() {
           tagline: s.tagline,
           domain: s.domain,
           currency: s.country.currencyCode,
+          countryId: s.countryId,
           path: `/s/${s.slug}`,
           /** Pages and the editor are read through the selected store. */
           current: s.id === currentStoreId,

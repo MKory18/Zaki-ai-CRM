@@ -26,7 +26,12 @@ export interface StorefrontFacts {
   /** ACTIVE products of THIS store with a price — what a catalogue would list. */
   sellableProducts: number;
   /** The Single Product store's front page, when one is picked. */
-  frontPage: { isPublished: boolean; productActive: boolean } | null;
+  frontPage: {
+    isPublished: boolean;
+    /** Has one at all — «بلا منتج» and «منتجه موقوف» are different faults. */
+    hasProduct: boolean;
+    productActive: boolean;
+  } | null;
 }
 
 /** Why this store may not open, or null when it may. */
@@ -35,6 +40,9 @@ export function openRefusal(f: StorefrontFacts): string | null {
   if (f.slugShared) return 'رابط هذا المتجر (slug) مستخدم لمتجر آخر — غيّره من «البلدان والمتاجر» ثم افتح المتجر';
   if (f.type === 'SINGLE_PRODUCT' && f.frontPage) {
     if (!f.frontPage.isPublished) return 'صفحة واجهة المتجر غير منشورة — انشرها أولاً، وإلا فتح الرابط صفحة غير موجودة';
+    // Two different faults, and the seller fixes them in two different
+    // places: one needs a product chosen, the other needs it re-activated.
+    if (!f.frontPage.hasProduct) return 'صفحة الواجهة بلا منتج — اربطها بمنتج من محرّر الصفحة، وإلا لا شيء يُباع فيها';
     if (!f.frontPage.productActive) return 'منتج صفحة الواجهة غير فعّال — لا شيء يُباع فيها';
     return null;
   }
@@ -84,7 +92,13 @@ export async function storefrontFacts(store: StoreAsItWouldBe): Promise<Storefro
     status: store.status,
     slugShared: shared !== null,
     sellableProducts,
-    frontPage: page ? { isPublished: page.isPublished, productActive: page.product?.status === 'ACTIVE' } : null,
+    frontPage: page
+      ? {
+          isPublished: page.isPublished,
+          hasProduct: page.product !== null,
+          productActive: page.product?.status === 'ACTIVE',
+        }
+      : null,
   };
 }
 

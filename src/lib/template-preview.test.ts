@@ -172,12 +172,39 @@ describe('the shop’s screens are in the shop’s tab', () => {
 
   it('and the store card reaches its design, templates and icon', () => {
     const src = stripComments(repoFile('src/components/screens/StorefrontsScreen.tsx'));
-    for (const href of ['/store/design', '/store/themes']) {
-      expect(src, `البطاقة لا تصل إلى ${href}`).toContain(`href="${href}"`);
+    for (const path of ['/store/design', '/store/themes']) {
+      expect(src, `البطاقة لا تصل إلى ${path}`).toContain(path);
     }
     // The logo and the icon have one editor; this links to it rather than
     // growing a second copy of the fields.
     expect(src).toMatch(/الشعار والأيقونة/);
     expect(src, 'البطاقة تحرّر الشعار بنفسها').not.toMatch(/type="file"/);
+  });
+
+  /**
+   * AND NONE OF THOSE IS A DEAD END.
+   *
+   * «صمّم الواجهة» used to be replaced, on every store that was not the
+   * selected one, by a sentence telling the seller to go up to the header,
+   * switch store, and come back — which was reported, correctly, as the
+   * button not working. The card knows which store it is, so it switches
+   * on the way instead of asking.
+   */
+  it('and every one of them opens, from whichever store you are standing in', () => {
+    const src = stripComments(repoFile('src/components/screens/StorefrontsScreen.tsx'));
+    // …only when standing somewhere else, and it is the same call the
+    // header's switcher makes, carrying THIS card's store…
+    expect(src, 'لا شرط على المتجر الحالي').toMatch(/if \(!shop\.current\) \{/);
+    expect(src, 'التبديل لا يحمل هذا المتجر').toMatch(
+      /fetch\('\/api\/context'[\s\S]{0,240}storeId: shop\.id/
+    );
+    // …a full navigation, because the selection is read server-side…
+    expect(src).toMatch(/window\.location\.href = href/);
+    // …and the screens are opened through it, not with a bare link.
+    for (const path of ['/store/design', '/store/themes', '/store/landing-pages']) {
+      expect(src, `${path} يُفتح برابطٍ لا يبدّل المتجر`).toContain(`onOpen('${path}`);
+    }
+    // No screen sends somebody away to do something first.
+    expect(src, 'ما زالت البطاقة تطلب التبديل يدوياً').not.toMatch(/بدّل إلى هذا المتجر من الأعلى/);
   });
 });
