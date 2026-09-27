@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { count, money } from '@/lib/numeric-input';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -124,7 +125,7 @@ export async function POST(req: Request) {
         z.object({
           action: z.literal('receive'),
           productId: z.string().min(10).max(64),
-          quantity: z.coerce.number().int().min(1).max(1_000_000),
+          quantity: count(1_000_000, 1),
           /**
            * NOT `.default(0)`. An empty field is not a price of zero, and
            * treating it as one is how 89 batches on this database came to
@@ -132,7 +133,7 @@ export async function POST(req: Request) {
            * means is decided by `resolveUnitCost`, with the product's own
            * history in hand.
            */
-          unitCost: z.coerce.number().min(0).max(1_000_000).optional(),
+          unitCost: money(1_000_000).optional(),
           /** Only ever read when the cost really is zero — a sample, a gift. */
           zeroCostReason: z.string().max(200).optional().nullable(),
           note: z.string().max(200).optional().nullable(),
@@ -141,7 +142,7 @@ export async function POST(req: Request) {
           action: z.literal('recount'),
           productId: z.string().min(10).max(64),
           /** What was physically counted on the shelf. */
-          countedQuantity: z.coerce.number().int().min(0).max(1_000_000),
+          countedQuantity: count(1_000_000),
           /** Why the shelf and the system disagree. Never optional. */
           reason: z.string().min(3).max(200),
         }),

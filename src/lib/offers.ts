@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { count, money } from './numeric-input';
 import type { Prisma } from '@prisma/client';
 import type { db } from './db';
 
@@ -24,14 +25,14 @@ import type { db } from './db';
 
 export const offerInputSchema = z.object({
   name: z.string().min(1, 'اسم العرض مطلوب').max(120),
-  quantity: z.coerce.number().int().min(1).max(999).default(1),
-  freeQuantity: z.coerce.number().int().min(0).max(999).default(0),
-  sellingPrice: z.coerce.number().min(0).max(1_000_000),
-  compareAtPrice: z.coerce.number().min(0).max(1_000_000).nullable().optional(),
-  discount: z.coerce.number().min(0).max(1_000_000).default(0),
+  quantity: count(999, 1).default(1),
+  freeQuantity: count(999).default(0),
+  sellingPrice: money(1_000_000),
+  compareAtPrice: money(1_000_000).nullable().optional(),
+  discount: money(1_000_000).default(0),
   deliveryIncluded: z.coerce.boolean().default(true),
   isDefault: z.coerce.boolean().default(false),
-  sortOrder: z.coerce.number().int().min(0).max(9999).default(0),
+  sortOrder: count(9999).default(0),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });
 

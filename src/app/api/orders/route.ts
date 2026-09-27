@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { notify } from '@/lib/notify';
 import { z } from 'zod';
+import { count, money as amount } from '@/lib/numeric-input';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { findOrCreateCustomer } from '@/lib/customer-identity';
@@ -221,8 +222,8 @@ export async function POST(req: Request) {
           z.object({
             productId: z.string().min(10).max(64),
             offerId: z.string().min(10).max(64).optional().nullable(),
-            quantity: z.coerce.number().int().min(1).max(999),
-            unitPrice: z.coerce.number().min(0).max(100000),
+            quantity: count(999, 1),
+            unitPrice: amount(100000),
           })
         )
         .min(1)
@@ -230,9 +231,9 @@ export async function POST(req: Request) {
         .optional(),
       productId: z.string().min(10).max(64).optional(),
       offerId: z.string().min(10).max(64).optional().nullable(),
-      quantity: z.coerce.number().int().min(1).max(999).optional(),
-      sellingPrice: z.coerce.number().min(0).max(100000).optional(),
-      shippingCost: z.coerce.number().min(0).max(1000).optional(),
+      quantity: count(999, 1).optional(),
+      sellingPrice: amount(100000).optional(),
+      shippingCost: amount(1000).optional(),
       source: z.string().trim().max(60).optional(),
       // The channel this came through. Its name is written into `source` too,
       // so the order keeps saying where it came from even if the channel is

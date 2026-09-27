@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { money as moneyInput } from '@/lib/numeric-input';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { inStore } from '@/lib/store-filter';
@@ -42,7 +43,7 @@ interface Ctx {
   params: Promise<{ id: string }>;
 }
 
-const money = z.coerce.number().min(0).max(100_000_000);
+const money = moneyInput(100_000_000);
 
 const schema = z.object({
   manufacturingCost: money.optional(),

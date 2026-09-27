@@ -88,10 +88,14 @@ describe('and all three doors use it', () => {
    */
   it('receiving no longer turns an empty field into a zero', () => {
     const src = inventory();
+    // The rule, not the mechanism: the field may be ABSENT, and an absent
+    // field must not arrive as a zero. (It reads through the strict
+    // numeric helper now — which also refuses `null` and `""`, the other
+    // two ways a blank used to become nothing.)
     expect(src, 'المخطّط ما زال يُحوّل الفراغ إلى صفر').not.toMatch(
-      /unitCost: z\.coerce\.number\(\)[^\n]*\.default\(0\)/
+      /unitCost:[^\n]*\.default\(0\)/
     );
-    expect(src).toMatch(/unitCost: z\.coerce\.number\(\)[^\n]*\.optional\(\)/);
+    expect(src).toMatch(/unitCost:[^\n]*\.optional\(\)/);
     expect(src).toContain('zeroCostReason');
   });
 
