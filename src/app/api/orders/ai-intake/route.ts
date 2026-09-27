@@ -7,6 +7,7 @@ import { findOrCreateCustomer } from '@/lib/customer-identity';
 import { orderRefFields } from '@/lib/order-ref';
 import { resolveRegionId } from '@/lib/regions';
 import { computeCod } from '@/lib/money';
+import { productCost } from '@/lib/product-cost';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { activeBlock } from '@/lib/blacklist';
@@ -155,7 +156,18 @@ export async function POST(req: Request) {
       // Same business rule as POST /orders: zero/absent price falls back to
       // the product's own base price — the client never dictates the price.
       const price = p.finalPrice || product.basePrice;
-      const unitCost = product.batches[0]?.costPerUnit || 0;
+      /**
+       * THE SAME ESTIMATE THE OTHER ORDER DOORS MAKE.
+       *
+       * This took the oldest batch still holding units — a defensible policy
+       * on its own, and a different one from `POST /orders`, which averages
+       * the stock on hand. Two doors creating the same kind of order and
+       * costing it two ways is exactly the drift `product-cost.ts` was
+       * written to end; its own comment says a product does not have «a»
+       * cost, and that the blend is a choice that shows up in the profit.
+       * So the choice is made in one place and read here.
+       */
+      const unitCost = (await productCost(db, companyId, product.id)).average;
 
       // Moderator assignment — must belong to THIS company (same rule as POST /orders)
       const assignedModeratorId = p.moderatorId || (user.role === 'MODERATOR' ? user.id : null);

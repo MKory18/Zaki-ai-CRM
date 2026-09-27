@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import type { db as prismaDb } from './db';
 import { receiveStock } from './receiving';
+import { resolveUnitCost } from './unit-cost';
 
 type Tx = Prisma.TransactionClient | typeof prismaDb;
 
@@ -116,15 +117,20 @@ export async function recordOpeningStockCount(
     if (!Number.isInteger(line.countedQty) || line.countedQty < 0) {
       throw new OpeningStockRefused('QUANTITY_INVALID', 'الكمية المعدودة يجب أن تكون عدداً صحيحاً غير سالب');
     }
-    if (!Number.isFinite(line.unitCost) || line.unitCost < 0) {
-      throw new OpeningStockRefused('COST_INVALID', 'كلفة الوحدة غير صالحة');
-    }
-    if (line.unitCost === 0 && (line.zeroCostReason?.trim().length ?? 0) < 5) {
-      throw new OpeningStockRefused(
-        'ZERO_COST_UNEXPLAINED',
-        'كلفة وحدةٍ بصفر تجعل كلَّ ما يُباع منها ربحاً صافياً إلى الأبد، والكلفة تُلتقط لحظة الدخول ' +
-          'فلا تصحيح بعدها. إن كانت صفراً حقّاً فاكتب السبب.'
-      );
+    // THE SAME RULE THE OTHER TWO DOORS NOW USE, and it lives in one file so
+    // it cannot be tightened here and left loose there — which is exactly
+    // what had happened: this door refused a bare zero while receiving
+    // purchased goods wrote one whenever the field was left empty.
+    //
+    // A count has no «carry the previous cost» case: it IS the first cost,
+    // so a line always states its own, and `given` is never blank here.
+    const priced = resolveUnitCost({
+      given: line.unitCost,
+      previous: null,
+      zeroCostReason: line.zeroCostReason,
+    });
+    if (!priced.ok) {
+      throw new OpeningStockRefused(priced.code, priced.message);
     }
   }
 

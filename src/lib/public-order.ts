@@ -4,6 +4,7 @@ import { findOrCreateCustomer } from './customer-identity';
 import { normalizePhoneNumber } from './phone';
 import { orderRefFields } from './order-ref';
 import { computeCod } from './money';
+import { productCost } from './product-cost';
 import { matchRegion } from './regions';
 import { NEUTRAL_REFUSAL, isBlocked } from './blacklist';
 import { rateLimit } from './rate-limit';
@@ -194,7 +195,34 @@ export async function createPublicOrder(
   });
 
   // ─── Create the REAL order (same Order model, same defaults) ───
-  const unitCost = 0; // public orders have no batch context; finance finalizes later
+
+  /**
+   * WHAT THE GOODS COST — and it is not zero.
+   *
+   * This read `const unitCost = 0`, with a comment saying public orders have
+   * no batch context and finance would finalise it later. Both halves were
+   * wrong in the way that matters:
+   *
+   *   An order does not need a BATCH to be costed. It needs the product's
+   *   cost, and `productCost` already computes the weighted average of the
+   *   stock actually on hand — that is the number the internal order door
+   *   has used all along, and the whole point of that helper is to stop two
+   *   doors choosing differently.
+   *
+   *   Finance never finalised anything. `productCost` is null on every one
+   *   of the 166 orders on this database, and the finance door falls back to
+   *   `estimatedCostOfGoods` — the zero this line wrote.
+   *
+   * Measured: 115 delivered orders, ALL of them carrying zero cost of goods,
+   * six of them raised through this very door rather than imported. Every
+   * profit figure over them is overstated by the entire cost of the goods,
+   * and the storefront is the channel the launch runs on.
+   *
+   * Zero stays possible and stays honest: a product with no costed stock on
+   * hand averages to zero, and that is a real answer to «ما كلفة وحدةٍ
+   * الآن؟» when there is nothing on the shelf to read a price from.
+   */
+  const unitCost = (await productCost(db, companyId, product.id)).average;
 
   // ONE COD function (contract PART 5). The offer price is the total for its
   // quantity; free units are real lines at zero price, so they never enter

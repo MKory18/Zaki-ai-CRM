@@ -37,6 +37,11 @@ const { db, requireContext, assertOrderAccess, can, createNotification } = vi.ho
     offer: { findMany: vi.fn() },
     // The store's pricing policy, asked by every order door.
     store: { findFirst: vi.fn(async () => ({ priceIncludesDelivery: false })) },
+    // What the goods cost. The storefront used to write a literal zero here
+    // and promise that finance would fill it in; it now reads the same
+    // weighted average every other order door reads. No batches on hand
+    // averages to zero, which is the honest answer for an empty shelf.
+    productionBatch: { findMany: vi.fn(async () => []) },
     landingPageRecommendation: { findMany: vi.fn() },
     $transaction: vi.fn(),
   };

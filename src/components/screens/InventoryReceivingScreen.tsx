@@ -29,6 +29,9 @@ interface ProductRow {
   sold: number;
   remaining: number;
   batchesCount: number;
+  /** The newest costed price, or null when this product has never been costed. */
+  lastUnitCost: number | null;
+  zeroCostBatches: number;
 }
 
 export function InventoryReceivingScreen() {
@@ -184,6 +187,7 @@ function ReceiveDialog({
 }) {
   const [quantity, setQuantity] = useState('');
   const [unitCost, setUnitCost] = useState('');
+  const [zeroReason, setZeroReason] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -202,7 +206,13 @@ function ReceiveDialog({
                 action: 'receive',
                 productId: product.id,
                 quantity: Number(quantity),
-                unitCost: unitCost ? Number(unitCost) : 0,
+                // A BLANK IS A BLANK. Sending 0 for an empty field is how
+                // this screen used to open batches at zero cost, and every
+                // unit sold out of one reads as pure profit for ever. The
+                // server decides what an empty price means — carry the last
+                // one forward, or refuse.
+                unitCost: unitCost === '' ? undefined : Number(unitCost),
+                zeroCostReason: zeroReason.trim() || null,
                 note: note.trim() || null,
               }),
             });
@@ -234,21 +244,54 @@ function ReceiveDialog({
           />
         </label>
 
+        {/*
+          NOT «(اختياري)» ANY MORE.
+          For a bought product this is the only place its cost is recorded —
+          the product row holds `basePrice`, which is what we SELL it for.
+          A blank used to become a zero, and a zero-cost batch reports every
+          unit sold out of it as pure profit, for ever, with no later
+          correction. What a blank means is now the server's decision, and
+          the line below says which of the two it will be.
+        */}
         <label className="block">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">تكلفة الوحدة في هذه الدفعة (اختياري)</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
+            تكلفة الوحدة في هذه الدفعة {product.lastUnitCost === null && <b className="text-[var(--sys-destructive)]">(مطلوبة)</b>}
+          </span>
           <input
             type="number"
             min="0"
             step="0.001"
             value={unitCost}
             onChange={(e) => setUnitCost(e.target.value)}
+            placeholder={product.lastUnitCost !== null ? String(product.lastUnitCost) : 'اكتب الكلفة'}
+            required={product.lastUnitCost === null}
             className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
-            تُفتح دفعة جديدة بهذه التكلفة، فلا تتأثر تكلفة البضاعة القديمة.
+            {product.lastUnitCost !== null ? (
+              <>تُفتح دفعة جديدة بهذه التكلفة، فلا تتأثر تكلفة البضاعة القديمة. واتركها فارغةً لتدخل بكلفة آخر دفعة ({product.lastUnitCost}).</>
+            ) : (
+              <>لم تُسعَّر هذه البضاعة من قبل، فلا كلفةَ تُبنى عليها. تركُها فارغةً يُدخلها بصفر فيظهر كلُّ ما يُباع منها ربحاً صافياً.</>
+            )}
           </span>
         </label>
+
+        {/* A free sample is real, so the door is not shut — it asks for a sentence. */}
+        {unitCost.trim() === '0' && (
+          <label className="block">
+            <span className="block text-xs font-medium text-[var(--sys-destructive)] mb-1">
+              كلفتُها صفر — لماذا؟
+            </span>
+            <input
+              value={zeroReason}
+              onChange={(e) => setZeroReason(e.target.value)}
+              placeholder="مثال: عيّنة مجّانية من المورّد"
+              required
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-destructive-border)] text-sm"
+            />
+          </label>
+        )}
 
         <label className="block">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة</span>

@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { drawDownStock, onHandTotal, receiveStock } from '@/lib/receiving';
 import { zodMessage } from '@/lib/zod-message';
+import { resolveUnitCost } from '@/lib/unit-cost';
 
 export async function GET() {
   try {
@@ -47,6 +48,11 @@ export async function GET() {
       const produced = p.batches.reduce((sum, b) => sum + b.quantityProduced, 0);
       const sold = p.batches.reduce((sum, b) => sum + b.quantitySold, 0);
       const remaining = p.batches.reduce((sum, b) => sum + b.quantityRemaining, 0);
+      // What the newest COSTED batch cost. The receiving screen needs it to
+      // say what leaving the price blank will do — and, when there is none,
+      // that a price has to be typed.
+      const lastUnitCost =
+        [...p.batches].reverse().find((b) => b.costPerUnit > 0)?.costPerUnit ?? null;
       return {
         id: p.id,
         name: p.name,
@@ -57,15 +63,34 @@ export async function GET() {
         sold,
         remaining,
         batchesCount: p.batches.length,
+        lastUnitCost,
+        /** Batches whose cost is zero — every unit out of them reads as pure profit. */
+        zeroCostBatches: p.batches.filter((b) => b.costPerUnit === 0 && b.quantityRemaining > 0).length,
       };
     });
 
     return NextResponse.json({ stockSummary, movements });
   } catch (error: any) {
+    if (error instanceof UncostedSurplus) {
+      return NextResponse.json({ error: error.message, code: 'UNIT_COST_REQUIRED' }, { status: 400 });
+    }
     return apiErrorResponse(error);
   }
 }
 
+
+/** The unit cost of this product's newest costed stock in this store, if any. */
+async function previousUnitCost(companyId: string, storeId: string | null, productId: string) {
+  const last = await db.productionBatch.findFirst({
+    where: { ...inStore(companyId, storeId), productId, costPerUnit: { gt: 0 } },
+    orderBy: { productionDate: 'desc' },
+    select: { costPerUnit: true },
+  });
+  return last?.costPerUnit ?? null;
+}
+
+/** A recount that found units of something never costed. Carried out of the transaction. */
+class UncostedSurplus extends Error {}
 
 /**
  * POST /api/inventory — the two things a person may do to stock by hand.
@@ -100,7 +125,16 @@ export async function POST(req: Request) {
           action: z.literal('receive'),
           productId: z.string().min(10).max(64),
           quantity: z.coerce.number().int().min(1).max(1_000_000),
-          unitCost: z.coerce.number().min(0).max(1_000_000).default(0),
+          /**
+           * NOT `.default(0)`. An empty field is not a price of zero, and
+           * treating it as one is how 89 batches on this database came to
+           * report every unit sold out of them as pure profit. What a blank
+           * means is decided by `resolveUnitCost`, with the product's own
+           * history in hand.
+           */
+          unitCost: z.coerce.number().min(0).max(1_000_000).optional(),
+          /** Only ever read when the cost really is zero — a sample, a gift. */
+          zeroCostReason: z.string().max(200).optional().nullable(),
           note: z.string().max(200).optional().nullable(),
         }),
         z.object({
@@ -145,13 +179,23 @@ export async function POST(req: Request) {
         );
       }
 
+      // What this delivery cost, by the one rule all three doors now share.
+      const priced = resolveUnitCost({
+        given: input.unitCost,
+        previous: await previousUnitCost(companyId, storeId, product.id),
+        zeroCostReason: input.zeroCostReason,
+      });
+      if (!priced.ok) {
+        return NextResponse.json({ error: priced.message, code: priced.code }, { status: 400 });
+      }
+
       const result = await db.$transaction((tx) =>
         receiveStock(tx, {
           companyId,
           storeId,
           productId: product.id,
           quantity: input.quantity,
-          unitCost: input.unitCost,
+          unitCost: priced.unitCost,
           note: input.note?.trim() || null,
           createdById: user.id,
         })
@@ -163,7 +207,14 @@ export async function POST(req: Request) {
         action: 'STOCK_RECEIVED',
         entity: 'Product',
         entityId: product.id,
-        newData: { quantity: input.quantity, unitCost: input.unitCost, batch: result.batch.batchNumber },
+        // The cost that was actually written, and where it came from —
+        // a carried-forward price and a typed one are not the same fact.
+        newData: {
+          quantity: input.quantity,
+          unitCost: priced.unitCost,
+          costSource: priced.source,
+          batch: result.batch.batchNumber,
+        },
       });
 
       return NextResponse.json({
@@ -192,17 +243,29 @@ export async function POST(req: Request) {
         // stock already there, not at zero: units at zero cost silently
         // lower the average and overstate the profit of everything sold
         // afterwards.
+        //
+        // AND WHEN THERE IS NO SUCH STOCK, this door stops rather than
+        // falling back to zero, which is what `?? 0` used to do here. A
+        // surplus of something we have never costed is not an adjustment,
+        // it is a delivery nobody recorded — and it has a price.
         const existing = await tx.productionBatch.findFirst({
           where: { ...inStore(companyId, storeId), productId: product.id, quantityRemaining: { gt: 0 } },
           orderBy: { productionDate: 'desc' },
           select: { costPerUnit: true },
         });
+        const carried = resolveUnitCost({ given: undefined, previous: existing?.costPerUnit ?? null });
+        if (!carried.ok) {
+          throw new UncostedSurplus(
+            `«${product.name}» زاد ${difference} وحدةً ولا كلفةَ سابقةً تُبنى عليها. ` +
+              'استلمها من باب «استلام بضاعة جاهزة» بكلفتها، ثمّ اجرد.'
+          );
+        }
         await receiveStock(tx, {
           companyId,
           storeId,
           productId: product.id,
           quantity: difference,
-          unitCost: existing?.costPerUnit ?? 0,
+          unitCost: carried.unitCost,
           batchNumber: `ADJ-${Date.now().toString(36).toUpperCase()}`,
           note: input.reason.trim(),
           createdById: user.id,
