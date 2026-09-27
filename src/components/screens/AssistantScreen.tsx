@@ -178,7 +178,7 @@ export function AssistantScreen() {
                     </span>
                   </div>
                 }
-                subtitle="Aggregated business intelligence summary calculated from real orders & production costs"
+                subtitle="ملخّصٌ محسوبٌ من الطلبات الحقيقيّة وكلفة البضاعة — لا تقديرات."
               />
               <CardContent className="space-y-4">
                 <p className="text-sm font-medium text-[var(--sys-heading)] leading-relaxed bg-[var(--sys-card)]/80 p-4 rounded-lg border border-[var(--sys-primary-soft)]/60 shadow-raised">
@@ -189,28 +189,32 @@ export function AssistantScreen() {
                 {metrics && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-center text-xs">
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-xs text-[var(--sys-muted)] block">Orders</span>
+                      <span className="text-xs text-[var(--sys-muted)] block">الطلبات</span>
                       <strong className="text-[var(--sys-heading)] font-bold">{metrics.total_orders}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-xs text-[var(--sys-muted)] block">Confirmed</span>
-                      <strong className="text-[var(--sys-destructive)] font-bold">{metrics.confirmed_orders}</strong>
+                      <span className="text-xs text-[var(--sys-muted)] block">المؤكَّدة</span>
+                      <strong className="text-[var(--sys-primary)] font-bold">{metrics.confirmed_orders}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-xs text-[var(--sys-muted)] block">Delivered</span>
-                      <strong className="text-[var(--sys-destructive)] font-bold">{metrics.delivered_orders}</strong>
+                      <span className="text-xs text-[var(--sys-muted)] block">المُسلَّمة</span>
+                      <strong className="text-[var(--sys-success)] font-bold">{metrics.delivered_orders}</strong>
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-xs text-[var(--sys-muted)] block">Delivered Revenue</span>
+                      <span className="text-xs text-[var(--sys-muted)] block">إيراد المُسلَّم</span>
                       <Money value={metrics.revenue} className="text-[var(--sys-heading)] font-bold" />
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-xs text-[var(--sys-muted)] block">Real Net Profit</span>
-                      <Money value={metrics.net_profit} className="text-[var(--sys-destructive)] font-black" />
+                      <span className="text-xs text-[var(--sys-muted)] block">صافي الربح</span>
+                      <Money
+                        value={metrics.net_profit}
+                        tone={Number(metrics.net_profit) < 0 ? 'lost' : 'collected'}
+                        className="font-black"
+                      />
                     </div>
                     <div className="bg-[var(--sys-card)] p-2.5 rounded-lg border border-[var(--sys-border)]">
-                      <span className="text-xs text-[var(--sys-muted)] block">Confirm Rate</span>
-                      <strong className="text-[var(--sys-destructive)] font-bold">{metrics.confirmation_rate}%</strong>
+                      <span className="text-xs text-[var(--sys-muted)] block">نسبة التأكيد</span>
+                      <strong className="text-[var(--sys-primary)] font-bold">{metrics.confirmation_rate}%</strong>
                     </div>
                   </div>
                 )}
@@ -277,7 +281,7 @@ export function AssistantScreen() {
         <Card className="flex flex-col h-[550px]">
           <CardHeader
             title={<span className="flex items-center space-x-2"><RiRobot2Line className="w-5 h-5 text-[var(--sys-primary)]" /><span>اسأل عن أرقامك</span></span>}
-            subtitle="Ask strategic questions; AI calculates responses from live verified database context"
+            subtitle="اسأل عن أداء متجرك — الإجابة محسوبةٌ من أرقام قاعدة بياناتك، ومحدودةٌ بما تسمح به صلاحيتك."
           />
 
           {/* Chat Messages */}
@@ -330,7 +334,7 @@ export function AssistantScreen() {
 
           {/* Quick Prompts Bar */}
           <div className="px-4 py-2 bg-[var(--sys-surface)] border-t border-[var(--sys-border)] flex items-center space-x-2 rtl:space-x-reverse overflow-x-auto text-xs">
-            <span className="text-[var(--sys-muted)] shrink-0 font-medium">Try asking:</span>
+            <span className="text-[var(--sys-muted)] shrink-0 font-medium">جرّب أن تسأل:</span>
             {suggestedQuestions.map((sq, i) => (
               <button
                 key={i}
