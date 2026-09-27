@@ -126,6 +126,23 @@ describe('access is applied inside the query', () => {
     await listAccessibleCountries(agent, COMPANY);
     expect(db.country.findMany.mock.calls[0][0].where).toEqual({ companyId: COMPANY, isActive: true });
   });
+
+  /**
+   * A door that opens onto an empty room is worse than no door: the reach
+   * rule now gives somebody nothing in a country where no store was named
+   * for them, so the picker must not offer that country at all.
+   */
+  it('and somebody named stores is offered only those stores’ countries', async () => {
+    db.userStoreAccess.findMany.mockResolvedValue([{ storeId: STORE_SY, store: { countryId: SY } }]);
+    db.country.findMany.mockResolvedValue([]);
+    await listAccessibleCountries(agent, COMPANY);
+    expect(db.country.findMany.mock.calls[0][0].where, 'يُعرَض عليه بلدٌ لا متجرَ له فيه').toEqual({
+      companyId: COMPANY,
+      isActive: true,
+      access: { some: { userId: agent.id } },
+      id: { in: [SY] },
+    });
+  });
 });
 
 describe('selection rules', () => {
@@ -182,15 +199,37 @@ describe('resolveEntry skip rules', () => {
 });
 
 describe('the store-entry rule (shared with the notification audience)', () => {
-  const facts = { seesAll: false, countryOpen: true, countryAssigned: true, storesInCountry: [] as string[] };
+  const facts = {
+    seesAll: false,
+    countryOpen: true,
+    countryAssigned: true,
+    storesInCountry: [] as string[],
+    hasStoreGrants: false,
+  };
 
-  it('no narrowing rows in an assigned country = every store of it', () => {
+  it('no store named anywhere = the country grant governs', () => {
     expect(reachesStore(facts, STORE_JO)).toBe(true);
   });
 
-  it('narrowing rows limit the country to those stores', () => {
-    expect(reachesStore({ ...facts, storesInCountry: [STORE_JO] }, STORE_JO)).toBe(true);
-    expect(reachesStore({ ...facts, storesInCountry: ['another-store'] }, STORE_JO)).toBe(false);
+  it('named stores limit the country to those stores', () => {
+    expect(reachesStore({ ...facts, hasStoreGrants: true, storesInCountry: [STORE_JO] }, STORE_JO)).toBe(true);
+    expect(reachesStore({ ...facts, hasStoreGrants: true, storesInCountry: ['another-store'] }, STORE_JO)).toBe(false);
+  });
+
+  /**
+   * THE HOLE THIS RULE HAD, AND THE REPORT THAT FOUND IT.
+   *
+   * «no rows in THIS country» used to mean «every store in it». So an
+   * employee named one store in Syria, and assigned Libya as a country,
+   * reached every Libyan store — measured on the dev database: eight
+   * employees granted one store each reached two.
+   *
+   * Somebody who was named stores is confined to them everywhere. A
+   * country where none was named for them holds nothing of theirs.
+   */
+  it('and a country where none was named for them holds nothing', () => {
+    const namedElsewhere = { ...facts, hasStoreGrants: true, storesInCountry: [] as string[] };
+    expect(reachesStore(namedElsewhere, STORE_JO), 'متجرٌ لم يُمنح صار مفتوحاً').toBe(false);
   });
 
   it('refuses a country the user is not assigned to', () => {
@@ -205,7 +244,32 @@ describe('the store-entry rule (shared with the notification audience)', () => {
   it('the picker applies the same narrowing', async () => {
     db.country.findFirst.mockResolvedValue({ id: JO });
     db.store.findMany.mockResolvedValue([{ id: STORE_JO }, { id: 'another-store' }]);
-    db.userStoreAccess.findMany.mockResolvedValue([{ storeId: STORE_JO }]);
+    // The rows now carry their store's country: the rule asks whether a
+    // named store exists ANYWHERE, not only in the country being listed.
+    db.userStoreAccess.findMany.mockResolvedValue([{ storeId: STORE_JO, store: { countryId: JO } }]);
     await expect(listAccessibleStores(agent, COMPANY, JO)).resolves.toEqual([{ id: STORE_JO }]);
+  });
+
+  /**
+   * THE PICKER MUST ASK THE SAME QUESTION THE RULE ASKS.
+   *
+   * If it loads only the stores named in the country being listed, then a
+   * user named a store SOMEWHERE ELSE looks unnamed here — and «unnamed»
+   * means «every store», which is the hole again, reached by a different
+   * road. This mock answers the query it is actually given, so a
+   * per-country query returns nothing and the difference shows.
+   */
+  it('and loads every named store, not only this country’s', async () => {
+    db.country.findFirst.mockResolvedValue({ id: JO });
+    db.store.findMany.mockResolvedValue([{ id: STORE_JO }, { id: 'another-store' }]);
+    const namedInSyria = { storeId: STORE_SY, store: { countryId: SY } };
+    db.userStoreAccess.findMany.mockImplementation(async ({ where }: { where: { store?: { countryId?: string } } }) =>
+      // A query narrowed to this country finds nothing; an honest one finds Syria.
+      where?.store?.countryId ? [] : [namedInSyria]
+    );
+    await expect(
+      listAccessibleStores(agent, COMPANY, JO),
+      'مُنح متجراً في بلدٍ آخر فانفتحت له متاجر هذا البلد'
+    ).resolves.toEqual([]);
   });
 });

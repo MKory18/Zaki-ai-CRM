@@ -50,12 +50,16 @@ const { db, state } = vi.hoisted(() => {
       ),
     },
     userStoreAccess: {
+      // Every row these users hold, in any country, each carrying its
+      // store's country — the reach rule asks «were they named any store
+      // at all», which a per-country query cannot answer.
       findMany: vi.fn(async ({ where }: any) =>
-        state.storeAccess.filter(
-          (a) =>
-            where.userId.in.includes(a.userId) &&
-            state.stores.find((s) => s.id === a.storeId)?.countryId === where.store.countryId
-        )
+        state.storeAccess
+          .filter((a) => where.userId.in.includes(a.userId))
+          .map((a) => ({
+            ...a,
+            store: { countryId: state.stores.find((s) => s.id === a.storeId)?.countryId },
+          }))
       ),
     },
     notification: {

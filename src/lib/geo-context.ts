@@ -96,11 +96,33 @@ export function seesAllCountries(user: SessionUser): boolean {
   return user.role === 'SUPER_ADMIN' || can(user, 'geo.manage');
 }
 
-/** Active countries the user may enter, with their active store counts. */
+/**
+ * Active countries the user may enter, with their active store counts.
+ *
+ * SOMEBODY CONFINED TO NAMED STORES IS OFFERED ONLY THE COUNTRIES THOSE
+ * STORES ARE IN. Without this the picker still listed a country where the
+ * reach rule now grants them nothing — a door that opens onto an empty
+ * room, and the person concludes the system is broken rather than that
+ * they were never given anything there.
+ */
 export async function listAccessibleCountries(user: SessionUser, companyId: string) {
-  const where = seesAllCountries(user)
+  const seesAll = seesAllCountries(user);
+  const granted = seesAll
+    ? []
+    : await db.userStoreAccess.findMany({
+        where: { userId: user.id },
+        select: { store: { select: { countryId: true } } },
+      });
+  const namedCountries = new Set(granted.map((g) => g.store.countryId));
+
+  const where = seesAll
     ? { companyId, isActive: true }
-    : { companyId, isActive: true, access: { some: { userId: user.id } } };
+    : {
+        companyId,
+        isActive: true,
+        access: { some: { userId: user.id } },
+        ...(namedCountries.size > 0 ? { id: { in: [...namedCountries] } } : {}),
+      };
   const countries = await db.country.findMany({
     where,
     orderBy: { name: 'asc' },
@@ -128,15 +150,35 @@ export interface StoreReachFacts {
   countryOpen: boolean;
   /** The user has a UserCountryAccess row for that country. */
   countryAssigned: boolean;
-  /** The user's UserStoreAccess rows inside that country (none = all of them). */
+  /** The user's UserStoreAccess rows inside that country. */
   storesInCountry: readonly string[];
+  /**
+   * WHETHER THIS USER WAS GIVEN NAMED STORES AT ALL — IN ANY COUNTRY.
+   *
+   * This used to be read per country only, and "no rows in this country"
+   * was taken to mean "every store in it". So an employee granted one
+   * store in Syria, and the country Libya, reached EVERY Libyan store —
+   * measured: eight employees granted one store reached two. Which is
+   * exactly the report: «أعطيه صلاحية على متجر معيّن، بدخل على كلّ
+   * الدول والمتاجر».
+   *
+   * The distinction the rule was missing: somebody with NO store grant
+   * anywhere is governed by their country grants, which is the ordinary
+   * case and stays. Somebody who WAS given named stores is confined to
+   * them — in every country, including ones where nobody thought to name
+   * a store for them.
+   */
+  hasStoreGrants: boolean;
 }
 
 export function reachesStore(facts: StoreReachFacts, storeId: string): boolean {
   if (!facts.countryOpen) return false;
   if (facts.seesAll) return true;
   if (!facts.countryAssigned) return false;
-  return facts.storesInCountry.length === 0 || facts.storesInCountry.includes(storeId);
+  // Named stores mean those stores. A country with none named for them is
+  // a country they may enter and find nothing in — not one they own.
+  if (facts.hasStoreGrants) return facts.storesInCountry.includes(storeId);
+  return true;
 }
 
 /** Stores of one accessible country the user may enter (null = country not accessible). */
@@ -152,21 +194,29 @@ export async function listAccessibleStores(user: SessionUser, companyId: string,
   });
   if (!country) return null;
 
-  const storesInCountry = seesAll
+  // Every store they were named, not only the ones in this country: the
+  // rule needs to know whether they were named ANY, because that is what
+  // decides whether an unnamed country is open or empty.
+  const granted = seesAll
     ? []
-    : (
-        await db.userStoreAccess.findMany({
-          where: { userId: user.id, store: { countryId } },
-          select: { storeId: true },
-        })
-      ).map((a) => a.storeId);
+    : await db.userStoreAccess.findMany({
+        where: { userId: user.id },
+        select: { storeId: true, store: { select: { countryId: true } } },
+      });
+  const storesInCountry = granted.filter((a) => a.store.countryId === countryId).map((a) => a.storeId);
 
   const stores = await db.store.findMany({
     where: { companyId, countryId },
     orderBy: { name: 'asc' },
     select: { id: true, name: true, slug: true, logo: true, status: true, type: true },
   });
-  const facts: StoreReachFacts = { seesAll, countryOpen: true, countryAssigned: true, storesInCountry };
+  const facts: StoreReachFacts = {
+    seesAll,
+    countryOpen: true,
+    countryAssigned: true,
+    storesInCountry,
+    hasStoreGrants: granted.length > 0,
+  };
   return stores.filter((s) => reachesStore(facts, s.id));
 }
 
@@ -200,16 +250,25 @@ export async function usersReachingStore(
           where: { userId: { in: narrowable }, countryId: store.countryId },
           select: { userId: true },
         }),
+        // Every store row these users hold, in any country — the reach
+        // rule needs «were they named any at all», not only «any here».
         db.userStoreAccess.findMany({
-          where: { userId: { in: narrowable }, store: { countryId: store.countryId } },
-          select: { userId: true, storeId: true },
+          where: { userId: { in: narrowable } },
+          select: { userId: true, storeId: true, store: { select: { countryId: true } } },
         }),
       ])
     : [[], []];
 
   const assignedIds = new Set(assigned.map((a) => a.userId));
   const storesOf = new Map<string, string[]>();
-  for (const n of narrowings) storesOf.set(n.userId, [...(storesOf.get(n.userId) ?? []), n.storeId]);
+  /** Who was named any store at all, anywhere. */
+  const named = new Set<string>();
+  for (const n of narrowings) {
+    named.add(n.userId);
+    if (n.store.countryId === store.countryId) {
+      storesOf.set(n.userId, [...(storesOf.get(n.userId) ?? []), n.storeId]);
+    }
+  }
 
   for (const u of users) {
     const facts: StoreReachFacts = {
@@ -217,6 +276,7 @@ export async function usersReachingStore(
       countryOpen,
       countryAssigned: assignedIds.has(u.id),
       storesInCountry: storesOf.get(u.id) ?? [],
+      hasStoreGrants: named.has(u.id),
     };
     if (reachesStore(facts, storeId)) reached.add(u.id);
   }
