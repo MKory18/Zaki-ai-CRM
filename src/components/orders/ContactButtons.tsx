@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
-import { fillTemplate, waNumber, type FillContext, type MessageTemplate } from '@/lib/message-templates';
+import { fillTemplate, whatsappLink, type FillContext, type MessageTemplate } from '@/lib/message-templates';
 import { RiChat3Line, RiMessage3Line, RiPhoneLine } from '@remixicon/react';
 
 /**
@@ -93,15 +93,14 @@ export function ContactButtons({
 
   /** WhatsApp with no message behind it — for a number that has no order. */
   const openPlainWhatsapp = () => {
-    window.open(`https://wa.me/${waNumber(phone!, countryCode)}`, '_blank', 'noopener');
+    window.open(whatsappLink(phone!, countryCode), '_blank', 'noopener');
     onContacted?.('WHATSAPP');
   };
 
   const send = (t: MessageTemplate) => {
     const text = fillTemplate(t.body, context);
     if (open === 'WHATSAPP') {
-      const to = waNumber(phone, countryCode);
-      window.open(`https://wa.me/${to}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+      window.open(whatsappLink(phone!, countryCode, text), '_blank', 'noopener');
     } else {
       // `?body=` is what both iOS and Android accept today; older Nokia-era
       // handsets wanted `?` vs `&` differently and are not a concern here.

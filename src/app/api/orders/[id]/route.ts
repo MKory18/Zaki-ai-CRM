@@ -16,6 +16,7 @@ import { apiError } from '@/lib/api-error';
 import { authorize, can, getPermissionScope } from '@/lib/authorization';
 import { MAX_REASON, reasonRefusal } from '@/lib/order-edit-reason';
 import { orderSeal, sealedFieldsIn, sealMessage } from '@/lib/order-seal';
+import { courierActionAr, courierActionFor, courierMessage, sealedAmong } from '@/lib/courier-change';
 import { expandApproved, mayApply, strayFields } from '@/lib/change-request-apply';
 import { zodMessage } from '@/lib/zod-message';
 
@@ -84,6 +85,12 @@ const patchSchema = z.object({
   // field besides expectedVersion: the values come from the approved
   // request on the server, never from this body.
   changeRequestId: z.string().uuid().optional(),
+  /**
+   * Set only after somebody has actually told the courier. It is not a
+   * permission — it is a statement of fact, recorded on the order with the
+   * name of whoever made it.
+   */
+  courierNotified: z.boolean().optional(),
 });
 
 /**
@@ -318,6 +325,8 @@ export async function PATCH(
     // change through with it.
     let data: z.infer<typeof patchSchema> = parsed.data;
     let viaRequest: { id: string; orderId: string; reason: string; decisionNote: string | null; requestedById: string } | null = null;
+    /** Somebody has told the courier, and is saying so. */
+    const courierTold = parsed.data.courierNotified === true;
     if (parsed.data.changeRequestId) {
       const stray = strayFields(parsed.data as Record<string, unknown>);
       if (stray.length > 0) {
@@ -592,10 +601,22 @@ export async function PATCH(
     // What was a direct edit becomes a change request: somebody who can
     // still reach the courier decides, and says what has to happen if the
     // change is no longer possible. Silence never approves it.
-    // An approved change request is what the seal asks for, so it passes —
-    // and only it, and only with the fields that were approved (the body
-    // could carry nothing else, see above).
-    const sealedAsked = viaRequest ? [] : sealedFieldsIn(data as Record<string, unknown>);
+    /**
+     * AN APPROVED REQUEST NO LONGER WALKS PAST THE SEAL IN SILENCE.
+     *
+     * It used to: `viaRequest ? [] : …`, on the reasoning that a human had
+     * decided and a human deciding would have rung the courier. Nothing
+     * checked that they had. So the ordinary case was a supervisor approving
+     * a new address, somebody pressing «طبّق», our record saying one street
+     * and the box on the van saying another — and the seal's own comment
+     * explaining exactly why that is worthless: «the waybill IS the address».
+     *
+     * The approval is still what lets the change through. What it no longer
+     * does is let it through BEFORE the courier is told. The block below
+     * composes the message and refuses; the same request, sent back with
+     * `courierNotified`, applies and records who told them.
+     */
+    const sealedAsked = viaRequest && courierTold ? [] : sealedFieldsIn(data as Record<string, unknown>);
     if (sealedAsked.length > 0) {
       const batch = await db.shippingBatch.findFirst({
         where: { orders: { some: { id } }, companyId },
@@ -610,6 +631,45 @@ export async function PATCH(
         labelPrintedAt: (existing as { labelPrintedAt?: Date | null }).labelPrintedAt ?? null,
       });
       if (seal.sealed) {
+        /**
+         * A REQUEST GETS THE MESSAGE. A DIRECT EDIT GETS THE OLD REFUSAL.
+         *
+         * Somebody editing a sealed order by hand has not been through any
+         * decision, and the answer to them is unchanged: raise a request.
+         * Somebody applying an APPROVED one has, and what is missing is not
+         * authority but a phone call — so they get the sentence to send and
+         * a door that opens once they have sent it.
+         */
+        if (viaRequest) {
+          const action = courierActionFor(sealedAsked);
+          const provider = existing.deliveryProviderId
+            ? await db.deliveryProvider.findFirst({
+                where: { id: existing.deliveryProviderId, companyId },
+                select: { name: true, phone: true },
+              })
+            : null;
+          return NextResponse.json(
+            {
+              error: courierActionAr(action),
+              errorAr: courierActionAr(action),
+              code: 'COURIER_ACTION_REQUIRED',
+              action,
+              fields: sealedAmong(sealedAsked),
+              courier: provider ? { name: provider.name, phone: provider.phone } : null,
+              message: courierMessage({
+                action: action === 'NONE' ? 'CONTACT_CHANGE' : action,
+                orderNumber: existing.orderNumber,
+                trackingNumber: (existing as { trackingNumber?: string | null }).trackingNumber ?? null,
+                storeName: null,
+                changes: Object.fromEntries(
+                  sealedAmong(sealedAsked).map((f) => [f, String((data as Record<string, unknown>)[f] ?? '')])
+                ),
+              }),
+              batchNumber: seal.batchNumber,
+            },
+            { status: 409 }
+          );
+        }
         return NextResponse.json(
           {
             error: sealMessage(seal.batchNumber, sealedAsked, seal.reason),
@@ -1055,6 +1115,27 @@ export async function PATCH(
         where: { id: viaRequest.id, appliedAt: null },
         data: { appliedAt: new Date(), appliedById: user.id },
       });
+
+      /**
+       * AND WHO TOLD THE COURIER, IF ANYBODY HAD TO.
+       *
+       * `courierNotified` is the only reason a sealed order accepted this
+       * write, so it is recorded as a statement with a name on it rather
+       * than as a flag. Somebody reading the order in a week has to be able
+       * to see that the parcel on the van and the record here were
+       * reconciled by a person, and which person.
+       */
+      if (stamped.count === 1 && courierTold) {
+        await db.orderNote.create({
+          data: {
+            companyId,
+            orderId: id,
+            authorId: user.id,
+            kind: 'internal',
+            body: `أُبلغت شركة الشحن بالتعديل قبل تطبيقه — ${viaRequest.reason}`,
+          },
+        });
+      }
 
       // AND THE PERSON WHO ASKED HEARS THAT IT IS DONE.
       //

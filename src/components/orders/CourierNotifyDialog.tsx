@@ -1,0 +1,145 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Modal } from '@/components/ui/Modal';
+import { whatsappLink } from '@/lib/message-templates';
+import { RiChat3Line, RiFileCopyLine, RiCheckLine } from '@remixicon/react';
+
+/**
+ * THE PARCEL IS ALREADY WITH THE COURIER.
+ *
+ * An approved change used to be written straight onto the order, waybill or
+ * no waybill. The seal's own comment says why that is worthless: once the
+ * paper is on the box, the paper IS the address — changing it here only
+ * makes our record disagree with the parcel on the van.
+ *
+ * So the approval still carries the authority, and this is the step it was
+ * missing: the sentence to send, and somebody saying they sent it. Nothing
+ * is written until they do, and what they did is recorded on the order with
+ * their name.
+ *
+ * NO GATEWAY. It opens WhatsApp with the text already written — the same way
+ * every other message in this product leaves, from the company's own number,
+ * with no account, no key and no per-message cost. The copy button is for the
+ * desk phone, the group the dispatcher actually watches, or a courier who
+ * takes these by SMS.
+ */
+
+export interface CourierAsk {
+  action: 'CONTACT_CHANGE' | 'CANCEL_AND_REORDER' | 'NONE';
+  /** Why our record is not changing yet, in the reader's own words. */
+  reason: string;
+  message: string;
+  courier: { name: string; phone: string | null } | null;
+}
+
+export function CourierNotifyDialog({
+  orderNumber,
+  ask,
+  busy,
+  countryCode,
+  onClose,
+  onNotified,
+}: {
+  orderNumber: string;
+  ask: CourierAsk;
+  busy: boolean;
+  /** Dialling code, e.g. "963" — wa.me needs the number in full international form. */
+  countryCode?: string;
+  onClose: () => void;
+  onNotified: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const phone = ask.courier?.phone ?? null;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(ask.message);
+      setCopied(true);
+      setSent(true);
+    } catch {
+      // A browser that refuses the clipboard is not a reason to block the
+      // work: the text is on screen and selectable.
+      setSent(true);
+    }
+  };
+
+  const openWhatsApp = () => {
+    if (!phone) return;
+    window.open(whatsappLink(phone, countryCode, ask.message), '_blank', 'noopener');
+    setSent(true);
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title={`${orderNumber} عند شركة الشحن`}>
+      <div className="space-y-3">
+        <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-3">
+          {ask.reason}
+        </p>
+
+        <label className="block">
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
+            الرسالة الجاهزة {ask.courier?.name ? `— إلى ${ask.courier.name}` : ''}
+          </span>
+          <textarea
+            value={ask.message}
+            readOnly
+            rows={7}
+            className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border)] text-sm leading-relaxed bg-[var(--sys-surface)]"
+          />
+        </label>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={openWhatsApp}
+            disabled={!phone}
+            title={phone ? undefined : 'لا رقم مسجَّل لشركة الشحن — انسخ الرسالة وأرسلها بنفسك'}
+            className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg bg-[var(--sys-success)] px-4 py-1.5 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+          >
+            <RiChat3Line className="w-4 h-4" aria-hidden />
+            أرسِلها واتساب
+          </button>
+          <button
+            type="button"
+            onClick={() => void copy()}
+            className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-4 py-1.5 text-xs font-medium text-[var(--sys-foreground)]"
+          >
+            {copied ? <RiCheckLine className="w-4 h-4" aria-hidden /> : <RiFileCopyLine className="w-4 h-4" aria-hidden />}
+            {copied ? 'نُسخت' : 'انسخ الرسالة'}
+          </button>
+        </div>
+
+        {/*
+          THE WRITE WAITS FOR A PERSON TO SAY IT HAPPENED.
+          Opening WhatsApp is not proof that anything was sent, so the button
+          below is a statement, not a consequence — and it is recorded on the
+          order with the name of whoever made it.
+        */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--sys-border)]">
+          <button
+            type="button"
+            onClick={onNotified}
+            disabled={busy || !sent}
+            title={sent ? undefined : 'أرسِل الرسالة أو انسخها أوّلاً'}
+            className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg bg-[var(--sys-primary)] px-4 py-1.5 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+          >
+            أبلغتُهم — طبّق التعديل الآن
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg border border-[var(--sys-border)] px-4 py-1.5 text-xs"
+          >
+            لاحقاً
+          </button>
+          <span className="text-xs text-[var(--sys-muted-foreground)]">
+            يُسجَّل على الطلب أنّك أبلغتَهم قبل التطبيق.
+          </span>
+        </div>
+      </div>
+    </Modal>
+  );
+}

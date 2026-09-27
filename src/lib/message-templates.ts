@@ -240,6 +240,29 @@ export function waNumber(raw: string, countryCode?: string | null): string {
   return digits;
 }
 
+/**
+ * THE ONE PLACE A MESSAGE LINK IS BUILT.
+ *
+ * `wa.me` written into a screen is a screen that will not normalise the
+ * number the same way, and there is a guard that fails the build over it.
+ * The rule is right and it is older than this function — what was missing
+ * was somewhere for a SECOND caller to go.
+ *
+ * The first caller is the contact strip, messaging a customer from a
+ * template. The second is the courier dialog, sending a dispatcher the one
+ * sentence that stops a parcel going to the wrong street. Neither of them
+ * owns the link format, and neither should discover on its own that a
+ * leading zero has to be dropped when a dialling code is prepended.
+ *
+ * No gateway, here or anywhere: it opens the phone's own WhatsApp with the
+ * text already written, so the message leaves from the company's number.
+ */
+export function whatsappLink(phone: string, countryCode?: string | null, text?: string): string {
+  const to = waNumber(phone, countryCode);
+  if (!to) return '';
+  return text ? `https://wa.me/${to}?text=${encodeURIComponent(text)}` : `https://wa.me/${to}`;
+}
+
 export async function templatesFor(companyId: string): Promise<MessageTemplate[]> {
   const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
   try {

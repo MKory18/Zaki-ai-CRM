@@ -107,8 +107,17 @@ export function expandApproved(request: ApplySource): Expansion {
   return { ok: true, fields };
 }
 
-/** The keys a request-authorised edit may carry besides the request id. */
-const ALLOWED_ALONGSIDE = new Set(['changeRequestId', 'expectedVersion']);
+/**
+ * The keys a request-authorised edit may carry besides the request id.
+ *
+ * `courierNotified` is on this list and is NOT a field of the order. It says
+ * «the courier has been told», which is what the seal now asks for before an
+ * approved change is written onto a parcel they are already holding. It
+ * changes nothing about WHAT is applied — the values still come from what
+ * was approved — so it cannot be used to smuggle a second change through,
+ * which is the whole reason this list is short.
+ */
+const ALLOWED_ALONGSIDE = new Set(['changeRequestId', 'expectedVersion', 'courierNotified']);
 
 /**
  * Anything in the body beyond the request id is refused.

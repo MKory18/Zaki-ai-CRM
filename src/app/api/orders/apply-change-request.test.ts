@@ -19,6 +19,10 @@ const { db, requireContext, authorize, can, logAudit } = vi.hoisted(() => ({
     orderChannel: { findFirst: vi.fn() },
     shippingBatch: { findFirst: vi.fn() },
     customer: { update: vi.fn() },
+    // The order now says, on the order itself, that the courier was told —
+    // and reads the courier's own name and number to compose the message.
+    orderNote: { create: vi.fn(async () => ({})) },
+    deliveryProvider: { findFirst: vi.fn(async () => ({ name: 'أرامكس', phone: '0700000000' })) },
     orderStatusLog: { create: vi.fn() },
     orderActivity: { create: vi.fn() },
     orderChangeRequest: { findFirst: vi.fn(), updateMany: vi.fn() },
@@ -107,21 +111,49 @@ beforeEach(() => {
 });
 
 describe('carrying out an approved request', () => {
-  it('passes the seal that refuses the same edit made directly', async () => {
+  /**
+   * THE APPROVAL IS THE AUTHORITY. IT IS NOT A PHONE CALL.
+   *
+   * This used to pass the seal outright, on the reasoning that a human had
+   * decided and a human deciding would have rung the courier. Nothing checked
+   * that they had — so the ordinary case was our record saying one street and
+   * the box on the van saying another, which is exactly what the seal's own
+   * comment says is worthless: «the waybill IS the address».
+   *
+   * Now the approval still lets the change through, but not before the
+   * courier is told. The refusal carries the sentence to send them.
+   */
+  it('asks for the courier before it passes the seal', async () => {
     // The control: the same address change, without a request, on the same
-    // shipped order, is refused by the seal.
+    // shipped order, is refused by the seal as it always was.
     authorize.mockReturnValue({ allowed: true });
     const direct = await patch({ expectedVersion: 3, customerAddress: 'شارع جديد' });
     expect(direct.status).toBe(409);
     expect((await direct.json()).code).toBe('ORDER_SEALED');
 
     asOwnerWithoutEditScope();
+    // WITHOUT the flag — that is the whole point of this one.
     const viaRequest = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
-    expect(viaRequest.status).toBe(200);
+    expect(viaRequest.status, 'التعديل المعتمد ما زال يمرّ بصمت').toBe(409);
+    const body = await viaRequest.json();
+    expect(body.code).toBe('COURIER_ACTION_REQUIRED');
+    // An address is something a dispatcher can change on the same waybill.
+    expect(body.action).toBe('CONTACT_CHANGE');
+    expect(body.message, 'لا رسالةَ جاهزةٌ للشركة').toContain('شارع جديد');
+  });
+
+  /** And it goes through once somebody says the courier was told. */
+  it('and applies once the courier has been told', async () => {
+    asOwnerWithoutEditScope();
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
+    expect(res.status).toBe(200);
+    // Recorded as a statement with a name on it, not as a silent flag.
+    const notes = JSON.stringify(db.orderNote.create.mock.calls);
+    expect(notes, 'لم يُسجَّل أنّ الشركة أُبلغت').toContain('أُبلغت شركة الشحن');
   });
 
   it('writes the APPROVED value, taken from the request on the server', async () => {
-    await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     const written = JSON.stringify(db.customer.update.mock.calls);
     expect(written).toContain('شارع جديد');
   });
@@ -129,12 +161,12 @@ describe('carrying out an approved request', () => {
   it('stands in for the orders.edit scope — for this order only', async () => {
     // The owner holds no edit scope on this order; the approved request is
     // the authority. authorize() is not what let it through.
-    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(res.status).toBe(200);
   });
 
   it('marks the request applied, once, by whom', async () => {
-    await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(db.orderChangeRequest.updateMany).toHaveBeenCalledWith({
       where: { id: REQUEST_ID, appliedAt: null },
       data: { appliedAt: expect.any(Date), appliedById: 'owner' },
@@ -142,7 +174,7 @@ describe('carrying out an approved request', () => {
   });
 
   it('writes to the audit WHY the seal was passed: the reason and the decision', async () => {
-    await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     const entry = logAudit.mock.calls.map((c) => c[0]).find((e) => e.entity === 'Order');
     expect(entry.action).toBe('ORDER_UPDATED_BY_CHANGE_REQUEST');
     expect(entry.userId).toBe('owner');
@@ -166,34 +198,34 @@ describe('the limits of that authority', () => {
 
   it('refuses a request that is still pending', async () => {
     db.orderChangeRequest.findFirst.mockResolvedValue(approved({ status: 'PENDING' }));
-    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(res.status).toBe(409);
     expect((await res.json()).code).toBe('NOT_APPROVED');
   });
 
   it('refuses a rejected request', async () => {
     db.orderChangeRequest.findFirst.mockResolvedValue(approved({ status: 'REJECTED' }));
-    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect((await res.json()).code).toBe('NOT_APPROVED');
   });
 
   it('refuses one that was already applied', async () => {
     db.orderChangeRequest.findFirst.mockResolvedValue(approved({ appliedAt: new Date() }));
-    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(res.status).toBe(409);
     expect((await res.json()).code).toBe('ALREADY_APPLIED');
   });
 
   it('refuses a request belonging to another order', async () => {
     db.orderChangeRequest.findFirst.mockResolvedValue(approved({ orderId: 'some-other-order' }));
-    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(res.status).toBe(404);
     expect((await res.json()).code).toBe('WRONG_ORDER');
   });
 
   it('refuses before confirmation — the order is still edited directly then', async () => {
     ORDER = { ...ORDER, confirmationStatus: 'IN_PROGRESS', shippingStatus: 'NOT_READY', shippedAt: null };
-    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(res.status).toBe(409);
     expect((await res.json()).code).toBe('NOT_CONFIRMED');
   });
@@ -205,7 +237,7 @@ describe('the limits of that authority', () => {
       country: { minorUnit: 2, currencyCode: 'JOD' },
     });
     can.mockImplementation(() => false);
-    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(res.status).toBe(403);
     expect((await res.json()).code).toBe('NOT_THE_DECIDER');
     expect(db.customer.update).not.toHaveBeenCalled();
@@ -217,7 +249,7 @@ describe('the limits of that authority', () => {
     db.orderChangeRequest.findFirst.mockResolvedValue(
       approved({ changes: { customerAddress: { to: 'شارع' }, customerCity: { to: 'الزرقاء' } } })
     );
-    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(res.status).toBe(422);
     const body = await res.json();
     expect(body.code).toBe('NOT_APPLICABLE');
@@ -226,7 +258,7 @@ describe('the limits of that authority', () => {
   });
 
   it('looks the request up inside the company only', async () => {
-    await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID });
+    await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(db.orderChangeRequest.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: REQUEST_ID, companyId: 'c1' } })
     );

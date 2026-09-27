@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { apiJson } from '@/lib/api-client';
+import { apiFetch, apiJson } from '@/lib/api-client';
+import { CourierNotifyDialog, type CourierAsk } from '@/components/orders/CourierNotifyDialog';
 import { ChangeRequestReview } from '@/components/orders/ChangeRequestReview';
 import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { changeFieldLabel } from '@/lib/change-request-fields';
@@ -65,6 +66,8 @@ export function ChangeRequestsScreen() {
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [applying, setApplying] = useState<string | null>(null);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
+  /** The request whose parcel is already with the courier, and what to send them. */
+  const [courierFor, setCourierFor] = useState<{ request: ChangeRequest; ask: CourierAsk } | null>(null);
   const confirm = useConfirm();
   const tell = useTell();
 
@@ -129,15 +132,49 @@ export function ChangeRequestsScreen() {
     });
     if (!ok) return;
 
+    await send(r, false);
+  }
+
+  /**
+   * THE WRITE, AND THE ONE THING THAT CAN STOP IT.
+   *
+   * `apiFetch` rather than `apiJson`, because the refusal that matters here
+   * carries a body — which action, which courier, and the sentence to send
+   * them — and `apiJson` throws away everything but the message.
+   *
+   * `courierNotified` is not a permission. It is a person saying the parcel's
+   * holder has been told, and the server records that on the order with their
+   * name before it writes anything.
+   */
+  async function send(r: ChangeRequest, courierNotified: boolean) {
     setApplying(r.id);
     try {
-      await apiJson(`/api/orders/${r.order.id}`, {
+      const res = await apiFetch(`/api/orders/${r.order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        // The id, and nothing else. The server rebuilds the edit from what
-        // was approved; it refuses anything sent alongside.
-        body: JSON.stringify({ changeRequestId: r.id }),
+        // The id, and nothing else that is a field of the order. The server
+        // rebuilds the edit from what was approved.
+        body: JSON.stringify({ changeRequestId: r.id, ...(courierNotified ? { courierNotified } : {}) }),
       });
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (body?.code === 'COURIER_ACTION_REQUIRED') {
+          setCourierFor({
+            request: r,
+            ask: {
+              action: body.action ?? 'CONTACT_CHANGE',
+              reason: body.errorAr ?? body.error ?? '',
+              message: body.message ?? '',
+              courier: body.courier ?? null,
+            },
+          });
+          return;
+        }
+        throw new Error(body?.errorAr || body?.error || 'تعذر تطبيق التعديل');
+      }
+
+      setCourierFor(null);
       await load();
     } catch (e) {
       await tell({
@@ -311,6 +348,16 @@ export function ChangeRequestsScreen() {
           </article>
         );
       })}
+
+      {courierFor && (
+        <CourierNotifyDialog
+          orderNumber={courierFor.request.order.orderNumber}
+          ask={courierFor.ask}
+          busy={applying === courierFor.request.id}
+          onClose={() => setCourierFor(null)}
+          onNotified={() => void send(courierFor.request, true)}
+        />
+      )}
 
       {reviewing && (
         <ChangeRequestReview
