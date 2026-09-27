@@ -76,6 +76,21 @@ export const storeHeaderSchema = z.object({
   background: hex.optional(),
   /** Stays at the top as the customer scrolls. */
   sticky: z.boolean().default(true),
+  /**
+   * WORN BY A SINGLE PRODUCT STORE'S FRONT PAGE TOO.
+   *
+   * Such a store's address renders its landing page, and it used to render
+   * it bare: no logo, no shop name, no header, no footer. Everything the
+   * seller set under «القوالب» — and the logo under «البلدان والمتاجر» —
+   * simply never appeared, on the only page that store has.
+   *
+   * It is a switch and not a rule because a landing page is also an advert,
+   * and a header full of links is a way out of one. The seller decides; the
+   * default is to look like the shop it is.
+   *
+   * Other store types always wear it — their pages are shop pages.
+   */
+  onFrontPage: z.boolean().default(true),
 });
 
 /**

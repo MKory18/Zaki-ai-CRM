@@ -165,7 +165,7 @@ describe('every colour is a variable', () => {
   });
 
   it('the header height is a variable too, so no component writes a pixel', () => {
-    expect(storeThemeVars(of({ header: { height: 96, sticky: true } }))['--lp-header-h']).toBe('96px');
+    expect(storeThemeVars(of({ header: { height: 96, sticky: true, onFrontPage: true } }))['--lp-header-h']).toBe('96px');
   });
 
   it('refuses a colour that is not one', () => {

@@ -18,11 +18,18 @@ export function StorefrontShell({
   store,
   children,
   back,
+  footer: showFooter = true,
 }: {
   store: Storefront;
   children: React.ReactNode;
   /** Shown on inner pages; the home page has nowhere to go back to. */
   back?: { href: string; label: string };
+  /**
+   * False when the page inside already ends with a footer of its own — a
+   * landing page fronting a store carries one as a block. Two footers is
+   * the duplication the store section exists to avoid.
+   */
+  footer?: boolean;
 }) {
   // Every variable the shop paints itself with, in one call: the palette
   // derived from the accent, plus the eight the seller may name and the
@@ -88,6 +95,7 @@ export function StorefrontShell({
 
       <main>{children}</main>
 
+      {showFooter && (
       <footer className="lp-footer">
         {store.about && <p className="sf-about">{store.about}</p>}
         {footerMenu.length > 0 && (
@@ -108,6 +116,7 @@ export function StorefrontShell({
         )}
         <p>{footer?.copyright?.trim() || `${store.name} — جميع الحقوق محفوظة`}</p>
       </footer>
+      )}
     </div>
   );
 }

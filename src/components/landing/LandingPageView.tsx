@@ -16,6 +16,8 @@ import { parseStoreTheme, themeForPage } from '@/lib/store-theme';
 import { directionOf } from '@/lib/store-languages';
 import { loadStoreFonts } from '@/lib/fonts/load-store-fonts';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
+import { StorefrontShell } from '@/components/storefront/StorefrontShell';
+import { getStorefront } from '@/lib/storefront';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref } from '@/components/landing/blocks/styles';
 import { availableStock } from '@/lib/reservation';
 import { deviceClassOf, recordLandingView } from '@/lib/landing-views';
@@ -127,7 +129,7 @@ const PAGE_SELECT = {
   storeId: true,
   store: {
     select: {
-      countryId: true, name: true, logo: true, favicon: true, supportPhone: true, theme: true, language: true,
+      countryId: true, name: true, slug: true, logo: true, favicon: true, supportPhone: true, theme: true, language: true,
       country: { select: { code: true, currencyCode: true } },
     },
   },
@@ -284,15 +286,8 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
       stock = await availableStock(db, companyId, lp.product.id, undefined, lp.storeId).catch(() => null);
     }
 
-    return (
-      // Its store's language and direction, not a hard-coded rtl: a page
-      // selling in English was being mirrored.
-      <div
-        dir={directionOf(lp.store?.language)}
-        lang={lp.store?.language ?? 'ar'}
-        className="lp-root"
-        style={paletteVars(palette) as React.CSSProperties}
-      >
+    const body = (
+      <>
         {href && <link rel="stylesheet" href={href} />}
         <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
         {storeFonts.css && <style dangerouslySetInnerHTML={{ __html: storeFonts.css }} />}
@@ -304,6 +299,50 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
             store: lp.store ? { name: lp.store.name, logo: lp.store.logo, phone: lp.store.supportPhone } : null,
           }}
         />
+      </>
+    );
+
+    /**
+     * THE SHOP'S OWN HEADER, ON THE PAGE THAT IS THE SHOP.
+     *
+     * A Single Product store's address renders THIS page, and it rendered
+     * bare: no logo, no shop name, no header, no footer, no menus. The
+     * seller set all of it under «القوالب» and «البلدان والمتاجر» and none
+     * of it ever appeared, which is why the store section read as dead.
+     *
+     * Only when this page is being served AS a store's front — a landing
+     * page opened at /lp/… is an advert of its own and keeps its own
+     * clothes. `getStorefront` is React-cached and the store route already
+     * called it this request, so the wrap costs no query.
+     *
+     * The page's own footer block wins over the shop's: two footers is the
+     * duplication this whole section exists to avoid.
+     */
+    const asFront = 'frontPageId' in target;
+    // The switch belongs to the STORE's template, not to the page's own
+    // palette: `theme` here has already been narrowed to what a landing
+    // page may override, and the shop's chrome is never one of those.
+    const wearsChrome =
+      asFront && parseStoreTheme(lp.store?.theme).header?.onFrontPage !== false && !!lp.store?.slug;
+    const shop = wearsChrome ? await getStorefront(lp.store!.slug) : null;
+    if (shop) {
+      return (
+        <StorefrontShell store={shop} footer={!sections.some((s) => s.type === 'footer')}>
+          {body}
+        </StorefrontShell>
+      );
+    }
+
+    return (
+      // Its store's language and direction, not a hard-coded rtl: a page
+      // selling in English was being mirrored.
+      <div
+        dir={directionOf(lp.store?.language)}
+        lang={lp.store?.language ?? 'ar'}
+        className="lp-root"
+        style={paletteVars(palette) as React.CSSProperties}
+      >
+        {body}
       </div>
     );
   }

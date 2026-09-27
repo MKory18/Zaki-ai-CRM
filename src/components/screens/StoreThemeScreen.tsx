@@ -516,6 +516,34 @@ export function StoreThemeScreen() {
             <p className={HINT}>
               الشعار المعروض في الترويسة هو شعار المتجر نفسه — يُضبط من «البلدان والمتاجر».
             </p>
+
+            {/*
+              ONLY A SINGLE PRODUCT STORE HAS THIS QUESTION.
+              Every other store's pages are shop pages and always wear the
+              header. A Single Product store's address renders its landing
+              page, and until now it rendered it bare: no logo, no name, no
+              header, no footer — everything set on this screen, invisible.
+            */}
+            {store?.type === 'SINGLE_PRODUCT' && (
+              <div className="mt-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3">
+                <label className="flex items-start gap-2 text-xs text-[var(--sys-foreground)]">
+                  <input
+                    type="checkbox"
+                    checked={theme.header?.onFrontPage !== false}
+                    onChange={(e) => setPart('header', { onFrontPage: e.target.checked })}
+                    className="mt-0.5 h-4 w-4 accent-[var(--sys-primary)]"
+                  />
+                  <span>
+                    <span className="font-semibold">أظهرها فوق صفحة الواجهة</span>
+                    <span className="mt-0.5 block leading-relaxed text-[var(--sys-muted-foreground)]">
+                      عنوانُ هذا المتجر يعرض صفحةَ الهبوط التي اخترتَها. مع هذا الخيار تلبس الصفحةُ
+                      ترويسةَ المتجر وشعارَه وقوائمَه وتذييلَه. أطفئه إن كنت تريدها إعلاناً صافياً
+                      بلا طريقٍ للخروج منه — وتذييلُ الصفحة الخاصُّ بها، إن وُجد، يبقى هو الظاهر.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            )}
           </div>
 
           <div className={CARD}>

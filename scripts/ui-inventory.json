@@ -931,7 +931,7 @@
   },
   "src/components/screens/StoreThemeScreen.tsx": {
     "buttons": 11,
-    "inputs": 23,
+    "inputs": 24,
     "columns": 15,
     "cards": 0,
     "modals": 0,
