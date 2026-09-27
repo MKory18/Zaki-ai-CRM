@@ -39,6 +39,7 @@ const base: WinbackSource = {
   rejectedAt: long,
   shippedAt: null,
   replacedByOrderNumber: null,
+  replacesOrderNumber: null,
   sellingPrice: 100,
   discountAmount: 0,
 };
@@ -98,6 +99,25 @@ describe('and the other four gates', () => {
     const v = winbackVerdict({ ...base, shippedAt: new Date('2026-09-01') }, NOW);
     expect(v.eligible, 'يعرض خصماً على شحنةٍ رجعت').toBe(false);
     if (!v.eligible) expect(v.code).toBe('ALREADY_SHIPPED');
+  });
+
+  /**
+   * ONE SECOND CHANCE, NOT A CHAIN.
+   *
+   * The database stops the ORIGINAL being offered twice — `replacesOrderId`
+   * is unique — and says nothing about the replacement. So A was won back as
+   * B, B was rejected, and fourteen days later B looked like an ordinary
+   * lost sale: offered again, cheaper, to a customer who had now said no
+   * three times. The rule is «من قال لا مرّتين قال لا», and it was being
+   * applied to one order rather than to one customer's answer.
+   */
+  it('refuses one that is itself a second chance', () => {
+    const v = winbackVerdict({ ...base, replacesOrderNumber: 'SY-0007' }, NOW);
+    expect(v.eligible, 'سلسلةُ خصوماتٍ بلا نهاية').toBe(false);
+    if (!v.eligible) {
+      expect(v.code).toBe('ALREADY_A_SECOND_CHANCE');
+      expect(v.reason).toContain('SY-0007');
+    }
   });
 
   /** Somebody who said no twice has answered twice. */
@@ -191,6 +211,13 @@ describe('the offer raises a new order and leaves the loss where it is', () => {
     expect(stripComments(repoFile('prisma/schema.prisma'))).toMatch(
       /replacesOrderId\s+String\?\s+@unique/
     );
+  });
+
+  /** And both doors have to load the link, or the guard reads null for ever. */
+  it('and both the list and the offer read whether it is already one', () => {
+    const src = route();
+    expect((src.match(/replaces: \{ select: \{ orderNumber: true \} \}/g) ?? []).length).toBe(2);
+    expect((src.match(/replacesOrderNumber:/g) ?? []).length).toBe(2);
   });
 
   /** A row eligible when the screen loaded may not be when the button lands. */

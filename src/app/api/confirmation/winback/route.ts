@@ -72,6 +72,8 @@ export async function GET(req: Request) {
         quantity: true, currency: true, productNameSnapshot: true, createdAt: true,
         customer: { select: { fullName: true, phone: true } },
         replacedBy: { select: { orderNumber: true } },
+        // Whether this order is itself somebody's second chance.
+        replaces: { select: { orderNumber: true } },
       },
     });
 
@@ -108,6 +110,7 @@ export async function GET(req: Request) {
         rejectedAt: rejectedAt.get(o.id) ?? null,
         shippedAt: o.shippedAt,
         replacedByOrderNumber: o.replacedBy?.orderNumber ?? null,
+        replacesOrderNumber: o.replaces?.orderNumber ?? null,
         sellingPrice: Number(o.sellingPrice ?? 0),
         discountAmount: Number(o.discountAmount ?? 0),
       };
@@ -161,7 +164,10 @@ export async function POST(req: Request) {
 
     const order = await db.order.findFirst({
       where: { id: orderId, companyId, ...(storeId ? { storeId } : {}) },
-      include: { replacedBy: { select: { orderNumber: true } } },
+      include: {
+        replacedBy: { select: { orderNumber: true } },
+        replaces: { select: { orderNumber: true } },
+      },
     });
     if (!order) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
 
@@ -180,6 +186,7 @@ export async function POST(req: Request) {
         rejectedAt: lastRejection?.createdAt ?? null,
         shippedAt: order.shippedAt,
         replacedByOrderNumber: order.replacedBy?.orderNumber ?? null,
+        replacesOrderNumber: order.replaces?.orderNumber ?? null,
         sellingPrice: Number(order.sellingPrice ?? 0),
         discountAmount: Number(order.discountAmount ?? 0),
       },

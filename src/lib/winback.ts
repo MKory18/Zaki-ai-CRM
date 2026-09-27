@@ -74,6 +74,11 @@ export interface WinbackSource {
   shippedAt: Date | string | null;
   /** The replacement it already has. A customer asked twice has answered twice. */
   replacedByOrderNumber: string | null;
+  /**
+   * The order this one was raised to win back, if it is itself a second
+   * chance. Null for an ordinary order.
+   */
+  replacesOrderNumber: string | null;
   sellingPrice: number;
   discountAmount: number;
 }
@@ -114,6 +119,30 @@ export function winbackVerdict(order: WinbackSource, now: Date): WinbackVerdict 
       eligible: false,
       code: 'ALREADY_OFFERED',
       reason: `عُرض عليه مرّةً بالفعل (${order.replacedByOrderNumber}) — ومن قال لا مرّتين قال لا`,
+    };
+  }
+
+  /**
+   * ONE SECOND CHANCE, NOT A CHAIN OF THEM.
+   *
+   * The database stops the ORIGINAL order being offered twice —
+   * `replacesOrderId` is unique, so it can carry at most one replacement.
+   * It says nothing about the replacement itself, and this verdict only
+   * looked at «has anybody offered on THIS order», never at «is this order
+   * already somebody's second chance».
+   *
+   * So order A was won back as B; B was rejected; fourteen days later B
+   * appeared in the list looking like an ordinary lost sale, was offered a
+   * discount, became C — and so on, each round cheaper than the last, to a
+   * customer who had now said no three times. The rule this screen exists to
+   * apply is «من قال لا مرّتين قال لا», and it was applying it to one order
+   * rather than to one customer's answer.
+   */
+  if (order.replacesOrderNumber) {
+    return {
+      eligible: false,
+      code: 'ALREADY_A_SECOND_CHANCE',
+      reason: `هذا نفسه محاولةُ استرجاعٍ لـ${order.replacesOrderNumber} ورُفض — ومن قال لا مرّتين قال لا`,
     };
   }
 
