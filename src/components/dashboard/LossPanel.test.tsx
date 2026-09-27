@@ -1,0 +1,111 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+import { summariseLoss } from '@/lib/loss-analysis';
+
+/**
+ * THE PANEL DRAWS WHAT THE READING FOUND — including what it did not find.
+ *
+ * `loss-analysis.test.ts` argues with the arithmetic and reads the panel's
+ * source for its shape. This renders it, because the two failures that
+ * matter here are failures of DRAWING, not of counting: a money figure
+ * appearing on the half that spent none, and thirty-one lines of courier
+ * prose where the panel should say «واحدٌ غيرُ مُصنَّف» and stop.
+ */
+
+const fetched = vi.hoisted(() => ({ body: null as unknown }));
+vi.mock('@/lib/api-client', () => ({
+  apiJson: async () => fetched.body,
+  apiFetch: async () => new Response('{}'),
+}));
+// The panel prints money; the shell that supplies the currency is not here.
+vi.mock('@/context/StoreCurrency', () => ({
+  useStoreCurrency: () => ({ code: 'USD', minorUnit: 2 }),
+}));
+
+import { LossPanel } from './LossPanel';
+
+afterEach(cleanup);
+
+function give(rows: Parameters<typeof summariseLoss>[0]) {
+  fetched.body = { ...summariseLoss(rows), period: 'all', scanned: 0, total: 0, truncated: false };
+}
+
+describe('the panel', () => {
+  it('names the reason, whose fault it is, and what it cost', async () => {
+    give([
+      { field: 'deliveryFailureReason', reason: 'WRONG_ADDRESS', count: 3, money: 21 },
+      { field: 'rejectionReason', reason: 'PRICE_TOO_HIGH', count: 5, money: 0 },
+    ]);
+    render(<LossPanel period="all" />);
+
+    await waitFor(() => expect(screen.getByText('عنوان خاطئ')).toBeTruthy());
+    expect(screen.getByText('السعر مرتفع')).toBeTruthy();
+    expect(screen.getAllByText('بياناتٌ عندنا خاطئة').length).toBeGreaterThan(0);
+    expect(screen.getByText('قرارُ العميل')).toBeTruthy();
+  });
+
+  /**
+   * NO MONEY ON THE UN-SHIPPED HALF.
+   *
+   * Nothing was spent: no fee, no stock, no parcel. A currency figure there
+   * would be the biggest number on the screen and the one nobody could
+   * defend.
+   */
+  it('prints no figure on the half that spent nothing', async () => {
+    give([{ field: 'rejectionReason', reason: 'PRICE_TOO_HIGH', count: 5, money: 0 }]);
+    const { container } = render(<LossPanel period="all" />);
+
+    await waitFor(() => expect(screen.getByText('السعر مرتفع')).toBeTruthy());
+    expect(screen.getByText('قبل التأكيد')).toBeTruthy();
+    // THE CELL, not the figure. Every row on this half is zero, so a money
+    // column drawn here renders the «—» placeholder and no currency at all:
+    // a first version of this assertion looked for «$» and passed with the
+    // column switched on, and looking for «—» matched the prose instead.
+    const row = container.querySelector('li');
+    expect(row?.children.length, 'عمودُ المال مرسومٌ على نصفٍ لم يُنفق فيه شيء').toBe(3);
+    expect(container.textContent).not.toMatch(/\$|USD/);
+  });
+
+  /** One row, with its count — not one row per courier sentence. */
+  it('collapses the courier prose onto one row and says how many', async () => {
+    give([
+      { field: 'returnReason', reason: '14561 - تم الرفض قبل الوصول', count: 1, money: 4 },
+      { field: 'returnReason', reason: '14926 - غير محافظة', count: 1, money: 4 },
+      { field: 'returnReason', reason: 'رفض الاستلام بالكامل', count: 1, money: 6 },
+    ]);
+    render(<LossPanel period="all" />);
+
+    await waitFor(() => expect(screen.getByText('سببٌ غيرُ مُصنَّف — نصٌّ حرّ')).toBeTruthy());
+    expect(screen.queryByText(/14926/), 'جملةُ المندوب مرسومةٌ في الملخّص').toBeNull();
+    expect(screen.getByText(/منها 3 بسببٍ غيرِ مُصنَّف/)).toBeTruthy();
+  });
+
+  /** The one line anybody can act on. */
+  it('leads with what our own failures cost after shipping', async () => {
+    give([
+      { field: 'deliveryFailureReason', reason: 'WRONG_ADDRESS', count: 3, money: 21 },
+      { field: 'returnReason', reason: 'CUSTOMER_REFUSED', count: 2, money: 9 },
+    ]);
+    render(<LossPanel period="all" />);
+
+    await waitFor(() => expect(screen.getByText(/دُفعت على 3 شحنةً فشلت لسببٍ عندنا/)).toBeTruthy());
+    expect(screen.getByText(/70% من كلفةِ ما فشل بعد الشحن/)).toBeTruthy();
+  });
+
+  /** And a customer saying no is not a failure of ours. */
+  it('claims nothing when every loss was the customer\'s decision', async () => {
+    give([{ field: 'returnReason', reason: 'CUSTOMER_REFUSED', count: 4, money: 18 }]);
+    render(<LossPanel period="all" />);
+
+    await waitFor(() => expect(screen.getByText('العميل رفض')).toBeTruthy());
+    expect(screen.queryByText(/فشلت لسببٍ عندنا/), 'نسب قرارَ العميل إلينا').toBeNull();
+  });
+
+  it('says why it is empty instead of drawing a blank card', async () => {
+    give([]);
+    render(<LossPanel period="all" />);
+    await waitFor(() => expect(screen.getByText('لا طلبَ خسرناه في هذه الفترة')).toBeTruthy());
+  });
+});

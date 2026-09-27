@@ -14,7 +14,12 @@ import { Input, Textarea, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { apiFetch } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
-import { ATTEMPT_RESULT_AR } from '@/lib/shipping-workflow';
+import {
+  ATTEMPT_RESULT_AR,
+  // The lists and their words come from one place — see the note there.
+  DELIVERY_FAILURE_REASON_LABELS as FAILURE_REASONS,
+  RETURN_REASON_LABELS as RETURN_REASONS,
+} from '@/lib/shipping-workflow';
 import { RiArchiveDrawerLine, RiArchiveLine, RiArrowGoBackLine, RiCloseCircleLine, RiHistoryLine, RiMapPinLine, RiNumbersLine, RiShipLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 
 
@@ -32,25 +37,6 @@ const SHIPPING_STATE: Record<string, { ar: string; en: string; cls: string }> = 
   CANCELLED: { ar: 'ملغى', en: 'Cancelled', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
 };
 
-const FAILURE_REASONS: Record<string, { ar: string; en: string }> = {
-  CUSTOMER_NOT_AVAILABLE: { ar: 'العميل غير متوفر', en: 'Customer not available' },
-  PHONE_UNREACHABLE: { ar: 'الهاتف لا يرد', en: 'Phone unreachable' },
-  WRONG_ADDRESS: { ar: 'عنوان خاطئ', en: 'Wrong address' },
-  CUSTOMER_REFUSED: { ar: 'العميل رفض', en: 'Customer refused' },
-  ADDRESS_NOT_FOUND: { ar: 'العنوان غير موجود', en: 'Address not found' },
-  AREA_NOT_SERVICED: { ar: 'منطقة غير مخدومة', en: 'Area not serviced' },
-  CUSTOMER_REQUESTED_DELAY: { ar: 'العميل طلب تأخير', en: 'Customer requested delay' },
-  OTHER: { ar: 'أخرى', en: 'Other' },
-};
-
-const RETURN_REASONS: Record<string, { ar: string; en: string }> = {
-  CUSTOMER_REFUSED: { ar: 'العميل رفض', en: 'Customer refused' },
-  FAILED_DELIVERY: { ar: 'فشل التوصيل', en: 'Failed delivery' },
-  DAMAGED_PRODUCT: { ar: 'منتج تالف', en: 'Damaged product' },
-  WRONG_PRODUCT: { ar: 'منتج خاطئ', en: 'Wrong product' },
-  CUSTOMER_REQUEST: { ar: 'طلب العميل', en: 'Customer request' },
-  OTHER: { ar: 'أخرى', en: 'Other' },
-};
 
 /** Next allowed transitions per current status (mirrors backend map for UX only) */
 const NEXT_ACTIONS: Record<string, { to: string; labelAr: string; labelEn: string; cls: string }[]> = {

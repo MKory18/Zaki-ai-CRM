@@ -72,6 +72,40 @@ export const RETURN_REASONS = [
 ] as const;
 
 /**
+ * AND WHAT THOSE TWO LISTS ARE CALLED, beside the lists themselves.
+ *
+ * Both label tables lived inside `ShippingSection.tsx` as `const
+ * RETURN_REASONS` — shadowing the canonical list imported from here, under
+ * the same name. Nothing kept them in step, and a code added to the list
+ * here would have rendered to an Arabic reader as a raw English constant on
+ * every screen. That is the divergence the delivery-attempt vocabulary
+ * already cost this codebase once, and the reason `REJECTION_REASON_AR` sits
+ * next to `REJECTION_REASONS` rather than in a screen.
+ *
+ * Bilingual, because the screen that renders them renders English too —
+ * moved here exactly as they were, so nothing reads differently today.
+ */
+export const RETURN_REASON_LABELS: Record<string, { ar: string; en: string }> = {
+  CUSTOMER_REFUSED: { ar: 'العميل رفض', en: 'Customer refused' },
+  FAILED_DELIVERY: { ar: 'فشل التوصيل', en: 'Failed delivery' },
+  DAMAGED_PRODUCT: { ar: 'منتج تالف', en: 'Damaged product' },
+  WRONG_PRODUCT: { ar: 'منتج خاطئ', en: 'Wrong product' },
+  CUSTOMER_REQUEST: { ar: 'طلب العميل', en: 'Customer request' },
+  OTHER: { ar: 'أخرى', en: 'Other' },
+};
+
+export const DELIVERY_FAILURE_REASON_LABELS: Record<string, { ar: string; en: string }> = {
+  CUSTOMER_NOT_AVAILABLE: { ar: 'العميل غير متوفر', en: 'Customer not available' },
+  PHONE_UNREACHABLE: { ar: 'الهاتف لا يرد', en: 'Phone unreachable' },
+  WRONG_ADDRESS: { ar: 'عنوان خاطئ', en: 'Wrong address' },
+  CUSTOMER_REFUSED: { ar: 'العميل رفض', en: 'Customer refused' },
+  ADDRESS_NOT_FOUND: { ar: 'العنوان غير موجود', en: 'Address not found' },
+  AREA_NOT_SERVICED: { ar: 'منطقة غير مخدومة', en: 'Area not serviced' },
+  CUSTOMER_REQUESTED_DELAY: { ar: 'العميل طلب تأخير', en: 'Customer requested delay' },
+  OTHER: { ar: 'أخرى', en: 'Other' },
+};
+
+/**
  * WHAT HAPPENED TO THE PARCEL — and, separately, why.
  *
  * This list used to carry `CUSTOMER_UNAVAILABLE` and `CUSTOMER_REFUSED`

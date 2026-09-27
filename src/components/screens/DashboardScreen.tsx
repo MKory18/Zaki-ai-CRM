@@ -19,6 +19,7 @@ import { IntelligenceStrip } from '@/components/growth/IntelligenceStrip';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LossPanel } from '@/components/dashboard/LossPanel';
 
 const PERIODS = [
   { key: 'today', ar: 'اليوم', en: 'Today' },
@@ -323,6 +324,15 @@ export function DashboardScreen() {
               ))}
             </CardContent>
           </Card>
+
+          {/*
+            RIGHT AFTER «الأكثر رفضاً», because that card names the product
+            and this one names the reason — and it takes the period the rest
+            of the screen is already showing. No new route and no menu entry:
+            the answer to «why are we losing orders» belongs on the screen
+            somebody already opens to ask it.
+          */}
+          <LossPanel period={period} />
 
           <Card>
             <CardHeader

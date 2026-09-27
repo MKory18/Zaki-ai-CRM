@@ -19,6 +19,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/dashboard/LossPanel.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 2,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/growth/AskAi.tsx": {
     "buttons": 2,
     "inputs": 1,
