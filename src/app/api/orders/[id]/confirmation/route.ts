@@ -3,6 +3,7 @@ import { notify } from '@/lib/notify';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { assertOrderAccess } from '@/lib/rbac';
+import { AlreadyBlocked, blockPhone } from '@/lib/blacklist';
 import {
   isValidTransition, REJECTION_REASONS, FOLLOW_UP_REASONS,
   CONFIRMATION_STATUSES, type ConfirmationStatus,
@@ -300,6 +301,65 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       previousData: { confirmationStatus: from, nextFollowUpAt: order.nextFollowUpAt },
       newData: { confirmationStatus: target, rejectionReason, followUpReason, action },
     });
+
+    /**
+     * A FAKE ORDER IS A PHONE, NOT JUST A ROW.
+     *
+     * The blacklist was complete — the model, the release-only history, and
+     * enforcement on all four intake doors: the direct order, the AI intake,
+     * the storefront and Telegram. Nothing ever put anybody ON it except a
+     * person opening `/control/blacklist` and typing a number.
+     *
+     * So the moment somebody actually identifies a fake — «طلب وهميّ», the
+     * one rejection reason that accuses nobody of changing their mind — the
+     * work of stopping the next one was a separate errand, on another
+     * screen, that nobody remembers after the twentieth call of the day.
+     * The list stayed empty and the same number ordered again on Tuesday.
+     *
+     * ONLY `FAKE_ORDER`. A wrong number is our typing, an entry error is our
+     * own mistake, and «لا يريد المنتج» is a customer exercising a choice —
+     * none of the three is a reason to stop somebody buying. This is the
+     * code whose whole meaning is «there is no real order here».
+     *
+     * Blocking never fails the rejection. The order was rejected; that is
+     * recorded and committed. If the phone is already blocked, or is not a
+     * phone we can canonicalise, the rejection still stands — and the block
+     * is releasable in one click on the screen that always owned it.
+     */
+    if (target === 'REJECTED' && rejectionReason === 'FAKE_ORDER') {
+      /**
+       * Read here, not off `order`. `assertOrderAccess` loads the order's
+       * own columns and no relations, so `order.customer` is undefined —
+       * reaching for it would have made this whole branch a silent no-op
+       * that typechecks perfectly.
+       */
+      const customer = await db.customer.findUnique({
+        where: { id: order.customerId },
+        select: { phone: true, fullName: true },
+      });
+      if (customer?.phone) {
+        try {
+          await blockPhone(db, {
+            companyId,
+            phone: customer.phone,
+            name: customer.fullName ?? null,
+            reason: `طلب وهميّ — ${order.orderNumber}${rejectionNote?.trim() ? `: ${rejectionNote.trim()}` : ''}`,
+            blockedById: user.id,
+          });
+          await logAudit({
+            companyId, userId: user.id, action: 'CUSTOMER_BLOCKED_ON_FAKE_ORDER',
+            entity: 'Order', entityId: id,
+            newData: { phone: customer.phone, orderNumber: order.orderNumber },
+          });
+        } catch (e) {
+          // Already blocked is the ordinary case on a second fake from the
+          // same number, and is not a failure of anything.
+          if (!(e instanceof AlreadyBlocked)) {
+            console.warn('blocking on fake order failed:', e);
+          }
+        }
+      }
+    }
 
     const fresh = await db.order.findUnique({ where: { id } });
 
