@@ -6,6 +6,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { requirePermission, getPermissionScope } from '@/lib/authorization';
+import { maySeeCost, withoutCost } from '@/lib/cost-visibility';
 
 export async function GET(req: Request) {
   try {
@@ -93,6 +94,18 @@ export async function GET(req: Request) {
       orderBy: { createdAt: 'desc' },
     });
 
+    /**
+     * WHAT IT COST US IS NOT PART OF «WHAT IS THIS PRODUCT».
+     *
+     * `products.view` belongs to the moderator and the confirmation and
+     * follow-up agents, who need the name, the price and the stock to talk
+     * to a customer. This list was also sending them every batch's
+     * manufacturing, packaging and raw-material cost and the average cost
+     * per unit — the margin on everything the company sells. The rule is
+     * the one the inventory route already applies.
+     */
+    const showCost = maySeeCost(user);
+
     // Compute comprehensive cost analysis for each product
     const enriched = products.map((prod) => {
       const totalProduced = prod.batches.reduce((sum, b) => sum + b.quantityProduced, 0);
@@ -110,16 +123,24 @@ export async function GET(req: Request) {
 
       return {
         ...prod,
+        // The batches keep their quantities and dates for everybody; their
+        // money is dropped, not zeroed — a zero is a claim, and «this cost
+        // nothing» is a false one.
+        batches: showCost ? prod.batches : prod.batches.map(withoutCost),
         analytics: {
           totalProduced,
           totalSold,
           totalRemaining,
-          totalMfgCost,
-          totalPackCost,
-          totalRawCost,
-          totalOtherCost,
-          totalProdCost,
-          avgCostPerUnit,
+          ...(showCost
+            ? {
+                totalMfgCost,
+                totalPackCost,
+                totalRawCost,
+                totalOtherCost,
+                totalProdCost,
+                avgCostPerUnit,
+              }
+            : {}),
         },
       };
     });

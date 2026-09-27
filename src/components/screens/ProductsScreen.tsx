@@ -28,6 +28,14 @@ export function ProductsScreen() {
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
+  /**
+   * Whether this viewer was given costs at all — asked of the DATA, not of
+   * the permissions. The server decides who may see what a thing cost
+   * (src/lib/cost-visibility.ts); a copy of that rule here would be a
+   * second answer to the same question, and one of the two would drift.
+   */
+  const showsCost = products.some((p) => p.analytics?.avgCostPerUnit !== undefined);
+
   // Create form state
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
@@ -354,12 +362,26 @@ export function ProductsScreen() {
                       </span>
                     ),
                   },
-                  {
-                    key: 'cost',
-                    label: 'التكلفة/وحدة',
-                    align: 'end',
-                    render: (p) => <Money value={p.analytics?.avgCostPerUnit ?? 0} />,
-                  },
+                  /**
+                   * THE COST COLUMN ONLY WHEN THE SERVER SENT A COST.
+                   *
+                   * It used to print `?? 0` for anyone the server withheld
+                   * it from — a column of zeros, which is not «you may not
+                   * see this» but «these cost nothing», and somebody would
+                   * eventually quote it. The server decides (see
+                   * cost-visibility.ts); this reads the answer rather than
+                   * keeping a second copy of the rule.
+                   */
+                  ...(showsCost
+                    ? [
+                        {
+                          key: 'cost',
+                          label: 'التكلفة/وحدة',
+                          align: 'end' as const,
+                          render: (p: any) => <Money value={p.analytics?.avgCostPerUnit ?? 0} />,
+                        },
+                      ]
+                    : []),
                   {
                     key: 'sold',
                     label: 'المبيعات',
