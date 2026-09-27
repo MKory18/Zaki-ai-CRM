@@ -345,7 +345,7 @@ export function OrdersScreen() {
               <RiSearchLine className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
               <input
                 type="text"
-                placeholder="ابحث برقم الطلب، الباركود، اسم العميل، أو الهاتف…"
+                placeholder="ابحث برقم الطلب، الرمز، اسم العميل، أو الهاتف…"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
@@ -360,7 +360,7 @@ export function OrdersScreen() {
                 same request goes out. A scan is a search — it sees exactly
                 the orders this account may see, and nothing more. */}
             <ScanButton
-              title="امسح بوليصة الطلب"
+              title="امسح بوليصة الطلب — QR أو باركود"
               onScan={(code) => {
                 setSearchInput(code);
                 setSearch(code);

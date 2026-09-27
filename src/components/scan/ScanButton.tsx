@@ -87,7 +87,15 @@ function announce(ok: boolean): void {
 /** Roughly eight frames a second: fast for a hand, cheap for a battery. */
 const FRAME_MS = 125;
 
-export function ScanButton({ onScan, title = 'مسح الباركود', continuous = false, label = 'مسح', className }: ScanButtonProps) {
+/**
+ * «الرمز», not «الباركود».
+ *
+ * The reader has always taken both: QR first, then the four linear formats
+ * a courier label carries — in the native `BarcodeDetector` path and in the
+ * ZXing fallback alike. Only the words said barcode, so anybody holding a
+ * label with a QR square on it had no reason to think this would read it.
+ */
+export function ScanButton({ onScan, title = 'مسح الرمز (QR أو باركود)', continuous = false, label = 'مسح', className }: ScanButtonProps) {
   const [open, setOpen] = useState(false);
   return (
     <>

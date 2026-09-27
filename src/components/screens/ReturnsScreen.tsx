@@ -66,14 +66,14 @@ export function ReturnsScreen() {
         className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex gap-3 items-end"
       >
         <label className="flex-1">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">امسح الباركود أو اكتب المرجع</span>
+          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">امسح الرمز (QR أو باركود) أو اكتب المرجع</span>
           <div className="relative">
             <RiQrScan2Line className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               autoFocus
-              placeholder="امسح الباركود هنا"
+              placeholder="امسح الرمز هنا"
               className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
               dir="ltr"
             />
@@ -83,7 +83,7 @@ export function ReturnsScreen() {
         {/* A phone is the scanner a warehouse already owns. It keeps
             scanning: a returned pallet is twenty parcels, not one. */}
         <ScanButton
-          title="امسح بوليصة المرتجع"
+          title="امسح بوليصة المرتجع — QR أو باركود"
           continuous
           onScan={(code) => {
             // Putting it in the box IS the search — the effect below
