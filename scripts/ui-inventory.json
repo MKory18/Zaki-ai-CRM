@@ -380,12 +380,12 @@
     "tabs": 0
   },
   "src/components/screens/ChangeRequestsScreen.tsx": {
-    "buttons": 3,
+    "buttons": 4,
     "inputs": 0,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 5,
+    "icons": 7,
     "links": 0,
     "tabs": 0
   },

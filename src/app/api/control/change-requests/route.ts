@@ -21,9 +21,22 @@ export async function GET(req: Request) {
     const supervises =
       can(user, 'control.change_requests') ||
       ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER', 'CONFIRMATION_SUPERVISOR'].includes(user.role);
+    // AND THE REQUESTS SHE RAISED HERSELF.
+    //
+    // This filter was only «orders still in my hands», which is right for
+    // the ones she has to ANSWER and leaves out every one she ASKED. A
+    // moderator raising a request on a confirmed order does not hold that
+    // order and never will — so her own request was invisible to her on the
+    // one screen that lists them. She could not see the decision, and could
+    // not take the request back.
     const mine = supervises
       ? {}
-      : { order: { claimedById: user.id, confirmationStatus: { in: BEFORE_OPERATIONS } } };
+      : {
+          OR: [
+            { order: { claimedById: user.id, confirmationStatus: { in: BEFORE_OPERATIONS } } },
+            { requestedById: user.id },
+          ],
+        };
 
     const status = new URL(req.url).searchParams.get('status') ?? 'PENDING';
     const now = new Date();
@@ -42,7 +55,8 @@ export async function GET(req: Request) {
       where: {
         companyId,
         ...statusWhere,
-        order: { storeId, ...(mine.order ?? {}) },
+        ...mine,
+        order: { storeId },
       },
       orderBy: [{ status: 'asc' }, { createdAt: 'asc' }],
       take: 200,
@@ -67,6 +81,10 @@ export async function GET(req: Request) {
       requests: rows.map((r) => ({
         ...r,
         requestedByName: nameOf.get(r.requestedById) ?? null,
+        // Hers to withdraw, never hers to decide — the decide route refuses
+        // self-approval, and a button that always 403s teaches people the
+        // screen is lying to them.
+        isMine: r.requestedById === user.id,
         overdue: r.status === 'PENDING' && !!r.slaDueAt && new Date(r.slaDueAt) < now,
       })),
     });

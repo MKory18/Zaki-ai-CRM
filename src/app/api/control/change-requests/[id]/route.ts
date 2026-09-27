@@ -6,6 +6,8 @@ import { mayDecide } from '@/lib/change-request-routing';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { zodMessage } from '@/lib/zod-message';
+import { createNotification } from '@/lib/notification';
+import { afterResponse } from '@/lib/notify';
 
 /**
  * PATCH /api/control/change-requests/:id — decide one request.
@@ -111,12 +113,132 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       newData: { status: parsed.data.decision, note: parsed.data.note ?? null },
     });
 
+    /**
+     * AND THE ANSWER GOES BACK TO WHOEVER ASKED.
+     *
+     * This was the hole. Raising a request notified the decider, and an
+     * overdue one notified the supervisors, and the DECISION notified
+     * nobody at all — there was not one call in this file. The agent
+     * presses «طلب تعديل» with the customer on the phone, and whether the
+     * answer came an hour ago or never is the same screen to her. So she
+     * rings a supervisor to ask, which is what the request existed to stop.
+     *
+     * Approved is not finished: the change is written onto the order in a
+     * second step, so the message says which of the two happened. The
+     * rejection carries its reason, because «لا» without one sends her
+     * straight back to ask why.
+     *
+     * Never to the decider — being told your own decision is noise, the
+     * same rule the raise already follows.
+     */
+    if (request.requestedById !== user.id) {
+      const approved = parsed.data.decision === 'APPROVED';
+      afterResponse(async () => {
+        await createNotification({
+          companyId,
+          storeId,
+          actorId: user.id,
+          audience: { userIds: [request.requestedById] },
+          type: 'SYSTEM_ALERT',
+          title: approved
+            ? `اعتُمد تعديلك على ${request.order.orderNumber}`
+            : `رُفض تعديلك على ${request.order.orderNumber}`,
+          message: approved
+            ? `${user.name ?? 'المشرف'} اعتمده — ويُطبَّق على الطلب في خطوة التطبيق.${parsed.data.note ? ` ${parsed.data.note}` : ''}`
+            : `${user.name ?? 'المشرف'}: ${parsed.data.note}`,
+          link: ['/orders', '/confirmation/mine', '/control/change-requests'],
+        });
+      });
+    }
+
     return NextResponse.json({
       request: decided,
       // The approved fields still have to be applied through the order APIs.
       fieldsToApply: parsed.data.decision === 'APPROVED' ? decided.changes : null,
     });
   } catch (error) {
+    return apiErrorResponse(error);
+  }
+}
+
+
+/**
+ * DELETE /api/control/change-requests/:id — take back a request you raised.
+ *
+ * `CANCELLED` was in the status list from the beginning and nothing ever
+ * wrote it, so a request raised by mistake could not be undone by anyone —
+ * and a PENDING request is not inert. A blocking one refuses every forward
+ * shipping transition on that order, and ANY pending one refuses a second
+ * request on it. So one wrong press froze the order until a supervisor
+ * happened to open the queue and reject it, and until then nobody could
+ * even raise the corrected request.
+ *
+ * ONLY THE REQUESTER, and only while it is still pending. A supervisor who
+ * wants it gone rejects it with a reason — that is a decision, it is
+ * already here, and it is what the requester needs to hear. Letting a
+ * supervisor withdraw instead would be the same act under a name that
+ * records nothing.
+ */
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { user, companyId, storeId } = await requireContext();
+
+    const request = await db.orderChangeRequest.findFirst({
+      where: { id, companyId, order: { storeId } },
+      select: { id: true, orderId: true, status: true, requestedById: true, reason: true },
+    });
+    if (!request) return NextResponse.json({ error: 'طلب التعديل غير موجود' }, { status: 404 });
+    if (request.requestedById !== user.id) {
+      return NextResponse.json(
+        { error: 'يسحب الطلبَ من رفعه — والمشرف يرفضه بسببٍ مكتوب', code: 'NOT_THE_REQUESTER' },
+        { status: 403 }
+      );
+    }
+    if (request.status !== 'PENDING') {
+      return NextResponse.json(
+        { error: 'تم البت في هذا الطلب مسبقاً', code: 'ALREADY_DECIDED' },
+        { status: 409 }
+      );
+    }
+
+    await db.$transaction(async (tx) => {
+      // Pending, here too: the supervisor may be deciding it this second,
+      // and a decision that lands first wins rather than being overwritten.
+      const res = await tx.orderChangeRequest.updateMany({
+        where: { id, status: 'PENDING' },
+        data: { status: 'CANCELLED', decidedById: user.id, decidedAt: new Date() },
+      });
+      if (res.count !== 1) throw new Error('ALREADY_DECIDED');
+      await tx.orderNote.create({
+        data: {
+          companyId,
+          orderId: request.orderId,
+          authorId: user.id,
+          kind: 'internal',
+          body: `سحب طلب التعديل: ${request.reason}`,
+        },
+      });
+    });
+
+    await logAudit({
+      companyId,
+      userId: user.id,
+      action: 'CHANGE_REQUEST_WITHDRAWN',
+      entity: 'OrderChangeRequest',
+      entityId: id,
+      previousData: { status: 'PENDING' },
+      newData: { status: 'CANCELLED' },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'ALREADY_DECIDED') {
+      return NextResponse.json(
+        { error: 'تم البت في هذا الطلب مسبقاً', code: 'ALREADY_DECIDED' },
+        { status: 409 }
+      );
+    }
     return apiErrorResponse(error);
   }
 }

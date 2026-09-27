@@ -9,7 +9,7 @@ import { deriveCoreState } from '@/lib/order-state';
 import { OrderStateChip } from '@/components/ui/StatusChip';
 import { ROLE_LABELS, type UserRole } from '@/types/auth';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiArrowLeftLine, RiCheckboxCircleLine, RiFileEditLine, RiLoader4Line } from '@remixicon/react';
+import { RiArrowGoBackLine, RiArrowLeftLine, RiCheckboxCircleLine, RiFileEditLine, RiLoader4Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 
@@ -42,6 +42,8 @@ interface ChangeRequest {
   decisionNote: string | null;
   requestedByName: string | null;
   requestedRole: string;
+  /** Raised by the person reading the screen. */
+  isMine: boolean;
   changes: Record<string, { from?: string | number | null; to: string | number | null }>;
   order: {
     id: string;
@@ -62,6 +64,7 @@ export function ChangeRequestsScreen() {
   const [lists, setLists] = useState<Record<Tab, ChangeRequest[]> | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [applying, setApplying] = useState<string | null>(null);
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const confirm = useConfirm();
   const tell = useTell();
 
@@ -82,6 +85,38 @@ export function ChangeRequestsScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * TAKE BACK A REQUEST YOU RAISED.
+   *
+   * A pending request is not inert: a blocking one stops the order from
+   * moving forward, and any pending one refuses a second request on the same
+   * order. So the corrected request could not be raised until somebody else
+   * cleared the wrong one.
+   */
+  async function withdraw(r: ChangeRequest) {
+    const ok = await confirm({
+      title: `اسحب طلبك على ${r.order.orderNumber}؟`,
+      body: 'يُلغى الطلب ويعود الطلبُ إلى التقدّم الطبيعي، ويمكنك رفعُ طلبٍ مصحَّح بعده. يُسجَّل السحب على الطلب.',
+      confirmLabel: 'اسحبه',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    setWithdrawing(r.id);
+    try {
+      await apiJson(`/api/control/change-requests/${r.id}`, { method: 'DELETE' });
+      await load();
+    } catch (e) {
+      await tell({
+        title: 'تعذر سحب الطلب',
+        body: e instanceof Error ? e.message : 'حدث خطأ',
+        tone: 'danger',
+      });
+    } finally {
+      setWithdrawing(null);
+    }
+  }
 
   async function apply(r: ChangeRequest) {
     const lines = Object.entries(r.changes ?? {})
@@ -231,14 +266,37 @@ export function ChangeRequestsScreen() {
               {r.order.customer.fullName} · <span dir="ltr">{r.order.customer.phone}</span>
             </p>
 
-            <footer className="flex pt-2 border-t border-[var(--sys-border)]">
+            <footer className="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--sys-border)]">
               {tab === 'PENDING' ? (
-                <button
-                  onClick={() => setReviewing(r.id)}
-                  className="min-h-11 md:min-h-0 inline-flex items-center px-4 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium"
-                >
-                  مراجعة واتخاذ القرار
-                </button>
+                /* Nobody decides their own request — the route refuses it,
+                   and a button that always fails teaches people the screen
+                   is lying. What she has on her own row is the withdrawal. */
+                r.isMine ? (
+                  <>
+                    <button
+                      onClick={() => void withdraw(r)}
+                      disabled={withdrawing === r.id}
+                      className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg border border-[var(--sys-border)] text-[var(--sys-foreground)] text-xs font-medium transition-colors hover:border-[var(--sys-destructive-border)] hover:text-[var(--sys-destructive)] disabled:opacity-50"
+                    >
+                      {withdrawing === r.id ? (
+                        <RiLoader4Line className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
+                      )}
+                      اسحب طلبي
+                    </button>
+                    <span className="text-xs text-[var(--sys-muted-foreground)]">
+                      طلبُك — ينتظر قرارَ من يستطيع الوصولَ إلى الطلب، ويصلك القرارُ إشعاراً.
+                    </span>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setReviewing(r.id)}
+                    className="min-h-11 md:min-h-0 inline-flex items-center px-4 py-1.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium"
+                  >
+                    مراجعة واتخاذ القرار
+                  </button>
+                )
               ) : (
                 <button
                   onClick={() => void apply(r)}

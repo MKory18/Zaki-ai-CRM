@@ -317,7 +317,7 @@ export async function PATCH(
     // because this authority passes the seal and must not carry a second
     // change through with it.
     let data: z.infer<typeof patchSchema> = parsed.data;
-    let viaRequest: { id: string; orderId: string; reason: string; decisionNote: string | null } | null = null;
+    let viaRequest: { id: string; orderId: string; reason: string; decisionNote: string | null; requestedById: string } | null = null;
     if (parsed.data.changeRequestId) {
       const stray = strayFields(parsed.data as Record<string, unknown>);
       if (stray.length > 0) {
@@ -328,7 +328,7 @@ export async function PATCH(
       }
       const request = await db.orderChangeRequest.findFirst({
         where: { id: parsed.data.changeRequestId, companyId },
-        select: { id: true, orderId: true, status: true, appliedAt: true, changes: true, reason: true, decisionNote: true },
+        select: { id: true, orderId: true, status: true, appliedAt: true, changes: true, reason: true, decisionNote: true, requestedById: true },
       });
       if (!request) return NextResponse.json({ error: 'طلب التعديل غير موجود' }, { status: 404 });
       const expanded = expandApproved(request);
@@ -1051,10 +1051,33 @@ export async function PATCH(
       // Once. `appliedAt: null` in the filter makes a second, concurrent apply
       // a no-op here — and the values are absolute ("to 3", not "+1"), so the
       // order itself ends the same either way.
-      await db.orderChangeRequest.updateMany({
+      const stamped = await db.orderChangeRequest.updateMany({
         where: { id: viaRequest.id, appliedAt: null },
         data: { appliedAt: new Date(), appliedById: user.id },
       });
+
+      // AND THE PERSON WHO ASKED HEARS THAT IT IS DONE.
+      //
+      // «اعتُمد» and «كُتب على الطلب» are two different days for her: an
+      // approval waits in «بانتظار التطبيق» until somebody carries it out,
+      // and until then the order still says what it said. Telling her only
+      // about the approval means she believes the customer's address changed
+      // at the moment it did not.
+      //
+      // Inside the `stamped` guard, so a second concurrent apply — which
+      // changes nothing — does not send a second message either.
+      if (stamped.count === 1 && viaRequest.requestedById !== user.id) {
+        notify({
+          companyId,
+          storeId: existing.storeId ?? storeId,
+          audience: { userIds: [viaRequest.requestedById] },
+          actorId: user.id,
+          title: `طُبِّق تعديلك على ${existing.orderNumber}`,
+          message: `${user.name ?? 'المشرف'} كتبه على الطلب: ${viaRequest.reason}`,
+          type: 'SYSTEM_ALERT',
+          link: '/orders',
+        });
+      }
     }
 
     // A confirmation outcome goes to this store's confirmation supervisors
