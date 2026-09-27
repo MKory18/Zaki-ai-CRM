@@ -1,0 +1,151 @@
+import { describe, expect, it } from 'vitest';
+import { repoFile, stripComments } from './guard-source';
+import { ALL_ROUTES, NAV } from './route-registry';
+import { PAGE_TEMPLATES, buildTemplate } from './page-templates';
+
+/**
+ * A TEMPLATE IS SHOWN, NOT DESCRIBED — AND BESIDE THE SHOP IT DRESSES.
+ *
+ * Both galleries offered a coloured square, a name and one sentence.
+ * Fifteen sentences is not a choice anybody can make, so people took the
+ * first one and fourteen shapes existed for nobody. And the two screens
+ * that decide how a Single Product shop looks — its front page and its
+ * landing pages — sat under «النمو» while its design, templates, logo and
+ * icon sat under «واجهة المتجر».
+ *
+ * These guards hold what is easy to lose again:
+ *
+ *   • the preview is drawn by the renderer that draws the real page, so it
+ *     cannot promise a shape the seller will not get;
+ *   • one gallery, used by both screens, so a template cannot be missing
+ *     from one of them;
+ *   • the frames that stand in for photographs appear in a PREVIEW only —
+ *     a grey box on a customer's screen is worse than nothing;
+ *   • and the shop's screens are in the shop's tab.
+ */
+
+describe('the template gallery shows the template', () => {
+  it('and draws it with the renderer the published page uses', () => {
+    const preview = stripComments(repoFile('src/components/landing/TemplatePreview.tsx'));
+    // The same component, not a picture and not a second renderer.
+    expect(preview, 'المعاينة لا تستعمل مُصيّر الصفحة نفسه').toMatch(/<PageBlocks\b/);
+    expect(preview).toMatch(/from '@\/components\/landing\/blocks\/PageBlocks'/);
+    // And the same palette derivation, or its colours would be a guess.
+    expect(preview).toMatch(/paletteVars\(palette\)/);
+    // It must never take an order: the form is a stand-in.
+    expect(preview, 'المعاينة تعرض نموذج طلب حقيقي').toMatch(/form: <FormPlaceholder/);
+    expect(preview).not.toMatch(/OrderForm/);
+  });
+
+  it('and shows the seller’s own product in it', () => {
+    const preview = stripComments(repoFile('src/components/landing/TemplatePreview.tsx'));
+    expect(preview).toMatch(/productName: product\?\.name/);
+    expect(preview).toMatch(/price: product\?\.price/);
+
+    // The product is picked BEFORE the templates are shown — otherwise
+    // every preview advertises «منتجك» and answers nothing.
+    const screen = stripComments(repoFile('src/components/screens/LandingPagesScreen.tsx'));
+    const productAt = screen.indexOf('id="lp-product"');
+    const galleryAt = screen.indexOf('<TemplateGallery');
+    expect(productAt).toBeGreaterThan(-1);
+    expect(galleryAt).toBeGreaterThan(-1);
+    expect(productAt, 'القالب يُختار قبل المنتج').toBeLessThan(galleryAt);
+    expect(screen).toMatch(/product=\{chosenProduct\}/);
+  });
+
+  it('and the products are offered under their categories', () => {
+    const screen = stripComments(repoFile('src/components/screens/LandingPagesScreen.tsx'));
+    expect(screen, 'لا تجميع حسب التصنيف').toMatch(/<optgroup/);
+    // The products with no category are a bucket that says so, not a
+    // silent scattering through the list.
+    expect(screen).toMatch(/بلا تصنيف/);
+  });
+
+  /**
+   * ONE GRID. Two galleries of the same fifteen templates is two places
+   * for one of them to be missing, and the store's was a swatch list while
+   * the page's had previews.
+   */
+  it('and both screens use the one gallery', () => {
+    for (const file of [
+      'src/components/screens/LandingPagesScreen.tsx',
+      'src/components/screens/StoreThemeScreen.tsx',
+    ]) {
+      const src = stripComments(repoFile(file));
+      expect(src, `${file} لا يستعمل المعرض المشترك`).toMatch(/<TemplateGallery/);
+      // Neither may keep hand-rolling the fifteen cards beside it.
+      expect(src, `${file} ما زال يرسم القوالب بنفسه`).not.toMatch(/PAGE_TEMPLATES\.map/);
+    }
+  });
+
+  it('and every template it offers can actually be built', () => {
+    expect(PAGE_TEMPLATES.length).toBeGreaterThan(1);
+    for (const t of PAGE_TEMPLATES) {
+      const built = buildTemplate(t.key);
+      expect(built.sections.length, `${t.key} بلا أقسام`).toBeGreaterThan(0);
+      expect(built.theme.accent, `${t.key} بلا لون`).toBeTruthy();
+    }
+  });
+
+  /**
+   * THE FRAMES ARE FOR THE PREVIEW ONLY.
+   *
+   * A template carries no photographs — it cannot, an uploaded image
+   * belongs to the company that uploaded it — so the gallery draws where
+   * they go. The published page must keep rendering nothing: an empty
+   * block there is one the seller has not filled yet.
+   */
+  it('and the image frames never reach a customer', () => {
+    const blocks = stripComments(repoFile('src/components/landing/blocks/PageBlocks.tsx'));
+    // Every frame is behind the flag…
+    const frames = blocks.match(/<ImageFrame/g) ?? [];
+    expect(frames.length).toBeGreaterThan(0);
+    expect(blocks).toMatch(/ctx\.placeholders && <ImageFrame/);
+    expect(blocks).toMatch(/if \(!ctx\.placeholders\) return null;/);
+    // …and only the gallery's preview sets it.
+    expect(stripComments(repoFile('src/components/landing/TemplatePreview.tsx'))).toMatch(
+      /placeholders: true/
+    );
+    for (const file of ['src/components/landing/LandingPageView.tsx', 'src/app/s/[store]/page.tsx']) {
+      expect(stripComments(repoFile(file)), `${file} يرسم إطارات على صفحة الزبون`).not.toMatch(
+        /placeholders/
+      );
+    }
+  });
+});
+
+describe('the shop’s screens are in the shop’s tab', () => {
+  it('the front page and the landing pages sit with the design', () => {
+    const storefront = NAV.find((g) => g.key === 'storefront')!;
+    const paths = storefront.routes.map((r) => r.path);
+    expect(paths).toContain('/store/single-product');
+    expect(paths).toContain('/store/landing-pages');
+    // The shop comes before the things that dress it.
+    expect(paths.indexOf('/store/single-product')).toBeLessThan(paths.indexOf('/store/design'));
+
+    const growth = NAV.find((g) => g.key === 'growth')!;
+    for (const gone of ['/growth/landing-pages', '/growth/single-product-stores']) {
+      expect(growth.routes.map((r) => r.path), `${gone} ما زال في النمو`).not.toContain(gone);
+    }
+    // And nothing anywhere still answers on the old addresses.
+    expect(ALL_ROUTES.map((r) => r.path)).not.toContain('/growth/landing-pages');
+  });
+
+  it('and two menu entries do not both read «الصفحات»', () => {
+    const labels = NAV.flatMap((g) => g.routes.map((r) => r.label));
+    expect(new Set(labels).size, 'مدخلان بالاسم نفسه').toBe(labels.length);
+    const pages = ALL_ROUTES.find((r) => r.path === '/store/pages')!;
+    expect(pages.label).not.toBe('الصفحات');
+  });
+
+  it('and the store card reaches its design, templates and icon', () => {
+    const src = stripComments(repoFile('src/components/screens/StorefrontsScreen.tsx'));
+    for (const href of ['/store/design', '/store/themes']) {
+      expect(src, `البطاقة لا تصل إلى ${href}`).toContain(`href="${href}"`);
+    }
+    // The logo and the icon have one editor; this links to it rather than
+    // growing a second copy of the fields.
+    expect(src).toMatch(/الشعار والأيقونة/);
+    expect(src, 'البطاقة تحرّر الشعار بنفسها').not.toMatch(/type="file"/);
+  });
+});

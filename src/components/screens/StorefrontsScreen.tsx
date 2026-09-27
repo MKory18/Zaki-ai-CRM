@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useConfirm } from '@/components/ui/Confirm';
 import { STORE_TYPE_LABEL } from '@/lib/store-types';
-import { RiAddCircleLine, RiAlertLine, RiBrushLine, RiCheckLine, RiEarthLine, RiEqualizer2Line, RiExternalLinkLine, RiInformationLine, RiLinksLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
+import { RiAddCircleLine, RiAlertLine, RiBrushLine, RiCheckLine, RiEarthLine, RiEqualizer2Line, RiExternalLinkLine, RiImageLine, RiInformationLine, RiLayoutGridLine, RiLinksLine, RiLoader4Line, RiPaletteLine, RiStore2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 
@@ -231,7 +231,7 @@ function Card({
           <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             لا صفحات هبوط تبيع منتجاً في هذا المتجر بعد.{' '}
             {shop.current ? (
-              <Link href="/growth/landing-pages" className="inline-flex items-center gap-0.5 font-semibold text-[var(--sys-primary)] hover:underline">
+              <Link href="/store/landing-pages" className="inline-flex items-center gap-0.5 font-semibold text-[var(--sys-primary)] hover:underline">
                 <RiAddCircleLine className="h-4 w-4" /> أنشئ صفحة من قالب
               </Link>
             ) : (
@@ -262,7 +262,7 @@ function Card({
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {shop.current ? (
               <Link
-                href={`/growth/landing-pages/${shop.frontPage.id}/editor`}
+                href={`/store/landing-pages/${shop.frontPage.id}/editor`}
                 className="inline-flex items-center gap-1 rounded-lg bg-[var(--sys-primary)] px-2.5 py-1 text-xs font-bold text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/90"
               >
                 <RiBrushLine className="h-4 w-4" /> صمّم الواجهة
@@ -324,6 +324,40 @@ function Card({
           <RiEqualizer2Line className="h-4 w-4" /> الإعدادات والنطاق
         </a>
       </div>
+
+      {/*
+        THE REST OF THIS SHOP, WHICH USED TO BE IN ANOTHER TAB.
+
+        A Single Product store is a landing page wearing this store's
+        theme: the accent, the fonts, the header and footer, the logo and
+        the icon all come from the screens below, and this card is where
+        somebody stands when they notice the shop looks wrong. Three links
+        and no controls — every one of these fields has exactly one editor,
+        and a copy of it here would be the second.
+
+        Only for the store being looked at: these screens read the selected
+        store, so the same links from another card would silently edit the
+        wrong shop.
+      */}
+      {shop.current ? (
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--sys-surface-strong)] pt-2 text-xs">
+          <span className="text-[var(--sys-muted)]">مظهر المتجر:</span>
+          <a href="/store/design" className="flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
+            <RiPaletteLine className="h-4 w-4" /> التصميم
+          </a>
+          <a href="/store/themes" className="flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
+            <RiLayoutGridLine className="h-4 w-4" /> القوالب
+          </a>
+          <a href={`/settings/geo?store=${shop.id}`} className="flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
+            <RiImageLine className="h-4 w-4" /> الشعار والأيقونة
+          </a>
+          {!shop.logo && <span className="text-[var(--sys-warning)]">لا شعار بعد</span>}
+        </div>
+      ) : (
+        <p className="mt-2 border-t border-[var(--sys-surface-strong)] pt-2 text-xs text-[var(--sys-muted)]">
+          بدّل إلى هذا المتجر من الأعلى لتفتح تصميمه وقوالبه وشعاره.
+        </p>
+      )}
 
       <p className="mt-1.5 truncate font-mono text-xs text-[var(--sys-muted)]" dir="ltr" title={url}>{url}</p>
     </div>

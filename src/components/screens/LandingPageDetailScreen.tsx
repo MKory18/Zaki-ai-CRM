@@ -184,7 +184,7 @@ export function LandingPageDetailScreen() {
           {/* Row one on a phone: where you came from, and where this page
               stands. The title gets its own line rather than being squeezed
               to "تحري.." between a button and a badge. */}
-          <Button variant="secondary" size="sm" onClick={() => (window.location.href = '/growth/landing-pages')}>
+          <Button variant="secondary" size="sm" onClick={() => (window.location.href = '/store/landing-pages')}>
             <RiArrowRightLine className="icon-mirror w-4 h-4" /> رجوع
           </Button>
           <Badge variant={lp.isPublished ? 'success' : 'warning'}>{lp.isPublished ? 'منشورة' : 'مسودة'}</Badge>
@@ -194,7 +194,7 @@ export function LandingPageDetailScreen() {
         />
 
           <div className="flex flex-1 items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => (window.location.href = `/growth/landing-pages/${lpId}/editor`)}>
+            <Button variant="outline" size="sm" onClick={() => (window.location.href = `/store/landing-pages/${lpId}/editor`)}>
               <RiPencilLine className="w-4 h-4" /> المحرّر
             </Button>
             <Button size="sm" onClick={togglePublish} variant={lp.isPublished ? 'outline' : 'success'}>

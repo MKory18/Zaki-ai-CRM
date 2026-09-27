@@ -720,7 +720,7 @@
     "tabs": 0
   },
   "src/components/screens/LandingPagesScreen.tsx": {
-    "buttons": 11,
+    "buttons": 10,
     "inputs": 3,
     "columns": 6,
     "cards": 1,
@@ -885,7 +885,7 @@
     "columns": 0,
     "cards": 1,
     "modals": 0,
-    "icons": 14,
+    "icons": 17,
     "links": 3,
     "tabs": 0
   },
@@ -1518,6 +1518,16 @@
     "icons": 0,
     "links": 0,
     "tabs": 2
+  },
+  "src/components/ui/TemplateGallery.tsx": {
+    "buttons": 4,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
   },
   "src/components/ui/Toast.tsx": {
     "buttons": 1,

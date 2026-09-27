@@ -255,7 +255,7 @@ describe('every screen names itself', () => {
     for (const page of walk(shell).filter((f) => f.endsWith('page.tsx'))) {
       // A DETAIL page guards the list's route but is not the list: the
       // landing-page editor lives under `[id]` and guards
-      // `/growth/landing-pages`, and calling itself «صفحات الهبوط» would be
+      // `/store/landing-pages`, and calling itself «صفحات الهبوط» would be
       // the opposite of helpful. Only a route's own page is compared.
       if (/[\\/]\[[^\\/]+\][\\/]/.test(page)) continue;
 

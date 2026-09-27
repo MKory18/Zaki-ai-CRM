@@ -146,13 +146,13 @@ export function StoreDesignScreen() {
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {data.store.landingPageId ? (
-              <a href={`/growth/landing-pages/${data.store.landingPageId}/editor`}>
+              <a href={`/store/landing-pages/${data.store.landingPageId}/editor`}>
                 <Button size="sm">
                   <RiExternalLinkLine className="icon-mirror h-4 w-4" /> صمّم صفحة الواجهة
                 </Button>
               </a>
             ) : (
-              <a href="/growth/single-product-stores">
+              <a href="/store/single-product">
                 <Button size="sm">اختر صفحة الواجهة أولاً</Button>
               </a>
             )}

@@ -553,7 +553,7 @@ export function LandingPageEditorScreen() {
         {/* ─── Header ─── */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3">
           <div className="flex items-center gap-3">
-            <Button variant="secondary" size="sm" onClick={() => router.push(`/growth/landing-pages/${lp.id}`)}>
+            <Button variant="secondary" size="sm" onClick={() => router.push(`/store/landing-pages/${lp.id}`)}>
               <RiArrowRightLine className="icon-mirror h-4 w-4" /> Landing Pages
             </Button>
             <PageHeader title={`/lp/${lp.slug}`}

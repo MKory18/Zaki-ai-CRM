@@ -148,8 +148,6 @@ export const NAV: NavGroup[] = [
       r('/assistant', 'المساعد الذكي', 'Bot', ['ai.use']),
       r('/growth/intelligence', 'مركز الذكاء', 'Lightbulb', ['growth.intelligence']),
       r('/settings/ai', 'الذكاء الاصطناعي والنصوص', 'Bot', ['settings.view']),
-      r('/growth/single-product-stores', 'متجر Single Product', 'Store', ['geo.manage']),
-      r('/growth/landing-pages', 'صفحات الهبوط', 'PanelsTopLeft', ['landing_pages.view']),
       r('/growth/whatsapp/inbox', 'صندوق الواتساب', 'MessageCircle', ['whatsapp.view']),
       r('/growth/telegram/orders', 'طلبات تلجرام', 'Send', ['telegram.view']),
     ],
@@ -165,10 +163,25 @@ export const NAV: NavGroup[] = [
     key: 'storefront',
     label: 'واجهة المتجر',
     routes: [
+      /**
+       * THE SHOP ITSELF, ABOVE THE THINGS THAT DRESS IT.
+       *
+       * These two sat under «النمو» while the design, the templates, the
+       * logo and the icon sat here — and a Single Product store IS one of
+       * these landing pages wearing this store's theme. Somebody choosing
+       * the page their advert points at had to leave the tab to change how
+       * it looks, and the two menus never said they were about one thing.
+       *
+       * Order is the order the work happens in: which page is the front,
+       * which pages exist, then how they look.
+       */
+      r('/store/single-product', 'متجر Single Product', 'Store', ['geo.manage']),
+      r('/store/landing-pages', 'صفحات الهبوط', 'PanelsTopLeft', ['landing_pages.view']),
+
       r('/store/design', 'التصميم', 'LayoutTemplate', ['storefront.view', 'storefront.manage']),
       r('/store/themes', 'القوالب', 'Palette', ['storefront.view', 'storefront.manage']),
       r('/store/menus', 'القوائم', 'ListTree', ['storefront.view', 'storefront.manage']),
-      r('/store/pages', 'الصفحات', 'FileText', ['storefront.view', 'storefront.manage']),
+      r('/store/pages', 'الصفحات التعريفية والسياسات', 'FileText', ['storefront.view', 'storefront.manage']),
       r('/store/languages', 'اللغات', 'Languages', ['storefront.view', 'storefront.manage']),
       r('/store/routes', 'المسارات', 'Signpost', ['storefront.view', 'storefront.manage']),
       r('/store/domain', 'الدومين', 'Globe', ['storefront.view', 'storefront.domain']),

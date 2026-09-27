@@ -1,6 +1,6 @@
 'use client';
 
-import { PAGE_TEMPLATES } from '@/lib/page-templates';
+import { TemplateGallery } from '@/components/ui/TemplateGallery';
 import React, { useEffect, useState } from 'react';
 import { useTell } from '@/components/ui/Confirm';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -54,6 +54,31 @@ export function LandingPagesScreen() {
   useEffect(() => {
     crmApi('/api/products?limit=200').then((d) => setProducts(d.products || [])).catch(() => {});
   }, []);
+
+  /**
+   * THE PRODUCTS, UNDER THEIR CATEGORIES.
+   *
+   * 114 products in one flat list is a list nobody reads to the end. The
+   * grouping is also the only honest way to show the gap: everything with
+   * no category lands in one bucket that says so, instead of being spread
+   * invisibly through the alphabet.
+   */
+  const grouped = React.useMemo(() => {
+    const by = new Map<string, any[]>();
+    for (const p of products) {
+      const key = p.category?.name || '';
+      if (!by.has(key)) by.set(key, []);
+      by.get(key)!.push(p);
+    }
+    // Uncategorised last: it is a leftover, not a category.
+    return [...by.entries()].sort((a, b) => (a[0] ? (b[0] ? a[0].localeCompare(b[0], 'ar') : -1) : 1));
+  }, [products]);
+
+  /** What the template previews should be selling: the product just picked. */
+  const chosenProduct = React.useMemo(() => {
+    const p = products.find((x: any) => x.id === form.productId);
+    return p ? { name: p.name, price: Number(p.basePrice ?? 0), currency: p.currency || '' } : null;
+  }, [products, form.productId]);
 
   const publicUrl = (lp: any) =>
     typeof window !== 'undefined' ? `${window.location.origin}/lp/${lp.slug}` : `/lp/${lp.slug}`;
@@ -110,7 +135,7 @@ export function LandingPagesScreen() {
         body: JSON.stringify({ name: form.name, slug: form.slug.toLowerCase().trim(), productId: form.productId || null, template: form.template }),
       });
       setCreateOpen(false);
-      window.location.href = `/growth/landing-pages/${data.landingPage.id}`;
+      window.location.href = `/store/landing-pages/${data.landingPage.id}`;
     } catch (e: any) { setFormError(e.message); } finally { setSaving(false); }
   };
 
@@ -131,7 +156,7 @@ export function LandingPagesScreen() {
       <div className="p-6 max-w-7xl mx-auto">
         {/* Header */}
         <PageHeader
-          title={routeLabel('/growth/landing-pages')}
+          title={routeLabel('/store/landing-pages')}
           description="صفحات تسويق عامة تُنشئ طلبات حقيقية داخل CRM تلقائيًا"
           actions={
             <Button onClick={() => { setForm({ name: '', slug: '', productId: '', template: 'classic' }); setFormError(null); setCreateOpen(true); }}>
@@ -198,7 +223,7 @@ export function LandingPagesScreen() {
                     { key: 'c5', label: "إجراءات",
                       render: (lp: any) => (
                   <><div className="flex items-center gap-1">
-                            <button aria-label="تحرير" title="تحرير" onClick={() => (window.location.href = `/growth/landing-pages/${lp.id}`)}
+                            <button aria-label="تحرير" title="تحرير" onClick={() => (window.location.href = `/store/landing-pages/${lp.id}`)}
                               className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]"><RiPencilLine className="w-4 h-4" /></button>
                             <button title={lp.isPublished ? 'إلغاء النشر' : 'نشر'} disabled={busyId === lp.id}
                               onClick={() => togglePublish(lp)}
@@ -233,10 +258,32 @@ export function LandingPagesScreen() {
       </div>
 
       {/* Create modal */}
-      <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="إنشاء صفحة هبوط جديدة" maxWidth="lg">
+      <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="إنشاء صفحة هبوط جديدة" maxWidth="4xl">
         <div className="space-y-4">
           {/*
-            The shape of the page, chosen FIRST.
+            THE PRODUCT FIRST, AND THE SHAPE SECOND.
+
+            The order is the whole point: every template below is drawn
+            selling the product chosen here, with its name and its price in
+            it. Asked afterwards, as it used to be, the fifteen previews
+            would all advertise «منتجك», and the question a seller actually
+            has — «هل يناسب هذا منتجي؟» — could not be answered by looking.
+          */}
+          <div>
+            <label className="text-xs font-semibold text-[var(--sys-foreground)]" htmlFor="lp-product">المنتج المرتبط</label>
+            <Select id="lp-product" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
+              <option value="">— اختر منتجًا —</option>
+              {grouped.map(([cat, items]) => (
+                <optgroup key={cat || 'none'} label={cat || 'بلا تصنيف'}>
+                  {items.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </optgroup>
+              ))}
+            </Select>
+            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">المنتج والسعر يُحدَّدان من السيرفر عند إرسال أي طلب — لا يمكن التلاعب بهما من الصفحة.</p>
+          </div>
+
+          {/*
+            The shape of the page, chosen SECOND.
             
             It lived in the editor, a thousand pixels down the panel, past
             every decision the template was about to make for you. Here it
@@ -246,27 +293,16 @@ export function LandingPagesScreen() {
           <div>
             <label className="text-xs font-semibold text-[var(--sys-foreground)]">شكل الصفحة</label>
             <p className="mb-2 mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-              تبدأ الصفحة بهذا الشكل ولونه وخطه — ويمكنك تغيير كل شيء بعدها.
+              كل قالب معروض كما سيظهر{chosenProduct ? ` وهو يبيع «${chosenProduct.name}»` : ''} — ويمكنك
+              تغيير كل شيء بعدها.
             </p>
-            <div className="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto pe-1 sm:grid-cols-2">
-              {PAGE_TEMPLATES.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setForm({ ...form, template: t.key })}
-                  className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 text-start transition ${
-                    form.template === t.key
-                      ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)]'
-                      : 'border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
-                  }`}
-                >
-                  <span className="mt-0.5 h-7 w-1.5 shrink-0 rounded-full" style={{ background: t.swatch }} />
-                  <span className="min-w-0">
-                    <span className="block text-xs font-semibold text-[var(--sys-foreground)]">{t.label}</span>
-                    <span className="block text-xs leading-relaxed text-[var(--sys-muted)]">{t.hint}</span>
-                  </span>
-                </button>
-              ))}
+            <div className="max-h-[22rem] overflow-y-auto pe-1">
+              <TemplateGallery
+                value={form.template}
+                onChange={(key) => setForm({ ...form, template: key })}
+                product={chosenProduct}
+                columns="sm:grid-cols-2"
+              />
             </div>
           </div>
           <div>
@@ -276,14 +312,6 @@ export function LandingPagesScreen() {
           <div>
             <label className="text-xs font-semibold text-[var(--sys-foreground)]">الرابط (slug) * — سيصبح /lp/…</label>
             <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="tremella" dir="ltr" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-[var(--sys-foreground)]">المنتج المرتبط</label>
-            <Select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
-              <option value="">— اختر منتجًا —</option>
-              {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </Select>
-            <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">المنتج والسعر يُحدَّدان من السيرفر عند إرسال أي طلب — لا يمكن التلاعب بهما من الصفحة.</p>
           </div>
           {formError && <div className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] rounded-lg px-3 py-2">{formError}</div>}
           <div className="flex justify-end gap-2 pt-2">

@@ -180,7 +180,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
         <p className="rounded-lg border border-[var(--sys-warning)]/50 bg-[var(--sys-warning-soft)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-warning)]">
           هذا المتجر واجهتُه صفحةُ هبوط، ولم تُختَر صفحةٌ بعد — فلا شيء يُعرض لزائره.{' '}
           <a
-            href="/growth/single-product-stores"
+            href="/store/single-product"
             className="font-semibold underline"
           >
             اختر صفحته الآن
@@ -191,7 +191,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
       {store.type === 'SINGLE_PRODUCT' && store.landingPageId && (
         <p className="rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-foreground)]">
           واجهة هذا المتجر صفحة هبوط — ألوانها وخطها ونصوصها تُعدَّل من{' '}
-          <a href="/growth/single-product-stores" className="font-semibold text-[var(--sys-primary)] hover:underline">
+          <a href="/store/single-product" className="font-semibold text-[var(--sys-primary)] hover:underline">
             متجر Single Product ← صمّم الواجهة
           </a>
           . اللون والنصوص هنا لا تظهر عليها؛ الشعار ورقم الدعم يُطبعان على البوالص.

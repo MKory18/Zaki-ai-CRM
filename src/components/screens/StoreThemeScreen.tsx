@@ -11,6 +11,7 @@ import {
 } from '@/lib/store-theme';
 import { RiBankCardLine, RiCheckLine, RiDownload2Line, RiExternalLinkLine, RiImageLine, RiLayoutBottomLine, RiLayoutGridLine, RiLayoutLine, RiLayoutTopLine, RiLoader4Line, RiPaletteLine, RiShoppingBagLine, RiTreeLine, RiUpload2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { TemplateGallery } from '@/components/ui/TemplateGallery';
 import { routeLabel } from '@/lib/route-registry';
 
 /**
@@ -89,8 +90,13 @@ export function StoreThemeScreen() {
   const [theme, setTheme] = useState<StoreTheme>(DEFAULT_STORE_THEME);
   const [saved, setSaved] = useState<StoreTheme>(DEFAULT_STORE_THEME);
   const [tab, setTab] = useState<TabKey>('gallery');
-  const [templates, setTemplates] = useState<{ key: string; label: string; hint: string; swatch: string }[]>([]);
   const [installing, setInstalling] = useState<string | null>(null);
+  /**
+   * The card being looked at. Selecting is not installing: installing
+   * overwrites the shop's draft, and a gallery where a stray tap replaces
+   * the design somebody spent an evening on is a gallery nobody browses.
+   */
+  const [picked, setPicked] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -98,14 +104,14 @@ export function StoreThemeScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [data, gallery] = await Promise.all([
-        apiJson<{ store: StoreInfo; theme: StoreTheme }>('/api/store/theme'),
-        apiJson<{ templates: { key: string; label: string; hint: string; swatch: string }[] }>('/api/store/templates'),
-      ]);
+      // The fifteen templates are a constant this bundle already holds;
+      // asking the server to name them was a request whose answer never
+      // differs from `PAGE_TEMPLATES`. The install call still goes to the
+      // server, which is where the decision about the draft belongs.
+      const data = await apiJson<{ store: StoreInfo; theme: StoreTheme }>('/api/store/theme');
       setStore(data.store);
       setTheme(data.theme);
       setSaved(data.theme);
-      setTemplates(gallery.templates);
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر تحميل القالب' });
     } finally {
@@ -280,28 +286,27 @@ export function StoreThemeScreen() {
             </p>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {templates.map((t) => (
-              <div key={t.key} className={`${CARD} flex flex-col gap-2`}>
-                <div className="flex items-center gap-2">
-                  <span className="h-8 w-8 shrink-0 rounded-lg" style={{ background: t.swatch }} aria-hidden />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-[var(--sys-heading)]">{t.label}</p>
-                  </div>
-                </div>
-                <p className="flex-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{t.hint}</p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={!!installing}
-                  onClick={() => void install('builtin', t.key)}
-                >
-                  {installing === t.key && <RiLoader4Line className="h-4 w-4 animate-spin" />}
-                  ثبّته كمسوّدة
-                </Button>
-              </div>
-            ))}
-          </div>
+          {/*
+            SHOWN, NOT DESCRIBED — and by the renderer that draws the real
+            page, so the card cannot promise a shape the shop will not get.
+            The same gallery the landing page's create dialog uses: one
+            grid, one set of fifteen, no second place to be out of date.
+          */}
+          <TemplateGallery
+            value={picked}
+            onChange={setPicked}
+            action={(key) => (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={!!installing}
+                onClick={() => void install('builtin', key)}
+              >
+                {installing === key && <RiLoader4Line className="h-4 w-4 animate-spin" />}
+                ثبّته كمسوّدة
+              </Button>
+            )}
+          />
           <p className="text-xs leading-relaxed text-[var(--sys-muted)]">
             التثبيت يكتب المسوّدة فقط: تعاينها في «التصميم» وتنشرها حين ترضى عنها. لا شيء يتغيّر عند
             الزبون قبل النشر.

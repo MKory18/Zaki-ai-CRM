@@ -46,6 +46,21 @@ export interface BlockContext {
    * one logo and one phone per store, set in the store's settings.
    */
   store?: { name: string; logo: string | null; phone: string | null } | null;
+  /**
+   * DRAW A FRAME WHERE A PHOTOGRAPH WOULD GO.
+   *
+   * Set ONLY by the template gallery. A template carries no images — it
+   * cannot, because an uploaded image belongs to the company that uploaded
+   * it — so a hero with no picture renders as a line of text, and eight of
+   * the fifteen templates also open a gallery block that renders nothing at
+   * all. Previewed that way, every template looks like the same bare page
+   * and the gallery teaches that the templates are identical.
+   *
+   * The published page must never do this: an empty block there is a block
+   * the seller has not filled, and drawing a grey box on a customer's
+   * screen is worse than drawing nothing.
+   */
+  placeholders?: boolean;
 }
 
 /**
@@ -252,7 +267,18 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
 
     case 'gallery': {
       const images = s.images.filter(Boolean);
-      if (!images.length) return null;
+      if (!images.length) {
+        if (!ctx.placeholders) return null;
+        return (
+          <Section title={s.title}>
+            <div className="lp-gallery">
+              {[0, 1, 2].map((i) => (
+                <ImageFrame key={i} label="صورة" ratio={1} />
+              ))}
+            </div>
+          </Section>
+        );
+      }
       return (
         <Section title={s.title}>
           <div className="lp-gallery">
@@ -434,13 +460,45 @@ function Section({ title, children }: { title?: string; children: React.ReactNod
   );
 }
 
+/**
+ * The shape of a photograph that is not there yet — in a preview only.
+ *
+ * It is drawn in the page's own accent, not grey: the point of a template
+ * preview is the look of the whole page, and a neutral box in the middle of
+ * a coloured one reads as a fault rather than as a space.
+ */
+function ImageFrame({ label, ratio }: { label: string; ratio: number }) {
+  return (
+    <div
+      style={{
+        aspectRatio: `1 / ${ratio}`,
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        border: '2px dashed var(--lp-accent-border)',
+        borderRadius: 'var(--lp-radius)',
+        background: 'var(--lp-accent-tint)',
+        color: 'var(--lp-accent)',
+        fontSize: 12,
+        fontWeight: 700,
+      }}
+    >
+      {label}
+    </div>
+  );
+}
+
 function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'hero' }>; ctx: BlockContext }) {
   const headline = s.headline || ctx.productName;
   return (
     <header className="lp-hero">
-      {s.image && (
+      {s.image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={s.image} alt={headline} className="lp-hero-img" />
+      ) : (
+        ctx.placeholders && <ImageFrame label="صورة المنتج" ratio={0.62} />
       )}
       <h1 className="lp-h1" data-edit="headline" {...rich(headline)} />
       {s.subheadline && <p className="lp-hero-sub" data-edit="subheadline" {...rich(s.subheadline)} />}

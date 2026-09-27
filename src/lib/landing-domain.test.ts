@@ -87,7 +87,7 @@ describe('claiming a domain', () => {
       headers: {
         'x-forwarded-host': 'crm.example.com',
         origin: 'https://panel.example.com',
-        referer: 'https://admin.example.com/growth/landing-pages/x',
+        referer: 'https://admin.example.com/store/landing-pages/x',
       },
     });
     const hosts = dashboardHosts(req);

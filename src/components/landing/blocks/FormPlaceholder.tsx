@@ -1,0 +1,28 @@
+import React from 'react';
+
+/**
+ * STANDS IN FOR THE REAL ORDER FORM: A PREVIEW MUST NEVER TAKE AN ORDER.
+ *
+ * It lived inside the builder, which is a thousand-line client component.
+ * The template gallery needs the same stand-in, and importing the builder
+ * to get it would pull the whole editor into a picker — so it lives on its
+ * own, and both render the one placeholder rather than two that drift.
+ */
+export function FormPlaceholder() {
+  return (
+    <div
+      style={{
+        border: '2px dashed var(--lp-accent-border)',
+        borderRadius: 'var(--lp-radius)',
+        padding: '28px 16px',
+        textAlign: 'center',
+        background: 'var(--lp-accent-tint)',
+      }}
+    >
+      <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--lp-accent)' }}>نموذج الطلب</p>
+      <p style={{ fontSize: 11.5, color: 'var(--lp-muted)', marginTop: 4 }}>
+        الاسم، الهاتف، المحافظة، العنوان — يظهر كاملاً في الصفحة المنشورة
+      </p>
+    </div>
+  );
+}

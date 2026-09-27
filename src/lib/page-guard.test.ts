@@ -66,9 +66,9 @@ describe('every contract route has a page', () => {
     // Only detail screens of a listed route may exist beside it.
     expect(extras.sort()).toEqual([
       '/admin/users/[id]',
-      '/growth/landing-pages/[id]',
-      '/growth/landing-pages/[id]/editor',
       '/products/[id]',
+      '/store/landing-pages/[id]',
+      '/store/landing-pages/[id]/editor',
     ]);
   });
 

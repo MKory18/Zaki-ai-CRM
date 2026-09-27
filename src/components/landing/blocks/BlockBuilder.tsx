@@ -17,6 +17,7 @@ import {
   type LandingTheme, type FontValue, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
 } from '@/lib/landing-theme';
 import { PageBlocks } from './PageBlocks';
+import { FormPlaceholder } from './FormPlaceholder';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from './styles';
 import { FontUploader, type StoreFontRow } from './FontUploader';
 import { SelectionBar } from './SelectionBar';
@@ -829,26 +830,6 @@ export function BlockBuilder(props: Props) {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Stands in for the real order form: the preview must never take an order. */
-function FormPlaceholder() {
-  return (
-    <div
-      style={{
-        border: '2px dashed var(--lp-accent-border)',
-        borderRadius: 'var(--lp-radius)',
-        padding: '28px 16px',
-        textAlign: 'center',
-        background: 'var(--lp-accent-tint)',
-      }}
-    >
-      <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--lp-accent)' }}>نموذج الطلب</p>
-      <p style={{ fontSize: 11.5, color: 'var(--lp-muted)', marginTop: 4 }}>
-        الاسم، الهاتف، المحافظة، العنوان — يظهر كاملاً في الصفحة المنشورة
-      </p>
     </div>
   );
 }
