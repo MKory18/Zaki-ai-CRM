@@ -58,28 +58,3 @@ export function PendingScreen() {
     </div>
   );
 }
-
-export function BlockedScreen({ status }: { status: string }) {
-  const handleLogout = () => signOut('manual');
-
-  return (
-    <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg bg-[var(--sys-card)] rounded-lg shadow-raised p-8 text-center space-y-6">
-        <div className="mx-auto w-16 h-16 rounded-lg bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] flex items-center justify-center">
-          <RiShieldCrossLine className="w-6 h-6 text-[var(--sys-destructive)]" />
-        </div>
-        <PageHeader title={status === 'SUSPENDED' ? 'تم إيقاف حسابك مؤقتاً' : 'تم تعطيل حسابك'}
-          description="يرجى التواصل مع مدير النظام لاستعادة الوصول إلى حسابك."
-        />
-        <button
-          onClick={handleLogout}
-          className="inline-flex items-center space-x-2 rtl:space-x-reverse px-5 py-2 text-sm font-medium rounded-lg bg-[var(--sys-destructive)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-destructive)]/85 transition-colors cursor-pointer"
-        >
-          <RiLogoutBoxLine className="icon-mirror w-4 h-4" />
-          <span>تسجيل الخروج</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-

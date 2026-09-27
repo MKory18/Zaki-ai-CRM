@@ -61,17 +61,3 @@ export function SkeletonRows({ rows = 5, className }: { rows?: number; className
     </div>
   );
 }
-
-/** The shape of a row of figures above a list. */
-export function SkeletonKpis({ count = 4 }: { count?: number }) {
-  return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" role="status" aria-label="جارٍ التحميل">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="mt-3 h-7 w-28" />
-        </div>
-      ))}
-    </div>
-  );
-}

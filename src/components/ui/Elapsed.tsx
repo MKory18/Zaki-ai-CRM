@@ -44,23 +44,3 @@ export function useElapsedMinutes(since: string | Date | null, serverNow?: strin
   return Math.max(0, Math.floor(ms / 60_000));
 }
 
-export function Elapsed({
-  since,
-  serverNow,
-  prefix,
-  className,
-}: {
-  since: string | Date | null;
-  serverNow?: string | null;
-  prefix?: string;
-  className?: string;
-}) {
-  const minutes = useElapsedMinutes(since, serverNow);
-  if (minutes === null) return null;
-  return (
-    <span className={className}>
-      {prefix ? `${prefix} ` : ''}
-      {humanMinutes(minutes)}
-    </span>
-  );
-}

@@ -267,23 +267,3 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
     </>
   );
 }
-
-/**
- * THE ONE THING THIS SCREEN IS FOR, WHERE A THUMB ALREADY IS.
- *
- * A primary action at the top of a long screen on a phone is an action
- * somebody scrolls back up to reach, every time. Pinned to the bottom it is
- * always one tap away — above the nav bar, and above the home indicator.
- *
- * Phones only. On a desk the button belongs beside the thing it acts on.
- */
-export function ThumbBar({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="fixed inset-x-0 z-20 border-t border-[var(--sys-border)] bg-[var(--sys-card)] p-3 md:hidden"
-      style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }}
-    >
-      {children}
-    </div>
-  );
-}

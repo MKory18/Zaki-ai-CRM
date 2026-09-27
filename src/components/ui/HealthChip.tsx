@@ -48,20 +48,3 @@ export function HealthChip({
     </span>
   );
 }
-
-/** The same, for a caller holding a metric key and a number. */
-export function MetricHealth({
-  metricKey,
-  value,
-  sample,
-  withWhy,
-  className,
-}: {
-  metricKey: string;
-  value: number | null | undefined;
-  sample?: number;
-  withWhy?: boolean;
-  className?: string;
-}) {
-  return <HealthChip health={healthOf(metricKey, value, sample)} withWhy={withWhy} className={className} />;
-}

@@ -269,12 +269,20 @@ describe('saved views', () => {
   });
 });
 
-describe('a filter bar', () => {
-  it('says how many filters are doing something', () => {
-    const src = code(readFileSync(join(process.cwd(), 'src/components/ui/FilterBar.tsx'), 'utf8'));
+/**
+ * THE RULE OUTLIVED THE COMPONENT IT WAS WRITTEN AGAINST.
+ *
+ * `ui/FilterBar` was a shared bar that no screen ever mounted — one screen
+ * in this system filters, and it draws its own row. The component was
+ * removed in the dead-code pass; the rule it carried is real and now reads
+ * the screen that actually does the filtering.
+ */
+describe('a filtered list says how many filters are doing something', () => {
+  it('and offers to clear them', () => {
+    const src = code(readFileSync(join(process.cwd(), 'src/components/screens/OrdersScreen.tsx'), 'utf8'));
     // Six dropdowns showing «كل الحالات» and one showing «ملغى» look the
     // same at a glance. A number does not.
-    expect(src).toContain('{active}');
+    expect(src).toMatch(/إعادة تعيين \(\{activeFilters\}\)/);
     expect(src).toContain('امسح الفلاتر');
   });
 });
