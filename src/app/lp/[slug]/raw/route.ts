@@ -1,6 +1,7 @@
 import { sellingCurrency, SELLING_STORE_SELECT } from '@/lib/selling-currency';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { activeOffersFor } from '@/lib/offers';
 import { clampStoredHtml, RAW_HTML_CSP, verifyPreviewToken } from '@/lib/landing-pages';
 import {
   sanitizeLandingCss,
@@ -133,11 +134,7 @@ ${settings.width === 'contained' && settings.maxWidth ? `.zaki-page-wrap{max-wid
   // read a per-page copy of the same tiers; there is only one copy now, so a
   // price raised in the catalogue reaches the uploaded HTML too.
   const productOffers = lp.productId
-    ? await db.offer.findMany({
-        where: { companyId: lp.companyId, productId: lp.productId, status: 'ACTIVE' },
-        orderBy: [{ sortOrder: 'asc' }, { quantity: 'asc' }],
-        select: { id: true, name: true, quantity: true, freeQuantity: true, sellingPrice: true, isDefault: true },
-      })
+    ? await activeOffersFor(db, lp.companyId, lp.productId)
     : [];
 
   html = resolveDynamicPlaceholders({

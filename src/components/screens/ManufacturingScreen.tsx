@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { RiAddCircleLine, RiCalculatorLine, RiDeleteBinLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { batchTotal, batchUnitCost } from '@/lib/product-cost';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -63,16 +64,22 @@ export function ManufacturingScreen() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  // Dynamic live calculation
-  const totalProductionCost =
-    (manufacturingCost || 0) +
-    (packagingCost || 0) +
-    (rawMaterialCost || 0) +
-    (otherCosts || 0) +
-    costLines.reduce((sum, l) => sum + (l.amount || 0), 0);
-
-  const costPerUnit =
-    quantityProduced > 0 ? (totalProductionCost / quantityProduced).toFixed(2) : '0.00';
+  /**
+   * THE FIGURE ON SCREEN IS THE FIGURE THAT WILL BE STORED.
+   *
+   * This used to add the buckets and the lines here and divide to two
+   * places, while the server records four — so the unit cost somebody
+   * watched while typing could differ from the one written down. The same
+   * two functions now, which are pure and import only types.
+   */
+  const { total: totalProductionCost } = batchTotal({
+    manufacturingCost,
+    packagingCost,
+    rawMaterialCost,
+    otherCosts,
+    costLines,
+  });
+  const costPerUnit = String(batchUnitCost(totalProductionCost, quantityProduced));
 
   // This screen is the door for what you MAKE. A bought product listed here
   // would be entered as a run that never happened, with a cost breakdown

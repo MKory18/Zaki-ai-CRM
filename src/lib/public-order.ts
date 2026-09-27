@@ -1,4 +1,5 @@
 import { priceIncludesDeliveryFor } from './delivery-fees';
+import { activeOffersFor } from './offers';
 import { db } from './db';
 import { findOrCreateCustomer } from './customer-identity';
 import { normalizePhoneNumber } from './phone';
@@ -131,11 +132,7 @@ export async function createPublicOrder(
   // The offers belong to the PRODUCT: one bundle, one price, wherever it is
   // sold. quantity / freeQuantity / price all come from the row — a quantity
   // or a price sent by the browser is ignored.
-  const productOffers = await db.offer.findMany({
-    where: { companyId, productId: product.id, status: 'ACTIVE' },
-    orderBy: [{ sortOrder: 'asc' }, { quantity: 'asc' }],
-    select: { id: true, name: true, quantity: true, freeQuantity: true, sellingPrice: true, deliveryIncluded: true },
-  });
+  const productOffers = await activeOffersFor(db, companyId, product.id);
 
   let offer: { id: string; name: string; quantity: number; freeQuantity: number; price: number; deliveryIncluded: boolean } | null = null;
   if (v.offerId) {

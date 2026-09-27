@@ -3,6 +3,7 @@ import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { notFound, redirect } from 'next/navigation';
 import { carryQuery } from '@/lib/query-string';
 import { db } from '@/lib/db';
+import { activeOffersFor } from '@/lib/offers';
 import { getStorefront, storefrontProduct } from '@/lib/storefront';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
 import { OfferCards } from '@/components/landing/blocks/OfferCards';
@@ -55,14 +56,7 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
   // The same offers the order path will charge from. A listing that reads a
   // different source is a listing that can advertise a price the checkout
   // refuses.
-  const offers = await db.offer.findMany({
-    where: { companyId: store.companyId, productId: product.id, status: 'ACTIVE' },
-    orderBy: [{ sortOrder: 'asc' }, { quantity: 'asc' }],
-    select: {
-      id: true, name: true, quantity: true, freeQuantity: true,
-      sellingPrice: true, compareAtPrice: true, isDefault: true,
-    },
-  });
+  const offers = await activeOffersFor(db, store.companyId, product.id);
 
   const offerViews = offers.map((o) => ({
     id: o.id,

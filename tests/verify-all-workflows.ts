@@ -1,5 +1,6 @@
 import { db } from '../src/lib/db';
-import { calculateBatchCosts, calculateRealProfit } from '../src/lib/financial';
+import { calculateRealProfit } from '../src/lib/financial';
+import { batchTotal, batchUnitCost } from '../src/lib/product-cost';
 import { normalizePhoneNumber } from '../src/lib/phone';
 import { generateAiBusinessAnalysis } from '../src/lib/ai';
 import { getCompanyAnalytics } from '../src/lib/analytics';
@@ -33,21 +34,25 @@ async function runVerification() {
   console.log('✅ Step 1: Product Created:', product.name, product.sku);
 
   // 3. Steps 2, 3, 4, 5: Create Production Batch & Calculate Cost Per Unit
-  const batchCostResult = calculateBatchCosts({
-    quantityProduced: 500,
+  // The ONE batch calculator — the same `batchTotal`/`batchUnitCost` the
+  // receiving door and the cost-of-goods reader use. This script used to
+  // verify a second one that ignored a batch's free-form cost lines, so it
+  // could pass while the figures the system actually records were wrong.
+  const { total: totalProductionCost } = batchTotal({
     manufacturingCost: 1500,
     packagingCost: 400,
     rawMaterialCost: 600,
     otherCosts: 0,
   });
+  const costPerUnit = batchUnitCost(totalProductionCost, 500);
 
-  if (batchCostResult.totalProductionCost !== 2500) {
-    throw new Error(`Expected total cost 2500, got ${batchCostResult.totalProductionCost}`);
+  if (totalProductionCost !== 2500) {
+    throw new Error(`Expected total cost 2500, got ${totalProductionCost}`);
   }
-  if (batchCostResult.costPerUnit !== 5.0) {
-    throw new Error(`Expected unit cost 5.0, got ${batchCostResult.costPerUnit}`);
+  if (costPerUnit !== 5.0) {
+    throw new Error(`Expected unit cost 5.0, got ${costPerUnit}`);
   }
-  console.log('✅ Steps 2, 3, 4, 5: Cost Calculation Engine verified:', batchCostResult);
+  console.log('✅ Steps 2, 3, 4, 5: Cost Calculation Engine verified:', { totalProductionCost, costPerUnit });
 
   const batch = await db.productionBatch.create({
     data: {
@@ -61,8 +66,8 @@ async function runVerification() {
       packagingCost: 400,
       rawMaterialCost: 600,
       otherCosts: 0,
-      totalProductionCost: batchCostResult.totalProductionCost,
-      costPerUnit: batchCostResult.costPerUnit,
+      totalProductionCost,
+      costPerUnit,
       status: 'COMPLETED',
     },
   });

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { ShieldCheck, Truck, PhoneCall } from 'lucide-react';
 import { db } from '@/lib/db';
+import { activeOffersFor } from '@/lib/offers';
 import { ruleFor } from '@/lib/phone-rules';
 import { verifyPreviewToken, clampStoredHtml } from '@/lib/landing-pages';
 import { sellingCurrency } from '@/lib/selling-currency';
@@ -54,14 +55,7 @@ import { publicizeMedia } from '@/lib/public-media';
  */
 async function fetchOffers(companyId: string, productId: string | null) {
   if (!productId) return [];
-  const fromProduct = await db.offer.findMany({
-    where: { companyId, productId, status: 'ACTIVE' },
-    orderBy: [{ sortOrder: 'asc' }, { quantity: 'asc' }],
-    select: {
-      id: true, name: true, quantity: true, freeQuantity: true,
-      sellingPrice: true, compareAtPrice: true, isDefault: true,
-    },
-  });
+  const fromProduct = await activeOffersFor(db, companyId, productId);
   return fromProduct.map((o) => ({
     id: o.id,
     name: o.name,

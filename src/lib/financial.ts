@@ -3,34 +3,19 @@
  * Strict, audit-proof calculation of Production Cost, Unit Cost, and Real Net Profit
  */
 
-export interface BatchCostInput {
-  quantityProduced: number;
-  manufacturingCost: number;
-  packagingCost: number;
-  rawMaterialCost: number;
-  otherCosts: number;
-}
-
-export function calculateBatchCosts(input: BatchCostInput): {
-  totalProductionCost: number;
-  costPerUnit: number;
-} {
-  const totalProductionCost =
-    (input.manufacturingCost || 0) +
-    (input.packagingCost || 0) +
-    (input.rawMaterialCost || 0) +
-    (input.otherCosts || 0);
-
-  const costPerUnit =
-    input.quantityProduced > 0
-      ? Number((totalProductionCost / input.quantityProduced).toFixed(4))
-      : 0;
-
-  return {
-    totalProductionCost: Number(totalProductionCost.toFixed(2)),
-    costPerUnit,
-  };
-}
+/*
+ * A SECOND BATCH-COST CALCULATOR LIVED HERE, AND IT DISAGREED.
+ *
+ * `calculateBatchCosts` summed the four legacy buckets and nothing else —
+ * it did not know about a batch's free-form cost lines at all — and it
+ * rounded the total to two places where the live one rounds to four.
+ * Nothing called it, so it cost nobody money; it was a loaded gun. The
+ * next person to find a file named «Financial Calculation Engine» and use
+ * it would have dropped every free-form line out of the cost of goods.
+ *
+ * The one calculator is `batchTotal` / `batchUnitCost` in product-cost.ts.
+ * Removed rather than fixed: two of them is the fault, not the arithmetic.
+ */
 
 export interface RealProfitInput {
   deliveredOrders: Array<{

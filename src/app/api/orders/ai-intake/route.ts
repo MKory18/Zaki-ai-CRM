@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { notify } from '@/lib/notify';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { activeOffersFor } from '@/lib/offers';
 import { requireContext } from '@/lib/geo-context';
 import { findOrCreateCustomer } from '@/lib/customer-identity';
 import { orderRefFields } from '@/lib/order-ref';
@@ -312,10 +313,7 @@ export async function POST(req: Request) {
     let suggestedPrice: number | null = parsed.price;
     let suggestedOfferName: string | null = null;
     if (match) {
-      const offers = await db.offer.findMany({
-        where: { companyId, productId: match.id, status: 'ACTIVE' },
-        orderBy: { quantity: 'asc' },
-      });
+      const offers = await activeOffersFor(db, companyId, match.id);
       const qtyOffer = offers.find((o) => o.quantity === (parsed.quantity || 1)) || offers[0];
       if (qtyOffer && (parsed.price === null || parsed.price <= 0)) {
         suggestedPrice = qtyOffer.sellingPrice;
