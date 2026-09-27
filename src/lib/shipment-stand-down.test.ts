@@ -1,0 +1,123 @@
+import { describe, expect, it } from 'vitest';
+import { CONFIRMATION_TRANSITIONS, REJECTION_REASONS } from './confirmation-workflow';
+import { repoFile, stripComments } from './guard-source';
+
+/**
+ * A CONFIRMED ORDER THAT IS NOT GOING OUT.
+ *
+ * Somebody at the packing table decides a parcel is not shipping. Either the
+ * customer needs talking to again, or it is over — and until now the screen
+ * offered neither. It had a HOLD, which keeps the order confirmed with its
+ * stock reserved and sets `shipHoldUntil`: a field read by exactly two files,
+ * defaulting to FOREVER, so a held order was invisible to everyone except
+ * whoever opened the held view on that one screen.
+ *
+ * THE STATE MACHINE SAID THIS COULD NOT HAPPEN. `CONFIRMED: []` — terminal.
+ * And the invariants say the opposite in as many words: «reservation is
+ * released in the same transaction on CANCELLED, VOIDED, UNCONFIRM». The
+ * concept was in the contract and the transition map had no room for it. That
+ * is reported, not quietly widened: this one door does it, with its own
+ * guards, rather than opening `CONFIRMED` to every screen in the product.
+ */
+
+const route = () => stripComments(repoFile('src/app/api/ops/shipments/stand-down/route.ts'));
+const screen = () => stripComments(repoFile('src/components/screens/ShipmentsNewScreen.tsx'));
+
+describe('standing a shipment down', () => {
+  it('is one door with two outcomes, not two doors', () => {
+    expect(route()).toContain("z.enum(['POSTPONE', 'CANCEL'])");
+    expect(screen()).toContain("'/api/ops/shipments/stand-down'");
+  });
+
+  /**
+   * BOTH OUTCOMES RELEASE THE STOCK, IN THE SAME TRANSACTION.
+   *
+   * The contract's rule, and the reason for it is plain: stock held by an
+   * order that is not going anywhere is stock the next customer is told we do
+   * not have.
+   */
+  it('releases the reservation in the transaction that stops the order', () => {
+    const src = route();
+    const tx = src.slice(src.indexOf('db.$transaction'), src.indexOf('await logAudit'));
+    expect(tx, 'الحجز يبقى على طلبٍ لا يذهب إلى أحد').toContain('releaseOrderLines(tx, order.id)');
+    // One call, covering both outcomes — not one per branch that can drift.
+    expect((src.match(/releaseOrderLines\(/g) ?? []).length).toBe(1);
+  });
+
+  it('and does it for the postpone as much as the cancel', () => {
+    const src = route();
+    // The release sits after the branch, so neither outcome can skip it.
+    expect(src.indexOf('releaseOrderLines(tx')).toBeGreaterThan(src.indexOf("auditAction = 'SHIPMENT_STOOD_DOWN_CANCELLED'"));
+  });
+
+  /** Once it is with the courier this is a return, not a decision. */
+  it('refuses after the parcel has left the warehouse', () => {
+    // The SHAPE, not the presence: a disabled `if (false)` leaves every one
+    // of these strings in the file, and a first version of this test passed
+    // against exactly that.
+    expect(route(), 'حارس الشحنة الخارجة معطَّل').toMatch(
+      /if \(!cancellable\.allowed\) \{/
+    );
+    expect(route(), 'حارس «مؤكَّد فقط» معطَّل').toMatch(
+      /if \(order\.confirmationStatus !== 'CONFIRMED'\) \{/
+    );
+    expect(route(), 'بلا حماية من تعديل متزامن').toContain('version: order.version');
+  });
+
+  /**
+   * THE POSTPONE UNDOES THE CONFIRMATION AND LETS GO OF THE ORDER.
+   *
+   * It has to be pullable by whoever is free when its date comes: the pool
+   * only takes unclaimed orders, and «back to the new orders» is the whole
+   * request.
+   */
+  it('hands the postponed order to nobody, with a date', () => {
+    const src = route();
+    const branch = src.slice(src.indexOf("outcome === 'POSTPONE'"), src.indexOf('} else {'));
+    expect(branch).toContain("confirmationStatus: 'POSTPONED'");
+    expect(branch).toContain('postponedUntil: due');
+    expect(branch).toContain('claimedById: null');
+    expect(branch, 'يبقى مؤكَّداً في الورق').toContain('confirmedAt: null');
+    expect(src, 'يقبل موعداً في الماضي').toContain('due.getTime() < Date.now()');
+  });
+
+  /** A cancellation with no reason is one nothing can be learned from. */
+  it('demands a structured reason to cancel, and a sentence for «other»', () => {
+    const src = route();
+    expect(src, 'الإلغاء بلا سبب مُهيكل').toMatch(
+      /if \(!reason \|\| !\(REJECTION_REASONS as readonly string\[\]\)\.includes\(reason\)\) \{/
+    );
+    expect(src).toContain('سبب الإلغاء مطلوب');
+    expect(src).toMatch(/if \(reason === 'OTHER' &&/);
+    expect(REJECTION_REASONS).toContain('OTHER');
+  });
+
+  /** One picker. Two lists is how a report compares different questions. */
+  it('and the screen reuses the reason dialog, never its own', () => {
+    const src = screen();
+    expect(src).toContain('<RejectDialog');
+    // Wired to the row being cancelled, not rendered and never opened.
+    expect(src, 'الحوار مرسومٌ ولا يُفتح').toContain('open={!!cancelling}');
+    const spelled = REJECTION_REASONS.filter((r) => src.includes(`'${r}'`)).length;
+    expect(spelled, 'نسخة محليّة من قائمة الأسباب في شاشة الشحن').toBeLessThan(3);
+  });
+
+  /**
+   * AND THE TRANSITION MAP IS UNTOUCHED.
+   *
+   * Opening `CONFIRMED` in `CONFIRMATION_TRANSITIONS` would let any screen
+   * un-confirm an order. This door carries its own guards and leaves the map
+   * closed — the divergence between it and the invariants is reported, not
+   * papered over.
+   */
+  it('without opening CONFIRMED to everything else', () => {
+    expect(CONFIRMATION_TRANSITIONS.CONFIRMED, 'فُتحت الحالة النهائيّة للجميع').toEqual([]);
+  });
+
+  it('is written down — a status log, a note and an audit row', () => {
+    const src = route();
+    expect(src).toContain('orderStatusLog.create');
+    expect(src).toContain('orderNote.create');
+    expect(src).toMatch(/action: auditAction/);
+  });
+});

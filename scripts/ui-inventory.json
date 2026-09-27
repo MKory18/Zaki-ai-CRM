@@ -810,12 +810,12 @@
     "tabs": 0
   },
   "src/components/screens/ShipmentsNewScreen.tsx": {
-    "buttons": 3,
+    "buttons": 5,
     "inputs": 5,
     "columns": 5,
     "cards": 0,
     "modals": 0,
-    "icons": 5,
+    "icons": 7,
     "links": 0,
     "tabs": 0
   },

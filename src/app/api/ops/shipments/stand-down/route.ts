@@ -1,0 +1,193 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { db } from '@/lib/db';
+import { requireContext } from '@/lib/geo-context';
+import { requirePermission } from '@/lib/authorization';
+import { apiErrorResponse } from '@/lib/api-error';
+import { zodMessage } from '@/lib/zod-message';
+import { logAudit } from '@/lib/audit';
+import { releaseOrderLines } from '@/lib/reservation';
+import { assertCancellable, type StateSource } from '@/lib/order-state';
+import { REJECTION_REASONS } from '@/lib/confirmation-workflow';
+
+/**
+ * POST /api/ops/shipments/stand-down — this parcel is not going out.
+ *
+ * ONE DOOR, TWO OUTCOMES, because they are the same moment: somebody standing
+ * at the packing table decides a confirmed order is not shipping. Either the
+ * customer needs talking to again, or it is over.
+ *
+ * WHY IT IS NOT THE CONFIRMATION ENDPOINT. That door belongs to the
+ * confirmation team and is gated on their permissions; the shipping role
+ * holds `ops.ship` and `orders.change_status` and none of theirs. Reaching
+ * through it would mean widening a confirmation permission to a role that
+ * does not do confirmation.
+ *
+ * WHY IT IS NOT THE EXISTING HOLD. `/api/ops/shipments/hold` keeps the order
+ * CONFIRMED with its stock still reserved and sets `shipHoldUntil` — a field
+ * read by exactly two files, so a held order is invisible to everyone except
+ * whoever opens the held view on this one screen, and it defaults to FOREVER.
+ * That is a different thing (we cannot ship today, the customer still wants
+ * it) and it stays for that. This is for when the ORDER, not the shipment,
+ * has to stop.
+ *
+ * BOTH OUTCOMES RELEASE THE RESERVATION, IN THE SAME TRANSACTION. That is the
+ * contract's own rule — «reservation is released in the same transaction on
+ * CANCELLED, VOIDED, unconfirm» — and the reason for it is plain: stock held
+ * by an order that is not going anywhere is stock the next customer is told
+ * we do not have.
+ */
+
+const schema = z.object({
+  orderId: z.string().uuid(),
+  outcome: z.enum(['POSTPONE', 'CANCEL']),
+  /** For POSTPONE: when to try again. The follow-up screen works by date. */
+  until: z.string().datetime({ offset: true }).or(z.string().datetime()).optional(),
+  /** For CANCEL: one of the structured reasons, never free text. */
+  reason: z.string().optional(),
+  note: z.string().trim().max(500).optional(),
+});
+
+export async function POST(req: Request) {
+  try {
+    const { user, companyId, storeId } = await requireContext();
+    await requirePermission('ops.ship');
+
+    const parsed = schema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
+    }
+    const { orderId, outcome, until, reason, note } = parsed.data;
+
+    const order = await db.order.findFirst({
+      where: { id: orderId, companyId, storeId },
+      select: {
+        id: true, orderNumber: true, version: true, confirmationStatus: true,
+        shippingStatus: true, shippedAt: true, labelPrintedAt: true, shippingBatchId: true,
+      },
+    });
+    if (!order) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
+
+    /**
+     * NOT AFTER IT HAS LEFT.
+     *
+     * Once the parcel is with the courier this is no longer a decision about
+     * a shipment — it is a return, counted and inspected when it comes back.
+     * The same guard the cancel path already uses, so the two cannot drift.
+     */
+    const cancellable = assertCancellable(order as unknown as StateSource);
+    if (!cancellable.allowed) {
+      return NextResponse.json({ error: cancellable.message, code: cancellable.code }, { status: 409 });
+    }
+
+    if (order.confirmationStatus !== 'CONFIRMED') {
+      return NextResponse.json(
+        { error: 'هذا الطلب ليس مؤكَّداً — لا شيء يُوقَف', code: 'NOT_CONFIRMED' },
+        { status: 409 }
+      );
+    }
+
+    let data: Record<string, unknown>;
+    let auditAction: string;
+    let noteBody: string;
+
+    if (outcome === 'POSTPONE') {
+      if (!until) {
+        return NextResponse.json({ error: 'موعد المحاولة القادمة مطلوب' }, { status: 400 });
+      }
+      const due = new Date(until);
+      if (isNaN(due.getTime()) || due.getTime() < Date.now() - 60_000) {
+        return NextResponse.json({ error: 'الموعد يجب أن يكون في المستقبل' }, { status: 400 });
+      }
+      data = {
+        // The confirmation is undone: the customer has to be spoken to again,
+        // so the order goes back to being one somebody has to work.
+        confirmationStatus: 'POSTPONED',
+        status: 'POSTPONED',
+        postponedUntil: due,
+        nextFollowUpAt: due,
+        postponeCount: { increment: 1 },
+        followUpStatus: 'SCHEDULED',
+        followUpReason: 'POSTPONED',
+        confirmedAt: null,
+        confirmedById: null,
+        // Nobody holds it: it belongs to whoever is free when its date comes.
+        claimedById: null,
+        claimedAt: null,
+        currentOwnerId: null,
+        lockedById: null,
+        lockedAt: null,
+        signatureStatus: 'UNSIGNED',
+        shippingStatus: 'NOT_READY',
+        version: { increment: 1 },
+      };
+      auditAction = 'SHIPMENT_STOOD_DOWN_POSTPONED';
+      noteBody = `أُوقف شحنه وأُعيد إلى المتابعة حتى ${due.toISOString().slice(0, 10)}${note ? ` — ${note}` : ''}`;
+    } else {
+      if (!reason || !(REJECTION_REASONS as readonly string[]).includes(reason)) {
+        return NextResponse.json({ error: 'سبب الإلغاء مطلوب' }, { status: 400 });
+      }
+      if (reason === 'OTHER' && (!note || note.trim().length < 5)) {
+        return NextResponse.json({ error: 'سبب «أخرى» يحتاج ملاحظة تشرحه' }, { status: 400 });
+      }
+      data = {
+        confirmationStatus: 'REJECTED',
+        status: 'REJECTED',
+        rejectionReason: reason,
+        rejectionNote: note?.trim() || null,
+        claimedById: null,
+        claimedAt: null,
+        currentOwnerId: null,
+        lockedById: null,
+        lockedAt: null,
+        shippingStatus: 'NOT_READY',
+        version: { increment: 1 },
+      };
+      auditAction = 'SHIPMENT_STOOD_DOWN_CANCELLED';
+      noteBody = `أُلغي قبل الشحن (${reason})${note ? ` — ${note}` : ''}`;
+    }
+
+    await db.$transaction(async (tx) => {
+      const res = await tx.order.updateMany({
+        where: { id: order.id, companyId, version: order.version },
+        data,
+      });
+      if (res.count !== 1) throw new Error('VERSION_CONFLICT');
+
+      // The contract's rule, in the same transaction as the decision: stock
+      // held by an order that is not going anywhere is stock the next
+      // customer is told we do not have.
+      await releaseOrderLines(tx, order.id);
+
+      await tx.orderStatusLog.create({
+        data: {
+          companyId, orderId: order.id, statusType: 'CONFIRMATION',
+          previousValue: 'CONFIRMED',
+          newValue: outcome === 'POSTPONE' ? 'POSTPONED' : 'REJECTED',
+          changedById: user.id, changedByRole: user.role,
+          note: noteBody,
+        },
+      });
+      await tx.orderNote.create({
+        data: { companyId, orderId: order.id, authorId: user.id, kind: 'internal', body: noteBody },
+      });
+    });
+
+    await logAudit({
+      companyId, userId: user.id, action: auditAction,
+      entity: 'Order', entityId: order.id,
+      previousData: { confirmationStatus: 'CONFIRMED' },
+      newData: { outcome, until: until ?? null, reason: reason ?? null, by: user.name },
+    });
+
+    return NextResponse.json({ success: true, orderNumber: order.orderNumber });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'VERSION_CONFLICT') {
+      return NextResponse.json(
+        { error: 'تغيّر الطلب أثناء العمل عليه — حدّث الصفحة', code: 'VERSION_CONFLICT' },
+        { status: 409 }
+      );
+    }
+    return apiErrorResponse(error);
+  }
+}

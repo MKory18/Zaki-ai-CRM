@@ -5,7 +5,8 @@ import { useAsk } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiAlertLine, RiArrowGoBackLine, RiLoader4Line, RiPauseCircleLine, RiTruckLine } from '@remixicon/react';
+import { RiAlertLine, RiArrowGoBackLine, RiCloseCircleLine, RiLoader4Line, RiPauseCircleLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RejectDialog } from '@/components/screens/confirmation/ActionDialogs';
 import { useConfirm } from '@/components/ui/Confirm';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
@@ -41,6 +42,9 @@ export function ShipmentsNewScreen() {
   const confirm = useConfirm();
   const [providers, setProviders] = useState<{ id: string; name: string }[]>([]);
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
+  /** The row whose cancellation is being given a reason. */
+  const [cancelling, setCancelling] = useState<Row | null>(null);
+  const [standingDown, setStandingDown] = useState<string | null>(null);
   const [filters, setFilters] = useState({ courier: '', region: '', from: '', to: '' });
   const [rows, setRows] = useState<Row[] | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -63,6 +67,59 @@ export function ShipmentsNewScreen() {
       })
       .catch(() => undefined);
   }, []);
+
+  /**
+   * THE ORDER STOPS, NOT ONLY THE SHIPMENT.
+   *
+   * Different from the hold beside it, and the difference is the whole point:
+   * a HOLD keeps the order confirmed with its stock reserved, for when we
+   * cannot ship today and the customer still wants it. This is for when the
+   * ORDER has to stop — the confirmation is undone, the stock goes back on
+   * the shelf, and the order returns to the people whose job is talking to
+   * customers.
+   */
+  const standDown = async (
+    row: Row,
+    body: { outcome: 'POSTPONE'; until: string } | { outcome: 'CANCEL'; reason: string; note: string }
+  ) => {
+    setStandingDown(row.id);
+    try {
+      await apiJson('/api/ops/shipments/stand-down', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: row.id, ...body }),
+      });
+      toast.done(
+        body.outcome === 'POSTPONE'
+          ? `${row.orderNumber} عاد إلى المتابعة — وبضاعته رجعت للبيع`
+          : `${row.orderNumber} أُلغي — وبضاعته رجعت للبيع`
+      );
+      await load();
+    } catch (e) {
+      toast.failed(e instanceof Error ? e.message : 'تعذّر التنفيذ');
+    } finally {
+      setStandingDown(null);
+    }
+  };
+
+  /** Back to the follow-up team, with the date the customer asked for. */
+  const postponeOrder = async (row: Row) => {
+    const answer = await ask({
+      title: `أعِد ${row.orderNumber} إلى المتابعة؟`,
+      body:
+        'يُلغى تأكيدُه وتعود بضاعتُه للبيع فوراً، ويظهر في المؤجَّل حتى الموعد — ' +
+        'ثمّ يسحبه أوّلُ من يفرغ ويكلّم الزبون من جديد. اكتب الموعد بصيغة YYYY-MM-DD.',
+      confirmLabel: 'أعِده',
+      input: { label: 'موعد المحاولة القادمة', placeholder: 'YYYY-MM-DD' },
+    });
+    if (answer === null) return;
+    const day = (answer || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      toast.failed('اكتب الموعد بصيغة YYYY-MM-DD');
+      return;
+    }
+    await standDown(row, { outcome: 'POSTPONE', until: new Date(`${day}T09:00:00`).toISOString() });
+  };
 
   /** Hold it back from today's shipment, or put it back in the queue. */
   const toggleHold = async (row: Row) => {
@@ -361,6 +418,37 @@ export function ShipmentsNewScreen() {
                     {r.shipHoldReason}
                   </span>
                 )}
+
+                {/* Back to the people who talk to customers. NOT a hold: the
+                    confirmation is undone and the stock goes back on sale. */}
+                {view !== 'held' && (
+                  <button
+                    type="button"
+                    onClick={() => void postponeOrder(r)}
+                    disabled={standingDown === r.id}
+                    title="أعِده إلى المتابعة — يُلغى تأكيدُه وتعود بضاعتُه للبيع"
+                    className="min-h-11 md:min-h-0 ms-1 inline-flex items-center gap-1 rounded-md border border-[var(--sys-border)] px-2 py-1 text-xs text-[var(--sys-muted-foreground)] transition-colors hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)] disabled:opacity-50"
+                  >
+                    <RiTimerLine className="w-4 h-4" aria-hidden />
+                    للمتابعة
+                  </button>
+                )}
+
+                {/* It is over. The reason comes from the same structured list
+                    every other cancellation uses — one with no reason is one
+                    nothing can be learned from. */}
+                {view !== 'held' && (
+                  <button
+                    type="button"
+                    onClick={() => setCancelling(r)}
+                    disabled={standingDown === r.id}
+                    title="ألغِ الطلب — تعود بضاعتُه للبيع"
+                    className="min-h-11 md:min-h-0 ms-1 inline-flex items-center gap-1 rounded-md border border-[var(--sys-border)] px-2 py-1 text-xs text-[var(--sys-muted-foreground)] transition-colors hover:border-[var(--sys-destructive-border)] hover:text-[var(--sys-destructive)] disabled:opacity-50"
+                  >
+                    <RiCloseCircleLine className="w-4 h-4" aria-hidden />
+                    ألغِ
+                  </button>
+                )}
               </span>
             )}
             empty={
@@ -374,6 +462,25 @@ export function ShipmentsNewScreen() {
         </div>
         </>
       )}
+
+      {/*
+        THE SAME REASON DIALOG THE CONFIRMATION TEAM USES.
+        Not a second one written here: a cancellation's reason is read by the
+        report that says why orders are lost, and two pickers offering two
+        lists is how that report comes to compare things that were never the
+        same question.
+      */}
+      <RejectDialog
+        open={!!cancelling}
+        orderNumber={cancelling?.orderNumber ?? ''}
+        busy={standingDown === cancelling?.id}
+        onClose={() => setCancelling(null)}
+        onSubmit={({ rejectionReason, note }) => {
+          const row = cancelling;
+          setCancelling(null);
+          if (row) void standDown(row, { outcome: 'CANCEL', reason: rejectionReason, note });
+        }}
+      />
     </div>
   );
 }
