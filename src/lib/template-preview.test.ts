@@ -114,6 +114,38 @@ describe('the template gallery shows the template', () => {
   });
 });
 
+/**
+ * NOTHING WE SHIP INVENTS A CUSTOMER.
+ *
+ * Five templates open a reviews block. The temptation, when the preview
+ * looked thin, was to fill it with example testimonials — and a seller who
+ * published without editing them would be showing a customer's words that
+ * no customer said. The block is shown as an empty frame that says whose
+ * job it is, and the template file carries no review text at all.
+ */
+describe('no template ships a testimonial', () => {
+  it('the reviews blocks are empty in every template', () => {
+    for (const t of PAGE_TEMPLATES) {
+      for (const section of buildTemplate(t.key).sections) {
+        if (section.type !== 'reviews') continue;
+        for (const item of section.items) {
+          expect(item.text.trim(), `${t.key} يحمل رأيَ عميلٍ مُختلَقاً`).toBe('');
+          expect(item.name.trim(), `${t.key} يحمل اسمَ عميلٍ مُختلَقاً`).toBe('');
+        }
+      }
+    }
+  });
+
+  it('and the empty frame is a preview-only thing', () => {
+    const blocks = stripComments(repoFile('src/components/landing/blocks/PageBlocks.tsx'));
+    // Both empty sections are behind the flag, like the image frames.
+    const guarded = blocks.match(/if \(!ctx\.placeholders\) return null;/g) ?? [];
+    expect(guarded.length, 'قسمٌ فارغ يُرسم على صفحة الزبون').toBeGreaterThanOrEqual(3);
+    expect(blocks).toMatch(/<SlotFrame label="[^"]*آراء العملاء/);
+    expect(blocks).toMatch(/<SlotFrame label="[^"]*الأسئلة الشائعة/);
+  });
+});
+
 describe('the shop’s screens are in the shop’s tab', () => {
   it('the front page and the landing pages sit with the design', () => {
     const storefront = NAV.find((g) => g.key === 'storefront')!;

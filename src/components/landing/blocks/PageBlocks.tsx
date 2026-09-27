@@ -315,7 +315,17 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
 
     case 'reviews': {
       const items = s.items.map((r, at) => ({ r, at })).filter(({ r }) => r.text.trim());
-      if (!items.length) return null;
+      if (!items.length) {
+        if (!ctx.placeholders) return null;
+        // A template ships no example testimonials, here or anywhere: a
+        // page published without editing them would show a customer's
+        // words that no customer said.
+        return (
+          <Section title={s.title}>
+            <SlotFrame label="آراء العملاء — تضيف آراءً حقيقية من زبائنك" />
+          </Section>
+        );
+      }
       return (
         <Section title={s.title}>
           <div className="lp-reviews">
@@ -337,7 +347,14 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
 
     case 'faq': {
       const items = s.items.filter((i) => i.q.trim());
-      if (!items.length) return null;
+      if (!items.length) {
+        if (!ctx.placeholders) return null;
+        return (
+          <Section title={s.title}>
+            <SlotFrame label="الأسئلة الشائعة — تكتب أسئلتك وأجوبتك" />
+          </Section>
+        );
+      }
       return (
         <Section title={s.title}>
           <FaqList items={items} />
@@ -457,6 +474,32 @@ function Section({ title, children }: { title?: string; children: React.ReactNod
       {title && <h2 className="lp-h2" data-edit="title" {...rich(title)} />}
       {children}
     </section>
+  );
+}
+
+/**
+ * A block that is in the template and has nothing in it yet — in a preview
+ * only. Six templates open a questions block and five a reviews block, and
+ * with nothing written in them they rendered as nothing at all: the seller
+ * chose a shape, got a shorter page, and never learned the section was
+ * theirs to fill.
+ */
+function SlotFrame({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        padding: '18px 14px',
+        textAlign: 'center',
+        border: '2px dashed var(--lp-accent-border)',
+        borderRadius: 'var(--lp-radius)',
+        background: 'var(--lp-accent-tint)',
+        color: 'var(--lp-accent)',
+        fontSize: 12,
+        fontWeight: 700,
+      }}
+    >
+      {label}
+    </div>
   );
 }
 
