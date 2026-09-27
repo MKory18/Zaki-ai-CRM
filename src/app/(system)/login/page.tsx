@@ -1,13 +1,14 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SecondFactor } from '@/components/shell/SecondFactor';
+import { loginWithPasskey, passkeySupported } from '@/lib/passkey-browser';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
-import { RiErrorWarningLine, RiLoginBoxLine, RiShieldCrossLine, RiTimerLine } from '@remixicon/react';
+import { RiErrorWarningLine, RiFingerprintLine, RiLoader4Line, RiLoginBoxLine, RiShieldCrossLine, RiTimerLine } from '@remixicon/react';
 import { BrandStage } from '@/components/shell/BrandStage';
 
 export default function LoginPage() {
@@ -18,6 +19,55 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingFlag, setPendingFlag] = useState(false);
+
+  /**
+   * SIGNING IN WITH THE FINGERPRINT ALONE.
+   *
+   * Offered only where the device has a sensor and the page is on a secure
+   * origin — `passkeySupported()` answers both. Whether a key exists is
+   * never asked here: the browser knows what it holds for this site, and a
+   * server that answered «this account has one» would be answering a
+   * question nobody signed in has the right to ask.
+   */
+  const [canFinger, setCanFinger] = useState(false);
+  const [fingerBusy, setFingerBusy] = useState(false);
+
+  useEffect(() => {
+    void passkeySupported().then(setCanFinger);
+  }, []);
+
+  async function signInWithFinger() {
+    setFingerBusy(true);
+    setError(null);
+    try {
+      const started = await fetch('/api/auth/passkey/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const offer = await started.json();
+      if (!started.ok) throw new Error(offer?.error || 'تعذّر بدء الدخول بالبصمة');
+
+      const assertion = await loginWithPasskey(offer);
+
+      const res = await fetch('/api/auth/passkey/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...assertion, challenge: offer.challenge, remember }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'تعذّر الدخول بالبصمة');
+
+      router.push(data.status === 'PENDING' ? '/pending' : '/');
+      router.refresh();
+    } catch (e) {
+      // A cancelled prompt is a person changing their mind, not a failure
+      // worth a red box — the password field is still right there.
+      const msg = e instanceof Error ? e.message : 'تعذّر الدخول بالبصمة';
+      if (!/NotAllowedError|abort|لم تُقرأ/i.test(msg)) setError(msg);
+      setFingerBusy(false);
+    }
+  }
   // Not an error: nothing went wrong, the phone was put down. Saying so
   // plainly is what stops somebody concluding the app signed them out at
   // random and asking for the whole measure to be removed.
@@ -173,6 +223,41 @@ export default function LoginPage() {
                 <RiLoginBoxLine className="icon-mirror w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 تسجيل الدخول
               </Button>
+
+              {/*
+                THE FINGERPRINT AS THE DOOR, NOT A SECOND LOCK ON IT.
+
+                Shown only where the device can actually answer: a button
+                that opens a prompt the device cannot show teaches somebody
+                the product is broken. Nothing here says whether a key
+                exists for this account — that would be a way to ask the
+                login page which accounts have one.
+              */}
+              {canFinger && (
+                <>
+                  <div className="flex items-center gap-3">
+                    <span className="h-px flex-1 bg-[var(--sys-border)]" />
+                    <span className="text-xs text-[var(--sys-muted)]">أو</span>
+                    <span className="h-px flex-1 bg-[var(--sys-border)]" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void signInWithFinger()}
+                    disabled={fingerBusy}
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[var(--sys-border)] px-4 py-2.5 text-sm font-medium text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] disabled:opacity-50"
+                  >
+                    {fingerBusy ? (
+                      <RiLoader4Line className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <RiFingerprintLine className="h-5 w-5" aria-hidden />
+                    )}
+                    ادخل ببصمتك
+                  </button>
+                  <p className="text-center text-xs text-[var(--sys-muted)]">
+                    بعد تسجيل بصمة هذا الجهاز من «الملف الشخصي».
+                  </p>
+                </>
+              )}
             </form>
             )}
           </CardContent>

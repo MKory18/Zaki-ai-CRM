@@ -1540,12 +1540,12 @@
     "tabs": 0
   },
   "src/app/(system)/login/page.tsx": {
-    "buttons": 1,
+    "buttons": 2,
     "inputs": 3,
     "columns": 0,
     "cards": 1,
     "modals": 0,
-    "icons": 3,
+    "icons": 5,
     "links": 3,
     "tabs": 0
   },

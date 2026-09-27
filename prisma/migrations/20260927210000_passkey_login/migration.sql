@@ -1,0 +1,11 @@
+-- SIGNING IN WITH A FINGERPRINT AND NOTHING ELSE.
+--
+-- A login challenge is issued before anybody has said who they are: the
+-- browser finds a discoverable key on the device and the signature names
+-- the account. So the challenge cannot carry a user, and the column that
+-- held one becomes nullable.
+--
+-- Nothing else changes. Existing REGISTER and AUTHENTICATE rows keep their
+-- user, and the foreign key still cascades — a deleted account still takes
+-- its challenges with it.
+ALTER TABLE "passkey_challenges" ALTER COLUMN "userId" DROP NOT NULL;

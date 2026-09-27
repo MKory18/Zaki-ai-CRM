@@ -73,9 +73,22 @@ export async function createPasskey(offer: RegisterOffer) {
         { type: 'public-key', alg: -7 },
         { type: 'public-key', alg: -257 },
       ],
-      // The fingerprint or face on THIS device, and a real touch — not a
-      // key the person has to carry, and not a silent assertion.
-      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+      /**
+       * The fingerprint or face on THIS device, and a real touch — not a
+       * key the person has to carry, and not a silent assertion.
+       *
+       * `residentKey: 'required'` is what makes signing in POSSIBLE with
+       * nothing typed: the key is stored on the device and the browser can
+       * find it for this site on its own. Without it the server would have
+       * to be told which account to look for first, which is the address
+       * and password the fingerprint exists to replace.
+       */
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        userVerification: 'required',
+        residentKey: 'required',
+        requireResidentKey: true,
+      },
       // The ones already on file, so the browser refuses to enrol the same
       // finger twice rather than making a row nobody can tell apart.
       excludeCredentials: offer.excludeCredentials.map((id) => ({
@@ -125,6 +138,40 @@ export async function signWithPasskey(offer: AssertOffer) {
       userVerification: 'required',
       timeout: 60_000,
     },
+  })) as PublicKeyCredential | null;
+
+  if (!credential) throw new Error('لم تُقرأ البصمة');
+  const response = credential.response as AuthenticatorAssertionResponse;
+
+  return {
+    credentialId: b64url(credential.rawId),
+    authenticatorData: b64url(response.authenticatorData),
+    clientDataJSON: b64url(response.clientDataJSON),
+    signature: b64url(response.signature),
+  };
+}
+
+/**
+ * SIGNING IN WITH NOTHING TYPED.
+ *
+ * No `allowCredentials`: the browser is not told which key to look for, so
+ * it offers whichever keys for this site the device is holding and the
+ * person picks. That is the whole difference between «the fingerprint
+ * instead of the code» and «the fingerprint instead of logging in».
+ *
+ * A cancelled prompt is not a failure — the person changed their mind and
+ * the password field is still there.
+ */
+export async function loginWithPasskey(offer: { challenge: string; rpId: string }) {
+  const credential = (await navigator.credentials.get({
+    publicKey: {
+      challenge: fromB64url(offer.challenge),
+      rpId: offer.rpId,
+      userVerification: 'required',
+      timeout: 60_000,
+    },
+    // Lets the browser surface keys it already knows for this site.
+    mediation: 'optional',
   })) as PublicKeyCredential | null;
 
   if (!credential) throw new Error('لم تُقرأ البصمة');

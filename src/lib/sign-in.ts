@@ -34,13 +34,22 @@ export async function issueSession(input: {
   };
   remember: boolean;
   ip: string;
-  /** Recorded on the audit row so a sign-in says how it was proved. */
   /**
-   * `password+passkey` is a fingerprint standing where the six digits
-   * stand — never where the password stands. A sign-in row that cannot
-   * say how it was proved is a trail nobody can read backwards.
+   * Recorded on the audit row so a sign-in says how it was proved. A
+   * sign-in row that cannot say how it was proved is a trail nobody can
+   * read backwards.
+   *
+   *   `password+passkey` — the fingerprint standing where the six digits
+   *   stand, after the password was accepted.
+   *
+   *   `passkey` — the fingerprint standing where the WHOLE login stands.
+   *   Not a weaker door: the signature covers the origin, so it cannot be
+   *   phished; what is stored is a public key, so it cannot be breached
+   *   out of us; and the device only signs after verifying the person, so
+   *   it is possession and inherence together. It is written differently
+   *   from the others precisely so the audit can tell them apart.
    */
-  factor: 'password' | 'password+totp' | 'password+recovery' | 'password+passkey';
+  factor: 'password' | 'password+totp' | 'password+recovery' | 'password+passkey' | 'passkey';
 }): Promise<NextResponse> {
   const { user, remember, ip } = input;
 

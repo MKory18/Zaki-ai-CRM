@@ -2925,16 +2925,21 @@ model Passkey {
 /// stored, matched, marked used, and expires on its own.
 model PasskeyChallenge {
   id        String    @id @default(uuid())
-  userId    String
+  /// NULL for a LOGIN challenge: it is issued before anybody has said who
+  /// they are. The browser finds a discoverable key, and the signature
+  /// names the account — which is the whole point of signing in with a
+  /// fingerprint instead of an address and a password.
+  userId    String?
   challenge String
-  /// REGISTER or AUTHENTICATE — a registration challenge must not be
-  /// answered with a sign-in, nor the other way round.
+  /// REGISTER, AUTHENTICATE or LOGIN — a registration challenge must not
+  /// be answered with a sign-in, nor the other way round, and a LOGIN
+  /// challenge must not finish a half-done password login.
   kind      String
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, kind])
   @@map("passkey_challenges")
