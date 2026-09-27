@@ -44,7 +44,12 @@ export function ProductsScreen() {
 
   // RiSearchLine
   const [search, setSearch] = useState('');
+  /** Show only the products with no category — the backlog, one click away. */
+  const [onlyUnfiled, setOnlyUnfiled] = useState(false);
+  const uncategorised = products.filter((p) => !p.categoryId).length;
+
   const filteredProducts = products.filter((p) => {
+    if (onlyUnfiled && p.categoryId) return false;
     if (!search.trim()) return true;
     const q = search.trim().toLowerCase();
     return (
@@ -256,6 +261,33 @@ export function ProductsScreen() {
                 {filteredProducts.length} من أصل {products.length} منتج
               </span>
             </div>
+
+            {/*
+              THE BACKLOG, SAID OUT LOUD.
+              A category decides who may see a product, how the reports group
+              it, and what the assistant can answer about a line of goods —
+              and 114 products carried none while the screen said nothing.
+              One switch filters to exactly them, so filing is a sitting.
+            */}
+            {uncategorised > 0 && (
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => setOnlyUnfiled((v) => !v)}
+                  className={`min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    onlyUnfiled
+                      ? 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)] text-[var(--sys-warning)]'
+                      : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)]'
+                  }`}
+                >
+                  <RiFoldersLine className="w-4 h-4" aria-hidden />
+                  {onlyUnfiled ? 'أظهِر الكلّ' : `${uncategorised} منتجاً بلا تصنيف`}
+                </button>
+                <span className="ms-2 text-xs text-[var(--sys-muted)]">
+                  التصنيف يحدّد من يرى المنتج، وكيف تُجمَّع تقاريره، وما يستطيع المساعد الإجابة عنه.
+                </span>
+              </div>
+            )}
           </CardContent>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -281,9 +313,17 @@ export function ProductsScreen() {
                               its own. A category is how a product is FILED,
                               so it reads as part of what it is rather than
                               as another field to scan across. */}
+                          {/*
+                            AND «بلا تصنيف» WHEN THERE IS NONE.
+                            Rendering nothing made 114 unfiled products look
+                            exactly like 114 filed ones. A gap you cannot see
+                            is a gap nobody closes.
+                          */}
                           {p.category?.name ? (
                             <span className="text-[var(--sys-muted-foreground)]">{p.category.name} • </span>
-                          ) : null}
+                          ) : (
+                            <span className="text-[var(--sys-warning)]">بلا تصنيف • </span>
+                          )}
                           {p.images?.length || 0} صورة • {p.offers?.length || 0} عرض
                         </span>
                       </>

@@ -800,12 +800,12 @@
     "tabs": 0
   },
   "src/components/screens/ProductsScreen.tsx": {
-    "buttons": 15,
+    "buttons": 16,
     "inputs": 11,
     "columns": 7,
     "cards": 1,
     "modals": 2,
-    "icons": 11,
+    "icons": 12,
     "links": 2,
     "tabs": 0
   },

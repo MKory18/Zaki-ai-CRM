@@ -46,6 +46,14 @@ export async function GET(req: Request) {
     const limitRaw = url.searchParams.get('limit');
     const take = limitRaw ? Math.min(Math.max(Number.parseInt(limitRaw, 10) || 0, 1), 100) : undefined;
 
+    /**
+     * HOW MANY ARE STILL UNFILED — counted over the same scope the list
+     * uses, so the number and the rows can never disagree. Said out loud on
+     * the screen, because 114 products with no category is a fact nobody
+     * could see: the column simply rendered nothing.
+     */
+    const uncategorised = await db.product.count({ where: { ...where, categoryId: null } });
+
     const products = await db.product.findMany({
       where,
       take,
@@ -116,7 +124,7 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({ products: enriched });
+    return NextResponse.json({ products: enriched, uncategorised });
   } catch (error: any) {
     return apiErrorResponse(error);
   }
@@ -131,7 +139,35 @@ export async function POST(req: Request) {
     const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType, categoryId } = body;
 
     if (!name || !sku) {
-      return NextResponse.json({ error: 'Name and SKU are required' }, { status: 400 });
+      return NextResponse.json({ error: 'الاسم ورمز المنتج مطلوبان' }, { status: 400 });
+    }
+
+    /**
+     * AND A SHELF TO FILE IT ON.
+     *
+     * Measured before this: 114 products, and not one of them categorised.
+     * A field that may be left empty is left empty, and the emptiness is
+     * not cosmetic — permissions can be scoped to categories, the assistant
+     * reads a product's category to answer «أي صنفٍ يبيع أكثر», and every
+     * report that groups by category grouped everything into one heap.
+     *
+     * It is demanded on the way IN, where it costs one click and the picker
+     * can name a new shelf on the spot. The products already here are not
+     * held hostage to it: editing one does not demand a category it never
+     * had, and the screen counts them so the backlog is visible instead of
+     * silent. Blocking an edit until somebody files 114 products is how a
+     * rule gets worked around rather than followed.
+     */
+    if (!categoryId) {
+      return NextResponse.json(
+        {
+          error:
+            'اختر تصنيف المنتج. التصنيف يُستعمل في صلاحيات الوصول وفي تقارير الأصناف وفي إجابات المساعد — ' +
+            'ويمكنك إنشاء تصنيفٍ جديدٍ من المنتقي نفسه.',
+          code: 'CATEGORY_REQUIRED',
+        },
+        { status: 400 }
+      );
     }
 
     // A SKU identifies an article WITHIN A STORE. It was unique across the
@@ -149,12 +185,12 @@ export async function POST(req: Request) {
     // An id that does not resolve is refused rather than dropped: filing
     // a product under a shelf that does not exist should say so, not
     // quietly create it unfiled.
-    let resolvedCategoryId: string | null = null;
-    if (categoryId) {
-      const cat = await db.category.findFirst({ where: { id: categoryId, companyId }, select: { id: true } });
-      if (!cat) return NextResponse.json({ error: 'لا تصنيف بهذا المعرّف' }, { status: 400 });
-      resolvedCategoryId = cat.id;
-    }
+    const cat = await db.category.findFirst({
+      where: { id: categoryId, companyId },
+      select: { id: true },
+    });
+    if (!cat) return NextResponse.json({ error: 'لا تصنيف بهذا المعرّف' }, { status: 400 });
+    const resolvedCategoryId = cat.id;
 
     const product = await db.product.create({
       data: {
