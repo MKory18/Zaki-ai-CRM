@@ -85,7 +85,15 @@ export function refFromNotes(notes: string | null | undefined): string | null {
   return match ? match[1] : null;
 }
 
-function splitCsvLine(line: string): string[] {
+/**
+ * One CSV line into cells, tolerant of quotes and of comma, semicolon or
+ * tab — which is what a spreadsheet exported in a different locale gives.
+ *
+ * Exported because the order importer reads the same kinds of file from the
+ * same kinds of hand, and a second splitter would be a second set of quoting
+ * bugs to find.
+ */
+export function splitCsvLine(line: string): string[] {
   const out: string[] = [];
   let cur = '';
   let quoted = false;

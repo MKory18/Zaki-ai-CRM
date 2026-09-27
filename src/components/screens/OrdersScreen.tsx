@@ -24,9 +24,10 @@ import { apiFetch } from '@/lib/api-client';
 import { format } from 'date-fns';
 import { ar as arLocale } from 'date-fns/locale';
 import { FILTERABLE_STATES, STATE_LABEL_AR } from '@/lib/order-state';
-import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiFilter3Line, RiMagicLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiFilter3Line, RiMagicLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine, RiUploadCloud2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -41,6 +42,7 @@ export function OrdersScreen() {
   // What is typed, and what has actually been searched for. They used to be
   // one value, so every keystroke sent a request.
   const [searchInput, setSearchInput] = useState('');
+  const [importing, setImporting] = useState(false);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [productId, setProductId] = useState('all');
@@ -299,6 +301,18 @@ export function OrdersScreen() {
             >
               <RiDownload2Line className="w-4 h-4" />
               <span>{t.export}</span>
+            </Button>
+
+            {/* Beside the export, because they are the same door in two
+                directions and somebody looking for one looks here. */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImporting(true)}
+              className="flex items-center space-x-1.5"
+            >
+              <RiUploadCloud2Line className="w-4 h-4" />
+              <span>استيراد طلبات</span>
             </Button>
 
             <Button
@@ -697,6 +711,18 @@ export function OrdersScreen() {
         onRefresh={() => loadOrders(pagination.page)}
         filters={{ q: search, status, productId, moderatorId, queue, source }}
       />
+
+      {/* Reads the file, shows every row, then creates through the ordinary
+          order door one at a time — see the dialog's own note. */}
+      {importing && (
+        <ImportOrdersDialog
+          onClose={() => setImporting(false)}
+          onDone={() => {
+            setImporting(false);
+            void loadOrders(1);
+          }}
+        />
+      )}
     </>
   );
 }
