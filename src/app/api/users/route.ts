@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from 'next/server';
+import { manageableUsersWhere } from '@/lib/manageable-user';
 import { apiErrorResponse } from '@/lib/api-error';
 import { z } from 'zod';
 import { PASSWORD_MAX, checkPassword } from '@/lib/password-rules';
@@ -152,7 +153,8 @@ if (isPrivilegedRoleName(targetRole.name) && admin.role !== 'SUPER_ADMIN') {
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requirePermission('users.view');
+    const viewer = await requirePermission('users.view');
+    const { companyId } = viewer;
     const { searchParams } = new URL(req.url);
 
     const search = searchParams.get('q')?.trim();
@@ -163,9 +165,11 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '25', 10);
 
-    const whereClause: any = {
-      OR: [{ companyId }, { companyId: null }],
-    };
+    // The one rule, in its list shape — see manageable-user.ts. Written by
+    // hand here it leaned on Prisma dropping an undefined key to let a
+    // platform admin through, which is a fact about the query builder
+    // standing in for a decision about tenancy.
+    const whereClause: any = { ...manageableUsersWhere(viewer) };
 
     if (search) {
       whereClause.AND = [

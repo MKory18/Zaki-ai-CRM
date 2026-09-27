@@ -1,4 +1,5 @@
 import { toLatinDigits } from '@/lib/latin-digits';
+import { mayActOnUser, USER_NOT_FOUND } from '@/lib/manageable-user';
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import crypto from 'crypto';
@@ -28,24 +29,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       include: { assignedBy: { select: { name: true } } },
     });
     if (!target) {
-      return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
+      return NextResponse.json({ error: USER_NOT_FOUND }, { status: 404 });
     }
 
-    // ── Multi-tenant isolation: admins may only manage users inside their
-    // own company. SUPER_ADMIN (platform, companyId=null) is exempt. ──
-    const isPlatformSuper = admin.role === 'SUPER_ADMIN' && !admin.companyId;
-    if (!isPlatformSuper) {
-      const adminCo = admin.companyId;
-      const targetCo = target.companyId;
-      const sameCompany = adminCo && targetCo === adminCo;
-      // Platform-level (companyId: null) accounts may only be touched by a
-      // company admin for ADOPTION (assignRole on a PENDING account); every
-      // other action (resetPassword/changeStatus/forceLogout/delete) is
-      // SUPER_ADMIN-only — platform accounts are never company-manageable.
-      const adoptionEligible = adminCo && targetCo === null && action === 'assignRole';
-      if (!sameCompany && !adoptionEligible) {
-        return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
-      }
+    /**
+     * MAY THIS ADMIN ACT ON THIS USER.
+     *
+     * Fifteen lines of tenancy reasoning used to live here, and three
+     * sibling routes each had their own version of it — one of which was
+     * wrong in a way that told the owner «المستخدم غير موجود» about
+     * themselves. The rule is the same rule in all four places, so it is
+     * written in one: see manageable-user.ts.
+     *
+     * Seeing an unplaced account is how it gets adopted; acting on one is
+     * a platform matter — and `assignRole` IS the adoption.
+     */
+    if (!mayActOnUser(admin, target, { adopting: action === 'assignRole' })) {
+      return NextResponse.json({ error: USER_NOT_FOUND }, { status: 404 });
     }
 
     // ── Privilege-escalation guards ──

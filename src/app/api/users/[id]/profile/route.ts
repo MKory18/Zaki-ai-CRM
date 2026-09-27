@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { manageableUserWhere } from '@/lib/manageable-user';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { can, requirePermission } from '@/lib/authorization';
@@ -15,11 +16,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { companyId } = viewer;
 
     const user = await db.user.findFirst({
-      where: {
-        id,
-        // Phase S: company isolation — platform SUPER_ADMIN exempt
-        ...(companyId ? { OR: [{ companyId }, { companyId: null }] } : {}),
-      },
+      // The one place that answers «may this admin look at this user» —
+      // see manageable-user.ts. Written by hand here once, and by hand
+      // three more times on the sibling routes, with one of the four wrong.
+      where: manageableUserWhere(viewer, id),
       select: {
         id: true, name: true, email: true, role: true, status: true,
         lastLoginAt: true, createdAt: true, phone: true, commissionRate: true,

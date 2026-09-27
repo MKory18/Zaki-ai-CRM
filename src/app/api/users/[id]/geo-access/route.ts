@@ -4,6 +4,8 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
+import { manageableUserWhere, USER_NOT_FOUND } from '@/lib/manageable-user';
+import type { SessionUser } from '@/types/auth';
 import { firstIssue, geoAccessSchema } from '@/lib/geo-schemas';
 import { currentGeoAccess, geoAccessError, replaceGeoAccess } from '@/lib/geo-access';
 
@@ -16,16 +18,26 @@ import { currentGeoAccess, geoAccessError, replaceGeoAccess } from '@/lib/geo-ac
  * assigned countries.
  */
 
-async function companyUser(id: string, companyId: string) {
-  return db.user.findFirst({ where: { id, companyId }, select: { id: true } });
+/**
+ * WHO THIS ADMIN MAY LOOK AT — from the one place that answers it.
+ *
+ * This read `{ id, companyId }`, which cannot match a user whose company
+ * is null — and the owner's own SUPER_ADMIN account is exactly that. So
+ * the countries block on their page said «المستخدم غير موجود» about the
+ * person reading it. That was the fourth report of the same sentence on a
+ * different screen, and the reason it kept coming back is that each of
+ * these routes wrote its own answer.
+ */
+async function manageable(admin: SessionUser, id: string) {
+  return db.user.findFirst({ where: manageableUserWhere(admin, id), select: { id: true } });
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { companyId } = await requireCompanyTenant();
+    const { user: admin } = await requireCompanyTenant();
     await requirePermission('geo.manage');
-    if (!(await companyUser(id, companyId))) return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
+    if (!(await manageable(admin, id))) return NextResponse.json({ error: USER_NOT_FOUND }, { status: 404 });
     return NextResponse.json(await currentGeoAccess(id));
   } catch (error) {
     return apiErrorResponse(error);
@@ -37,7 +49,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const { user, companyId } = await requireCompanyTenant();
     await requirePermission('geo.manage');
-    if (!(await companyUser(id, companyId))) return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
+    if (!(await manageable(user, id))) return NextResponse.json({ error: USER_NOT_FOUND }, { status: 404 });
 
     const parsed = geoAccessSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: firstIssue(parsed.error) }, { status: 400 });
