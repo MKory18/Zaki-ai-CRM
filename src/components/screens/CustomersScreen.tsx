@@ -11,6 +11,8 @@ import { useApp } from '@/context/AppContext';
 import { format } from 'date-fns';
 import { RiAddCircleLine, RiMapPinLine, RiPhoneLine, RiSearchLine, RiUserLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { HealthChip } from '@/components/ui/HealthChip';
+import { GRADE_RANK, scoreCustomer } from '@/lib/customer-score';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export function CustomersScreen() {
@@ -93,6 +95,18 @@ export function CustomersScreen() {
     }
   };
 
+  /**
+   * GRADED HERE, AND SORTED BY WHAT IS WORTH SEEING FIRST.
+   *
+   * `now` is taken once per render rather than inside the loop, so two
+   * cards on the same screen cannot land on different sides of the dormancy
+   * line — and the clock is read once, not once per row.
+   */
+  const now = new Date();
+  const graded = customers
+    .map((c) => ({ customer: c, score: scoreCustomer(c, now) }))
+    .sort((a, b) => GRADE_RANK[a.score.grade] - GRADE_RANK[b.score.grade]);
+
   return (
     <>
       <div className="space-y-6">
@@ -125,7 +139,7 @@ export function CustomersScreen() {
 
         {/* Customer Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {customers.map((c) => (
+          {graded.map(({ customer: c, score }) => (
             <Card
               key={c.id}
               className="cursor-pointer hover:border-[var(--sys-primary)]/40 transition-colors"
@@ -138,6 +152,15 @@ export function CustomersScreen() {
                       <RiUserLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                       <span>{c.fullName}</span>
                     </h3>
+                    {/*
+                      THE ONE THING AN AGENT NEEDS BEFORE RINGING.
+                      In a cash-on-delivery shop a customer who refused four
+                      parcels out of five and one who took eight of eight
+                      looked identical on every screen in this product.
+                    */}
+                    <span className="mt-1 block">
+                      <HealthChip health={{ tone: score.tone, label: score.label, why: score.why }} />
+                    </span>
                     <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center space-x-1 mt-1">
                       <RiMapPinLine className="w-4 h-4 text-[var(--sys-muted)]" />
                       <span>

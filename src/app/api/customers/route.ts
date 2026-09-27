@@ -24,6 +24,13 @@ const FULL_CUSTOMER_SELECT = {
   notes: true,
   createdAt: true,
   updatedAt: true,
+  // What the grade is derived from. Not a stored score: a score written
+  // down was true in March, and goes stale the moment an order moves.
+  totalOrders: true,
+  deliveredOrders: true,
+  cancelledOrders: true,
+  totalPurchaseValue: true,
+  lastOrderDate: true,
   orders: {
     select: {
       id: true,

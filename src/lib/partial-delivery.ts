@@ -103,7 +103,7 @@ export async function recordPartialDelivery(
   const order = await tx.order.findFirst({
     where: { id: input.orderId, companyId: input.companyId },
     select: {
-      id: true, orderNumber: true, shippingStatus: true, deliveryFee: true,
+      id: true, orderNumber: true, shippingStatus: true, deliveryFee: true, customerId: true,
       priceIncludesDelivery: true, deliveredAt: true, returnedAt: true, deliveryProviderId: true,
       items: {
         select: {
@@ -237,6 +237,31 @@ export async function recordPartialDelivery(
   // not a «returned» attempt. The parcel coming back is what happens next,
   // at a warehouse; what happened at the door is that somebody would not
   // take it.
+  /**
+   * AND THE CUSTOMER'S OWN RECORD.
+   *
+   * `Customer.deliveredOrders` and `cancelledOrders` are what the customers
+   * screen grades somebody on — «هل يستلم؟», the only question that matters
+   * before shipping to them on cash-on-delivery. They were incremented by
+   * exactly one path: the manual status change on `PATCH /api/orders/:id`.
+   *
+   * Measured: 111 counted against 115 actually delivered. Neither this door
+   * nor the courier's statement touched them, so a customer who takes every
+   * parcel at the door reads as somebody with no history at all — and the
+   * grade built on that counter would be wrong for the commonest way an
+   * order actually completes.
+   *
+   * Anything taken is a delivery for this purpose. A partial is a customer
+   * who opened the door and paid; grading them beside somebody who refused
+   * the lot would be the wrong sentence about the wrong person.
+   */
+  await tx.customer.update({
+    where: { id: order.customerId },
+    data: nothingTaken
+      ? { cancelledOrders: { increment: 1 } }
+      : { deliveredOrders: { increment: 1 }, totalPurchaseValue: { increment: collectedAmount } },
+  });
+
   await appendDeliveryAttempt(tx, {
     orderId: order.id,
     companyId: input.companyId,

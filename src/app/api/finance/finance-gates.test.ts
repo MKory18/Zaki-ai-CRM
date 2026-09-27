@@ -15,6 +15,8 @@ const { db, requireContext, requirePermission, logAudit, recordMovement, markPay
       // Approving a statement now also closes the deliveries it reports.
       order: { updateMany: vi.fn(), findMany: vi.fn(), update: vi.fn() },
       orderActivity: { create: vi.fn() },
+      // The statement promotion counts the delivery on the customer too.
+      customer: { update: vi.fn(async () => ({})) },
       orderItem: { findMany: vi.fn() },
       inventoryMovement: { findFirst: vi.fn(), create: vi.fn() },
       productionBatch: { findMany: vi.fn(), update: vi.fn() },

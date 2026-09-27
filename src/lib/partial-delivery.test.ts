@@ -15,6 +15,8 @@ const { db, consumeOrderStock } = vi.hoisted(() => ({
     order: { findFirst: vi.fn(), update: vi.fn() },
     orderItem: { update: vi.fn() },
     orderActivity: { create: vi.fn() },
+    // Every door that delivers a parcel now counts it on the customer.
+    customer: { update: vi.fn() },
     // The knock at the door, appended in this same transaction. These 14
     // tests failed the moment it started being recorded, which is the right
     // way round: a delivery that writes no attempt is the defect.
@@ -57,6 +59,7 @@ beforeEach(() => {
   db.order.update.mockResolvedValue({});
   db.orderItem.update.mockResolvedValue({});
   db.orderActivity.create.mockResolvedValue({});
+  db.customer.update.mockResolvedValue({});
 });
 
 describe('the delivery fee is charged in full', () => {

@@ -203,7 +203,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           companyId,
           shippingStatus: { in: ['SHIPPED', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP'] },
         },
-        select: { id: true, orderNumber: true },
+        select: { id: true, orderNumber: true, customerId: true },
       });
       // The period's end is when the courier says the money was in, and is
       // closer to the truth than the moment somebody uploaded a file.
@@ -229,6 +229,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           allowNegativeStock: true,
           userId: user.id,
         });
+        /**
+         * The customer's own record, for the same reason as the door: this
+         * is how an order completes when nobody ticked anything by hand,
+         * and a counter only the manual path maintains is a counter that
+         * describes the exceptions.
+         */
+        await tx.customer.update({
+          where: { id: order.customerId },
+          data: {
+            deliveredOrders: { increment: 1 },
+            ...(collected != null ? { totalPurchaseValue: { increment: collected } } : {}),
+          },
+        });
+
         await tx.orderActivity.create({
           data: {
             companyId,

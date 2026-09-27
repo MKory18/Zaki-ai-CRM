@@ -42,6 +42,7 @@ function fakeTx(items: ReturnType<typeof line>[]) {
         // writing money.
         deliveredAt: null,
         returnedAt: null,
+        customerId: 'cust-1',
         deliveryProviderId: 'courier-1',
         items,
       })),
@@ -53,6 +54,9 @@ function fakeTx(items: ReturnType<typeof line>[]) {
     // it used to live only in the attempt row and this activity's metadata,
     // which is three machine places and no human one.
     orderNote: { create: vi.fn(async () => ({})) },
+    // Every door that delivers a parcel now counts it on the customer —
+    // «هل يستلم؟» is what the customers screen grades them on.
+    customer: { update: vi.fn(async () => ({})) },
   } as never;
 }
 
