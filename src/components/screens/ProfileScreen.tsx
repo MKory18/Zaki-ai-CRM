@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { ScoreCard } from '@/components/performance/ScoreCard';
 import { ThemePicker } from '@/components/settings/ThemePicker';
+import { PasskeySection } from '@/components/settings/PasskeySection';
 import { RiCheckboxCircleLine, RiErrorWarningLine, RiShieldCheckLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
@@ -188,6 +189,10 @@ export function ProfileScreen() {
             </Button>
           </div>
         </form>
+
+        {/* Outside the form: registering a key is its own act, and a finger
+            on the sensor must not be submitting a name change with it. */}
+        <PasskeySection />
       </div>
     </>
   );

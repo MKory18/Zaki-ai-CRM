@@ -35,7 +35,12 @@ export async function issueSession(input: {
   remember: boolean;
   ip: string;
   /** Recorded on the audit row so a sign-in says how it was proved. */
-  factor: 'password' | 'password+totp' | 'password+recovery';
+  /**
+   * `password+passkey` is a fingerprint standing where the six digits
+   * stand — never where the password stands. A sign-in row that cannot
+   * say how it was proved is a trail nobody can read backwards.
+   */
+  factor: 'password' | 'password+totp' | 'password+recovery' | 'password+passkey';
 }): Promise<NextResponse> {
   const { user, remember, ip } = input;
 

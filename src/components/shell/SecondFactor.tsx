@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
-import { RiLoader4Line, RiShieldKeyholeLine } from '@remixicon/react';
+import { RiFingerprintLine, RiLoader4Line, RiShieldKeyholeLine } from '@remixicon/react';
+import { passkeySupported, signWithPasskey } from '@/lib/passkey-browser';
 
 /**
  * THE SECOND STEP OF SIGNING IN.
@@ -48,6 +49,67 @@ function VerifyStep({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * THE FINGERPRINT, WHERE THE SIX DIGITS ARE TYPED.
+   *
+   * Offered only when this device HAS a sensor and this account HAS a key
+   * registered — asked of the server, which answers `challenge: null` when
+   * there is none. A button that opens a dialog the device cannot show is
+   * worse than no button: the person concludes the product is broken
+   * rather than that the feature is not set up.
+   *
+   * It replaces the typing, never the password: getting here at all means
+   * the password was already accepted.
+   */
+  const [offer, setOffer] = useState<{ challenge: string; rpId: string; allowCredentials: string[] } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      if (!(await passkeySupported())) return;
+      try {
+        const res = await fetch('/api/auth/passkey/assert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ challenge }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (alive && res.ok && data?.challenge) setOffer(data);
+      } catch {
+        // No passkey offer is not an error: the code below still works.
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [challenge]);
+
+  async function withFinger() {
+    if (!offer) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const assertion = await signWithPasskey(offer);
+      const res = await fetch('/api/auth/passkey/assert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge, ...assertion }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'تعذّر التحقّق بالبصمة');
+      onSignedIn(data.status);
+    } catch (err) {
+      // A refused fingerprint must never be a locked door: the code field
+      // is still there, and the message says so.
+      setError(
+        (err instanceof Error ? err.message : 'تعذّر التحقّق بالبصمة') + ' — يمكنك كتابة الرمز بدلاً منها.'
+      );
+      setBusy(false);
+      return;
+    }
+    setBusy(false);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -75,6 +137,25 @@ function VerifyStep({
         <RiShieldKeyholeLine className="mt-0.5 h-5 w-5 shrink-0 text-[var(--sys-primary)]" aria-hidden />
         <span>افتح تطبيق المصادقة واكتب الرمز المعروض. أو اكتب أحد رموز الاسترداد إن لم يكن الهاتف بيدك.</span>
       </p>
+
+      {offer && (
+        <>
+          <button
+            type="button"
+            onClick={() => void withFinger()}
+            disabled={busy}
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--sys-primary)] px-4 py-2.5 text-sm font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
+          >
+            {busy ? (
+              <RiLoader4Line className="h-5 w-5 animate-spin" />
+            ) : (
+              <RiFingerprintLine className="h-5 w-5" aria-hidden />
+            )}
+            ادخل ببصمتك
+          </button>
+          <p className="text-center text-xs text-[var(--sys-muted-foreground)]">أو اكتب الرمز</p>
+        </>
+      )}
 
       <label className="block">
         <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">الرمز</span>

@@ -208,21 +208,21 @@ model ConversionDelivery {
 }
 
 model User {
-  id                String    @id @default(uuid())
-  companyId         String?
-  email             String    @unique
-  name              String
-  passwordHash      String
-  role              String    @default("PENDING_USER") // SUPER_ADMIN, COMPANY_ADMIN, MANAGER, MODERATOR, CONFIRMATION_AGENT, FOLLOW_UP_AGENT, SETTLEMENT_OFFICER, ACCOUNTANT, DELIVERY_MANAGER, PENDING_USER
-  phone             String?
+  id                 String    @id @default(uuid())
+  companyId          String?
+  email              String    @unique
+  name               String
+  passwordHash       String
+  role               String    @default("PENDING_USER") // SUPER_ADMIN, COMPANY_ADMIN, MANAGER, MODERATOR, CONFIRMATION_AGENT, FOLLOW_UP_AGENT, SETTLEMENT_OFFICER, ACCOUNTANT, DELIVERY_MANAGER, PENDING_USER
+  phone              String?
   /// The currency this person's commission is counted in. Null = the store's,
   /// which is how it always worked. An Egyptian moderator is paid in pounds
   /// even where there is no pound wallet: the money leaves a wallet of
   /// another currency at a rate the owner writes when they pay it.
-  commissionCurrency String? @map("commission_currency")
-  avatar            String?
-  commissionRate    Float     @default(0.0)
-  status            String    @default("PENDING") // PENDING, ACTIVE, SUSPENDED, DISABLED
+  commissionCurrency String?   @map("commission_currency")
+  avatar             String?
+  commissionRate     Float     @default(0.0)
+  status             String    @default("PENDING") // PENDING, ACTIVE, SUSPENDED, DISABLED
   /// When this person starts and hands over, as "HH:mm" in the country's
   /// timezone. NULL means the country's own work hours — so nothing changes
   /// for anybody until a shift is set on purpose.
@@ -236,20 +236,20 @@ model User {
   /// Which of the system's looks this person chose. Null = the default.
   /// On the user rather than in browser storage: somebody who works from
   /// the counter and from a laptop chose once, not twice.
-  systemTheme       String?   @map("system_theme")
-  salaryAmount      Decimal?  @map("salary_amount") @db.Decimal(12, 2)
-  salaryCurrency    String?   @map("salary_currency")
-  shiftStart        String?   @map("shift_start") @db.VarChar(5)
-  shiftEnd          String?   @map("shift_end") @db.VarChar(5)
+  systemTheme        String?   @map("system_theme")
+  salaryAmount       Decimal?  @map("salary_amount") @db.Decimal(12, 2)
+  salaryCurrency     String?   @map("salary_currency")
+  shiftStart         String?   @map("shift_start") @db.VarChar(5)
+  shiftEnd           String?   @map("shift_end") @db.VarChar(5)
   /// Their rest days as comma-separated weekday numbers (0 = Sunday).
   /// NULL = the country's weekend. A night shift does not rest on Friday.
-  restDays          String?   @map("rest_days")
-  tokenVersion      Int       @default(0)
-  lastLoginAt       DateTime?
-  assignedById      String?
-  assignedAt        DateTime?
-  resetToken        String?
-  resetTokenExpires DateTime?
+  restDays           String?   @map("rest_days")
+  tokenVersion       Int       @default(0)
+  lastLoginAt        DateTime?
+  assignedById       String?
+  assignedAt         DateTime?
+  resetToken         String?
+  resetTokenExpires  DateTime?
 
   /// THE SECOND FACTOR, FOR THE ROLES THAT MOVE MONEY.
   ///
@@ -257,19 +257,25 @@ model User {
   /// a database copy alone must not hand somebody a working authenticator.
   /// `totpLastStep` is the 30-second step most recently spent, so the same
   /// code cannot be replayed inside its own window.
-  totpSecretEnc     String?
-  totpEnabledAt     DateTime?
-  totpLastStep      Int?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  totpSecretEnc String?
+  totpEnabledAt DateTime?
+  totpLastStep  Int?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  company                       Company?               @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  assignedOrders                Order[]                @relation("ModeratorOrders")
-  claimedOrders                 Order[]                @relation("OrderClaimer")
-  ownedOrders                   Order[]                @relation("OrderCurrentOwner")
-  lockedOrders                  Order[]                @relation("OrderLockHolder")
-  assignedWork                  Order[]                @relation("OrderAssignee")
-  signedOrders                  Order[]                @relation("OrderSignedBy")
+  /// THE FINGERPRINT ON THE DEVICE ALREADY IN THE HAND.
+  ///
+  /// A passkey stands in for the six-digit code, never for the password: a
+  /// phone that is picked up is a second factor that is already lost.
+  passkeys                      Passkey[]
+  passkeyChallenges             PasskeyChallenge[]
+  company                       Company?                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedOrders                Order[]                 @relation("ModeratorOrders")
+  claimedOrders                 Order[]                 @relation("OrderClaimer")
+  ownedOrders                   Order[]                 @relation("OrderCurrentOwner")
+  lockedOrders                  Order[]                 @relation("OrderLockHolder")
+  assignedWork                  Order[]                 @relation("OrderAssignee")
+  signedOrders                  Order[]                 @relation("OrderSignedBy")
   callLogs                      CallLog[]
   auditLogs                     AuditLog[]
   recoveryCodes                 TwoFactorRecoveryCode[]
@@ -277,28 +283,28 @@ model User {
   claimHistory                  OrderClaimHistory[]
   statusLogs                    OrderStatusLog[]
   contactAttempts               OrderContactAttempt[]
-  createdLandingPages           LandingPage[]          @relation("LandingPageCreator")
-  confirmedOrders               Order[]                @relation("OrderConfirmedBy")
-  resolvedFollowUps             Order[]                @relation("FollowUpResolvedBy")
-  createdShippingBatches        ShippingBatch[]        @relation("ShippingBatchCreator")
-  deliveryAgentAttempts         DeliveryAttempt[]      @relation("DeliveryAttemptAgent")
-  financialTransactions         FinancialTransaction[] @relation("FinanceTransactionActor")
-  assignedDeliveryOrders        Order[]                @relation("DeliveryAssignedBy")
-  assignedBy                    User?                  @relation("UserAssigner", fields: [assignedById], references: [id])
-  assignedUsers                 User[]                 @relation("UserAssigner")
+  createdLandingPages           LandingPage[]           @relation("LandingPageCreator")
+  confirmedOrders               Order[]                 @relation("OrderConfirmedBy")
+  resolvedFollowUps             Order[]                 @relation("FollowUpResolvedBy")
+  createdShippingBatches        ShippingBatch[]         @relation("ShippingBatchCreator")
+  deliveryAgentAttempts         DeliveryAttempt[]       @relation("DeliveryAttemptAgent")
+  financialTransactions         FinancialTransaction[]  @relation("FinanceTransactionActor")
+  assignedDeliveryOrders        Order[]                 @relation("DeliveryAssignedBy")
+  assignedBy                    User?                   @relation("UserAssigner", fields: [assignedById], references: [id])
+  assignedUsers                 User[]                  @relation("UserAssigner")
   roleId                        String?
-  roleRef                       Role?                  @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  permissionsVersion            Int                    @default(1)
+  roleRef                       Role?                   @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  permissionsVersion            Int                     @default(1)
   userPermissions               UserPermission[]
-  permissionsGranted            UserPermission[]       @relation("UserPermissionGranter")
-  whatsappAssignedConversations WhatsAppConversation[] @relation("WhatsAppAssignee")
+  permissionsGranted            UserPermission[]        @relation("UserPermissionGranter")
+  whatsappAssignedConversations WhatsAppConversation[]  @relation("WhatsAppAssignee")
   countryAccess                 UserCountryAccess[]
   storeAccess                   UserStoreAccess[]
   penalties                     Penalty[]
   payslips                      Payslip[]
   notifications                 Notification[]
-  customerBlocks                CustomerBlock[]        @relation("CustomerBlockedBy")
-  customerBlockReleases         CustomerBlock[]        @relation("CustomerBlockReleasedBy")
+  customerBlocks                CustomerBlock[]         @relation("CustomerBlockedBy")
+  customerBlockReleases         CustomerBlock[]         @relation("CustomerBlockReleasedBy")
 
   @@index([companyId])
   @@index([role])
@@ -397,7 +403,7 @@ model ProductionBatch {
   /// Set when this batch came from the opening physical count at cutover.
   /// The count's batches ARE its lines: quantity and unit cost live here and
   /// nowhere else, so there is no second copy of them to drift.
-  openingCountId      String?
+  openingCountId String?
 
   company            Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   product            Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -1613,26 +1619,26 @@ model Store {
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
 
-  company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  country         Country            @relation(fields: [countryId], references: [id], onDelete: Restrict)
-  orders          Order[]
-  access          UserStoreAccess[]
-  landingPages    LandingPage[]      @relation("StorePages")
-  telegramSources TelegramSource[]
-  shippingBatches ShippingBatch[]
-  couriers        DeliveryProvider[]
-  fonts           StoreFont[]
-  campaigns       Campaign[]
-  adAccounts      AdAccount[]
-  wallets         Wallet[]
-  products        Product[]
-  customers       Customer[]
-  notifications   Notification[]
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  country           Country            @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  orders            Order[]
+  access            UserStoreAccess[]
+  landingPages      LandingPage[]      @relation("StorePages")
+  telegramSources   TelegramSource[]
+  shippingBatches   ShippingBatch[]
+  couriers          DeliveryProvider[]
+  fonts             StoreFont[]
+  campaigns         Campaign[]
+  adAccounts        AdAccount[]
+  wallets           Wallet[]
+  products          Product[]
+  customers         Customer[]
+  notifications     Notification[]
   /// The one signed physical count of stock this store started from.
   stockOpeningCount StockOpeningCount?
-  pages           StorePage[]
-  menus           StoreMenu[]
-  redirects       StoreRedirect[]
+  pages             StorePage[]
+  menus             StoreMenu[]
+  redirects         StoreRedirect[]
 
   @@unique([companyId, slug])
   @@unique([domain])
@@ -1954,12 +1960,12 @@ model Wallet {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  country   Country            @relation(fields: [countryId], references: [id], onDelete: Restrict)
-  store     Store?             @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  movements WalletMovement[]
-  closings  DailyClosing[]
-  openingCount WalletOpeningCount?
-  receipts  StatementReceipt[]
+  country           Country             @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  store             Store?              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  movements         WalletMovement[]
+  closings          DailyClosing[]
+  openingCount      WalletOpeningCount?
+  receipts          StatementReceipt[]
   commissionPayouts CommissionPayout[]
   payslips          Payslip[]
   expenses          Expense[]
@@ -2279,7 +2285,7 @@ model CommissionRule {
 // order generates zero commission for every party, and a correction is a
 // reversing entry — the monthly period is locked once approved.
 model CommissionEntry {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   companyId      String
   /// The order that earned it — null for a PERIOD entry, which no single
   /// order produced ("150 confirmed in a day"). What such an entry was
@@ -2288,10 +2294,10 @@ model CommissionEntry {
   userId         String
   role           String
   ruleId         String?
-  amount         Decimal  @db.Decimal(14, 3)
+  amount         Decimal   @db.Decimal(14, 3)
   currencyCode   String
   /// ACCRUED (delivered) -> PAYABLE (settlement approved) -> PAID, or REVERSED.
-  status         String   @default("ACCRUED")
+  status         String    @default("ACCRUED")
   /// YYYY-MM of the delivery; the period is locked when approved.
   periodMonth    String
   /// A PERIOD entry: the span it covers, how many orders were counted in it,
@@ -2301,17 +2307,17 @@ model CommissionEntry {
   counted        Int?
   tierLabel      String?   @map("tier_label")
   /// The payment that settled it. Null until it is paid.
-  payoutId       String?  @map("payout_id")
-  reversalOfId   String?  @unique
+  payoutId       String?   @map("payout_id")
+  reversalOfId   String?   @unique
   reversalReason String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  order      Order?           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  rule       CommissionRule?  @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  order      Order?            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  rule       CommissionRule?   @relation(fields: [ruleId], references: [id], onDelete: SetNull)
   payout     CommissionPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
-  reversalOf CommissionEntry? @relation("CommissionReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
-  reversedBy CommissionEntry? @relation("CommissionReversal")
+  reversalOf CommissionEntry?  @relation("CommissionReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy CommissionEntry?  @relation("CommissionReversal")
 
   @@unique([orderId, userId, status])
   @@index([companyId, periodMonth, status])
@@ -2332,34 +2338,33 @@ model CommissionEntry {
 /// wallet transfer. A month already paid must read the same next year.
 /**
  * A RULE THAT PROPOSES A DEDUCTION — it never applies one.
- *
  * Grace and a cap are not softness. A rule with no grace charges somebody
  * every day traffic exists, and a deduction that happens every day stops
  * being a signal about anything. A rule with no cap can eat a salary over
  * one illness.
  */
 model PenaltyRule {
-  id           String    @id @default(uuid())
-  companyId    String    @map("company_id")
+  id            String    @id @default(uuid())
+  companyId     String    @map("company_id")
   /// Null = every store of the company.
-  storeId      String?   @map("store_id")
+  storeId       String?   @map("store_id")
   /// Null = every role.
-  role         String?
+  role          String?
   /// See PENALTY_KINDS in src/lib/penalties.ts.
-  kind         String
+  kind          String
   /// What ONE unit costs: a minute late, an absent day, an untouched order.
-  perUnit      Decimal   @map("per_unit") @db.Decimal(12, 4)
+  perUnit       Decimal   @map("per_unit") @db.Decimal(12, 4)
   /// Units forgiven before anything is charged.
-  grace        Int       @default(0)
+  grace         Int       @default(0)
   /// The most this rule may take from one person in one period.
-  periodCap    Decimal?  @map("period_cap") @db.Decimal(12, 2)
-  currencyCode String    @map("currency_code")
-  effectiveFrom DateTime @map("effective_from")
+  periodCap     Decimal?  @map("period_cap") @db.Decimal(12, 2)
+  currencyCode  String    @map("currency_code")
+  effectiveFrom DateTime  @map("effective_from")
   effectiveTo   DateTime? @map("effective_to")
-  isActive     Boolean   @default(true) @map("is_active")
-  createdById  String    @map("created_by_id")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdById   String    @map("created_by_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   penalties Penalty[]
@@ -2371,13 +2376,11 @@ model PenaltyRule {
 
 /**
  * ONE PROPOSED OR APPLIED DEDUCTION.
- *
  * Nothing here becomes money on its own. The system can measure that
  * somebody arrived at 09:40; it cannot know there was a funeral, a closed
  * road, or a shift swapped by phone. And an arrival taken from the first
  * order somebody touched is an UPPER BOUND — taking money on an upper
  * bound is not a policy, it is an error with a receipt.
- *
  * So: PROPOSED by the system, APPLIED or WAIVED by a person, and REVERSED
  * by a linked opposite row rather than by a delete — the same rule every
  * financial record in this system lives by.
@@ -2429,11 +2432,9 @@ model Penalty {
 
 /**
  * ONE MONTH'S PAY, AND WHAT WAS TAKEN OUT OF IT.
- *
  * The salary is a SNAPSHOT. Reading it from the employee later would
  * rewrite last March every time somebody gets a rise, and a payslip that
  * changes is not a record of anything.
- *
  * `carriedOver` is the guard that matters: deductions larger than the
  * salary do not produce a negative payment. What did not fit stays owed
  * and is offered against the next payslip — a person is never handed a bill
@@ -2888,4 +2889,53 @@ model LandingPageView {
   @@unique([landingPageId, day, device, campaignId])
   @@index([companyId, storeId, day])
   @@map("landing_page_views")
+}
+
+/// A REGISTERED AUTHENTICATOR — a fingerprint, a face, a security key.
+///
+/// Nothing secret is stored. `publicKey` is the SPKI the browser itself
+/// hands over at registration: a copy of this table lets somebody VERIFY a
+/// signature and never lets them produce one.
+model Passkey {
+  id           String    @id @default(uuid())
+  userId       String
+  /// The authenticator's credential id, base64url as the browser sends it.
+  credentialId String    @unique
+  /// SPKI DER, base64. Public by definition.
+  publicKey    String
+  /// COSE algorithm: -7 is ES256, -257 is RS256.
+  algorithm    Int
+  /// What the person recognises it by — «آيفون العمل».
+  label        String?
+  /// The authenticator's own counter. One that fails to advance is what a
+  /// cloned key produces, and it is refused.
+  counter      Int       @default(0)
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("passkeys")
+}
+
+/// THE CHALLENGE THE SERVER ISSUED, SPENT ONCE.
+///
+/// A signature over a challenge we did not issue is a replay. So it is
+/// stored, matched, marked used, and expires on its own.
+model PasskeyChallenge {
+  id        String    @id @default(uuid())
+  userId    String
+  challenge String
+  /// REGISTER or AUTHENTICATE — a registration challenge must not be
+  /// answered with a sign-in, nor the other way round.
+  kind      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@map("passkey_challenges")
 }
