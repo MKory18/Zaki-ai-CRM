@@ -161,9 +161,23 @@ describe('what it refuses', () => {
     await expect(run([{ itemId: 'i1', deliveredQty: 1 }])).rejects.toThrow(/قبل خروج الشحنة/);
   });
 
-  it('refuses to settle the same order twice', async () => {
-    db.order.findFirst.mockResolvedValue(order({ collectedAmount: 25 }));
+  /**
+   * The signal is the door's own marks now, not `collectedAmount`: the door
+   * stopped writing money, so an amount on the order says the courier's
+   * statement arrived, not that somebody already stood at this door.
+   */
+  it('refuses to settle the same order twice, on either of its two dates', async () => {
+    db.order.findFirst.mockResolvedValue(order({ deliveredAt: new Date('2026-09-20') }));
     await expect(run([{ itemId: 'i1', deliveredQty: 1 }])).rejects.toThrow(/مسبقاً/);
+
+    db.order.findFirst.mockResolvedValue(order({ returnedAt: new Date('2026-09-20') }));
+    await expect(run([{ itemId: 'i1', deliveredQty: 1 }])).rejects.toThrow(/مسبقاً/);
+  });
+
+  /** And an amount alone no longer blocks it — that is the statement's mark. */
+  it('but an amount from the statement is not a second delivery', async () => {
+    db.order.findFirst.mockResolvedValue(order({ collectedAmount: 25 }));
+    await expect(run([{ itemId: 'i1', deliveredQty: 1 }])).resolves.toBeTruthy();
   });
 
   it('refuses more units than were shipped', async () => {

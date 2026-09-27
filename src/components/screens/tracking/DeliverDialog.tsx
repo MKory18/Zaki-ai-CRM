@@ -151,9 +151,19 @@ export function DeliverDialog({
                 </span>
                 <span>{chargedFee} {order.currency}</span>
               </p>
+              {/*
+                «المتوقَّع», not «المحصَّل».
+                Nobody at this screen knows what money arrived — a follow-up
+                agent is repeating what the courier said on the phone. The
+                figure that lands on the order is the one on the courier's
+                statement, and until it comes in this is what we expect.
+              */}
               <p className="flex justify-between font-semibold text-[var(--sys-heading)] border-t border-[var(--sys-border)] pt-1">
-                <span>المحصَّل من العميل</span>
+                <span>المتوقَّع تحصيله</span>
                 <span>{Math.round(collected * 100) / 100} {order.currency}</span>
+              </p>
+              <p className="text-xs text-[var(--sys-muted)]">
+                المبلغ الفعليّ يُسجَّل من كشف شركة الشحن عند المطابقة — لا من هنا.
               </p>
 
               {!allTaken && anyTaken && (

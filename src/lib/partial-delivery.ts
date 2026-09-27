@@ -17,15 +17,28 @@ type Tx = Prisma.TransactionClient | typeof db;
  *
  * What is recorded:
  *   - per line, how many units were taken and how many came back;
- *   - collectedAmount: the delivered goods plus the FULL fee, which is what
- *     the customer actually paid at the door;
  *   - the refused units, returned to the caller so they re-enter stock
  *     through the normal count-and-inspect, never automatically.
  *
- * Settlement then compares the courier's statement against collectedAmount
- * rather than the original total — expectedAmountFor already does that. A
- * partial delivery measured against the original total would look like the
- * courier short-paid every time.
+ * AND NOT THE MONEY. This wrote `collectedAmount` — the delivered goods plus
+ * the full fee — and that was the one figure here nobody at the door can
+ * know. A follow-up agent records what the courier told her on the phone;
+ * the money is what the courier's statement says arrived, and those are not
+ * the same fact.
+ *
+ * It was worse than a guess. The statement sweep only promotes orders still
+ * in flight, so an order settled here left the set the statement checks —
+ * recording a delivery did not anticipate the reconciliation, it CANCELLED
+ * it, and the typed figure was never once compared with the courier's own.
+ *
+ * So the amount is computed and RETURNED, for the screen to show as what we
+ * expect to be paid, and written by the statement when it arrives. The
+ * division is the honest one: whoever stood at the door knows what happened
+ * — who took what — and the courier's statement knows what money came in.
+ *
+ * Settlement compares the statement against `expectedAmountFor`, which reads
+ * the delivered lines rather than the original total, so a partial delivery
+ * is still measured against what was actually handed over.
  */
 
 export interface DeliveredLine {
@@ -91,7 +104,7 @@ export async function recordPartialDelivery(
     where: { id: input.orderId, companyId: input.companyId },
     select: {
       id: true, orderNumber: true, shippingStatus: true, deliveryFee: true,
-      priceIncludesDelivery: true, collectedAmount: true, deliveryProviderId: true,
+      priceIncludesDelivery: true, deliveredAt: true, returnedAt: true, deliveryProviderId: true,
       items: {
         select: {
           id: true, productId: true, productName: true,
@@ -102,7 +115,17 @@ export async function recordPartialDelivery(
   });
   if (!order) throw new PartialDeliveryRefused('NOT_FOUND', 'الطلب غير موجود');
 
-  if (order.collectedAmount !== null) {
+  /**
+   * ALREADY RECORDED?
+   *
+   * This asked whether `collectedAmount` was set, which stopped being the
+   * door's signal the moment the door stopped writing money. The door's own
+   * marks are the dates it stamps, and one of the two is always set —
+   * `deliveredAt` when anything was taken, `returnedAt` when nothing was.
+   */
+  // Truthy, not `!== null`: a caller that selected neither column hands over
+  // `undefined`, and `undefined !== null` would refuse every delivery.
+  if (order.deliveredAt || order.returnedAt) {
     throw new PartialDeliveryRefused('ALREADY_SETTLED', 'سُجِّل تسليم هذا الطلب مسبقاً');
   }
   if (!SETTLEABLE.includes(order.shippingStatus)) {
@@ -197,7 +220,9 @@ export async function recordPartialDelivery(
     where: { id: order.id },
     data: {
       shippingStatus: status,
-      collectedAmount,
+      // NOT collectedAmount. See the note at the top of this file: the money
+      // is the courier's statement's to write, and writing a typed figure
+      // here also removed the order from the set that statement checks.
       deliveredAt: nothingTaken ? null : new Date(),
       returnedAt: nothingTaken ? new Date() : null,
       ...(nothingTaken ? { returnReason: input.note ?? 'رفض الاستلام بالكامل' } : {}),
@@ -285,7 +310,9 @@ export async function recordPartialDelivery(
       action: 'PARTIAL_DELIVERY_RECORDED',
       newStatus: status,
       metadata: JSON.stringify({
-        collectedAmount,
+        // What we EXPECT the courier to remit for this parcel. The figure
+        // that lands on the order comes from their statement.
+        expectedCollection: collectedAmount,
         deliveredValue,
         deliveryFee: chargedFee,
         feeChargedInFull: !nothingTaken,

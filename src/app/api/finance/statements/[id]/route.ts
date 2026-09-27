@@ -161,17 +161,42 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         });
       }
 
-      // ── The statement IS the delivery proof ──
-      //
-      // The courier has told us, in writing, that they delivered this
-      // parcel and collected this amount. Reading that and then asking
-      // somebody to tick "delivered" by hand is the same fact entered
-      // twice — and every order nobody got round to ticking sat in the
-      // tracking list forever, long after the money had arrived.
-      //
-      // Only the ones still in flight are moved: an order already marked
-      // delivered keeps its own date and amount, because whoever stood
-      // there and recorded it knew more than a spreadsheet does.
+      // What the courier says arrived, per order — read once, used twice.
+      const amountOf = new Map(
+        matched.map((m) => [m.orderId as string, m.statementAmount == null ? null : Number(m.statementAmount)])
+      );
+
+      /**
+       * ── THE STATEMENT IS THE DELIVERY PROOF, AND THE ONLY SOURCE OF THE MONEY ──
+       *
+       * The courier has told us, in writing, that they delivered this parcel
+       * and collected this amount. Reading that and then asking somebody to
+       * tick "delivered" by hand is the same fact entered twice — and every
+       * order nobody got round to ticking sat in the tracking list forever,
+       * long after the money had arrived.
+       *
+       * WHAT CHANGED, AND WHY. This file used to say that an order already
+       * marked delivered «keeps its own date and amount, because whoever
+       * stood there and recorded it knew more than a spreadsheet does». Half
+       * of that is true and half of it was a hole.
+       *
+       * The true half: the person at the door knows WHAT HAPPENED — who took
+       * which line, what came back, why. No statement carries that, and the
+       * date and status they recorded are still theirs and are left alone.
+       *
+       * The hole: they do not know WHAT MONEY ARRIVED. A follow-up agent is
+       * repeating what a courier said on the phone. And because only in-flight
+       * orders were touched here, the figure she typed was never once compared
+       * with the courier's own — recording a delivery did not anticipate the
+       * reconciliation, it removed the order from it.
+       *
+       * So the door no longer writes `collectedAmount` at all, and the amount
+       * is written here for EVERY matched order that has none yet, whatever
+       * its status. An amount already on an order is never overwritten: a
+       * correction is a correction, made deliberately, not a side effect of
+       * re-importing a file.
+       */
+
       const inFlight = await tx.order.findMany({
         where: {
           id: { in: settledOrderIds },
@@ -180,9 +205,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         },
         select: { id: true, orderNumber: true },
       });
-      const amountOf = new Map(
-        matched.map((m) => [m.orderId as string, m.statementAmount == null ? null : Number(m.statementAmount)])
-      );
       // The period's end is when the courier says the money was in, and is
       // closer to the truth than the moment somebody uploaded a file.
       const deliveredAt = statement.periodTo ?? new Date();
@@ -219,6 +241,37 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
               collected: collected ?? null,
             }),
           },
+        });
+      }
+
+      /**
+       * AND THE MONEY FOR THE ONES THE LOOP ABOVE DID NOT TOUCH.
+       *
+       * An order marked delivered by hand keeps its own status and date —
+       * the person at the door knew what happened — but it was never given
+       * an amount by anybody, because the door no longer writes one and this
+       * sweep used to skip it. Its `collectedAmount` stayed null for ever.
+       *
+       * After the loop and excluding what the loop wrote, so no order is
+       * updated twice and no version is bumped twice for one statement.
+       * An amount already present is never overwritten: a correction is made
+       * deliberately, not as a side effect of re-importing a file.
+       */
+      const promoted = new Set(inFlight.map((o) => o.id));
+      const awaitingAmount = await tx.order.findMany({
+        where: {
+          id: { in: settledOrderIds.filter((oid) => !promoted.has(oid)) },
+          companyId,
+          collectedAmount: null,
+        },
+        select: { id: true },
+      });
+      for (const order of awaitingAmount) {
+        const collected = amountOf.get(order.id);
+        if (collected == null) continue;
+        await tx.order.update({
+          where: { id: order.id },
+          data: { collectedAmount: collected, version: { increment: 1 } },
         });
       }
 

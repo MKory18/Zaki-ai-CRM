@@ -36,7 +36,12 @@ function fakeTx(items: ReturnType<typeof line>[]) {
         shippingStatus: 'OUT_FOR_DELIVERY',
         deliveryFee: 5,
         priceIncludesDelivery: false,
-        collectedAmount: null,
+        // The door's own marks. One of the two is set once a delivery has
+        // been recorded, and that is now what makes a second one refuse —
+        // `collectedAmount` stopped being the signal when the door stopped
+        // writing money.
+        deliveredAt: null,
+        returnedAt: null,
         deliveryProviderId: 'courier-1',
         items,
       })),

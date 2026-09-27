@@ -203,7 +203,7 @@ describe('the statement is the delivery proof', () => {
   // nobody got round to ticking sat in the tracking list forever, long
   // after the money had arrived.
   const ID2 = '11111111-1111-4111-8111-111111111111';
-  const approveWith = async (matches: unknown[], inFlight: unknown[]) => {
+  const approveWith = async (matches: unknown[], inFlight: { id: string; orderNumber?: string }[], awaitingAmount: { id: string }[] = []) => {
     db.courierStatement.findFirst.mockResolvedValue({
       id: ID2,
       status: 'MATCHED',
@@ -215,7 +215,12 @@ describe('the statement is the delivery proof', () => {
       matches,
     });
     db.courierStatement.update.mockResolvedValue({ id: ID2 });
-    db.order.findMany.mockResolvedValue(inFlight);
+    // Two reads now, in order: the orders still in flight (promoted to
+    // DELIVERED), then the matched ones that were delivered by hand and have
+    // no amount yet. `awaitingAmount` defaults to none so the older tests
+    // describe exactly what they always did.
+    db.order.findMany.mockReset();
+    db.order.findMany.mockResolvedValueOnce(inFlight).mockResolvedValueOnce(awaitingAmount);
     receiptGap.mockResolvedValue({ claimed: 0, received: 0, gap: 0, needsExplanation: false, explained: false });
     return approveStatement(
       new Request('http://localhost/x', {
@@ -240,8 +245,9 @@ describe('the statement is the delivery proof', () => {
     expect(written.deliveredAt).toEqual(new Date('2026-09-20T00:00:00.000Z'));
   });
 
-  it('leaves an order that was already delivered by hand alone', async () => {
-    // Whoever stood there and recorded it knew more than a spreadsheet.
+  it('leaves the STATUS and DATE of one delivered by hand alone', async () => {
+    // Whoever stood there knows what happened; only the money is the
+    // statement's to write, and there is none to write here.
     await approveWith([{ orderId: 'o1', result: 'MATCHED', statementAmount: 50 }], []);
     expect(db.order.update).not.toHaveBeenCalled();
   });
@@ -251,10 +257,47 @@ describe('the statement is the delivery proof', () => {
     expect(db.order.findMany.mock.calls[0][0].where.id).toEqual({ in: [] });
   });
 
-  it('only ever touches orders still in flight', async () => {
+  it('only ever CLOSES orders still in flight', async () => {
     await approveWith([{ orderId: 'o1', result: 'MATCHED', statementAmount: 50 }], []);
     expect(db.order.findMany.mock.calls[0][0].where.shippingStatus).toEqual({
       in: ['SHIPPED', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP'],
     });
+  });
+
+  /**
+   * BUT THE MONEY REACHES THE ONES IT DOES NOT CLOSE.
+   *
+   * The door stopped writing `collectedAmount` — a follow-up agent repeating
+   * what a courier said on the phone is not what arrived. If this sweep also
+   * skipped those orders, the amount would stay null for ever: recording a
+   * delivery by hand would remove the order from the only thing that knows
+   * what the courier paid.
+   */
+  it('and writes the amount on one delivered by hand, which it does not close', async () => {
+    await approveWith(
+      [{ orderId: 'o2', result: 'MATCHED', statementAmount: 41.5 }],
+      [],
+      [{ id: 'o2' }]
+    );
+    const written = db.order.update.mock.calls.at(-1)?.[0].data;
+    expect(written.collectedAmount, 'المبلغ لم يصل الطلب المُسجَّل يدويّاً').toBe(41.5);
+    // Its status and date are the door's, and are left alone.
+    expect(written.shippingStatus).toBeUndefined();
+    expect(written.deliveredAt).toBeUndefined();
+  });
+
+  /** Never twice for one order, and never a second version bump. */
+  it('and never writes to an order the in-flight loop already wrote', async () => {
+    await approveWith(
+      [{ orderId: 'o1', result: 'MATCHED', statementAmount: 50 }],
+      [{ id: 'o1', orderNumber: 'SY-1' }]
+    );
+    expect(db.order.findMany.mock.calls[1][0].where.id).toEqual({ in: [] });
+  });
+
+  /** A correction is deliberate, not a side effect of re-importing a file. */
+  it('and never overwrites an amount that is already there', async () => {
+    await approveWith([{ orderId: 'o3', result: 'MATCHED', statementAmount: 9 }], []);
+    expect(db.order.findMany.mock.calls[1][0].where.collectedAmount).toBeNull();
   });
 });
