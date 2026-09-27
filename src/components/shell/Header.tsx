@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { signOut } from '@/lib/sign-out';
 import { NotificationBell } from '@/components/shell/NotificationBell';
-import { ConfirmationCounter } from './ConfirmationCounter';
+import { MyWork } from './MyWork';
 import { ShiftChip } from '@/components/attendance/ShiftChip';
 import { ROLE_LABELS } from '@/types/auth';
 import { RiLogoutBoxLine, RiMenuLine, RiRepeatLine, RiSearchLine, RiStore2Line } from '@remixicon/react';
@@ -122,10 +122,18 @@ export function Header({
             server decides who sees it — the owner does not clock in. */}
         <ShiftChip />
 
-        {/* How much confirmation work is waiting — the pool for whoever
-            pulls from it, and a moderator's own unconfirmed orders for him.
-            A number only; the server decides which, or none. */}
-        <ConfirmationCounter />
+        {/*
+          WHAT IS WAITING FOR THIS PERSON — counts only, never a list.
+
+          This replaced a single confirmation counter, which was the right
+          idea applied to one role: a shipping clerk with forty parcels
+          ready to go and a warehouse with an uncounted pallet of returns
+          both saw a header identical to an accountant's. The server still
+          decides which numbers each person gets, by permission, and the
+          phone gets only the most urgent — seven controls in a 375px bar
+          is how a bell gets missed and a logout gets hit.
+        */}
+        <MyWork />
 
         {/* Work is announced here: this person's own notifications for the
             selected store. The server decides who is told what. */}

@@ -147,23 +147,6 @@ export async function awaitingConfirmationCount(tx: Tx, scope: QueueScope, moder
   });
 }
 
-/**
- * Which counter a person sees, if any.
- *
- * One chip in the header for both jobs, and the server chooses its meaning:
- * somebody who may pull sees the pool they pull from; somebody who brings
- * orders in sees their own still waiting. A person who does neither sees
- * nothing — a counter that means nothing to its reader is noise on every
- * screen.
- */
-export type CounterKind = 'POOL' | 'MINE';
-
-export function counterKindFor(may: { pull: boolean; create: boolean }): CounterKind | null {
-  if (may.pull) return 'POOL';
-  if (may.create) return 'MINE';
-  return null;
-}
-
 function claimableWhere(scope: QueueScope) {
   return {
     ...scope,
