@@ -48,6 +48,13 @@ export interface PartialOutcome {
   linesReturned: number;
 }
 
+/** What the door saw, in the words the note is prefixed with. */
+const DOOR_OUTCOME_AR: Record<string, string> = {
+  DELIVERED: 'تسليم كامل',
+  PARTIALLY_DELIVERED: 'تسليم جزئي',
+  RETURNED: 'رفض الاستلام',
+};
+
 export class PartialDeliveryRefused extends Error {
   constructor(
     readonly code: string,
@@ -240,6 +247,33 @@ export async function recordPartialDelivery(
       companyId: input.companyId,
       allowNegativeStock: input.allowNegativeStock ?? false,
       userId: input.userId,
+    });
+  }
+
+  /**
+   * AND THE SENTENCE GOES WHERE SENTENCES GO.
+   *
+   * The note typed at the door was written into the delivery attempt and
+   * into this activity's metadata, and into nothing a person reads. The
+   * order's own note thread — the one every screen shows and the one the
+   * confirmation team, the returns desk and the owner all open — never saw
+   * it. So «العميل رفض القطعة الثانية لأنّ اللون غير المطلوب» was recorded
+   * in three machine places and no human one.
+   *
+   * It is the follow-up agent speaking, so it is an internal note on the
+   * order, in the same transaction as the outcome it explains: a note that
+   * survives while the delivery it describes rolls back would be a note
+   * about something that never happened.
+   */
+  if (input.note?.trim()) {
+    await tx.orderNote.create({
+      data: {
+        companyId: input.companyId,
+        orderId: order.id,
+        authorId: input.userId,
+        kind: 'internal',
+        body: `${DOOR_OUTCOME_AR[status] ?? status}: ${input.note.trim()}`,
+      },
     });
   }
 

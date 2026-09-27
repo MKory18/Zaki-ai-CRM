@@ -172,14 +172,27 @@ export function DeliverDialog({
               البنود المرفوضة لا تعود للمخزون من هنا — تُستلم وتُفحص في شاشة المرتجعات.
             </p>
 
+            {/*
+              NOT «ملاحظة (اختيارية)».
+              It used to be written into the delivery attempt and this
+              event's metadata — three machine places and no human one. It
+              is now an internal note on the order itself, in the thread the
+              confirmation team, the returns desk and the owner all read, so
+              the label says that rather than «optional».
+            */}
             <label className="block">
-              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختيارية)</span>
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
+                ملاحظة داخلية على الطلب
+              </span>
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="سبب رفض البنود مثلاً"
+                placeholder="مثال: رفض القطعة الثانية — اللون غير المطلوب"
                 className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
               />
+              <span className="block text-xs text-[var(--sys-muted)] mt-1">
+                تُضاف باسمك إلى ملاحظات الطلب، ويقرؤها التأكيد والمرتجعات.
+              </span>
             </label>
           </>
         )}

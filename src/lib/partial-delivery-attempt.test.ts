@@ -44,6 +44,10 @@ function fakeTx(items: ReturnType<typeof line>[]) {
     },
     orderItem: { update: vi.fn(async () => ({})) },
     orderActivity: { create: vi.fn(async () => ({})) },
+    // The sentence typed at the door is now an internal note on the order —
+    // it used to live only in the attempt row and this activity's metadata,
+    // which is three machine places and no human one.
+    orderNote: { create: vi.fn(async () => ({})) },
   } as never;
 }
 

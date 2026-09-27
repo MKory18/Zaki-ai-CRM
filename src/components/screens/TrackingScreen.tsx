@@ -9,7 +9,8 @@ import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { Rows } from '@/components/ui/Rows';
-import { RiEBike2Line, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RiChat1Line, RiEBike2Line, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { useAsk } from '@/components/ui/Confirm';
 
 /**
  * /ops/tracking — search by order, reference, barcode, customer or phone.
@@ -76,9 +77,52 @@ export function TrackingScreen() {
   const [done, setDone] = useState<string | null>(null);
   const [transferFor, setTransferFor] = useState<Row | null>(null);
   const [deliverFor, setDeliverFor] = useState<Row | null>(null);
+  const [noting, setNoting] = useState<string | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [collecting, setCollecting] = useState(false);
   const [task, setTask] = useState<TaskFilter>('all');
+
+  const ask = useAsk();
+
+  /**
+   * MOST OF WHAT A FOLLOW-UP AGENT LEARNS IS NOT AN OUTCOME.
+   *
+   * «رنّيت ثلاث مرّات ما ردّ», «المندوب قال بكرة الصبح», «الزبون طلب
+   * يأجّلها ليوم الخميس». None of that is a delivery, a refusal or a
+   * transfer, and the row offered nothing for it — so it was kept in a
+   * notebook, or in the agent's head, and the next person to open the order
+   * started from nothing.
+   *
+   * It writes through the order's own notes door, which already exists and
+   * is already the immutable thread every screen reads. No second place for
+   * notes to live, and nothing here settles anything.
+   */
+  const addNote = async (row: Row) => {
+    const answer = await ask({
+      title: `ملاحظة على ${row.orderNumber}`,
+      body: 'تُضاف باسمك إلى ملاحظات الطلب ويقرؤها التأكيد والمرتجعات. لا تُغيّر حالة الطلب ولا تُسجّل تسليماً.',
+      confirmLabel: 'أضِفها',
+      input: { label: 'ما الذي حدث؟', placeholder: 'مثال: المندوب قال يسلّمها غداً صباحاً', multiline: true },
+    });
+    const body = (answer ?? '').trim();
+    if (!body) return;
+
+    setNoting(row.id);
+    try {
+      await apiJson(`/api/orders/${row.id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body, kind: 'follow_up' }),
+      });
+      setDone(`أُضيفت الملاحظة إلى ${row.orderNumber}`);
+      setError(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر حفظ الملاحظة');
+    } finally {
+      setNoting(null);
+    }
+  };
 
   const load = useCallback(async () => {
     const q = new URLSearchParams();
@@ -389,6 +433,20 @@ export function TrackingScreen() {
                 }
               >
                 تحويل
+              </button>
+              {/* The third one, and the only one that settles nothing. */}
+              <button
+                onClick={() => void addNote(o)}
+                disabled={noting === o.id}
+                className="inline-flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)] hover:underline disabled:opacity-50"
+                title="اكتب ما حدث — تُضاف كملاحظة داخلية على الطلب ولا تُغيّر حالته"
+              >
+                {noting === o.id ? (
+                  <RiLoader4Line className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RiChat1Line className="w-4 h-4" aria-hidden />
+                )}
+                ملاحظة
               </button>
             </>
           )}
