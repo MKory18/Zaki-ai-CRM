@@ -75,6 +75,9 @@ export const NAV: NavGroup[] = [
       r('/confirmation/queue', 'الطلبات الجديدة', 'Inbox', ['confirmation.pull', 'confirmation.supervise']),
       r('/confirmation/mine', 'طلباتي', 'ClipboardList', ['confirmation.work']),
       r('/confirmation/postponed', 'الطلبات المؤجلة', 'CalendarClock', ['confirmation.work', 'confirmation.supervise']),
+      // The discount is money, so this is the supervisor's screen — the
+      // agent meets the result of it as an ordinary new order in her queue.
+      r('/confirmation/winback', 'استرجاع الملغى', 'Repeat', ['confirmation.supervise']),
       r('/confirmation/issues', 'الإشكالات', 'AlertTriangle', ['confirmation.issues']),
     ],
   },
