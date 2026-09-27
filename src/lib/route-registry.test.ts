@@ -25,19 +25,21 @@ describe('navigation contract', () => {
     ]);
   });
 
-  it('lists 61 unique routes', () => {
+  it('lists 60 unique routes', () => {
     // 52 until /ops/labels was folded into the shipping batches screen:
     // printing, the sizes and the courier CSV all live where the batch is.
     // 59 with the store section's seven screens, all live. 60 with
     // /control/penalties, where a human decides what the deduction job
     // proposed. 61 with /confirmation/winback, where a supervisor offers a
-    // lost order back at a discount. A screen is registered
+    // lost order back at a discount. 60 when «أجور التوصيل» stopped being a
+    // screen: a courier's fees are a panel inside the courier, because a fee
+    // row has always belonged to one company. A screen is registered
     // when it is real — the
     // store section's remaining screens join this count as they ship, and
     // nothing here renders "قيد الإنشاء".
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(61);
-    expect(new Set(paths).size).toBe(61);
+    expect(paths).toHaveLength(60);
+    expect(new Set(paths).size).toBe(60);
   });
 
   it('the store section is its own group, and reads as one', () => {

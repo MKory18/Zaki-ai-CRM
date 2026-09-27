@@ -530,13 +530,13 @@
     "tabs": 0
   },
   "src/components/screens/CouriersScreen.tsx": {
-    "buttons": 10,
+    "buttons": 11,
     "inputs": 5,
-    "columns": 6,
+    "columns": 8,
     "cards": 0,
-    "modals": 0,
+    "modals": 1,
     "icons": 8,
-    "links": 2,
+    "links": 0,
     "tabs": 0
   },
   "src/components/screens/CustomersScreen.tsx": {
@@ -557,16 +557,6 @@
     "modals": 0,
     "icons": 6,
     "links": 2,
-    "tabs": 0
-  },
-  "src/components/screens/DeliveryFeesScreen.tsx": {
-    "buttons": 6,
-    "inputs": 8,
-    "columns": 5,
-    "cards": 0,
-    "modals": 2,
-    "icons": 4,
-    "links": 0,
     "tabs": 0
   },
   "src/components/screens/DiscountAlertsScreen.tsx": {
@@ -1136,6 +1126,16 @@
     "cards": 0,
     "modals": 1,
     "icons": 13,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/settings/CourierFees.tsx": {
+    "buttons": 6,
+    "inputs": 7,
+    "columns": 5,
+    "cards": 0,
+    "modals": 2,
+    "icons": 4,
     "links": 0,
     "tabs": 0
   },

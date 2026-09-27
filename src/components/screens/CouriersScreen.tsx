@@ -1,23 +1,43 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useConfirm } from '@/components/ui/Confirm';
-import Link from 'next/link';
 import { apiJson } from '@/lib/api-client';
 import { CourierCredentials } from '@/components/settings/CourierCredentials';
 import { CourierWebhook } from '@/components/settings/CourierWebhook';
+import { CourierFees } from '@/components/settings/CourierFees';
 import { ContactButtons } from '@/components/orders/ContactButtons';
 import { COURIER_PLATFORMS } from '@/lib/couriers';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { Modal } from '@/components/ui/Modal';
+import { Tabs } from '@/components/ui/Tabs';
 import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiEBike2Line, RiLoader4Line, RiPencilLine, RiTruckLine } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 
 /**
- * /settings/couriers — the shipping companies themselves. Their per-region
- * fees live in /settings/delivery-fees; a courier without fee rows cannot
- * ship, and the shipment screen says so.
+ * /settings/couriers — THE SHIPPING COMPANIES AND WHAT THEY CHARGE, ON ONE
+ * SCREEN.
+ *
+ * These were two entries in the menu. «شركات الشحن» listed the companies and
+ * «أجور التوصيل» priced them, each opening with a link to the other, because
+ * neither is usable alone: a courier with no fee rows cannot ship, and a fee
+ * row without a courier is not a thing that exists — `DeliveryFee` has
+ * carried `deliveryProviderId` from the beginning.
+ *
+ * WHY THIS IS NOT ONE LONG PAGE. The fees are a row per region — fourteen in
+ * Syria — so putting every courier's table on one screen is four tables and
+ * fifty-six rows to find the one number somebody came to change. Instead the
+ * list stays a list, and a courier opens BESIDE it: its fees, and its
+ * platform account, for that one company. The coverage chip is the door —
+ * «٨ من ١٢ محافظة» is both the answer and the way in.
+ *
+ * AND THE PANEL IS WHY THE ACCOUNT WORKS AGAIN. «الحساب والتكامل» was a
+ * button that set a piece of state nothing read: the credentials and webhook
+ * panels were imported here and rendered nowhere, so the only way to give a
+ * courier its API login was to not have one. They are a tab now.
  */
 
 interface Courier {
@@ -37,11 +57,6 @@ interface Courier {
   pricedRegions?: number;
 }
 
-interface StoreRow {
-  id: string;
-  name: string;
-}
-
 export function CouriersScreen() {
   const ask = useConfirm();
   const toast = useToast();
@@ -50,13 +65,22 @@ export function CouriersScreen() {
   const [totalRegions, setTotalRegions] = useState(0);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', code: '', phone: '', kind: 'COMPANY' as 'COMPANY' | 'AGENT', adapterCode: 'MANUAL' });
-  const [accountFor, setAccountFor] = useState<string | null>(null);
-  const [stores, setStores] = useState<StoreRow[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [edit, setEdit] = useState({ name: '', phone: '' });
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  /**
+   * WHICH COURIER IS OPEN, AND ON WHICH TAB.
+   *
+   * `?courier=` still opens one straight away — that link was how the old
+   * fees screen was reached, and anything already pointing at a courier's
+   * fees keeps landing on them.
+   */
+  const asked = useSearchParams().get('courier');
+  const [openId, setOpenId] = useState<string | null>(asked);
+  const [tab, setTab] = useState<'fees' | 'account'>('fees');
 
   const load = useCallback(async () => {
     try {
@@ -70,11 +94,12 @@ export function CouriersScreen() {
 
   useEffect(() => {
     void load();
-    // The store list is what makes "whose courier is this?" answerable.
-    apiJson<{ stores?: StoreRow[] }>('/api/geo/stores')
-      .then((d) => setStores(d.stores ?? []))
-      .catch(() => setStores([]));
   }, [load]);
+
+  const open = (c: Courier, which: 'fees' | 'account') => {
+    setTab(which);
+    setOpenId(c.id);
+  };
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,14 +227,15 @@ export function CouriersScreen() {
     );
   }
 
+  const opened = rows.find((c) => c.id === openId) ?? null;
+
   return (
     <div className="max-w-3xl space-y-3">
       <ScreenTitle />
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-[var(--sys-muted-foreground)]">
-          أجور التوصيل لكل محافظة تُضبط من{' '}
-          <Link href="/settings/delivery-fees" className="text-[var(--sys-primary)] hover:underline">أجور التوصيل</Link>.
+          افتح شركةً لتسعير محافظاتها وضبط حسابها.
         </p>
         <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">
           <RiAddCircleLine className="w-4 h-4" /> شركة شحن أو مندوب
@@ -329,17 +355,16 @@ export function CouriersScreen() {
                   </span></>
                 ) },
             /**
-             * CAN IT SHIP? — the question the list could not answer.
+             * CAN IT SHIP? — and the way to fix it if it cannot.
              *
              * A courier's fees are a row per region, and a courier with
-             * none cannot be used: the shipment screen refuses it. Until
-             * now the list said «نشط» beside a courier that was unusable,
-             * and the only way to find out was to try, or to open a
-             * different screen and count.
+             * none cannot be used: the shipment screen refuses it. The list
+             * used to say «نشطة» beside a courier that was unusable, and
+             * the only way to find out was to try.
              *
-             * The number links to that screen filtered to this courier,
-             * which is the merge that matters: not one giant page, but the
-             * fact where the decision is, and one tap to the editor.
+             * The chip is now the door, not a link to another screen: it
+             * opens this courier's fee table beside the list, so the fact
+             * and the fix are one tap apart and nobody loses their place.
              */
             { key: 'fees', label: 'الأجور',
               render: (c) => {
@@ -348,8 +373,9 @@ export function CouriersScreen() {
                 const none = priced === 0;
                 const partial = all > 0 && priced > 0 && priced < all;
                 return (
-                  <Link
-                    href={`/settings/delivery-fees?courier=${c.id}`}
+                  <button
+                    onClick={() => open(c, 'fees')}
+                    title={`أجور ${c.name}`}
                     className={`tap-safe inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums ${
                       none
                         ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
@@ -359,7 +385,7 @@ export function CouriersScreen() {
                     }`}
                   >
                     {none ? 'بلا أجور — لا تشحن' : `${priced} من ${all} محافظة`}
-                  </Link>
+                  </button>
                 );
               } },
             { key: 'c2', label: "الرمز",
@@ -405,7 +431,7 @@ export function CouriersScreen() {
                         motorbike, settled by hand. Only a company has a login. */}
                     {c.kind !== 'AGENT' && (
                       <button
-                        onClick={() => setAccountFor(accountFor === c.id ? null : c.id)}
+                        onClick={() => open(c, 'account')}
                         className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg border border-[var(--sys-border)] px-3 py-1 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
                       >
                         الحساب والتكامل
@@ -466,6 +492,63 @@ export function CouriersScreen() {
           )}
         />
       </div>
+
+      {/*
+        THE COURIER, BESIDE THE LIST IT WAS FOUND IN.
+        `side="end"` and not a page: closing it puts somebody back on the row
+        they tapped, which is the whole reason the two screens became one.
+      */}
+      {opened && (
+        <Modal
+          isOpen
+          onClose={() => setOpenId(null)}
+          title={opened.name}
+          subtitle={
+            opened.kind === 'AGENT'
+              ? 'مندوب — تسويته يدوية'
+              : `${opened.code} · ${COURIER_PLATFORMS.find((p) => p.code === opened.adapterCode)?.name ?? 'يدوي'}`
+          }
+          side="end"
+          maxWidth="2xl"
+        >
+          {/*
+            AN AGENT HAS NO TAB STRIP, AND STILL HAS FEES.
+            He is a person with a motorbike: no platform account, so no
+            second tab — and one tab is not a choice, it is a decoration.
+            But he is paid per governorate like anybody else, so the fee
+            editor is rendered ONCE, below, for both. Two branches each
+            rendering their own copy is how one of them quietly loses a
+            feature the other keeps.
+          */}
+          <div className="space-y-4">
+            {opened.kind !== 'AGENT' && (
+              <Tabs
+                tabs={[
+                  {
+                    key: 'fees',
+                    label: 'الأجور',
+                    // The regions still unpriced: the number that decides
+                    // whether this courier can ship at all.
+                    count: Math.max(0, totalRegions - (opened.pricedRegions ?? 0)) || undefined,
+                  },
+                  { key: 'account', label: 'الحساب والتكامل' },
+                ]}
+                value={tab}
+                onChange={(k) => setTab(k as 'fees' | 'account')}
+              />
+            )}
+
+            {opened.kind === 'AGENT' || tab === 'fees' ? (
+              <CourierFees courierId={opened.id} onChanged={load} />
+            ) : (
+              <div className="space-y-4">
+                <CourierCredentials providerId={opened.id} />
+                <CourierWebhook providerId={opened.id} />
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

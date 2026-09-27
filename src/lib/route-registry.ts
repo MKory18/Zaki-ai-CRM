@@ -64,7 +64,6 @@ export const NAV: NavGroup[] = [
       r('/orders', 'الطلبات', 'ShoppingCart', ['orders.view']),
       r('/customers', 'العملاء', 'Users', ['customers.view', 'customers.view_basic']),
       r('/products', 'المنتجات', 'Package', ['products.view']),
-      r('/assistant', 'المساعد الذكي', 'Bot', ['ai.use']),
     ],
   },
   {
@@ -135,7 +134,20 @@ export const NAV: NavGroup[] = [
     routes: [
       r('/growth/performance', 'لوحة الأداء', 'Gauge', ['reports.view', 'analytics.view']),
       r('/growth/campaigns', 'الحملات', 'Megaphone', ['reports.view']),
+
+      /**
+       * EVERYTHING THE MODEL TOUCHES, IN ONE PLACE.
+       *
+       * The assistant sat under «الرئيسية», the intelligence centre here,
+       * and the prompts the model is actually given under «الإعدادات» —
+       * three menus for one subject, and the one that decides what the
+       * assistant SAYS was the hardest to find. Somebody who wants the AI
+       * to answer differently should not have to know that its words live
+       * in settings while its answers live in growth.
+       */
+      r('/assistant', 'المساعد الذكي', 'Bot', ['ai.use']),
       r('/growth/intelligence', 'مركز الذكاء', 'Lightbulb', ['growth.intelligence']),
+      r('/settings/ai', 'الذكاء الاصطناعي والنصوص', 'Bot', ['settings.view']),
       r('/growth/single-product-stores', 'متجر Single Product', 'Store', ['geo.manage']),
       r('/growth/landing-pages', 'صفحات الهبوط', 'PanelsTopLeft', ['landing_pages.view']),
       r('/growth/whatsapp/inbox', 'صندوق الواتساب', 'MessageCircle', ['whatsapp.view']),
@@ -175,15 +187,23 @@ export const NAV: NavGroup[] = [
     label: 'الإعدادات',
     routes: [
       r('/settings/geo', 'البلدان والمتاجر', 'Globe', ['geo.view']),
-      r('/settings/delivery-fees', 'أجور التوصيل', 'Receipt', ['settings.view']),
+
+      /**
+       * ONE SCREEN FOR THE COURIER AND ITS FEES — and one entry for both.
+       *
+       * They were two: «شركات الشحن» and «أجور التوصيل», each linking to the
+       * other because neither is usable alone. A fee row already carries
+       * `deliveryProviderId`; in the data a fee has always been «this
+       * courier, this region», and only the screens were split.
+       *
+       * It sits right after «البلدان والمتاجر» because that screen defines
+       * the regions this one prices: you cannot set an Aleppo fee before
+       * Aleppo exists, and the two now read in that order.
+       */
+      r('/settings/couriers', 'شركات الشحن وأجورها', 'Truck', ['settings.view']),
       r('/settings/commission', 'العمولات', 'Percent', ['settings.view']),
-      r('/settings/couriers', 'شركات الشحن', 'Truck', ['settings.view']),
       r('/settings/channels', 'قنوات الطلبات', 'Radio', ['settings.view']),
       r('/settings/tracking', 'بكسل التتبع والحملات', 'Radar', ['settings.view']),
-      // Its own entry, not a card at the bottom of system settings: the
-      // words the system says to the model are a thing a seller edits,
-      // and they cannot edit what they cannot find.
-      r('/settings/ai', 'الذكاء الاصطناعي والنصوص', 'Bot', ['settings.view']),
       r('/settings/whatsapp', 'إعدادات واتساب', 'MessageCircle', ['whatsapp.manage']),
       r('/settings/telegram', 'إعدادات تلجرام', 'Send', ['telegram.manage']),
       r('/settings/system', 'إعدادات النظام', 'Settings', ['settings.view']),
