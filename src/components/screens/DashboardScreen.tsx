@@ -20,6 +20,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LossPanel } from '@/components/dashboard/LossPanel';
+import { healthOf } from '@/lib/health';
+import { HealthChip } from '@/components/ui/HealthChip';
 
 const PERIODS = [
   { key: 'today', ar: 'اليوم', en: 'Today' },
@@ -133,6 +135,30 @@ export function DashboardScreen() {
     deliveryRate: against(rates.deliveryRate, prevRaw?.deliveryRate, (n) => `${n}%`),
   };
 
+  /**
+   * WHERE EACH FIGURE SITS AGAINST THE BAR.
+   *
+   * The arrow beside a KPI answers «did it move». Nobody opens this screen
+   * to ask that — they open it to ask «هل نحن بخير», and a delivery rate
+   * can rise three points and still be under the bar, with a green arrow
+   * over it saying the opposite.
+   *
+   * The sample goes with the rate, because a rate over four orders is not a
+   * rate: `healthOf` refuses to judge below the floor and says «لا يكفي»
+   * out loud rather than dressing it as «متوسط». The two money figures
+   * carry no sample — a margin is a ratio of money, not of observations.
+   */
+  const verdicts = {
+    confirmationRate: healthOf('confirmationRate', rates.confirmationRate, counts.decided ?? counts.total),
+    deliveryRate: healthOf('deliveryRate', rates.deliveryRate, counts.confirmed),
+    profitMargin: healthOf('profitMargin', fin.profitMargin),
+    rejectionRate: healthOf(
+      'rejectionRate',
+      (counts.decided ?? counts.total) > 0 ? (counts.rejected / (counts.decided ?? counts.total)) * 100 : null,
+      counts.decided ?? counts.total
+    ),
+  };
+
   const statusTiles = [
     { label: t.NEW, value: counts.new, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-primary)]' },
     { label: t.CONTACTING, value: counts.contacting, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-muted-foreground)]' },
@@ -140,7 +166,7 @@ export function DashboardScreen() {
     { label: t.POSTPONED, value: counts.postponed, color: 'text-[var(--sys-warning)]', dot: 'bg-[var(--sys-warning)]' },
     { label: t.SHIPPED, value: counts.shipped, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-primary)]' },
     { label: t.DELIVERED, value: counts.delivered, color: 'text-[var(--sys-success)]', dot: 'bg-[var(--sys-success)]' },
-    { label: t.REJECTED, value: counts.rejected, color: 'text-[var(--sys-destructive)]', dot: 'bg-[var(--sys-destructive)]' },
+    { label: t.REJECTED, value: counts.rejected, color: 'text-[var(--sys-destructive)]', dot: 'bg-[var(--sys-destructive)]', health: verdicts.rejectionRate },
   ];
 
   // The icon is a COMPONENT, not a character. An emoji here was drawn by
@@ -231,6 +257,7 @@ export function DashboardScreen() {
               subtitle={`${t.profitMargin} ${fin.profitMargin}%`}
               icon={RiWallet3Line}
               previous={prev.netProfit}
+              health={verdicts.profitMargin}
               goodWhen="rising"
               href="/finance/profit"
             />
@@ -254,6 +281,7 @@ export function DashboardScreen() {
             subtitle={`${counts.confirmed} / ${counts.decided ?? counts.total} ${t.decidedOrders}`}
             icon={RiPercentLine}
             previous={prev.confirmationRate}
+            health={verdicts.confirmationRate}
             goodWhen="rising"
             href="/confirmation/queue"
           />
@@ -264,6 +292,7 @@ export function DashboardScreen() {
             subtitle={`${counts.delivered} / ${counts.confirmed} ${t.confirmedOrders}`}
             icon={RiTruckLine}
             previous={prev.deliveryRate}
+            health={verdicts.deliveryRate}
             goodWhen="rising"
             href="/ops/tracking"
           />
@@ -278,6 +307,14 @@ export function DashboardScreen() {
               <span className={`block text-xl font-black mt-1 ${s.value > 0 ? s.color : 'text-[var(--sys-border-strong)]'}`}>
                 {s.value}
               </span>
+              {/* Only the tile that has a bar carries one. A count of new
+                  orders is neither good nor bad, and a chip on it would
+                  teach people to ignore the chips that mean something. */}
+              {s.health && (
+                <span className="mt-1 block">
+                  <HealthChip health={s.health} />
+                </span>
+              )}
             </div>
           ))}
         </div>

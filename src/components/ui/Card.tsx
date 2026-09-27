@@ -1,4 +1,6 @@
 import React from 'react';
+import { HealthChip } from './HealthChip';
+import type { Health as HealthVerdict } from '@/lib/health';
 import Link from 'next/link';
 import { RiArrowDownLine, RiArrowUpLine, type RemixiconComponentType } from '@remixicon/react';
 import { Sparkline } from './Sparkline';
@@ -114,6 +116,7 @@ export function KpiCard({
   previous,
   series,
   goodWhen,
+  health,
   href,
 }: {
   title: string;
@@ -126,6 +129,16 @@ export function KpiCard({
   /** The shape over time. Fewer than two points draws nothing. */
   series?: number[];
   goodWhen?: 'rising' | 'falling' | 'neither';
+  /**
+   * WHERE THE NUMBER SITS AGAINST THE BAR, not only against last month.
+   *
+   * The arrow answers «did it move» and that was the only question this
+   * card ever asked. «هل هو جيّد» is the other one, and it is the one
+   * somebody opening the screen actually has: a delivery rate can rise
+   * three points and still be under the bar, and a card that shows a green
+   * arrow over it is telling a comforting lie.
+   */
+  health?: HealthVerdict;
   /** The list behind the number. */
   href?: string;
 }) {
@@ -140,7 +153,10 @@ export function KpiCard({
         {Icon && <Icon className="w-5 h-5 shrink-0 text-[var(--sys-muted)]" aria-hidden />}
       </div>
 
-      <div className="mt-2 text-display font-bold leading-none tabular-nums text-[var(--sys-heading)]">{value}</div>
+      <div className="mt-2 flex flex-wrap items-baseline gap-2">
+        <span className="text-display font-bold leading-none tabular-nums text-[var(--sys-heading)]">{value}</span>
+        {health && <HealthChip health={health} />}
+      </div>
 
       {previous && (
         <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-[var(--sys-muted-foreground)]">
