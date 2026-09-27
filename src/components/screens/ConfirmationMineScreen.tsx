@@ -208,15 +208,38 @@ export function ConfirmationMineScreen() {
     );
   };
 
+  /**
+   * ONE PRESS, EVEN WHEN NO APPROVAL IS OWED.
+   *
+   * The door decides for itself whether the raiser may also decide it and
+   * the parcel is still ours — and says so with `readyToApply`. When it is
+   * true, waiting for somebody to open «بانتظار التطبيق» and press a second
+   * button would be the queue we just removed, wearing a different hat.
+   *
+   * The write still goes through the one apply path, so the money rules,
+   * the seal and the audit are exactly the ones a supervisor's approval
+   * would have gone through. And if that second call fails, the request is
+   * sitting in «بانتظار التطبيق» — visible and applicable, never lost.
+   */
   const submitChange = (order: OrderRow, value: { field: string; to: string; reason: string }) => {
     setDialog(null);
-    void act(order.id, () =>
-      apiJson(`/api/orders/${order.id}/change-requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: value.reason, changes: { [value.field]: { to: value.to } } }),
-      })
-    );
+    void act(order.id, async () => {
+      const res = await apiJson<{ request: { id: string }; readyToApply?: boolean }>(
+        `/api/orders/${order.id}/change-requests`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: value.reason, changes: { [value.field]: { to: value.to } } }),
+        }
+      );
+      if (res.readyToApply) {
+        await apiJson(`/api/orders/${order.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ changeRequestId: res.request.id }),
+        });
+      }
+    });
   };
 
   if (!data) {

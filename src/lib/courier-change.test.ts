@@ -219,3 +219,65 @@ describe('the screen asks, then applies', () => {
     expect(src).toContain('لا رقم مسجَّل لشركة الشحن');
   });
 });
+
+/**
+ * AND NOBODY WAITS FOR THEIR OWN PERMISSION.
+ *
+ * The rule the change-request door exists for is real — a confirmed order is
+ * read-only for the agent, and a change passes a second pair of eyes. But
+ * when the raiser IS that second pair, the queue was a supervisor approving
+ * a note they had written thirty seconds earlier, on a screen they had to go
+ * and open. Two conditions together, and only together: they may decide it,
+ * and the parcel has not left.
+ */
+describe('a decider does not queue behind themselves', () => {
+  const raise = () => stripComments(repoFile('src/app/api/orders/[id]/change-requests/route.ts'));
+  const mine = () => stripComments(repoFile('src/components/screens/ConfirmationMineScreen.tsx'));
+
+  it('on both conditions, never on either alone', () => {
+    expect(raise(), 'شرطٌ واحدٌ يكفي للبتّ الذاتي').toContain(
+      'const readyToApply = mine.allowed && !seal.sealed;'
+    );
+  });
+
+  /** A decision with a name and a written reason, not a row born approved. */
+  it('recorded as a decision somebody made', () => {
+    const src = raise();
+    expect(src).toMatch(/status: 'APPROVED',\s*decidedById: user\.id,/);
+    expect(src).toContain('طُبِّق مباشرةً — رافعُه يملك البتَّ فيه');
+  });
+
+  /** An announcement about a decision already taken is noise. */
+  it('and announced to nobody, because nobody is waiting', () => {
+    expect(raise()).toMatch(/if \(readyToApply\) return;/);
+  });
+
+  /**
+   * ONE PRESS. Making her open «بانتظار التطبيق» and press a second button
+   * would be the queue we just removed, wearing a different hat — and the
+   * write still goes through the one apply path, so the seal, the money
+   * rules and the audit are the ones an approval would have gone through.
+   */
+  it('and the screen carries it through in one press', () => {
+    const src = mine();
+    expect(src, 'الشاشة تتجاهل أنّ الطلب جاهزٌ للتطبيق').toMatch(/if \(res\.readyToApply\) \{/);
+    expect(src).toMatch(/changeRequestId: res\.request\.id/);
+    expect(src).toMatch(/method: 'PATCH'/);
+  });
+});
+
+describe('and a malformed session is answered, not crashed', () => {
+  /**
+   * `can()` has a legacy branch whose own comment says it "should not
+   * happen" — and it read `user.permissions.includes(...)` unguarded. A
+   * session shaped oddly enough to reach that branch may also be missing the
+   * array, and a TypeError there 500s the whole request instead of
+   * answering «no». The self-decision above was the first caller to walk
+   * into it.
+   */
+  it('a session with no permissions array is refused, not a 500', () => {
+    const src = stripComments(repoFile('src/lib/authorization.ts'));
+    expect(src, 'قراءةٌ غير محميّة تُسقط الطلب').not.toContain('return user.permissions.includes(permission);');
+    expect(src).toContain('return (user.permissions ?? []).includes(permission);');
+  });
+});

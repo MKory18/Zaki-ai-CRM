@@ -68,7 +68,11 @@ export function can(user: SessionUser, permission: string): boolean {
     // Session without attached grants (should not happen for getCurrentUser
     // sessions) — legacy role fallback so nothing silently loses access.
     if (user.role === 'SUPER_ADMIN') return true;
-    return user.permissions.includes(permission);
+    // `?? []` because this whole branch is the one that "should not happen":
+    // a session shaped oddly enough to reach it is a session that may also
+    // be missing the array, and a thrown TypeError here 500s the request
+    // instead of answering «no».
+    return (user.permissions ?? []).includes(permission);
   }
   if (g.fullAccess) return true;
   return g.grants[permission] !== undefined || g.grants[LEGACY_ALIAS[permission] ?? permission] !== undefined;

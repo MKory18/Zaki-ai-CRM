@@ -12,7 +12,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { db, requireContext, assertOrderAccess } = vi.hoisted(() => ({
   db: {
     order: { findFirst: vi.fn() },
-    orderChangeRequest: { findFirst: vi.fn(), create: vi.fn() },
+    orderChangeRequest: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(async () => ({})) },
+    // The raiser may decide it themselves when the parcel has not left, so
+    // the door reads the seal before it queues anything.
+    shippingBatch: { findFirst: vi.fn(async () => null) },
     orderNote: { create: vi.fn() },
     user: { findMany: vi.fn() },
   },
@@ -29,7 +32,7 @@ vi.mock('@/lib/notification', () => ({ createNotification: vi.fn() }));
 import { POST } from '@/app/api/orders/[id]/change-requests/route';
 
 const ctx = {
-  user: { id: 'u1', name: 'مودريتور', role: 'MODERATOR', status: 'ACTIVE' },
+  user: { id: 'u1', name: 'مودريتور', role: 'MODERATOR', status: 'ACTIVE', permissions: [] },
   companyId: 'c1', storeId: 's1',
   country: { workHoursStart: '09:00', workHoursEnd: '17:00', weekendDays: [5], timezone: 'Asia/Amman' },
 };

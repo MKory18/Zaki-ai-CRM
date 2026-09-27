@@ -10,7 +10,8 @@ import { addBusinessMinutes } from '@/lib/business-calendar';
 import { zodMessage } from '@/lib/zod-message';
 import { CHANGEABLE_FIELDS, withFrom } from '@/lib/change-request-fields';
 import { createNotification } from '@/lib/notification';
-import { deciderFor, SUPERVISOR_ROLES } from '@/lib/change-request-routing';
+import { deciderFor, mayDecide, SUPERVISOR_ROLES } from '@/lib/change-request-routing';
+import { orderSeal } from '@/lib/order-seal';
 
 /**
  * Change requests on an order (contract PART 2 / invariant 7).
@@ -117,6 +118,59 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       },
     });
 
+    /**
+     * NOBODY WAITS FOR THEIR OWN PERMISSION.
+     *
+     * The rule this door exists for is real: a confirmed order is read-only
+     * for the agent, and a change goes past a second pair of eyes. But the
+     * second pair of eyes belonged to whoever may DECIDE — and when the
+     * person raising the request is already that person, the queue was a
+     * supervisor approving a note they had written thirty seconds earlier,
+     * on a screen they had to go and open.
+     *
+     * So it decides itself, under two conditions, and only both together:
+     *
+     *   THE RAISER MAY DECIDE IT. `mayDecide` — the supervisor, or the agent
+     *   actually holding the order before operations. An agent raising one
+     *   on somebody else's order still waits, which is the whole rule.
+     *
+     *   THE PARCEL HAS NOT LEFT. Once the waybill is printed the change is
+     *   not ours to make at all: it is a message to the courier, and the
+     *   apply path refuses it until they have been told. Self-deciding there
+     *   would only move the refusal one step later.
+     *
+     * It is recorded as a decision with a name and a reason, not as a row
+     * that appeared already approved — «طُبِّق مباشرةً» is a fact about who
+     * did what, and the audit and the reports read it like any other.
+     */
+    const batch = await db.shippingBatch.findFirst({
+      where: { orders: { some: { id } }, companyId },
+      select: { status: true, batchNumber: true },
+    });
+    const seal = orderSeal({
+      shippingBatch: batch,
+      shippingStatus: (order as { shippingStatus?: string }).shippingStatus,
+      shippedAt: (order as { shippedAt?: Date | null }).shippedAt ?? null,
+      labelPrintedAt: (order as { labelPrintedAt?: Date | null }).labelPrintedAt ?? null,
+    });
+    const mine = mayDecide(user, {
+      confirmationStatus: order.confirmationStatus,
+      claimedById: (order as { claimedById?: string | null }).claimedById ?? null,
+    });
+    const readyToApply = mine.allowed && !seal.sealed;
+
+    if (readyToApply) {
+      await db.orderChangeRequest.update({
+        where: { id: created.id },
+        data: {
+          status: 'APPROVED',
+          decidedById: user.id,
+          decidedAt: new Date(),
+          decisionNote: 'طُبِّق مباشرةً — رافعُه يملك البتَّ فيه، والطرد لم يُسلَّم لشركة الشحن بعد.',
+        },
+      });
+    }
+
     // Tell whoever has to answer it.
     //
     // Without this the request sat on a screen until somebody happened to
@@ -155,6 +209,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       link: ['/control/change-requests', '/confirmation/mine', '/orders'],
     };
     afterResponse(async () => {
+      // Nothing to announce when it was decided by the person who raised it.
+      if (readyToApply) return;
       const told =
         decider.kind === 'HOLDING_AGENT'
           ? await createNotification({ ...notice, audience: { userIds: [decider.userId] } })
@@ -188,7 +244,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       },
     });
 
-    return NextResponse.json({ request: created, orderStatus: order.confirmationStatus }, { status: 201 });
+    return NextResponse.json(
+      { request: created, orderStatus: order.confirmationStatus, readyToApply },
+      { status: 201 }
+    );
   } catch (error) {
     return apiErrorResponse(error);
   }

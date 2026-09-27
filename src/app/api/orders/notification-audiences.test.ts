@@ -20,7 +20,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { db, requireContext, assertOrderAccess, can, createNotification } = vi.hoisted(() => {
   const db: any = {
     order: { findFirst: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn() },
-    orderChangeRequest: { findFirst: vi.fn(), create: vi.fn() },
+    orderChangeRequest: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(async () => ({})) },
+    // The raiser may decide it themselves when the parcel has not left, so
+    // the door reads the seal before it queues anything.
+    shippingBatch: { findFirst: vi.fn(async () => null) },
     orderChannel: { findFirst: vi.fn(async () => null) },
     orderNote: { create: vi.fn() },
     orderStatusLog: { create: vi.fn() },
@@ -203,17 +206,46 @@ describe('a change request', () => {
     expect(createNotification.mock.calls[0][0]).toMatchObject({ audience: { userIds: ['holder-1'] }, actorId: 'actor-1' });
   });
 
-  it('when the holder raised it herself, the supervisors are told instead of nobody', async () => {
+  /**
+   * WHEN THE HOLDER RAISES IT HERSELF, THERE IS NOBODY TO TELL.
+   *
+   * This used to fall through to the supervisors, because a request had to
+   * be decided by somebody and she could not decide her own. She can now:
+   * the raiser who may decide it, on a parcel that has not left, decides it
+   * as she raises it. So there is no queue, and an announcement about a
+   * decision already taken is noise addressed to people with nothing to do.
+   */
+  it('when the holder raised it herself, it decides itself and tells nobody', async () => {
     assertOrderAccess.mockResolvedValue({ allowed: true, order: order({ claimedById: 'actor-1' }) });
-    // The holder is the actor, so the first audience resolves to nobody.
-    createNotification.mockResolvedValueOnce(0);
     await raise();
-    expect(createNotification).toHaveBeenCalledTimes(2);
-    expect(createNotification.mock.calls[1][0]).toMatchObject({ actorId: 'actor-1' });
-    expect(createNotification.mock.calls[1][0].audience).toEqual({
-      permission: 'control.change_requests',
-      roles: SUPERVISOR_ROLES,
+    expect(createNotification, 'أُعلن قرارٌ اتُّخذ فعلاً').not.toHaveBeenCalled();
+    // And it is recorded as a decision with her name and a written reason.
+    const decided = db.orderChangeRequest.update.mock.calls[0][0].data;
+    expect(decided.status).toBe('APPROVED');
+    expect(decided.decidedById).toBe('actor-1');
+    expect(decided.decisionNote).toContain('لم يُسلَّم لشركة الشحن');
+  });
+
+  /**
+   * AND SOMEBODY ELSE'S ORDER STILL WAITS. That is the rule the whole door
+   * exists for, and it is untouched.
+   */
+  it('while a request on an order she does not hold still goes to the holder', async () => {
+    assertOrderAccess.mockResolvedValue({ allowed: true, order: order({ claimedById: 'holder-1' }) });
+    await raise();
+    expect(createNotification).toHaveBeenCalledTimes(1);
+    expect(db.orderChangeRequest.update, 'بتَّ في طلبٍ ليس له').not.toHaveBeenCalled();
+  });
+
+  /** Nor does a parcel already with the courier decide itself. */
+  it('and a sealed order queues even for somebody who may decide it', async () => {
+    assertOrderAccess.mockResolvedValue({
+      allowed: true,
+      order: order({ claimedById: 'actor-1', shippedAt: new Date(), shippingStatus: 'SHIPPED' }),
     });
+    await raise();
+    expect(db.orderChangeRequest.update, 'بتَّ في طلبٍ على طردٍ غادر').not.toHaveBeenCalled();
+    expect(createNotification).toHaveBeenCalled();
   });
 
   it('offers the holder a screen she can open when the queue is closed to her', async () => {
