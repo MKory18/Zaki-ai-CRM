@@ -29,17 +29,40 @@ import { zodMessage } from '@/lib/zod-message';
  * somebody else's order take them.
  */
 
-const schema = z.object({
-  orderId: z.string().uuid(),
-  /** Until when. Omitted means open-ended: it waits until somebody releases it. */
-  until: z.string().datetime().optional().nullable(),
-  reason: z.string().trim().max(300).optional(),
-  /** true lifts the hold. */
-  release: z.boolean().default(false),
-});
+/**
+ * UNTIL WHEN — and there is no longer an «omitted» case.
+ *
+ * A RELEASE carries no date, so the two shapes are separate rather than one
+ * shape with everything optional: «lift this hold» and «hold this until
+ * Thursday» are different requests, and a schema that accepts both with all
+ * fields optional accepts neither properly.
+ */
+const schema = z.union([
+  z.object({ orderId: z.string().uuid(), release: z.literal(true) }),
+  z.object({
+    orderId: z.string().uuid(),
+    /**
+   *
+     * The date was optional, and a missing one stored the year 2999. That is
+     * not an open-ended hold, it is a lost order: `shipHoldUntil` is read by
+     * two files, the shipment list simply excludes anything held, and
+     * nothing anywhere brings a held order back or says out loud that it is
+     * waiting. A parcel held «for now» by somebody who then went on leave
+     * was gone, with its stock still reserved against it.
+     *
+     * Every hold now ends on a day, and on that day the order reappears in
+     * the shipment list by itself — `shipHoldUntil <= now` is already how
+     * that list is filtered, so the date was always the mechanism. Nothing
+     * ever asked for it.
+     */
+    until: z.string().datetime({ offset: true }).or(z.string().datetime()),
+    reason: z.string().trim().max(300).optional(),
+    release: z.literal(false).optional(),
+  }),
+]);
 
-/** Open-ended holds are stored far in the future rather than as a null flag. */
-const FOREVER = new Date('2999-12-31T00:00:00.000Z');
+/** A hold longer than this is not a delayed shipment, it is a stopped order. */
+export const MAX_HOLD_DAYS = 30;
 
 export async function POST(req: Request) {
   try {
@@ -50,7 +73,38 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
-    const { orderId, until, reason, release } = parsed.data;
+    const data = parsed.data;
+    const orderId = data.orderId;
+    const release = 'release' in data && data.release === true;
+    const until = release ? null : (data as { until: string }).until;
+    const reason = release ? undefined : (data as { reason?: string }).reason;
+
+    /**
+     * THE DATE HAS TO BE A DATE, AND NOT A YEAR FROM NOW.
+     *
+     * The goods stay reserved for the whole of a hold — that is the point of
+     * it — so a long one is stock nobody can sell, quietly. Past thirty days
+     * the honest instrument is the other one: un-confirm it, let the goods go
+     * back on sale, and let the follow-up team talk to the customer again.
+     */
+    if (!release) {
+      const due = new Date(until as string);
+      const maxAt = Date.now() + MAX_HOLD_DAYS * 86_400_000;
+      if (isNaN(due.getTime()) || due.getTime() < Date.now() - 60_000) {
+        return NextResponse.json({ error: 'موعد الإفراج يجب أن يكون في المستقبل' }, { status: 400 });
+      }
+      if (due.getTime() > maxAt) {
+        return NextResponse.json(
+          {
+            error:
+              `التأجيل مع حجز البضاعة لا يتجاوز ${MAX_HOLD_DAYS} يوماً — البضاعة محجوزة طوال المدّة. ` +
+              'لمدّةٍ أطول أعِده إلى المتابعة، فتعود بضاعتُه للبيع.',
+            code: 'HOLD_TOO_LONG',
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     const order = await db.order.findFirst({
       where: { id: orderId, companyId, storeId },
@@ -82,7 +136,7 @@ export async function POST(req: Request) {
       data: release
         ? { shipHoldUntil: null, shipHoldReason: null, version: { increment: 1 } }
         : {
-            shipHoldUntil: until ? new Date(until) : FOREVER,
+            shipHoldUntil: new Date(until as string),
             shipHoldReason: reason?.trim() || null,
             version: { increment: 1 },
           },
@@ -113,7 +167,7 @@ export async function POST(req: Request) {
       order: updated,
       message: release
         ? `${order.orderNumber} عاد إلى قائمة الشحن.`
-        : `${order.orderNumber} مؤجَّل — لن يدخل أي شحنة حتى تُفرج عنه.`,
+        : `${order.orderNumber} مؤجَّل حتى ${String(until).slice(0, 10)} — ويعود إلى قائمة الشحن يومَها وحده.`,
     });
   } catch (error) {
     return apiErrorResponse(error);

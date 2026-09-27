@@ -5,8 +5,9 @@ import { useAsk } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiAlertLine, RiArrowGoBackLine, RiCloseCircleLine, RiLoader4Line, RiPauseCircleLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RiAlertLine, RiArrowGoBackLine, RiCloseCircleLine, RiLoader4Line, RiPauseCircleLine, RiTruckLine } from '@remixicon/react';
 import { RejectDialog } from '@/components/screens/confirmation/ActionDialogs';
+import { DelayShipmentDialog, type DelayChoice } from '@/components/ops/DelayShipmentDialog';
 import { useConfirm } from '@/components/ui/Confirm';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
@@ -33,6 +34,8 @@ interface Row {
   selectable: boolean;
   hardBlocked: boolean;
   shipHoldUntil: string | null;
+  /** Why the order can no longer be stood down, from the server's own guard. */
+  standDownBlocked: { code: string; message: string } | null;
   shipHoldReason: string | null;
 }
 
@@ -44,6 +47,8 @@ export function ShipmentsNewScreen() {
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
   /** The row whose cancellation is being given a reason. */
   const [cancelling, setCancelling] = useState<Row | null>(null);
+  /** The row whose delay is being chosen — one dialog, two ways out. */
+  const [delaying, setDelaying] = useState<Row | null>(null);
   const [standingDown, setStandingDown] = useState<string | null>(null);
   const [filters, setFilters] = useState({ courier: '', region: '', from: '', to: '' });
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -102,54 +107,58 @@ export function ShipmentsNewScreen() {
     }
   };
 
-  /** Back to the follow-up team, with the date the customer asked for. */
-  const postponeOrder = async (row: Row) => {
-    const answer = await ask({
-      title: `أعِد ${row.orderNumber} إلى المتابعة؟`,
-      body:
-        'يُلغى تأكيدُه وتعود بضاعتُه للبيع فوراً، ويظهر في المؤجَّل حتى الموعد — ' +
-        'ثمّ يسحبه أوّلُ من يفرغ ويكلّم الزبون من جديد. اكتب الموعد بصيغة YYYY-MM-DD.',
-      confirmLabel: 'أعِده',
-      input: { label: 'موعد المحاولة القادمة', placeholder: 'YYYY-MM-DD' },
-    });
-    if (answer === null) return;
-    const day = (answer || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
-      toast.failed('اكتب الموعد بصيغة YYYY-MM-DD');
-      return;
+  /**
+   * NOT SHIPPING TODAY — and the dialog asked which kind.
+   *
+   * Both outcomes now carry a date, because the two ways of losing an order
+   * on this screen were both dateless: the hold stored the year 2999 when
+   * nobody typed one, and «للمتابعة» was a second button saying the same
+   * word as the first.
+   */
+  const delay = async (row: Row, choice: DelayChoice) => {
+    setHolding(row.id);
+    try {
+      if (choice.kind === 'HOLD') {
+        await apiJson('/api/ops/shipments/hold', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: row.id, until: choice.until, reason: choice.reason }),
+        });
+        toast.done(`${row.orderNumber} محجوزٌ له حتى ${choice.until.slice(0, 10)}`);
+      } else {
+        await apiJson('/api/ops/shipments/stand-down', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: row.id,
+            outcome: 'POSTPONE',
+            until: choice.until,
+            note: choice.reason,
+          }),
+        });
+        toast.done(`${row.orderNumber} عاد إلى المتابعة — وبضاعته رجعت للبيع`);
+      }
+      setDelaying(null);
+      await load();
+    } catch (e) {
+      toast.failed(e instanceof Error ? e.message : 'تعذّر التنفيذ');
+    } finally {
+      setHolding(null);
     }
-    await standDown(row, { outcome: 'POSTPONE', until: new Date(`${day}T09:00:00`).toISOString() });
   };
 
-  /** Hold it back from today's shipment, or put it back in the queue. */
-  const toggleHold = async (row: Row) => {
-    let reason: string | undefined;
-    if (view !== 'held') {
-      const answer = await ask({
-        title: `تأجيل شحن ${row.orderNumber}؟`,
-        body: 'يبقى الطلب خارج دفعات الشحن حتى تُعيده إلى الطابور.',
-        confirmLabel: 'أجّل',
-        input: { label: 'سبب التأجيل', placeholder: 'اختياري', multiline: true },
-      });
-      // Cancel means cancel. The browser prompt returned null here and the
-      // hold went ahead anyway, only without a reason.
-      if (answer === null) return;
-      reason = answer || undefined;
-    }
+  /** Lifting a hold is the only half of it that carries no date. */
+  const releaseHold = async (row: Row) => {
     setHolding(row.id);
     try {
       await apiJson('/api/ops/shipments/hold', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          view === 'held'
-            ? { orderId: row.id, release: true }
-            : { orderId: row.id, reason }
-        ),
+        body: JSON.stringify({ orderId: row.id, release: true }),
       });
       await load();
     } catch (e) {
-      toast.failed(e instanceof Error ? e.message : 'تعذر التأجيل');
+      toast.failed(e instanceof Error ? e.message : 'تعذر التنفيذ');
     } finally {
       setHolding(null);
     }
@@ -383,33 +392,47 @@ export function ShipmentsNewScreen() {
             ]}
             actions={(r) => (
               <span className="whitespace-nowrap">
-                {/* Not this week, the customer said. The order is good; it
-                    simply must not go out yet — and cancelling it would
-                    throw away a sale and free stock he still wants. */}
-                <button
-                  type="button"
-                  onClick={() => toggleHold(r)}
-                  disabled={holding === r.id}
-                  title={
-                    view === 'held'
-                      ? 'أعِده إلى قائمة الشحن'
-                      : 'أجّله — لن يدخل أي شحنة حتى تُفرج عنه، والبضاعة تبقى محجوزة له'
-                  }
-                  className={`min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border transition-colors disabled:opacity-50 ${
-                    view === 'held'
-                      ? 'border-[var(--sys-border)] text-[var(--sys-success)] hover:border-[var(--sys-success)]'
-                      : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)]'
-                  }`}
-                >
-                  {holding === r.id ? (
-                    <RiLoader4Line className="w-4 h-4 animate-spin" />
-                  ) : view === 'held' ? (
-                    <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
-                  ) : (
-                    <RiPauseCircleLine className="w-4 h-4" />
-                  )}
-                  {view === 'held' ? 'أرجِعه' : 'أجّل'}
-                </button>
+                {/*
+                  ONE CONTROL FOR «NOT TODAY».
+                  There used to be two, «أجّل» and «للمتابعة», and both read
+                  as postponing. The first asked for a reason and never a
+                  date — a missing date stored the year 2999, so the order
+                  left the shipment list and nothing brought it back. The
+                  choice between keeping the goods reserved and letting them
+                  go is real, but it belongs in a sentence at the moment of
+                  choosing, not in two button labels to be decoded first.
+                */}
+                {view === 'held' ? (
+                  <button
+                    type="button"
+                    onClick={() => void releaseHold(r)}
+                    disabled={holding === r.id}
+                    title="أعِده إلى قائمة الشحن"
+                    className="min-h-11 md:min-h-0 inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-[var(--sys-border)] text-[var(--sys-success)] transition-colors hover:border-[var(--sys-success)] disabled:opacity-50"
+                  >
+                    {holding === r.id ? (
+                      <RiLoader4Line className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
+                    )}
+                    أرجِعه
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setDelaying(r)}
+                    disabled={holding === r.id}
+                    title="لن يُشحن اليوم — تختار بعدها: تحجز له بضاعته، أم يعود إلى المتابعة"
+                    className="min-h-11 md:min-h-0 inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] transition-colors hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)] disabled:opacity-50"
+                  >
+                    {holding === r.id ? (
+                      <RiLoader4Line className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RiPauseCircleLine className="w-4 h-4" />
+                    )}
+                    أجّل
+                  </button>
+                )}
                 {r.shipHoldReason && (
                   <span
                     className="block text-xs text-[var(--sys-muted)] mt-0.5 max-w-[10rem] truncate"
@@ -417,21 +440,6 @@ export function ShipmentsNewScreen() {
                   >
                     {r.shipHoldReason}
                   </span>
-                )}
-
-                {/* Back to the people who talk to customers. NOT a hold: the
-                    confirmation is undone and the stock goes back on sale. */}
-                {view !== 'held' && (
-                  <button
-                    type="button"
-                    onClick={() => void postponeOrder(r)}
-                    disabled={standingDown === r.id}
-                    title="أعِده إلى المتابعة — يُلغى تأكيدُه وتعود بضاعتُه للبيع"
-                    className="min-h-11 md:min-h-0 ms-1 inline-flex items-center gap-1 rounded-md border border-[var(--sys-border)] px-2 py-1 text-xs text-[var(--sys-muted-foreground)] transition-colors hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)] disabled:opacity-50"
-                  >
-                    <RiTimerLine className="w-4 h-4" aria-hidden />
-                    للمتابعة
-                  </button>
                 )}
 
                 {/* It is over. The reason comes from the same structured list
@@ -470,6 +478,16 @@ export function ShipmentsNewScreen() {
         lists is how that report comes to compare things that were never the
         same question.
       */}
+      {delaying && (
+        <DelayShipmentDialog
+          orderNumber={delaying.orderNumber}
+          busy={holding === delaying.id}
+          standDownBlocked={delaying.standDownBlocked}
+          onClose={() => setDelaying(null)}
+          onChoose={(choice) => void delay(delaying, choice)}
+        />
+      )}
+
       <RejectDialog
         open={!!cancelling}
         orderNumber={cancelling?.orderNumber ?? ''}

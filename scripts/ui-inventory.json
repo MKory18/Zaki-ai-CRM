@@ -69,6 +69,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/ops/DelayShipmentDialog.tsx": {
+    "buttons": 2,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/orders/AiOrderModal.tsx": {
     "buttons": 4,
     "inputs": 9,

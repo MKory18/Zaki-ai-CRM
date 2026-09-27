@@ -7,7 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { shipmentBlocks } from '@/lib/operations';
 import { codForOrder, resolveDeliveryFee } from '@/lib/delivery-fees';
-import { assertReadyToShip, type StateSource } from '@/lib/order-state';
+import { assertCancellable, assertReadyToShip, type StateSource } from '@/lib/order-state';
 import { zodMessage } from '@/lib/zod-message';
 
 /**
@@ -71,6 +71,9 @@ export async function GET(req: Request) {
         shipHoldUntil: true, shipHoldReason: true,
         priceIncludesDelivery: true, deliveryFee: true, regionId: true, deliveryProviderId: true,
         customerId: true, companyId: true, storeId: true, confirmationStatus: true, shippingStatus: true, shippedAt: true,
+        // Read so the row can say whether standing the order down is
+        // still possible. A printed waybill is already out of our hands.
+        labelPrintedAt: true, shippingBatchId: true,
         customer: { select: { id: true, fullName: true, phone: true, city: true, totalOrders: true } },
         region: { select: { id: true, name: true } },
         items: { select: { productName: true, quantity: true, freeQuantity: true, unitPrice: true, discountShare: true, reservedQty: true } },
@@ -113,6 +116,24 @@ export async function GET(req: Request) {
         // Select-all skips anything blocked; soft blocks need an acknowledgement.
         selectable: blocks.length === 0,
         hardBlocked: blocks.some((b) => b.hard),
+        /**
+         * CAN THIS ORDER STILL BE STOOD DOWN?
+         *
+         * Measured on this database: two of the five candidate rows already
+         * had a printed waybill. The delay dialog offered «أعِده إلى
+         * المتابعة» on them and the door refused every time — a control that
+         * always fails teaches people the screen is lying, which is worse
+         * than not offering it.
+         *
+         * The answer comes from `assertCancellable`, the same function the
+         * door itself calls, so the row and the refusal can never disagree.
+         * The hold half stays available: a printed label does not stop us
+         * keeping the parcel back, only from un-confirming the sale.
+         */
+        standDownBlocked: (() => {
+          const verdict = assertCancellable(order as unknown as StateSource);
+          return verdict.allowed ? null : { code: verdict.code, message: verdict.message };
+        })(),
       });
     }
 
