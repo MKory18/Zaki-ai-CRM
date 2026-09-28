@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useNotifications } from './NotificationsProvider';
 import clsx from 'clsx';
 import type { NavGroup } from '@/lib/route-registry';
 import { iconFor } from './icons';
@@ -32,6 +33,9 @@ export function Sidebar({
   onClose?: () => void;
 }) {
   const pathname = usePathname();
+  // Unread, by the screen each notification points at — one poller, in
+  // NotificationsProvider; this only reads it.
+  const { byRoute } = useNotifications();
 
   /** The group the current page lives in — always open, never collapsible shut. */
   const activeGroup = useMemo(
@@ -289,6 +293,30 @@ export function Sidebar({
                       </span>
                       <span className="rail-hide">{route.label}</span>
                     </span>
+
+                    {/*
+                      HOW MANY UNREAD ARE ABOUT THIS SCREEN.
+
+                      Every notification already carries the route it is
+                      about, so this is that column grouped — not a second
+                      counter to invent and keep in step with the bell. It
+                      shows on the rail too, where the label does not: a
+                      number is the only thing a folded menu can say.
+                    */}
+                    {byRoute[route.path] ? (
+                      <span
+                        /* One badge, not two. A tinted chip carrying the
+                           accent as its text reads on the row you stand on
+                           and on the rows you do not — and the pair is
+                           already guarded for contrast. Painting a wash of
+                           `primary-foreground` for the active row would
+                           have been a second style to keep legible. */
+                        className="min-w-5 rounded-full bg-[var(--sys-primary-soft)] px-1.5 py-0.5 text-center text-xs font-bold tabular-nums text-[var(--sys-primary)]"
+                        aria-label={`${byRoute[route.path]} إشعار غير مقروء`}
+                      >
+                        {byRoute[route.path]}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}

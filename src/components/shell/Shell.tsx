@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import type { NavGroup } from '@/lib/route-registry';
 import { Sidebar } from './Sidebar';
 import { Header, type ShellContextInfo } from './Header';
+import { NotificationsProvider } from './NotificationsProvider';
+import { NotificationCards } from './NotificationCards';
 import { MobileNav } from './MobileNav';
 import { OfflineWatch } from './OfflineWatch';
 import { Watermark } from './Watermark';
@@ -41,6 +43,10 @@ export function Shell({
         has been printing it all along; four money screens had nothing to
         print but a hardcoded «$». */}
     <StoreCurrencyProvider code={context.currencyCode}>
+    {/* One poller for the bell, the menu's counts and the corner cards —
+        three components asking separately would be three timers and three
+        answers a second apart. */}
+    <NotificationsProvider>
     <div className="min-h-screen bg-[var(--sys-surface)] flex flex-col">
 
       {/* Registers the worker, and says when the line is down — which
@@ -68,6 +74,11 @@ export function Shell({
       </div>
 
       <MobileNav groups={groups} />
+
+      {/* What arrived while you were looking at something else. On the
+          START corner: the assistant anchors to the END one, and two
+          floaters in one corner cover each other. */}
+      <NotificationCards />
 
       {/* A personal device, and the two things a web page can honestly do
           about that: put a name in any photograph of the screen, and stop
@@ -100,6 +111,7 @@ export function Shell({
       {userRole !== 'SUPER_ADMIN' && <Watermark viewer={viewer} />}
       <IdleGuard />
     </div>
+    </NotificationsProvider>
     </StoreCurrencyProvider>
     </BulkProvider>
   );

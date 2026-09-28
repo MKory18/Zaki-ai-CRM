@@ -85,7 +85,11 @@ export async function GET(req: Request) {
     const ctx = await contextOrNull();
     const { searchParams } = new URL(req.url);
     const countOnly = searchParams.get('countOnly') === '1';
-    if (!ctx) return NextResponse.json(countOnly ? { unreadCount: 0 } : { notifications: [], unreadCount: 0 });
+    if (!ctx) {
+      return NextResponse.json(
+        countOnly ? { unreadCount: 0, byRoute: {} } : { notifications: [], unreadCount: 0, byRoute: {} }
+      );
+    }
 
     const { companyId, storeId, user } = ctx;
     const mine = mineIn(user, companyId, storeId);
@@ -94,21 +98,49 @@ export async function GET(req: Request) {
     // the poll and the panel — counting the 50 listed rows gave a smaller
     // number than the badge, and opening the panel overwrote it.
     const unread = () => db.notification.count({ where: { ...mine, isRead: false } });
-    if (countOnly) return NextResponse.json({ unreadCount: await unread() });
+
+    /**
+     * UNREAD, BY THE SCREEN EACH ONE POINTS AT.
+     *
+     * Every notification already carries the route it is about — measured
+     * on the live rows: `/orders`, `/control/change-requests`, and so on.
+     * So the number that belongs beside «الطلبات» in the menu is a group-by
+     * on a column that is already there, not a new count to invent and
+     * keep in step.
+     *
+     * Sent with the poll as well as with the panel, because the menu wants
+     * it whether or not the bell is open.
+     */
+    const byRoute = async () => {
+      const rows = await db.notification.groupBy({
+        by: ['link'],
+        where: { ...mine, isRead: false, link: { not: null } },
+        _count: { _all: true },
+      });
+      const out: Record<string, number> = {};
+      for (const r of rows) if (r.link) out[r.link] = r._count._all;
+      return out;
+    };
+
+    if (countOnly) {
+      const [unreadCount, routes] = await Promise.all([unread(), byRoute()]);
+      return NextResponse.json({ unreadCount, byRoute: routes });
+    }
 
     const legacy = legacyFor(user, companyId);
-    const [notifications, unreadCount] = await Promise.all([
+    const [notifications, unreadCount, routes] = await Promise.all([
       db.notification.findMany({
         where: legacy ? { OR: [mine, legacy] } : mine,
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),
       unread(),
+      byRoute(),
     ]);
 
     // History reads as read: its one shared flag was never this person's.
     const shown = notifications.map((n) => (n.userId === null ? { ...n, isRead: true } : n));
-    return NextResponse.json({ notifications: shown, unreadCount });
+    return NextResponse.json({ notifications: shown, unreadCount, byRoute: routes });
   } catch (error) {
     return apiErrorResponse(error);
   }

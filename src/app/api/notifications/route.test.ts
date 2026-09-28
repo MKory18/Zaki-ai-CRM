@@ -22,6 +22,8 @@ type Row = {
   type: string;
   isRead: boolean;
   createdAt: Date;
+  /** The screen it is about — what the menu's per-route counts group on. */
+  link?: string | null;
 };
 
 const { db, table, requireContext, can, seesAll } = vi.hoisted(() => {
@@ -34,6 +36,10 @@ const { db, table, requireContext, can, seesAll } = vi.hoisted(() => {
       if (k === 'AND') return (v as any[]).every((w) => matches(row, w));
       if (v !== null && typeof v === 'object') {
         if (Array.isArray((v as any).in)) return (v as any).in.includes(row[k]);
+        // `{ not: null }` — the per-route counts ask only for rows that
+        // point somewhere. Unsupported filters still throw: a mock that
+        // silently ignores a clause proves a scoping rule that is not there.
+        if ('not' in (v as any)) return row[k] !== (v as any).not;
         throw new Error(`unsupported filter on ${k}`);
       }
       return row[k] === v;
@@ -49,6 +55,20 @@ const { db, table, requireContext, can, seesAll } = vi.hoisted(() => {
           .map((r) => ({ ...r }))
       ),
       count: vi.fn(async ({ where }: any) => table.rows.filter((r) => matches(r, where)).length),
+      /**
+       * Unread grouped by the screen each row points at — what the menu's
+       * numbers are counted from. Mocked over the same `matches` the other
+       * two use, so a scoping rule proved for the list is proved for the
+       * counts as well.
+       */
+      groupBy: vi.fn(async ({ where }: any) => {
+        const tally = new Map<string, number>();
+        for (const r of table.rows.filter((row) => matches(row, where))) {
+          if (!r.link) continue;
+          tally.set(r.link, (tally.get(r.link) ?? 0) + 1);
+        }
+        return [...tally].map(([link, n]) => ({ link, _count: { _all: n } }));
+      }),
       updateMany: vi.fn(async ({ where, data }: any) => {
         const hit = table.rows.filter((r) => matches(r, where));
         for (const r of hit) Object.assign(r, data);
@@ -170,9 +190,9 @@ describe('GET — what a person sees', () => {
     requireContext.mockRejectedValue(new ContextError('STORE_REQUIRED', 'A store must be selected'));
     const poll = await GET(new Request('http://localhost/api/notifications?countOnly=1'));
     expect(poll.status).toBe(200);
-    expect(await poll.json()).toEqual({ unreadCount: 0 });
+    expect(await poll.json()).toEqual({ unreadCount: 0, byRoute: {} });
     const list = await GET(new Request('http://localhost/api/notifications'));
-    expect(await list.json()).toEqual({ notifications: [], unreadCount: 0 });
+    expect(await list.json()).toEqual({ notifications: [], unreadCount: 0, byRoute: {} });
   });
 
   it('still fails for anything that is not a missing store', async () => {

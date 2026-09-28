@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useNotifications } from './NotificationsProvider';
 import { apiJson } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
 import type { NotificationType } from '@/lib/notification';
@@ -65,40 +66,20 @@ const POLL_MS = 60_000;
 
 export function NotificationBell() {
   const router = useRouter();
-  const [unread, setUnread] = useState(0);
+  /**
+   * THE ROWS COME FROM THE ONE POLLER.
+   *
+   * This kept a timer of its own and asked for the count every minute; the
+   * corner cards and the menu's numbers want the same rows, and three
+   * askers is three answers a second apart — a badge that disagrees with
+   * the list it opens. The timer, the visibility rule and the «a failed
+   * poll is not worth a message» all moved to NotificationsProvider.
+   */
+  const { items: rows, unreadCount: unread, markAllRead, markRead: markOneRead, refresh } = useNotifications();
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<Notification[] | null>(null);
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-
-  const loadCount = useCallback(async () => {
-    try {
-      // Plain fetch for the poll: apiJson answers a missing store by sending
-      // the whole tab to the store picker, which a background poll must never
-      // do. (The route now answers 0 in that case anyway.)
-      const r = await fetch('/api/notifications?countOnly=1', { credentials: 'same-origin' });
-      if (!r.ok) return;
-      const res = (await r.json()) as { unreadCount: number };
-      setUnread(res.unreadCount ?? 0);
-    } catch {
-      // A failed poll is not worth a message; the next one will do.
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadCount();
-    const timer = setInterval(() => {
-      if (!document.hidden) void loadCount();
-    }, POLL_MS);
-    const onVisible = () => {
-      if (!document.hidden) void loadCount();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [loadCount]);
+  const items: Notification[] | null = rows as unknown as Notification[];
 
   useEffect(() => {
     if (!open) return;
@@ -117,42 +98,24 @@ export function NotificationBell() {
   async function toggle() {
     const next = !open;
     setOpen(next);
-    if (!next) return;
-    setItems(null);
-    try {
-      const res = await apiJson<{ notifications: Notification[]; unreadCount: number }>('/api/notifications');
-      setItems(res.notifications ?? []);
-      setUnread(res.unreadCount ?? 0);
-    } catch {
-      setItems([]);
-    }
+    // Opening asks for a fresh read rather than showing a minute-old list;
+    // the rows themselves live in the provider.
+    if (next) await refresh();
   }
 
   async function markAll() {
     setBusy(true);
     try {
-      await apiJson('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markAllRead: true }),
-      });
-      setItems((prev) => prev?.map((n) => ({ ...n, isRead: true })) ?? null);
-      setUnread(0);
+      // The provider owns the write and the re-read, so the bell, the
+      // corner and the menu all stop counting the same rows at once.
+      await markAllRead();
     } finally {
       setBusy(false);
     }
   }
 
   async function openItem(n: Notification) {
-    if (!n.isRead) {
-      apiJson('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId: n.id }),
-      }).catch(() => undefined);
-      setUnread((c) => Math.max(0, c - 1));
-      setItems((prev) => prev?.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)) ?? null);
-    }
+    if (!n.isRead) void markOneRead(n.id);
     if (n.link) {
       setOpen(false);
       router.push(n.link);
