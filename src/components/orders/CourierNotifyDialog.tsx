@@ -126,7 +126,18 @@ export function CourierNotifyDialog({
             title={sent ? undefined : 'أرسِل الرسالة أو انسخها أوّلاً'}
             className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg bg-[var(--sys-primary)] px-4 py-1.5 text-xs font-medium text-[var(--sys-primary-foreground)] disabled:opacity-50"
           >
-            أبلغتُهم — طبّق التعديل الآن
+            {/*
+              THE BUTTON SAYS WHAT WILL HAPPEN.
+
+              On a cancelled waybill nothing is «applied» to this order:
+              the message above promised the courier a NEW waybill, and
+              this is where that promise is kept. Calling it «طبّق التعديل»
+              was the label on a button that did the wrong thing — it wrote
+              the change onto the parcel we had just told them to cancel.
+            */}
+            {ask.action === 'CANCEL_AND_REORDER'
+              ? 'أبلغتُهم — ألغِ البوليصة وارفع الطلب البديل'
+              : 'أبلغتُهم — طبّق التعديل الآن'}
           </button>
           <button
             type="button"
@@ -136,7 +147,9 @@ export function CourierNotifyDialog({
             لاحقاً
           </button>
           <span className="text-xs text-[var(--sys-muted-foreground)]">
-            يُسجَّل على الطلب أنّك أبلغتَهم قبل التطبيق.
+            {ask.action === 'CANCEL_AND_REORDER'
+              ? 'يعود هذا الطلب مرتجعاً، ويصدر بديلٌ بالتعديل جاهزاً للتحضير.'
+              : 'يُسجَّل على الطلب أنّك أبلغتَهم قبل التطبيق.'}
           </span>
         </div>
       </div>

@@ -66,6 +66,11 @@ export async function GET(req: Request) {
         order: {
           select: {
             id: true, orderNumber: true, merchantRef: true, confirmationStatus: true, shippingStatus: true,
+            // The version the screen is about to write against. Without it
+            // «طبّق» sent no `expectedVersion` and the order route refused
+            // every press with «expectedVersion is required for order
+            // updates» — this half of the queue had never applied anything.
+            version: true,
             // Where the parcel is decides what carrying the request out even
             // means — a cancellation before the waybill is a cancellation,
             // and after it is a message to the courier and a return.

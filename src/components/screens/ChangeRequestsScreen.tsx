@@ -59,6 +59,8 @@ interface ChangeRequest {
     orderNumber: string;
     confirmationStatus: string;
     shippingStatus: string;
+    /** Optimistic concurrency — the order route refuses a write without it. */
+    version: number;
     customer: { fullName: string; phone: string };
   };
 }
@@ -225,12 +227,42 @@ export function ChangeRequestsScreen() {
   async function send(r: ChangeRequest, courierNotified: boolean) {
     setApplying(r.id);
     try {
+      /**
+       * A CANCELLED WAYBILL IS NOT AN EDIT.
+       *
+       * The message the courier was just sent promises them a new waybill.
+       * Writing the change onto this order instead would leave our record
+       * saying a quantity that was never in the carton, on a parcel we
+       * asked them to stop. The reorder door closes this one as a return
+       * and raises the order we promised.
+       */
+      if (courierNotified && courierFor?.ask.action === 'CANCEL_AND_REORDER') {
+        const made = await apiFetch(`/api/orders/${r.order.id}/reorder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ changeRequestId: r.id, courierNotified: true }),
+        });
+        const out = await made.json().catch(() => ({}));
+        if (!made.ok) throw new Error(out?.errorAr || out?.error || 'تعذر إصدار الطلب البديل');
+        setCourierFor(null);
+        await load();
+        toast.done(`صدر الطلب البديل ${out?.replacement?.orderNumber ?? ''}`);
+        return;
+      }
+
       const res = await apiFetch(`/api/orders/${r.order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        // The id, and nothing else that is a field of the order. The server
-        // rebuilds the edit from what was approved.
-        body: JSON.stringify({ changeRequestId: r.id, ...(courierNotified ? { courierNotified } : {}) }),
+        // The id, the version it was loaded at, and nothing else that is
+        // a field of the order. The server rebuilds the edit from what was
+        // approved; `expectedVersion` is on the short list of keys allowed
+        // to ride along precisely because it changes nothing about WHAT is
+        // applied, and the order route refuses any write without it.
+        body: JSON.stringify({
+          changeRequestId: r.id,
+          expectedVersion: r.order.version,
+          ...(courierNotified ? { courierNotified } : {}),
+        }),
       });
       const body = await res.json().catch(() => ({}));
 

@@ -1,0 +1,274 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { repoFile, stripComments } from './guard-source';
+
+vi.mock('./order-ref', () => ({
+  orderRefFields: vi.fn(async (_tx: unknown, _c: string, prefix: string, attempt: number) => ({
+    orderNumber: `${prefix}-${100 + attempt}`,
+  })),
+}));
+const reserve = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('./reservation', () => ({ reserveOrderLines: (...a: unknown[]) => reserve(...a) }));
+
+import { createReplacement, type ReplacementSource } from './replacement-order';
+
+/**
+ * A SECOND ORDER FOR THE SAME SALE.
+ *
+ * Two paths need one — a parcel taken back from a courier company, and a
+ * change to the goods on a parcel they already hold — and they used to
+ * have a builder each, except the second path had no builder at all: the
+ * message told the courier «we will send you a new waybill» and nothing
+ * anywhere made one.
+ *
+ * What these hold down is the part that cannot be seen by looking at the
+ * screen: that an unchanged replacement carries the ORIGINAL's figures
+ * untouched, and a changed one goes through `computeCod` — the one COD
+ * function — rather than a second arithmetic written here.
+ */
+
+const ORDER: ReplacementSource = {
+  id: 'o1',
+  orderNumber: 'SY-0001',
+  countryId: 'c1',
+  storeId: 's1',
+  regionId: 'r1',
+  customerId: 'cust1',
+  productId: 'p1',
+  offerId: null,
+  quantity: 2,
+  freeQuantity: 0,
+  sellingPrice: 200,
+  discountAmount: 20,
+  shippingCost: 15,
+  totalAmount: 195,
+  currency: 'SYP',
+  priceIncludesDelivery: false,
+  productNameSnapshot: 'قميص',
+  productImageSnapshot: null,
+  moderatorId: 'm1',
+  estimatedCostOfGoods: 80,
+  source: 'Manual',
+  customerNotes: null,
+};
+
+/**
+ * A REAL ROW'S SHAPE, COPIED OFF THE DATABASE.
+ *
+ * `unitPrice` is PER UNIT and `lineTotal` is the line after its discount
+ * share — measured on SY-2026-0152: quantity 3, unitPrice 16.67,
+ * lineTotal 50. The first version of this fixture put the LINE total in
+ * `unitPrice`, because the order route divides by quantity when it writes
+ * the column and that reads like the column holds a line total. It does
+ * not; the route divides because its own input is one.
+ *
+ * So the fixture agreed with the arithmetic under test instead of with the
+ * rows, every assertion passed, and a replacement of two units priced
+ * itself at a third of what the customer owed.
+ */
+const ITEMS = [
+  { productId: 'p1', productName: 'قميص', quantity: 2, freeQuantity: 0, unitPrice: 100, lineTotal: 180, discountShare: 20 },
+];
+
+function fakeTx() {
+  const created: Record<string, unknown>[] = [];
+  const lines: Record<string, unknown>[] = [];
+  return {
+    tx: {
+      orderItem: {
+        findMany: vi.fn(async () => ITEMS),
+        create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+          lines.push(data);
+          return data;
+        }),
+      },
+      order: {
+        create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+          created.push(data);
+          return { id: 'new1', orderNumber: data.orderNumber };
+        }),
+      },
+    },
+    created,
+    lines,
+  };
+}
+
+const plan = {
+  companyId: 'co1',
+  order: ORDER,
+  orderPrefix: 'SY',
+  attempt: 0,
+  minorUnit: 2,
+  allowNegativeStock: false,
+  shippingStatus: 'READY_FOR_SHIPPING',
+  internalNotes: 'بديل',
+};
+
+beforeEach(() => reserve.mockClear());
+
+describe('a replacement with nothing changed', () => {
+  it('carries the original figures untouched', async () => {
+    const { tx, created } = fakeTx();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await createReplacement(tx as any, plan);
+    const row = created[0];
+    // Recomputing an amount nobody asked to change is a way to move it by
+    // a rounding rule that has shifted since.
+    expect(row.totalAmount).toBe(ORDER.totalAmount);
+    expect(row.sellingPrice).toBe(ORDER.sellingPrice);
+    expect(row.quantity).toBe(ORDER.quantity);
+    expect(row.discountAmount).toBe(ORDER.discountAmount);
+    expect(row.estimatedCostOfGoods).toBe(ORDER.estimatedCostOfGoods);
+  });
+
+  it('and links back, and starts life where the caller said', async () => {
+    const { tx, created } = fakeTx();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await createReplacement(tx as any, { ...plan, shippingStatus: 'PACKING' });
+    expect(created[0].replacesOrderId).toBe('o1');
+    expect(created[0].shippingStatus).toBe('PACKING');
+    // The delivery fee for the leg already flown is owed against the
+    // ORIGINAL; this one is priced when it joins a shipment.
+    expect(created[0].shippingCost).toBe(0);
+    // Confirmed once already — it re-enters at preparation, not intake.
+    expect(created[0].confirmationStatus).toBe('CONFIRMED');
+  });
+
+  /** A replacement that cannot be picked is not a replacement. */
+  it('and takes its goods off the shelf now', async () => {
+    const { tx } = fakeTx();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await createReplacement(tx as any, plan);
+    expect(reserve).toHaveBeenCalledTimes(1);
+    expect(reserve.mock.calls[0][2]).toEqual({ allowNegativeStock: false });
+  });
+});
+
+describe('a replacement carrying an approved change', () => {
+  it('recomputes the money at the new count', async () => {
+    const { tx, created, lines } = fakeTx();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await createReplacement(tx as any, { ...plan, overrides: { quantity: 3 } });
+    const row = created[0];
+    expect(row.quantity).toBe(3);
+    // 3 × 100, the stored per-unit price = 300, less the 20 discount =
+    // 280. Not the original's 195 carried across unchanged, which is what
+    // an edit-free copy would have shipped — and not 3 × (100/2) = 150,
+    // which is what dividing a per-unit price by its quantity produced.
+    expect(row.sellingPrice).toBe(300);
+    expect(row.totalAmount).toBe(280);
+    // And the line follows, or preparation picks two while the order says
+    // three. Its unit price is untouched: the count changed, not the price.
+    expect(lines[0].quantity).toBe(3);
+    expect(lines[0].unitPrice).toBe(100);
+    expect(lines[0].lineTotal).toBe(280);
+  });
+
+  it('and moves the cost of goods with the count', async () => {
+    const { tx, created } = fakeTx();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await createReplacement(tx as any, { ...plan, overrides: { quantity: 4 } });
+    // 80 for two units is 160 for four. Left at 80 the reported profit on
+    // the replacement is wrong by the cost of two shirts.
+    expect(created[0].estimatedCostOfGoods).toBe(160);
+  });
+
+  it('and applies an approved discount through the same function', async () => {
+    const { tx, created } = fakeTx();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await createReplacement(tx as any, { ...plan, overrides: { discountAmount: 50 } });
+    expect(created[0].discountAmount).toBe(50);
+    // 2 × 100 = 200, less 50 = 150.
+    expect(created[0].totalAmount).toBe(150);
+    expect(created[0].sellingPrice).toBe(200);
+  });
+
+  it('and keeps every line it was given', async () => {
+    const { tx, lines } = fakeTx();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await createReplacement(tx as any, { ...plan, overrides: { quantity: 3 } });
+    expect(lines).toHaveLength(ITEMS.length);
+    expect(lines[0].productId).toBe('p1');
+    expect(lines[0].addedStage).toBe('INTAKE');
+  });
+});
+
+describe('the reorder door', () => {
+  const route = () => stripComments(repoFile('src/app/api/orders/[id]/reorder/route.ts'));
+
+  it('re-reads the seal and refuses anything that is not a reorder', () => {
+    const src = route();
+    // Not trusted from the screen: a parcel that came back while the
+    // message was being written belongs on the ordinary apply path, and an
+    // address change belongs there too — cancelling a waybill a dispatcher
+    // could have fixed costs a delivery and a return for nothing.
+    expect(src).toMatch(/if \(!seal\.sealed \|\| courierActionFor\(sealedAsked\) !== 'CANCEL_AND_REORDER'\)/);
+  });
+
+  it('and raises no second replacement for one order', () => {
+    expect(route()).toMatch(/if \(order\.replacedBy\)/);
+    // And once, under concurrency: the same guard the apply path uses.
+    expect(route()).toMatch(/where: \{ id: request\.id, appliedAt: null \}/);
+  });
+
+  it('and ends the original as a return, never as stock back on the shelf', () => {
+    const src = route();
+    // The parcel is physically in a van. Releasing its units here would
+    // count goods as available while they are out on a road.
+    expect(src).toMatch(/shippingStatus: 'RETURN_REQUESTED'/);
+    expect(src, 'يُحرِّر الحجزَ على طردٍ ما زال خارجاً').not.toMatch(/releaseOrderLines/);
+    // Optimistic concurrency, like every other write to an order.
+    expect(src).toMatch(/version: order\.version/);
+  });
+
+  it('and carries only the goods, naming what it will not carry', () => {
+    const src = route();
+    expect(src).toMatch(/const REORDERABLE = \['quantity', 'discountAmount'\] as const/);
+    // THE REFUSAL, not merely the words for it. Naming the list and the
+    // code passed while the `if` around them had been switched off — and
+    // a request mixing an address in would then have had its address
+    // silently dropped, which is the exact failure the list is for.
+    expect(src).toMatch(
+      /const stray = Object\.keys\(expanded\.fields\)\.filter\(\s*\(f\) => !\(REORDERABLE as readonly string\[\]\)\.includes\(f\)\s*\);\s*if \(stray\.length > 0\) \{/
+    );
+    expect(src).toMatch(/code: 'NOT_REORDERABLE'/);
+  });
+
+  it('and moves nothing until somebody says the courier was told', () => {
+    // `z.literal(true)`, not an optional boolean: the whole reason this
+    // door exists is that the courier has been told, and a default would
+    // let a request through that said nothing about it.
+    expect(route()).toMatch(/courierNotified: z\.literal\(true\)/);
+  });
+});
+
+describe('one builder, two callers', () => {
+  it('the transfer route no longer builds an order of its own', () => {
+    const src = stripComments(repoFile('src/app/api/ops/tracking/transfer/route.ts'));
+    expect(src).toMatch(/createReplacement\(tx, \{/);
+    expect(src, 'ما زال يُنشئ الطلبَ بنفسه').not.toMatch(/tx\.order\.create\(/);
+    // And the reservation moved with it, rather than being done twice.
+    expect(src).not.toMatch(/reserveOrderLines/);
+  });
+
+  it('and the reorder route uses the same one', () => {
+    expect(stripComments(repoFile('src/app/api/orders/[id]/reorder/route.ts'))).toMatch(
+      /createReplacement\(tx, \{/
+    );
+  });
+});
+
+describe('the button under the courier message', () => {
+  it('says what it will do, and does it', () => {
+    const dialog = stripComments(repoFile('src/components/orders/CourierNotifyDialog.tsx'));
+    // «طبّق التعديل» on a cancelled waybill was the label on a button that
+    // wrote the change onto the parcel we had just asked them to stop.
+    expect(dialog).toMatch(/ask\.action === 'CANCEL_AND_REORDER'\s*\?\s*'أبلغتُهم — ألغِ البوليصة وارفع الطلب البديل'/);
+
+    const queue = stripComments(repoFile('src/components/screens/ChangeRequestsScreen.tsx'));
+    expect(queue).toMatch(
+      /if \(courierNotified && courierFor\?\.ask\.action === 'CANCEL_AND_REORDER'\)/
+    );
+    expect(queue).toMatch(/\/reorder`/);
+  });
+});

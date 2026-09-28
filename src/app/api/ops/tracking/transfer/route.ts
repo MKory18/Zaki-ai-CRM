@@ -7,7 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { orderRefFields } from '@/lib/order-ref';
 import { planTransfer, requiresOpenBatch, TransferRefused, type TransferParty } from '@/lib/courier-transfer';
-import { reserveOrderLines } from '@/lib/reservation';
+import { createReplacement, type ReplacementSource } from '@/lib/replacement-order';
 import { zodMessage } from '@/lib/zod-message';
 
 /**
@@ -138,75 +138,30 @@ export async function POST(req: Request) {
         },
       });
 
-      // The number is taken BEFORE the insert and any clash retries the whole
-      // transaction from outside: on Postgres a failed statement aborts the
-      // transaction, so a retry within it cannot run.
-      const refs = await orderRefFields(tx, companyId, country.orderPrefix, attempt);
-      const replacement = await tx.order.create({
-            data: {
-              companyId,
-              countryId: order.countryId,
-              storeId: order.storeId,
-              regionId: order.regionId,
-              ...refs,
-              replacesOrderId: order.id,
-              customerId: order.customerId,
-              productId: order.productId,
-              offerId: order.offerId,
-              quantity: order.quantity,
-              freeQuantity: order.freeQuantity,
-              sellingPrice: order.sellingPrice,
-              discountAmount: order.discountAmount,
-              shippingCost: 0,
-              totalAmount: order.totalAmount,
-              currency: order.currency,
-              priceIncludesDelivery: order.priceIncludesDelivery,
-              productNameSnapshot: order.productNameSnapshot,
-              productImageSnapshot: order.productImageSnapshot,
-              moderatorId: order.moderatorId,
-              estimatedCostOfGoods: order.estimatedCostOfGoods,
-              // Already confirmed once — it re-enters at preparation, not intake.
-              status: 'CONFIRMED',
-              confirmationStatus: 'CONFIRMED',
-              shippingStatus: plan.nextStatus,
-              settlementStatus: 'NOT_APPLICABLE',
-              // Straight onto the open trolley of the company it is going
-              // to — there is nothing left to decide about it.
-              deliveryProviderId: to.id,
-              shippingBatchId: openBatch?.id ?? null,
-              source: order.source,
-              customerNotes: order.customerNotes,
-              internalNotes: `بديل عن ${order.orderNumber}: ${plan.reason}`,
-              version: 1,
-            },
+      /**
+       * The number is taken BEFORE the insert and any clash retries the
+       * whole transaction from outside: on Postgres a failed statement
+       * aborts the transaction, so a retry within it cannot run.
+       *
+       * The building itself is shared with the reorder path — see
+       * src/lib/replacement-order.ts. A second copy of it is where «the
+       * lines are carried over» or «the goods come off the shelf now»
+       * stops being true on one of the two.
+       */
+      const replacement = await createReplacement(tx, {
+        companyId,
+        order: order as unknown as ReplacementSource,
+        orderPrefix: country.orderPrefix,
+        attempt,
+        minorUnit: country.minorUnit,
+        allowNegativeStock: country.allowNegativeStock,
+        // Straight onto the open trolley of the company it is going to —
+        // there is nothing left to decide about it.
+        shippingStatus: plan.nextStatus,
+        deliveryProviderId: to.id,
+        shippingBatchId: openBatch?.id ?? null,
+        internalNotes: `بديل عن ${order.orderNumber}: ${plan.reason}`,
       });
-
-      // Carry the lines over, so preparation and stock see the same goods.
-      const items = await tx.orderItem.findMany({ where: { orderId: order.id } });
-      for (const item of items) {
-        await tx.orderItem.create({
-          data: {
-            companyId,
-            orderId: replacement.id,
-            productId: item.productId,
-            productName: item.productName,
-            quantity: item.quantity,
-            freeQuantity: item.freeQuantity,
-            unitPrice: item.unitPrice,
-            lineTotal: item.lineTotal,
-            discountShare: item.discountShare,
-            addedStage: 'INTAKE',
-          },
-        });
-      }
-
-      // The goods for the replacement come off the shelf NOW, not when the
-      // first company finally sends the parcel back. The customer is
-      // waiting on this one, and a replacement that cannot be picked is not
-      // a replacement. The original's units stay reserved against it until
-      // the return is received — two reservations for one sale is the true
-      // position while two parcels exist.
-      await reserveOrderLines(tx, replacement.id, { allowNegativeStock: country.allowNegativeStock });
 
       for (const [orderId, note] of [
         [order.id, `سُحب من ${from?.name} — صدر البديل ${replacement.orderNumber}`],
