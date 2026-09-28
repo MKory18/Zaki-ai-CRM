@@ -243,12 +243,22 @@ export function OrdersScreen() {
    * order. The ones that were ticked and cannot be printed are named, not
    * silently left out of the stack of paper.
    */
-  const handlePrintLabels = async (mode: 'print' | 'pdf' = 'print') => {
-    if (selected.size === 0) return;
+  const handlePrintLabels = async (mode: 'print' | 'pdf' = 'print', only?: string[]) => {
+    /**
+     * `only` is one row's waybill, from the row itself.
+     *
+     * Printing lived ONLY in the bulk bar, and the bulk bar appears only
+     * once something is ticked — so on a screen with nothing selected
+     * there was no print anywhere, which is «الطباعة اختفت». And the
+     * common act at a packing bench is one parcel, one label: reaching it
+     * through a checkbox meant for batches is a step for nothing.
+     */
+    const ids = only ?? [...selected];
+    if (ids.length === 0) return;
     setPrinting(true);
     setError(null);
     try {
-      const out = await openWaybills({ orderIds: [...selected], ...labelSize.dims }, mode);
+      const out = await openWaybills({ orderIds: ids, ...labelSize.dims }, mode);
       if (out.refused.length) {
         void tell({
           title: `جُهِّزت ${out.count} بوليصة، ولم تُجهَّز ${out.refused.length}`,
@@ -643,7 +653,35 @@ export function OrdersScreen() {
                           minorUnit={currency.code ? currency.minorUnit : undefined}
                           className="font-bold text-[var(--sys-heading)] text-sm"
                         />
-                        <span onClick={(e) => e.stopPropagation()}>
+                        <span onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
+                          {/*
+                            ONE PARCEL, ONE LABEL — FROM THE ROW.
+
+                            Printing lived only in the bulk bar, which
+                            appears once something is ticked. So a screen
+                            with nothing selected had no print anywhere on
+                            it, which is «الطباعة اختفت». And the common
+                            act at a bench is a single waybill: reaching it
+                            through a checkbox meant for batches was a step
+                            for nothing.
+
+                            Shown on the rows that can actually produce one
+                            — a waybill needs a confirmed order with a
+                            courier — so it is never a button that answers
+                            with a refusal.
+                          */}
+                          {canPrint && order.confirmationStatus === 'CONFIRMED' && (
+                            <button
+                              type="button"
+                              onClick={() => void handlePrintLabels('print', [order.id])}
+                              disabled={printing}
+                              aria-label={`اطبع بوليصة ${order.orderNumber}`}
+                              title="اطبع بوليصة هذا الطلب"
+                              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)] disabled:opacity-40"
+                            >
+                              <RiPrinterLine className="w-4 h-4" />
+                            </button>
+                          )}
                           <CustomerHistoryButton
                             customerId={order.customer?.id}
                             orderId={order.id}
