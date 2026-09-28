@@ -52,6 +52,8 @@ export function ShipmentsNewScreen() {
   const [standingDown, setStandingDown] = useState<string | null>(null);
   const [filters, setFilters] = useState({ courier: '', region: '', from: '', to: '' });
   const [rows, setRows] = useState<Row[] | null>(null);
+  /** How many are being held back, shown on the tab so none can seem to vanish. */
+  const [heldCount, setHeldCount] = useState(0);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
   const [exceptions, setExceptions] = useState<{ orderNumber: string; reasons: string[] }[]>([]);
@@ -124,7 +126,9 @@ export function ShipmentsNewScreen() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ orderId: row.id, until: choice.until, reason: choice.reason }),
         });
-        toast.done(`${row.orderNumber} محجوزٌ له حتى ${choice.until.slice(0, 10)}`);
+        toast.done(
+          `${row.orderNumber} محجوزٌ له حتى ${choice.until.slice(0, 10)} — تجده في تبويب «مؤجَّلة الشحن»`
+        );
       } else {
         await apiJson('/api/ops/shipments/stand-down', {
           method: 'POST',
@@ -170,8 +174,9 @@ export function ShipmentsNewScreen() {
     Object.entries(filters).forEach(([k, v]) => v && q.set(k, v));
     if (view === 'held') q.set('held', 'only');
     try {
-      const data = await apiJson<{ orders: Row[] }>(`/api/ops/shipments?${q}`);
+      const data = await apiJson<{ orders: Row[]; heldCount?: number }>(`/api/ops/shipments?${q}`);
       setRows(data.orders);
+      setHeldCount(data.heldCount ?? 0);
       setSelected({});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحميل');
@@ -281,7 +286,14 @@ export function ShipmentsNewScreen() {
       ) : (
         <>
         <div className="flex gap-1.5 mb-2">
-        {([['ready', 'جاهزة للشحن'], ['held', 'مؤجَّلة']] as const).map(([k, label]) => (
+        {/*
+          «مؤجَّلة» ALONE WAS THE SAME WORD AS A SCREEN IN THE MENU.
+          «الطلبات المؤجلة» there is a customer who asked to be called
+          later; this is a parcel held back from a van. Somebody who
+          postponed a shipment went looking in the other one, did not find
+          it, and reported the postpone as broken — which it was not.
+        */}
+        {([['ready', 'جاهزة للشحن'], ['held', 'مؤجَّلة الشحن']] as const).map(([k, label]) => (
           <button
             key={k}
             type="button"
@@ -293,6 +305,17 @@ export function ShipmentsNewScreen() {
             }`}
           >
             {label}
+            {k === 'held' && heldCount > 0 && (
+              <span
+                className={`ms-1.5 rounded-full px-1.5 py-0.5 text-xs font-bold tabular-nums ${
+                  view === k
+                    ? 'bg-[var(--sys-primary-foreground)]/20'
+                    : 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'
+                }`}
+              >
+                {heldCount}
+              </span>
+            )}
           </button>
         ))}
       </div>

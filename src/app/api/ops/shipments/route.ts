@@ -137,7 +137,28 @@ export async function GET(req: Request) {
       });
     }
 
-    return NextResponse.json({ count: rows.length, allowNegativeStock: country.allowNegativeStock, orders: rows });
+    /**
+     * HOW MANY ARE BEING HELD, ALWAYS — even while looking at the ready
+     * ones. «أجّلتُه ولم أجده» is what happens when a held order leaves
+     * this list and nothing on the screen says it went anywhere. A number
+     * on the tab is the whole difference between «held» and «gone».
+     */
+    const heldCount = await db.order.count({
+      where: {
+        companyId,
+        storeId,
+        confirmationStatus: 'CONFIRMED',
+        shippingStatus: { in: ['NOT_READY', 'PACKING', 'READY_FOR_SHIPPING'] },
+        shipHoldUntil: { not: null },
+      },
+    });
+
+    return NextResponse.json({
+      count: rows.length,
+      heldCount,
+      allowNegativeStock: country.allowNegativeStock,
+      orders: rows,
+    });
   } catch (error) {
     return apiErrorResponse(error);
   }
