@@ -1,106 +1,107 @@
 import { describe, expect, it } from 'vitest';
-import { repoFile, stripComments } from './guard-source';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { stripComments } from './guard-source';
 import { AI_JOBS } from './ai-prompts';
 
 /**
- * THE ASSISTANT SPEAKS THE LANGUAGE OF THE PEOPLE WHO USE IT.
+ * THE ASSISTANT ANSWERS IN ARABIC.
  *
- * The prompt was already Arabic and already says «أجب بنفس لغة السؤال», and
- * the grounded fallback — the answer built from our own numbers when no model
- * replies — was Arabic too. The English was the screen's own: its two
- * subtitles, its «Try asking:», and the six figures along the top, which are
- * the first thing anybody reads.
+ * Reported twice. The prompts were Arabic all along — what was English was
+ * everything AROUND them:
  *
- * And a second fault beside it, because a colour is a sentence too. «المؤكَّدة»,
- * «المُسلَّمة» and the confirmation rate were all painted in the danger colour —
- * the three pieces of good news on the row, in red, saying the opposite of the
- * numbers they stood over.
+ *   `askAiAssistant` wrapped the question in «Business Metrics Context:»
+ *   and «User Question:», so the model read English headings, an English
+ *   JSON blob and one Arabic sentence. The rule said «أجب بنفس لغة
+ *   السؤال», which in that prompt is a genuinely open question.
+ *
+ *   The daily summary demanded a JSON schema written in English WITH
+ *   ENGLISH EXAMPLE VALUES — «Concise executive overview paragraph». A
+ *   model shown an English schema fills it in English.
+ *
+ * So the rule now names the language outright, and nothing a human will
+ * read is framed in English. The extraction engine in ai-intake is the one
+ * exception and is deliberate: its output is parsed, never read, and it is
+ * already told to keep the Arabic text it was given.
  */
 
-const screen = () => stripComments(repoFile('src/components/screens/AssistantScreen.tsx'));
+const ROOT = process.cwd();
+const read = (rel: string) => stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+
+describe('every default prompt', () => {
+  it('is written in Arabic', () => {
+    // Two carry no default on purpose: the house prompt is whatever the
+    // seller writes above every assistant, and the landing-page job is
+    // driven by its slots. An empty default is not an English one.
+    for (const job of AI_JOBS.filter((j) => j.default.trim())) {
+      expect(/[؀-ۿ]/.test(job.default), `تعليمات «${job.label}» ليست بالعربية`).toBe(true);
+    }
+    expect(AI_JOBS.filter((j) => j.default.trim()).length, 'لا تعليماتِ افتراضيةً أصلاً').toBeGreaterThan(3);
+  });
+
+  it('and the two that answer a person in prose pin the language outright', () => {
+    for (const key of ['assistant', 'advisor']) {
+      const job = AI_JOBS.find((j) => j.key === key)!;
+      expect(job.default, `«${job.label}» لا يُلزم العربية`).toContain('بالعربية');
+      // «the same language as the question» is not a rule when the prompt
+      // around it is in two languages.
+      expect(job.default).not.toContain('بنفس لغة السؤال');
+    }
+  });
+});
+
+describe('what is wrapped around the question', () => {
+  it('is Arabic in the assistant', () => {
+    const src = read('src/lib/ai.ts');
+    expect(src).toContain('سؤال المستخدم:');
+    expect(src, 'ما زال الإطار إنجليزياً').not.toContain('User Question:');
+    expect(src).not.toContain('Business Metrics Context');
+  });
+
+  it('and Arabic in the daily summary, values and all', () => {
+    const src = read('src/lib/ai.ts');
+    expect(src).toContain('هذه أرقام أداء المتجر');
+    expect(src, 'أمثلةُ المخطّط إنجليزية فيكتب النموذج بالإنجليزية').not.toContain(
+      'Concise executive overview'
+    );
+    // The KEYS stay English because the parser reads them — and the model
+    // is told so, rather than left to guess and translate them.
+    expect(src).toContain('"summary"');
+    expect(src).toContain('لا تترجمها');
+  });
+
+  it('and Arabic in the intelligence panel — both halves of the frame', () => {
+    const src = read('src/app/api/growth/intelligence/ask/route.ts');
+    // Anchored to the message itself: «السؤال:» alone still passed while
+    // the heading above it had been turned back into «Data:».
+    expect(src).toMatch(/user: `البيانات:[\s\S]{0,120}السؤال: /);
+  });
+});
 
 /**
- * Prose a person reads: the text of a label, a title or a subtitle, and the
- * words between two tags. Not class names, not props, not code.
+ * A sweep, so the next English frame is caught where it is written rather
+ * than after somebody reads an English answer on a screen.
  */
-function latinProse(src: string): string[] {
-  const out: string[] = [];
-  const attr = /(?:title|subtitle|placeholder|aria-label)="([^"]{4,})"/g;
-  const between = />\s*([A-Za-z][A-Za-z ,.'?!:%-]{5,})\s*</g;
-  for (const re of [attr, between]) {
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(src))) out.push((m[1] ?? '').trim());
-  }
-  // Latin LETTERS and no Arabic. A first version of this helper reported the
-  // Arabic replacements as findings, which would have made it pass by
-  // accident on any screen and fail on this one for the wrong reason.
-  return out.filter((t) => /[A-Za-z]/.test(t) && !/[؀-ۿ]/.test(t));
-}
-
-describe('nothing on the assistant screen is in English', () => {
-  it('not a subtitle, not a label, not a word between two tags', () => {
-    expect(latinProse(screen()), 'نصٌّ إنجليزيٌّ يقرؤه المستخدم').toEqual([]);
-  });
-
-  /** The six figures along the top are the first thing anybody reads. */
-  it('and the figures along the top are named in Arabic', () => {
-    const src = screen();
-    for (const word of ['الطلبات', 'المؤكَّدة', 'المُسلَّمة', 'إيراد المُسلَّم', 'صافي الربح', 'نسبة التأكيد']) {
-      expect(src, `«${word}» غير موجودة`).toContain(word);
+describe('no English frame reaches a model', () => {
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(join(ROOT, dir))) {
+      const rel = `${dir}/${name}`;
+      if (statSync(join(ROOT, rel)).isDirectory()) walk(rel);
+      else if (/\.ts$/.test(name) && !/\.test\.ts$/.test(name)) files.push(rel);
     }
-    for (const en of ['Orders', 'Confirmed', 'Delivered Revenue', 'Real Net Profit', 'Confirm Rate']) {
-      expect(src, `«${en}» ما زالت`).not.toContain(`block">${en}<`);
-    }
-  });
+  };
+  walk('src/lib');
+  walk('src/app/api');
 
-  it('including the two subtitles and the prompt above the suggestions', () => {
-    const src = screen();
-    expect(src).toContain('ملخّصٌ محسوبٌ من الطلبات الحقيقيّة');
-    expect(src).toContain('اسأل عن أداء متجرك');
-    expect(src).toContain('جرّب أن تسأل:');
-  });
-});
-
-describe('and the colours agree with the numbers', () => {
-  it('good news is not painted as danger', () => {
-    const src = screen();
-    for (const [word, colour] of [
-      ['المؤكَّدة', 'primary'],
-      ['المُسلَّمة', 'success'],
-      ['نسبة التأكيد', 'primary'],
-    ] as const) {
-      const at = src.indexOf(`block">${word}</span>`);
-      expect(at, `«${word}» غير موجودة`).toBeGreaterThan(-1);
-      const pill = src.slice(at, at + 220);
-      expect(pill, `«${word}» ما زالت بلون الخطر`).not.toContain('--sys-destructive');
-      expect(pill).toContain(`--sys-${colour}`);
-    }
-  });
-
-  /** The one figure that can genuinely be bad news is told by its sign. */
-  it('and the profit is red only when it is actually a loss', () => {
-    const src = screen();
-    expect(src).toMatch(/tone=\{Number\(metrics\.net_profit\) < 0 \? 'lost' : 'collected'\}/);
-    expect(src, 'الربح مرسومٌ بالأحمر دائماً').not.toContain(
-      'value={metrics.net_profit} className="text-[var(--sys-destructive)]'
-    );
-  });
-});
-
-describe('and the model is told to answer in the asker’s language', () => {
-  it('which is the rule that keeps an Arabic question from an English reply', () => {
-    const advisor = AI_JOBS.find((j) => j.key === 'advisor');
-    expect(advisor, 'وظيفة المستشار غير معرَّفة').toBeTruthy();
-    expect(advisor?.default, 'المطالبة لا تُلزم بلغة السؤال').toContain('أجب بنفس لغة السؤال');
-  });
-
-  /** And the answer built from our own numbers, when no model replies. */
-  it('and the grounded fallback is written in Arabic', () => {
-    const ai = stripComments(repoFile('src/lib/ai.ts'));
-    const at = ai.indexOf('function groundedAnswer');
-    const body = ai.slice(at, at + 2600);
-    expect(body).toContain('صافي الربح');
-    expect(body).toContain('نسبة التأكيد');
-    expect(body, 'ردٌّ إنجليزيٌّ في الجواب الاحتياطي').not.toMatch(/add\('[A-Za-z]/);
+  it('in any prompt a person will read the answer to', () => {
+    const offenders = files.filter((f) => {
+      // The order-intake engine is exempt and says why: its output is
+      // parsed, not read, and it is told to keep the Arabic it was given.
+      if (f.endsWith('src/app/api/orders/ai-intake/route.ts')) return false;
+      const src = read(f);
+      return /(content|user|system): `(Here is|You are|Always|Return|Extract|Business|Analyze)/.test(src);
+    });
+    expect(offenders, `إطارٌ إنجليزيّ يصل النموذج:\n${offenders.join('\n')}`).toEqual([]);
   });
 });

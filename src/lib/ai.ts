@@ -53,15 +53,29 @@ export async function generateAiBusinessAnalysis(
    * the instructions and the system appends what the machine needs.
    */
   const guidance = resolvePrompt('daily_summary', companyId ? (await aiSettings(companyId)).prompts : {});
+  /**
+   * THE KEYS ARE THE PARSER'S; THE WORDS INSIDE THEM ARE THE SELLER'S.
+   *
+   * This block used to be English, with English example values —
+   * «Concise executive overview paragraph», «observation 1». A model shown
+   * an English schema writes English contents, so the daily summary came
+   * back in English however Arabic the guidance above it was. That is the
+   * other half of «خانة المساعد الذكي إنجليزي».
+   *
+   * The key names stay English because the parser reads them; the sentence
+   * says, in as many words, that everything written INTO them is Arabic.
+   */
   const systemPrompt = `${guidance}
 
-Always format your response as valid JSON matching this schema:
+أعِد ردَّك دائماً بصيغة JSON صالحة بهذا الشكل بالضبط، وبقيمٍ عربية:
 {
-  "summary": "Concise executive overview paragraph",
-  "observations": ["observation 1", "observation 2"],
-  "risks": ["risk 1", "risk 2"],
-  "recommendations": ["recommendation 1", "recommendation 2"]
-}`;
+  "summary": "فقرة موجزة تصف أداء اليوم",
+  "observations": ["ملاحظة", "ملاحظة أخرى"],
+  "risks": ["خطر", "خطر آخر"],
+  "recommendations": ["توصية", "توصية أخرى"]
+}
+
+أسماء الحقول إنجليزية كما هي أعلاه — لا تترجمها. كل نصٍّ داخلها بالعربية.`;
 
   if (apiKey) {
     try {
@@ -82,7 +96,7 @@ Always format your response as valid JSON matching this schema:
             { role: 'system', content: systemPrompt },
             {
               role: 'user',
-              content: `Here is today's verified e-commerce performance data:\n${JSON.stringify(
+              content: `هذه أرقام أداء المتجر المحقّقة لليوم:\n${JSON.stringify(
                 context,
                 null,
                 2
@@ -208,10 +222,20 @@ export async function askAiAssistant(
       const answer = await aiChat({
         companyId,
         job,
-        user: `Business Metrics Context:
+        /**
+         * THE FRAME IS ARABIC BECAUSE THE ANSWER MUST BE.
+         *
+         * This said «Business Metrics Context» and «User Question», and
+         * wrapped an Arabic question in English scaffolding around a JSON
+         * blob whose keys are English too. «أجب بنفس لغة السؤال» then has
+         * to decide what the language of the prompt even IS, and a model
+         * reading English headings and one Arabic sentence answers in
+         * English. Which is what was reported, twice.
+         */
+        user: `بيانات المتجر:
 ${JSON.stringify(context, null, 2)}
 
-${note ? `NOTE: ${note}\n\n` : ''}User Question: ${question}`,
+${note ? `ملاحظة: ${note}\n\n` : ''}سؤال المستخدم: ${question}`,
       });
       if (answer) return note ? `${answer}\n\n_${note}_` : answer;
     } catch (e) {
