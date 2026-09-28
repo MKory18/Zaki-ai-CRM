@@ -117,7 +117,9 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
       )}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--sys-border)] bg-[var(--sys-card)] pb-[env(safe-area-inset-bottom)] md:hidden"
+        /* Its height is published as `--sys-mobile-nav-h` so anything
+           floating above it reads the same number — see system.css. */
+        className="fixed inset-x-0 bottom-0 z-30 min-h-[var(--sys-mobile-nav-h)] border-t border-[var(--sys-border)] bg-[var(--sys-card)] pb-[env(safe-area-inset-bottom)] md:hidden"
         aria-label="التنقل"
       >
         <ul className="flex">

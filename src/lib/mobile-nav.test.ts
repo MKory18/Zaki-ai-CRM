@@ -225,9 +225,18 @@ describe('nothing is parked outside the screen', () => {
 
   it('and the header can give way rather than push the page wide', () => {
     const src = read('src/components/shell/Header.tsx');
-    // The chip that carries the store name is the one that must shrink:
-    // it is the widest thing in the row and the only one with text to cut.
-    expect(src).toMatch(/className="flex min-w-0 shrink items-center[^"]*"/);
+    /**
+     * The chip that carries the store name is the one that must shrink: it
+     * is the widest thing in the row and the only one with text to cut.
+     *
+     * Asserted on the class string wherever it is written. It used to be
+     * inline on the div; the chip became a link (it is the store switch
+     * now) and its classes moved into a const, which failed this on a rule
+     * that had not changed.
+     */
+    expect(src, 'شريحة المتجر لا تستطيع الانكماش').toMatch(
+      /['"`]flex min-w-0 shrink items-center[^'"`]*['"`]/
+    );
     /**
      * AND THE CLUSTER OF ICONS WRAPS INSTEAD OF SHRINKING.
      *

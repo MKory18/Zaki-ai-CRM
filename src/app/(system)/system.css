@@ -303,6 +303,19 @@ html[lang="ar"] td {
  */
 :root {
   --shell-nav: 280px;
+
+  /*
+   * THE PHONE'S BOTTOM BAR, MEASURED ONCE.
+   *
+   * A 44px tap target, the bar's own vertical padding and its top border.
+   * Anything that must float ABOVE the bar reads this instead of carrying
+   * its own guess: the assistant's button carried `bottom-4` — sixteen
+   * pixels — and therefore sat on «المزيد», which is what was reported.
+   *
+   * The safe-area inset is NOT folded in: the bar pads itself with it, and
+   * a floater needs to add it separately.
+   */
+  --sys-mobile-nav-h: calc(44px + 0.75rem + 1px);
 }
 
 @media (min-width: 768px) {

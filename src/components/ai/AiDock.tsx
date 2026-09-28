@@ -129,7 +129,20 @@ export function AiDock() {
         onClick={() => setOpen(true)}
         title="المساعد الذكي"
         aria-label="افتح المساعد الذكي"
-        className={`fixed bottom-4 end-4 z-40 h-12 w-12 items-center justify-center rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] shadow-overlay transition hover:bg-[var(--sys-heading)] active:scale-95 ${
+        /**
+         * ABOVE THE PHONE'S NAV BAR, NOT ON TOP OF IT.
+         *
+         * `bottom-4` put a 48px button between 16px and 64px from the
+         * bottom. The mobile bar occupies 0–56px and sits at `z-30`, so
+         * this landed ON «المزيد» — the last item, on the same side the
+         * dock is anchored to. Reported as exactly that.
+         *
+         * The lift is the bar's own height plus the home indicator, the
+         * same expression the bar uses for its padding, so the two cannot
+         * drift apart. A desk has no bar, so it keeps `bottom-4`.
+         */
+        style={{ bottom: 'calc(var(--sys-mobile-nav-h) + env(safe-area-inset-bottom) + 0.75rem)' }}
+        className={`fixed end-4 z-40 h-12 w-12 items-center justify-center rounded-full bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] shadow-overlay transition hover:bg-[var(--sys-heading)] active:scale-95 md:!bottom-4 ${
           yielding ? 'hidden md:flex' : 'flex'
         }`}
       >
@@ -148,7 +161,9 @@ export function AiDock() {
       // A panel, not an overlay. It has a width and a height and sits in
       // the corner — the CRM behind it stays readable and clickable, which
       // is the whole difference between an assistant and an interruption.
-      className="fixed bottom-4 end-4 z-40 flex h-[min(32rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-overlay"
+      /* The open panel clears the bar for the same reason the button does. */
+      style={{ bottom: 'calc(var(--sys-mobile-nav-h) + env(safe-area-inset-bottom) + 0.75rem)' }}
+      className="fixed end-4 z-40 flex h-[min(32rem,calc(100vh-8rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] shadow-overlay md:!bottom-4 md:h-[min(32rem,calc(100vh-2rem))]"
     >
       <header className="flex items-center justify-between border-b border-[var(--sys-border)] bg-[var(--sys-heading)] px-3 py-2">
         <span className="flex items-center gap-2 text-xs font-bold text-[var(--sys-primary-foreground)]">

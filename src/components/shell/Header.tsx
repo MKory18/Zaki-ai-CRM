@@ -50,30 +50,49 @@ export function Header({
           whole document grows 95px wider than the screen — so every page
           scrolls sideways into grey. The name already truncates; it just
           had no room in which to. */}
-      <div className="flex min-w-0 shrink items-center gap-2 px-3 py-2 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)]">
-        <RiStore2Line className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
-        <div className="leading-tight min-w-0">
-          <p className="text-xs font-semibold text-[var(--sys-heading)] truncate max-w-[160px]">{context.storeName}</p>
-          <p className="text-xs text-[var(--sys-muted-foreground)] truncate">
-            {context.countryName} · {context.currencyCode}
-            {context.storePaused && <span className="text-[var(--sys-destructive)]"> · موقوف</span>}
-          </p>
-        </div>
-        {/* On a desk there is room to offer the switch beside the name.
-            On a phone there is not, and the same command is one tap away in
-            the palette — which is also where signing out now lives. Seven
-            controls in a 375px bar is how a bell gets missed and a logout
-            gets hit. */}
-        {context.canSwitch && (
+      {/*
+        THE CHIP IS THE SWITCH.
+
+        It used to be a box that showed the store, with a small swap icon
+        beside it that was `hidden md:block`. On a phone the box was the
+        only thing there — bordered, with a store icon and a name — and it
+        did nothing when tapped: «خانة تبديل المتاجر لا يمكن أن تضغط
+        عليها». A thing that looks like a control and is not one is worse
+        than no control.
+        This adds NO seventh control to a 375px bar: it makes the one
+        already sitting there work, and the separate icon goes — two
+        targets for one command was the duplication underneath the bug.
+      */}
+      {(() => {
+        const body = (
+          <>
+            <RiStore2Line className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
+            <div className="leading-tight min-w-0 text-start">
+              <p className="text-xs font-semibold text-[var(--sys-heading)] truncate max-w-[160px]">{context.storeName}</p>
+              <p className="text-xs text-[var(--sys-muted-foreground)] truncate">
+                {context.countryName} · {context.currencyCode}
+                {context.storePaused && <span className="text-[var(--sys-destructive)]"> · موقوف</span>}
+              </p>
+            </div>
+            {context.canSwitch && (
+              <RiRepeatLine className="w-4 h-4 shrink-0 text-[var(--sys-muted)]" aria-hidden />
+            )}
+          </>
+        );
+        const shell = 'flex min-w-0 shrink items-center gap-2 px-3 py-2 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)]';
+        return context.canSwitch ? (
           <Link
             href="/entry?change=1"
-            className="mr-1 hidden md:block p-1.5 rounded-md text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] hover:bg-[var(--sys-card)]"
             title="تبديل البلد أو المتجر"
+            aria-label={`المتجر الحالي ${context.storeName} — بدّل البلد أو المتجر`}
+            className={`${shell} min-h-11 md:min-h-0 hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]`}
           >
-            <RiRepeatLine className="w-4 h-4" />
+            {body}
           </Link>
-        )}
-      </div>
+        ) : (
+          <div className={shell}>{body}</div>
+        );
+      })()}
 
       {/* ONE TRIGGER, NOT A SECOND SEARCH.
           What stood here was an input that searched orders and nothing
