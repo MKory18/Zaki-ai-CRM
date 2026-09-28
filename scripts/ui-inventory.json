@@ -542,10 +542,10 @@
   "src/components/screens/CustomersScreen.tsx": {
     "buttons": 3,
     "inputs": 7,
-    "columns": 0,
-    "cards": 1,
+    "columns": 5,
+    "cards": 0,
     "modals": 2,
-    "icons": 5,
+    "icons": 4,
     "links": 0,
     "tabs": 0
   },

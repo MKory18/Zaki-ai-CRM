@@ -37,11 +37,21 @@ interface Info {
   sources: Source[];
 }
 
-export function AskAi() {
+export function AskAi({
+  /**
+   * Which boxes are ticked when the panel opens. The customers screen
+   * points it at its own data; the intelligence screen leaves it as it
+   * was. Every box stays switchable either way — a preselection is a
+   * sensible start, not a restriction.
+   */
+  preselect,
+}: {
+  preselect?: string[];
+} = {}) {
   const toast = useToast();
   const [info, setInfo] = useState<Info | null>(null);
   const [question, setQuestion] = useState('');
-  const [picked, setPicked] = useState<string[]>(['SALES', 'PRODUCTS', 'TEAM']);
+  const [picked, setPicked] = useState<string[]>(preselect ?? ['SALES', 'PRODUCTS', 'TEAM']);
   const [answer, setAnswer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);

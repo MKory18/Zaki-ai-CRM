@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
+import { db } from '@/lib/db';
+import { customerFacts } from '@/lib/customer-insights';
 import { aiChat, AiNotConfigured, aiSettings, providerInfo } from '@/lib/ai-provider';
 import { getCompanyAnalytics } from '@/lib/analytics';
 import { teamPerformance } from '@/lib/team-performance';
@@ -22,7 +24,7 @@ import { teamPerformance } from '@/lib/team-performance';
 const schema = z.object({
   question: z.string().trim().min(3).max(2000),
   /** Which slices to hand it. Fewer means a cheaper, sharper answer. */
-  sources: z.array(z.enum(['SALES', 'PRODUCTS', 'TEAM'])).min(1).max(3).optional(),
+  sources: z.array(z.enum(['SALES', 'PRODUCTS', 'TEAM', 'CUSTOMERS'])).min(1).max(4).optional(),
 });
 
 /** What the AI can be given, named so the screen can list it honestly. */
@@ -30,6 +32,14 @@ export const DATA_SOURCES = [
   { id: 'SALES', label: 'المبيعات والأرباح', detail: 'الإيراد والتكاليف والهوامش ونِسب التأكيد والتوصيل' },
   { id: 'PRODUCTS', label: 'المنتجات', detail: 'أداء كل منتج: طلبات، مؤكد، موصَّل، مرفوض، ربح' },
   { id: 'TEAM', label: 'أداء الفريق', detail: 'موظفو التأكيد: ما سحبوه وأكّدوه وأزمنتهم' },
+  {
+    id: 'CUSTOMERS',
+    label: 'العملاء',
+    // Said plainly on the screen, because «العملاء» could be read as the
+    // book itself. It is counts and rates — never a name, a phone or an
+    // address. Nothing worth asking a model needs to know who somebody is.
+    detail: 'أعداد ونِسب فقط: من طلب، من كرّر، من رفض، والمحافظات — بلا أسماء ولا أرقام',
+  },
 ] as const;
 
 export async function GET() {
@@ -58,7 +68,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: 'اكتب سؤالاً أولاً' }, { status: 400 });
     }
-    const want = new Set(parsed.data.sources ?? ['SALES', 'PRODUCTS', 'TEAM']);
+    const want = new Set(parsed.data.sources ?? ['SALES', 'PRODUCTS', 'TEAM', 'CUSTOMERS']);
 
     const analytics = await getCompanyAnalytics({ companyId, storeId }, { period: '30d' });
     const context: Record<string, unknown> = { currency: country.currencyCode, window: 'آخر 30 يوماً' };
@@ -84,6 +94,30 @@ export async function POST(req: Request) {
         end,
       });
       context.team = team.employees;
+    }
+    if (want.has('CUSTOMERS')) {
+      /**
+       * The same figures the customers screen shows above its list — one
+       * function, so the assistant cannot be told a different story from
+       * the one the seller is reading.
+       *
+       * Only the counters are selected. A name or a phone number has no
+       * place in a question about patterns, and a model is the last place
+       * to send one.
+       */
+      const rows = await db.customer.findMany({
+        where: { companyId, ...(storeId ? { storeId } : {}) },
+        select: {
+          city: true,
+          totalOrders: true,
+          deliveredOrders: true,
+          cancelledOrders: true,
+          totalPurchaseValue: true,
+          lastOrderDate: true,
+        },
+      });
+      const facts = customerFacts(rows, new Date());
+      context.customers = { ...facts, cities: facts.cities.slice(0, 10) };
     }
 
     const system = [

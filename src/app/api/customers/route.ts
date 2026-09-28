@@ -7,6 +7,7 @@ import { can, getPermissionScope, requirePermission } from '@/lib/authorization'
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit, redactCustomerForAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
+import { customerFacts } from '@/lib/customer-insights';
 
 /**
  * Full PII projection for users holding 'customers.view'.
@@ -105,7 +106,37 @@ export async function GET(req: Request) {
       take: 100,
     });
 
-    return NextResponse.json({ customers, limited: !canViewFull });
+    /**
+     * THE FIGURES ABOVE THE LIST DESCRIBE THE BOOK, NOT THE PAGE.
+     *
+     * The list is a hundred rows of whatever was searched for. A strip
+     * that counted those would change every time somebody typed, and
+     * «١٦٧ عميلاً طلبوا» would silently become «٣ من نتائج بحثك». So the
+     * counts are taken over everything this person may see, with the
+     * search dropped and only the counters selected.
+     *
+     * Withheld from the limited projection on purpose: an agent who may
+     * not see a customer's history may not see the history of all of them
+     * added up either.
+     */
+    const facts = canViewFull
+      ? customerFacts(
+          await db.customer.findMany({
+            where: { ...whereClause, OR: undefined },
+            select: {
+              city: true,
+              totalOrders: true,
+              deliveredOrders: true,
+              cancelledOrders: true,
+              totalPurchaseValue: true,
+              lastOrderDate: true,
+            },
+          }),
+          new Date()
+        )
+      : null;
+
+    return NextResponse.json({ customers, limited: !canViewFull, facts });
   } catch (error: any) {
     return apiErrorResponse(error);
   }

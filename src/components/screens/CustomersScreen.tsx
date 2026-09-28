@@ -12,15 +12,24 @@ import { format } from 'date-fns';
 import { RiAddCircleLine, RiMapPinLine, RiPhoneLine, RiSearchLine, RiUserLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { HealthChip } from '@/components/ui/HealthChip';
+import type { CustomerFacts } from '@/lib/customer-insights';
+import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { AskAi } from '@/components/growth/AskAi';
+import { userCan } from '@/lib/can';
 import { GRADE_RANK, scoreCustomer } from '@/lib/customer-score';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export function CustomersScreen() {
-  const { t } = useApp();
+  const { t, currentUser } = useApp();
+  // The assistant's own gate: a panel that opens onto a refusal is noise.
+  const canAskAi = userCan(currentUser, 'ai.use');
   // Governorates of the selected country, not a hard-coded country list.
   const { regions, countryName } = useRegions();
   const regionNames = regions.map((r) => r.name);
   const [customers, setCustomers] = useState<any[]>([]);
+  /** The whole book's figures, from the server — not a count of this page. */
+  const [facts, setFacts] = useState<CustomerFacts | null>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -49,6 +58,7 @@ export function CustomersScreen() {
       if (res.ok) {
         const data = await res.json();
         setCustomers(data.customers || []);
+        setFacts(data.facts ?? null);
       }
     } catch (e) {
       console.error(e);
@@ -112,7 +122,7 @@ export function CustomersScreen() {
       <div className="space-y-6">
         {/* Header */}
         <PageHeader title={t.customers}
-            description="ملف العملاء مع توحيد أرقام الهاتݡ كشف التكرار وسجل الطلبات الكامل"
+            description="سِجلّ العملاء: توحيدُ الأرقام، وكشفُ التكرار، وسجلُّ الطلبات — ومن يستلم ومن يرفض"
             actions={
               <><Button
             size="sm"
@@ -137,72 +147,140 @@ export function CustomersScreen() {
           />
         </div>
 
-        {/* Customer Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {graded.map(({ customer: c, score }) => (
-            <Card
-              key={c.id}
-              className="cursor-pointer hover:border-[var(--sys-primary)]/40 transition-colors"
-              onClick={() => setSelectedCustomer(c)}
-            >
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-[var(--sys-heading)] text-sm flex items-center space-x-1.5 rtl:space-x-reverse">
-                      <RiUserLine className="w-4 h-4 text-[var(--sys-destructive)]" />
-                      <span>{c.fullName}</span>
-                    </h3>
-                    {/*
-                      THE ONE THING AN AGENT NEEDS BEFORE RINGING.
-                      In a cash-on-delivery shop a customer who refused four
-                      parcels out of five and one who took eight of eight
-                      looked identical on every screen in this product.
-                    */}
-                    <span className="mt-1 block">
-                      <HealthChip health={{ tone: score.tone, label: score.label, why: score.why }} />
-                    </span>
-                    <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center space-x-1 mt-1">
-                      <RiMapPinLine className="w-4 h-4 text-[var(--sys-muted)]" />
-                      <span>
-                        {c.city}، {c.address}
-                      </span>
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-md">
-                    <Money value={c.totalPurchaseValue ?? 0} />
-                  </span>
-                </div>
+        {/*
+          WHAT THE BOOK SAYS, ABOVE WHAT THE PAGE SHOWS.
 
-                <div className="flex items-center space-x-2 text-xs pt-2 border-t border-[var(--sys-border)]">
+          Measured before this was written: 178 customers, 167 have
+          ordered, 111 have received something, ONE has refused and ONE has
+          ordered twice. A per-customer verdict needs three decided orders,
+          so 178 chips reading «لا يكفي» would have been 178 pieces of
+          noise. These five counts are real, and they are the ones a seller
+          asks about. The figures come from the server over the WHOLE book,
+          not over the hundred rows a search happened to return.
+        */}
+        {facts && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            <Fact label="عميل" value={facts.total} />
+            <Fact label="طلبوا" value={facts.ordered} hint={`${facts.total - facts.ordered} لم يطلبوا بعد`} />
+            <Fact label="كرّروا الطلب" value={facts.repeat} tone="success" />
+            <Fact label="رفضوا طرداً" value={facts.refused} tone={facts.refused > 0 ? 'danger' : undefined} />
+            <Fact
+              label="نسبة الاستلام"
+              value={facts.deliveryRate === null ? '—' : `${facts.deliveryRate}%`}
+              hint={facts.deliveryRate === null ? 'لا طلبَ محسوماً بعد' : 'من الطلبات المحسومة'}
+            />
+          </div>
+        )}
+
+        {/*
+          ONE LIST COMPONENT, LIKE EVERY OTHER SCREEN.
+
+          This was a three-column grid of bespoke cards: a fourth way of
+          drawing a list in a product that has one, with no phone layout of
+          its own and nothing shared with the rest. `Rows` gives the same
+          table on a desk, the same cards on a phone, and one place to fix
+          any of it.
+        */}
+        <div className="overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
+          <Rows
+            rows={graded}
+            keyOf={({ customer }) => customer.id}
+            onRowClick={({ customer }) => setSelectedCustomer(customer)}
+            alert={({ customer }) => (customer.cancelledOrders ?? 0) > 0}
+            columns={[
+              {
+                key: 'name',
+                label: 'العميل',
+                primary: true,
+                render: ({ customer: c, score }) => (
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold text-[var(--sys-heading)]">{c.fullName}</span>
+                    {/*
+                      The grade only where it means something. Below the
+                      floor it says «لا يكفي», which is true of almost
+                      every row here and worth saying once in the strip
+                      above, not 178 times down the page.
+                    */}
+                    {score.grade !== 'new' && (
+                      <span className="mt-0.5 block">
+                        <HealthChip health={{ tone: score.tone, label: score.label, why: score.why }} />
+                      </span>
+                    )}
+                  </span>
+                ),
+              },
+              {
+                key: 'phone',
+                label: 'الهاتف',
+                primary: true,
+                render: ({ customer: c }) => (
                   <a
                     href={`tel:${c.phone}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="tap-safe inline-flex items-center space-x-1 rtl:space-x-reverse font-mono font-bold text-[var(--sys-heading)] bg-[var(--sys-surface)] px-2 py-1 rounded-lg hover:bg-[var(--sys-border)]"
+                    className="tap-safe inline-flex items-center gap-1 font-mono text-[var(--sys-heading)] hover:text-[var(--sys-primary)]"
                   >
-                    <RiPhoneLine className="w-4 h-4 text-[var(--sys-destructive)]" />
+                    <RiPhoneLine className="h-4 w-4 text-[var(--sys-muted)]" />
                     <span dir="ltr">{c.rawPhone || c.phone}</span>
                   </a>
-                  {c.altPhone && <span className="text-[var(--sys-muted)]">بديل: {c.altPhone}</span>}
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--sys-border)] text-center text-xs">
-                  <div className="bg-[var(--sys-surface)] p-1.5 rounded-lg">
-                    <span className="text-[var(--sys-muted)] block">الكل</span>
-                    <span className="font-bold text-[var(--sys-heading)]">{c.totalOrders}</span>
-                  </div>
-                  <div className="bg-[var(--sys-success-soft)] p-1.5 rounded-lg">
-                    <span className="text-[var(--sys-success)] block">موصّل</span>
-                    <span className="font-bold text-[var(--sys-success)]">{c.deliveredOrders}</span>
-                  </div>
-                  <div className="bg-[var(--sys-destructive-soft)] p-1.5 rounded-lg">
-                    <span className="text-[var(--sys-destructive)] block">ملغى</span>
-                    <span className="font-bold text-[var(--sys-destructive)]">{c.cancelledOrders}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                ),
+              },
+              {
+                key: 'city',
+                label: 'المحافظة',
+                render: ({ customer: c }) => (
+                  <span className="inline-flex items-center gap-1 text-[var(--sys-muted-foreground)]">
+                    <RiMapPinLine className="h-4 w-4 text-[var(--sys-muted)]" />
+                    {c.city || '—'}
+                  </span>
+                ),
+              },
+              {
+                key: 'orders',
+                label: 'طلبات',
+                align: 'end',
+                render: ({ customer: c }) => (
+                  <span className="tabular-nums">
+                    <span className="font-semibold text-[var(--sys-heading)]">{c.totalOrders ?? 0}</span>
+                    <span className="text-[var(--sys-muted)]"> · </span>
+                    <span className="text-[var(--sys-success)]">{c.deliveredOrders ?? 0}</span>
+                    {(c.cancelledOrders ?? 0) > 0 && (
+                      <>
+                        <span className="text-[var(--sys-muted)]"> · </span>
+                        <span className="font-semibold text-[var(--sys-destructive)]">{c.cancelledOrders}</span>
+                      </>
+                    )}
+                  </span>
+                ),
+              },
+              {
+                key: 'value',
+                label: 'قيمة المشتريات',
+                align: 'end',
+                render: ({ customer: c }) => <Money value={c.totalPurchaseValue ?? 0} />,
+              },
+            ]}
+            empty={
+              <EmptyState
+                title={search ? 'لا عميلَ يطابق بحثك' : 'لا عملاءَ بعد'}
+                why={
+                  search
+                    ? 'جرّب رقماً أو جزءاً من اسم. الأرقامُ موحَّدة، فصيغةُ كتابتها لا تهمّ.'
+                    : 'يُنشأ العميلُ من أوّل طلبٍ له، أو أضِفه بنفسك من الزرّ أعلاه.'
+                }
+              />
+            }
+          />
         </div>
+
+        {/*
+          AND THE ASSISTANT, READING THESE CUSTOMERS.
+
+          The one assistant panel the intelligence screen uses, pointed at
+          the customers source — not a second chat box. What it is given is
+          the object above: counts, rates and governorates. No name, no
+          phone, no address ever reaches a model.
+        */}
+        {canAskAi && <AskAi preselect={['CUSTOMERS']} />}
       </div>
 
       {/* Customer Details & History Modal */}
@@ -339,5 +417,37 @@ export function CustomersScreen() {
         </form>
       </Modal>
     </>
+  );
+}
+
+/**
+ * One figure from the book, with the sentence that makes it readable.
+ * Small on purpose: five of these are a strip, not a dashboard.
+ */
+function Fact({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: number | string;
+  hint?: string;
+  tone?: 'success' | 'danger';
+}) {
+  const colour =
+    tone === 'success'
+      ? 'text-[var(--sys-success)]'
+      : tone === 'danger'
+        ? 'text-[var(--sys-destructive)]'
+        : 'text-[var(--sys-heading)]';
+  return (
+    <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+      <p className="text-xs text-[var(--sys-muted-foreground)]">{label}</p>
+      <p className={`mt-0.5 text-lg font-bold tabular-nums ${colour}`} dir="ltr">
+        {value}
+      </p>
+      {hint && <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted)]">{hint}</p>}
+    </div>
   );
 }
