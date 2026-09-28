@@ -185,6 +185,59 @@ export const BLOCK_CSS = `
   border: 1px solid var(--lp-border);
 }
 
+/* ── catalog: the shop's own pages and products ──
+   ONE COLUMN ON A PHONE, WHATEVER THE SELLER CHOSE. The --lp-cat-cols
+   variable is their choice for a wide screen; a phone is too narrow for
+   three cards, and honouring the number there would make every shop
+   unreadable on the device most shoppers hold. The media query at the
+   bottom of this sheet widens it.
+   (No backticks in this file: the whole stylesheet is one template
+   literal, and one would end it.) */
+.lp-catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.lp-catalog-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--lp-radius);
+  border: 1px solid var(--lp-border);
+  background: var(--lp-card, #fff);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.lp-catalog-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); }
+.lp-catalog-card img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
+.lp-catalog-noimg { display: block; width: 100%; aspect-ratio: 1 / 1; background: var(--lp-muted-bg, #f1f5f9); }
+.lp-catalog-body { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; }
+.lp-catalog-name { font-weight: 700; line-height: 1.4; }
+.lp-catalog-price { font-weight: 800; color: var(--lp-accent); }
+
+/* The three sizes are the CARD's height, not the grid's: the seller asks
+   for bigger pictures, not fewer of them. */
+.lp-catalog-sm .lp-catalog-card img,
+.lp-catalog-sm .lp-catalog-noimg { aspect-ratio: 4 / 3; }
+.lp-catalog-sm .lp-catalog-name { font-size: 0.82rem; }
+.lp-catalog-lg .lp-catalog-card img,
+.lp-catalog-lg .lp-catalog-noimg { aspect-ratio: 3 / 4; }
+.lp-catalog-lg .lp-catalog-name { font-size: 1.05rem; }
+
+.lp-catalog-cats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.lp-catalog-cat {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--lp-border);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: inherit;
+  /* A thumb needs somewhere to land; these sit in a row and are the one
+     control on this block a shopper presses. */
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+}
+.lp-catalog-cat.is-on { background: var(--lp-accent); border-color: var(--lp-accent); color: #fff; }
+
 /* ── slider ── */
 .lp-slider { position: relative; overflow: hidden; border-radius: var(--lp-radius); border: 1px solid var(--lp-border); touch-action: pan-y; user-select: none; }
 .lp-slider-track { display: flex; transition: transform 0.45s ease; }
@@ -459,6 +512,8 @@ export const BLOCK_CSS = `
   .lp-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .lp-reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lp-offers { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  /* The seller's own column count, now that there is room for it. */
+  .lp-catalog { grid-template-columns: repeat(var(--lp-cat-cols, 3), minmax(0, 1fr)); }
 }
 /* ─────────────────────────────────────────────────────
    WHAT A BLOCK'S OWN LOOK OVERRIDES.

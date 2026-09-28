@@ -892,6 +892,93 @@ function SectionFields({
         </div>
       );
 
+    /**
+     * THE ARRANGEMENT, AND NOTHING THAT IS ALREADY KNOWN.
+     *
+     * No list of pages to tick: what is in the shop is what the shop has,
+     * read at render time. A list ticked here would be a second place
+     * deciding it, wrong the first time a page was unpublished.
+     *
+     * Every control is the real thing — a select, a radio row, a
+     * checkbox — because a number typed into a box is a number that can
+     * say 97 columns.
+     */
+    case 'catalog':
+      return (
+        <div className="space-y-2.5">
+          <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} placeholder="اختياري" />
+
+          <div className="space-y-1">
+            <span className="block text-[11px] font-semibold text-[#364152]">ماذا يُعرض</span>
+            <div className="flex gap-1 rounded-md bg-[#f1f5f9] p-0.5">
+              {([
+                ['pages', 'صفحات الهبوط'],
+                ['products', 'المنتجات'],
+                ['both', 'كلاهما'],
+              ] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => patch({ source: v })}
+                  className={`flex-1 rounded px-2 py-1.5 text-[11px] font-bold transition ${
+                    s.source === v ? 'bg-white text-[#0f172a] shadow-sm' : 'text-[#64748b] hover:text-[#0f172a]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#364152]">
+            أعمدة على الشاشة الكبيرة
+            <select
+              value={s.columns}
+              onChange={(e) => patch({ columns: Number(e.target.value) })}
+              className="h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+            >
+              {[2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          {/* The phone always shows two. Saying so stops the seller
+              choosing four and calling the result a bug. */}
+          <p className="text-[10px] leading-relaxed text-[#94a3b8]">على الهاتف عمودان دائماً — ثلاثة أو أربعة لا تُقرأ على شاشة صغيرة.</p>
+
+          <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#364152]">
+            حجم البطاقة
+            <select
+              value={s.cardSize}
+              onChange={(e) => patch({ cardSize: e.target.value as 'sm' | 'md' | 'lg' })}
+              className="h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+            >
+              <option value="sm">صغير</option>
+              <option value="md">متوسط</option>
+              <option value="lg">كبير</option>
+            </select>
+          </label>
+
+          <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#364152]">
+            أكثر عدد يُعرض
+            <select
+              value={s.limit}
+              onChange={(e) => patch({ limit: Number(e.target.value) })}
+              className="h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+            >
+              <option value={0}>الكل</option>
+              {[4, 6, 8, 12, 16, 24].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+
+          <Check label="أظهر السعر" checked={s.showPrice} onChange={(v) => patch({ showPrice: v })} />
+          <Check label="أظهر شريط التصنيفات" checked={s.showCategories} onChange={(v) => patch({ showCategories: v })} />
+          {/* The chips are drawn only where there is something to filter;
+              a shop whose products carry no category shows none. */}
+          <p className="text-[10px] leading-relaxed text-[#94a3b8]">
+            شريط التصنيفات يظهر فقط إن كانت لمنتجات هذا المتجر تصنيفات.
+          </p>
+        </div>
+      );
+
     case 'slider':
       return (
         <div className="space-y-2.5">

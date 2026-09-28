@@ -13,7 +13,7 @@ import { formatDate } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
-import { RiAddCircleLine, RiCursorLine, RiDeleteBinLine, RiExternalLinkLine, RiEyeLine, RiEyeOffLine, RiFileCopy2Line, RiFileCopyLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
+import { RiAddCircleLine, RiCursorLine, RiDeleteBinLine, RiExternalLinkLine, RiEyeLine, RiEyeOffLine, RiFileCopy2Line, RiFileCopyLine, RiLoader4Line, RiPencilLine, RiStoreLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { routeLabel } from '@/lib/route-registry';
 import { SkeletonRows } from '@/components/ui/Skeleton';
@@ -126,6 +126,31 @@ export function LandingPagesScreen() {
     } finally { setBusyId(null); }
   };
 
+  /**
+   * SHOWN IN THE SHOP, OR REACHABLE BY ITS LINK ALONE.
+   *
+   * Belonging to a store is not the same as being in its window: a
+   * campaign page is built for one audience and one advert, and listing
+   * every page a store owns would put the half-finished ones in front of
+   * every shopper.
+   *
+   * Publishing is still the act — an unpublished page is never shown in
+   * the shop whatever this says — so the two toggles mean different things
+   * and both are on the row.
+   */
+  const toggleInStore = async (lp: any) => {
+    setBusyId(lp.id);
+    try {
+      await crmApi(`/api/landing-pages/${lp.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ showInStore: !lp.showInStore }),
+      });
+      await load();
+    } catch (e: any) {
+      void tell({ title: 'تعذر تغيير ظهورها في المتجر', body: e.message, tone: 'danger' });
+    } finally { setBusyId(null); }
+  };
+
   const createLandingPage = async () => {
     setFormError(null);
     setSaving(true);
@@ -206,7 +231,13 @@ export function LandingPagesScreen() {
                       render: (lp: any) => (
                   <><Badge variant={lp.isPublished ? 'success' : 'default'}>
                             {lp.isPublished ? 'منشورة' : 'مسودة'}
-                          </Badge></>
+                          </Badge>
+                          {/* Said where the state is read, not only where it
+                              is toggled: «in the shop» is a fact about this
+                              page a seller scans the column for. */}
+                          {lp.showInStore && (
+                            <Badge variant="info">في المتجر</Badge>
+                          )}</>
                 ) },
                     { key: 'c3', label: "الرابط",
                       render: (lp: any) => (
@@ -229,6 +260,17 @@ export function LandingPagesScreen() {
                               onClick={() => togglePublish(lp)}
                               className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)] disabled:opacity-40">
                               {lp.isPublished ? <RiEyeOffLine className="w-4 h-4" /> : <RiEyeLine className="w-4 h-4" />}
+                            </button>
+                            <button
+                              title={lp.showInStore ? 'أخفِها من المتجر' : 'أظهِرها في المتجر'}
+                              aria-label={lp.showInStore ? 'أخفِها من المتجر' : 'أظهِرها في المتجر'}
+                              disabled={busyId === lp.id}
+                              onClick={() => toggleInStore(lp)}
+                              className={`min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] disabled:opacity-40 ${
+                                lp.showInStore ? 'text-[var(--sys-primary)]' : 'text-[var(--sys-foreground)]'
+                              }`}
+                            >
+                              <RiStoreLine className="w-4 h-4" />
                             </button>
                             <button title="نسخ الرابط" onClick={() => copyUrl(lp)}
                               className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1.5 rounded-lg hover:bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]">

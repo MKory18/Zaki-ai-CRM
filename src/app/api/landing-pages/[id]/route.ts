@@ -63,6 +63,14 @@ export async function PATCH(req: Request, ctx: Ctx) {
       slug: z.string().trim().toLowerCase().max(60).optional(),
       productId: z.string().min(10).max(64).optional().nullable(),
       isPublished: z.boolean().optional(),
+      /**
+       * Listed in its store's own front, or reachable by its link alone.
+       *
+       * Separate from `isPublished` on purpose: publishing is what makes a
+       * page exist for the public, and a campaign page is published and
+       * deliberately NOT in the shop window. The storefront demands both.
+       */
+      showInStore: z.boolean().optional(),
       // '' clears the domain; the page goes back to /lp/<slug> only.
       domain: z.string().trim().max(253).optional().nullable(),
     });
@@ -135,6 +143,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       data.productId = parsed.data.productId;
     }
     if (parsed.data.isPublished !== undefined) data.isPublished = parsed.data.isPublished;
+    if (parsed.data.showInStore !== undefined) data.showInStore = parsed.data.showInStore;
 
     // ── Custom domain ──
     if (parsed.data.domain !== undefined) {

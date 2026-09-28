@@ -61,6 +61,39 @@ export interface BlockContext {
    * screen is worse than drawing nothing.
    */
   placeholders?: boolean;
+  /**
+   * WHAT THE SHOP HAS, FOR THE `catalog` BLOCK.
+   *
+   * Filled by the server at render time, never stored in the block. A list
+   * of page ids copied into a section would be a second place deciding
+   * what is in the shop, and it would be wrong the first time a page was
+   * unpublished or a product paused.
+   *
+   * Both kinds always, whatever the block's `source` says: the filtering
+   * happens in the renderer, so the builder's preview answers the «pages ·
+   * products · both» toggle instantly instead of waiting for a refetch.
+   */
+  catalog?: {
+    items: CatalogItem[];
+    /** The categories THIS store's products actually carry. Derived. */
+    categories: { id: string; name: string }[];
+    /** The one the shopper picked, from the query string. */
+    activeCategory?: string | null;
+    /** Where a category chip points. The builder passes none: nothing to browse. */
+    categoryHref?: ((id: string | null) => string) | null;
+  } | null;
+}
+
+export interface CatalogItem {
+  id: string;
+  /** A landing page the seller built, or a product in the shop. */
+  kind: 'page' | 'product';
+  name: string;
+  image: string | null;
+  href: string;
+  /** Null when there is no one price to show. */
+  price: number | null;
+  categoryId: string | null;
 }
 
 /**
@@ -287,6 +320,94 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
               // allow-listed, and a blocked hero is worse than an unoptimised one.
               // eslint-disable-next-line @next/next/no-img-element
               <img key={i} src={src} alt="" loading="lazy" />
+            ))}
+          </div>
+        </Section>
+      );
+    }
+
+    /**
+     * THE SHOP, LAID OUT.
+     *
+     * The block carries the arrangement; `ctx.catalog` carries the things.
+     * A store with four landing pages had no way to show them at all — its
+     * address rendered one of them, or a plain grid of products, and the
+     * pages the seller had actually built were reachable only by their own
+     * links.
+     *
+     * Pages before products when both are asked for: a landing page is the
+     * one the seller built on purpose, and it sells better than a card.
+     */
+    case 'catalog': {
+      const cat = ctx.catalog;
+      const all = cat?.items ?? [];
+      const wanted = s.source === 'both' ? all : all.filter((i) => i.kind === (s.source === 'pages' ? 'page' : 'product'));
+      const narrowed = cat?.activeCategory
+        ? wanted.filter((i) => i.categoryId === cat.activeCategory)
+        : wanted;
+      const items = s.limit > 0 ? narrowed.slice(0, s.limit) : narrowed;
+
+      if (items.length === 0) {
+        // In the builder, an empty shop must still show the seller what
+        // this block will look like — otherwise it reads as broken and
+        // they delete it. On a customer's screen it draws nothing.
+        if (!ctx.placeholders) return null;
+        return (
+          <Section title={s.title}>
+            <div className={`lp-catalog lp-catalog-${s.cardSize}`} style={{ '--lp-cat-cols': s.columns } as React.CSSProperties}>
+              {[0, 1, 2].map((i) => (
+                <ImageFrame key={i} label="منتج" ratio={1} />
+              ))}
+            </div>
+          </Section>
+        );
+      }
+
+      // Only when the shop's products actually carry categories. A row of
+      // chips over a shop that has none is a control that filters nothing.
+      const chips = s.showCategories && (cat?.categories.length ?? 0) > 0 ? cat!.categories : [];
+
+      return (
+        <Section title={s.title}>
+          {chips.length > 0 && (
+            <div className="lp-catalog-cats">
+              {[{ id: '', name: 'الكل' }, ...chips].map((c) => {
+                const on = (cat!.activeCategory ?? '') === c.id;
+                const href = cat!.categoryHref ? cat!.categoryHref(c.id || null) : null;
+                const cls = `lp-catalog-cat${on ? ' is-on' : ''}`;
+                // A link, not a button: the page is rendered on the server,
+                // and a shopper with no JavaScript still gets to browse.
+                return href ? (
+                  <a key={c.id} href={href} className={cls} aria-current={on ? 'true' : undefined}>
+                    {c.name}
+                  </a>
+                ) : (
+                  <span key={c.id} className={cls}>{c.name}</span>
+                );
+              })}
+            </div>
+          )}
+          <div className={`lp-catalog lp-catalog-${s.cardSize}`} style={{ '--lp-cat-cols': s.columns } as React.CSSProperties}>
+            {items.map((it) => (
+              <a key={`${it.kind}-${it.id}`} href={it.href} className="lp-catalog-card">
+                {it.image ? (
+                  // The seller's own uploads; next/image would need every
+                  // host allow-listed, and a blocked image is worse than an
+                  // unoptimised one.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={it.image} alt="" loading="lazy" />
+                ) : (
+                  <span className="lp-catalog-noimg" aria-hidden />
+                )}
+                <span className="lp-catalog-body">
+                  <span className="lp-catalog-name">{it.name}</span>
+                  {s.showPrice && it.price !== null && (
+                    <span className="lp-catalog-price" dir="ltr">
+                      {it.price.toLocaleString('en-US', { maximumFractionDigits: 2 })} {ctx.currency}
+                    </span>
+                  )}
+                </span>
+              </a>
             ))}
           </div>
         </Section>

@@ -720,12 +720,12 @@
     "tabs": 0
   },
   "src/components/screens/LandingPagesScreen.tsx": {
-    "buttons": 10,
+    "buttons": 11,
     "inputs": 3,
     "columns": 6,
     "cards": 1,
     "modals": 2,
-    "icons": 13,
+    "icons": 14,
     "links": 0,
     "tabs": 0
   },
@@ -860,12 +860,12 @@
     "tabs": 0
   },
   "src/components/screens/StoreDesignScreen.tsx": {
-    "buttons": 5,
+    "buttons": 3,
     "inputs": 0,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 7,
+    "icons": 6,
     "links": 0,
     "tabs": 0
   },
@@ -880,7 +880,7 @@
     "tabs": 0
   },
   "src/components/screens/StorefrontsScreen.tsx": {
-    "buttons": 7,
+    "buttons": 8,
     "inputs": 1,
     "columns": 0,
     "cards": 1,

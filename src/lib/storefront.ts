@@ -5,6 +5,7 @@ import { DEFAULT_STORE_THEME, parseStoreTheme, type StoreTheme } from './store-t
 import { parseMenuItems, visibleItems, type MenuItem, type MenuKey } from './store-menus';
 import { directionOf } from './store-languages';
 import { publicizeMedia } from './public-media';
+import type { CatalogItem } from '@/components/landing/blocks/PageBlocks';
 
 /**
  * A STORE, SEEN FROM THE OUTSIDE.
@@ -258,3 +259,89 @@ export const storefrontProduct = cache(async function storefrontProduct(
     gallery,
   };
 });
+
+/**
+ * WHAT A `catalog` BLOCK LAYS OUT: this store's pages and products.
+ *
+ * Read at render time, never stored in the block. A list of ids ticked in
+ * the builder would be a second place deciding what is in the shop, and it
+ * would be wrong the first time a page was unpublished or a product paused.
+ *
+ * BOTH KINDS ALWAYS, whatever the block's `source` says. The filtering is
+ * the renderer's, so the builder's preview answers the «pages · products ·
+ * both» toggle without a round trip — and one query serves a page with two
+ * catalogue blocks set differently.
+ *
+ * A PAGE IS SHOWN ONLY IF IT SAYS SO. `showInStore` is off by default and
+ * the page's own screen turns it on: a campaign page is meant to be
+ * reachable by its link and nowhere else, and listing every page a store
+ * owns would put the half-finished ones in the shop window. Unpublished
+ * pages never appear whatever the flag says — the flag is intent, and
+ * publishing is the act.
+ */
+export async function storefrontCatalog(
+  companyId: string,
+  storeId: string,
+  storeSlug: string
+): Promise<{ items: CatalogItem[]; categories: { id: string; name: string }[] }> {
+  const [pages, products] = await Promise.all([
+    db.landingPage.findMany({
+      where: { companyId, storeId, showInStore: true, isPublished: true },
+      orderBy: { createdAt: 'desc' },
+      take: 60,
+      select: {
+        id: true, name: true, slug: true,
+        product: { select: { image: true, basePrice: true, categoryId: true } },
+      },
+    }),
+    storefrontProducts(companyId, storeId),
+  ]);
+
+  const productRows = await db.product.findMany({
+    where: { companyId, storeId, status: 'ACTIVE', categoryId: { not: null } },
+    select: { id: true, categoryId: true, category: { select: { id: true, name: true } } },
+  });
+  const catOf = new Map(productRows.map((p) => [p.id, p.categoryId]));
+
+  /**
+   * THE CATEGORIES ARE THIS STORE'S, DERIVED.
+   *
+   * Not a per-store category table. `Category` is already company-wide and
+   * already hangs off the product; a second, store-scoped one would be two
+   * tables answering «what kind of thing is this» and they would disagree.
+   * A store shows the categories ITS OWN products carry — which is exactly
+   * «كل متجر وتصنيفاته» without a fork.
+   */
+  const seen = new Map<string, string>();
+  for (const p of productRows) if (p.category) seen.set(p.category.id, p.category.name);
+
+  const items: CatalogItem[] = [
+    // Pages first: the one the seller built on purpose.
+    ...pages.map((p) => ({
+      id: p.id,
+      kind: 'page' as const,
+      name: p.name,
+      // A page has no picture of its own; the product it sells does.
+      image: p.product?.image ?? null,
+      // The public landing page route. A store page links to the page the
+      // seller built, not to a product card standing in for it.
+      href: `/lp/${p.slug}`,
+      price: p.product?.basePrice ?? null,
+      categoryId: p.product?.categoryId ?? null,
+    })),
+    ...products.map((p) => ({
+      id: p.id,
+      kind: 'product' as const,
+      name: p.name,
+      image: p.image,
+      href: `/s/${storeSlug}/p/${p.sku}`,
+      price: p.fromPrice,
+      categoryId: catOf.get(p.id) ?? null,
+    })),
+  ];
+
+  return {
+    items: publicizeMedia(items),
+    categories: [...seen].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'ar')),
+  };
+}

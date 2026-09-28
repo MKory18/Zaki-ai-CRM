@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { LandingPageView } from '@/components/landing/LandingPageView';
 import { carryQuery } from '@/lib/query-string';
 import Link from 'next/link';
-import { getStorefront, storefrontProducts } from '@/lib/storefront';
+import { getStorefront, storefrontCatalog, storefrontProducts } from '@/lib/storefront';
 import { parseSections } from '@/lib/landing-sections';
 import { paletteFor } from '@/lib/landing-theme';
 import { publicizeMedia } from '@/lib/public-media';
@@ -46,7 +46,15 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
   const store = await getStorefront(slug);
   if (!store) notFound();
 
-  if (store.type === 'SINGLE_PRODUCT') {
+  // ── A home page the seller built and PUBLISHED wins ──
+  //
+  // Read before the single-product branch below, because a seller who has
+  // published a shop home has said what they want their address to open:
+  // the shop, with its pages inside it. Until they publish one, nothing
+  // changes — the front page still renders here exactly as it did.
+  const home = parseSections(store.homeLive).filter((s) => s.enabled);
+
+  if (store.type === 'SINGLE_PRODUCT' && home.length === 0) {
     if (store.landingPageId) {
       const { c } = await searchParams;
       return (
@@ -71,8 +79,26 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
   // SAME renderer the builder previews with, so what they approved is what
   // ships. A shop that has published nothing keeps the product list it
   // always had.
-  const home = parseSections(store.homeLive).filter((s) => s.enabled);
   if (home.length > 0) {
+    /**
+     * THE CATALOGUE'S CONTENTS, READ ONLY IF SOMETHING ASKS FOR THEM.
+     *
+     * A home page of a hero and a footer must not pay for two queries it
+     * never renders, so this is fetched when a `catalog` block is actually
+     * on the page.
+     */
+    const wantsCatalog = home.some((b) => b.type === 'catalog');
+    const catalogue = wantsCatalog
+      ? await storefrontCatalog(store.companyId, store.id, store.slug)
+      : null;
+
+    // The shopper's chosen category, from the query string. A link and a
+    // server render rather than client state: this page is a server
+    // component, and a shopper with no JavaScript still gets to browse.
+    const { cat } = await searchParams;
+    const activeCategory =
+      typeof cat === 'string' && catalogue?.categories.some((c) => c.id === cat) ? cat : null;
+
     return (
       <StorefrontShell store={store}>
         <LandingTrackingPixels page="PUBLIC" pixels={pixelsForHome} viewContent={null} />
@@ -94,6 +120,16 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
             // form that cannot say what it is buying.
             form: null,
             store: { name: store.name, logo: store.logo, phone: store.supportPhone },
+            catalog: catalogue
+              ? {
+                  ...catalogue,
+                  activeCategory,
+                  // Back to the same address with one parameter changed:
+                  // nothing else about where the shopper is gets lost.
+                  categoryHref: (id: string | null) =>
+                    id ? `/s/${store.slug}?cat=${encodeURIComponent(id)}` : `/s/${store.slug}`,
+                }
+              : null,
           }}
         />
       </StorefrontShell>

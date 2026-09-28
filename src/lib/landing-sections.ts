@@ -333,9 +333,61 @@ const sticky = z.object({
   showPrice: z.boolean().default(true),
 });
 
+/**
+ * THE SHOP'S OWN THINGS, LAID OUT IN IT.
+ *
+ * Every other block carries its content: the seller types the headline,
+ * uploads the photos, writes the questions. This one carries none — it
+ * carries the ARRANGEMENT, and what it arranges is what the store already
+ * has: its landing pages and its products.
+ *
+ * That is the whole reason it exists. A store with four landing pages had
+ * no way to show them. Its address rendered one of them, or a plain grid
+ * of products, and the pages the seller had built — the ones with the
+ * offers and the photos and the reviews on them — were reachable only by
+ * their own links.
+ *
+ * WHAT IT SHOWS is never typed here either: `source` names a set and the
+ * server fills it at render time, from THIS store. A list of page ids
+ * copied into a block would be a second place that decides what is in the
+ * shop, and it would be wrong the first time a page was unpublished.
+ *
+ * The size, the colours and the background are not this block's invention:
+ * `...base` brings `look` and `background`, which every block has, and
+ * `columns` and `cardSize` are the two this one adds because a catalogue
+ * is the one block whose shape the seller actually argues with.
+ */
+const catalog = z.object({
+  ...base,
+  type: z.literal('catalog'),
+  title: richTextSchema(120).default('تسوّق من المتجر'),
+  /**
+   * PAGES, PRODUCTS, OR BOTH.
+   *
+   * A landing page sells better than a product card — it is the one the
+   * seller built on purpose — so pages come first when both are shown.
+   */
+  source: z.enum(['pages', 'products', 'both']).default('pages'),
+  /** Across, on a wide screen. A phone decides for itself; see the CSS. */
+  columns: z.number().int().min(2).max(4).default(3),
+  cardSize: z.enum(['sm', 'md', 'lg']).default('md'),
+  /** Show the price under each card, where there is one to show. */
+  showPrice: z.boolean().default(true),
+  /**
+   * Let the shopper narrow by category.
+   *
+   * The categories are the ones THIS store's products actually carry —
+   * derived, never a list stored here. A shop whose products have no
+   * category shows no filter rather than an empty row of chips.
+   */
+  showCategories: z.boolean().default(true),
+  /** Nothing, or at most this many. Zero means all of them. */
+  limit: z.number().int().min(0).max(60).default(0),
+});
+
 export const landingSectionSchema = z.discriminatedUnion('type', [
   announcement, hero, slider, benefits, gallery, text, offers,
-  reviews, faq, urgency, form, trust, footer, sticky, thankyou,
+  reviews, faq, urgency, form, trust, footer, sticky, thankyou, catalog,
 ]);
 
 export type LandingSection = z.infer<typeof landingSectionSchema>;
@@ -367,6 +419,7 @@ export const SECTION_LABEL: Record<SectionType, string> = {
   footer: 'التذييل',
   sticky: 'زر عائم',
   thankyou: 'صفحة الشكر',
+  catalog: 'معروضات المتجر',
 };
 
 export const SECTION_HINT: Record<SectionType, string> = {
@@ -385,6 +438,7 @@ export const SECTION_HINT: Record<SectionType, string> = {
   footer: 'شعار وروابط صفحات وحقوق',
   sticky: 'يلاحق الزائر وينقله لتعبئة البيانات',
   thankyou: 'ما يقرؤه الزبون بعد إرسال الطلب',
+  catalog: 'صفحات الهبوط ومنتجات هذا المتجر — بالحجم والترتيب اللذين تختارهما',
 };
 
 /** Blocks that may appear only once; the editor hides them when present. */
@@ -441,6 +495,17 @@ export function newSection(type: SectionType): LandingSection {
       ],
     },
     gallery: { title: 'صور المنتج', images: [] },
+    // Pages first, because a landing page is the one the seller built on
+    // purpose — it sells better than a bare product card.
+    catalog: {
+      title: 'تسوّق من المتجر',
+      source: 'pages',
+      columns: 3,
+      cardSize: 'md',
+      showPrice: true,
+      showCategories: true,
+      limit: 0,
+    },
     text: { title: '', body: '' },
     offers: { title: 'اختر العرض المناسب' },
     reviews: { title: 'آراء المشترين', items: [{ name: '', text: '', stars: 5 }] },

@@ -9,7 +9,6 @@ import type { LandingSection } from '@/lib/landing-sections';
 import type { StoreTheme } from '@/lib/store-theme';
 import { RiCheckLine, RiExternalLinkLine, RiLoader4Line, RiRocketLine, RiSaveLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { routeLabel } from '@/lib/route-registry';
 
 /**
  * THE SHOP'S HOME PAGE.
@@ -131,37 +130,6 @@ export function StoreDesignScreen() {
     );
   }
 
-  // A Single Product store's front IS its landing page. Offering a second
-  // builder for a home page it does not have would be the duplication the
-  // whole section exists to prevent.
-  if (data.store.singleProduct) {
-    return (
-      <div className="space-y-4 p-4 sm:p-6" dir="rtl">
-        <PageHeader title={routeLabel('/store/design')} />
-        <div className="rounded-lg border border-[var(--sys-border)] bg-white p-4">
-          <p className="text-sm font-bold text-[var(--sys-heading)]">واجهة هذا المتجر هي صفحة الهبوط المرتبطة به</p>
-          <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-            متجر Single Product لا يملك صفحة رئيسية منفصلة: عنوانه يعرض صفحة الهبوط التي اخترتَها،
-            بكل أقسامها وعروضها وبكسلاتها. تُصمَّم من مكانها — لا نبني لك بانية ثانية لنفس الصفحة.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {data.store.landingPageId ? (
-              <a href={`/store/landing-pages/${data.store.landingPageId}/editor`}>
-                <Button size="sm">
-                  <RiExternalLinkLine className="icon-mirror h-4 w-4" /> صمّم صفحة الواجهة
-                </Button>
-              </a>
-            ) : (
-              <a href="/store/single-product">
-                <Button size="sm">اختر صفحة الواجهة أولاً</Button>
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full flex-col" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sys-border)] bg-white px-4 py-3">
@@ -170,7 +138,13 @@ export function StoreDesignScreen() {
           description={
             (data.publishedAt
               ? `آخر نشر: ${new Date(data.publishedAt).toLocaleString('ar-u-nu-latn')}`
-              : 'لم تُنشر بعد — متجرك يعرض قائمة المنتجات العادية') +
+              : data.store.singleProduct && data.store.landingPageId
+                ? // It has a front page, and that page is what its address
+                  // opens today. Saying so here is the difference between
+                  // «nothing happened» and «I have just replaced my shop
+                  // window» — and publishing is the only press that does it.
+                  'لم تُنشر بعد — عنوان متجرك يعرض صفحة الواجهة المختارة. النشر يجعله يعرض هذه الصفحة بدلاً منها.'
+                : 'لم تُنشر بعد — متجرك يعرض قائمة المنتجات العادية') +
             (data.hasUnpublished ? ' · فيها تغييرات غير منشورة' : '')
           }
         />

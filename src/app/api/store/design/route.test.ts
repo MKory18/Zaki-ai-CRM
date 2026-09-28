@@ -119,28 +119,53 @@ describe('what the screen is told', () => {
   });
 });
 
-describe('a Single Product store has no home page to build', () => {
+describe('a Single Product store builds one too', () => {
   const single = { ...STORE, type: 'SINGLE_PRODUCT', landingPageId: 'lp1' };
 
-  it('is told where its front page actually is', async () => {
+  /**
+   * THE RULING CHANGED, AND THESE CHANGED WITH IT.
+   *
+   * Both writes used to refuse this store — «واجهته صفحة الهبوط المرتبطة
+   * به» — and these two tests held that refusal down. The reasoning was
+   * sound while a Single Product store was an address in front of ONE
+   * page. It stopped being sound when a seller had four pages in one store
+   * and wanted a shop around them, with the shop's own banner and logo.
+   *
+   * Measured when it changed: the only live store on this installation is
+   * Single Product, has four landing pages, and had never picked a front
+   * page — so the refusal left it with no design screen of any kind.
+   *
+   * What still has to be true is that NOTHING WAS TAKEN AWAY: the screen
+   * is still told where the front page is, and publishing is still the
+   * only act that changes what a shopper opens.
+   */
+  it('is still told where its front page is, so the screen can say what publishing replaces', async () => {
     db.store.findFirst.mockResolvedValue(single);
     const body = await (await GET()).json();
     expect(body.store.singleProduct).toBe(true);
     expect(body.store.landingPageId).toBe('lp1');
   });
 
-  it('cannot save one — the refusal is at the server, not a hidden button', async () => {
+  it('saves a draft like any other store', async () => {
     db.store.findFirst.mockResolvedValue(single);
     const res = await put([HERO]);
-    expect(res.status).toBe(409);
-    expect((await res.json()).code).toBe('SINGLE_PRODUCT');
-    expect(db.store.update).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(Object.keys(db.store.update.mock.calls[0][0].data)).toEqual(['homeDraft']);
   });
 
-  it('cannot publish one either', async () => {
-    db.store.findFirst.mockResolvedValue(single);
-    expect((await POST()).status).toBe(409);
-    expect(db.store.update).not.toHaveBeenCalled();
+  it('and publishes it like any other store', async () => {
+    db.store.findFirst.mockResolvedValue({ ...single, homeDraft: JSON.stringify([HERO]) });
+    await POST();
+    expect(JSON.parse(db.store.update.mock.calls[0][0].data.homeLive)).toHaveLength(1);
+  });
+
+  /** Saving still reaches nobody, which is the rule this file exists for. */
+  it('and a save on it still touches only the draft', async () => {
+    db.store.findFirst.mockResolvedValue({ ...single, homeLive: JSON.stringify([HERO]) });
+    await put([]);
+    const data = db.store.update.mock.calls[0][0].data;
+    expect(data.homeLive).toBeUndefined();
+    expect(data.homePublishedAt).toBeUndefined();
   });
 });
 

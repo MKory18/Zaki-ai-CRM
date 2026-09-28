@@ -301,18 +301,42 @@ function Card({
             ))}
           </select>
         )}
-        {shop.frontPage && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => onOpen(`/store/landing-pages/${shop.frontPage!.id}/editor`)}
-              className="tap-safe inline-flex items-center gap-1 rounded-lg bg-[var(--sys-primary)] px-2.5 py-1 text-xs font-bold text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/90"
-            >
-              <RiBrushLine className="h-4 w-4" /> صمّم الواجهة
-            </button>
-            {!shop.frontPage.isPublished && <span className="text-xs font-semibold text-[var(--sys-warning)]">الصفحة غير منشورة</span>}
-          </div>
-        )}
+        {/*
+          «صمّم الواجهة» USED TO OPEN A LANDING PAGE'S EDITOR.
+
+          That is what it was reported as: «برجع ع صفحات الهبوط». The
+          button was also inside `shop.frontPage &&`, so on a store with no
+          front page picked — which is every store here — it was not drawn
+          at all. Both halves of «غير فعال», in four lines.
+
+          It opens the STORE's designer now: the banner, the header and the
+          blocks belong to the shop, and the shop is what a seller with
+          four pages in it is trying to build. Editing the front page
+          itself is still one press away, named for what it is.
+        */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onOpen('/store/design')}
+            className="tap-safe inline-flex items-center gap-1 rounded-lg bg-[var(--sys-primary)] px-2.5 py-1 text-xs font-bold text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/90"
+          >
+            <RiBrushLine className="h-4 w-4" /> صمّم واجهة المتجر
+          </button>
+          {shop.frontPage && (
+            <>
+              <button
+                type="button"
+                onClick={() => onOpen(`/store/landing-pages/${shop.frontPage!.id}/editor`)}
+                className="tap-safe inline-flex items-center gap-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+              >
+                حرّر صفحة الواجهة
+              </button>
+              {!shop.frontPage.isPublished && (
+                <span className="text-xs font-semibold text-[var(--sys-warning)]">الصفحة غير منشورة</span>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-[var(--sys-surface-strong)] pt-2.5">

@@ -81,7 +81,27 @@ export async function GET() {
   }
 }
 
-/** Save the draft. Never touches what a shopper sees. */
+/**
+ * Save the draft. Never touches what a shopper sees.
+ *
+ * A SINGLE PRODUCT STORE IS DESIGNED HERE TOO, NOW.
+ *
+ * Both writes used to refuse it — «واجهته صفحة الهبوط المرتبطة به، تُصمَّم
+ * من صفحات الهبوط» — on the reasoning that such a store IS its page. The
+ * reasoning held while a store was an address in front of one page. It
+ * stopped holding the moment a seller had four pages in one store and
+ * wanted a shop around them: a banner of the SHOP's, a logo of the shop's,
+ * and the pages listed inside it.
+ *
+ * Measured when this changed: the only live store on this installation is
+ * Single Product, has four landing pages, and had never picked a front
+ * page — so the refusal here and the button that was hidden without a
+ * front page left it with no design screen of any kind.
+ *
+ * Nothing is taken away. A store that publishes no home still renders its
+ * front page exactly as before; the home only wins once it is published,
+ * which is a thing the seller does on purpose.
+ */
 export async function PUT(req: Request) {
   try {
     const { user, storeId, companyId } = await requireContext();
@@ -89,13 +109,6 @@ export async function PUT(req: Request) {
 
     const store = await load(storeId!, companyId);
     if (!store) return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
-    if (!cartBarApplies(store.type)) {
-      return NextResponse.json(
-        { error: 'متجر Single Product واجهته صفحة الهبوط المرتبطة به — تُصمَّم من صفحات الهبوط', code: 'SINGLE_PRODUCT' },
-        { status: 409 }
-      );
-    }
-
     const parsed = saveSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: 'تعذّر قراءة الأقسام' }, { status: 400 });
 
@@ -131,13 +144,6 @@ export async function POST() {
 
     const store = await load(storeId!, companyId);
     if (!store) return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
-    if (!cartBarApplies(store.type)) {
-      return NextResponse.json(
-        { error: 'متجر Single Product واجهته صفحة الهبوط المرتبطة به', code: 'SINGLE_PRODUCT' },
-        { status: 409 }
-      );
-    }
-
     await db.store.update({
       where: { id: store.id },
       // The draft as it stands, copied across. Publishing an empty draft is

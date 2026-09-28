@@ -1248,6 +1248,11 @@ model LandingPage {
   domain           String?
   domainVerifiedAt DateTime?
   isPublished      Boolean   @default(false)
+  /// Listed in the store's own front by a `catalog` block. Belonging to a
+  /// store is not the same as being shown in it: a campaign page is meant to
+  /// be reachable by its link and nowhere else, and listing every page a
+  /// store owns would put the half-finished ones in the shop window.
+  showInStore      Boolean   @default(false)
   viewsCount       Int       @default(0) // view = one successful public page render (no PII)
   ordersCount      Int       @default(0)
   upsellAddsCount  Int       @default(0) // recommendation add-ons accepted after order
@@ -1275,6 +1280,7 @@ model LandingPage {
   @@index([companyId])
   @@index([companyId, isPublished])
   @@index([storeId])
+  @@index([storeId, showInStore])
   @@map("landing_pages")
 }
 
