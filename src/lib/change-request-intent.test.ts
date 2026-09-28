@@ -223,6 +223,66 @@ describe('the wiring', () => {
     }
   });
 
+  /**
+   * ONE LINE, FOUR GATES.
+   *
+   * Where the goods stop being ours to take back is a ruling, not a
+   * preference: the waybill, not the handover — a labelled parcel on the
+   * out-tray is committed, because stock counted as available while it
+   * sits in a box is stock the next customer is promised and does not get.
+   * `warehouse-custody.test.ts` holds that line itself.
+   *
+   * What this holds is that the three asks all ASK THE SAME FUNCTION. Four
+   * places decide it — the door that offers the buttons, the route that
+   * accepts a request, the queue that names the act, and the card on the
+   * order — and four copies of «has it gone?» is four places for the line
+   * to drift to SHIPPED, one at a time, until the door offers a
+   * postponement the route refuses.
+   */
+  it('and every gate reads the same line, the waybill one', () => {
+    for (const f of [
+      'src/app/api/orders/[id]/change-requests/route.ts',
+      'src/app/api/control/change-requests/route.ts',
+      'src/components/orders/OrderDetailModal.tsx',
+    ]) {
+      const src = stripComments(repoFile(f));
+      expect(src, `${f} لا يسأل الخطَّ نفسه`).toMatch(/hasLeftWarehouse\(/);
+      // Not the later line. `hasEverShipped` starts at SHIPPED and would
+      // leave a printed waybill editable — the exact window the custody
+      // rule exists to close.
+      //
+      // The NAME anywhere in the file, not `hasEverShipped(` at a call
+      // site: `import { hasEverShipped as hasLeftWarehouse }` moves the
+      // line while every call still reads correctly, and that spelling
+      // walked straight past the first version of this.
+      expect(src, `${f} يستعمل خطَّ الشحن لا خطَّ البوليصة`).not.toMatch(/hasEverShipped/);
+    }
+  });
+
+  it('and the order screen is actually told the waybill was printed', () => {
+    // The screen computes the line from the order it was handed. A GET
+    // that did not return `labelPrintedAt` would make it read false in
+    // silence, and the door would offer a postponement on a labelled
+    // parcel for the route to refuse a moment later — the fail-late this
+    // whole design is against. `include` returns every scalar; a `select`
+    // added here later would not.
+    const src = stripComments(repoFile('src/app/api/orders/[id]/route.ts'));
+    const get = src.slice(src.indexOf('export async function GET'));
+    // From 1, or indexOf finds the GET's own header and hands back an
+    // empty string — on which the negative assertion below passes for
+    // saying nothing at all.
+    const end = get.indexOf('export async function', 1);
+    const body = end > 0 ? get.slice(0, end) : get;
+    expect(body.length, 'القصُّ أخطأ موضعه').toBeGreaterThan(200);
+    // THE ORDER QUERY ITSELF, not any `include:` in the file — the nested
+    // relations carry several of their own, and matching those passed
+    // while the top-level query had been narrowed to a column list that
+    // leaves out the waybill date.
+    expect(body, 'GET يختار أعمدةً بعينها ولم يعد يشمل تاريخَ البوليصة').toMatch(
+      /db\.order\.find(Unique|First)\(\{\s*where: \{ id \},\s*include: \{/
+    );
+  });
+
   it('and the queue sends a cancellation to the door that cancels', () => {
     const src = stripComments(repoFile('src/components/screens/ChangeRequestsScreen.tsx'));
     // The edit endpoint answers a cancellation with «لا حقول لتطبيقها».
