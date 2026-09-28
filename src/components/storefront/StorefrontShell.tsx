@@ -55,11 +55,17 @@ export function StorefrontShell({
       <header className={header?.sticky === false ? 'sf-header' : 'sf-header sf-header-sticky'}>
         <div className="sf-header-inner">
           <Link href={home} className="sf-brand">
-            {store.logo && (
+            {store.logo ? (
               // The seller's own upload; next/image would need every host
               // allow-listed, and a missing logo is worse than an unoptimised one.
               // eslint-disable-next-line @next/next/no-img-element
               <img src={store.logo} alt="" className="sf-logo" />
+            ) : (
+              // A SHOP WITH NO LOGO STILL HAS A MARK. Most shops have not
+              // uploaded one — measured: none of the three here had — and a
+              // bare line of text is not a brand. This disappears the moment
+              // a real logo arrives.
+              <span className="sf-mark" aria-hidden>{store.name.trim().charAt(0)}</span>
             )}
             <span>
               <strong>{store.name}</strong>

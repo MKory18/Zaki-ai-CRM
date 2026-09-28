@@ -132,6 +132,102 @@ describe('the store front', () => {
   });
 });
 
+/**
+ * HOW THE SHOP LOOKS, where looking wrong is a thing that can happen in
+ * silence. Not every pixel — the rules a later edit could quietly undo.
+ */
+describe('the shop’s face', () => {
+  const sheet = () => repoFile('src/components/storefront/styles.ts');
+  const blocks = () => repoFile('src/components/landing/blocks/styles.ts');
+
+  // A backtick inside either stylesheet ends its template literal and the
+  // build stops — it happened twice writing this. No guard for it: `tsc`
+  // says so immediately and unambiguously, and a second check that only
+  // repeats the compiler is noise that can itself be wrong. The first
+  // version of it was.
+
+  /**
+   * A shop's language is the seller's choice, and half of them read left
+   * to right. `inset-inline-start: 50%` with a positive translateX centres
+   * in RTL and pushes off-centre in LTR — the underline under every
+   * section heading floated to one side in every English shop.
+   */
+  it('centring is physical, so it centres in both directions', () => {
+    expect(sheet()).not.toMatch(/inset-inline-start: 50%;[\s\S]{0,80}translateX\(50%\)/);
+  });
+
+  it('the catalogue card and the plain grid card are the same object', () => {
+    // The plain grid is what a shop shows before its seller builds a home
+    // page — most shops, most of the time. Left behind while the block
+    // was restyled, one product would have had two shops.
+    for (const [name, sel] of [['catalogue', blocks()], ['grid', sheet()]] as const) {
+      expect(sel, `${name}: بلا ارتفاعٍ عند اللمس`).toMatch(/transform: translateY\(-4px\)/);
+      expect(sel, `${name}: بلا إطارٍ رفيع`).toMatch(/0 0 0 1px color-mix/);
+      expect(sel, `${name}: الصورةُ لا تقترب`).toMatch(/transform: scale\(1\.055\)/);
+    }
+  });
+
+  /**
+   * A NEW SHOP HAS NO PHOTOGRAPHS. Measured: one of this store's twenty
+   * products had one. Twenty flat grey squares was the whole page, and it
+   * read as broken rather than as new.
+   */
+  it('a product with no picture gets its initial, not a grey square', () => {
+    expect(blocks()).toMatch(/content: attr\(data-letter\)/);
+    expect(sheet()).toMatch(/content: attr\(data-letter\)/);
+    const page = stripComments(repoFile('src/components/landing/blocks/PageBlocks.tsx'));
+    // `?? ''` and not a bare `.trim()`: one row with a null name took the
+    // whole shop page down with «Cannot read properties of undefined».
+    expect(page).toMatch(/data-letter=\{\(it\.name \?\? ''\)\.trim\(\)\.charAt\(0\)/);
+    const front = stripComments(repoFile('src/app/s/[store]/page.tsx'));
+    expect(front).toMatch(/data-letter=\{\(p\.name \?\? ''\)\.trim\(\)\.charAt\(0\)/);
+  });
+
+  it('and a shop with no logo still has a mark', () => {
+    const shell = stripComments(repoFile('src/components/storefront/StorefrontShell.tsx'));
+    expect(shell).toMatch(/<span className="sf-mark" aria-hidden>\{store\.name\.trim\(\)\.charAt\(0\)\}<\/span>/);
+    expect(sheet()).toMatch(/\.sf-mark \{/);
+  });
+
+  /** A shop is not an article: 760px is three cramped columns. */
+  it('the goods get more width than a page of prose', () => {
+    expect(sheet()).toMatch(/:has\(> \.lp-catalog\)[\s\S]{0,200}max-width: 1180px/);
+  });
+
+  it('and the shop’s own colour paints all of it — no hex is written here', () => {
+    // One colour picker restyles the whole shop. A literal would be the
+    // one thing that did not move with it.
+    const css = sheet();
+    const hexes = css.match(/#[0-9a-fA-F]{3,8}/g) ?? [];
+    // `#fff` as a fallback for accent-text is the only one allowed: it is
+    // what a colour lands on, not a colour of the shop's.
+    expect(hexes.filter((h) => h.toLowerCase() !== '#fff')).toEqual([]);
+    /**
+     * AND THE EXPRESSION ACTUALLY MATCHES SOMETHING.
+     *
+     * This line once ended in a word-boundary escape that the shell
+     * heredoc writing it turned into a literal backspace byte. The regex
+     * then demanded a backspace after every colour, matched nothing at
+     * all, and the guard passed happily on a stylesheet with a hex in it.
+     * A filter over an empty list is always empty; only the mutation run
+     * found it.
+     */
+    expect(hexes.length, 'التعبير لا يلتقط شيئاً — الحارسُ فارغ').toBeGreaterThan(0);
+  });
+});
+
+describe('a price of zero is not a price', () => {
+  /**
+   * A landing page whose product carries no base price rendered «0 USD»
+   * under its card, which reads as free. Nothing is the honest answer,
+   * and `!== null` alone never said so.
+   */
+  it('shows nothing rather than a zero', () => {
+    const src = stripComments(repoFile('src/components/landing/blocks/PageBlocks.tsx'));
+    expect(src).toMatch(/s\.showPrice && it\.price !== null && it\.price > 0 &&/);
+  });
+});
+
 describe('the way in', () => {
   it('«صمّم الواجهة» opens the store’s own designer, not a landing page’s', () => {
     const src = stripComments(repoFile('src/components/screens/StorefrontsScreen.tsx'));

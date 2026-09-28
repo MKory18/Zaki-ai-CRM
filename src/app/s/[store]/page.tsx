@@ -159,7 +159,14 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={p.image} alt={p.name} className="sf-card-img" loading="lazy" />
                 ) : (
-                  <span className="sf-card-none" aria-hidden />
+                  // The product's initial in a wash of the shop's colour,
+                  // the same as the catalogue block's: «the picture goes
+                  // here», not «something is broken».
+                  // `?? ''`, because a name is not guaranteed: one row with
+                  // a null name took the whole shop page down with
+                  // «Cannot read properties of undefined». A missing letter
+                  // is a dash; a missing shop is an outage.
+                  <span className="sf-card-none" data-letter={(p.name ?? '').trim().charAt(0) || '—'} aria-hidden />
                 )}
                 <span className="sf-card-body">
                   <span className="sf-card-name">{p.name}</span>

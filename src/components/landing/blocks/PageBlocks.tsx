@@ -356,7 +356,15 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
           <Section title={s.title}>
             <div className={`lp-catalog lp-catalog-${s.cardSize}`} style={{ '--lp-cat-cols': s.columns } as React.CSSProperties}>
               {[0, 1, 2].map((i) => (
-                <ImageFrame key={i} label="منتج" ratio={1} />
+                <span key={i} className="lp-catalog-card">
+                  <span className="lp-catalog-media">
+                    <span className="lp-catalog-noimg" data-letter="؟" aria-hidden />
+                  </span>
+                  <span className="lp-catalog-body">
+                    <span className="lp-catalog-name">اسم المنتج أو الصفحة</span>
+                    <span className="lp-catalog-price" dir="ltr">0 {ctx.currency}</span>
+                  </span>
+                </span>
               ))}
             </div>
           </Section>
@@ -390,18 +398,32 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
           <div className={`lp-catalog lp-catalog-${s.cardSize}`} style={{ '--lp-cat-cols': s.columns } as React.CSSProperties}>
             {items.map((it) => (
               <a key={`${it.kind}-${it.id}`} href={it.href} className="lp-catalog-card">
-                {it.image ? (
-                  // The seller's own uploads; next/image would need every
-                  // host allow-listed, and a blocked image is worse than an
-                  // unoptimised one.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={it.image} alt="" loading="lazy" />
-                ) : (
-                  <span className="lp-catalog-noimg" aria-hidden />
-                )}
+                <span className="lp-catalog-media">
+                  {/* WHICH OF THE TWO KINDS. A landing page the seller
+                      built is a different thing from a catalogue product,
+                      and a shopper who cannot tell them apart cannot tell
+                      why one of them carries an offer. */}
+                  {it.kind === 'page' && <span className="lp-catalog-tag">عرض خاص</span>}
+                  {it.image ? (
+                    // The seller's own uploads; next/image would need every
+                    // host allow-listed, and a blocked image is worse than an
+                    // unoptimised one.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={it.image} alt="" loading="lazy" />
+                  ) : (
+                    // Not a grey rectangle: most of a new shop's products
+                    // have no photograph yet, and twenty flat grey blocks
+                    // was the whole page. The first letter in a wash of the
+                    // shop's own colour reads as «the picture goes here».
+                    <span className="lp-catalog-noimg" data-letter={(it.name ?? '').trim().charAt(0) || '—'} aria-hidden />
+                  )}
+                </span>
                 <span className="lp-catalog-body">
                   <span className="lp-catalog-name">{it.name}</span>
-                  {s.showPrice && it.price !== null && (
+                  {/* A PRICE OF ZERO IS NOT A PRICE. A landing page whose
+                      product has no base price was showing «0 USD», which
+                      reads as free. Nothing is the honest answer. */}
+                  {s.showPrice && it.price !== null && it.price > 0 && (
                     <span className="lp-catalog-price" dir="ltr">
                       {it.price.toLocaleString('en-US', { maximumFractionDigits: 2 })} {ctx.currency}
                     </span>

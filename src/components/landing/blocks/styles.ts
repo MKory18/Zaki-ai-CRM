@@ -186,57 +186,168 @@ export const BLOCK_CSS = `
 }
 
 /* ── catalog: the shop's own pages and products ──
-   ONE COLUMN ON A PHONE, WHATEVER THE SELLER CHOSE. The --lp-cat-cols
-   variable is their choice for a wide screen; a phone is too narrow for
-   three cards, and honouring the number there would make every shop
-   unreadable on the device most shoppers hold. The media query at the
+   ONE COLUMN COUNT IS THE SELLER'S, ONE IS THE PHONE'S. The
+   --lp-cat-cols variable is their choice for a wide screen; a phone is too
+   narrow for three cards, and honouring the number there would make every
+   shop unreadable on the device most shoppers hold. The media query at the
    bottom of this sheet widens it.
    (No backticks in this file: the whole stylesheet is one template
    literal, and one would end it.) */
-.lp-catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.lp-catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
 .lp-catalog-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: var(--lp-radius);
-  border: 1px solid var(--lp-border);
+  border-radius: calc(var(--lp-radius) + 6px);
   background: var(--lp-card, #fff);
   text-decoration: none;
   color: inherit;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  isolation: isolate;
+  /* TWO SHADOWS, NOT A BORDER. A hairline round every card draws a grid of
+     boxes; a card should read as an object sitting on the page. The first
+     shadow is the contact edge, the second the soft ambient one. */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--lp-text) 6%, transparent),
+    0 1px 2px color-mix(in srgb, var(--lp-text) 8%, transparent),
+    0 8px 24px -12px color-mix(in srgb, var(--lp-text) 22%, transparent);
+  transition: transform .28s cubic-bezier(.2, .7, .3, 1), box-shadow .28s cubic-bezier(.2, .7, .3, 1);
 }
-.lp-catalog-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); }
-.lp-catalog-card img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
-.lp-catalog-noimg { display: block; width: 100%; aspect-ratio: 1 / 1; background: var(--lp-muted-bg, #f1f5f9); }
-.lp-catalog-body { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; }
-.lp-catalog-name { font-weight: 700; line-height: 1.4; }
-.lp-catalog-price { font-weight: 800; color: var(--lp-accent); }
+.lp-catalog-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--lp-accent) 24%, transparent),
+    0 2px 4px color-mix(in srgb, var(--lp-text) 10%, transparent),
+    0 20px 40px -16px color-mix(in srgb, var(--lp-accent) 42%, transparent);
+}
 
-/* The three sizes are the CARD's height, not the grid's: the seller asks
-   for bigger pictures, not fewer of them. */
+/* The picture is the product. It fills its frame and leans in a little
+   when the cursor is on it — the one piece of motion a shop needs. */
+.lp-catalog-media { position: relative; overflow: hidden; background: var(--lp-page); }
+.lp-catalog-card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+  transition: transform .5s cubic-bezier(.2, .7, .3, 1);
+}
+.lp-catalog-card:hover img { transform: scale(1.055); }
+
+/* NO PICTURE IS NOT A GREY RECTANGLE. Most of this shop's products have no
+   photograph yet, and twenty flat grey blocks was the whole page. A soft
+   wash of the shop's own colour with its initial in it reads as a place
+   the picture goes, not as something broken. */
+.lp-catalog-noimg {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background:
+    radial-gradient(120% 90% at 22% 12%, color-mix(in srgb, var(--lp-accent) 16%, transparent) 0%, transparent 62%),
+    linear-gradient(140deg, color-mix(in srgb, var(--lp-accent) 9%, var(--lp-card)) 0%, var(--lp-card) 70%);
+}
+.lp-catalog-noimg::after {
+  content: attr(data-letter);
+  font-size: clamp(26px, 7vw, 40px);
+  font-weight: 900;
+  line-height: 1;
+  color: color-mix(in srgb, var(--lp-accent) 30%, transparent);
+}
+
+/* Which of the two kinds this is. A landing page the seller built is a
+   different thing from a catalogue product, and a shopper who cannot tell
+   them apart cannot tell why one has an offer on it. */
+.lp-catalog-tag {
+  position: absolute;
+  inset-inline-start: 10px;
+  top: 10px;
+  z-index: 2;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: var(--lp-accent-text, #fff);
+  background: var(--lp-accent);
+  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--lp-accent) 65%, transparent);
+}
+
+.lp-catalog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 14px 15px;
+  /* The name block grows so every price in a row sits on one line,
+     whatever the names above them did. */
+  flex: 1;
+}
+.lp-catalog-name {
+  font-weight: 800;
+  font-size: .92rem;
+  line-height: 1.5;
+  letter-spacing: -.1px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+/* THE PRICE IS A CHIP, NOT A LINE OF TEXT. It is the one number a shopper
+   scans a grid for, and coloured text at the same weight as the name made
+   them the same object. */
+.lp-catalog-price {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .82rem;
+  font-weight: 900;
+  color: var(--lp-accent);
+  background: color-mix(in srgb, var(--lp-accent) 11%, transparent);
+}
+
+/* The three sizes are the PICTURE's shape, not the grid's: the seller asks
+   for bigger images, not fewer of them. */
 .lp-catalog-sm .lp-catalog-card img,
 .lp-catalog-sm .lp-catalog-noimg { aspect-ratio: 4 / 3; }
-.lp-catalog-sm .lp-catalog-name { font-size: 0.82rem; }
+.lp-catalog-sm .lp-catalog-name { font-size: .82rem; }
+.lp-catalog-sm .lp-catalog-body { padding: 10px 12px 12px; }
 .lp-catalog-lg .lp-catalog-card img,
 .lp-catalog-lg .lp-catalog-noimg { aspect-ratio: 3 / 4; }
-.lp-catalog-lg .lp-catalog-name { font-size: 1.05rem; }
+.lp-catalog-lg .lp-catalog-name { font-size: 1.02rem; }
+.lp-catalog-lg .lp-catalog-body { padding: 16px 17px 18px; }
 
-.lp-catalog-cats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+/* ── the category row ── */
+.lp-catalog-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
 .lp-catalog-cat {
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 999px;
   border: 1px solid var(--lp-border);
-  font-size: 0.82rem;
+  background: var(--lp-card);
+  font-size: .82rem;
   font-weight: 700;
   text-decoration: none;
-  color: inherit;
-  /* A thumb needs somewhere to land; these sit in a row and are the one
-     control on this block a shopper presses. */
-  min-height: 38px;
+  color: var(--lp-muted);
+  /* A thumb needs somewhere to land; these are the one control on this
+     block a shopper actually presses. */
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
+  transition: color .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
 }
-.lp-catalog-cat.is-on { background: var(--lp-accent); border-color: var(--lp-accent); color: #fff; }
+.lp-catalog-cat:hover { color: var(--lp-text); border-color: var(--lp-accent-border, var(--lp-accent)); }
+.lp-catalog-cat.is-on {
+  background: var(--lp-accent);
+  border-color: var(--lp-accent);
+  color: var(--lp-accent-text, #fff);
+  box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--lp-accent) 80%, transparent);
+}
 
 /* ── slider ── */
 .lp-slider { position: relative; overflow: hidden; border-radius: var(--lp-radius); border: 1px solid var(--lp-border); touch-action: pan-y; user-select: none; }
