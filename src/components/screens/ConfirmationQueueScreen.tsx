@@ -21,6 +21,7 @@ interface QueueResponse {
   owned: { total: number; withoutAttempt: number };
   caps: { withoutAttempt: number; total: number };
   leadDays: number;
+  waitingOnADate?: number;
   canPull: boolean;
   refusal: { code: string; message: string } | null;
   autoReleased: number;
@@ -89,7 +90,22 @@ export function ConfirmationQueueScreen() {
           <RiInboxLine className="w-6 h-6 text-[var(--sys-primary)]" />
         </div>
         <p className="mt-4 text-4xl font-bold text-[var(--sys-heading)] tabular-nums">{data.waiting}</p>
-        <p className="mt-1 text-sm text-[var(--sys-muted-foreground)]">طلب بانتظار التأكيد</p>
+        <p className="mt-1 text-sm text-[var(--sys-muted-foreground)]">طلب جاهز للسحب الآن</p>
+
+        {/*
+          WAITING ON A DATE IS NOT WAITING FOR YOU.
+
+          The big number used to include postponed orders whose day has not
+          come. So a pool holding nothing but far-off promises showed «٣
+          بانتظار التأكيد» above a live button that answered «لا توجد
+          طلبات» every time — which is «ببطل أقدر أسحب أي طلب». They are
+          counted, and said, separately.
+        */}
+        {!!data.waitingOnADate && (
+          <p className="mt-1 text-xs text-[var(--sys-muted)]">
+            و{data.waitingOnADate} مؤجَّلة حتى موعدها — تُسحب في يومها وحدها
+          </p>
+        )}
 
         <button
           onClick={pullNext}

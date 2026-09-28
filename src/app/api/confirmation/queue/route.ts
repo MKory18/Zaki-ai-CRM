@@ -9,6 +9,7 @@ import {
   pullRefusal,
   releaseStaleClaims,
   waitingCount,
+  postponedNotDueCount,
   POSTPONE_LEAD_DAYS,
 } from '@/lib/confirmation-queue';
 
@@ -33,7 +34,13 @@ export async function GET() {
     };
     const released = await releaseStaleClaims(db, scope, cal);
 
-    const [waiting, counts] = await Promise.all([waitingCount(db, scope), ownedCounts(db, scope, user.id)]);
+    const [waiting, counts, waitingOnADate] = await Promise.all([
+      waitingCount(db, scope),
+      ownedCounts(db, scope, user.id),
+      // Real work, none of it takeable today. Said out loud rather than
+      // folded into a number that promises a pull.
+      postponedNotDueCount(db, scope),
+    ]);
     const refusal = pullRefusal(counts);
 
     const isSupervisor = can(user, 'confirmation.supervise');
@@ -53,6 +60,7 @@ export async function GET() {
 
     return NextResponse.json({
       waiting,
+      waitingOnADate,
       owned: counts,
       caps: CLAIM_CAPS,
       leadDays: POSTPONE_LEAD_DAYS,

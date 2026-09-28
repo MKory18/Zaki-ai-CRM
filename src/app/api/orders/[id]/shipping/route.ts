@@ -37,6 +37,36 @@ import { orderLinesForGuard } from '@/lib/reservation';
  *
  * Server controls: companyId, assignedById, all timestamps, version increments.
  */
+/**
+ * The states in the words the screens use. A refusal that prints
+ * `OUT_FOR_DELIVERY` at somebody is a refusal in a second language on top
+ * of the first.
+ */
+const CONFIRMATION_AR: Record<string, string> = {
+  NEW: 'جديد',
+  IN_PROGRESS: 'قيد المعالجة',
+  NO_ANSWER: 'لا يرد',
+  FOLLOW_UP_REQUIRED: 'بحاجة متابعة',
+  POSTPONED: 'مؤجَّل',
+  CONFIRMED: 'مؤكَّد',
+  REJECTED: 'مرفوض',
+  CANCELLED: 'ملغى',
+};
+
+const SHIPPING_AR: Record<string, string> = {
+  NOT_READY: 'غير جاهز',
+  PACKING: 'قيد التجهيز',
+  READY_FOR_SHIPPING: 'جاهز للشحن',
+  READY_FOR_PICKUP: 'بانتظار الاستلام',
+  SHIPPED: 'مشحون',
+  OUT_FOR_DELIVERY: 'خرج للتوصيل',
+  DELIVERED: 'مُسلَّم',
+  PARTIALLY_DELIVERED: 'مُسلَّم جزئياً',
+  FAILED_DELIVERY: 'تعذّر التوصيل',
+  RETURN_REQUESTED: 'مطلوب إرجاعه',
+  RETURNED: 'مرتجع',
+};
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -46,14 +76,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'الطلب غير موجود أو ليس بين يديك' }, { status: map[access.reason] });
     }
     const order = access.order;
 
     // Permission: shipping authority (scope evaluated against the loaded order)
     const shippingAuth = authorize(user, 'orders.change_status', order);
     if (!shippingAuth.allowed) {
-      return NextResponse.json({ error: 'Forbidden: you are not allowed to change shipping status' }, { status: 403 });
+      return NextResponse.json({ error: 'لا تملك صلاحية تغيير حالة الشحن' }, { status: 403 });
     }
 
     // ── Editing-lock enforcement: an ACTIVE foreign lock blocks edits ──
@@ -66,7 +96,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const holder = await db.user.findUnique({ where: { id: order.lockedById! }, select: { name: true } });
       return NextResponse.json(
         {
-          error: `This order is currently being edited by ${holder?.name ?? 'another user'}.`,
+          error: `${holder?.name ?? 'موظف آخر'} يعمل على هذا الطلب الآن — انتظر حتى يتركه`,
           errorAr: `هذا الطلب يتم تعديله حالياً بواسطة ${holder?.name ?? 'مستخدم آخر'}.`,
           code: 'ORDER_LOCKED',
           locked: true,
@@ -87,14 +117,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       deliveryFailureReason?: string; returnReason?: string; expectedVersion?: number;
     };
 
-    if (!action) return NextResponse.json({ error: 'action is required' }, { status: 400 });
+    if (!action) return NextResponse.json({ error: 'لم يُحدَّد الإجراء' }, { status: 400 });
     if (typeof expectedVersion !== 'number') {
-      return NextResponse.json({ error: 'expectedVersion is required', code: 'VERSION_REQUIRED' }, { status: 400 });
+      return NextResponse.json({ error: 'تعذّر الحفظ — أعد فتح الطلب وحاول ثانية', code: 'VERSION_REQUIRED' }, { status: 400 });
     }
     if (expectedVersion !== order.version) {
       return NextResponse.json(
         {
-          error: 'This order was updated by another user. Please refresh before saving.',
+          error: 'عدّل هذا الطلبَ شخصٌ آخر قبلك — أعد تحميل الصفحة ثم احفظ',
           errorAr: 'تم تعديل هذا الطلب بواسطة مستخدم آخر. يرجى تحديث الصفحة قبل الحفظ.',
           code: 'VERSION_CONFLICT',
         },
@@ -109,10 +139,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     switch (action) {
       case 'transition': {
-        if (!to) return NextResponse.json({ error: 'to is required for transition' }, { status: 400 });
+        if (!to) return NextResponse.json({ error: 'لم تُحدَّد الحالة المطلوبة' }, { status: 400 });
         // Whitelist validation — enforced even on the override path
         if (!(SHIPPING_STATUSES as readonly string[]).includes(to)) {
-          return NextResponse.json({ error: `Invalid shipping status: ${to}` }, { status: 400 });
+          return NextResponse.json({ error: `حالة شحن غير معروفة: ${to}` }, { status: 400 });
         }
         newShippingStatus = to as ShippingStatus;
 
@@ -120,7 +150,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         if (newShippingStatus !== 'CANCELLED' && !canEnterShipping(order.confirmationStatus)) {
           return NextResponse.json(
             {
-              error: `Shipping requires a CONFIRMED order (current: ${order.confirmationStatus})`,
+              error: `الشحن يحتاج طلباً مؤكَّداً — هذا «${CONFIRMATION_AR[order.confirmationStatus] ?? order.confirmationStatus}»`,
               errorAr: `الشحن يتطلب طلباً مؤكداً (الحالة الحالية: ${order.confirmationStatus})`,
               code: 'CONFIRMATION_REQUIRED',
             },
@@ -148,7 +178,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           if (!isOverride) {
             return NextResponse.json(
               {
-                error: `Invalid shipping transition: ${from} → ${newShippingStatus}`,
+                error: `لا يمكن الانتقال من «${SHIPPING_AR[from] ?? from}» إلى «${SHIPPING_AR[newShippingStatus] ?? newShippingStatus}»`,
                 errorAr: `انتقال شحن غير صالح: ${from} → ${newShippingStatus}`,
                 code: 'INVALID_TRANSITION',
               },
@@ -194,16 +224,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         // Structured reasons
         if (newShippingStatus === 'FAILED_DELIVERY') {
           if (!deliveryFailureReason || !(DELIVERY_FAILURE_REASONS as readonly string[]).includes(deliveryFailureReason)) {
-            return NextResponse.json({ error: 'A structured delivery failure reason is required' }, { status: 400 });
+            return NextResponse.json({ error: 'اختر سبب تعذّر التوصيل من القائمة' }, { status: 400 });
           }
           if (deliveryFailureReason === 'OTHER' && (!shippingNote || shippingNote.trim().length < 5)) {
-            return NextResponse.json({ error: 'OTHER failure requires a note (min 5 chars)' }, { status: 400 });
+            return NextResponse.json({ error: 'سبب «أخرى» يحتاج ملاحظة — خمسة أحرف على الأقل' }, { status: 400 });
           }
           updateData.deliveryFailureReason = deliveryFailureReason;
         }
         if (newShippingStatus === 'RETURN_REQUESTED' || newShippingStatus === 'RETURNED') {
           if (!returnReason || !(RETURN_REASONS as readonly string[]).includes(returnReason)) {
-            return NextResponse.json({ error: 'A structured return reason is required' }, { status: 400 });
+            return NextResponse.json({ error: 'اختر سبب الإرجاع من القائمة' }, { status: 400 });
           }
           updateData.returnReason = returnReason;
         }
@@ -224,11 +254,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       }
 
       case 'assign_provider': {
-        if (!deliveryProviderId) return NextResponse.json({ error: 'deliveryProviderId is required' }, { status: 400 });
+        if (!deliveryProviderId) return NextResponse.json({ error: 'اختر شركة الشحن' }, { status: 400 });
         // Tenant-validate the provider (Phase S rule)
         const provider = await db.deliveryProvider.findFirst({ where: { id: deliveryProviderId, companyId } });
         if (!provider) {
-          return NextResponse.json({ error: 'Delivery provider not found in your company' }, { status: 404 });
+          return NextResponse.json({ error: 'شركة الشحن غير موجودة' }, { status: 404 });
         }
         updateData.deliveryProviderId = provider.id;
         updateData.deliveryAssignedAt = now;          // server timestamp
@@ -237,10 +267,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       }
 
       case 'assign_batch': {
-        if (!shippingBatchId) return NextResponse.json({ error: 'shippingBatchId is required' }, { status: 400 });
+        if (!shippingBatchId) return NextResponse.json({ error: 'اختر دفعة الشحن' }, { status: 400 });
         const batch = await db.shippingBatch.findFirst({ where: { id: shippingBatchId, companyId, storeId } });
         if (!batch) {
-          return NextResponse.json({ error: 'Shipping batch not found in your company' }, { status: 404 });
+          return NextResponse.json({ error: 'دفعة الشحن غير موجودة' }, { status: 404 });
         }
         // A batch stops taking work the moment the courier takes it away.
         // Adding an order to a trolley that is already on a van is an order
@@ -262,14 +292,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case 'update_tracking': {
         // Tracking is modifiable BEFORE shipment only (Section 7)
         if (['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED_DELIVERY', 'RETURN_REQUESTED', 'RETURNED'].includes(from)) {
-          return NextResponse.json({ error: 'Tracking cannot be modified after shipment' }, { status: 409 });
+          return NextResponse.json({ error: 'رقم التتبّع لا يُعدَّل بعد الشحن — البوليصة عند الشركة' }, { status: 409 });
         }
         if (trackingNumber !== undefined) {
           const tn = trackingNumber.trim();
           if (tn) {
             // Uniqueness within company scope
             const clash = await db.order.findFirst({ where: { companyId, trackingNumber: tn, id: { not: id } } });
-            if (clash) return NextResponse.json({ error: 'Tracking number already used in your company' }, { status: 409 });
+            if (clash) return NextResponse.json({ error: 'رقم التتبّع مستعمل في طلب آخر' }, { status: 409 });
             updateData.trackingNumber = tn;
           } else {
             updateData.trackingNumber = null;
@@ -281,7 +311,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       }
 
       default:
-        return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+        return NextResponse.json({ error: 'إجراء غير معروف' }, { status: 400 });
     }
 
     if (shippingNote !== undefined && action !== 'transition') {
@@ -347,7 +377,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (saved.count !== 1) {
       return NextResponse.json(
         {
-          error: 'This order was updated by another user. Please refresh before saving.',
+          error: 'عدّل هذا الطلبَ شخصٌ آخر قبلك — أعد تحميل الصفحة ثم احفظ',
           errorAr: 'تم تعديل هذا الطلب بواسطة مستخدم آخر. يرجى تحديث الصفحة قبل الحفظ.',
           code: 'VERSION_CONFLICT',
         },

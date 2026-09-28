@@ -32,6 +32,22 @@ import { queueConversions } from '@/lib/conversions/emit';
  *
  * All transitions validated server-side; SUPER_ADMIN override requires reason + audit.
  */
+/**
+ * The confirmation states, in the words the screens already use. A refusal
+ * that prints `FOLLOW_UP_REQUIRED` at somebody is a refusal in a second
+ * language on top of the first.
+ */
+const CONFIRMATION_AR: Record<string, string> = {
+  NEW: 'جديد',
+  IN_PROGRESS: 'قيد المعالجة',
+  NO_ANSWER: 'لا يرد',
+  FOLLOW_UP_REQUIRED: 'بحاجة متابعة',
+  POSTPONED: 'مؤجَّل',
+  CONFIRMED: 'مؤكَّد',
+  REJECTED: 'مرفوض',
+  CANCELLED: 'ملغى',
+};
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -41,13 +57,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'الطلب غير موجود أو ليس بين يديك' }, { status: map[access.reason] });
     }
     const order = access.order;
 
     const confirmAuth = authorize(user, 'orders.confirm', order);
     if (!confirmAuth.allowed) {
-      return NextResponse.json({ error: 'Forbidden: you are not allowed to change confirmation status' }, { status: 403 });
+      return NextResponse.json({ error: 'لا تملك صلاحية تغيير حالة التأكيد' }, { status: 403 });
     }
 
     // ── Editing-lock enforcement: an ACTIVE foreign lock blocks edits ──
@@ -60,7 +76,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const holder = await db.user.findUnique({ where: { id: order.lockedById! }, select: { name: true } });
       return NextResponse.json(
         {
-          error: `This order is currently being edited by ${holder?.name ?? 'another user'}.`,
+          error: `${holder?.name ?? 'موظف آخر'} يعمل على هذا الطلب الآن — انتظر حتى يتركه`,
           errorAr: `هذا الطلب يتم تعديله حالياً بواسطة ${holder?.name ?? 'مستخدم آخر'}.`,
           code: 'ORDER_LOCKED',
           locked: true,
@@ -80,7 +96,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       rejectionReason?: string; rejectionNote?: string; expectedVersion?: number;
     };
 
-    if (!action) return NextResponse.json({ error: 'action is required' }, { status: 400 });
+    if (!action) return NextResponse.json({ error: 'لم يُحدَّد الإجراء' }, { status: 400 });
 
     const from = order.confirmationStatus as ConfirmationStatus;
     const now = new Date();
@@ -93,10 +109,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case 'start': {
         // Claimed owner may mark processing
         if (from !== 'NEW') {
-          return NextResponse.json({ error: `Cannot start from status ${from}` }, { status: 400 });
+          return NextResponse.json({ error: `لا يمكن البدء من حالة «${CONFIRMATION_AR[from] ?? from}»` }, { status: 400 });
         }
         if (order.claimedById !== user.id && !authorize(user, 'orders.edit', order).allowed) {
-          return NextResponse.json({ error: 'Forbidden: claim the order first' }, { status: 403 });
+          return NextResponse.json({ error: 'اسحب الطلب أولاً — لا يمكن العمل على طلب ليس بين يديك' }, { status: 403 });
         }
         target = 'IN_PROGRESS';
         break;
@@ -104,7 +120,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case 'contact_result': {
         // Records result on the attempt just logged; updates workflow state
         if (!result || !['ANSWERED', 'NO_ANSWER', 'BUSY', 'WRONG_NUMBER', 'CALLBACK_REQUESTED', 'OTHER'].includes(result)) {
-          return NextResponse.json({ error: 'Invalid contact result for workflow update' }, { status: 400 });
+          return NextResponse.json({ error: 'نتيجة الاتصال غير صالحة' }, { status: 400 });
         }
         if (result === 'ANSWERED') target = 'IN_PROGRESS';
         else if (result === 'NO_ANSWER') target = 'NO_ANSWER';
@@ -121,10 +137,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case 'reject': {
         target = 'REJECTED';
         if (!rejectionReason || !(REJECTION_REASONS as readonly string[]).includes(rejectionReason)) {
-          return NextResponse.json({ error: 'A structured rejection reason is required' }, { status: 400 });
+          return NextResponse.json({ error: 'اختر سبب الرفض من القائمة' }, { status: 400 });
         }
         if (rejectionReason === 'OTHER' && (!note || note.trim().length < 5)) {
-          return NextResponse.json({ error: 'OTHER rejection requires a note (min 5 chars)' }, { status: 400 });
+          return NextResponse.json({ error: 'سبب الرفض «أخرى» يحتاج ملاحظة — خمسة أحرف على الأقل' }, { status: 400 });
         }
         updateData.rejectionReason = rejectionReason;
         updateData.rejectionNote = rejectionNote?.trim() || null;
@@ -133,21 +149,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case 'schedule_follow_up': {
         target = nextFollowUpTarget(from);
         if (!target) {
-          return NextResponse.json({ error: `Cannot schedule follow-up from status ${from}` }, { status: 400 });
+          return NextResponse.json({ error: `لا يمكن جدولة متابعة من حالة «${CONFIRMATION_AR[from] ?? from}»` }, { status: 400 });
         }
         break;
       }
       case 'resolve_follow_up': {
         // Any active employee on the order resolves the pending follow-up
         if (!order.nextFollowUpAt || order.followUpStatus === 'COMPLETED' || order.followUpStatus === 'CANCELLED') {
-          return NextResponse.json({ error: 'No active follow-up to resolve' }, { status: 400 });
+          return NextResponse.json({ error: 'لا متابعة قائمة على هذا الطلب لتُغلَق' }, { status: 400 });
         }
         break;
       }
       case 'cancel': {
         // Authorized cancellation — SUPER_ADMIN override style
         if (!can(user, 'orders.unlock')) {
-          return NextResponse.json({ error: 'Forbidden: only administrators may cancel orders' }, { status: 403 });
+          return NextResponse.json({ error: 'الإلغاء للمدير وحده' }, { status: 403 });
         }
         // No cancellation after SHIPPED — it becomes a cancel request and
         // ends as RETURNED with a reason (contract invariant 4).
@@ -159,13 +175,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           );
         }
         if (!note || note.trim().length < 5) {
-          return NextResponse.json({ error: 'Cancellation requires a reason (min 5 chars)' }, { status: 400 });
+          return NextResponse.json({ error: 'الإلغاء يحتاج سبباً — خمسة أحرف على الأقل' }, { status: 400 });
         }
         target = 'CANCELLED';
         break;
       }
       default:
-        return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+        return NextResponse.json({ error: 'إجراء غير معروف' }, { status: 400 });
     }
 
     // Follow-up scheduling validation (POSTPONED / FOLLOW_UP_REQUIRED / future contact)
@@ -173,9 +189,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (action === 'schedule_follow_up' || (action === 'contact_result' && nextFollowUpAt)) {
       if (nextFollowUpAt) {
         const d = new Date(nextFollowUpAt);
-        if (isNaN(d.getTime())) return NextResponse.json({ error: 'Invalid nextFollowUpAt' }, { status: 400 });
+        if (isNaN(d.getTime())) return NextResponse.json({ error: 'تاريخ المتابعة غير صالح' }, { status: 400 });
         if (d.getTime() < now.getTime() - 60_000) {
-          return NextResponse.json({ error: 'nextFollowUpAt must be in the future (server time)' }, { status: 400 });
+          return NextResponse.json({ error: 'موعد المتابعة يجب أن يكون في المستقبل' }, { status: 400 });
         }
         updateData.nextFollowUpAt = d;
         // Postpone details the confirmation screen shows back to the agent:
@@ -194,7 +210,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             : 'OTHER';
       } else if (target === 'POSTPONED' || target === 'FOLLOW_UP_REQUIRED') {
         return NextResponse.json(
-          { error: 'nextFollowUpAt is required for postponing or follow-up' }, { status: 400 }
+          { error: 'التأجيل والمتابعة يحتاجان موعداً — بلا موعد يختفي الطلب ولا يُعيده شيء' }, { status: 400 }
         );
       }
     }
@@ -208,7 +224,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (!isOverride) {
         return NextResponse.json(
           {
-            error: `Invalid workflow transition: ${from} → ${target}`,
+            error: `لا يمكن الانتقال من «${CONFIRMATION_AR[from] ?? from}» إلى «${CONFIRMATION_AR[target] ?? target}»`,
             errorAr: `انتقال غير صالح في سير العمل: ${from} → ${target}`,
             code: 'INVALID_TRANSITION',
           },
@@ -222,7 +238,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (typeof expectedVersion !== 'number') {
       return NextResponse.json(
         {
-          error: 'expectedVersion is required for confirmation updates.',
+          error: 'تعذّر الحفظ — أعد فتح الطلب وحاول ثانية',
           errorAr: 'يلزم تمرير رقم النسخة (expectedVersion) لتحديث حالة التأكيد.',
           code: 'VERSION_REQUIRED',
         },
@@ -405,7 +421,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (error?.message?.startsWith('VERSION_CONFLICT')) {
       return NextResponse.json(
         {
-          error: 'This order was updated by another user. Please refresh before saving.',
+          error: 'عدّل هذا الطلبَ شخصٌ آخر قبلك — أعد تحميل الصفحة ثم احفظ',
           errorAr: 'تم تعديل هذا الطلب بواسطة مستخدم آخر. يرجى تحديث الصفحة قبل الحفظ.',
           code: 'VERSION_CONFLICT',
         },

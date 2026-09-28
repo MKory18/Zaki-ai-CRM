@@ -119,8 +119,32 @@ export async function releaseStaleClaims(tx: Tx, scope: QueueScope, cal: Busines
 }
 
 /** How many orders are waiting to be pulled (the agent's only queue number). */
-export async function waitingCount(tx: Tx, scope: QueueScope) {
-  return tx.order.count({ where: claimableWhere(scope) });
+export async function waitingCount(tx: Tx, scope: QueueScope, now = new Date()) {
+  // Exactly the set `pickNextCandidate` draws from — see the note there.
+  const [due, ready] = await Promise.all([
+    tx.order.count({ where: duePostponedWhere(scope, now) }),
+    tx.order.count({ where: readyToPullWhere(scope) }),
+  ]);
+  return due + ready;
+}
+
+/**
+ * Waiting on a date that has not arrived — real work, and none of it
+ * takeable today. Counted separately so the screen can say so instead of
+ * hiding it inside a number that promises a pull.
+ */
+export async function postponedNotDueCount(tx: Tx, scope: QueueScope, now = new Date()) {
+  const leadEnd = new Date(now.getTime() + POSTPONE_LEAD_DAYS * 24 * 60 * 60 * 1000);
+  return tx.order.count({
+    where: {
+      ...claimableWhere(scope),
+      confirmationStatus: 'POSTPONED',
+      AND: [
+        { OR: [{ postponedUntil: { gt: leadEnd } }, { postponedUntil: null }] },
+        { OR: [{ nextFollowUpAt: { gt: leadEnd } }, { nextFollowUpAt: null }] },
+      ],
+    },
+  });
 }
 
 /**
@@ -157,25 +181,49 @@ function claimableWhere(scope: QueueScope) {
 }
 
 /**
+ * THE TWO HALVES OF «TAKEABLE NOW», WRITTEN ONCE.
+ *
+ * A postponed order that is not yet due is waiting, and must NOT be handed
+ * to anybody: the customer asked to be called on Thursday. The picker has
+ * always honoured that. The COUNTER did not — it counted every unclaimed
+ * open order — so a pool holding nothing but far-off postponements showed
+ * «٣ طلبات بانتظار التأكيد» above a live button that answered «لا توجد
+ * طلبات» every time it was pressed.
+ *
+ * That is the shape of «بعدين ببطل أقدر أسحب أي طلب»: a number that
+ * promises work and a button that never yields any. Both read these two
+ * predicates now, so they cannot disagree.
+ */
+export function duePostponedWhere(scope: QueueScope, now: Date) {
+  const leadEnd = new Date(now.getTime() + POSTPONE_LEAD_DAYS * 24 * 60 * 60 * 1000);
+  return {
+    ...claimableWhere(scope),
+    confirmationStatus: 'POSTPONED',
+    OR: [{ postponedUntil: { lte: leadEnd } }, { nextFollowUpAt: { lte: leadEnd } }],
+  };
+}
+
+export function readyToPullWhere(scope: QueueScope) {
+  return { ...claimableWhere(scope), confirmationStatus: { not: 'POSTPONED' } };
+}
+
+/**
  * The next order to work on: a postponed one that is due within the lead
  * days, otherwise the oldest waiting order.
  */
 export async function pickNextCandidate(tx: Tx, scope: QueueScope, now = new Date()) {
-  const leadEnd = new Date(now.getTime() + POSTPONE_LEAD_DAYS * 24 * 60 * 60 * 1000);
-
+  // The same two predicates the counter uses — kept as two queries only
+  // because they are ordered differently: a promise by its date, and
+  // everything else by its age.
   const duePostponed = await tx.order.findFirst({
-    where: {
-      ...claimableWhere(scope),
-      confirmationStatus: 'POSTPONED',
-      OR: [{ postponedUntil: { lte: leadEnd } }, { nextFollowUpAt: { lte: leadEnd } }],
-    },
+    where: duePostponedWhere(scope, now),
     orderBy: [{ postponedUntil: 'asc' }, { nextFollowUpAt: 'asc' }],
     select: { id: true },
   });
   if (duePostponed) return duePostponed.id;
 
   const oldest = await tx.order.findFirst({
-    where: { ...claimableWhere(scope), confirmationStatus: { not: 'POSTPONED' } },
+    where: readyToPullWhere(scope),
     orderBy: { createdAt: 'asc' },
     select: { id: true },
   });
