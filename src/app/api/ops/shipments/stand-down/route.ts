@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { requirePermission } from '@/lib/authorization';
+import { requirePermission, can } from '@/lib/authorization';
+import { authorises } from '@/lib/change-request-apply';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
 import { logAudit } from '@/lib/audit';
 import { releaseOrderLines } from '@/lib/reservation';
 import { assertCancellable, type StateSource } from '@/lib/order-state';
 import { REJECTION_REASONS } from '@/lib/confirmation-workflow';
+import { notify } from '@/lib/notify';
 
 /**
  * POST /api/ops/shipments/stand-down — this parcel is not going out.
@@ -46,18 +48,82 @@ const schema = z.object({
   /** For CANCEL: one of the structured reasons, never free text. */
   reason: z.string().optional(),
   note: z.string().trim().max(500).optional(),
+  /**
+   * AN APPROVED CANCEL OR POSTPONE REQUEST, CARRIED OUT.
+   *
+   * The agent on the phone cannot stand a shipment down — `ops.ship` is the
+   * packing table's permission, not hers. What she can do is ask, through
+   * the change-request door, and somebody who may decide decides. This is
+   * that decision being carried out, and it is the same two outcomes this
+   * route already performs, with the same guards.
+   */
+  changeRequestId: z.string().uuid().optional(),
 });
 
 export async function POST(req: Request) {
   try {
     const { user, companyId, storeId } = await requireContext();
-    await requirePermission('ops.ship');
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
-    const { orderId, outcome, until, reason, note } = parsed.data;
+    const { orderId, outcome, note, changeRequestId } = parsed.data;
+    let { until, reason } = parsed.data;
+
+    /**
+     * WHO MAY: the packing table, or a decision that says so.
+     *
+     * `requirePermission` moved down here from the top of the handler so
+     * the second door exists at all. It is still the ONLY way in without a
+     * request — the approved request does not widen `ops.ship`, it stands
+     * beside it, and it is read from the database rather than believed.
+     */
+    let viaRequest: {
+      id: string; requestedById: string; reason: string;
+      postponeUntil: Date | null; cancelReason: string | null;
+    } | null = null;
+    if (changeRequestId) {
+      const request = await db.orderChangeRequest.findFirst({
+        where: { id: changeRequestId, companyId },
+        select: {
+          id: true, orderId: true, status: true, appliedAt: true, intent: true,
+          reason: true, requestedById: true, postponeUntil: true, cancelReason: true,
+        },
+      });
+      if (!request) return NextResponse.json({ error: 'طلب التعديل غير موجود' }, { status: 404 });
+      const verdict = authorises(request, outcome === 'CANCEL' ? 'CANCEL' : 'POSTPONE', orderId);
+      if (!verdict.ok) {
+        return NextResponse.json({ error: verdict.error, code: verdict.code }, { status: verdict.status });
+      }
+      // Whoever may decide one may carry out the one they decided.
+      if (!can(user, 'control.change_requests') && !can(user, 'ops.ship')) {
+        return NextResponse.json({ error: 'لا تملك صلاحية تنفيذ هذا القرار' }, { status: 403 });
+      }
+      viaRequest = {
+        id: request.id,
+        requestedById: request.requestedById,
+        reason: request.reason,
+        postponeUntil: request.postponeUntil,
+        cancelReason: request.cancelReason,
+      };
+    } else {
+      await requirePermission('ops.ship');
+    }
+
+    /**
+     * AND THE VALUES COME FROM WHAT WAS APPROVED.
+     *
+     * The same rule the edit path states: «the browser sends the request's
+     * id and nothing else; the VALUES come from the approved request, on
+     * the server». A date or a reason riding along in the body would make
+     * «an approved postponement to Thursday» a way to hold an order until
+     * next year.
+     */
+    if (viaRequest) {
+      until = viaRequest.postponeUntil ? viaRequest.postponeUntil.toISOString() : undefined;
+      reason = viaRequest.cancelReason ?? undefined;
+    }
 
     const order = await db.order.findFirst({
       where: { id: orderId, companyId, storeId },
@@ -169,9 +235,52 @@ export async function POST(req: Request) {
         },
       });
       await tx.orderNote.create({
-        data: { companyId, orderId: order.id, authorId: user.id, kind: 'internal', body: noteBody },
+        data: {
+          companyId,
+          orderId: order.id,
+          authorId: user.id,
+          kind: 'internal',
+          // Whose ask this was. A cancellation that appears on an order
+          // with only the deciding manager's name on it loses the agent's
+          // sentence — and her sentence is the only record of what the
+          // customer actually said.
+          body: viaRequest ? `${noteBody} — بناءً على طلب: ${viaRequest.reason}` : noteBody,
+        },
       });
+
+      /**
+       * ONCE. `appliedAt: null` in the filter makes a second, concurrent
+       * carry-out a no-op — the same guard the edit path uses, for the same
+       * reason: two presses must not cancel an order twice.
+       */
+      if (viaRequest) {
+        await tx.orderChangeRequest.updateMany({
+          where: { id: viaRequest.id, appliedAt: null },
+          data: { appliedAt: new Date(), appliedById: user.id },
+        });
+      }
     });
+
+    /**
+     * AND THE PERSON WHO ASKED HEARS THAT IT IS DONE.
+     *
+     * «اعتُمد» and «نُفِّذ» are two different days for her: an approval sits
+     * in «بانتظار التطبيق» until somebody carries it out, and until then
+     * the order still says what it said. She told the customer it was
+     * cancelled; she needs to know when it actually was.
+     */
+    if (viaRequest && viaRequest.requestedById !== user.id) {
+      notify({
+        companyId,
+        storeId,
+        audience: { userIds: [viaRequest.requestedById] },
+        actorId: user.id,
+        title: `نُفِّذ طلبك على ${order.orderNumber}`,
+        message: outcome === 'CANCEL' ? `أُلغي الطلب: ${viaRequest.reason}` : `أُجِّل الطلب: ${viaRequest.reason}`,
+        type: 'SYSTEM_ALERT',
+        link: '/orders',
+      });
+    }
 
     await logAudit({
       companyId, userId: user.id, action: auditAction,

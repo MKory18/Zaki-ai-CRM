@@ -1,6 +1,7 @@
 import type { SessionUser } from '@/types/auth';
 import { BEFORE_OPERATIONS, mayDecide } from './change-request-routing';
 import { CHANGEABLE_FIELDS, changeFieldLabel, type ChangeValue } from './change-request-fields';
+import { INTENT_AR, type ChangeIntent } from './change-request-intent';
 
 /**
  * APPLYING AN APPROVED CHANGE REQUEST.
@@ -59,6 +60,8 @@ export interface ApplySource {
   status: string;
   appliedAt: Date | string | null;
   changes: unknown;
+  /** EDIT | CANCEL | POSTPONE. Absent on rows written before it existed. */
+  intent?: string | null;
 }
 
 export type Expansion =
@@ -72,6 +75,23 @@ export type Expansion =
  * applied is refused with its reason rather than half-way through an edit.
  */
 export function expandApproved(request: ApplySource): Expansion {
+  /**
+   * AND IT IS AN EDIT.
+   *
+   * A cancellation carries no fields, so without this it fell out the far
+   * end as «لا حقول في طلب التعديل لتطبيقها» — true, and no help at all to
+   * somebody who pressed «طبّق» on a cancellation and is now looking for
+   * the button that does work.
+   */
+  const asked = (request.intent ?? 'EDIT') as ChangeIntent;
+  if (asked !== 'EDIT') {
+    return {
+      ok: false,
+      status: 409,
+      code: 'WRONG_INTENT',
+      error: `هذا الطلب يطلب ${INTENT_AR[asked]}، لا تعديل حقل — نفِّذه من زرّه.`,
+    };
+  }
   if (request.status !== 'APPROVED') {
     return { ok: false, status: 409, code: 'NOT_APPROVED', error: 'طلب التعديل غير معتمَد — لا يُطبَّق إلا بعد الاعتماد' };
   }
@@ -152,6 +172,63 @@ export function mayApply(
   const routing = mayDecide(user, order);
   if (!routing.allowed) {
     return { ok: false, status: 403, code: 'NOT_THE_DECIDER', error: routing.reason ?? 'لا تملك صلاحية تطبيق هذا التعديل' };
+  }
+  return { ok: true };
+}
+
+/**
+ * AN APPROVED REQUEST AS THE AUTHORITY FOR A CANCELLATION OR A HOLD.
+ *
+ * The edit path set this precedent and states its reasoning: an approved
+ * request is «the one authority that passes the seal», because it carries a
+ * raiser, a reason, a decider, an SLA that escalates and an audit row —
+ * strictly more control than the direct edit it replaces, not less.
+ *
+ * The other two intents need it for the same reason and one more. Measured
+ * on this company: `control.change_requests` is held by MANAGER,
+ * COMPANY_ADMIN, DELIVERY_MANAGER and CONFIRMATION_SUPERVISOR, while
+ * cancelling directly needs `orders.unlock` — MANAGER, COMPANY_ADMIN and
+ * SUPER_ADMIN — and standing a shipment down needs `ops.ship`, which is
+ * neither. So two of the four people the queue is addressed to could
+ * approve a cancellation and then not carry it out, and the request would
+ * sit in «بانتظار التطبيق» until somebody with a third permission noticed.
+ *
+ * An approval that cannot be acted on is not an approval. So the decision
+ * is the authority, and the permission still governs the door with no
+ * decision behind it.
+ *
+ * What it does NOT do is widen anything else: the carry-out keeps every one
+ * of its own guards. `assertCancellable` still refuses once the goods have
+ * left, and answers with the return that is the real remedy there.
+ */
+export function authorises(
+  /**
+   * The four columns the answer turns on, and not `changes` — a cancellation
+   * has none, and demanding the field would make the caller select a column
+   * it has no use for.
+   */
+  request: Pick<ApplySource, 'orderId' | 'status' | 'appliedAt' | 'intent'>,
+  intent: ChangeIntent,
+  orderId: string
+): OrderVerdict {
+  if (request.orderId !== orderId) {
+    return { ok: false, status: 404, code: 'WRONG_ORDER', error: 'طلب التعديل لا يخص هذا الطلب' };
+  }
+  // A row written before the column existed is an edit, and says so.
+  const asked = (request.intent ?? 'EDIT') as ChangeIntent;
+  if (asked !== intent) {
+    return {
+      ok: false,
+      status: 409,
+      code: 'WRONG_INTENT',
+      error: `هذا الطلب يطلب ${INTENT_AR[asked]}، لا ${INTENT_AR[intent]}`,
+    };
+  }
+  if (request.status !== 'APPROVED') {
+    return { ok: false, status: 409, code: 'NOT_APPROVED', error: 'الطلب غير معتمَد — لا يُنفَّذ إلا بعد الاعتماد' };
+  }
+  if (request.appliedAt) {
+    return { ok: false, status: 409, code: 'ALREADY_APPLIED', error: 'نُفِّذ هذا الطلب مسبقاً' };
   }
   return { ok: true };
 }

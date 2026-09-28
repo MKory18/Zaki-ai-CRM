@@ -170,7 +170,7 @@
     "tabs": 0
   },
   "src/components/orders/OrderDetailModal.tsx": {
-    "buttons": 9,
+    "buttons": 10,
     "inputs": 2,
     "columns": 0,
     "cards": 0,
@@ -470,8 +470,8 @@
     "tabs": 0
   },
   "src/components/screens/confirmation/ActionDialogs.tsx": {
-    "buttons": 4,
-    "inputs": 11,
+    "buttons": 5,
+    "inputs": 13,
     "columns": 0,
     "cards": 0,
     "modals": 4,

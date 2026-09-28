@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { PICKABLE_REJECTION_REASONS, REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
+import { CHANGE_INTENTS, INTENT_AR, refusalFor, type ChangeIntent } from '@/lib/change-request-intent';
 import { Modal } from '@/components/ui/Modal';
 
 /**
@@ -223,57 +224,166 @@ export const CHANGE_FIELDS = [
   { value: 'customerNotes', label: 'ملاحظات العميل' },
 ] as const;
 
+export interface ChangeRequestValue {
+  intent: ChangeIntent;
+  /** EDIT only. */
+  field: string;
+  to: string;
+  /** POSTPONE only — yyyy-mm-dd. */
+  postponeDate: string;
+  /** CANCEL only — one of the structured reasons. */
+  cancelReason: string;
+  reason: string;
+}
+
+/**
+ * THREE DOORS, NOT ONE.
+ *
+ * What the customer says on the phone after the order is confirmed is one
+ * of three things: change something, cancel it, or not this week. The agent
+ * had a door for the first and, once she had pressed «تأكيد», none at all
+ * for the other two — her «ألغِ» and «تأجيل» buttons live on the queue
+ * screen and are gone by then.
+ *
+ * So the three are chosen first, because they are three different
+ * conversations and asking «which field?» of somebody cancelling an order
+ * is the wrong first question. Each shows only what it needs, and the
+ * reason — the sentence the decider actually reads — is common to all.
+ *
+ * WHAT IS IMPOSSIBLE IS NOT OFFERED. A parcel already with the courier
+ * cannot be postponed: there is nothing left to hold back. `refusalFor`
+ * says so — the same function the route refuses with, so the door and the
+ * answer can never disagree — and the button is disabled with its sentence
+ * beside it rather than failing two hours later in somebody's queue.
+ */
 export function ChangeRequestDialog({
   open,
   orderNumber,
   busy,
+  hasLeftWarehouse = false,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   orderNumber: string;
   busy?: boolean;
+  /** The parcel is with the courier — what that rules out is shown, not hidden. */
+  hasLeftWarehouse?: boolean;
   onClose: () => void;
-  onSubmit: (value: { field: string; to: string; reason: string }) => void;
+  onSubmit: (value: ChangeRequestValue) => void;
 }) {
+  const [intent, setIntent] = useState<ChangeIntent>('EDIT');
   const [field, setField] = useState<string>(CHANGE_FIELDS[0].value);
   const [to, setTo] = useState('');
   const [reason, setReason] = useState('');
+  const [cancelReason, setCancelReason] = useState<string>(PICKABLE_REJECTION_REASONS[0]);
+  const [postponeDate, setPostponeDate] = useState(() =>
+    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  );
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const numeric = field === 'quantity' || field === 'discountAmount';
+  const blockedPostpone = refusalFor('POSTPONE', { hasLeftWarehouse });
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="طلب تعديل على طلب مؤكد" subtitle={orderNumber} maxWidth="sm">
+    <Modal isOpen={open} onClose={onClose} title="طلب على طلب مؤكد" subtitle={orderNumber} maxWidth="sm">
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit({ field, to, reason });
+          onSubmit({ intent, field, to, postponeDate, cancelReason, reason });
         }}
         className="space-y-3"
       >
+        {/* WHAT YOU ARE ASKING FOR — first, because it decides the rest. */}
+        <div className="grid grid-cols-3 gap-1 rounded-lg bg-[var(--sys-surface-strong)] p-0.5">
+          {CHANGE_INTENTS.map((k) => {
+            const blocked = refusalFor(k, { hasLeftWarehouse });
+            return (
+              <button
+                key={k}
+                type="button"
+                disabled={!!blocked}
+                title={blocked ?? undefined}
+                onClick={() => setIntent(k)}
+                className={`min-h-11 md:min-h-9 rounded-md px-2 text-xs font-semibold transition disabled:opacity-40 ${
+                  intent === k
+                    ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-raised'
+                    : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
+                }`}
+              >
+                {INTENT_AR[k]}
+              </button>
+            );
+          })}
+        </div>
+
+        {hasLeftWarehouse && intent !== 'POSTPONE' && (
+          <p className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2">
+            الطرد عند شركة الشحن — يُنفَّذ برسالةٍ إليهم بعد الموافقة، لا بتعديلٍ عندنا.
+          </p>
+        )}
+        {blockedPostpone && (
+          <p className="text-xs text-[var(--sys-muted-foreground)]">{blockedPostpone}</p>
+        )}
+
         <p className="text-xs text-[var(--sys-muted-foreground)]">
-          الطلب المؤكد للقراءة فقط. يراجع المشرف التعديل، ويتوقف تقدّم الطلب حتى صدور القرار.
+          الطلب المؤكد للقراءة فقط. يراجع المشرف الطلب، ويتوقف تقدّم الطلب حتى صدور القرار.
         </p>
-        <Field label="الحقل المطلوب تعديله">
-          <select value={field} onChange={(e) => setField(e.target.value)} className={FIELD_CLS}>
-            {CHANGE_FIELDS.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="القيمة الجديدة">
-          <input
-            required
-            type={numeric ? 'number' : 'text'}
-            min={numeric ? 0 : undefined}
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className={FIELD_CLS}
-            dir={field === 'customerPhone' || field === 'customerAltPhone' || numeric ? 'ltr' : undefined}
-          />
-        </Field>
-        <Field label="سبب التعديل">
+
+        {intent === 'EDIT' && (
+          <>
+            <Field label="الحقل المطلوب تعديله">
+              <select value={field} onChange={(e) => setField(e.target.value)} className={FIELD_CLS}>
+                {CHANGE_FIELDS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="القيمة الجديدة">
+              <input
+                required
+                type={numeric ? 'number' : 'text'}
+                min={numeric ? 0 : undefined}
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                className={FIELD_CLS}
+                dir={field === 'customerPhone' || field === 'customerAltPhone' || numeric ? 'ltr' : undefined}
+              />
+            </Field>
+          </>
+        )}
+
+        {intent === 'CANCEL' && (
+          <Field label="سبب الإلغاء">
+            {/* The taxonomy, picked by the person who heard it. The decider
+                reads her sentence below; they should not also have to guess
+                which of the eight she meant — the reports count this one. */}
+            <select value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} className={FIELD_CLS}>
+              {PICKABLE_REJECTION_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {REJECTION_REASON_AR[r] ?? r}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+
+        {intent === 'POSTPONE' && (
+          <Field label="يُؤجَّل حتى">
+            <input
+              type="date"
+              required
+              min={today}
+              value={postponeDate}
+              onChange={(e) => setPostponeDate(e.target.value)}
+              className={FIELD_CLS}
+              dir="ltr"
+            />
+          </Field>
+        )}
+
+        <Field label={intent === 'EDIT' ? 'سبب التعديل' : 'ما قاله العميل'}>
           <textarea
             required
             minLength={5}
@@ -281,7 +391,13 @@ export function ChangeRequestDialog({
             onChange={(e) => setReason(e.target.value)}
             rows={2}
             className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
-            placeholder="مثال: العميل أعطى عنواناً جديداً عند الاتصال"
+            placeholder={
+              intent === 'EDIT'
+                ? 'مثال: العميل أعطى عنواناً جديداً عند الاتصال'
+                : intent === 'CANCEL'
+                  ? 'مثال: العميل اشترى المنتج من مكان آخر'
+                  : 'مثال: العميل مسافر ويعود يوم الأحد'
+            }
           />
         </Field>
         <Buttons onCancel={onClose} busy={busy} submitLabel="إرسال الطلب" />

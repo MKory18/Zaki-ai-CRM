@@ -4,6 +4,8 @@ import { requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
 import { BEFORE_OPERATIONS } from '@/lib/change-request-routing';
 import { apiErrorResponse } from '@/lib/api-error';
+import { carryOut, type ChangeIntent } from '@/lib/change-request-intent';
+import { hasLeftWarehouse, type StateSource } from '@/lib/order-state';
 
 /**
  * GET /api/control/change-requests?status=PENDING
@@ -64,6 +66,10 @@ export async function GET(req: Request) {
         order: {
           select: {
             id: true, orderNumber: true, merchantRef: true, confirmationStatus: true, shippingStatus: true,
+            // Where the parcel is decides what carrying the request out even
+            // means — a cancellation before the waybill is a cancellation,
+            // and after it is a message to the courier and a return.
+            shippedAt: true, labelPrintedAt: true,
             customer: { select: { fullName: true, phone: true } },
           },
         },
@@ -81,6 +87,16 @@ export async function GET(req: Request) {
       requests: rows.map((r) => ({
         ...r,
         requestedByName: nameOf.get(r.requestedById) ?? null,
+        /**
+         * WHAT PRESSING THE BUTTON WILL DO, decided here rather than in the
+         * browser. The screen has to name the act on the button — «ألغِ
+         * الطلب» and «أبلغ شركة الشحن» are not the same press — and the
+         * rule that tells them apart is `hasLeftWarehouse`, which the
+         * screen would have to re-derive from three columns to guess at.
+         */
+        carryOut: carryOut((r.intent ?? 'EDIT') as ChangeIntent, {
+          hasLeftWarehouse: hasLeftWarehouse(r.order as unknown as StateSource),
+        }),
         // Hers to withdraw, never hers to decide — the decide route refuses
         // self-approval, and a button that always 403s teaches people the
         // screen is lying to them.

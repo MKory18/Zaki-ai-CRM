@@ -11,6 +11,9 @@ import { OrderResponsibility } from '@/components/orders/OrderResponsibility';
 import { CustomerCard } from '@/components/orders/CustomerCard';
 import { OrderLinesCard } from '@/components/orders/OrderLinesCard';
 import { ConfirmationActions } from '@/components/orders/ConfirmationActions';
+import { ChangeRequestDialog, type ChangeRequestValue } from '@/components/screens/confirmation/ActionDialogs';
+import { raiseChangeRequest } from '@/components/orders/raiseChangeRequest';
+import { hasLeftWarehouse, type StateSource } from '@/lib/order-state';
 import { ShippingSection } from '@/components/orders/ShippingSection';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
@@ -67,6 +70,9 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
   const [channelOpen, setChannelOpen] = useState(false);
   const [channelDraft, setChannelDraft] = useState('');
+  /** تعديل · إلغاء · تأجيل on a confirmed order — see the card below. */
+  const [askOpen, setAskOpen] = useState(false);
+  const [asking, setAsking] = useState(false);
 
   useEffect(() => {
     if (!isOpen || channels.length) return;
@@ -581,6 +587,40 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               owner this screen is oversight, and a panel of buttons whose
               every press the server refuses is worse than no panel. The
               server still enforces it — this only stops offering it. */}
+          {/*
+            THE THREE THINGS A CUSTOMER SAYS AFTER CONFIRMATION.
+
+            This door existed on one screen only — the agent's own queue,
+            which lists orders still in her hands. The moment an order left
+            them there was nowhere to ask anything about it, and this modal
+            is where a confirmed, batched or dispatched order is actually
+            opened. So the customer who rings to cancel a parcel that is
+            already out reached a system with no door for it at all.
+
+            A card, not a link in a corner: asking is the only thing anybody
+            can do to a sealed order, so it is the one control that must be
+            visible without hunting for it.
+          */}
+          {order.confirmationStatus === 'CONFIRMED' && (
+            <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-2">
+              <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)]">
+                طلبٌ على هذا الطلب
+              </h4>
+              <p className="text-xs text-[var(--sys-muted-foreground)]">
+                {hasLeftWarehouse(order as unknown as StateSource)
+                  ? 'الطرد عند شركة الشحن — التعديل والإلغاء يمرّان برسالةٍ إليهم بعد الموافقة.'
+                  : 'الطلب مؤكَّد وللقراءة فقط — تعديلُه أو إلغاؤه أو تأجيلُه يمرّ بقرار.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setAskOpen(true)}
+                className="min-h-11 md:min-h-0 inline-flex items-center rounded-lg border border-[var(--sys-border)] px-4 py-1.5 text-xs font-medium text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+              >
+                تعديل · إلغاء · تأجيل
+              </button>
+            </div>
+          )}
+
           {mayRecordCalls && (
           <ConfirmationActions
             order={order}
@@ -795,6 +835,30 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           </div>
         </div>
       </div>
+
+      {askOpen && (
+        <ChangeRequestDialog
+          open
+          orderNumber={order.orderNumber}
+          busy={asking}
+          hasLeftWarehouse={hasLeftWarehouse(order as unknown as StateSource)}
+          onClose={() => setAskOpen(false)}
+          onSubmit={(value: ChangeRequestValue) => {
+            setAskOpen(false);
+            setAsking(true);
+            void raiseChangeRequest(order.id, value)
+              .then(async () => {
+                setActionFeedback({ type: 'success', text: 'أُرسل الطلب — يصلك القرار إشعاراً.' });
+                await loadOrder(order.id);
+                onRefresh();
+              })
+              .catch((e) =>
+                setActionFeedback({ type: 'error', text: e instanceof Error ? e.message : 'تعذر إرسال الطلب' })
+              )
+              .finally(() => setAsking(false));
+          }}
+        />
+      )}
     </Modal>
   );
 }

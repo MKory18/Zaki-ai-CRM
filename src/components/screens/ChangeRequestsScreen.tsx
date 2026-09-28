@@ -6,6 +6,8 @@ import { CourierNotifyDialog, type CourierAsk } from '@/components/orders/Courie
 import { ChangeRequestReview } from '@/components/orders/ChangeRequestReview';
 import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { changeFieldLabel } from '@/lib/change-request-fields';
+import { INTENT_AR, type ChangeIntent } from '@/lib/change-request-intent';
+import { REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
 import { deriveCoreState } from '@/lib/order-state';
 import { OrderStateChip } from '@/components/ui/StatusChip';
 import { ROLE_LABELS, type UserRole } from '@/types/auth';
@@ -45,6 +47,12 @@ interface ChangeRequest {
   requestedRole: string;
   /** Raised by the person reading the screen. */
   isMine: boolean;
+  /** EDIT | CANCEL | POSTPONE. Absent on rows raised before it existed. */
+  intent?: ChangeIntent | null;
+  postponeUntil: string | null;
+  cancelReason: string | null;
+  /** What pressing the button will actually do — decided by the server. */
+  carryOut: { kind: string; reason?: string };
   changes: Record<string, { from?: string | number | null; to: string | number | null }>;
   order: {
     id: string;
@@ -121,18 +129,86 @@ export function ChangeRequestsScreen() {
     }
   }
 
+  /**
+   * WHAT THE BUTTON SAYS, AND WHERE IT PRESSES.
+   *
+   * «طبّق التعديل على الطلب» on a cancellation is a lie about what is
+   * about to happen, and the edit endpoint would have answered it with
+   * «لا حقول لتطبيقها». Each ask is carried out through the door that
+   * already does that thing, and the confirmation names the act.
+   */
+  const CARRY_LABEL: Record<string, string> = {
+    EDIT_ORDER: 'طبّق التعديل على الطلب',
+    CANCEL_ORDER: 'ألغِ الطلب',
+    CANCEL_VIA_COURIER: 'أبلغ شركة الشحن بالإلغاء',
+    HOLD_SHIPMENT: 'أجّل الطلب',
+  };
+
   async function apply(r: ChangeRequest) {
+    const intent = (r.intent ?? 'EDIT') as ChangeIntent;
+    // Built first, and not nested three templates deep inside the ternary:
+    // the currency guard walks the source blanking templates, and a
+    // template inside a template inside a template is where it loses the
+    // thread and reports an innocent line as a typed «$».
     const lines = Object.entries(r.changes ?? {})
       .map(([f, v]) => `${changeFieldLabel(f)}: ${v?.from !== undefined ? `${show(v.from)} ← ` : ''}${show(v?.to)}`)
       .join('\n');
+    const body =
+      intent === 'EDIT'
+        ? `${lines}\n\nيُكتب على الطلب بالقيم المعتمدة كما هي، ويُسجَّل في سجل التدقيق مع سببه.`
+        : intent === 'CANCEL'
+          ? `سبب الإلغاء: ${REJECTION_REASON_AR[r.cancelReason ?? ''] ?? r.cancelReason ?? '—'}\n\n` +
+            'تعود البضاعةُ المحجوزة إلى المخزون في المعاملة نفسها.'
+          : `يُؤجَّل حتى ${String(r.postponeUntil ?? '').slice(0, 10)}\n\n` +
+            'يعود الطلبُ إلى المتابعة ويظهر لمن يكون فارغاً يومَها، وتعود بضاعتُه إلى المخزون.';
+
     const ok = await confirm({
-      title: `تطبيق التعديل على ${r.order.orderNumber}؟`,
-      body: `${lines}\n\nيُكتب على الطلب بالقيم المعتمدة كما هي، ويُسجَّل في سجل التدقيق مع سببه.`,
-      confirmLabel: 'طبّق',
+      title: `${CARRY_LABEL[r.carryOut?.kind] ?? 'نفِّذ'} — ${r.order.orderNumber}؟`,
+      body,
+      confirmLabel: 'نفِّذ',
+      tone: intent === 'CANCEL' ? 'danger' : undefined,
     });
     if (!ok) return;
 
-    await send(r, false);
+    if (intent === 'EDIT') {
+      await send(r, false);
+      return;
+    }
+    await standDown(r, intent);
+  }
+
+  /**
+   * A cancellation or a postponement, through the door that does it.
+   *
+   * The id and nothing else: the date and the structured reason come from
+   * the approved request, on the server. `assertCancellable` still refuses
+   * once the goods have left — and its refusal is the message to the
+   * courier, which is the real remedy there.
+   */
+  async function standDown(r: ChangeRequest, intent: ChangeIntent) {
+    setApplying(r.id);
+    try {
+      const res = await apiFetch('/api/ops/shipments/stand-down', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: r.order.id,
+          outcome: intent === 'CANCEL' ? 'CANCEL' : 'POSTPONE',
+          changeRequestId: r.id,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.errorAr || body?.error || 'تعذر تنفيذ القرار');
+      await load();
+    } catch (e) {
+      await tell({
+        title: 'تعذر تنفيذ القرار',
+        body: e instanceof Error ? e.message : 'حدث خطأ',
+        tone: 'danger',
+      });
+    } finally {
+      setApplying(null);
+    }
   }
 
   /**
@@ -232,7 +308,7 @@ export function ChangeRequestsScreen() {
       {rows.length === 0 && (
         <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
           <EmptyState
-            title={tab === 'PENDING' ? 'لا طلبَ تعديلٍ ينتظر المراجعة' : 'لا تعديلَ معتمَداً ينتظر التطبيق'}
+            title={tab === 'PENDING' ? 'لا طلبَ ينتظر المراجعة' : 'لا قرارَ معتمَداً ينتظر التنفيذ'}
             why={
               tab === 'PENDING'
                 ? 'الطلب المؤكَّد للقراءة فقط بالنسبة للموظّف: تغييرُه يمرّ من هنا. فراغُ القائمة يعني أنّ لا أحد طلب تغييراً.'
@@ -256,6 +332,19 @@ export function ChangeRequestsScreen() {
                 )}
               </span>
               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{r.order.orderNumber}</span>
+              {/* WHICH OF THE THREE. Every row said «طلب تعديل» and a
+                  cancellation read as a field edit — answered like one. */}
+              <span
+                className={`text-xs px-2 py-0.5 rounded-md border ${
+                  (r.intent ?? 'EDIT') === 'CANCEL'
+                    ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]'
+                    : (r.intent ?? 'EDIT') === 'POSTPONE'
+                      ? 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/30 text-[var(--sys-warning)]'
+                      : 'bg-[var(--sys-surface)] border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
+                }`}
+              >
+                {INTENT_AR[(r.intent ?? 'EDIT') as ChangeIntent]}
+              </span>
               {/* The one chip. Drawn here by hand it was always grey, so a
                   cancelled order and a delivered one looked the same. */}
               <OrderStateChip state={state} />
@@ -276,9 +365,32 @@ export function ChangeRequestsScreen() {
 
             <p className="text-sm text-[var(--sys-heading)]">{r.reason}</p>
 
+            {/* A cancellation has no fields and a postponement has a date;
+                the empty box that used to sit here on both said nothing. */}
+            {(r.intent ?? 'EDIT') === 'CANCEL' && (
+              <p className="text-xs rounded-lg border border-[var(--sys-border)] px-3 py-2">
+                <span className="font-semibold text-[var(--sys-muted-foreground)]">سبب الإلغاء: </span>
+                <span className="font-semibold text-[var(--sys-heading)]">
+                  {REJECTION_REASON_AR[r.cancelReason ?? ''] ?? r.cancelReason ?? '—'}
+                </span>
+              </p>
+            )}
+            {(r.intent ?? 'EDIT') === 'POSTPONE' && (
+              <p className="text-xs rounded-lg border border-[var(--sys-border)] px-3 py-2">
+                <span className="font-semibold text-[var(--sys-muted-foreground)]">يُؤجَّل حتى: </span>
+                <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">
+                  {String(r.postponeUntil ?? '').slice(0, 10) || '—'}
+                </span>
+              </p>
+            )}
+
             {/* What changes, in words the person deciding reads: the field's
                 Arabic name, and the value before and after. */}
-            <ul className="rounded-lg border border-[var(--sys-border)] divide-y divide-[var(--sys-border)]">
+            <ul
+              className={`rounded-lg border border-[var(--sys-border)] divide-y divide-[var(--sys-border)] ${
+                Object.keys(r.changes ?? {}).length === 0 ? 'hidden' : ''
+              }`}
+            >
               {Object.entries(r.changes ?? {}).map(([field, value]) => (
                 <li key={field} className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
                   <span className="w-28 shrink-0 font-semibold text-[var(--sys-muted-foreground)]">{changeFieldLabel(field)}</span>
@@ -341,7 +453,7 @@ export function ChangeRequestsScreen() {
                   className="min-h-11 md:min-h-0 inline-flex items-center flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[var(--sys-success)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
                 >
                   {applying === r.id && <RiLoader4Line className="w-4 h-4 animate-spin" />}
-                  طبّق التعديل على الطلب
+                  {CARRY_LABEL[r.carryOut?.kind] ?? 'نفِّذ القرار'}
                 </button>
               )}
             </footer>

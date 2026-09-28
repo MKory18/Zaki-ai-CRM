@@ -73,7 +73,12 @@ describe('standing a shipment down', () => {
    */
   it('hands the postponed order to nobody, with a date', () => {
     const src = route();
-    const branch = src.slice(src.indexOf("outcome === 'POSTPONE'"), src.indexOf('} else {'));
+    // From the branch to ITS else, not to the first `} else {` anywhere in
+    // the file: the authority check above grew one, and slicing from zero
+    // handed this an empty string that contained every rule vacuously.
+    const start = src.indexOf("outcome === 'POSTPONE'");
+    const branch = src.slice(start, src.indexOf('} else {', start));
+    expect(branch.length, 'الفرعُ فارغ — القصُّ أخطأ موضعه').toBeGreaterThan(200);
     expect(branch).toContain("confirmationStatus: 'POSTPONED'");
     expect(branch).toContain('postponedUntil: due');
     expect(branch).toContain('claimedById: null');

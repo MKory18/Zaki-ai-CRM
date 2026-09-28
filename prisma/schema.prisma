@@ -1829,8 +1829,18 @@ model OrderChangeRequest {
   orderId             String
   requestedById       String
   requestedRole       String
+  /// EDIT | CANCEL | POSTPONE — which of the three things is being asked
+  /// for. EDIT carries `changes`; POSTPONE carries `postponeUntil`; CANCEL
+  /// carries only the reason.
+  intent              String    @default("EDIT")
   /// { field: { from, to } } — what the requester wants changed
   changes             Json
+  /// The day a POSTPONE request is asking to wait until.
+  postponeUntil       DateTime?
+  /// A CANCEL request's reason in the structured taxonomy (REJECTION_REASONS),
+  /// picked by the agent who spoke to the customer. `reason` stays the
+  /// sentence she wrote; this is the one the reports count.
+  cancelReason        String?
   reason              String
   status              String    @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
   blocking            Boolean   @default(true)

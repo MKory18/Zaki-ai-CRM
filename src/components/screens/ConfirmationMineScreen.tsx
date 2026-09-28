@@ -13,8 +13,10 @@ import {
   IssueDialog,
   PostponeDialog,
   RejectDialog,
+  type ChangeRequestValue,
   type PostponeValue,
 } from './confirmation/ActionDialogs';
+import { raiseChangeRequest } from '@/components/orders/raiseChangeRequest';
 import { AssistantDialog } from './confirmation/AssistantDialog';
 import { RiAlertLine, RiChat3Line, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLoader4Line, RiPencilLine, RiPhoneLine, RiPhoneLockLine, RiSearchLine, RiShieldFlashLine, RiSparkling2Line, RiTimerLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
@@ -221,25 +223,13 @@ export function ConfirmationMineScreen() {
    * would have gone through. And if that second call fails, the request is
    * sitting in «بانتظار التطبيق» — visible and applicable, never lost.
    */
-  const submitChange = (order: OrderRow, value: { field: string; to: string; reason: string }) => {
+  /**
+   * تعديل · إلغاء · تأجيل — through the one raiser, which the order
+   * screen uses too. See src/components/orders/raiseChangeRequest.ts.
+   */
+  const submitChange = (order: OrderRow, value: ChangeRequestValue) => {
     setDialog(null);
-    void act(order.id, async () => {
-      const res = await apiJson<{ request: { id: string }; readyToApply?: boolean }>(
-        `/api/orders/${order.id}/change-requests`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: value.reason, changes: { [value.field]: { to: value.to } } }),
-        }
-      );
-      if (res.readyToApply) {
-        await apiJson(`/api/orders/${order.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ changeRequestId: res.request.id }),
-        });
-      }
-    });
+    void act(order.id, () => raiseChangeRequest(order.id, value));
   };
 
   if (!data) {

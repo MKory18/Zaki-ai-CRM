@@ -259,8 +259,14 @@ describe('a decider does not queue behind themselves', () => {
    * rules and the audit are the ones an approval would have gone through.
    */
   it('and the screen carries it through in one press', () => {
-    const src = mine();
-    expect(src, 'الشاشة تتجاهل أنّ الطلب جاهزٌ للتطبيق').toMatch(/if \(res\.readyToApply\) \{/);
+    // THE RULE, IN ITS NEW HOME. The raiser moved out of the screen when a
+    // second screen needed it — the order modal, which is the only place a
+    // dispatched order can be reached. What must stay true is that a
+    // self-decided request is carried out in the same press, wherever the
+    // press was; asserting the PATCH's presence in one screen file stopped
+    // saying that the moment the code moved.
+    const src = stripComments(repoFile('src/components/orders/raiseChangeRequest.ts'));
+    expect(src, 'الشاشة تتجاهل أنّ الطلب جاهزٌ للتطبيق').toMatch(/if \(!res\.readyToApply\) return;/);
     expect(src).toMatch(/changeRequestId: res\.request\.id/);
     expect(src).toMatch(/method: 'PATCH'/);
   });

@@ -9,6 +9,8 @@ import { logAudit } from '@/lib/audit';
 import { addBusinessMinutes } from '@/lib/business-calendar';
 import { zodMessage } from '@/lib/zod-message';
 import { CHANGEABLE_FIELDS, withFrom } from '@/lib/change-request-fields';
+import { CHANGE_INTENTS, INTENT_AR, INTENT_ASK_AR, carryOut, missingFor, type ChangeIntent } from '@/lib/change-request-intent';
+import { hasLeftWarehouse, type StateSource } from '@/lib/order-state';
 import { createNotification } from '@/lib/notification';
 import { deciderFor, mayDecide, SUPERVISOR_ROLES } from '@/lib/change-request-routing';
 import { orderSeal } from '@/lib/order-seal';
@@ -30,6 +32,12 @@ export const CHANGE_REQUEST_SLA_MINUTES = 120;
 
 
 const createSchema = z.object({
+  /**
+   * WHICH OF THE THREE. Defaulted, because every request raised before this
+   * existed was an edit and every caller that has not been taught the word
+   * still means one.
+   */
+  intent: z.enum(CHANGE_INTENTS).default('EDIT'),
   // partialRecord, NOT record.
   //
   // In Zod 4 a record keyed by an enum is EXHAUSTIVE: it demands every key
@@ -37,9 +45,15 @@ const createSchema = z.object({
   // on every request, and the only answer anybody could get was "اسم
   // العميل مطلوب" — no change request could be raised at all, from any
   // screen, since the upgrade.
+  //
+  // Optional now, and required only OF AN EDIT — `missingFor` says so, in
+  // one place both this route and the dialog read, so a cancellation is
+  // not refused for naming no field.
   changes: z
     .partialRecord(z.enum(CHANGEABLE_FIELDS), z.object({ to: z.union([z.string(), z.number()]).nullable() }))
-    .refine((c) => Object.keys(c).length > 0, 'حدّد حقلاً واحداً على الأقل'),
+    .optional(),
+  /** The day a postponement is asking to wait until. */
+  postponeUntil: z.string().datetime().optional(),
   reason: z.string().trim().min(5, 'اذكر سبب التعديل').max(500),
   blocking: z.boolean().default(true),
 });
@@ -73,6 +87,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
+    }
+
+    const intent = parsed.data.intent as ChangeIntent;
+    const missing = missingFor(intent, {
+      changes: parsed.data.changes ?? null,
+      postponeUntil: parsed.data.postponeUntil ?? null,
+    });
+    if (missing) return NextResponse.json({ error: missing }, { status: 400 });
+
+    /**
+     * REFUSED AT THE DOOR, NOT AN HOUR LATER BY A SUPERVISOR.
+     *
+     * A postponement once the parcel is with the courier is the one ask
+     * that can never be carried out — there is nothing left to hold back.
+     * Letting it be raised would put it in somebody's queue for two hours
+     * so they could say the same sentence this says now, while the agent
+     * believed the customer's date was booked.
+     */
+    const refusal = carryOut(intent, {
+      hasLeftWarehouse: hasLeftWarehouse(order as unknown as StateSource),
+    });
+    if (refusal.kind === 'REFUSED') {
+      return NextResponse.json({ error: refusal.reason, code: 'INTENT_IMPOSSIBLE' }, { status: 409 });
     }
 
     const open = await db.orderChangeRequest.findFirst({
@@ -111,7 +148,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         orderId: id,
         requestedById: user.id,
         requestedRole: user.role,
-        changes: withFrom(snapshot, parsed.data.changes) as object,
+        intent,
+        changes: withFrom(snapshot, parsed.data.changes ?? {}) as object,
+        postponeUntil: parsed.data.postponeUntil ? new Date(parsed.data.postponeUntil) : null,
         reason: parsed.data.reason,
         blocking: parsed.data.blocking,
         slaDueAt: addBusinessMinutes(new Date(), CHANGE_REQUEST_SLA_MINUTES, cal),
@@ -204,7 +243,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       storeId: order.storeId ?? storeId,
       actorId: user.id,
       type: 'SYSTEM_ALERT' as const,
-      title: `طلب تعديل على ${order.orderNumber}`,
+      // The title says WHICH of the three, because «طلب تعديل» on a
+      // cancellation reads as a field edit and gets answered like one.
+      title: `طلب ${INTENT_AR[intent]} على ${order.orderNumber}`,
       message: `${user.name ?? 'موظف'}: ${parsed.data.reason}`,
       link: ['/control/change-requests', '/confirmation/mine', '/orders'],
     };
@@ -232,7 +273,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       action: 'CHANGE_REQUEST_RAISED',
       entity: 'Order',
       entityId: id,
-      newData: { requestId: created.id, changes: parsed.data.changes, reason: parsed.data.reason },
+      newData: { requestId: created.id, intent, changes: parsed.data.changes, reason: parsed.data.reason },
     });
     await db.orderNote.create({
       data: {
@@ -240,7 +281,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         orderId: id,
         authorId: user.id,
         kind: 'internal',
-        body: `طلب تعديل: ${parsed.data.reason}`,
+        body: `${INTENT_ASK_AR[intent]} — طلب: ${parsed.data.reason}`,
       },
     });
 
