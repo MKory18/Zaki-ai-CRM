@@ -21,14 +21,34 @@ import { zodMessage } from '@/lib/zod-message';
  * back — not when the courier says it is coming.
  */
 
-const schema = z.object({
-  orderId: z.string().uuid(),
-  lines: z
-    .array(z.object({ itemId: z.string().uuid(), deliveredQty: z.number().int().min(0).max(10_000) }))
-    .min(1)
-    .max(100),
-  note: z.string().trim().max(300).optional(),
-});
+/**
+ * THE TWO COMMON OUTCOMES ARE A WORD, NOT A LINE LIST.
+ *
+ * Almost every parcel is «all of it» or «none of it». Making the screen
+ * send a full line list for those means the client has to KNOW the lines
+ * — a fetch before the click, and a chance to send the wrong set — to say
+ * something the server can read off the order itself.
+ *
+ * `outcome` is that word. `lines` stays for the partial case, which is
+ * the only one that genuinely needs counting. One endpoint still, and one
+ * fee rule: `outcome` is expanded into lines here, three lines below, and
+ * everything after it is the path it always was.
+ */
+const schema = z.union([
+  z.object({
+    orderId: z.string().uuid(),
+    outcome: z.enum(['ALL', 'NONE']),
+    note: z.string().trim().max(300).optional(),
+  }),
+  z.object({
+    orderId: z.string().uuid(),
+    lines: z
+      .array(z.object({ itemId: z.string().uuid(), deliveredQty: z.number().int().min(0).max(10_000) }))
+      .min(1)
+      .max(100),
+    note: z.string().trim().max(300).optional(),
+  }),
+]);
 
 export async function POST(req: Request) {
   try {
@@ -40,12 +60,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
+    /**
+     * A word becomes the line list, read from the order rather than taken
+     * from the request: «all of it» means every unit this order actually
+     * has, not every unit a client thought it had.
+     */
+    const asked = parsed.data;
+    let lines: { itemId: string; deliveredQty: number }[];
+    if ('outcome' in asked) {
+      const items = await db.orderItem.findMany({
+        where: { orderId: asked.orderId, order: { companyId } },
+        select: { id: true, quantity: true, freeQuantity: true },
+      });
+      if (items.length === 0) {
+        return NextResponse.json({ error: 'لا بنود لهذا الطلب' }, { status: 404 });
+      }
+      lines = items.map((i) => ({
+        itemId: i.id,
+        deliveredQty: asked.outcome === 'ALL' ? i.quantity + i.freeQuantity : 0,
+      }));
+    } else {
+      lines = asked.lines;
+    }
+
     try {
       const outcome = await db.$transaction((tx) =>
         recordPartialDelivery(tx, {
           companyId,
           orderId: parsed.data.orderId,
-          lines: parsed.data.lines,
+          lines,
           minorUnit: country.minorUnit,
           userId: user.id,
           note: parsed.data.note ?? null,

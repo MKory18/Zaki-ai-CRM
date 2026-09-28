@@ -1000,12 +1000,12 @@
     "tabs": 0
   },
   "src/components/screens/TrackingScreen.tsx": {
-    "buttons": 9,
+    "buttons": 11,
     "inputs": 2,
     "columns": 16,
     "cards": 0,
     "modals": 0,
-    "icons": 8,
+    "icons": 11,
     "links": 0,
     "tabs": 0
   },

@@ -9,8 +9,8 @@ import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { Rows } from '@/components/ui/Rows';
-import { RiChat1Line, RiEBike2Line, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
-import { useAsk } from '@/components/ui/Confirm';
+import { RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { useAsk, useConfirm } from '@/components/ui/Confirm';
 
 /**
  * /ops/tracking — search by order, reference, barcode, customer or phone.
@@ -78,11 +78,15 @@ export function TrackingScreen() {
   const [transferFor, setTransferFor] = useState<Row | null>(null);
   const [deliverFor, setDeliverFor] = useState<Row | null>(null);
   const [noting, setNoting] = useState<string | null>(null);
+  /** The order whose door outcome is being written, so its buttons wait. */
+  const [settling, setSettling] = useState<string | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [collecting, setCollecting] = useState(false);
   const [task, setTask] = useState<TaskFilter>('all');
 
   const ask = useAsk();
+  // A plain yes/no: refusing a parcel needs a confirmation, not a sentence.
+  const confirm = useConfirm();
 
   /**
    * MOST OF WHAT A FOLLOW-UP AGENT LEARNS IS NOT AN OUTCOME.
@@ -121,6 +125,40 @@ export function TrackingScreen() {
       setError(e instanceof Error ? e.message : 'تعذر حفظ الملاحظة');
     } finally {
       setNoting(null);
+    }
+  };
+
+  /**
+   * «استلم» و«رفض» — نداءٌ واحد، والسيرفر يقرأ بنودَ الطلب بنفسه.
+   *
+   * Sending `outcome` rather than a line list keeps the screen from having
+   * to know the lines to say something the order already knows, and keeps
+   * the fee rule in the one place that has it.
+   */
+  const settle = async (o: Row, outcome: 'ALL' | 'NONE') => {
+    if (outcome === 'NONE') {
+      const ok = await confirm({
+        title: `${o.merchantRef ?? o.orderNumber} — لم يستلم شيئاً؟`,
+        body: 'يصير الطلبُ مرتجعاً. البضاعةُ لا تعود إلى المخزون الآن — تعود عند استلامها فعلياً في المرتجعات.',
+        confirmLabel: 'نعم، رفضه',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
+    setSettling(o.id);
+    setError(null);
+    try {
+      const res = await apiJson<{ message: string }>('/api/ops/tracking/deliver', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: o.id, outcome }),
+      });
+      setDone(res.message);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر التسجيل');
+    } finally {
+      setSettling(null);
     }
   };
 
@@ -414,14 +452,53 @@ export function TrackingScreen() {
           ]}
           actions={(o) => (
             <>
+              {/*
+                THE TWO ANSWERS THE DOOR ACTUALLY GIVES, AS TWO BUTTONS.
+
+                This was one «تسجيل التسليم» that opened a dialog asking
+                which lines were taken. Almost every parcel is all of it or
+                none of it, and making somebody open a dialog and read a
+                line list to say «استلم» is the reason it was reported as
+                heavy. The partial case is real but rare, and it keeps the
+                dialog — reached from the same place, one tap further.
+
+                NEITHER SETTLES MONEY. What is written here is what
+                HAPPENED at the door; the collected amount is written when
+                the courier's statement is matched. Both buttons go to the
+                one endpoint that has always known that.
+              */}
               {['SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.shippingStatus) && (
-                <button
-                  onClick={() => setDeliverFor(o)}
-                  className="text-xs text-[var(--sys-success)] hover:underline"
-                  title="سجّل ما استلمه العميل فعلاً — كاملاً أو جزئياً"
-                >
-                  تسجيل التسليم
-                </button>
+                <>
+                  <button
+                    onClick={() => void settle(o, 'ALL')}
+                    disabled={settling === o.id}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-success)] hover:underline disabled:opacity-50"
+                    title="استلم الطلب كاملاً — يُسجَّل ما حدث، والمبلغ يُكتب عند مطابقة كشف الشركة"
+                  >
+                    {settling === o.id ? (
+                      <RiLoader4Line className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RiCheckLine className="w-4 h-4" aria-hidden />
+                    )}
+                    استلم
+                  </button>
+                  <button
+                    onClick={() => void settle(o, 'NONE')}
+                    disabled={settling === o.id}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-destructive)] hover:underline disabled:opacity-50"
+                    title="رفضه أو أُلغي — لم يستلم شيئاً، ويصير مرتجعاً"
+                  >
+                    <RiCloseLine className="w-4 h-4" aria-hidden />
+                    رفض / ملغى
+                  </button>
+                  <button
+                    onClick={() => setDeliverFor(o)}
+                    className="text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)] hover:underline"
+                    title="استلم بعض البنود فقط — أشّر ما أخذه بالضبط"
+                  >
+                    استلم جزءاً
+                  </button>
+                </>
               )}
               <button
                 onClick={() => setTransferFor(o)}

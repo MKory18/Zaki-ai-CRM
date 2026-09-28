@@ -66,7 +66,11 @@ describe('and the third control settles nothing', () => {
     const src = screen();
     expect(src, 'لا زرّ للملاحظة').toMatch(/onClick=\{\(\) => void addNote\(o\)\}/);
     expect(src).toContain('تحويل');
-    expect(src).toContain('تسجيل التسليم');
+    // The door's own answers, beside it. They were one «تسجيل التسليم»
+    // that opened a line list; they are «استلم», «رفض / ملغى» and the
+    // partial case now, and the note still settles none of them.
+    expect(src).toContain('استلم');
+    expect(src).toContain('رفض / ملغى');
   });
 
   /**
@@ -82,8 +86,14 @@ describe('and the third control settles nothing', () => {
     expect(src).toMatch(/kind: 'follow_up'/);
     expect(NOTE_KINDS).toContain('follow_up');
     // Nothing here touches an outcome.
+    /**
+     * Sliced to THIS function, not to the next symbol somebody happens to
+     * have written below it: a new handler added in between used to land
+     * inside the slice and fail a rule it has nothing to do with.
+     */
     const at = src.indexOf('const addNote');
-    const body = src.slice(at, src.indexOf('const load = useCallback'));
+    const next = src.indexOf('\n  const ', at + 10);
+    const body = src.slice(at, next === -1 ? src.length : next);
     expect(body, 'الملاحظة تُغيّر حالة الطلب').not.toContain('shippingStatus');
     expect(body, 'الملاحظة تسجّل تسليماً').not.toContain('tracking/deliver');
   });
