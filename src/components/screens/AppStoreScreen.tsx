@@ -181,7 +181,7 @@ export function AppStoreScreen() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)]">
+        <h2 className="mb-2 text-xs font-bold text-[var(--sys-muted-foreground)]">
           تطبيقات مسجَّلة عندك
         </h2>
         {shelf.external.length === 0 ? (

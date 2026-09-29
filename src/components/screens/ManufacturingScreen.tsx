@@ -537,7 +537,7 @@ export function ManufacturingScreen() {
 
           {/* Cost Items Grid */}
           <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)]/60 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">
+            <h4 className="text-xs font-bold text-[var(--sys-foreground)]">
               تفصيل الكلفة المباشرة
             </h4>
 

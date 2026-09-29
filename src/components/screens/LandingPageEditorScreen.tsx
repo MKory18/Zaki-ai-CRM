@@ -658,7 +658,7 @@ export function LandingPageEditorScreen() {
           {/* RIGHT COLUMN (second on a phone): the tools, folded away. */}
           <div className="order-2 space-y-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3 lg:order-2">
             <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--sys-muted-foreground)]">
+              <p className="mb-1.5 text-xs font-semibold text-[var(--sys-muted-foreground)]">
                 اكتب الـHTML بالذكاء الاصطناعي
               </p>
               <p className="mb-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">

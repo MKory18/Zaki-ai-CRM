@@ -307,7 +307,7 @@ export function UserDetailScreen() {
         {mayResetTwoFactor(currentUser as never, user.id).ok && user.totpEnabledAt && (
           <Card>
             <CardContent className="p-5 space-y-2">
-              <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-1.5">
+              <h3 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-1.5">
                 <RiShieldKeyholeLine className="w-4 h-4" />
                 التحقّق بخطوتين
               </h3>
@@ -341,7 +341,7 @@ export function UserDetailScreen() {
 
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-1.5">
+            <h3 className="text-xs font-black text-[var(--sys-foreground)] mb-3 flex items-center gap-1.5">
               <RiKey2Line className="w-4 h-4" />
               {ar ? 'الدور والصلاحيات' : 'Role & Permissions'}
             </h3>
@@ -411,7 +411,7 @@ export function UserDetailScreen() {
         {/* Workload */}
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3">
+            <h3 className="text-xs font-black text-[var(--sys-foreground)] mb-3">
               {ar ? 'حجم العمل الحالي' : 'Current Workload'}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
@@ -727,7 +727,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
       {/* Card 1 — Effective permissions */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-1.5">
+          <h3 className="text-xs font-black text-[var(--sys-foreground)] mb-3 flex items-center gap-1.5">
             <RiShieldCheckLine className="w-4 h-4" />
             {ar ? 'الصلاحيات الفعّالة' : 'Effective Permissions'}
           </h3>
@@ -838,7 +838,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
       <Card>
         <CardContent className="p-5">
           <div className="flex items-center justify-between gap-3 mb-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-1.5">
+            <h3 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-1.5">
               <RiKey2Line className="w-4 h-4" />
               {ar ? 'استثناءات المستخدم' : 'User Overrides'}
             </h3>

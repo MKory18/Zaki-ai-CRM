@@ -189,7 +189,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
     <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-raised" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
+        <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
           <RiPhoneLine className="w-4 h-4 text-[var(--sys-primary)]" />
           {ar ? 'تسجيل نتيجة الاتصال' : 'Record a call outcome'}
         </h4>

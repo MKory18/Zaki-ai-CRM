@@ -319,7 +319,7 @@ export function CustomersScreen() {
               </div>
             </div>
 
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)] mt-2">
+            <h4 className="text-xs font-bold text-[var(--sys-foreground)] mt-2">
               سجل الطلبات ({selectedCustomer.orders?.length || 0})
             </h4>
 

@@ -540,7 +540,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           */}
           {order.confirmationStatus === 'CONFIRMED' && (
             <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-2">
-              <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)]">
+              <h4 className="text-xs font-black text-[var(--sys-foreground)]">
                 طلبٌ على هذا الطلب
               </h4>
               <p className="text-xs text-[var(--sys-muted-foreground)]">
@@ -585,7 +585,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         <div className="space-y-5">
           {/* Financial overview */}
           <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised space-y-3">
-            <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
+            <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
               <RiMoneyDollarCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" />
               الملخص المالي
             </h4>
@@ -744,7 +744,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           {/* Timeline — merged from every event table (src/lib/order-timeline.ts),
               not just the activity log, so it always matches the state above. */}
           <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 shadow-raised">
-            <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-2">
+            <h4 className="text-xs font-black text-[var(--sys-foreground)] mb-3 flex items-center gap-2">
               <RiTimerLine className="w-4 h-4 text-[var(--sys-muted)]" />
               سجل الأحداث ({timeline.length})
               {timeline.length > 5 && (

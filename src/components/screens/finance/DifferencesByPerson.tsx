@@ -72,7 +72,7 @@ export function DifferencesByPerson({ currency }: { currency: string }) {
 
   return (
     <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 space-y-2">
-      <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-heading)]">
+      <h4 className="text-xs font-black text-[var(--sys-heading)]">
         الفروق حسب من أكّد الطلب
       </h4>
       <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">

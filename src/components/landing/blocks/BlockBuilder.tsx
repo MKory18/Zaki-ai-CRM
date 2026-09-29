@@ -352,7 +352,7 @@ export function BlockBuilder(props: Props) {
 
         {/* Theme */}
         <div className="rounded-xl border border-[#e3e8ef] bg-white p-4">
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-[#697586]">الهوية</p>
+          <p className="mb-3 text-[10px] font-bold text-[#697586]">الهوية</p>
 
           <label className="mb-1.5 block text-xs font-semibold text-[#364152]">اللون الأساسي</label>
           <div className="mb-2 grid grid-cols-6 gap-1.5">
@@ -500,7 +500,7 @@ export function BlockBuilder(props: Props) {
         {/* Sections */}
         <div className="rounded-xl border border-[#e3e8ef] bg-white p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#697586]">أقسام الصفحة</p>
+            <p className="text-[10px] font-bold text-[#697586]">أقسام الصفحة</p>
             <span className="text-[10px] text-[#9aa4b2]">{sections.length}</span>
           </div>
 

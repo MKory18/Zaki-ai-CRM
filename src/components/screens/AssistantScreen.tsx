@@ -223,7 +223,7 @@ export function AssistantScreen() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   {/* Key Observations */}
                   <div className="bg-[var(--sys-surface)]/70 border border-[var(--sys-muted-foreground)]/30 rounded-lg p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-muted-foreground)] flex items-center space-x-1.5 mb-2.5">
+                    <h4 className="text-xs font-bold text-[var(--sys-muted-foreground)] flex items-center space-x-1.5 mb-2.5">
                       <RiLightbulbLine className="w-4 h-4 text-[var(--sys-muted-foreground)]" />
                       <span>ملاحظات</span>
                     </h4>
@@ -239,7 +239,7 @@ export function AssistantScreen() {
 
                   {/* Risks */}
                   <div className="bg-[var(--sys-destructive-soft)]/70 border border-[var(--sys-destructive-border)] rounded-lg p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
+                    <h4 className="text-xs font-bold text-[var(--sys-destructive)] flex items-center space-x-1.5 mb-2.5">
                       <RiShieldFlashLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                       <span>مخاطر تحتاج تدخّلاً</span>
                     </h4>
@@ -255,7 +255,7 @@ export function AssistantScreen() {
 
                   {/* Recommendations */}
                   <div className="bg-[var(--sys-success-soft)]/70 border border-[var(--sys-success)]/30 rounded-lg p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-success)] flex items-center space-x-1.5 mb-2.5">
+                    <h4 className="text-xs font-bold text-[var(--sys-success)] flex items-center space-x-1.5 mb-2.5">
                       <RiCheckboxCircleLine className="w-4 h-4 text-[var(--sys-success)]" />
                       <span>توصيات</span>
                     </h4>

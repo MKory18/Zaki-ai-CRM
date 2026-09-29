@@ -188,7 +188,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
         {result && p && (
           <div className="border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]/40 rounded-lg p-4 space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--sys-destructive-border)] pb-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-destructive)] flex items-center space-x-2 rtl:space-x-reverse">
+              <h4 className="text-xs font-bold text-[var(--sys-destructive)] flex items-center space-x-2 rtl:space-x-reverse">
                 <RiCheckboxCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" />
                 <span>2. تأكيد البيانات المستخرجة (قابلة للتعديل)</span>
               </h4>

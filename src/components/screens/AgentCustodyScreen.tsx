@@ -202,7 +202,7 @@ export function AgentCustodyScreen() {
         */}
         {open.owing.length > 0 && (
           <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 space-y-2">
-            <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)]">
+            <h4 className="text-xs font-black text-[var(--sys-foreground)]">
               استلام ما بذمّته
             </h4>
             <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">

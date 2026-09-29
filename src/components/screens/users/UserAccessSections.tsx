@@ -99,7 +99,7 @@ export function UserGeoAccessSection({ userId, canEdit }: { userId: string; canE
   return (
     <Card>
       <CardContent className="p-5">
-        <h3 className="mb-1 flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)]">
+        <h3 className="mb-1 flex items-center gap-1.5 text-xs font-black text-[var(--sys-foreground)]">
           <RiEarthLine className="h-4 w-4" /> البلدان والمتاجر
         </h3>
         <p className="mb-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">

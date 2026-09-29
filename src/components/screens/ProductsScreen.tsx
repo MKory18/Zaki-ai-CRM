@@ -668,7 +668,7 @@ export function ProductsScreen() {
           {/* Product Images */}
           <div className="border border-[var(--sys-border)] rounded-lg p-4 bg-[var(--sys-surface)] space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--sys-foreground)]">
+              <h4 className="text-xs font-bold text-[var(--sys-foreground)]">
                 2. صور المنتج (الأولى = الصورة الرئيسية)
               </h4>
               <input

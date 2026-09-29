@@ -209,7 +209,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
     <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-raised" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-2">
+        <h4 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-2">
           <RiTruckLine className="w-4 h-4 text-[var(--sys-destructive)]" />
           {ar ? 'الشحن والتوصيل' : 'Shipping & Delivery'}
         </h4>
@@ -303,7 +303,7 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
       {/* Delivery attempts (append-only history) */}
       <div className="border-t border-[var(--sys-border)] pt-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-bold uppercase tracking-wider text-[var(--sys-muted)] flex items-center gap-1.5">
+          <p className="text-xs font-bold text-[var(--sys-muted)] flex items-center gap-1.5">
             <RiHistoryLine className="w-4 h-4" />
             {ar ? 'سجل الشحن والتوصيل' : 'Shipping & Delivery Timeline'}
             {loading && <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-[var(--sys-destructive)]" />}
