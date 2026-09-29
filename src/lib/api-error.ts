@@ -15,6 +15,35 @@ export interface ApiErrorResult {
   status: number;
 }
 
+/**
+ * ONLY A SENTENCE THIS CODEBASE WROTE MAY BE SHOWN TO A CALLER.
+ *
+ * Two of the branches below echo the error's own message, which is right
+ * for `throw new Error('المحفظة غير موجودة')` and wrong for everything
+ * else that happens to contain the same word. Measured, not feared: a
+ * Prisma error whose text merely mentions «not found» came back whole, and
+ * it carried
+ *
+ *   Invalid `prisma.order.findUnique()` invocation in
+ *   C:\Users\…\src\lib\orders.ts:88:14
+ *
+ * — the absolute path of the server's source tree, the model and the
+ * method, handed to a browser. An initialization error matched on the word
+ * «version» and gave up the engine file and the Prisma version with it.
+ *
+ * Three signs, each of which a message we wrote never has: it came from a
+ * Prisma class, it spans lines, or it holds a filesystem path.
+ */
+function ours(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (error.name.startsWith('Prisma')) return false;
+  const m = error.message;
+  if (m.length > 200 || m.includes('\n')) return false;
+  // `C:\…`, `/home/…`, `/var/…`, `/Users/…` — a path in a message meant for
+  // a person is a leak whatever the rest of the sentence says.
+  return !/[A-Za-z]:[\\/]{1,2}[A-Za-z]|(?:^|[\s(])\/(?:home|Users|var|opt|srv|app)\//.test(m);
+}
+
 export function apiError(error: unknown): ApiErrorResult {
   const message = error instanceof Error ? error.message : String(error);
 
@@ -42,10 +71,10 @@ export function apiError(error: unknown): ApiErrorResult {
     }
   }
 
-  if (/version|conflict/i.test(message)) {
+  if (ours(error) && /version|conflict/i.test(message)) {
     return { body: { error: message }, status: 409 };
   }
-  if (/not.?found/i.test(message)) {
+  if (ours(error) && /not.?found/i.test(message)) {
     return { body: { error: message }, status: 404 };
   }
 

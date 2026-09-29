@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { newResetToken } from '@/lib/reset-token';
 import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -28,11 +28,13 @@ export async function POST(req: Request) {
       });
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
+    // The row keeps a hash; the token itself exists only in the message
+    // that is sent. See src/lib/reset-token.ts for why.
+    const { token, stored } = newResetToken();
     await db.user.update({
       where: { id: user.id },
       data: {
-        resetToken: token,
+        resetToken: stored,
         // Token expires in 1 hour
         resetTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
       },

@@ -6,6 +6,8 @@ import { can } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { customerRisk } from '@/lib/customer-risk';
 import { deriveCoreState, type StateSource } from '@/lib/order-state';
+import { noteCustomerAccess } from '@/lib/pii-access';
+import { announceBulkCustomerView } from '@/lib/pii-alert';
 
 /**
  * GET /api/customers/:id/history?exclude=<orderId>
@@ -53,6 +55,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     });
 
     const risk = await customerRisk(db, companyId, id);
+
+    /*
+     * One person's contact details — and the same tally the list feeds.
+     * Counted here too, or the hole is obvious: open five hundred profiles
+     * one at a time and the list endpoint never sees any of it.
+     */
+    const seen = noteCustomerAccess(`customers:${user.id}`, 1);
+    if (seen.crossed) {
+      await announceBulkCustomerView({
+        companyId, storeId, user, records: seen.records, where: 'ملفّات العملاء',
+      });
+    }
 
     return NextResponse.json({
       customer,

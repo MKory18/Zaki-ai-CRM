@@ -93,3 +93,44 @@ describe('what the headers allow', () => {
     }
   });
 });
+
+/**
+ * WHAT THE BUILD MUST NOT SEND WITH THE PAGE.
+ *
+ * Both of these are correct today by DEFAULT, which is exactly why they
+ * are written down: a default is a thing nobody decided, and nobody
+ * reviews the line that turns one off. Neither has a symptom a person
+ * would notice — the app looks identical with the whole source tree
+ * attached to it.
+ */
+describe('nothing extra ships to the browser', () => {
+  it('does not turn on production source maps', () => {
+    // `productionBrowserSourceMaps: true` publishes the readable source of
+    // every screen, with the comments that explain where the money rules
+    // live, to anyone who opens devtools on the login page.
+    const src = config().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(src, 'خرائطُ المصدر تُنشر مع البناء').not.toMatch(/productionBrowserSourceMaps:\s*true/);
+  });
+
+  it('and puts no secret in a NEXT_PUBLIC_ name', () => {
+    // Every NEXT_PUBLIC_ value is compiled into the bundle and is public
+    // whatever it is called. One is allowed, and it is an address.
+    const files = walk(join(process.cwd(), 'src'));
+    const names = new Set<string>();
+    for (const file of [...files, join(process.cwd(), 'next.config.ts')]) {
+      for (const m of readFileSync(file, 'utf8').matchAll(/NEXT_PUBLIC_[A-Z0-9_]+/g)) names.add(m[0]);
+    }
+    expect([...names].sort()).toEqual(['NEXT_PUBLIC_APP_URL']);
+  });
+});
+
+/** Every .ts/.tsx under a directory. */
+function walk(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...walk(full));
+    else if (/\.tsx?$/.test(entry)) out.push(full);
+  }
+  return out;
+}

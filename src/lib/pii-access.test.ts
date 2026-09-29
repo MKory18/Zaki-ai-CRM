@@ -1,0 +1,169 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import {
+  BULK_VIEW_RECORDS,
+  BULK_VIEW_WINDOW_MS,
+  noteCustomerAccess,
+  type AccessWindow,
+} from './pii-access';
+
+/**
+ * READING EVERY CUSTOMER USED TO LEAVE NO TRACE AT ALL.
+ *
+ * The permission, the store scope and the hundred-row cap all hold for
+ * one request. None of them sees the same allowed person asking a hundred
+ * times. These tests pin the one thing that does: the count, and the
+ * single moment it is worth telling somebody about.
+ */
+
+let store: Map<string, AccessWindow>;
+const NOW = 1_800_000_000_000;
+
+beforeEach(() => {
+  store = new Map();
+});
+
+const note = (records: number, at = NOW, key = 'customers:u1') =>
+  noteCustomerAccess(key, records, { store, now: at, threshold: 10, windowMs: 1000 });
+
+describe('counting what a person was handed', () => {
+  it('adds up across requests inside the window', () => {
+    expect(note(4).records).toBe(4);
+    expect(note(3, NOW + 100).records).toBe(7);
+  });
+
+  it('starts again once the window rolls over', () => {
+    note(9);
+    expect(note(1, NOW + 2000).records, 'حُسبت النافذةُ القديمة مع الجديدة').toBe(1);
+  });
+
+  it('keeps one tally per person', () => {
+    note(9);
+    expect(note(2, NOW, 'customers:u2').records).toBe(2);
+  });
+
+  it('ignores a read that returned nobody', () => {
+    expect(note(0).records).toBe(0);
+  });
+
+  it('and cannot be talked downwards', () => {
+    note(8);
+    // A negative count would let a caller erase what it had already read.
+    expect(note(-100).records).toBe(8);
+  });
+});
+
+describe('the moment it stops looking like work', () => {
+  it('says nothing below the threshold', () => {
+    expect(note(9).crossed).toBe(false);
+  });
+
+  it('says it once, on the request that crosses', () => {
+    expect(note(9).crossed).toBe(false);
+    expect(note(1, NOW + 10).crossed, 'لم يُعلَن التجاوز').toBe(true);
+  });
+
+  it('and does not repeat for the rest of the window', () => {
+    note(9);
+    note(1, NOW + 10);
+    // An alert that fires on every later request is an alert somebody
+    // switches off, and then nobody hears the next one either.
+    expect(note(100, NOW + 20).crossed).toBe(false);
+    expect(note(100, NOW + 30).crossed).toBe(false);
+  });
+
+  it('but does speak again in a new window', () => {
+    note(10);
+    expect(note(10, NOW + 2000).crossed).toBe(true);
+  });
+
+  it('fires on a single oversized read too, not only on a slow climb', () => {
+    expect(note(500).crossed).toBe(true);
+  });
+});
+
+describe('the numbers it ships with', () => {
+  it('are five full pages of the largest list the API returns', () => {
+    // The list endpoint takes 100. Five loads in a quarter of an hour is
+    // not a person making calls.
+    expect(BULK_VIEW_RECORDS).toBe(500);
+    expect(BULK_VIEW_WINDOW_MS).toBe(15 * 60 * 1000);
+  });
+});
+
+/**
+ * THE COUNTER IS USELESS UNLESS SOMETHING CALLS IT.
+ *
+ * A pure function with perfect tests, wired to nothing, is the most
+ * comfortable kind of dead code. This reads the route.
+ */
+describe('the route that feeds it', () => {
+  const route = readFileSync(join(process.cwd(), 'src', 'app', 'api', 'customers', 'route.ts'), 'utf8');
+
+  it('counts the rows it actually returned', () => {
+    expect(route).toMatch(/noteCustomerAccess\(`customers:\$\{user\.id\}`, customers\.length\)/);
+  });
+
+  it('and announces only the crossing', () => {
+    expect(route).toMatch(/if \(seen\.crossed\)[\s\S]{0,200}announceBulkCustomerView/);
+  });
+
+  it('and the profile page feeds the same tally', () => {
+    // Otherwise the hole is the obvious one: open five hundred profiles
+    // one at a time and the list endpoint never sees any of it.
+    const history = readFileSync(
+      join(process.cwd(), 'src', 'app', 'api', 'customers', '[id]', 'history', 'route.ts'),
+      'utf8'
+    );
+    expect(history).toMatch(/noteCustomerAccess\(`customers:\$\{user\.id\}`, 1\)/);
+    expect(history).toMatch(/if \(seen\.crossed\)[\s\S]{0,200}announceBulkCustomerView/);
+  });
+
+  it('and blocks nobody', () => {
+    // Deliberate: someone may have a real reason to read six hundred
+    // customers. The system raises a hand; a person decides.
+    expect(route, 'حُوِّل التنبيهُ إلى منع').not.toMatch(/seen\.crossed[\s\S]{0,120}status:\s*4\d\d/);
+  });
+});
+
+describe('the alert itself', () => {
+  const alert = readFileSync(join(process.cwd(), 'src', 'lib', 'pii-alert.ts'), 'utf8');
+
+  it('writes the record and raises the hand as two separate things', () => {
+    expect(alert).toMatch(/action: 'CUSTOMER_BULK_VIEW'/);
+    expect(alert).toMatch(/createNotification\(/);
+  });
+
+  it('tells the people who can act, not everyone who can read', () => {
+    expect(alert).toMatch(/audience: \{ permission: 'users\.manage' \}/);
+  });
+
+  it('does not tell the person being watched', () => {
+    expect(alert, 'أُعلِم الشخصُ بأنّه مراقَب').toMatch(/actorId: input\.user\.id/);
+  });
+
+  it('names no customer in the alert about customer data', () => {
+    // The entity id is the reader, not a person read: putting one of the
+    // protected rows inside the warning about them would be absurd.
+    expect(alert).toMatch(/entityId: input\.user\.id/);
+  });
+
+  it('never turns a permitted read into an error', async () => {
+    vi.resetModules();
+    vi.doMock('./audit', () => ({ logAudit: vi.fn().mockRejectedValue(new Error('db down')) }));
+    vi.doMock('./notification', () => ({ createNotification: vi.fn() }));
+    const { announceBulkCustomerView } = await import('./pii-alert');
+    await expect(
+      announceBulkCustomerView({
+        companyId: 'c1',
+        storeId: 's1',
+        user: { id: 'u1', name: 'س', email: 'a@b.c' } as never,
+        records: 600,
+        where: 'قائمة العملاء',
+      })
+    ).resolves.toBeUndefined();
+    vi.doUnmock('./audit');
+    vi.doUnmock('./notification');
+  });
+});

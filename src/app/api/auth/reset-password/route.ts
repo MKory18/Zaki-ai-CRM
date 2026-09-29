@@ -4,6 +4,7 @@ import { PASSWORD_MAX, checkPassword } from '@/lib/password-rules';
 import { db } from '@/lib/db';
 import { hashPassword, sessionCookieOptions, COOKIE_NAME, createSessionToken } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { storedForm } from '@/lib/reset-token';
 import { UserRole, UserStatus, ROLE_PERMISSIONS } from '@/types/auth';
 import { zodMessage } from '@/lib/zod-message';
 
@@ -37,9 +38,11 @@ export async function POST(req: Request) {
 
     const { token, password } = parsed.data;
 
+    // The column holds a hash, so the link is hashed to look it up. A
+    // reader of the database therefore learns nothing they can use.
     const user = await db.user.findFirst({
       where: {
-        resetToken: token,
+        resetToken: storedForm(token),
         resetTokenExpires: { gt: new Date() },
       },
     });

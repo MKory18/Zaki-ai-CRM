@@ -8,6 +8,8 @@ import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit, redactCustomerForAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { customerFacts } from '@/lib/customer-insights';
+import { noteCustomerAccess } from '@/lib/pii-access';
+import { announceBulkCustomerView } from '@/lib/pii-alert';
 
 /**
  * Full PII projection for users holding 'customers.view'.
@@ -135,6 +137,22 @@ export async function GET(req: Request) {
           new Date()
         )
       : null;
+
+    /*
+     * THE QUIET PATH OUT OF THE CUSTOMER TABLE.
+     *
+     * Everything above guards WHO may read and HOW MUCH per request. What
+     * it cannot see is a person entitled to read customers reading all of
+     * them, a hundred at a time, over an afternoon. Nothing is blocked —
+     * somebody may have a real reason — but crossing the line leaves one
+     * legible line in the audit trail and raises a hand.
+     */
+    const seen = noteCustomerAccess(`customers:${user.id}`, customers.length);
+    if (seen.crossed) {
+      await announceBulkCustomerView({
+        companyId, storeId, user, records: seen.records, where: 'قائمة العملاء',
+      });
+    }
 
     return NextResponse.json({ customers, limited: !canViewFull, facts });
   } catch (error: any) {
