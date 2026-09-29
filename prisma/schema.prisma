@@ -2960,3 +2960,34 @@ model PasskeyChallenge {
   @@index([userId, kind])
   @@map("passkey_challenges")
 }
+
+/// A SETTING THAT BELONGS TO THE INSTALLATION, NOT TO A COMPANY.
+///
+/// Asked for in these words: «الذكاء الاصطناعي والنصوص: المزوّد والمفتاح ...
+/// واحفظو للـ System». Everything configurable in this product until now
+/// lived in `Company.settings`, which is right for a company's own choices —
+/// its prompts, its wording, what its assistant may read. It is wrong for an
+/// AI vendor account: the key is infrastructure. Somebody pays a vendor,
+/// installs the system, and the models are simply THERE, the way a database
+/// URL is there. Asking each company to paste the same key is asking the
+/// same secret to be stored more times than it needs to be.
+///
+/// Key/value on purpose. A column per setting means a migration per setting,
+/// and the thing being stored here is already a JSON document with its own
+/// shape rules enforced in `ai-provider.ts`. The table's job is scope — one
+/// row for the whole installation — not structure.
+model SystemSetting {
+  /// The setting's name, e.g. «ai». One row per subject.
+  key   String @id
+  /// A JSON document. Secrets inside it are encrypted individually by the
+  /// code that writes them, never by virtue of sitting in this column.
+  value String
+  /// Who last changed it, for the same reason courier credentials record it:
+  /// «who configured this» must have an answer. Not a foreign key — a
+  /// deleted user must not take the installation's settings with them.
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@map("system_settings")
+}

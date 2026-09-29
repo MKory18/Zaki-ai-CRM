@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
-import { AiNotConfigured, aiChat, aiSettings } from '@/lib/ai-provider';
+import { AiEndpointMissing, AiNotConfigured, aiChat, aiSettings } from '@/lib/ai-provider';
 
 /**
  * POST /api/settings/ai/test — does the key actually work?
@@ -20,6 +20,13 @@ import { AiNotConfigured, aiChat, aiSettings } from '@/lib/ai-provider';
 
 /** What went wrong, in words a seller can act on. */
 function diagnose(error: unknown): { ok: false; error: string } {
+  if (error instanceof AiEndpointMissing) {
+    // A local model was chosen and nobody said where it lives. Distinct from
+    // "no key": the local provider usually needs no key at all, so telling
+    // somebody to paste one would send them looking for a thing that does
+    // not exist.
+    return { ok: false, error: 'لم يُحفظ عنوان الخادم المحلي بعد — اكتب العنوان في إعدادات النظام واحفظ.' };
+  }
   if (error instanceof AiNotConfigured) {
     return { ok: false, error: 'لم يُحفظ مفتاح بعد — الصق المفتاح واحفظ، ثم جرّب الاتصال.' };
   }

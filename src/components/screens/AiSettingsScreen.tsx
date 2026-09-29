@@ -29,7 +29,39 @@ import { PageHeader } from '@/components/ui/PageHeader';
  * were created with.
  */
 
-interface Provider { id: string; label: string; defaultModel: string; models: string[]; keyHelp: string }
+interface Provider {
+  id: string;
+  label: string;
+  defaultModel: string;
+  models: string[];
+  keyHelp: string;
+  /** LOCAL only: a machine the owner runs, so it needs an address. */
+  needsEndpoint?: boolean;
+  /** Most local servers are not authenticated at all. */
+  keyOptional?: boolean;
+}
+
+/**
+ * THE INSTALLATION'S VENDOR ACCOUNTS — «واحفظو للـ System».
+ *
+ * A company's prompts are its own voice and stay on /api/settings/ai. The
+ * accounts are infrastructure: one key, entered once, for the whole box.
+ *
+ * NOTHING OF A KEY COMES BACK. Not the key, not a mask, not the last few
+ * characters — this screen used to print «محفوظ — ينتهي بـ ••••abc», and the
+ * pattern this product already follows for a courier's account hints the
+ * LOGIN and never the PASSWORD. An AI key has no login beside it, so what
+ * says which key is in there is the vendor's name and the date it was saved.
+ */
+interface SystemAi {
+  provider: string;
+  model: string;
+  providerKeys: Record<string, { configured: boolean; savedAt: string | null }>;
+  localBaseUrl: string | null;
+  savedAt: string | null;
+  savedBy: string | null;
+  encryptionAvailable: boolean;
+}
 interface Settings {
   /** What the business-intelligence assistant may read. */
   intelligenceScopes?: string[];
@@ -37,14 +69,13 @@ interface Settings {
   model: string;
   /** Per-assistant vendor and model, where one was chosen. */
   assistants?: Record<string, { provider?: string; model?: string }>;
-  /** Which vendors have a key, and the last four characters of each. */
-  providerKeys?: Record<string, string | null>;
+  /** WHICH vendors this company has a key for — a yes or a no, never a fragment. */
+  providerKeys?: Record<string, boolean>;
   prompt: string;
   prompts: Record<string, string>;
   /** What each job's prompt said before, newest first. */
   promptHistory?: Record<string, PromptVersion[]>;
   hasKey: boolean;
-  keyHint: string | null;
 }
 
 export function AiSettingsScreen() {
@@ -52,7 +83,14 @@ export function AiSettingsScreen() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [jobs, setJobs] = useState<AiJob[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [apiKey, setApiKey] = useState('');
+  /** A key box per vendor, so several can be entered without switching first. */
+  const [keyDrafts, setKeyDrafts] = useState<Record<string, string>>({});
+  const [system, setSystem] = useState<SystemAi | null>(null);
+  const [localUrl, setLocalUrl] = useState('');
+  const [systemBusy, setSystemBusy] = useState(false);
+  const [systemMsg, setSystemMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  /** Null until the first load says whether this account may see it at all. */
+  const [systemAllowed, setSystemAllowed] = useState<boolean | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -86,6 +124,23 @@ export function AiSettingsScreen() {
     setProviders(json.providers || []);
     setJobs(json.jobs || []);
     setDrafts(json.settings?.prompts ?? {});
+
+    /**
+     * The installation's accounts, which only a system administrator may
+     * see. A 403 here is not an error to show — it is this account being
+     * told, correctly, that the key every company runs on is not theirs to
+     * change. The card is simply not drawn.
+     */
+    const sys = await fetch('/api/settings/ai/system');
+    if (sys.ok) {
+      const sysJson = await sys.json();
+      setSystem(sysJson.system);
+      setLocalUrl(sysJson.system?.localBaseUrl ?? '');
+      setSystemAllowed(true);
+      if (sysJson.providers) setProviders(sysJson.providers);
+    } else {
+      setSystemAllowed(false);
+    }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
@@ -98,22 +153,94 @@ export function AiSettingsScreen() {
       const res = await fetch('/api/settings/ai', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        /*
+          KEYS NO LONGER TRAVEL WITH THE PROMPTS.
+          This form used to carry `apiKey` alongside the wording, so saving a
+          sentence and saving a vendor account were one action with one
+          permission. They are different things owned by different people:
+          the accounts are the installation's, and they are saved by the card
+          above through their own endpoint.
+        */
         body: JSON.stringify({
           provider: settings.provider,
           model: settings.model,
           prompts: drafts,
-          ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
         }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'تعذر الحفظ');
-      setApiKey('');
       await load();
       setMsg({ ok: true, text: 'حُفظ. النصوص الجديدة مستعملة من الآن في كل طلب.' });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر الحفظ' });
     } finally {
       setBusy(false);
+    }
+  }
+
+  /**
+   * Save the installation's accounts.
+   *
+   * Every non-empty key box is sent at once, so registering three vendors is
+   * one action rather than three round trips through a dropdown. The boxes
+   * are cleared on success: nothing typed into them is ever read back.
+   */
+  async function saveSystem() {
+    if (!system) return;
+    setSystemBusy(true);
+    setSystemMsg(null);
+    try {
+      const providerKeys = Object.fromEntries(
+        Object.entries(keyDrafts)
+          .filter(([, v]) => v.trim().length > 0)
+          .map(([id, v]) => [id, v.trim()])
+      );
+      const res = await fetch('/api/settings/ai/system', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: system.provider,
+          model: system.model,
+          ...(Object.keys(providerKeys).length > 0 ? { providerKeys } : {}),
+          localBaseUrl: localUrl.trim() || null,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'تعذر الحفظ');
+      setKeyDrafts({});
+      setSystem(json.system);
+      setLocalUrl(json.system?.localBaseUrl ?? '');
+      setSystemMsg({ ok: true, text: 'حُفظت حسابات المزوّدين للنظام.' });
+    } catch (e) {
+      setSystemMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر الحفظ' });
+    } finally {
+      setSystemBusy(false);
+    }
+  }
+
+  /** Forget one vendor's key, without touching the others. */
+  async function clearKey(id: string) {
+    if (!system) return;
+    setSystemBusy(true);
+    setSystemMsg(null);
+    try {
+      const res = await fetch('/api/settings/ai/system', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: system.provider,
+          model: system.model,
+          providerKeys: { [id]: null },
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'تعذر الحذف');
+      setSystem(json.system);
+      setSystemMsg({ ok: true, text: 'حُذف المفتاح.' });
+    } catch (e) {
+      setSystemMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر الحذف' });
+    } finally {
+      setSystemBusy(false);
     }
   }
 
@@ -125,7 +252,9 @@ export function AiSettingsScreen() {
     );
   }
 
-  const provider = providers.find((p) => p.id === settings.provider);
+  // The vendor's own help text moved into the per-vendor list above, where
+  // each row carries its own — so there is no single "current vendor" whose
+  // hints this screen needs to look up any more.
   const tier = settings.model ? tierOf(settings.model) : null;
 
   return (
@@ -203,25 +332,133 @@ export function AiSettingsScreen() {
           </p>
         </div>
 
-        <div className="mt-3">
-          <label className="mb-1 flex items-center gap-1 text-xs font-semibold text-[var(--sys-foreground)]">
-            <RiKey2Line className="h-4 w-4" /> مفتاح الوصول
-          </label>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={settings.hasKey ? `محفوظ — ينتهي بـ ${settings.keyHint ?? '••••'}` : 'الصق المفتاح هنا'}
-            className={INPUT}
-            dir="ltr"
-            autoComplete="off"
-          />
-          <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted)]">
-            {provider?.keyHelp}
-            {' — '}
-            المفتاح يُشفَّر ولا يُعرَض بعدها أبداً، ولا يُكتب في سجل التدقيق.
+        {/*
+          MORE THAN ONE VENDOR, ENTERED AT ONCE — «أقدر أدخل أكثر من موديل».
+          A single key box beside a dropdown meant registering three vendors
+          was three visits: pick, paste, save, pick again. Every vendor has
+          its own box here and they all save together, and each row says
+          whether a key is already in it — which is also the only honest way
+          to answer «which key is in there» without showing any part of it.
+        */}
+        {systemAllowed && system && (
+          <div className="mt-4 border-t border-[var(--sys-border)] pt-3">
+            <h3 className="flex items-center gap-1 text-xs font-bold text-[var(--sys-heading)]">
+              <RiKey2Line className="h-4 w-4" /> حسابات المزوّدين — للنظام كله
+            </h3>
+            <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+              تُحفظ مرة واحدة للنظام لا لكل شركة. المفتاح يُشفَّر، ولا يعود منه شيء إلى الشاشة
+              بعد حفظه — ولا آخر حروفه — ولا يُكتب في سجل التدقيق.
+            </p>
+
+            {!system.encryptionAvailable && (
+              <p className="mt-2 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs leading-relaxed text-[var(--sys-destructive)]">
+                مفتاح التشفير غير مُهيّأ على الخادم — لن يُقبل حفظ أي مفتاح حتى يُضبط. لا يُحفظ مفتاح بلا تشفير.
+              </p>
+            )}
+
+            <ul className="mt-2 space-y-2">
+              {providers.map((p) => (
+                <li key={p.id} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3">
+                  <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-[var(--sys-heading)]">{p.label}</span>
+                    {system.providerKeys[p.id]?.configured ? (
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-md border border-[var(--sys-success)]/40 bg-[var(--sys-success-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--sys-success)]">
+                          مفتاح محفوظ
+                        </span>
+                        {system.providerKeys[p.id]?.savedAt && (
+                          <span className="text-xs text-[var(--sys-muted)]">
+                            منذ {new Date(system.providerKeys[p.id]!.savedAt as string).toLocaleDateString('en-GB')}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void clearKey(p.id)}
+                          disabled={systemBusy}
+                          className="inline-flex min-h-11 items-center text-xs font-semibold text-[var(--sys-destructive)] hover:underline disabled:opacity-50 md:min-h-0"
+                        >
+                          احذف المفتاح
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="text-xs text-[var(--sys-muted)]">
+                        {p.keyOptional ? 'بلا مفتاح — وأكثر الخوادم المحلية لا تطلب مفتاحاً' : 'بلا مفتاح'}
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    value={keyDrafts[p.id] ?? ''}
+                    onChange={(e) => setKeyDrafts({ ...keyDrafts, [p.id]: e.target.value })}
+                    placeholder={system.providerKeys[p.id]?.configured ? 'الصق مفتاحاً جديداً ليحلّ محلّه' : 'الصق المفتاح هنا'}
+                    className={INPUT}
+                    dir="ltr"
+                    autoComplete="off"
+                  />
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted)]">{p.keyHelp}</p>
+
+                  {/*
+                    THE ADDRESS OF A MODEL THE OWNER RUNS HIMSELF.
+                    Refused unless it is on his own network — the server would
+                    otherwise send every prompt, with its customer names and
+                    its figures, wherever this box said. The server applies the
+                    rule and names the reason; nothing is checked only here.
+                  */}
+                  {p.needsEndpoint && (
+                    <div className="mt-2 border-t border-[var(--sys-border)] pt-2">
+                      <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]" htmlFor="ai-local-url">
+                        عنوان الخادم
+                      </label>
+                      <input
+                        id="ai-local-url"
+                        value={localUrl}
+                        onChange={(e) => setLocalUrl(e.target.value)}
+                        placeholder="http://localhost:11434"
+                        className={INPUT}
+                        dir="ltr"
+                        autoComplete="off"
+                      />
+                      <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted)]">
+                        على الخادم نفسه أو على شبكتك الداخلية فقط. عنوان على الإنترنت مرفوض — مزوّد على
+                        الإنترنت يُضاف أعلاه بمفتاحه.
+                      </p>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void saveSystem()}
+                disabled={systemBusy}
+                className="inline-flex h-11 items-center gap-1.5 rounded-lg bg-[var(--sys-primary)] px-4 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-50 md:h-10"
+              >
+                {systemBusy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : null}
+                احفظ حسابات النظام
+              </button>
+              {system.savedAt && (
+                <span className="text-xs text-[var(--sys-muted)]">
+                  آخر تعديل {new Date(system.savedAt).toLocaleDateString('en-GB')}
+                  {system.savedBy ? ` — ${system.savedBy}` : ''}
+                </span>
+              )}
+              {systemMsg && (
+                <span className={`text-xs ${systemMsg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
+                  {systemMsg.text}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {systemAllowed === false && (
+          <p className="mt-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            حسابات المزوّدين تُضبط على مستوى النظام، ويضبطها مدير النظام. النصوص وتوجيه المساعدين
+            في التبويبات الأخرى تخصّ شركتك ويمكنك تعديلها.
           </p>
-        </div>
+        )}
 
         {/* A key is pasted and saved, and nothing says whether it works —
             the assistant just quietly stops being an assistant. This asks
@@ -230,13 +467,17 @@ export function AiSettingsScreen() {
           <button
             type="button"
             onClick={() => void testConnection()}
-            disabled={testing || !settings.hasKey}
+            /* A local server needs no key, so "has a key" is the wrong gate
+               for it — the gate is whether anything is configured at all. */
+            disabled={testing || !(settings.hasKey || system?.providerKeys[system.provider]?.configured || system?.localBaseUrl)}
             className="inline-flex h-11 md:h-8 items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
           >
             {testing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiPlugLine className="h-4 w-4" />}
             اختبار الاتصال
           </button>
-          {!settings.hasKey && <span className="text-xs text-[var(--sys-muted)]">احفظ المفتاح أولاً.</span>}
+          {!settings.hasKey && !system?.providerKeys[system.provider]?.configured && !system?.localBaseUrl && (
+            <span className="text-xs text-[var(--sys-muted)]">احفظ المفتاح أو عنوان الخادم أولاً.</span>
+          )}
           {test && (
             <span className={`text-xs ${test.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{test.text}</span>
           )}

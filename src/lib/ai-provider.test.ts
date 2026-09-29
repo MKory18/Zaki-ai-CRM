@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db } = vi.hoisted(() => ({
-  db: { company: { findUnique: vi.fn(), update: vi.fn() }, $transaction: vi.fn() },
+  db: {
+    company: { findUnique: vi.fn(), update: vi.fn() },
+    // The installation's own vendor accounts, which every route now consults
+    // before the company's. These cases describe a company that has its own
+    // settings and an installation that has none — the backward-compatible
+    // path, which is exactly what must keep working.
+    systemSetting: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    user: { findUnique: vi.fn() },
+    $transaction: vi.fn(),
+  },
 }));
 vi.mock('./db', () => ({ db }));
 
@@ -31,6 +40,9 @@ beforeEach(() => {
   delete process.env.OPENROUTER_API_KEY;
   db.company.findUnique.mockResolvedValue({ settings: null });
   db.company.update.mockResolvedValue({});
+  // No installation-level settings: the company's own are what answer.
+  db.systemSetting.findUnique.mockResolvedValue(null);
+  db.user.findUnique.mockResolvedValue(null);
   // The locked read-modify-write reads the same row the reader does.
   db.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
     fn({
@@ -99,13 +111,41 @@ describe('the key', () => {
     expect(stored().apiKeyEncrypted).toMatch(/^v1:/);
   });
 
-  it('never comes back from the settings reader', async () => {
+  /**
+   * NOT EVEN THE LAST THREE CHARACTERS.
+   *
+   * This used to assert that a hint came back — `••••lue` — and the screen
+   * printed it as «محفوظ — ينتهي بـ». The pattern this repo already follows
+   * for a courier's account hints the LOGIN and never the PASSWORD, and an
+   * AI key is the password: there is no login beside it to hint instead. So
+   * nothing of the key leaves the server, and «which key is in there» is
+   * answered by the vendor's name and the date it was saved.
+   */
+  it('never comes back from the settings reader — not even a fragment', async () => {
     await saveAiSettings('c1', { provider: 'OPENAI', model: 'gpt-4o-mini', apiKey: 'sk-secret-value' });
     withSettings(stored());
     const read = await aiSettings('c1');
-    expect(JSON.stringify(read)).not.toContain('sk-secret-value');
+    const body = JSON.stringify(read);
+    expect(body).not.toContain('sk-secret-value');
+    // No tail of it either, however short.
+    expect(body).not.toContain('lue');
+    expect(body).not.toContain('•');
     expect(read.hasKey).toBe(true);
-    expect(read.keyHint).toContain('•');
+    // Which vendor holds one — a yes or a no, and nothing else.
+    expect(read.providerKeys.OPENAI).toBe(true);
+    expect(read.providerKeys.ANTHROPIC).toBe(false);
+  });
+
+  it('and no hint is written to the database either', async () => {
+    // A stored hint is a hint that leaks later, through some other reader.
+    await saveAiSettings('c1', {
+      provider: 'OPENAI',
+      model: 'gpt-4o-mini',
+      providerKeys: { OPENAI: 'sk-secret-value' },
+    });
+    const raw = db.company.update.mock.calls.at(-1)![0].data.settings;
+    expect(raw).not.toContain('lue');
+    expect(raw).not.toContain('hint');
   });
 
   it('refuses to save rather than store a key in the clear', async () => {

@@ -41,9 +41,20 @@ export async function generateAiBusinessAnalysis(
   context: AiBusinessContext,
   companyId?: string
 ): Promise<AiAnalysisResult> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
-
+  /**
+   * THIS USED TO BE A SECOND AI SYSTEM, AND IT IGNORED THE FIRST.
+   *
+   * It read `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` straight from the
+   * environment and called OpenRouter itself. So a company that had chosen
+   * Anthropic on the settings screen, pasted an Anthropic key and picked a
+   * model got a daily summary written by whatever was in the deploy's env —
+   * or, with nothing there, no summary at all and no way to find out why.
+   * The vendor, the model and the key are settings now, and there is exactly
+   * one place that resolves them.
+   *
+   * `aiChat` carries the timeout, the house prompt and the per-assistant
+   * routing with it, so this loses nothing by asking it instead.
+   */
   /**
    * The guidance is the company's to edit; the SCHEMA is not.
    *
@@ -77,55 +88,36 @@ export async function generateAiBusinessAnalysis(
 
 أسماء الحقول إنجليزية كما هي أعلاه — لا تترجمها. كل نصٍّ داخلها بالعربية.`;
 
-  if (apiKey) {
+  if (companyId) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
-
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://salesflow.io',
-          'X-Title': 'SALESFLOW Business Intelligence',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            {
-              role: 'user',
-              content: `هذه أرقام أداء المتجر المحقّقة لليوم:\n${JSON.stringify(
-                context,
-                null,
-                2
-              )}`,
-            },
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.2,
-        }),
-        signal: controller.signal,
+      const content = await aiChat({
+        companyId,
+        system: systemPrompt,
+        user: `هذه أرقام أداء المتجر المحقّقة لليوم:
+${JSON.stringify(context, null, 2)}`,
+        json: true,
+        timeoutMs: 20_000,
       });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const json = await response.json();
-        const content = json.choices?.[0]?.message?.content;
-        if (content) {
-          const parsed = JSON.parse(content);
-          return {
-            summary: parsed.summary || 'Summary generated.',
-            observations: parsed.observations || [],
-            risks: parsed.risks || [],
-            recommendations: parsed.recommendations || [],
-          };
-        }
+      if (content) {
+        const parsed = JSON.parse(content);
+        return {
+          summary: parsed.summary || 'Summary generated.',
+          observations: parsed.observations || [],
+          risks: parsed.risks || [],
+          recommendations: parsed.recommendations || [],
+        };
       }
     } catch (error) {
-      console.warn('OpenRouter API call failed or timed out, using fallback analyzer:', error);
+      /**
+       * A VENDOR THAT IS NOT CONFIGURED IS NOT AN ERROR HERE.
+       *
+       * The deterministic analyst below is built from the same verified
+       * numbers and is the answer whenever the model cannot be reached — so
+       * the summary is never empty and never invented. The message names the
+       * reason without naming the key.
+       */
+      const why = error instanceof AiNotConfigured ? 'no AI provider configured' : error;
+      console.warn('Daily summary fell back to the deterministic analyst:', why);
     }
   }
 

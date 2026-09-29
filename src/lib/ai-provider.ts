@@ -1,8 +1,10 @@
 import { sanitizeScopes, type AiScope } from './ai-assistants';
 import { db } from './db';
 import { sanitizePromptOverrides, resolvePrompt, recordVersions, HOUSE_JOB, type PromptHistory } from './ai-prompts';
-import { decryptSecret, encryptSecret, encryptionAvailable, secretHint } from './secrets';
+import { decryptSecret, encryptSecret, encryptionAvailable } from './secrets';
 import { updateCompanySettings } from './company-settings';
+import { SYSTEM_AI, readSystemSetting, systemSettingMeta, updateSystemSetting } from './system-settings';
+import { chatCompletionsUrl } from './ai-endpoint';
 
 /**
  * WHICH AI, AND WITH WHOSE KEY.
@@ -24,7 +26,7 @@ import { updateCompanySettings } from './company-settings';
  * database anybody can read is worse than no AI at all.
  */
 
-export type AiProvider = 'OPENROUTER' | 'OPENAI' | 'ANTHROPIC';
+export type AiProvider = 'OPENROUTER' | 'OPENAI' | 'ANTHROPIC' | 'LOCAL';
 
 export interface ProviderInfo {
   id: AiProvider;
@@ -34,6 +36,17 @@ export interface ProviderInfo {
   /** Examples, so the box is not a blank line with no clue what goes in it. */
   models: string[];
   keyHelp: string;
+  /**
+   * This vendor is a machine the owner runs, so it needs an address and the
+   * model list is whatever HE loaded onto it.
+   *
+   * Set only on LOCAL. Everything reading it must also apply
+   * `parseLocalEndpoint` — see `ai-endpoint.ts` for what a free-text address
+   * can be abused for.
+   */
+  needsEndpoint?: boolean;
+  /** A key is optional: most local servers are not authenticated at all. */
+  keyOptional?: boolean;
 }
 
 /**
@@ -97,6 +110,30 @@ export const AI_PROVIDERS: ProviderInfo[] = [
       'meta-llama/llama-3.3-70b-instruct:free',
     ],
     keyHelp: 'مفتاح من openrouter.ai — يبدأ بـ sk-or-',
+  },
+  {
+    /**
+     * A MODEL THE OWNER RUNS HIMSELF.
+     *
+     * «وإذا بدي أحمّل نموذج محلي ع السيرفر مستقبلاً». Ollama, vLLM and LM
+     * Studio all answer the OpenAI chat-completions shape, which is why this
+     * needs no adapter of its own — only an address.
+     *
+     * The suggested names are the models people actually run on one machine,
+     * and they are only suggestions: the real list is whatever was pulled
+     * onto that server, which this file cannot know. The box accepts any
+     * name for that reason, and for this vendor alone — for a paid vendor a
+     * free-text model is a typo that looks like a choice, but here the
+     * operator IS the catalogue.
+     */
+    id: 'LOCAL',
+    label: 'نموذج على خادمك',
+    defaultModel: 'llama3.1:8b',
+    models: ['llama3.1:8b', 'qwen2.5:14b', 'mistral-small', 'gemma2:9b'],
+    keyHelp:
+      'أكثر الخوادم المحلية بلا مفتاح — اتركه فارغاً إن لم يطلب خادمك مفتاحاً.',
+    needsEndpoint: true,
+    keyOptional: true,
   },
 ];
 
@@ -172,13 +209,19 @@ export interface AiSettings {
   promptHistory: PromptHistory;
   hasKey: boolean;
   /**
-   * Which providers have a key, and the last four characters of each.
-   * Never the key: no endpoint returns one, ever.
+   * WHICH vendors hold a key. Not which characters are in it.
+   *
+   * This used to be the last three characters of each key, and the screen
+   * printed them as «محفوظ — ينتهي بـ ••••abc». The pattern this repo
+   * already follows for a courier's account hints the LOGIN and never the
+   * PASSWORD — «Never the password. Enough of the login to recognise the
+   * account» — and an AI key is the password: it has no login beside it to
+   * hint instead. So nothing of it comes back at all, and «which key is in
+   * there» is answered by the vendor's name and the date it was saved.
    */
-  providerKeys: Record<string, string | null>;
+  providerKeys: Record<string, boolean>;
   /** Per-assistant vendor and model, where one was chosen. */
   assistants: Record<string, { provider?: string; model?: string }>;
-  keyHint: string | null;
 }
 
 interface StoredAi {
@@ -203,6 +246,13 @@ interface StoredAi {
    * have to touch anything.
    */
   apiKeyEncrypted?: string;
+  /**
+   * LEGACY, and no longer written. It held `secretHint(key)` — the last
+   * three characters of the key — and it was returned to the browser. It is
+   * dropped from the document on the next save of these settings rather
+   * than migrated, because there is nothing to preserve: a fragment of a
+   * secret is not information anybody needs back.
+   */
   keyHint?: string;
   /**
    * A key PER PROVIDER, so several vendors can be configured at once.
@@ -210,12 +260,134 @@ interface StoredAi {
    * key in the box belonged to OpenAI — a setting that saves and then
    * fails at the moment somebody needs an answer.
    */
-  keys?: Record<string, { enc: string; hint: string }>;
+  keys?: Record<string, { enc: string; hint?: string }>;
   /**
    * Per-assistant routing. Absent = the company default, which is what
    * every assistant did before and what most should keep doing.
    */
   assistants?: Record<string, { provider?: string; model?: string }>;
+}
+
+/**
+ * THE INSTALLATION'S OWN VENDOR ACCOUNTS.
+ *
+ * «واحفظو للـ System». A prompt is a company's voice and belongs to the
+ * company; a vendor account is infrastructure and belongs to whoever
+ * installed the system. Keeping the key per company stores one secret once
+ * per seller, and every extra copy is another place it leaks from.
+ *
+ * This is the SAME shape the company document already used for `keys` — a
+ * key per vendor, encrypted — moved up a scope, not a second system beside
+ * it. `routeFor` reads this first and falls back to the company's own stored
+ * key, so an installation that configured one before this existed keeps
+ * working untouched.
+ *
+ * NO HINT IS STORED. What used to sit beside each key was `secretHint(key)` —
+ * the last three characters — and it was returned to the browser and printed
+ * on the settings screen as «محفوظ — ينتهي بـ ••••abc». The pattern this
+ * repo already follows for courier credentials hints the LOGIN and never the
+ * PASSWORD, and an AI key is the password. «Which key is in there» is
+ * answered by the vendor's name, the date it was saved and who saved it —
+ * none of which is any part of the secret.
+ */
+interface SystemAi {
+  provider?: string;
+  model?: string;
+  /** Encrypted key per vendor, with when it was set. Never the key, never a hint. */
+  keys?: Record<string, { enc: string; at?: string }>;
+  /**
+   * Where the owner's own model server lives.
+   *
+   * Written ONLY after `parseLocalEndpoint` has accepted it. Stored as a
+   * plain string because it is not a secret — but it IS the most dangerous
+   * field in the product, and `ai-endpoint.ts` says at length why.
+   */
+  localBaseUrl?: string;
+}
+
+/** What the installation has configured. Never a key, never part of one. */
+export interface SystemAiSettings {
+  provider: AiProvider;
+  model: string;
+  /** Which vendors hold a key, and when it was put there. */
+  providerKeys: Record<string, { configured: boolean; savedAt: string | null }>;
+  localBaseUrl: string | null;
+  /** Who last changed the installation's AI settings, and when. */
+  savedAt: string | null;
+  savedBy: string | null;
+  /** Can a key be stored at all right now? A screen should say so first. */
+  encryptionAvailable: boolean;
+}
+
+export async function systemAi(): Promise<SystemAiSettings> {
+  const stored = (await readSystemSetting<SystemAi>(SYSTEM_AI)) ?? {};
+  const meta = await systemSettingMeta(SYSTEM_AI);
+  const provider = (AI_PROVIDERS.find((p) => p.id === stored.provider)?.id ?? 'OPENROUTER') as AiProvider;
+  return {
+    provider,
+    model: stored.model || providerInfo(provider).defaultModel,
+    providerKeys: Object.fromEntries(
+      AI_PROVIDERS.map((p) => [
+        p.id,
+        { configured: !!stored.keys?.[p.id]?.enc, savedAt: stored.keys?.[p.id]?.at ?? null },
+      ])
+    ),
+    localBaseUrl: stored.localBaseUrl ?? null,
+    savedAt: meta?.updatedAt.toISOString() ?? null,
+    savedBy: meta?.updatedBy ?? null,
+    encryptionAvailable: encryptionAvailable(),
+  };
+}
+
+export interface SaveSystemAiInput {
+  provider: AiProvider;
+  model: string;
+  /** A key per vendor: a value sets it, null clears it, absent leaves it. */
+  providerKeys?: Record<string, string | null>;
+  /** The local server's address, already checked by `parseLocalEndpoint`. */
+  localBaseUrl?: string | null;
+}
+
+/**
+ * Save the installation's vendor accounts.
+ *
+ * Refused outright when encryption is unavailable — a key written in the
+ * clear is worse than no AI at all, and that is the whole reason the courier
+ * credentials route refuses too.
+ */
+export async function saveSystemAi(input: SaveSystemAiInput, actorId?: string | null): Promise<SystemAiSettings> {
+  const settingKey = Object.values(input.providerKeys ?? {}).some((v) => !!v);
+  if (settingKey && !encryptionAvailable()) throw new Error('ENCRYPTION_KEY_MISSING');
+
+  await updateSystemSetting<SystemAi>(
+    SYSTEM_AI,
+    (current) => {
+      const next: SystemAi = { ...(current ?? {}) };
+      next.provider = AI_PROVIDERS.find((p) => p.id === input.provider)?.id ?? next.provider;
+      next.model = input.model.trim() || providerInfo(input.provider).defaultModel;
+
+      if (input.providerKeys) {
+        const keys = { ...(next.keys ?? {}) };
+        for (const [id, value] of Object.entries(input.providerKeys)) {
+          // A vendor this system does not know is dropped, never stored: a
+          // typo would otherwise sit there holding a real key under a name
+          // nothing ever reads.
+          if (!AI_PROVIDERS.some((p) => p.id === id)) continue;
+          if (value === null) delete keys[id];
+          else if (value) keys[id] = { enc: encryptSecret(value.trim()), at: new Date().toISOString() };
+        }
+        next.keys = Object.keys(keys).length > 0 ? keys : undefined;
+      }
+
+      if (input.localBaseUrl === null) delete next.localBaseUrl;
+      else if (input.localBaseUrl) next.localBaseUrl = input.localBaseUrl;
+
+      return next;
+    },
+    actorId
+  );
+
+  return systemAi();
 }
 
 /** The overrides as the editor should show them: the legacy house prompt folded in. */
@@ -251,13 +423,12 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
     intelligenceScopes: sanitizeScopes(ai.intelligenceScopes),
     promptHistory: ai.promptHistory ?? {},
     hasKey: !!ai.apiKeyEncrypted || !!ai.keys?.[provider] || !!process.env.OPENROUTER_API_KEY,
-    keyHint: ai.keyHint ?? null,
-    // A hint per vendor, so the screen can say WHICH ones are configured
-    // rather than one «محفوظ» that could mean any of them.
+    // WHICH vendors this company has a key for — a yes or a no, never a
+    // fragment of the key itself.
     providerKeys: Object.fromEntries(
       AI_PROVIDERS.map((p) => [
         p.id,
-        ai.keys?.[p.id]?.hint ?? (p.id === provider ? ai.keyHint ?? null : null),
+        !!ai.keys?.[p.id]?.enc || (p.id === provider && !!ai.apiKeyEncrypted),
       ])
     ),
     assistants: ai.assistants ?? {},
@@ -321,7 +492,7 @@ export async function saveAiSettings(
       // bring a prompt the seller just cleared back to life.
       ...(input.prompts === undefined && current.prompt ? { prompt: current.prompt } : {}),
       apiKeyEncrypted: current.apiKeyEncrypted,
-      keyHint: current.keyHint,
+      // `keyHint` is deliberately NOT carried over: every save drops it.
       keys: current.keys,
       /**
        * Only vendors and models this system knows.
@@ -352,7 +523,7 @@ export async function saveAiSettings(
       for (const [id, value] of Object.entries(input.providerKeys)) {
         if (!AI_PROVIDERS.some((p) => p.id === id)) continue;
         if (value === null) delete keys[id];
-        else if (value) keys[id] = { enc: encryptSecret(value.trim()), hint: secretHint(value.trim()) ?? '' };
+        else if (value) keys[id] = { enc: encryptSecret(value.trim()) };
       }
       next.keys = Object.keys(keys).length > 0 ? keys : undefined;
     }
@@ -363,7 +534,6 @@ export async function saveAiSettings(
       delete next.keyHint;
     } else if (input.apiKey) {
       next.apiKeyEncrypted = encryptSecret(input.apiKey.trim());
-      next.keyHint = secretHint(input.apiKey.trim()) ?? undefined;
     }
     return next;
   });
@@ -390,13 +560,21 @@ export interface AiRoute {
   provider: AiProvider;
   model: string;
   key: string | null;
+  /** Only for LOCAL: the server the owner runs. Null for a vendor. */
+  baseUrl?: string | null;
 }
 
 async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
   const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
   const ai = readStored(company?.settings ?? null);
+  // The installation's own accounts come first; a company's stored settings
+  // are the fallback, so a deployment configured before «احفظو للـ System»
+  // existed keeps answering without anybody re-entering anything.
+  const sys = (await readSystemSetting<SystemAi>(SYSTEM_AI)) ?? {};
 
-  const fallback = (AI_PROVIDERS.find((p) => p.id === ai.provider)?.id ?? 'OPENROUTER') as AiProvider;
+  const fallback = (AI_PROVIDERS.find((p) => p.id === sys.provider)?.id ??
+    AI_PROVIDERS.find((p) => p.id === ai.provider)?.id ??
+    'OPENROUTER') as AiProvider;
   const override = job ? ai.assistants?.[job] : undefined;
   const chosen = AI_PROVIDERS.find((p) => p.id === override?.provider)?.id as AiProvider | undefined;
   const provider = chosen ?? fallback;
@@ -410,11 +588,12 @@ async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
     override?.model?.trim() ||
       (chosen && chosen !== fallback
         ? providerInfo(provider).defaultModel
-        : ai.model || providerInfo(provider).defaultModel)
+        : sys.model || ai.model || providerInfo(provider).defaultModel)
   );
 
   let key: string | null = null;
-  const stored = ai.keys?.[provider]?.enc;
+  // The installation's key for THIS vendor, then the company's own.
+  const stored = sys.keys?.[provider]?.enc ?? ai.keys?.[provider]?.enc;
   if (stored) {
     try {
       key = decryptSecret(stored);
@@ -432,7 +611,7 @@ async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
   }
   if (!key && provider === 'OPENROUTER') key = process.env.OPENROUTER_API_KEY ?? null;
 
-  return { provider, model, key };
+  return { provider, model, key, baseUrl: provider === 'LOCAL' ? sys.localBaseUrl ?? null : null };
 }
 
 export interface ChatRequest {
@@ -458,6 +637,13 @@ export class AiNotConfigured extends Error {
   }
 }
 
+/** A local model was chosen and nobody said where it lives. */
+export class AiEndpointMissing extends Error {
+  constructor() {
+    super('AI_ENDPOINT_MISSING');
+  }
+}
+
 /**
  * One call, three vendors.
  *
@@ -471,7 +657,19 @@ export async function aiChat(req: ChatRequest): Promise<string> {
   // Vendor, model and key for THIS assistant — `req.job` is the assistant.
   const route = await routeFor(req.companyId, req.job);
   const key = route.key;
-  if (!key) throw new AiNotConfigured();
+  /**
+   * A LOCAL SERVER IS CONFIGURED BY ITS ADDRESS, NOT BY A KEY.
+   *
+   * Most of them are not authenticated at all, so demanding a key here would
+   * make the one provider the owner actually runs himself the only one he
+   * cannot turn on. What it cannot do without is somewhere to send the
+   * request.
+   */
+  if (route.provider === 'LOCAL') {
+    if (!route.baseUrl) throw new AiEndpointMissing();
+  } else if (!key) {
+    throw new AiNotConfigured();
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), req.timeoutMs ?? 30_000);
@@ -481,6 +679,9 @@ export async function aiChat(req: ChatRequest): Promise<string> {
     const system = house ? `${house}\n\n${req.system}` : req.system;
 
     if (route.provider === 'ANTHROPIC') {
+      // Proved by the guard above; re-stated because the compiler cannot
+      // narrow across it, and an empty key here would be sent as a real one.
+      if (!key) throw new AiNotConfigured();
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         signal: controller.signal,
@@ -501,17 +702,29 @@ export async function aiChat(req: ChatRequest): Promise<string> {
       return data?.content?.[0]?.text ?? '';
     }
 
+    /**
+     * OpenAI, OpenRouter and a local server all speak one shape, which is
+     * why the owner's own machine needs no adapter — only an address.
+     *
+     * `route.baseUrl` reached here through `parseLocalEndpoint`, which is
+     * the only thing standing between this `fetch` and an address somebody
+     * typed. See `ai-endpoint.ts`.
+     */
     const url =
       route.provider === 'OPENAI'
         ? 'https://api.openai.com/v1/chat/completions'
-        : 'https://openrouter.ai/api/v1/chat/completions';
+        : route.provider === 'LOCAL'
+          ? chatCompletionsUrl(route.baseUrl as string)
+          : 'https://openrouter.ai/api/v1/chat/completions';
 
     const res = await fetch(url, {
       method: 'POST',
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${key}`,
+        // A local server usually wants no key at all, and sending
+        // `Bearer null` is how a server that ignores auth starts refusing.
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
         ...(route.provider === 'OPENROUTER'
           ? { 'HTTP-Referer': 'https://salesflow.io', 'X-Title': 'SALESFLOW Business Intelligence' }
           : {}),

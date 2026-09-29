@@ -13,7 +13,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * never in the answer.
  */
 
-const { aiChat, aiSettings, requireCompanyTenant, requirePermission, AiNotConfigured } = vi.hoisted(() => ({
+const {
+  aiChat, aiSettings, requireCompanyTenant, requirePermission, AiNotConfigured, AiEndpointMissing,
+} = vi.hoisted(() => ({
   aiChat: vi.fn(),
   aiSettings: vi.fn(),
   requireCompanyTenant: vi.fn(),
@@ -21,12 +23,17 @@ const { aiChat, aiSettings, requireCompanyTenant, requirePermission, AiNotConfig
   // Hoisted with the rest: the module factory below runs before any
   // top-level declaration in this file would exist.
   AiNotConfigured: class AiNotConfigured extends Error {},
+  // A local model chosen with no address saved. Absent from this mock, the
+  // route's `instanceof` ran against `undefined` and took every diagnosis
+  // down with it.
+  AiEndpointMissing: class AiEndpointMissing extends Error {},
 }));
 
 vi.mock('@/lib/ai-provider', () => ({
   aiChat: (...a: unknown[]) => aiChat(...a),
   aiSettings: (...a: unknown[]) => aiSettings(...a),
   AiNotConfigured,
+  AiEndpointMissing,
 }));
 vi.mock('@/lib/auth', () => ({ requireCompanyTenant: (...a: unknown[]) => requireCompanyTenant(...a) }));
 vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
@@ -79,6 +86,17 @@ describe('when it does not', () => {
 
   it('a rate limit or an empty balance', async () => {
     await says(new Error('AI_HTTP_429'), 'التمهّل');
+  });
+
+  it('and a local model with nowhere to send the request says so', async () => {
+    // Distinct from "no key": a local server usually needs none, so telling
+    // somebody to paste one sends them looking for a thing that does not
+    // exist.
+    aiChat.mockRejectedValue(new AiEndpointMissing('AI_ENDPOINT_MISSING'));
+    const res = await POST();
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(json.error).toContain('العنوان');
   });
 
   it('no key saved yet', async () => {

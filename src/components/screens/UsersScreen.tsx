@@ -13,10 +13,12 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '@/types/auth';
 import { findRoute, routeLabel } from '@/lib/route-registry';
 import { format } from 'date-fns';
-import { RiArrowLeftSLine, RiArrowRightSLine, RiForbidLine, RiGroupLine, RiKey2Line, RiLogoutBoxLine, RiPlayCircleLine, RiRefreshLine, RiSearchLine, RiShieldCheckLine, RiShieldCrossLine, RiUserAddLine } from '@remixicon/react';
+import { RiArrowLeftSLine, RiArrowRightSLine, RiForbidLine, RiGroupLine, RiKey2Line, RiLogoutBoxLine, RiMedalLine, RiPlayCircleLine, RiRefreshLine, RiSearchLine, RiShieldCheckLine, RiShieldCrossLine, RiUserAddLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { HealthChip } from '@/components/ui/HealthChip';
+import type { EmployeeGrade, RosterReadiness } from '@/lib/employee-grade';
 
 /** One source for the Arabic role names — a screen with its own copy is how
  *  two of them ended up blank in the filter. */
@@ -31,12 +33,34 @@ const STATUS_LABELS: Record<string, string> = {
   DISABLED: 'معطّل',
 };
 
+const PERIOD_AR: Record<string, string> = { WEEKLY: 'هذا الأسبوع', MONTHLY: 'هذا الشهر' };
+
+/** What the grades route answers with, so the screen never guesses a shape. */
+interface GradesData {
+  window: { period: 'WEEKLY' | 'MONTHLY' };
+  minSample: number;
+  grades: EmployeeGrade[];
+  readiness: RosterReadiness;
+}
+
 export function UsersScreen() {
   const { currentUser } = useApp();
   const [users, setUsers] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 25, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * THE GRADE ARRIVES SEPARATELY, AND THE ROSTER DOES NOT WAIT FOR IT.
+   *
+   * Two reasons, both about not breaking a screen people already use.
+   * Managing accounts and monitoring performance are different permissions,
+   * so an admin who may approve a signup but not read anybody's numbers gets
+   * this list exactly as it was — no column, no strip, no error. And the
+   * quality half of the grade is a store-scoped scoring pass over the whole
+   * role; folding it into `/api/users` would make every page of the employee
+   * list wait on it, including for the readers who cannot see it.
+   */
+  const [gradeData, setGradeData] = useState<GradesData | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -54,6 +78,24 @@ export function UsersScreen() {
   // Critical-action confirmation (suspend/disable/role change)
   const [pendingAction, setPendingAction] = useState<{ action: string; extra?: any; title: string; msg: string } | null>(null);
 
+  /**
+   * The grade for exactly the people on screen — never for a set the list is
+   * not showing, or the number beside a name would belong to another row.
+   */
+  const loadGrades = useCallback(async (ids: string[]) => {
+    setGradeData(null);
+    if (ids.length === 0) return;
+    try {
+      const res = await fetch(`/api/users/grades?ids=${ids.join(',')}`);
+      // A 403 here is the ordinary case for an account administrator without
+      // `team.monitor`, not a failure worth a red box on the roster.
+      if (!res.ok) return;
+      setGradeData(await res.json());
+    } catch {
+      // Same reasoning: the names must render even when the grade cannot.
+    }
+  }, []);
+
   const loadUsers = useCallback(
     async (pageToLoad = 1) => {
       setLoading(true);
@@ -70,16 +112,21 @@ export function UsersScreen() {
         const res = await fetch(`/api/users?${params.toString()}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        setUsers(data.users || []);
+        const list: any[] = data.users || [];
+        setUsers(list);
         setPagination(data.pagination || { total: 0, page: 1, limit: 25, totalPages: 1 });
+        void loadGrades(list.map((u) => u.id));
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     },
-    [search, roleFilter, statusFilter, fromDate, toDate]
+    [search, roleFilter, statusFilter, fromDate, toDate, loadGrades]
   );
+
+  const gradeOf = (id: string): EmployeeGrade | undefined =>
+    gradeData?.grades.find((g) => g.userId === id);
 
   useEffect(() => {
     const timer = setTimeout(() => loadUsers(1), 250);
@@ -185,6 +232,40 @@ export function UsersScreen() {
           </div>
         </div>
 
+        {/*
+          WHAT THE GRADE IS MADE OF, AND WHAT IS MISSING BEFORE IT SPEAKS.
+          Measured on this record, the column can grade one person out of
+          nineteen. A column that is blank on eighteen rows teaches a reader
+          that the feature is broken — so the screen says out loud how many
+          rows are blank and for which of five reasons, and names the bands the
+          number would be built from. «6 حسابات بلا أثر» is six accounts to
+          close or six people to train, which is worth more than one score.
+        */}
+        {gradeData && (
+          <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <RiMedalLine className="w-4 h-4 text-[var(--sys-primary)]" />
+              <h3 className="text-xs font-bold text-[var(--sys-heading)]">
+                التقدير: ممّا يُبنى، وما ينقص قبل أن ينطق
+              </h3>
+            </div>
+            <p className="text-xs font-semibold text-[var(--sys-foreground)] leading-relaxed">
+              {gradeData.readiness.why}
+            </p>
+            {gradeData.readiness.madeOf.length > 0 && (
+              <p className="text-xs text-[var(--sys-muted-foreground)] leading-relaxed">
+                يُبنى على: {gradeData.readiness.madeOf.join('، ')} — عن {PERIOD_AR[gradeData.window.period]} وفي
+                المتجر المختار وحده، ولا يُعطى رقمٌ لمن عيّنتُه أقلّ من {gradeData.minSample} طلباً. الترتيب داخل
+                الدور نفسه، لا بين الأدوار: البنودُ التي لا يقدر دورٌ على كسبها لا تُحسَب عليه صفراً.
+              </p>
+            )}
+            <p className="text-xs text-[var(--sys-muted)] leading-relaxed">
+              لا يُستدعى أيُّ نموذجٍ في هذا الرقم. كلُّ جملةٍ هنا قالبٌ حول عددٍ مقروءٍ من السجل، والرقمُ نفسه
+              هو رقمُ بطاقةِ الأداء لا حساباً ثانياً له.
+            </p>
+          </div>
+        )}
+
         {/* RiGroupLine Table */}
         <Card>
           <CardContent className="p-0">
@@ -208,6 +289,41 @@ export function UsersScreen() {
                     render: (u) => (
                   <><Badge variant={statusVariant(u.status) as any}>{STATUS_LABELS[u.status] || u.status}</Badge></>
                 ) },
+                  /*
+                    THE CHIP IS NEVER ALONE. «مقيَّم» on its own is the opaque
+                    figure this system refuses everywhere else; the sentence
+                    under it carries the counted numbers so the reader can
+                    check it by hand, and the presence line under THAT is a
+                    second, independent fact — never added to the first.
+
+                    The score is printed in the primary colour and given no
+                    verdict colour of its own, exactly as `ScoreCard` prints
+                    it: there is no owner-set bar for a composite out of
+                    ninety, and colouring it would be this screen inventing
+                    one.
+                  */
+                  { key: 'c7', label: "التقدير",
+                    render: (u) => {
+                      const g = gradeOf(u.id);
+                      if (!g) return <span className="text-xs text-[var(--sys-muted)]">—</span>;
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <HealthChip health={{ tone: g.tone, label: g.label, why: g.why }} />
+                            {g.scored && g.scored.total !== null && (
+                              <span className="text-xs font-bold tabular-nums text-[var(--sys-primary)]">
+                                {g.scored.total}
+                                <span className="font-normal text-[var(--sys-muted-foreground)]"> / {g.scored.possible}</span>
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-[var(--sys-muted-foreground)] leading-relaxed">{g.why}</p>
+                          <p className={`text-xs leading-relaxed ${g.stale ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-muted)]'}`}>
+                            {g.presence}
+                          </p>
+                        </div>
+                      );
+                    } },
                   { key: 'c3', label: "تاريخ التسجيل",
                     render: (u) => (format(new Date(u.createdAt), 'yyyy-MM-dd')) },
                   { key: 'c4', label: "آخر دخول",
