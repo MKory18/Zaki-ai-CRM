@@ -137,6 +137,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       where: { id, companyId },
       select: {
         quantity: true, productId: true, offerId: true, discountAmount: true, customerNotes: true,
+        // The governorate it ships to — what a «change the city» request
+        // actually means, and the only one of the two the order can write.
+        regionId: true,
         customer: { select: { fullName: true, phone: true, altPhone: true, address: true, city: true } },
       },
     });

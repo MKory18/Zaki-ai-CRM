@@ -7,6 +7,7 @@ const order: OrderSnapshot = {
   offerId: null,
   discountAmount: 0,
   customerNotes: null,
+  regionId: 'region-amman',
   customer: { fullName: 'أحمد', phone: '0791234567', altPhone: null, address: 'عمان، الشميساني', city: 'عمان' },
 };
 
@@ -31,10 +32,24 @@ describe('withFrom — the value BEFORE, taken by the server', () => {
   });
 
   it('reads customer fields from the customer', () => {
-    expect(withFrom(order, { customerPhone: { to: '0799999999' }, customerCity: { to: 'الزرقاء' } })).toEqual({
+    expect(withFrom(order, { customerPhone: { to: '0799999999' } })).toEqual({
       customerPhone: { from: '0791234567', to: '0799999999' },
-      customerCity: { from: 'عمان', to: 'الزرقاء' },
     });
+  });
+
+  /**
+   * THE GOVERNORATE, NOT THE CITY.
+   *
+   * The city was free text and the order has no column for it, so every
+   * request to change it was accepted, approved, and then refused with
+   * «عدّلها يدوياً» — reported as «طلب تعديل: لا يمكن تعديل المدينة».
+   * The order ships to a region, and that is what the request carries.
+   */
+  it('reads the governorate from the order, not the customer’s typed city', () => {
+    expect(withFrom(order, { regionId: { to: 'region-zarqa' } })).toEqual({
+      regionId: { from: 'region-amman', to: 'region-zarqa' },
+    });
+    expect(CHANGEABLE_FIELDS).not.toContain('customerCity');
   });
 
   it('records an empty before as null, not as a missing key', () => {

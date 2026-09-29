@@ -66,6 +66,11 @@ export const OUR_FAULTS: readonly Fault[] = ['OUR_DATA', 'OUR_REACH'];
 
 const BEFORE_FAULT: Record<string, Fault> = {
   PRICE_TOO_HIGH: 'CUSTOMER',
+  // The customer's decision, like «السعر مرتفع» — but it is the one
+  // rejection that names a competitor, so it is kept apart from it:
+  // «غالي» is a question about this customer, «لقاها أرخص» is a question
+  // about the market, and only the second can be answered by a number.
+  FOUND_CHEAPER_ELSEWHERE: 'CUSTOMER',
   CUSTOMER_CHANGED_MIND: 'CUSTOMER',
   CUSTOMER_DOES_NOT_WANT_PRODUCT: 'CUSTOMER',
   DUPLICATE_ORDER: 'OUR_DATA',

@@ -16,7 +16,15 @@ describe('every changeable field has a decided fate', () => {
       const r = expandApproved(approved({ [f]: { to: 'x' } }));
       if (!r.ok) cannot.push(f);
     }
-    expect(cannot.sort()).toEqual(['customerCity', 'offerId']);
+    // THE CITY LEFT THIS LIST BY BEING FIXED, NOT BY BEING EXEMPTED.
+    //
+    // It was free text with no column on the order, so every request to
+    // change it was accepted, approved, and then refused — «طلب تعديل: لا
+    // يمكن تعديل المدينة». The request now carries `regionId`, the
+    // governorate the delivery fee is keyed on, which the order does
+    // write. The offer is the one left: it has no column either, and
+    // saying so is better than applying half a request.
+    expect(cannot.sort()).toEqual(['offerId']);
   });
 });
 

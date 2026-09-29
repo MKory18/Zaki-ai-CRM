@@ -35,7 +35,14 @@ import { REJECTION_REASONS } from './confirmation-workflow';
  */
 
 /** The three a second call makes sense for, named one by one rather than as a subtraction. */
-export const WINBACK_REASONS = ['PRICE_TOO_HIGH', 'CUSTOMER_CHANGED_MIND', 'NO_ANSWER_3_ATTEMPTS'] as const;
+export const WINBACK_REASONS = [
+  'PRICE_TOO_HIGH',
+  // The most winnable of them all: he wants the product and said so — the
+  // only thing between him and it is a number we control.
+  'FOUND_CHEAPER_ELSEWHERE',
+  'CUSTOMER_CHANGED_MIND',
+  'NO_ANSWER_3_ATTEMPTS',
+] as const;
 export type WinbackReason = (typeof WINBACK_REASONS)[number];
 
 /** And why each of the others is left alone — in the reader's language, on the screen. */

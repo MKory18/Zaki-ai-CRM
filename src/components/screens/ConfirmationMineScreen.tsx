@@ -229,7 +229,7 @@ export function ConfirmationMineScreen() {
    */
   const submitChange = (order: OrderRow, value: ChangeRequestValue) => {
     setDialog(null);
-    void act(order.id, () => raiseChangeRequest(order.id, value));
+    void act(order.id, () => raiseChangeRequest(order.id, value, order.version));
   };
 
   if (!data) {
@@ -407,6 +407,22 @@ export function ConfirmationMineScreen() {
                       logAttempt(order, method, method === 'PHONE' ? 'ANSWERED' : 'MESSAGE_SENT')
                     }
                   />
+                  {/*
+                    IN THE ORDER THE WORK HAPPENS IN.
+
+                    She rings, and then one of four things is true. The
+                    confirmation is what most calls end in, and it was last
+                    — past «تأجيل», «ألغِ», «إشكال» and «مساعدة» — so the
+                    commonest press was the furthest from the thumb and sat
+                    beside the one that cancels.
+
+                    Confirm first, then postpone, then cancel. The two that
+                    are neither an outcome of the call — the entry issue and
+                    the assistant — come after them.
+                  */}
+                  <Action primary onClick={() => confirm(order)} busy={busyId === order.id} icon={<RiCheckboxCircleLine className="w-4 h-4" />}>
+                    تأكيد الطلب
+                  </Action>
                   <Action onClick={() => setDialog({ kind: 'postpone', order })} busy={busyId === order.id} icon={<RiTimerLine className="w-4 h-4" />}>
                     تأجيل {order.postponeCount > 0 && `(${order.postponeCount})`}
                   </Action>
@@ -414,8 +430,11 @@ export function ConfirmationMineScreen() {
                     ألغِ
                   </Action>
 
+                  {/* «إدخال إشكال», not «إشكال إدخال»: the button is the
+                      act she performs, and the old name read as the name of
+                      the thing — so it looked like a filter, not a door. */}
                   <Action onClick={() => setDialog({ kind: 'issue', order })} busy={busyId === order.id} icon={<RiAlertLine className="w-4 h-4" />}>
-                    إشكال إدخال
+                    إدخال إشكال
                   </Action>
 
                   {/* Reads this order and this customer's history, and says
@@ -423,9 +442,6 @@ export function ConfirmationMineScreen() {
                       button that does is on either side of it. */}
                   <Action onClick={() => setDialog({ kind: 'assist', order })} icon={<RiSparkling2Line className="w-4 h-4" />}>
                     مساعدة
-                  </Action>
-                  <Action primary onClick={() => confirm(order)} busy={busyId === order.id} icon={<RiCheckboxCircleLine className="w-4 h-4" />}>
-                    تأكيد الطلب
                   </Action>
                 </footer>
               </article>

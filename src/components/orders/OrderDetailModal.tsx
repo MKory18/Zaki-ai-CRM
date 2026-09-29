@@ -846,7 +846,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           onSubmit={(value: ChangeRequestValue) => {
             setAskOpen(false);
             setAsking(true);
-            void raiseChangeRequest(order.id, value)
+            void raiseChangeRequest(order.id, value, order.version)
               .then(async () => {
                 setActionFeedback({ type: 'success', text: 'أُرسل الطلب — يصلك القرار إشعاراً.' });
                 await loadOrder(order.id);

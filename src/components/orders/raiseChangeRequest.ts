@@ -23,7 +23,19 @@ import type { ChangeRequestValue } from '@/components/screens/confirmation/Actio
  * queue, and this returns having asked — which is the whole of what she can
  * do.
  */
-export async function raiseChangeRequest(orderId: string, value: ChangeRequestValue): Promise<void> {
+export async function raiseChangeRequest(
+  orderId: string,
+  value: ChangeRequestValue,
+  /**
+   * THE VERSION THE SCREEN LOADED THE ORDER AT.
+   *
+   * The order route refuses every write without it — «expectedVersion is
+   * required for order updates» — so a request the raiser could also
+   * decide was raised, approved, and then failed at the last step with an
+   * English sentence. It was reported as exactly that.
+   */
+  expectedVersion: number
+): Promise<void> {
   /**
    * Each ask carries only what it means. A cancellation names no field and
    * a postponement names no value; sending empty ones would have the server
@@ -50,7 +62,7 @@ export async function raiseChangeRequest(orderId: string, value: ChangeRequestVa
     await apiJson(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ changeRequestId: res.request.id }),
+      body: JSON.stringify({ changeRequestId: res.request.id, expectedVersion }),
     });
     return;
   }

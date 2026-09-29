@@ -244,17 +244,39 @@ describe('the limits of that authority', () => {
   });
 
   it('refuses a request it cannot carry out whole, and names the field', async () => {
-    // The order edit has no city and no offer. Applying half a request is
-    // worse than refusing it and saying why.
+    // The order edit has no offer column. Applying half a request is worse
+    // than refusing it and saying why.
+    //
+    // The CITY used to be the second example here, and it was a defect
+    // rather than a rule: it was refused every single time, which the
+    // seller reported as «طلب تعديل: لا يمكن تعديل المدينة». The request
+    // now carries the governorate, which the order does write.
     db.orderChangeRequest.findFirst.mockResolvedValue(
-      approved({ changes: { customerAddress: { to: 'شارع' }, customerCity: { to: 'الزرقاء' } } })
+      approved({ changes: { customerAddress: { to: 'شارع' }, offerId: { to: 'offer-2' } } })
     );
     const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
     expect(res.status).toBe(422);
     const body = await res.json();
     expect(body.code).toBe('NOT_APPLICABLE');
-    expect(body.error).toContain('المدينة');
+    expect(body.error).toContain('العرض');
     expect(db.customer.update).not.toHaveBeenCalled();
+  });
+
+  /**
+   * And the governorate now goes all the way through, where the city was
+   * refused every single time.
+   *
+   * A real uuid: the order route validates the region as one, and the
+   * first version of this test used «r2» and was refused with «المحافظة
+   * غير صالح» — which is the value guard doing its job on a value the
+   * dialog's select could never produce.
+   */
+  it('carries the governorate through, where it used to refuse it', async () => {
+    db.orderChangeRequest.findFirst.mockResolvedValue(
+      approved({ changes: { regionId: { from: null, to: '3f9a1c52-7b1e-4a2d-8c6f-0d5e8a4b1c37' } } })
+    );
+    const res = await patch({ expectedVersion: 3, changeRequestId: REQUEST_ID, courierNotified: true });
+    expect(res.status, await res.text()).not.toBe(422);
   });
 
   it('looks the request up inside the company only', async () => {

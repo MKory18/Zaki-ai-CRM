@@ -79,8 +79,17 @@ describe('every rejection reason is decided, one way or the other', () => {
     }
   });
 
-  it('and keeps the three that time or a price answers', () => {
-    expect(WINBACK_REASONS).toEqual(['PRICE_TOO_HIGH', 'CUSTOMER_CHANGED_MIND', 'NO_ANSWER_3_ATTEMPTS']);
+  it('and keeps the ones that time or a price answers', () => {
+    // Listed rather than counted, so a reason gained or lost is read here
+    // as a decision. «وجدها أرخص عند غيرنا» joined them as the most
+    // winnable of all: he wants the product and said so, and the only
+    // thing between him and it is a number we control.
+    expect(WINBACK_REASONS).toEqual([
+      'PRICE_TOO_HIGH',
+      'FOUND_CHEAPER_ELSEWHERE',
+      'CUSTOMER_CHANGED_MIND',
+      'NO_ANSWER_3_ATTEMPTS',
+    ]);
     for (const r of WINBACK_REASONS) {
       expect(winbackVerdict({ ...base, rejectionReason: r }, NOW).eligible, r).toBe(true);
     }

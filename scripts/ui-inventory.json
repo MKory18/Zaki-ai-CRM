@@ -471,7 +471,7 @@
   },
   "src/components/screens/confirmation/ActionDialogs.tsx": {
     "buttons": 5,
-    "inputs": 13,
+    "inputs": 14,
     "columns": 0,
     "cards": 0,
     "modals": 4,

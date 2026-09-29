@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { PICKABLE_REJECTION_REASONS, REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
 import { CHANGE_INTENTS, INTENT_AR, refusalFor, type ChangeIntent } from '@/lib/change-request-intent';
+import { CHANGEABLE_FIELDS, CHANGE_FIELD_AR } from '@/lib/change-request-fields';
+import { useRegions } from '@/hooks/useRegions';
 import { Modal } from '@/components/ui/Modal';
 
 /**
@@ -213,16 +215,22 @@ export function IssueDialog({
   );
 }
 
-export const CHANGE_FIELDS = [
-  { value: 'customerName', label: 'اسم العميل' },
-  { value: 'customerPhone', label: 'رقم الهاتف' },
-  { value: 'customerAltPhone', label: 'رقم بديل' },
-  { value: 'customerAddress', label: 'العنوان' },
-  { value: 'customerCity', label: 'المدينة' },
-  { value: 'quantity', label: 'الكمية' },
-  { value: 'discountAmount', label: 'الخصم' },
-  { value: 'customerNotes', label: 'ملاحظات العميل' },
-] as const;
+/**
+ * DERIVED, NOT COPIED.
+ *
+ * This was a fourth hand-written copy of the changeable fields, and the
+ * copies had already drifted once — four of the ten reached the person
+ * deciding under their English code names. It now comes from the one list,
+ * less the two the apply path cannot carry out: the product needs a picker
+ * this dialog does not have, and the offer has no column on the order.
+ *
+ * Adding a field to the list is now all it takes to offer it here.
+ */
+const NOT_OFFERED_HERE: readonly string[] = ['productId', 'offerId'];
+
+export const CHANGE_FIELDS = CHANGEABLE_FIELDS.filter((f) => !NOT_OFFERED_HERE.includes(f)).map(
+  (value) => ({ value, label: CHANGE_FIELD_AR[value] })
+);
 
 export interface ChangeRequestValue {
   intent: ChangeIntent;
@@ -283,6 +291,15 @@ export function ChangeRequestDialog({
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const numeric = field === 'quantity' || field === 'discountAmount';
   const blockedPostpone = refusalFor('POSTPONE', { hasLeftWarehouse });
+  /**
+   * THE GOVERNORATES, FOR THE ONE FIELD THAT IS A CHOICE.
+   *
+   * «لازم تعطيه يختار المحافظات» — and it must be, because the delivery
+   * fee is keyed on the region: a typed name is a request nobody can
+   * carry out, which is how the city came to be refused with «عدّلها
+   * يدوياً» every time.
+   */
+  const { regions, loading: regionsLoading } = useRegions();
 
   return (
     <Modal isOpen={open} onClose={onClose} title="طلب على طلب مؤكد" subtitle={orderNumber} maxWidth="sm">
@@ -341,16 +358,41 @@ export function ChangeRequestDialog({
               </select>
             </Field>
             <Field label="القيمة الجديدة">
-              <input
-                required
-                type={numeric ? 'number' : 'text'}
-                min={numeric ? 0 : undefined}
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className={FIELD_CLS}
-                dir={field === 'customerPhone' || field === 'customerAltPhone' || numeric ? 'ltr' : undefined}
-              />
+              {field === 'regionId' ? (
+                <select
+                  required
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  className={FIELD_CLS}
+                  disabled={regionsLoading}
+                >
+                  <option value="">{regionsLoading ? 'جارٍ التحميل…' : '— اختر المحافظة —'}</option>
+                  {regions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  required
+                  type={numeric ? 'number' : 'text'}
+                  min={numeric ? 0 : undefined}
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  className={FIELD_CLS}
+                  dir={field === 'customerPhone' || field === 'customerAltPhone' || numeric ? 'ltr' : undefined}
+                />
+              )}
             </Field>
+            {/* Changing how many changes what is owed. Said here, because
+                the person asking is on the phone with the customer and the
+                amount is the next thing they will be asked. */}
+            {field === 'quantity' && (
+              <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                تغيير الكمية يعيد حساب المبلغ المطلوب عند التسليم تلقائياً.
+              </p>
+            )}
           </>
         )}
 

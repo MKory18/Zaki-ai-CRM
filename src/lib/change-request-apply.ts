@@ -38,10 +38,15 @@ import { INTENT_AR, type ChangeIntent } from './change-request-intent';
 /**
  * Change-request fields and the order-edit field each one becomes.
  *
- * Two are missing on purpose, and the refusal names them: the order edit
- * has no city (the governorate — a region — is what it ships to) and no
- * offer. A request for either could be raised and approved but never
+ * ONE is missing on purpose now, and the refusal names it: the order edit
+ * has no offer. A request for it could be raised and approved but never
  * carried out; saying so is better than applying half of it.
+ *
+ * The city used to be the other one — and that was the wrong answer to
+ * the right observation. The order ships to a REGION, so the request now
+ * carries `regionId`, which the order route does write. A door that
+ * accepts a request it can never carry out is worse than one that refuses
+ * it at the start.
  */
 const APPLIES_AS: Partial<Record<(typeof CHANGEABLE_FIELDS)[number], string>> = {
   customerName: 'customerName',
@@ -49,6 +54,7 @@ const APPLIES_AS: Partial<Record<(typeof CHANGEABLE_FIELDS)[number], string>> = 
   customerAltPhone: 'customerAltPhone',
   customerAddress: 'customerAddress',
   customerNotes: 'customerNotes',
+  regionId: 'regionId',
   quantity: 'quantity',
   discountAmount: 'discountAmount',
   productId: 'productId',

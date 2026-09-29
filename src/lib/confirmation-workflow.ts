@@ -39,6 +39,13 @@ export function isValidTransition(from: string, to: string): boolean {
 export const REJECTION_REASONS = [
   'PRICE_TOO_HIGH', 'CUSTOMER_CHANGED_MIND', 'CUSTOMER_DOES_NOT_WANT_PRODUCT',
   'DUPLICATE_ORDER', 'WRONG_NUMBER', 'FAKE_ORDER', 'OUT_OF_SERVICE_AREA',
+  // NOT the same as «السعر مرتفع», and the difference is a decision.
+  // «غالي» says our price is beyond what this customer will pay; «لقاها
+  // أرخص» says somebody else is selling it for less. The first is a
+  // question about the customer, the second is a question about the
+  // market — and rolling them together hides the only one that can be
+  // answered by changing a number.
+  'FOUND_CHEAPER_ELSEWHERE',
   // Its own distinct reason: the third no-answer closes the order by rule,
   // so it is never mixed with a customer's refusal in any report.
   'NO_ANSWER_3_ATTEMPTS',
@@ -94,6 +101,7 @@ export const REJECTION_REASON_AR: Record<string, string> = {
   WRONG_NUMBER: 'رقم خاطئ',
   FAKE_ORDER: 'طلب وهميّ',
   OUT_OF_SERVICE_AREA: 'خارج نطاق التغطية',
+  FOUND_CHEAPER_ELSEWHERE: 'وجدها أرخص عند غيرنا',
   NO_ANSWER_3_ATTEMPTS: 'أُغلق بعد ثلاث محاولات بلا ردّ',
   MODERATOR_DATA_ERROR: 'خطأ إدخال من المُعدِّل',
   OTHER: 'سبب آخر',

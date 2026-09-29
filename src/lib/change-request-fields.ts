@@ -11,8 +11,20 @@
  * Pure and client-safe: the dialog runs in the browser.
  */
 
+/**
+ * `regionId`, NOT `customerCity`.
+ *
+ * The city was free text and could not be applied at all: the order ships
+ * to a REGION — the governorate the delivery fee is keyed on — and the
+ * order route has no city field to write. So every request on it was
+ * accepted, approved, and then refused with «عدّلها يدوياً»; it was
+ * reported as «طلب تعديل: لا يمكن تعديل المدينة».
+ *
+ * The governorate is a real list and a real column, so the request can be
+ * carried out to the end — which is the whole point of the door.
+ */
 export const CHANGEABLE_FIELDS = [
-  'customerName', 'customerPhone', 'customerAltPhone', 'customerAddress', 'customerCity',
+  'customerName', 'customerPhone', 'customerAltPhone', 'customerAddress', 'regionId',
   'quantity', 'productId', 'offerId', 'discountAmount', 'customerNotes',
 ] as const;
 
@@ -23,7 +35,7 @@ export const CHANGE_FIELD_AR: Record<ChangeableField, string> = {
   customerPhone: 'هاتف العميل',
   customerAltPhone: 'الهاتف البديل',
   customerAddress: 'العنوان',
-  customerCity: 'المدينة',
+  regionId: 'المحافظة',
   quantity: 'الكمية',
   productId: 'المنتج',
   offerId: 'العرض',
@@ -45,6 +57,8 @@ export interface OrderSnapshot {
   offerId: string | null;
   discountAmount: number;
   customerNotes: string | null;
+  /** The governorate it ships to — what the delivery fee is keyed on. */
+  regionId: string | null;
   customer: {
     fullName: string;
     phone: string;
@@ -60,7 +74,7 @@ function current(order: OrderSnapshot, field: ChangeableField): ChangeValue {
     case 'customerPhone': return order.customer.phone;
     case 'customerAltPhone': return order.customer.altPhone;
     case 'customerAddress': return order.customer.address;
-    case 'customerCity': return order.customer.city;
+    case 'regionId': return order.regionId ?? null;
     case 'quantity': return order.quantity;
     case 'productId': return order.productId;
     case 'offerId': return order.offerId;

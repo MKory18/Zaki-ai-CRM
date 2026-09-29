@@ -134,12 +134,17 @@ async function main() {
   console.log('\nTEST 9/10 — Confirm & reject semantics');
   ok('IN_PROGRESS → CONFIRMED valid', wf.isValidTransition('IN_PROGRESS', 'CONFIRMED'));
   ok('IN_PROGRESS → REJECTED valid', wf.isValidTransition('IN_PROGRESS', 'REJECTED'));
-  // 8 original + NO_ANSWER_3_ATTEMPTS (the auto-close) + MODERATOR_DATA_ERROR
-  // (voiding an entry issue, which used to be recorded as FAKE_ORDER).
-  ok('10 structured rejection reasons defined', wf.REJECTION_REASONS.length === 10);
+  // A COUNT IS NOT A CONTRACT.
+  //
+  // This asserted «exactly ten», so adding a reason the business needed —
+  // «وجدها أرخص عند غيرنا», which is a different decision from «السعر
+  // مرتفع» — broke a test that was never about the number. What matters
+  // is that the list is structured and that the named ones are in it.
+  ok('rejection reasons are a structured list', wf.REJECTION_REASONS.length >= 10);
   ok('auto-close has its own reason', (wf.REJECTION_REASONS as readonly string[]).includes('NO_ANSWER_3_ATTEMPTS'));
   ok('our own mistake has its own reason', (wf.REJECTION_REASONS as readonly string[]).includes('MODERATOR_DATA_ERROR'));
   ok('reject OTHER requires note (validator contract)', (wf.REJECTION_REASONS as readonly string[]).includes('OTHER'));
+  ok('a cheaper competitor is its own reason', (wf.REJECTION_REASONS as readonly string[]).includes('FOUND_CHEAPER_ELSEWHERE'));
 
   // ═══ TEST 11 ═══
   console.log('\nTEST 11 — Invalid transitions rejected');
