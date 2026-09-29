@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { RiCloseLine } from '@remixicon/react';
@@ -143,7 +143,50 @@ export function Modal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  if (!isOpen || typeof document === 'undefined') return null;
+  /**
+   * RESOLVED AFTER MOUNT, NOT WHILE RENDERING.
+   *
+   * On the first render of a tree the frame div is not in the document yet,
+   * so a query run during render finds nothing and the dialog falls back to
+   * `<body>` — the exact defect this is here to fix, hidden behind the fact
+   * that in the running app a dialog is almost always opened later. A layout
+   * effect runs after the DOM is committed and before paint, so the dialog
+   * never appears in the wrong place even for one frame.
+   */
+  const [host, setHost] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    setHost(document.querySelector<HTMLElement>('[data-sys-theme]') ?? document.body);
+  }, [isOpen]);
+
+  if (!isOpen || typeof document === 'undefined' || !host) return null;
+
+  /*
+   * INTO THE THEMED FRAME, NOT INTO <body>.
+   *
+   * Every colour in this product is a custom property declared on
+   * `[data-sys-theme]`, and `SystemFrame` renders that attribute on a div
+   * INSIDE the document element. Custom properties inherit down the tree,
+   * so a dialog portalled into `<body>` — a SIBLING of that div, not a
+   * descendant — never saw it: it fell back to the `:root` block, which is
+   * the dark «ops» palette.
+   *
+   * The effect was invisible to anybody on the default theme, which is 18 of
+   * this shop's 19 accounts. For the one person on «النهار» EVERY dialog in
+   * the product rendered dark over a light page, and the fonts had already
+   * been worked around the same way — `SystemFrame` puts its font variables
+   * on `:root` precisely because «a dialog portalled into <body> reads them
+   * too». The colours never got that treatment.
+   *
+   * Portalling into the frame keeps the reason the portal exists — the
+   * dialog is still not a DOM child of the row that opened it, so its
+   * clicks no longer bubble into that row — and it needs no script: a theme
+   * change re-paints the dialog because the attribute is an ancestor again.
+   *
+   * `<body>` remains the fallback for anything rendered outside the frame,
+   * which is how the seller's own surfaces render their dialogs.
+   */
 
   const widthStyles = {
     sm: 'max-w-sm',
@@ -154,10 +197,10 @@ export function Modal({
     '4xl': 'max-w-4xl',
   };
 
-  // Rendered through a portal, into <body>. A modal opened from inside a
-  // clickable row used to be a DOM child of that row, so every click inside
-  // it bubbled up and opened the row behind it — clicking "السجل" landed you
-  // in the order instead of the history.
+  // Rendered through a portal. A modal opened from inside a clickable row
+  // used to be a DOM child of that row, so every click inside it bubbled up
+  // and opened the row behind it — clicking "السجل" landed you in the order
+  // instead of the history. See `host` above for which node it lands in.
   return createPortal(
     <div
       className={clsx(
@@ -213,6 +256,6 @@ export function Modal({
         <div className="p-6 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>,
-    document.body
+    host
   );
 }

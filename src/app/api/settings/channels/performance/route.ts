@@ -9,6 +9,7 @@ import { DELIVERED_SHIPPING, whereDelivered } from '@/lib/order-state';
 import { DOOR_FAILED_SHIPPING, DOOR_RETURNED_SHIPPING, doorOutcome } from '@/lib/cod-vitals';
 import {
   collectionTrust,
+  MIN_CONFIRMED,
   scoreChannel,
   unattributedShare,
   whyNoScore,
@@ -145,7 +146,34 @@ export async function GET() {
       if (!r || r.delivered <= 0) return null;
       return Number((r.revenue / r.delivered).toFixed(2));
     };
-    const bestBasket = Math.max(0, ...channels.map((c) => basketOf(c.id) ?? 0));
+    /**
+     * AND THE CEILING IS SET BY A DOOR THAT CLEARS THE FLOOR.
+     *
+     * It was the maximum over EVERY channel, with no sample behind it — so
+     * one delivered order at an unusual price became the bar every other
+     * door was measured against, and the doors doing the real work scored a
+     * fraction of what they had earned. Measured in this shop's own data
+     * when the same fault was found on the products screen: the best single
+     * delivered order was 50.01 and belonged to a product with two of them;
+     * letting it set the reference scored the three real products 8, 9 and 9
+     * out of 20 instead of 17, 20 and 20.
+     *
+     * A reference is a claim about what this shop can do. One order is not
+     * that claim, and `MIN_CONFIRMED` is the bar the rest of this file
+     * already scores against — so the ceiling now comes from the doors whose
+     * rates are allowed to speak at all. If not one of them clears it, there
+     * is no reference and the band withholds itself rather than inventing a
+     * bar out of the loudest accident.
+     */
+    const eligibleBaskets = channels
+      .filter((c) => (attributed.get(c.id)?.confirmed ?? 0) >= MIN_CONFIRMED)
+      .map((c) => basketOf(c.id))
+      // `basketOf` already answers null for a door that delivered nothing,
+      // and a zero among positives cannot move a maximum — so there is no
+      // `> 0` here. A condition that can never change the answer is a claim
+      // no test can check.
+      .filter((b): b is number => b !== null);
+    const bestBasket = eligibleBaskets.length ? Math.max(...eligibleBaskets) : 0;
 
     const performance: ChannelPerformanceRow[] = channels.map((c) => {
       const r = attributed.get(c.id);
