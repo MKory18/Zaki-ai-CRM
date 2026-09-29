@@ -1,12 +1,21 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
-import { RiInboxArchiveLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
+import {
+  RiBuilding4Line,
+  RiInboxArchiveLine,
+  RiLoader4Line,
+  RiPriceTag3Line,
+  RiSearchLine,
+} from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ORIGIN } from '@/lib/batch-grade';
 
 /**
  * /inventory/receiving — put stock in.
@@ -42,6 +51,27 @@ export function InventoryReceivingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
+  /**
+   * ARRIVING FROM ONE PRODUCT, AT THAT PRODUCT.
+   *
+   * The owner's note: «كمان تحديث المخزون مش موجود» — pressed from a
+   * product's own page, «إضافة مخزون» landed him on a list of every ready
+   * product with a search box, and he had to find by name the product he had
+   * just been looking at. The door was there; it did not arrive anywhere.
+   *
+   * `?product=<id>` opens that product's receiving dialog straight away. The
+   * link without the parameter still behaves exactly as it did, so nothing
+   * pointing here breaks.
+   *
+   * DERIVED, NOT SET IN AN EFFECT. Writing state from an effect once the
+   * rows arrive means a second render pass for something that is simply a
+   * function of the URL and the list — and it has to carry a "have I already
+   * done this" flag, because otherwise closing the dialog reopens it for as
+   * long as the parameter stays in the address bar.
+   */
+  const asked = useSearchParams().get('product');
+  const [dismissed, setDismissed] = useState(false);
+
   const load = useCallback(async () => {
     try {
       const data = await apiJson<{ stockSummary: ProductRow[] }>('/api/inventory');
@@ -54,6 +84,23 @@ export function InventoryReceivingScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const linked = useMemo(() => {
+    if (dismissed || !asked || !products) return { row: null, message: null as string | null };
+    const row = products.find((p) => p.id === asked) ?? null;
+    if (row?.sourceType === 'PURCHASED') return { row, message: null };
+    // Opening the dialog for a made product anyway would end in the server's
+    // WRONG_DOOR after the quantity had already been typed.
+    return {
+      row: null,
+      message: row
+        ? `«${row.name}» منتج مصنّع — تُضاف كميته من «تشغيلات الإنتاج» ببنود كلفتها، لا من هنا.`
+        : 'لم يُعثر على هذا المنتج في هذا المتجر.',
+    };
+  }, [asked, products, dismissed]);
+
+  /** The dialog the reader opened, or the one the link asked for. */
+  const shown = active ?? linked.row;
 
   const rows = useMemo(() => {
     const q = term.trim();
@@ -74,12 +121,53 @@ export function InventoryReceivingScreen() {
     <div className="max-w-5xl space-y-3">
       <PageHeader title="استلام بضاعة جاهزة"
           description="الباب الذي تدخل منه بضاعة المنتجات التي تشتريها جاهزة، بسعر شرائها. ما تصنّعه بنفسك يدخل من «تشغيلات الإنتاج» ببنود كلفته — ولهذا لا يظهر هنا."
+          actions={
+            <>
+              {/* «في استلام بضاعة جاهزة، ضيف زر يوديني على المنتجات» — a
+                  product's type is what decides which of the two doors it
+                  comes in through, and the type is set on the product page.
+                  Being told that with no way to get there is the whole
+                  complaint. */}
+              <Link
+                href="/products"
+                className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-sm font-medium text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] md:h-10"
+              >
+                <RiPriceTag3Line className="h-4 w-4" />
+                المنتجات
+              </Link>
+              <Link
+                href="/manufacturing"
+                className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-sm font-medium text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] md:h-10"
+              >
+                <RiBuilding4Line className="h-4 w-4" />
+                تشغيلات الإنتاج
+              </Link>
+            </>
+          }
         />
+
+      {/*
+        WHERE WHAT YOU RECEIVE HERE SHOWS UP AFTERWARDS.
+
+        The owner's note: «ليش المنتجات الجاهزة موجودة بتشغيلات الإنتاج». This
+        screen is where that happens, so this is where it is explained — in
+        the SAME words the production screen uses, from `ORIGIN.RECEIVED.why`,
+        because two screens explaining one fact in two wordings is how a
+        reader learns to trust neither.
+      */}
+      <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+        كل استلام يفتح دفعةً باسمه، وتظهر تلك الدفعة في قائمة «تشغيلات الإنتاج» موسومةً بأنها
+        استلام لا تشغيلة: {ORIGIN.RECEIVED.why}
+      </p>
 
       {rows.length === 0 && (products?.length ?? 0) > 0 && !term && !onlyEmpty && (
         <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-6 text-center text-sm text-[var(--sys-muted-foreground)]">
           لا منتجات جاهزة بعد — كل منتجاتك مصنّعة. يُحدَّد النوع عند إضافة المنتج،
-          ويمكن تغييره من صفحة المنتج.
+          ويمكن تغييره من صفحة المنتج.{' '}
+          {/* The sentence named the place to go and did not go there. */}
+          <Link href="/products" className="font-semibold text-[var(--sys-primary)] hover:underline">
+            اذهب إلى المنتجات
+          </Link>
         </p>
       )}
 
@@ -108,7 +196,7 @@ export function InventoryReceivingScreen() {
         </label>
       </div>
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {(error ?? linked.message) && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error ?? linked.message}</p>}
       {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
       {!products ? (
@@ -149,7 +237,17 @@ export function InventoryReceivingScreen() {
             actions={(p) => (
               <><button onClick={() => setActive(p)} className="text-xs text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1">
                       <RiInboxArchiveLine className="w-4 h-4" /> استلام
-                    </button></>
+                    </button>
+                    {/* The weighted-average cost, the reserved units and the
+                        type that put this product on this screen are all on
+                        its own page. Reaching it used to mean going back to
+                        the sidebar and searching by name. */}
+                    <Link
+                      href={`/products/${p.id}`}
+                      className="text-xs text-[var(--sys-primary)] hover:underline inline-flex items-center gap-1"
+                    >
+                      <RiPriceTag3Line className="w-4 h-4" /> المنتج
+                    </Link></>
             )}
           />
           {rows.length > 100 && (
@@ -160,12 +258,18 @@ export function InventoryReceivingScreen() {
         </div>
       )}
 
-      {active && (
+      {shown && (
         <ReceiveDialog
-          product={active}
-          onClose={() => setActive(null)}
+          product={shown}
+          onClose={() => {
+            setActive(null);
+            // A closed dialog stays closed, even with `?product=` still in
+            // the address bar.
+            setDismissed(true);
+          }}
           onSaved={async (message) => {
             setActive(null);
+            setDismissed(true);
             setDone(message);
             setError(null);
             await load();

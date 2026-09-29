@@ -16,7 +16,14 @@ export async function GET(req: Request) {
       where: inStore(companyId, storeId),
       include: {
         product: {
-          select: { id: true, name: true, sku: true },
+          // `sourceType` and `basePrice` are what the screen grades a batch
+          // with: a PURCHASED product's batch is a delivery of ready goods
+          // and not a run at all — the owner's «ليش المنتجات الجاهزة موجودة
+          // بتشغيلات الإنتاج» — and a unit cost is only worth judging against
+          // the price the unit is sold at. Neither is inferred in the browser
+          // and neither is a new query: they ride the include that was
+          // already here.
+          select: { id: true, name: true, sku: true, sourceType: true, basePrice: true },
         },
         // The named costs of this run, beside the four fixed buckets.
         costLines: { orderBy: { sortOrder: 'asc' }, select: { label: true, amount: true } },

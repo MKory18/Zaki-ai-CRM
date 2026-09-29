@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { CONFIRMATION_REFUSED, DELIVERED_SHIPPING, rateOf } from './order-state';
+import { whereCountsTowardCommission } from './commission-fairness';
 import type { CommissionMetric } from './commission-rules';
 
 type Tx = Prisma.TransactionClient | typeof db;
@@ -37,14 +38,41 @@ export interface MetricResult {
 
 const EMPTY: MetricResult = { count: 0, amount: 0, orderIds: [] };
 
-/** Orders whose sale money counts: delivered inside the span. */
-function deliveredIn(scope: MetricScope) {
-  return {
+/**
+ * A CANCELLED ORDER IS NEVER IN A COMMISSION BASE.
+ *
+ * The owner's rule: «قاعدة عمولة صحيح ما بظهر ولا طلب ملغي سواء قبل التأكيد
+ * او بعد التأكيد». Composed with `AND` rather than spread, deliberately: a
+ * spread would collide with the `confirmationStatus` key that two of the
+ * readers below already pin, and whichever one came second in the object
+ * would silently win. `AND` says "countable, and also this" and cannot be
+ * broken by reordering.
+ *
+ * The predicate itself lives in `commission-fairness.ts` so this file and the
+ * fairness measure ask one question rather than two spellings of it.
+ */
+function countable(where: Prisma.OrderWhereInput): Prisma.OrderWhereInput {
+  return { AND: [whereCountsTowardCommission(), where] };
+}
+
+/**
+ * Orders whose sale money counts: delivered inside the span.
+ *
+ * The cancellation guard is redundant here today — `assertCancellable`
+ * refuses to cancel an order that has left the warehouse, so a DELIVERED
+ * order cannot also be cancelled — but `order-state.ts` states plainly that
+ * "a cancelled shipment is cancelled whatever the confirmation says", so the
+ * two columns are allowed to disagree by design. A base that relies on a
+ * guard in a different file to stay correct is a base that breaks the day
+ * that guard is relaxed.
+ */
+function deliveredIn(scope: MetricScope): Prisma.OrderWhereInput {
+  return countable({
     companyId: scope.companyId,
     storeId: scope.storeId,
     shippingStatus: { in: [...DELIVERED_SHIPPING] },
     deliveredAt: { gte: scope.start, lt: scope.end },
-  };
+  });
 }
 
 /** The sale, without the courier's fee — the same basis accrual uses. */
@@ -123,14 +151,14 @@ async function multiUnitOrders(tx: Tx, scope: MetricScope): Promise<MetricResult
 
 /** Orders this person confirmed inside the span. */
 async function confirmedCount(tx: Tx, scope: MetricScope): Promise<MetricResult> {
-  const orders = await ordersFor(tx, {
+  const orders = await ordersFor(tx, countable({
     companyId: scope.companyId,
     storeId: scope.storeId,
     confirmedById: scope.userId,
     confirmationStatus: 'CONFIRMED',
     confirmedAt: { gte: scope.start, lt: scope.end },
     ...(scope.productId ? { items: { some: { productId: scope.productId } } } : {}),
-  });
+  }));
   return {
     count: orders.length,
     amount: orders.reduce((sum, o) => sum + saleOf(o), 0),
@@ -138,15 +166,30 @@ async function confirmedCount(tx: Tx, scope: MetricScope): Promise<MetricResult>
   };
 }
 
-/** Orders this moderator brought in, counted when they arrived. */
+/**
+ * Orders this moderator brought in, counted when they arrived.
+ *
+ * THIS READER HAD NO STATUS FILTER AT ALL, and it is the one the owner is
+ * complaining about: «قاعدة عمولة صحيح ما بظهر ولا طلب ملغي». Every order a
+ * moderator entered in the span was counted, cancelled ones included — so a
+ * cancelled order sat both in the count a tiered rule bands on and in the
+ * `amount` a PERCENT rule multiplies. Measured on this database on
+ * 2026-09-29: 1 of the 150 orders in this base, carrying 20.00 of sale value.
+ * Small here only because the whole record holds 7 refusals; a live COD shop
+ * refuses nothing like 0.7%, and every one of those would have been paid on.
+ *
+ * Unlike the delivered readers above, this one counts orders AT ARRIVAL —
+ * before anybody knows what becomes of them — which is exactly why it needed
+ * the filter most and was the only place without it.
+ */
 async function sourcedCount(tx: Tx, scope: MetricScope): Promise<MetricResult> {
-  const orders = await ordersFor(tx, {
+  const orders = await ordersFor(tx, countable({
     companyId: scope.companyId,
     storeId: scope.storeId,
     moderatorId: scope.userId,
     createdAt: { gte: scope.start, lt: scope.end },
     ...(scope.productId ? { items: { some: { productId: scope.productId } } } : {}),
-  });
+  }));
   return {
     count: orders.length,
     amount: orders.reduce((sum, o) => sum + saleOf(o), 0),
@@ -169,6 +212,24 @@ async function orderDelivered(tx: Tx, scope: MetricScope): Promise<MetricResult>
 }
 
 /**
+ * Orders this person confirmed and did not have refused — the DENOMINATOR of
+ * the delivery rate, and the population its minimum sample is measured over.
+ *
+ * One definition for both, because they were two copies of the same five
+ * lines: a rate could be computed over one population while the sample floor
+ * was checked against another, and nothing on any screen would look wrong.
+ */
+function everConfirmedBy(scope: MetricScope): Prisma.OrderWhereInput {
+  return countable({
+    companyId: scope.companyId,
+    storeId: scope.storeId,
+    confirmedById: scope.userId,
+    confirmationStatus: { notIn: [...CONFIRMATION_REFUSED] },
+    confirmedAt: { gte: scope.start, lt: scope.end },
+  });
+}
+
+/**
  * Delivered out of what this person confirmed, as a whole number.
  *
  * The denominator is every order they confirmed in the span — including the
@@ -179,13 +240,7 @@ async function orderDelivered(tx: Tx, scope: MetricScope): Promise<MetricResult>
  */
 async function deliveryRate(tx: Tx, scope: MetricScope): Promise<MetricResult> {
   const confirmed = await tx.order.findMany({
-    where: {
-      companyId: scope.companyId,
-      storeId: scope.storeId,
-      confirmedById: scope.userId,
-      confirmationStatus: { notIn: [...CONFIRMATION_REFUSED] },
-      confirmedAt: { gte: scope.start, lt: scope.end },
-    },
+    where: everConfirmedBy(scope),
     select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true },
   });
   if (confirmed.length === 0) return EMPTY;
@@ -223,13 +278,9 @@ export async function measure(tx: Tx, metric: string, scope: MetricScope): Promi
  */
 export async function sampleSize(tx: Tx, metric: string, scope: MetricScope): Promise<number> {
   if (metric !== 'DELIVERY_RATE') return (await measure(tx, metric, scope)).count;
-  return tx.order.count({
-    where: {
-      companyId: scope.companyId,
-      storeId: scope.storeId,
-      confirmedById: scope.userId,
-      confirmationStatus: { notIn: [...CONFIRMATION_REFUSED] },
-      confirmedAt: { gte: scope.start, lt: scope.end },
-    },
-  });
+  // The SAME clause the rate's denominator uses, by calling it rather than
+  // repeating it. These two were separate copies of one five-line filter, so
+  // a rate could be computed over one population and refused for a small
+  // sample measured over another — and nothing would have looked wrong.
+  return tx.order.count({ where: everConfirmedBy(scope) });
 }

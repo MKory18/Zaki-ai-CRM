@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /** Nothing enters stock before the count-and-inspect acknowledgement. */
 
 const { db, requireContext, requirePermission, logAudit, reverseForOrder } = vi.hoisted(() => ({
   reverseForOrder: vi.fn(async (..._a: unknown[]) => 1),
   db: {
-    order: { findFirst: vi.fn(), update: vi.fn() },
+    order: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     returnReceipt: { create: vi.fn() },
     inventoryMovement: { findFirst: vi.fn(), create: vi.fn() },
     productionBatch: { findFirst: vi.fn(), create: vi.fn(), aggregate: vi.fn() },
@@ -25,7 +27,7 @@ vi.mock('@/lib/authorization', () => ({ can: () => true, requirePermission: (...
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
 vi.mock('@/lib/commission', () => ({ reverseForOrder }));
 
-import { POST } from '@/app/api/ops/returns/route';
+import { GET, POST } from '@/app/api/ops/returns/route';
 
 const ORDER_ID = '77777777-7777-4777-8777-777777777777';
 const body = (b: unknown) =>
@@ -237,5 +239,175 @@ describe('receiving what a partial delivery sent back', () => {
     expect(db.order.update.mock.calls[0][0].data).toMatchObject({
       shippingStatus: 'RETURNED', status: 'RETURNED', settlementStatus: 'NOT_APPLICABLE',
     });
+  });
+});
+
+/**
+ * THIS DESK CLOSES ONE HALF.
+ *
+ *   «بصير الطلب بيتمم مرتين — مرة بيتمم للمستلم ومرة للطلب الراجع. واذا اتمم
+ *    واحد فهو اتمم جزءي، ما بنغلق غير كامل»
+ *
+ * The receipt settles the goods. The money the customer paid at the door is
+ * the courier's statement's to settle, and until it does the order is not
+ * finished — a fact that was recorded in no column, no note and no response,
+ * so the clerk who wrote the receipt left believing they had closed it.
+ */
+describe('a receipt closes one half of a partial delivery, and says so', () => {
+  const partial = (deliveredQty: number, over: Record<string, unknown> = {}) => {
+    db.order.findFirst.mockResolvedValue({
+      id: ORDER_ID, orderNumber: 'ORD-1', shippingStatus: 'PARTIALLY_DELIVERED',
+      settlementStatus: 'PENDING_COLLECTION',
+      returnReceipt: null, regionId: 'r1', deliveryProviderId: 'dp1',
+      items: [{ id: 'i1', productId: 'p1', productName: 'X', quantity: 3, freeQuantity: 0, deliveredQty }],
+      ...over,
+    });
+  };
+
+  it('reports the order as HALF settled, with the money still open', async () => {
+    partial(2);
+    const res = await POST(body({ orderId: ORDER_ID, receivedQty: 1, countedAndInspected: true }));
+    const { completion } = await res.json();
+    expect(completion.degree).toBe('PARTIAL');
+    expect(completion.complete).toBe(false);
+    expect(completion.awaiting).toEqual(['MONEY']);
+  });
+
+  it('writes the remaining half into the note thread a person actually reads', async () => {
+    partial(2);
+    await POST(body({ orderId: ORDER_ID, receivedQty: 1, countedAndInspected: true }));
+    expect(db.orderNote.create.mock.calls[0][0].data.body).toContain('بانتظار');
+  });
+
+  it('and closes the order once the courier’s money has arrived too', async () => {
+    // The receipt is the same receipt; what changed is the other half.
+    partial(2, { settlementStatus: 'SETTLED' });
+    const res = await POST(body({ orderId: ORDER_ID, receivedQty: 1, countedAndInspected: true }));
+    const { completion } = await res.json();
+    expect(completion.complete).toBe(true);
+    expect(completion.degree).toBe('FULL');
+    // Nothing left to chase, so the note says nothing about waiting.
+    expect(db.orderNote.create.mock.calls[0][0].data.body).not.toContain('بانتظار');
+  });
+
+  it('a whole return is finished by its receipt — it has no money half', async () => {
+    // Nothing was handed over, so nobody owes anything for it.
+    const res = await POST(body({ orderId: ORDER_ID, receivedQty: 3, countedAndInspected: true }));
+    const { completion } = await res.json();
+    expect(completion.halves.map((h: { key: string }) => h.key)).toEqual(['GOODS']);
+    expect(completion.complete).toBe(true);
+  });
+
+  it('records which half it closed in the audit trail', async () => {
+    partial(2);
+    await POST(body({ orderId: ORDER_ID, receivedQty: 1, countedAndInspected: true }));
+    expect(logAudit.mock.calls[0][0].newData).toMatchObject({ completion: 'PARTIAL', awaiting: ['MONEY'] });
+  });
+
+  it('still refuses to rewrite the shipping status — the delivery happened', async () => {
+    // Closing the goods half is not the same as turning the order into a
+    // return. The completion is derived; no column is stamped for it.
+    partial(2);
+    await POST(body({ orderId: ORDER_ID, receivedQty: 1, countedAndInspected: true }));
+    const data = db.order.update.mock.calls[0][0].data;
+    expect(data.shippingStatus).toBeUndefined();
+    expect(data.settlementStatus).toBeUndefined();
+  });
+});
+
+/**
+ * THE EXPECTED-BACK SUM IS WORKED OUT IN ONE PLACE.
+ *
+ * The route held its own `expectedBack`, and the screen listed every line at
+ * its full shipped quantity. Two copies of one rule, and they disagreed on
+ * exactly the case the owner asked about: the total said one unit was coming
+ * back while the list beside it said three.
+ */
+describe('what is coming back is counted once', () => {
+  const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
+
+  it('the route reads the rule from the library instead of restating it', () => {
+    const route = read('src/app/api/ops/returns/route.ts');
+    expect(route).toContain('expectedBackTotal');
+    // The old private copy, in the shape it had.
+    expect(route).not.toMatch(/function expectedBack\s*\(/);
+  });
+
+  it('and the screen renders the server’s lines rather than the raw items', () => {
+    const screen = read('src/components/screens/ReturnsScreen.tsx');
+    expect(screen).toContain('order.lines.map');
+    // «productName × quantity + freeQuantity» — the list that lied.
+    expect(screen).not.toMatch(/i\.quantity \+ i\.freeQuantity/);
+  });
+
+  it('and the screen is told the completion rather than deriving it', () => {
+    const screen = read('src/components/screens/ReturnsScreen.tsx');
+    expect(screen).toContain('order.completion');
+    expect(screen).not.toContain('MONEY_RESOLVED');
+  });
+});
+
+/**
+ * WHAT THE DESK IS HANDED BEFORE IT COUNTS.
+ *
+ * The list is what the clerk works from, so the per-line breakdown and the
+ * extra question are decided here and not in the screen — the same division
+ * the collect dialog uses, where the server sends `expectedCollection` and
+ * the dialog adds it up rather than re-deriving it.
+ */
+describe('the returns list', () => {
+  const listed = (items: unknown[], over: Record<string, unknown> = {}) => {
+    db.order.findMany.mockResolvedValue([
+      {
+        id: ORDER_ID, orderNumber: 'ORD-1', merchantRef: null, trackingNumber: 'TRK-1',
+        shippingStatus: 'PARTIALLY_DELIVERED', settlementStatus: 'PENDING_COLLECTION',
+        returnReason: null, returnedAt: null, regionId: 'r1', deliveryProviderId: 'dp1',
+        customer: { fullName: 'سارة', phone: '0900' },
+        region: { id: 'r1', name: 'دمشق' },
+        deliveryProvider: { id: 'dp1', name: 'ناقل' },
+        items,
+        ...over,
+      },
+    ]);
+  };
+  const get = () => GET(new Request('http://localhost/api/ops/returns'));
+  const split = [{ id: 'i1', productId: 'p1', productName: 'ماء الكمأ', quantity: 3, freeQuantity: 0, deliveredQty: 2 }];
+
+  it('sends the per-line breakdown, not only a total', async () => {
+    listed(split);
+    const { orders } = await (await get()).json();
+    expect(orders[0].expectedQty).toBe(1);
+    expect(orders[0].lines).toEqual([
+      { itemId: 'i1', productId: 'p1', productName: 'ماء الكمأ', shipped: 3, delivered: 2, expectedBack: 1 },
+    ]);
+  });
+
+  it('does not also send the raw items — one fact, one shape', async () => {
+    // Shipping both invites the screen to reach for the list that lied.
+    listed(split);
+    const { orders } = await (await get()).json();
+    expect(orders[0].items).toBeUndefined();
+  });
+
+  it('sends the extra question for a parcel the door split', async () => {
+    listed(split);
+    const { orders } = await (await get()).json();
+    expect(orders[0].action.key).toBe('GOODS');
+    expect(orders[0].action.yes).toContain('نعم');
+  });
+
+  it('and sends none for an announced return, whose flow is unchanged', async () => {
+    listed([{ id: 'i1', productId: 'p1', productName: 'ماء الكمأ', quantity: 3, freeQuantity: 0, deliveredQty: null }]);
+    const { orders } = await (await get()).json();
+    expect(orders[0].action).toBeNull();
+    expect(orders[0].lines[0].delivered).toBeNull();
+    expect(orders[0].expectedQty).toBe(3);
+  });
+
+  it('shows both halves as open — nothing in this list has been received yet', async () => {
+    listed(split);
+    const { orders } = await (await get()).json();
+    expect(orders[0].completion.halves.map((h: { key: string }) => h.key)).toEqual(['MONEY', 'GOODS']);
+    expect(orders[0].completion.complete).toBe(false);
   });
 });

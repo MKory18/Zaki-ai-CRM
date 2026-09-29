@@ -10,6 +10,89 @@ import { requirePermission } from '@/lib/authorization';
 import { drawDownStock, onHandTotal, receiveStock } from '@/lib/receiving';
 import { zodMessage } from '@/lib/zod-message';
 import { resolveUnitCost } from '@/lib/unit-cost';
+import { reservedElsewhere } from '@/lib/reservation';
+import { MAX_WINDOW_DAYS, stockHealth, summariseStock, type StockFacts } from '@/lib/stock-health';
+
+const DAY_MS = 86_400_000;
+
+/**
+ * HOW FAR BACK THIS STORE'S DELIVERY RECORD GOES.
+ *
+ * The one number the whole reading rests on. A rate is units divided by a
+ * window, and a window taken from a wish rather than from the record turns a
+ * product selling 7.7 a day into one selling 1.2 a day — measured on this
+ * database, where the delivered record is 13.4 days deep and the caller asks
+ * for 90.
+ *
+ * Zero when nothing has ever been delivered, which `stock-health` reads as
+ * «no rate may be stated» rather than as a rate of zero.
+ */
+async function ledgerDepthDays(companyId: string, storeId: string | null, now: Date): Promise<number> {
+  const first = await db.order.findFirst({
+    where: { ...inStore(companyId, storeId), shippingStatus: 'DELIVERED', deliveredAt: { not: null } },
+    orderBy: { deliveredAt: 'asc' },
+    select: { deliveredAt: true },
+  });
+  if (!first?.deliveredAt) return 0;
+  return Math.max(0, (now.getTime() - first.deliveredAt.getTime()) / DAY_MS);
+}
+
+/**
+ * WHAT ACTUALLY LEFT, PER PRODUCT, AND WHEN.
+ *
+ * Read from DELIVERED ORDERS, not from the stock ledger, and the difference
+ * is not academic. `inventory_movements` of type SALE were backfilled onto
+ * this database on 2026-09-21 by `scripts/backfill-delivered-stock.ts`, so
+ * every one of the 119 rows carries the backfill's timestamp: the movement
+ * ledger reads 8.1 days deep where the orders read 13.4, and «last sold»
+ * taken from it would be the day somebody ran a script. The order knows when
+ * the customer took the parcel. Nothing else does.
+ *
+ * SHIPPED IS NOT SOLD. Only DELIVERED counts — a parcel that went out and
+ * came back sold nothing, and counting it as velocity buys stock against a
+ * sale that did not happen. The 32 RETURNED orders on this database fall out
+ * of this filter by themselves.
+ *
+ * `deliveredQty` first where a partial delivery recorded it, and the ordered
+ * quantity plus gift units otherwise. Gift units are real stock off a real
+ * shelf; leaving them out understates how fast the shelf empties.
+ */
+async function deliveredPerProduct(
+  companyId: string,
+  storeId: string | null,
+  since: Date
+): Promise<Map<string, { units: number; lines: number; lastAt: Date }>> {
+  const lines = await db.orderItem.findMany({
+    where: {
+      order: { ...inStore(companyId, storeId), shippingStatus: 'DELIVERED', deliveredAt: { gte: since } },
+    },
+    select: {
+      productId: true,
+      quantity: true,
+      freeQuantity: true,
+      deliveredQty: true,
+      order: { select: { deliveredAt: true } },
+    },
+  });
+
+  const out = new Map<string, { units: number; lines: number; lastAt: Date }>();
+  for (const line of lines) {
+    const at = line.order.deliveredAt;
+    if (!at) continue;
+    const units = line.deliveredQty ?? line.quantity + line.freeQuantity;
+    // A line that delivered nothing is not an observation of selling.
+    if (units <= 0) continue;
+    const seen = out.get(line.productId);
+    if (!seen) {
+      out.set(line.productId, { units, lines: 1, lastAt: at });
+      continue;
+    }
+    seen.units += units;
+    seen.lines += 1;
+    if (at > seen.lastAt) seen.lastAt = at;
+  }
+  return out;
+}
 
 export async function GET() {
   try {
@@ -30,6 +113,11 @@ export async function GET() {
             quantitySold: true,
             quantityRemaining: true,
             costPerUnit: true,
+            // How long this product has had stock at all. The verdict «راكد»
+            // needs it: goods received last week have not failed to sell,
+            // they have not been offered, and charging them for it sends
+            // somebody to clear a shelf that only just arrived.
+            productionDate: true,
           },
         },
       },
@@ -45,6 +133,40 @@ export async function GET() {
       take: 50,
     });
 
+    // ── WHAT EACH PRODUCT IS DOING, not merely how much of it there is ──
+    //
+    // The owner's ask: «تنظيم أكثر — AI + Score. ملاحظات: قارب على الانتهاء
+    // يعني، ماشي بطيء… إلخ. يحتاج مخزون. تنبيهات». The verdict is computed
+    // HERE as well as rendered on the screen, from the one function in
+    // `stock-health`, because the alerts row is a count the server owes the
+    // client — a screen that counts its own alerts from a filtered list
+    // counts the page it is showing, not the store.
+    const now = new Date();
+    const since = new Date(now.getTime() - MAX_WINDOW_DAYS * DAY_MS);
+    const [ledgerDays, delivered] = await Promise.all([
+      ledgerDepthDays(companyId, storeId, now),
+      deliveredPerProduct(companyId, storeId, since),
+    ]);
+
+    // RESERVED UNITS COME FROM `reservation.reservedElsewhere`, ONE PRODUCT
+    // AT A TIME, ON PURPOSE.
+    //
+    // A single `groupBy` would be one query instead of these — measured at
+    // 2 ms against 425 ms for 114 products — but it would mean writing the
+    // "order still open" predicate a second time, in a route, beside the
+    // copy in `reservation.ts`. That predicate is five statuses long and it
+    // decides whether a unit may be promised twice; the day somebody adds a
+    // sixth status to one copy, this screen starts reporting stock that is
+    // already sold as available, and it will look like working software.
+    // Four hundred milliseconds is the price of the rule having one home.
+    const reserved = new Map<string, number>(
+      await Promise.all(
+        products.map(
+          async (p) => [p.id, await reservedElsewhere(db, companyId, p.id, undefined, storeId)] as const
+        )
+      )
+    );
+
     const stockSummary = products.map((p) => {
       const produced = p.batches.reduce((sum, b) => sum + b.quantityProduced, 0);
       const sold = p.batches.reduce((sum, b) => sum + b.quantitySold, 0);
@@ -54,6 +176,25 @@ export async function GET() {
       // that a price has to be typed.
       const lastUnitCost =
         [...p.batches].reverse().find((b) => b.costPerUnit > 0)?.costPerUnit ?? null;
+
+      const sales = delivered.get(p.id);
+      const firstStocked = p.batches.reduce<Date | null>(
+        (oldest, b) => (oldest === null || b.productionDate < oldest ? b.productionDate : oldest),
+        null
+      );
+      const facts: StockFacts = {
+        // `remaining` is the same sum `reservation.onHand` returns, taken
+        // from the batches already in hand rather than asked for again.
+        onHand: remaining,
+        reserved: reserved.get(p.id) ?? 0,
+        batchCount: p.batches.length,
+        deliveredUnits: sales?.units ?? 0,
+        deliveredLines: sales?.lines ?? 0,
+        ledgerDays,
+        daysSinceLastSale: sales ? Math.max(0, (now.getTime() - sales.lastAt.getTime()) / DAY_MS) : null,
+        daysStocked: firstStocked ? Math.max(0, (now.getTime() - firstStocked.getTime()) / DAY_MS) : null,
+      };
+
       return {
         id: p.id,
         name: p.name,
@@ -67,10 +208,23 @@ export async function GET() {
         lastUnitCost,
         /** Batches whose cost is zero — every unit out of them reads as pure profit. */
         zeroCostBatches: p.batches.filter((b) => b.costPerUnit === 0 && b.quantityRemaining > 0).length,
+        /** The verdict, its reason, its score and the bands behind it. */
+        health: stockHealth(facts, MAX_WINDOW_DAYS),
       };
     });
 
-    return NextResponse.json({ stockSummary, movements });
+    // Counted over the WHOLE store, before any search term narrows the list.
+    // An alerts row that counts what is on screen tells you about your
+    // filter, which is the one thing you already know.
+    const summary = summariseStock(stockSummary.map((s) => s.health));
+
+    return NextResponse.json({
+      stockSummary,
+      movements,
+      /** How deep the delivery record is — every rate on the screen rests on it. */
+      ledgerDays: Math.round(ledgerDays * 10) / 10,
+      ...summary,
+    });
   } catch (error: any) {
     if (error instanceof UncostedSurplus) {
       return NextResponse.json({ error: error.message, code: 'UNIT_COST_REQUIRED' }, { status: 400 });

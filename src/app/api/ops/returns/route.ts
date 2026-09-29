@@ -11,6 +11,9 @@ import { resolveDeliveryFee } from '@/lib/delivery-fees';
 import { roundMinor } from '@/lib/money';
 import { zodMessage } from '@/lib/zod-message';
 import { reverseForOrder } from '@/lib/commission';
+import {
+  completionOf, doorUnits, expectedBackTotal, extraAction, needsExtraAction, settledLines,
+} from '@/lib/partial-delivery';
 
 /**
  * Return receiving.
@@ -22,19 +25,14 @@ import { reverseForOrder } from '@/lib/commission';
  * acknowledgement is required by the schema, and the stock movement is
  * written in the same transaction as the receipt. Missing units are computed
  * (expected - received - damaged), never typed by the receiver.
- */
-
-/**
- * How many units are actually coming back.
  *
- * The whole parcel, LESS whatever the customer kept at the door. Counting
- * the full ordered quantity made every partial return read as a shortage —
- * two units "missing" that the customer is holding and paid for — and put a
- * shortfall on the courier's record for goods he delivered correctly.
+ * THIS DESK SETTLES ONE HALF OF A PARTIAL DELIVERY — «مرة بيتمم للمستلم
+ * ومرة للطلب الراجع». The other half is the money the customer paid at the
+ * door, and it arrives with the courier's statement. Both endpoints report
+ * `completion` so that nobody reads a half-settled order as a finished one:
+ * the rule is `completionOf` in lib/partial-delivery.ts, and the screen reads
+ * the same function.
  */
-function expectedBack(items: { quantity: number; freeQuantity: number; deliveredQty?: number | null }[]): number {
-  return items.reduce((sum, i) => sum + i.quantity + i.freeQuantity - (i.deliveredQty ?? 0), 0);
-}
 
 const receiveSchema = z.object({
   orderId: z.string().uuid(),
@@ -73,21 +71,57 @@ export async function GET(req: Request) {
       take: 200,
       select: {
         id: true, orderNumber: true, merchantRef: true, trackingNumber: true,
-        shippingStatus: true, returnReason: true, returnedAt: true, regionId: true, deliveryProviderId: true,
+        shippingStatus: true, settlementStatus: true, returnReason: true, returnedAt: true,
+        regionId: true, deliveryProviderId: true,
         customer: { select: { fullName: true, phone: true } },
         region: { select: { id: true, name: true } },
         deliveryProvider: { select: { id: true, name: true } },
-        items: { select: { productName: true, quantity: true, freeQuantity: true, deliveredQty: true, productId: true } },
+        items: { select: { id: true, productName: true, quantity: true, freeQuantity: true, deliveredQty: true, productId: true } },
       },
     });
 
     return NextResponse.json({
       count: orders.length,
-      orders: orders.map((o) => ({
-        ...o,
-        customer: redactCustomerForWarehouse(o.customer, maySeeContact),
-        expectedQty: expectedBack(o.items),
-      })),
+      // `items` is deliberately NOT spread out below: `lines` is the same
+      // fact in the shape the desk needs, and shipping both invites the
+      // screen to reach for the raw one again.
+      orders: orders.map(({ items, ...o }) => {
+        const units = doorUnits(items);
+        // Every row in this list is a return that has NOT been received yet,
+        // so the goods half is open by construction.
+        const completion = completionOf({
+          deliveredUnits: units.delivered,
+          refusedUnits: units.refused,
+          settlementStatus: o.settlementStatus,
+          hasReturnReceipt: false,
+        });
+        return {
+          ...o,
+          customer: redactCustomerForWarehouse(o.customer, maySeeContact),
+          expectedQty: expectedBackTotal(items),
+          /**
+           * WHICH PRODUCT, AND HOW MANY OF IT, IS COMING BACK.
+           *
+           * The clerk holds the parcel while reading this. The list used to
+           * print every line at its full shipped quantity — «ماء الكمأ × 3»
+           * for an order where the customer kept two — so the list and the
+           * total in the next column said different things about the same
+           * parcel, and the list was the one a person believes.
+           */
+          lines: settledLines(items),
+          completion,
+          /**
+           * THE EXTRA ACTION, DECIDED HERE AND WORDED HERE.
+           *
+           * The dialog renders what this says rather than deciding for
+           * itself, the same way the collect dialog adds up the server's
+           * `expectedCollection` instead of re-deriving it. Two copies of one
+           * rule is how the list and the total came to disagree in the first
+           * place.
+           */
+          action: needsExtraAction(items) ? extraAction(completion, 'GOODS') : null,
+        };
+      }),
     });
   } catch (error) {
     return apiErrorResponse(error);
@@ -108,7 +142,8 @@ export async function POST(req: Request) {
     const order = await db.order.findFirst({
       where: { id: input.orderId, companyId, storeId },
       select: {
-        id: true, orderNumber: true, shippingStatus: true, regionId: true, deliveryProviderId: true,
+        id: true, orderNumber: true, shippingStatus: true, settlementStatus: true,
+        regionId: true, deliveryProviderId: true,
         returnReceipt: { select: { id: true } },
         items: { select: { id: true, productId: true, productName: true, quantity: true, freeQuantity: true, deliveredQty: true } },
       },
@@ -118,7 +153,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'تم استلام هذا المرتجع مسبقاً', code: 'ALREADY_RECEIVED' }, { status: 409 });
     }
 
-    const expectedQty = expectedBack(order.items);
+    const expectedQty = expectedBackTotal(order.items);
     if (input.receivedQty + input.damagedQty > expectedQty) {
       return NextResponse.json(
         { error: `الكمية المستلمة أكبر من المشحونة (${expectedQty})`, code: 'OVER_RECEIVED' },
@@ -126,6 +161,28 @@ export async function POST(req: Request) {
       );
     }
     const missingQty = expectedQty - input.receivedQty - input.damagedQty;
+
+    /**
+     * THE HALF THIS RECEIPT CLOSES, AND THE ONE IT DOES NOT.
+     *
+     *   «واذا اتمم واحد فهو اتمم جزءي، ما بنغلق غير كامل»
+     *
+     * Computed from the facts as they will stand once the transaction below
+     * lands: the goods half is settled by the receipt this request writes.
+     * The money half is not this desk's to settle and is untouched here —
+     * it closes when the courier's statement is reconciled.
+     *
+     * Pure, and computed before the write rather than read back after it, so
+     * the sentence in the note and the sentence in the response are the same
+     * sentence and cannot drift apart.
+     */
+    const units = doorUnits(order.items);
+    const completion = completionOf({
+      deliveredUnits: units.delivered,
+      refusedUnits: units.refused,
+      settlementStatus: order.settlementStatus,
+      hasReturnReceipt: true,
+    });
 
     // The courier's return fee comes from the fee table of this region and
     // courier — it is never typed in by the receiver.
@@ -218,7 +275,11 @@ export async function POST(req: Request) {
           body:
             `استلام مرتجع: وصل ${input.receivedQty}، تالف ${input.damagedQty}، ناقص ${missingQty}` +
             (input.chargeCourierFee ? ` — أجرة إرجاع ${courierFeeAmount}` : '') +
-            (input.note ? ` — ${input.note}` : ''),
+            (input.note ? ` — ${input.note}` : '') +
+            // The note thread is where a person finds out the order is not
+            // finished. Without this line the receipt reads as the end of
+            // the order, and for a partial delivery it is half of it.
+            (completion.complete ? '' : ` — ${completion.label}`),
         },
       });
       return created;
@@ -227,10 +288,15 @@ export async function POST(req: Request) {
     await logAudit({
       companyId, userId: user.id, action: 'RETURN_RECEIVED',
       entity: 'Order', entityId: order.id,
-      newData: { receiptId: receipt.id, expectedQty, received: input.receivedQty, damaged: input.damagedQty, missingQty, courierFeeAmount },
+      newData: {
+        receiptId: receipt.id, expectedQty, received: input.receivedQty, damaged: input.damagedQty,
+        missingQty, courierFeeAmount,
+        // Whether this receipt finished the order or only half of it.
+        completion: completion.degree, awaiting: completion.awaiting,
+      },
     });
 
-    return NextResponse.json({ receipt, missingQty, courierFeeAmount }, { status: 201 });
+    return NextResponse.json({ receipt, missingQty, courierFeeAmount, completion }, { status: 201 });
   } catch (error) {
     return apiErrorResponse(error);
   }

@@ -29,7 +29,10 @@ import { UserGeoAccessSection, UserPhoneField } from '@/components/screens/users
 import { UserCommissionCurrency } from '@/components/screens/users/UserCommissionCurrency';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { format } from 'date-fns';
-import { RiAddCircleLine, RiArrowRightLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiTimerLine, RiUserLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiLoader4Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiShieldKeyholeLine, RiTimerLine, RiUserLine } from '@remixicon/react';
+import { apiJson } from '@/lib/api-client';
+import { useConfirm } from '@/components/ui/Confirm';
+import { mayResetTwoFactor } from '@/lib/two-factor-reset';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -39,6 +42,7 @@ const BY_NAME = 'name:';
 
 export function UserDetailScreen() {
   const { locale, isRtl, currentUser } = useApp();
+  const confirm = useConfirm();
   const ar = locale === 'ar';
   const params = useParams();
   const router = useRouter();
@@ -54,6 +58,41 @@ export function UserDetailScreen() {
   const [selectedRoleId, setSelectedRoleId] = useState('');
   const [savingRole, setSavingRole] = useState(false);
   const [roleFlash, setRoleFlash] = useState<string | null>(null);
+  const [resetting2fa, setResetting2fa] = useState(false);
+  const [twoFaMsg, setTwoFaMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  /**
+   * CLEARING AN ENROLMENT IS NOT LOGGING SOMEBODY IN.
+   *
+   * It asks first and says exactly what follows, because «أعِد الضبط» read
+   * on its own sounds like it hands the account over. It does the
+   * opposite: the next login cannot proceed until a new phone is enrolled.
+   */
+  const resetTwoFactor = async () => {
+    if (!userId) return;
+    const ok = await confirm({
+      title: `إعادة ضبط التحقّق بخطوتين لـ${user?.name ?? 'هذا الموظّف'}؟`,
+      body:
+        'يُمسح تسجيلُ هاتفه الحالي ورموزُ الاسترداد، ويُطلب منه تسجيلُ هاتفٍ جديد عند الدخول القادم — ' +
+        'ولا يدخل بلا تحقّق. يُسجَّل هذا باسمك في سجلّ التدقيق.',
+      confirmLabel: 'أعِد الضبط',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    setResetting2fa(true);
+    setTwoFaMsg(null);
+    try {
+      const res = await apiJson<{ message: string }>(`/api/users/${userId}/two-factor`, { method: 'DELETE' });
+      setTwoFaMsg({ ok: true, text: res.message });
+      // The card is drawn from this one field, so clearing it here is what
+      // makes the button disappear — no refetch for a fact we just set.
+      setUser((prev: any) => (prev ? { ...prev, totpEnabledAt: null } : prev));
+    } catch (e) {
+      setTwoFaMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر إعادة الضبط' });
+    } finally {
+      setResetting2fa(false);
+    }
+  };
   const [roleError, setRoleError] = useState<string | null>(null);
   const canAssignRole = userCan(currentUser, 'users.edit');
 
@@ -251,6 +290,56 @@ export function UserDetailScreen() {
         {userId && userCan(currentUser, 'team.monitor') && <ScoreCard userId={userId} />}
 
         {/* Role assignment (roleId-based) */}
+        {/*
+          A PHONE IS LOST, AND THE PERSON STILL WORKS HERE.
+
+          «زر لـ reset الـ 2FA للموظفين، بس للمالك حصراً». Without it the
+          only cure was a developer with a database client, which is not a
+          cure — it is an outage with somebody's name on it.
+
+          It does not let anybody in: it clears the enrolment, so the next
+          login walks that person through enrolling again on the new phone,
+          with a fresh secret and fresh recovery codes.
+
+          Drawn only for the owner, only for somebody ELSE, and only when
+          there is an enrolment to clear — a button that always refuses
+          teaches people the screen is lying to them.
+        */}
+        {mayResetTwoFactor(currentUser as never, user.id).ok && user.totpEnabledAt && (
+          <Card>
+            <CardContent className="p-5 space-y-2">
+              <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] flex items-center gap-1.5">
+                <RiShieldKeyholeLine className="w-4 h-4" />
+                التحقّق بخطوتين
+              </h3>
+              <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                مسجَّلٌ على جهاز هذا الموظّف. إن فقد هاتفه، تُعيد الضبطَ فيُطلب منه تسجيلُه من
+                جديد عند الدخول القادم — ولا يدخل أحدٌ بلا تحقّق.
+              </p>
+              {twoFaMsg && (
+                <p
+                  className={`rounded-lg px-3 py-2 text-xs font-medium ${
+                    twoFaMsg.ok
+                      ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]'
+                      : 'bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]'
+                  }`}
+                >
+                  {twoFaMsg.text}
+                </p>
+              )}
+              <button
+                type="button"
+                disabled={resetting2fa}
+                onClick={() => void resetTwoFactor()}
+                className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-4 py-1.5 text-xs font-medium text-[var(--sys-foreground)] hover:border-[var(--sys-destructive-border)] hover:text-[var(--sys-destructive)] disabled:opacity-50"
+              >
+                {resetting2fa ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiShieldKeyholeLine className="w-4 h-4" />}
+                أعِد ضبط التحقّق بخطوتين
+              </button>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardContent className="p-5">
             <h3 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)] mb-3 flex items-center gap-1.5">

@@ -178,9 +178,31 @@ export function DeliverDialog({
               )}
             </div>
 
-            <p className="text-xs text-[var(--sys-muted)]">
-              البنود المرفوضة لا تعود للمخزون من هنا — تُستلم وتُفحص في شاشة المرتجعات.
-            </p>
+            {/*
+              A PARTIAL DELIVERY IS THE FIRST OF TWO COMPLETIONS.
+
+                «بصير الطلب بيتمم مرتين — مرة بيتمم للمستلم ومرة للطلب
+                 الراجع. واذا اتمم واحد فهو اتمم جزءي، ما بنغلق غير كامل»
+
+              The person at this screen finishes their half and closes the
+              dialog, so this is the only moment they can be told there is a
+              second one. It is stated only when it applies — some taken and
+              some refused — because saying it on a full delivery would make
+              it noise people learn to skip.
+            */}
+            {!allTaken && anyTaken ? (
+              <ul className="text-xs bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2 space-y-1">
+                <li className="font-medium text-[var(--sys-heading)]">
+                  هذا الطلب يُتَمَّم مرتين — لا يُغلق إلا بإتمامهما:
+                </li>
+                <li className="text-[var(--sys-foreground)]">• تحصيل مال ما استلمه العميل — من كشف شركة الشحن</li>
+                <li className="text-[var(--sys-foreground)]">• استلام القطع المرفوضة وعدّها في شاشة المرتجعات</li>
+              </ul>
+            ) : (
+              <p className="text-xs text-[var(--sys-muted)]">
+                البنود المرفوضة لا تعود للمخزون من هنا — تُستلم وتُفحص في شاشة المرتجعات.
+              </p>
+            )}
 
             {/*
               NOT «ملاحظة (اختيارية)».

@@ -105,6 +105,9 @@ export async function POST(req: Request) {
           deliveryFee: outcome.deliveryFee,
           linesDelivered: outcome.linesDelivered,
           linesReturned: outcome.linesReturned,
+          // Which of the two settlements this door visit left open.
+          completion: outcome.completion.degree,
+          awaiting: outcome.completion.awaiting,
         },
       });
 
@@ -115,7 +118,15 @@ export async function POST(req: Request) {
             ? `سُلِّم كاملاً — حُصِّل ${outcome.collectedAmount} ${country.currencyCode}`
             : outcome.status === 'RETURNED'
               ? 'لم يُستلم شيء — الطلب مرتجع'
-              : `تسليم جزئي — حُصِّل ${outcome.collectedAmount} ${country.currencyCode} بأجرة توصيل كاملة ${outcome.deliveryFee}`,
+              : // A PARTIAL DELIVERY SAYS SO OUT LOUD.
+                //
+                // «واذا اتمم واحد فهو اتمم جزءي، ما بنغلق غير كامل» — the
+                // person at this screen has just finished their part and
+                // would otherwise read the toast as the end of the order.
+                // Naming the half that is still open is how the rule
+                // reaches them at the moment it starts applying.
+                `تسليم جزئي — المتوقَّع ${outcome.collectedAmount} ${country.currencyCode} بأجرة توصيل كاملة ${outcome.deliveryFee}. ` +
+                `${outcome.refusedUnits} قطعة راجعة — ${outcome.completion.label}`,
       });
     } catch (e) {
       if (e instanceof PartialDeliveryRefused) {

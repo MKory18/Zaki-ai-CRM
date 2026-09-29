@@ -33,6 +33,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         // as though somebody had chosen it.
         shiftStart: true, shiftEnd: true, restDays: true,
         salaryAmount: true, salaryCurrency: true,
+        // WHETHER a second factor is enrolled — never the secret, which
+        // is encrypted and never leaves the database. The owner's reset
+        // button is drawn from this, and from nothing else.
+        totpEnabledAt: true,
         assignedBy: { select: { name: true } },
       },
     });

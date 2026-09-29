@@ -1,6 +1,7 @@
 ﻿'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
@@ -9,12 +10,22 @@ import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { BatchCostDialog, type BatchForCost } from '@/components/production/BatchCostDialog';
 import { format } from 'date-fns';
-import { RiAddCircleLine, RiCalculatorLine, RiDeleteBinLine } from '@remixicon/react';
+import {
+  RiAddCircleLine,
+  RiCalculatorLine,
+  RiDeleteBinLine,
+  RiInboxArchiveLine,
+  RiLightbulbLine,
+  RiPriceTag3Line,
+} from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { batchTotal, batchUnitCost } from '@/lib/product-cost';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Tabs } from '@/components/ui/Tabs';
+import { HealthChip } from '@/components/ui/HealthChip';
+import { ORIGIN, gradeBatch, readBatches, type BatchOrigin } from '@/lib/batch-grade';
 
 /**
  * The costs that keep coming back, offered instead of typed.
@@ -85,6 +96,58 @@ export function ManufacturingScreen() {
   // would be entered as a run that never happened, with a cost breakdown
   // nobody can trace to any work — and the server refuses it anyway.
   const manufacturedProducts = products.filter((p: any) => p.sourceType !== 'PURCHASED');
+
+  /**
+   * WHICH DOOR EACH ROW CAME IN THROUGH, AND WHAT ITS COST ACTUALLY SAYS.
+   *
+   * The owner's note: «ليش المنتجات الجاهزة موجودة بتشغيلات الإنتاج». They
+   * are here because a batch is the only place units live, so every door
+   * that puts stock in opens one — receiving ready goods, the opening count,
+   * a recount. Measured on this database: of 110 rows, 17 are runs, 4 are
+   * receipts of ready goods and 89 are opening balances. So 93 rows on a
+   * screen called «تشغيلات الإنتاج» were not production, unlabelled.
+   *
+   * Nothing is hidden — a hidden row is stock nobody can find. Each row now
+   * says which door it came from, and the door's own link is beside it.
+   */
+  const graded: any[] = useMemo(
+    () =>
+      batches.map((b: any) => ({
+        ...b,
+        grade: gradeBatch({
+          batchNumber: b.batchNumber,
+          openingCountId: b.openingCountId,
+          sourceType: b.product?.sourceType,
+          quantityProduced: b.quantityProduced,
+          costPerUnit: b.costPerUnit,
+          totalProductionCost: b.totalProductionCost,
+          manufacturingCost: b.manufacturingCost,
+          packagingCost: b.packagingCost,
+          rawMaterialCost: b.rawMaterialCost,
+          otherCosts: b.otherCosts,
+          costLines: b.costLines ?? [],
+          // What we sell one for. Zero means this product has no price set,
+          // and then the margin band is not scored rather than assumed.
+          sellingPrice: b.product?.basePrice ?? null,
+        }),
+      })),
+    [batches]
+  );
+
+  const reading = useMemo(() => readBatches(graded.map((g: any) => g.grade)), [graded]);
+
+  const [door, setDoor] = useState<'ALL' | BatchOrigin>('ALL');
+
+  // A filter on a door that no longer has rows is a dead end: the tab it
+  // points at is not on the strip any more, so the list reads as empty with
+  // nothing highlighted to click back out of. It falls back to «الكل».
+  const openDoor: 'ALL' | BatchOrigin =
+    door !== 'ALL' && !graded.some((g: any) => g.grade.origin === door) ? 'ALL' : door;
+
+  const visible = useMemo(
+    () => (openDoor === 'ALL' ? graded : graded.filter((g: any) => g.grade.origin === openDoor)),
+    [graded, openDoor]
+  );
 
   const loadData = async () => {
     setLoading(true);
@@ -160,7 +223,23 @@ export function ManufacturingScreen() {
             description="الباب الذي تدخل منه بضاعة المنتجات التي تصنّعها — كل تشغيلة ببنود كلفتها،
               ومنها تُحسب تكلفة الوحدة التي يقرأها الربح."
             actions={
-              <><Button
+              <>
+          {/* The two doors this screen is next to, said out loud rather than
+              left in the sidebar: the product itself, and the other door
+              stock comes in through. «ضيف زر يوديني على المنتجات». */}
+          <Link href="/products">
+            <Button size="sm" variant="outline" className="flex items-center space-x-1.5">
+              <RiPriceTag3Line className="w-4 h-4" />
+              <span>المنتجات</span>
+            </Button>
+          </Link>
+          <Link href="/inventory/receiving">
+            <Button size="sm" variant="outline" className="flex items-center space-x-1.5">
+              <RiInboxArchiveLine className="w-4 h-4" />
+              <span>استلام بضاعة جاهزة</span>
+            </Button>
+          </Link>
+          <Button
             size="sm"
             onClick={() => {
               setBatchNumber(`BATCH-${new Date().getFullYear()}-${String(batches.length + 1).padStart(3, '0')}`);
@@ -174,20 +253,130 @@ export function ManufacturingScreen() {
             }
           />
 
+        {/*
+          THE READ OVER THE LIST — «تشغيلات الإنتاج: AI + Score», and there is
+          no model behind either half of it.
+
+          Every figure below is a count of the rows on this screen, so the
+          owner can check any of them by counting. The alternative — a
+          sentence a model wrote about his money — is a sentence he cannot
+          check, and this screen decides what stock costs.
+        */}
+        {reading.headline && (
+          <Card>
+            <CardHeader
+              title={
+                <span className="flex items-center gap-2">
+                  <RiLightbulbLine className="w-4 h-4 text-[var(--sys-warning)]" />
+                  <span>قراءة هذه القائمة</span>
+                </span>
+              }
+              subtitle="عدٌّ محسوب من صفوف هذه الشاشة نفسها — لا تخمين، ولا نموذج يكتبه"
+            />
+            <CardContent className="space-y-3">
+              <p className="text-sm font-semibold leading-relaxed text-[var(--sys-heading)]">
+                {reading.headline}
+              </p>
+
+              {/* Why a row that is not production is on the production
+                  screen — the owner's question, answered per door, with the
+                  door's own link so the row can be managed where it belongs. */}
+              {reading.byOrigin
+                .filter((o) => o.origin !== 'PRODUCED')
+                .map((o) => (
+                  <div
+                    key={o.origin}
+                    className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3"
+                  >
+                    <p className="flex flex-wrap items-center gap-2 text-xs font-bold text-[var(--sys-heading)]">
+                      <span>{ORIGIN[o.origin].ar}</span>
+                      <span className="tabular-nums rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5">
+                        {o.count}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDoor(o.origin)}
+                        className="text-xs font-semibold text-[var(--sys-primary)] hover:underline"
+                      >
+                        اعرضها وحدها
+                      </button>
+                      {ORIGIN[o.origin].href && (
+                        <Link
+                          href={ORIGIN[o.origin].href as string}
+                          className="text-xs font-semibold text-[var(--sys-primary)] hover:underline"
+                        >
+                          اذهب إلى بابها
+                        </Link>
+                      )}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                      {ORIGIN[o.origin].why}
+                    </p>
+                  </div>
+                ))}
+
+              {reading.mismatched > 0 && (
+                <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-3 text-xs leading-relaxed text-[var(--sys-destructive)]">
+                  {reading.mismatched} دفعة كلفتها المحفوظة تخالف بنودها — عدّل كلفتها لتتفق الأرقام.
+                </p>
+              )}
+
+              {reading.ungraded > 0 && (
+                <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                  {reading.ungraded} دفعة بلا درجة: لم يُقَس منها إلا وجود الكلفة، فلا بنود كلفة فيها
+                  ولا سعر بيع للمنتج يُقارن به. درجةٌ مبنيّة على سؤال واحد ليست درجة — فلا تُمنَح.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Batch List Table */}
         <Card>
           <CardHeader
             title="تشغيلات الإنتاج وحساب التكلفة"
             subtitle="كل تشغيلة بكلفتها وكم بِيع منها وكم بقي — وتكلفة الوحدة محسوبة منها"
           />
+          {/* The filter is a filter, not a hiding place: «الكل» is the default
+              and every count is on the strip, so nothing is out of sight
+              without the reader having chosen to put it there. */}
+          {graded.length > 0 && reading.byOrigin.length > 1 && (
+            <div className="px-3 pt-1">
+              <Tabs
+                value={openDoor}
+                onChange={(k) => setDoor(k as 'ALL' | BatchOrigin)}
+                tabs={[
+                  { key: 'ALL', label: 'الكل', count: graded.length },
+                  ...reading.byOrigin.map((o) => ({
+                    key: o.origin,
+                    label: ORIGIN[o.origin].ar,
+                    count: o.count,
+                  })),
+                ]}
+              />
+            </div>
+          )}
           <CardContent className="p-0">
             <div className="overflow-x-auto">
                             <Rows
-                rows={batches}
+                rows={visible}
                 keyOf={(b) => b.id}
                 columns={[
                   { key: 'c0', label: "رقم التشغيلة", primary: true,
                     render: (b) => (b.batchNumber) },
+                  { key: 'origin', label: "من أي باب دخلت",
+                    render: (b) => (
+                  <><span
+                          title={ORIGIN[b.grade.origin as BatchOrigin].why}
+                          className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${
+                            b.grade.origin === 'PRODUCED'
+                              ? 'border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-foreground)]'
+                              : 'border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)] text-[var(--sys-warning)]'
+                          }`}
+                        >
+                          {ORIGIN[b.grade.origin as BatchOrigin].ar}
+                        </span></>
+                ) },
                   { key: 'c1', label: "المنتج", primary: true,
                     render: (b) => (
                   <><span className="font-semibold text-[var(--sys-heading)] block">{b.product?.name}</span>
@@ -228,14 +417,45 @@ export function ManufacturingScreen() {
                           </button>
                         )}</>
                 ) },
+                  {
+                    key: 'grade',
+                    label: 'درجة الكلفة',
+                    // The reason is a sentence, so the cell is given a width
+                    // to wrap inside rather than pushing a ten-column table
+                    // sideways.
+                    className: 'max-w-xs',
+                    render: (b) => (
+                      <>
+                        <HealthChip health={b.grade} />
+                        {/* The reason is printed, not hidden in a tooltip: a
+                            grade nobody can see the arithmetic of is a grade
+                            people argue with instead of acting on. */}
+                        <span className="mt-1 block text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                          {b.grade.why}
+                        </span>
+                        {b.grade.mismatch && (
+                          <span className="mt-1 block text-xs font-semibold text-[var(--sys-destructive)]">
+                            {b.grade.mismatch}
+                          </span>
+                        )}
+                      </>
+                    ),
+                  },
                   { key: 'c7', label: "التاريخ",
                     render: (b) => (format(new Date(b.productionDate), 'd MMM yyyy')) },
                 ]}
                 empty={
-                  <EmptyState
-                    title="لا تشغيلاتِ إنتاجٍ بعد"
-                    why="التشغيلة هي ما يُحسب منه سعرُ الوحدة. بلا تشغيلةٍ بكلفة، الربحُ المحسوب إجماليٌّ لا صافٍ."
-                  />
+                  graded.length > 0 ? (
+                    <EmptyState
+                      title="لا صفوفَ في هذا الباب"
+                      why="المرشِّح أعلاه يعرض باباً واحداً. اختَر «الكل» لترى كل ما دخل المخزون."
+                    />
+                  ) : (
+                    <EmptyState
+                      title="لا تشغيلاتِ إنتاجٍ بعد"
+                      why="التشغيلة هي ما يُحسب منه سعرُ الوحدة. بلا تشغيلةٍ بكلفة، الربحُ المحسوب إجماليٌّ لا صافٍ."
+                    />
+                  )
                 }
                 actions={(b) => (
                   <><button
@@ -244,7 +464,20 @@ export function ManufacturingScreen() {
                           className="text-xs text-[var(--sys-primary)] hover:underline whitespace-nowrap"
                         >
                           عدّل الكلفة
-                        </button></>
+                        </button>
+                        {/* From a row straight to the product it belongs to.
+                            The stock, the weighted-average cost and the type
+                            that decided which door this row came through are
+                            all on that page — and reaching it used to mean
+                            leaving for the sidebar and searching by name. */}
+                        {b.productId && (
+                          <Link
+                            href={`/products/${b.productId}`}
+                            className="text-xs text-[var(--sys-primary)] hover:underline whitespace-nowrap"
+                          >
+                            المنتج
+                          </Link>
+                        )}</>
                 )}
               />
             </div>

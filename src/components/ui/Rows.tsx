@@ -74,9 +74,30 @@ export interface RowsProps<T> {
   };
   /** Marks a row as needing attention — red on the desk, red on the card. */
   alert?: (row: T) => boolean;
+  /**
+   * THE ONE THING ABOUT THIS ROW THAT MUST BE READ BEFORE ITS FIELDS.
+   *
+   * A card has no full-width region, and that is why a warning on one ends
+   * up as either a chip crushed into the heading beside the reference, or a
+   * label/value line squeezed into the right half of a `<dl>` row. Neither
+   * is a warning; both are a field. The tracking screen's «أُلغي الطلب —
+   * الطرد ما زال عند الشحن» is not a field: it decides whether anything else
+   * on the card is worth acting on, and it carries its own button.
+   *
+   * CARD ONLY, and deliberately. The desk already has a place for this — a
+   * column, read at a glance beside everything else — while a row spanning
+   * every column of a table is ambiguous about whether it belongs to the row
+   * above it or below it. So the screen puts it in a column for the table
+   * and here for the hand, from one render function, which is the same deal
+   * every `column` already makes.
+   *
+   * Returning nothing draws nothing: a row with no notice is untouched, and
+   * so is every screen that passes no `notice` at all.
+   */
+  notice?: (row: T) => React.ReactNode;
 }
 
-export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, selection, alert }: RowsProps<T>) {
+export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, selection, alert, notice }: RowsProps<T>) {
   /**
    * A LIST THAT HAS NOT ARRIVED IS NOT A CRASH.
    *
@@ -196,7 +217,9 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
         </label>
       )}
       <ul className="space-y-2 md:hidden">
-        {rows.map((row) => (
+        {rows.map((row) => {
+          const flag = notice?.(row);
+          return (
           <li
             key={keyOf(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -206,6 +229,10 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
                 : 'border-[var(--sys-border)]'
             }`}
           >
+            {/* Above the heading, because a reader who has already read the
+                reference and rung the customer has been told too late. */}
+            {flag && <div className="mb-2">{flag}</div>}
+
             {(titles.length > 0 || selection) && (
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--sys-border)] pb-1.5">
                 <span className="flex items-center gap-2">
@@ -262,7 +289,8 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
               <div className="mt-2 flex flex-wrap gap-2 border-t border-[var(--sys-border)] pt-2">{actions(row)}</div>
             )}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </>
   );

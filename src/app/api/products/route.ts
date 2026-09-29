@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
+import { productCosts } from '@/lib/product-cost';
 import { requirePermission, getPermissionScope } from '@/lib/authorization';
 import { maySeeCost, withoutCost } from '@/lib/cost-visibility';
 
@@ -106,6 +107,29 @@ export async function GET(req: Request) {
      */
     const showCost = maySeeCost(user);
 
+    /**
+     * ONE «متوسط تكلفة الوحدة», AND IT IS THE ONE product-cost.ts OWNS.
+     *
+     * This used to be computed here by hand as `totalProductionCost /
+     * totalProduced` across EVERY batch — including the ones already
+     * emptied. `product-cost.ts` says in as many words why that is the
+     * wrong number: «an emptied run tells you what March cost, not what a
+     * unit costs today, and averaging it back in drags the figure towards
+     * a price you can no longer buy at».
+     *
+     * So the same product page carried two different figures under nearly
+     * the same Arabic label — this one in the information card, and the
+     * weighted average of stock ON HAND in the stock panel beside it.
+     * They agree on every product whose stock arrived at one price, and
+     * disagree the moment one is re-received at another, which is exactly
+     * the case somebody opens that page to understand.
+     *
+     * One query for the whole page, not one per product.
+     */
+    const costOf = showCost
+      ? await productCosts(db, companyId, products.map((p) => p.id))
+      : new Map<string, { average: number }>();
+
     // Compute comprehensive cost analysis for each product
     const enriched = products.map((prod) => {
       const totalProduced = prod.batches.reduce((sum, b) => sum + b.quantityProduced, 0);
@@ -118,8 +142,6 @@ export async function GET(req: Request) {
       const totalOtherCost = prod.batches.reduce((sum, b) => sum + b.otherCosts, 0);
       const totalProdCost = prod.batches.reduce((sum, b) => sum + b.totalProductionCost, 0);
 
-      const avgCostPerUnit =
-        totalProduced > 0 ? Number((totalProdCost / totalProduced).toFixed(2)) : 0;
 
       return {
         ...prod,
@@ -138,7 +160,9 @@ export async function GET(req: Request) {
                 totalRawCost,
                 totalOtherCost,
                 totalProdCost,
-                avgCostPerUnit,
+                // The weighted average of the stock actually on hand — the
+                // one figure, from the one owner.
+                avgCostPerUnit: Number((costOf.get(prod.id)?.average ?? 0).toFixed(2)),
               }
             : {}),
         },

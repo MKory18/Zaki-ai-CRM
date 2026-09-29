@@ -670,7 +670,7 @@
     "tabs": 0
   },
   "src/components/screens/InventoryBalancesScreen.tsx": {
-    "buttons": 3,
+    "buttons": 6,
     "inputs": 3,
     "columns": 0,
     "cards": 1,
@@ -695,8 +695,8 @@
     "columns": 2,
     "cards": 0,
     "modals": 1,
-    "icons": 3,
-    "links": 0,
+    "icons": 6,
+    "links": 4,
     "tabs": 0
   },
   "src/components/screens/JobsScreen.tsx": {
@@ -740,13 +740,13 @@
     "tabs": 0
   },
   "src/components/screens/ManufacturingScreen.tsx": {
-    "buttons": 6,
+    "buttons": 9,
     "inputs": 10,
-    "columns": 8,
-    "cards": 1,
+    "columns": 11,
+    "cards": 2,
     "modals": 1,
-    "icons": 3,
-    "links": 0,
+    "icons": 6,
+    "links": 4,
     "tabs": 0
   },
   "src/components/screens/ops/PickingAssistant.tsx": {
@@ -782,7 +782,7 @@
   "src/components/screens/PerformanceScreen.tsx": {
     "buttons": 2,
     "inputs": 0,
-    "columns": 10,
+    "columns": 12,
     "cards": 5,
     "modals": 0,
     "icons": 8,
@@ -840,12 +840,12 @@
     "tabs": 0
   },
   "src/components/screens/ReturnsScreen.tsx": {
-    "buttons": 4,
+    "buttons": 6,
     "inputs": 5,
     "columns": 5,
     "cards": 0,
     "modals": 1,
-    "icons": 1,
+    "icons": 3,
     "links": 0,
     "tabs": 0
   },
@@ -1010,22 +1010,22 @@
     "tabs": 0
   },
   "src/components/screens/TrackingScreen.tsx": {
-    "buttons": 12,
+    "buttons": 13,
     "inputs": 2,
-    "columns": 16,
+    "columns": 11,
     "cards": 0,
     "modals": 0,
-    "icons": 13,
+    "icons": 15,
     "links": 0,
     "tabs": 0
   },
   "src/components/screens/UserDetailScreen.tsx": {
-    "buttons": 10,
+    "buttons": 11,
     "inputs": 9,
     "columns": 5,
-    "cards": 5,
+    "cards": 6,
     "modals": 1,
-    "icons": 13,
+    "icons": 16,
     "links": 0,
     "tabs": 0
   },

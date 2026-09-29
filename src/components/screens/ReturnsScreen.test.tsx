@@ -1,0 +1,163 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import React from 'react';
+
+/**
+ * THE RETURNS DESK READS WHAT THE DOOR WROTE.
+ *
+ *   «استلم جزءي: شو المنتج الي استلمو وكم قطعة وشو الي رجع»
+ *   «إذا الأوردر فيه أكثر من كمية واستلم أو رفض قطعة، حط إجراء إضافي مثل:
+ *    هل الطلب استلم؟ نعم / لا»
+ *
+ * The clerk has the box open in front of them, so the line list is the
+ * figure they believe — and it used to print every line at its full shipped
+ * quantity, «ماء الكمأ × 3» for a parcel where the customer kept two. The
+ * total in the row behind the dialog said 1. Two numbers about one parcel,
+ * and the wrong one was the louder.
+ *
+ * These render the dialog because that is the only place the fault was
+ * visible: every figure involved was already correct in the database.
+ */
+
+const { apiJson } = vi.hoisted(() => ({ apiJson: vi.fn() }));
+
+vi.mock('@/lib/api-client', () => ({ apiJson: (...a: unknown[]) => apiJson(...a) }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/ops/returns' }));
+vi.mock('@/components/ui/Toast', () => ({ useToast: () => ({ failed: vi.fn(), done: vi.fn() }) }));
+// A camera is not a thing jsdom has, and this test is not about scanning.
+vi.mock('@/components/scan/ScanButton', () => ({ ScanButton: () => <button type="button">امسح</button> }));
+
+import { ReturnsScreen } from './ReturnsScreen';
+
+/** Three units went out, the customer kept two, one is coming back. */
+const PARTIAL_ROW = {
+  id: 'o1',
+  orderNumber: 'SY-2026-0148',
+  merchantRef: null,
+  trackingNumber: 'TRK-1',
+  shippingStatus: 'PARTIALLY_DELIVERED',
+  settlementStatus: 'PENDING_COLLECTION',
+  returnReason: null,
+  expectedQty: 1,
+  customer: { fullName: 'سارة' },
+  region: { name: 'دمشق' },
+  deliveryProvider: { name: 'ناقل' },
+  lines: [
+    { itemId: 'i1', productName: 'ماء الكمأ', shipped: 3, delivered: 2, expectedBack: 1 },
+  ],
+  completion: {
+    halves: [
+      { key: 'MONEY', label: 'تحصيل مال ما استلمه العميل', settled: false, units: 2 },
+      { key: 'GOODS', label: 'استلام الراجع وعدّه في المستودع', settled: false, units: 1 },
+    ],
+    settledCount: 0,
+    degree: 'NONE',
+    complete: false,
+    awaiting: ['MONEY', 'GOODS'],
+    label: 'تمّ 0 من 2 — بانتظار تحصيل مال ما استلمه العميل و استلام الراجع وعدّه في المستودع',
+  },
+  action: {
+    key: 'GOODS',
+    question: 'هل رجعت القطع المرفوضة إلى المستودع؟',
+    yes: 'نعم — عددتها واستلمتها',
+    no: 'لا — لم تصل بعد',
+  },
+};
+
+/** An announced return: the door never spoke, the whole parcel is due back. */
+const WHOLE_ROW = {
+  ...PARTIAL_ROW,
+  id: 'o2',
+  shippingStatus: 'RETURN_REQUESTED',
+  expectedQty: 3,
+  lines: [{ itemId: 'i1', productName: 'ماء الكمأ', shipped: 3, delivered: null, expectedBack: 3 }],
+  completion: {
+    halves: [{ key: 'GOODS', label: 'استلام الراجع وعدّه في المستودع', settled: false, units: 3 }],
+    settledCount: 0,
+    degree: 'NONE',
+    complete: false,
+    awaiting: ['GOODS'],
+    label: 'تمّ 0 من 1 — بانتظار استلام الراجع وعدّه في المستودع',
+  },
+  action: null,
+};
+
+const openDialog = async (row: unknown) => {
+  apiJson.mockResolvedValue({ orders: [row] });
+  render(<ReturnsScreen />);
+  const receive = await waitFor(() => screen.getAllByRole('button', { name: 'استلام' })[0]);
+  await userEvent.click(receive);
+  return screen.getByText('استلام مرتجع');
+};
+
+beforeEach(() => vi.clearAllMocks());
+afterEach(cleanup);
+
+describe('what came back, per product', () => {
+  it('shows the units taken at the door beside the units due back', async () => {
+    await openDialog(PARTIAL_ROW);
+    const row = screen.getByText('ماء الكمأ').closest('div')!.parentElement!;
+    // Shipped 3, kept 2, coming back 1 — all three, in one line, in Western
+    // digits. The old list printed only «3».
+    expect(row.textContent).toContain('3');
+    expect(row.textContent).toContain('2');
+    expect(row.textContent).toContain('1');
+  });
+
+  it('prints a dash, not a zero, where the door never spoke', async () => {
+    // «0 delivered» is a statement that the customer refused it. An announced
+    // return is not that statement.
+    await openDialog(WHOLE_ROW);
+    // Scoped to the dialog's own line: the list behind it prints a dash for
+    // every empty column, so an unscoped search finds those instead.
+    const row = screen.getAllByText('ماء الكمأ')[0].closest('div')!.parentElement!;
+    expect(row.textContent).toContain('—');
+  });
+
+  it('names the two settlements and says the order will not close on one', async () => {
+    await openDialog(PARTIAL_ROW);
+    expect(screen.getByText(/يُتَمَّم مرتين/)).toBeTruthy();
+    expect(screen.getByText(/تحصيل مال ما استلمه العميل/)).toBeTruthy();
+  });
+
+  it('does not claim two settlements on a parcel that only has one', async () => {
+    await openDialog(WHOLE_ROW);
+    expect(screen.queryByText(/يُتَمَّم مرتين/)).toBeNull();
+  });
+});
+
+describe('the extra action gates the count', () => {
+  it('asks «هل الطلب استلم؟» before offering anything to count', async () => {
+    await openDialog(PARTIAL_ROW);
+    expect(screen.getByText('هل رجعت القطع المرفوضة إلى المستودع؟')).toBeTruthy();
+    // Nothing to fill in and nothing to confirm until it is answered: a
+    // pre-filled count answers the question with the commonest wrong answer.
+    expect(screen.queryByText('سليم')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'تأكيد الاستلام' })).toBeNull();
+  });
+
+  it('opens the count on «نعم»', async () => {
+    await openDialog(PARTIAL_ROW);
+    await userEvent.click(screen.getByRole('button', { name: 'نعم — عددتها واستلمتها' }));
+    expect(screen.getByText('سليم')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'تأكيد الاستلام' })).toBeTruthy();
+  });
+
+  it('records nothing on «لا», and says the order stays open', async () => {
+    await openDialog(PARTIAL_ROW);
+    apiJson.mockClear();
+    await userEvent.click(screen.getByRole('button', { name: 'لا — لم تصل بعد' }));
+    expect(screen.getByText(/لا يُسجَّل استلام/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'تأكيد الاستلام' })).toBeNull();
+    expect(apiJson).not.toHaveBeenCalled();
+  });
+
+  it('is not asked of a parcel the door never split — that flow is unchanged', async () => {
+    await openDialog(WHOLE_ROW);
+    expect(screen.queryByText(/هل رجعت القطع/)).toBeNull();
+    // Straight to the count, as it always was.
+    expect(screen.getByText('سليم')).toBeTruthy();
+  });
+});

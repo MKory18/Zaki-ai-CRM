@@ -3,25 +3,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardContent, KpiCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { OrderStatusBadge } from '@/components/ui/Badge';
-import { ProductThumb } from '@/components/ui/ProductThumb';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { AiOrderModal } from '@/components/orders/AiOrderModal';
-import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
-import { productName } from '@/lib/product-name';
-import { format } from 'date-fns';
 import Link from 'next/link';
-import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiFireLine, RiMoneyDollarCircleLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiSubtractLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiFireLine, RiHandCoinLine, RiInboxUnarchiveLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { IntelligenceStrip } from '@/components/growth/IntelligenceStrip';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Rows } from '@/components/ui/Rows';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { LossPanel } from '@/components/dashboard/LossPanel';
 import { healthOf } from '@/lib/health';
 import { HealthChip } from '@/components/ui/HealthChip';
+import type { Trust } from '@/lib/cod-vitals';
 
 const PERIODS = [
   { key: 'today', ar: 'اليوم', en: 'Today' },
@@ -43,7 +37,6 @@ export function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // Monotonic request counter — stale (out-of-order) analytics responses are
   // discarded so an older poll can never overwrite a newer result
@@ -97,6 +90,49 @@ export function DashboardScreen() {
   };
   const rates = analytics?.rates ?? { confirmationRate: 0, deliveryRate: 0 };
 
+  /**
+   * THE COD VITALS, AS THE SERVER SENT THEM.
+   *
+   * Typed here and nowhere recomputed. Two of these are money — what is
+   * still owed to us — and money is the server's to compute: the one COD
+   * function decides what a parcel was worth, and a browser adding figures
+   * up a second time is how two screens come to disagree about one debt.
+   *
+   * `cost` is not a number at all. It is the verdict on whether the figures
+   * that REST on a cost may be printed, and it travels with them so no
+   * screen has to remember which ones those are.
+   */
+  const vitals = analytics?.vitals as
+    | {
+        door: { delivered: number; failed: number; returned: number; decided: number; returnRate: number | null; failureRate: number | null };
+        cost: Trust;
+        expenses: { rows: number };
+        outstanding: { orders: number; money: number; unrecordedOrders: number };
+      }
+    | undefined;
+
+  /**
+   * WHETHER THE PROFIT LINE MAY BE SAID OUT LOUD AT ALL.
+   *
+   * On the live database it may not: cost of goods is recorded on 4 of 119
+   * delivered orders, and the margin that came out of that was 76.93% —
+   * which is revenue with the word «ربح» over it. Every product row on the
+   * performance screen read between 76% and 82% for the same reason, and a
+   * grade that comes out the same for everybody is the precise shape of the
+   * failure that killed the intelligence layer in this product.
+   *
+   * So the tile shows «—» and says which field is empty, rather than a
+   * confident figure somebody would price against. The link behind it still
+   * goes to the profit screen, because the point is to get the cost typed
+   * in, not to hide the subject.
+   */
+  const costTrust = vitals?.cost;
+  const profitStated = costTrust ? costTrust.level !== 'WITHHELD' : false;
+  // An empty expenses table is a second hole in the same figure, and it has
+  // no per-order denominator to be a coverage share of — so it is named
+  // beside the margin rather than folded into the gate.
+  const noExpenses = (vitals?.expenses.rows ?? 0) === 0;
+
 
   // Was a hardcoded «$» with a locale's own grouping. The store may be
   // Jordanian or Syrian, and `<Money>` knows which it is.
@@ -133,6 +169,10 @@ export function DashboardScreen() {
     deliveredRevenue: against(fin.deliveredRevenue, prevRaw?.deliveredRevenue, (n) => fmt(n)),
     confirmationRate: against(rates.confirmationRate, prevRaw?.confirmationRate, (n) => `${n}%`),
     deliveryRate: against(rates.deliveryRate, prevRaw?.deliveryRate, (n) => `${n}%`),
+    // The one comparison on this screen where DOWN is the good direction, so
+    // the card is told so at its own call site — the same rule the four
+    // above follow, and the reason `against` does not decide it here.
+    returnRate: against(vitals?.door.returnRate ?? 0, prevRaw?.returnRate ?? undefined, (n) => `${n}%`),
   };
 
   /**
@@ -157,6 +197,19 @@ export function DashboardScreen() {
       (counts.decided ?? counts.total) > 0 ? (counts.rejected / (counts.decided ?? counts.total)) * 100 : null,
       counts.decided ?? counts.total
     ),
+    /**
+     * THE RETURN RATE, AGAINST THE BAR THAT ALREADY EXISTED FOR IT.
+     *
+     * `health.ts` has carried a `returnRate` bar — 8% good, 15% acceptable —
+     * since before any screen showed a return rate. The measured shop is at
+     * 22% over 153 decided parcels, which is «ضعيف» with a sample far above
+     * the floor: not a quiet quarter, a leak.
+     *
+     * The sample is what the DOOR decided, not orders created. An order
+     * still in a van has not failed, and counting it would make this rate
+     * fall every time intake sped up.
+     */
+    returnRate: healthOf('returnRate', vitals?.door.returnRate ?? null, vitals?.door.decided),
   };
 
   const statusTiles = [
@@ -177,22 +230,33 @@ export function DashboardScreen() {
   // the bag is an order here and on the orders card, the wallet is profit
   // here and in the net-profit tile, the truck is a delivery in both. Four
   // new drawings would have been four more concepts for the same four.
-  const rankings = [
-    { icon: RiShoppingBagLine, label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', sub: analytics?.rankings?.mostRequested?.totalOrders ?? 0, subSuffix: locale === 'ar' ? 'طلب' : 'orders', name: analytics?.rankings?.mostRequested?.name, tint: 'bg-[var(--sys-surface)] border-[var(--sys-primary-soft)]', text: 'text-[var(--sys-primary)]' },
-    { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', sub: analytics?.rankings?.mostProfitable?.netProfit ?? 0, prefix: '+$', name: analytics?.rankings?.mostProfitable?.name, tint: 'bg-[var(--sys-success-soft)]', text: 'text-[var(--sys-success)]' },
-    { icon: RiTruckLine, label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', sub: analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0, subSuffix: locale === 'ar' ? 'توصيل' : 'delivered', name: analytics?.rankings?.mostDelivered?.name, tint: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/30', text: 'text-[var(--sys-warning)]' },
-    { icon: RiCloseCircleLine, label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', sub: analytics?.rankings?.highestRejection?.rejectedOrders ?? 0, subSuffix: locale === 'ar' ? 'رفض' : 'rejected', name: analytics?.rankings?.highestRejection?.name, tint: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]', text: 'text-[var(--sys-destructive)]' },
-  ];
-
-  // `value` is a NODE, not a string. It used to be `` `+${fmt(x)}` `` —
-  // and once `fmt` returned a <Money> element instead of a string, the
-  // equation row printed «+[object Object]» across the dashboard.
-  const profitFlow: { label: string; value: React.ReactNode; cls: string }[] = [
-    { label: locale === 'ar' ? 'إيراد التوصيل' : 'Delivered Revenue', value: (<>+{fmt(fin.deliveredRevenue)}</>), cls: 'text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-0' },
-    { label: locale === 'ar' ? 'تكلفة البضاعة' : 'COGS', value: (<>−{fmt(fin.costOfGoodsSold)}</>), cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
-    { label: locale === 'ar' ? 'الشحن' : 'Shipping', value: (<>−{fmt(fin.shippingCosts)}</>), cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
-    { label: locale === 'ar' ? 'العمولات' : 'Commissions', value: (<>−{fmt(fin.commission)}</>), cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
-    { label: locale === 'ar' ? 'المصروفات' : 'Expenses', value: (<>−{fmt(fin.operationalExpenses)}</>), cls: 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]' },
+  const rankings: {
+    icon: typeof RiShoppingBagLine;
+    label: string;
+    name?: string;
+    value: React.ReactNode;
+    tint: string;
+    text: string;
+  }[] = [
+    { icon: RiShoppingBagLine, label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', name: analytics?.rankings?.mostRequested?.name, value: `${analytics?.rankings?.mostRequested?.totalOrders ?? 0} ${locale === 'ar' ? 'طلب' : 'orders'}`, tint: 'bg-[var(--sys-surface)] border-[var(--sys-primary-soft)]', text: 'text-[var(--sys-primary)]' },
+    /**
+     * «الأكثر ربحاً» ONLY WHERE A PROFIT WAS ACTUALLY MEASURED.
+     *
+     * Two things were wrong with this row and they compounded. It printed
+     * `+$` and a raw float — a hardcoded dollar sign on a shop that may be
+     * Jordanian or Syrian, with none of `<Money>`'s grouping or minor unit.
+     * And with cost recorded on 4 of 119 delivered orders, ranking by profit
+     * is ranking by revenue: measured on all three stores in the database,
+     * «الأكثر ربحاً» named the SAME product as «الأكثر توصيلاً» every time.
+     *
+     * So it names a product when the cost data can support the word, and
+     * says which field is empty when it cannot.
+     */
+    profitStated
+      ? { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', name: analytics?.rankings?.mostProfitable?.name, value: fmt(analytics?.rankings?.mostProfitable?.netProfit ?? 0), tint: 'bg-[var(--sys-success-soft)]', text: 'text-[var(--sys-success)]' }
+      : { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', name: undefined, value: locale === 'ar' ? 'كلفة البضاعة غير مسجَّلة' : 'No recorded cost', tint: 'bg-[var(--sys-surface)] border-[var(--sys-border)]', text: 'text-[var(--sys-muted-foreground)]' },
+    { icon: RiTruckLine, label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', name: analytics?.rankings?.mostDelivered?.name, value: `${analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0} ${locale === 'ar' ? 'توصيل' : 'delivered'}`, tint: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/30', text: 'text-[var(--sys-warning)]' },
+    { icon: RiCloseCircleLine, label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', name: analytics?.rankings?.highestRejection?.name, value: `${analytics?.rankings?.highestRejection?.rejectedOrders ?? 0} ${locale === 'ar' ? 'رفض' : 'rejected'}`, tint: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]', text: 'text-[var(--sys-destructive)]' },
   ];
 
   return (
@@ -245,19 +309,59 @@ export function DashboardScreen() {
              that leads with the month is read once a month. */}
         <IntelligenceStrip />
 
-        {/* ─── The four numbers, from the shared card ───
-             Each one carries the previous period beside it and opens the
-             list behind it. A figure with nothing to compare it against is
-             a figure nobody can act on. */}
+        {/*
+          ─── THE SIX NUMBERS A CASH-ON-DELIVERY SHOP IS RUN ON ───
+
+          Four were here, and they were chosen before anybody read the data.
+          Measured on the live database, two of them needed a gate and two
+          more numbers were missing entirely:
+
+            THE PROFIT AND ITS MARGIN came out at 76.93% — impossible in this
+            trade, and produced by a cost of goods recorded on 4 of 119
+            delivered orders against an empty expenses table. So the tile is
+            GATED: it prints the figure when the cost data can carry it, and
+            says which field is empty when it cannot. That is the whole lesson
+            of the intelligence layer this product had to abandon, where every
+            customer graded the same.
+
+            THE RETURN RATE was nowhere in this product at all. 34 of 153
+            parcels that reached a verdict at the door came back — 22% against
+            a bar of 8% — and a return is the one loss in this trade that is
+            billed twice, out and back.
+
+            THE MONEY NOT YET COLLECTED was nowhere either. 2461.50 across 119
+            delivered orders is sitting with couriers, which is to say ALL of
+            the revenue the tile beside it reports as earned. A dashboard that
+            prints «إيراد» and never prints «لم يُحصَّل» is describing a
+            business that has been paid.
+
+          The first four keep their order and their grid: they are what people
+          already look for, and the two new ones sit under them rather than
+          shouldering one of them out. The confirmation rate stays — at 97%
+          over 165 decided orders it is «جيّد» every morning and teaches
+          little, but it is the phone room's own figure and dropping it would
+          leave that team without a number on the screen they open.
+        */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {canFinance && (
             <KpiCard
               title={t.netProfit}
-              value={fmt(fin.netProfit)}
-              subtitle={`${t.profitMargin} ${fin.profitMargin}%`}
+              value={profitStated ? fmt(fin.netProfit) : '—'}
+              /**
+               * When the figure is stated, the margin goes under it — and an
+               * empty expenses table is named beside it, because subtracting
+               * zero expenses and calling the result «صافي» is the same
+               * silence in a different field. When it is withheld, the
+               * subtitle is the reason, which names the field to go and fill.
+               */
+              subtitle={
+                profitStated
+                  ? `${t.profitMargin} ${fin.profitMargin}%${noExpenses ? ' — لا مصاريف مسجَّلة في هذه المدة' : ''}`
+                  : costTrust?.ar
+              }
               icon={RiWallet3Line}
-              previous={prev.netProfit}
-              health={verdicts.profitMargin}
+              previous={profitStated ? prev.netProfit : undefined}
+              health={profitStated ? verdicts.profitMargin : undefined}
               goodWhen="rising"
               href="/finance/profit"
             />
@@ -296,6 +400,46 @@ export function DashboardScreen() {
             goodWhen="rising"
             href="/ops/tracking"
           />
+
+          <KpiCard
+            title="نسبة الإرجاع"
+            value={vitals?.door.returnRate === null || vitals === undefined ? '—' : `${vitals.door.returnRate}%`}
+            // Out of what the DOOR decided — delivered, failed and returned
+            // — never out of orders created. An order still in a van has not
+            // failed, and counting it would make this rate fall every time
+            // intake sped up.
+            subtitle={`${vitals?.door.returned ?? 0} / ${vitals?.door.decided ?? 0} طلب بتَّ فيه الباب`}
+            icon={RiInboxUnarchiveLine}
+            previous={prev.returnRate}
+            health={verdicts.returnRate}
+            goodWhen="falling"
+            href="/ops/returns"
+          />
+
+          {canFinance && (
+            <KpiCard
+              title="لم يُحصَّل بعد"
+              value={fmt(vitals?.outstanding.money ?? 0)}
+              /**
+               * «كل المدة» is not filler — it is the one figure on this screen
+               * that ignores the period buttons above it, and it says so.
+               * Money a courier owes us is owed whatever month the order was
+               * typed in, and an exposure that shrank when somebody clicked
+               * «اليوم» would be read as an exposure that shrank.
+               *
+               * No previous period beside it for the same reason: there is no
+               * «last month's outstanding» to compare a standing debt with.
+               */
+              subtitle={
+                `${vitals?.outstanding.orders ?? 0} طلب مسلَّم بانتظار التحصيل — كل المدة` +
+                (vitals?.outstanding.unrecordedOrders
+                  ? ` · و${vitals.outstanding.unrecordedOrders} مسلَّم بلا حالة تحصيل مكتوبة`
+                  : '')
+              }
+              icon={RiHandCoinLine}
+              href="/finance/collection"
+            />
+          )}
         </div>
 
         {/* ─── Order Status Tiles ─── */}
@@ -348,15 +492,26 @@ export function DashboardScreen() {
                       {/* No `uppercase tracking-wide`: the label is Arabic, and
                           spacing a joined script out stops its letters touching. */}
                       <p className={`text-xs font-bold ${r.text}`}>{r.label}</p>
+                      {/* THE NAME, RENDERED RATHER THAN SWALLOWED.
+                          `productName` takes a product and reads `.name` off
+                          it. This was handing it the name itself — a string,
+                          which has no `.name` — so it returned '' and all
+                          four ranking rows drew a blank line where the
+                          product should be. Typing the array found it.
+                          The analytics ranking carries one name and no
+                          English alternative, so there is nothing to
+                          resolve: it is printed. */}
                       <p className="text-sm font-bold text-[var(--sys-heading)] line-clamp-1">
-                        {r.name ? productName(r.name, locale) : '—'}
+                        {r.name || '—'}
                       </p>
                     </div>
                   </div>
-                  <span className={`text-sm font-black ${r.text}`}>
-                    {r.prefix ?? ''}
-                    {r.sub} {r.subSuffix ?? ''}
-                  </span>
+                  {/* One node, already carrying its own unit — a <Money> for
+                      the money row and a counted noun for the rest. It used
+                      to be a prefix, a raw float and a suffix glued together,
+                      and the prefix was a hardcoded «$» on a shop that may
+                      be Jordanian or Syrian. */}
+                  <span className={`text-sm font-black ${r.text}`}>{r.value}</span>
                 </div>
               ))}
             </CardContent>
@@ -436,12 +591,6 @@ export function DashboardScreen() {
         isOpen={aiModalOpen}
         onClose={() => setAiModalOpen(false)}
         onSuccess={loadAnalytics}
-      />
-      <OrderDetailModal
-        orderId={selectedOrderId}
-        isOpen={!!selectedOrderId}
-        onClose={() => setSelectedOrderId(null)}
-        onRefresh={loadAnalytics}
       />
     </>
   );

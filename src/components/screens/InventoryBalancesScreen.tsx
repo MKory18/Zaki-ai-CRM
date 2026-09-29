@@ -1,22 +1,95 @@
-﻿'use client';
+'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { Badge } from '@/components/ui/Badge';
+import { HealthChip } from '@/components/ui/HealthChip';
 import { useApp } from '@/context/AppContext';
-import { format } from 'date-fns';
-import { findRoute, routeLabel } from '@/lib/route-registry';
+import { routeLabel } from '@/lib/route-registry';
 import { RiArrowUpDownLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { OpeningStockCountBanner } from '@/components/inventory/OpeningStockCount';
+import {
+  IDLE_WINDOW_DAYS,
+  MIN_DELIVERED_LINES,
+  MIN_LEDGER_DAYS,
+  byUrgency,
+  type StockAlert,
+  type StockHealth,
+  type StockState,
+} from '@/lib/stock-health';
+
+/**
+ * WHAT IS LEFT — AND WHETHER THAT IS TOO MUCH, TOO LITTLE, OR RIGHT.
+ *
+ * The owner's note, verbatim: «ارصدة المخزون: تنظيم أكثر — AI + Score.
+ * ملاحظات: قارب على الانتهاء يعني، ماشي بطيء… إلخ. يحتاج مخزون. تنبيهات».
+ *
+ * What was here printed three numbers per product — دخل، خرج، متبقٍّ — and
+ * one green-or-red badge decided by `remaining > 50`. Fifty units is six days
+ * of stock for the product that sells eight a day and a lifetime's supply for
+ * the one that sells none, and the badge called the first «متوفر» in green.
+ * Both readings came out of the same number because the number alone cannot
+ * answer the question. So every card now says how fast the product leaves,
+ * how long what is left will last, and what that makes it.
+ *
+ * NOT ONE WORD OF THE VERDICT IS DECIDED HERE. `stock-health.ts` holds the
+ * rule and `/api/inventory` applies it; this file renders what it is handed
+ * and sorts by it. The screen and the route reading two copies of the same
+ * threshold is how «قارب على الانتهاء» ends up meaning twenty-one days in one
+ * place and thirty in another, with nobody able to say which is the policy.
+ *
+ * AND THE NUMBERS THAT ARE NOT THERE ARE NOT DRAWN. A product with two
+ * delivered lines behind it shows a dash where the daily rate would be, and
+ * the chip says «لا يكفي». On this database that is 107 of 114 products — a
+ * wall of «we do not know yet», which is exactly the honest picture of a
+ * sales record that is thirteen days old, and a far more useful thing to be
+ * handed than 107 confident guesses to buy stock against.
+ */
+
+interface StockRow {
+  id: string;
+  name: string;
+  sku: string;
+  sourceType: 'PURCHASED' | 'MANUFACTURED';
+  produced: number;
+  sold: number;
+  remaining: number;
+  health: StockHealth;
+}
+
+/** A measured number, or a dash — never a plausible-looking stand-in. */
+function Figure({
+  label,
+  value,
+  hint,
+  strong,
+}: {
+  label: string;
+  value: string | number | null;
+  hint?: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="rounded-lg bg-[var(--sys-surface)] p-2 text-center" title={hint}>
+      <span className="block text-xs text-[var(--sys-muted)]">{label}</span>
+      <span
+        className={`tabular-nums text-[var(--sys-heading)] ${strong ? 'text-sm font-black' : 'text-sm font-bold'}`}
+        dir="ltr"
+      >
+        {value === null ? '—' : value}
+      </span>
+    </div>
+  );
+}
 
 export function InventoryBalancesScreen() {
   const { t } = useApp();
-  const [stockSummary, setStockSummary] = useState<any[]>([]);
-  const [movements, setMovements] = useState<any[]>([]);
+  const [stockSummary, setStockSummary] = useState<StockRow[]>([]);
+  const [alerts, setAlerts] = useState<StockAlert[]>([]);
+  const [ledgerDays, setLedgerDays] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
 
@@ -32,6 +105,11 @@ export function InventoryBalancesScreen() {
   const [countError, setCountError] = useState<string | null>(null);
   const [term, setTerm] = useState('');
 
+  /** Which alert the reader pressed. One at a time — a screen, not a query builder. */
+  const [only, setOnly] = useState<StockState | 'restock' | null>(null);
+  /** Which card has its score opened. A grade whose bands are hidden is a grade. */
+  const [openBands, setOpenBands] = useState<string | null>(null);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -39,7 +117,8 @@ export function InventoryBalancesScreen() {
       if (res.ok) {
         const data = await res.json();
         setStockSummary(data.stockSummary || []);
-        setMovements(data.movements || []);
+        setAlerts(data.alerts || []);
+        setLedgerDays(typeof data.ledgerDays === 'number' ? data.ledgerDays : null);
         if (data.stockSummary?.length > 0 && !productId) {
           setProductId(data.stockSummary[0].id);
         }
@@ -77,10 +156,25 @@ export function InventoryBalancesScreen() {
     }
   };
 
-  const q = term.trim();
-  const visible = q
-    ? stockSummary.filter((s) => s.name.includes(q) || (s.sku || '').toUpperCase().includes(q.toUpperCase()))
-    : stockSummary;
+  /**
+   * WORST FIRST, always, and the order is not a setting.
+   *
+   * 114 cards in catalogue order means the one product about to run out is
+   * somewhere below the fold with nothing marking it. The comparator lives in
+   * `stock-health` so the API could sort the same way if it ever needs to.
+   */
+  const visible = useMemo(() => {
+    const q = term.trim();
+    return stockSummary
+      .filter((s) => {
+        if (only === 'restock' && !s.health.needsRestock) return false;
+        if (only !== null && only !== 'restock' && s.health.state !== only) return false;
+        if (!q) return true;
+        return s.name.includes(q) || (s.sku || '').toUpperCase().includes(q.toUpperCase());
+      })
+      .slice()
+      .sort((a, b) => byUrgency(a.health, b.health));
+  }, [stockSummary, term, only]);
 
   const selected = stockSummary.find((s) => s.id === productId);
   const systemQty = selected?.remaining ?? 0;
@@ -89,29 +183,87 @@ export function InventoryBalancesScreen() {
   return (
     <>
       <div className="space-y-6">
-        {/* Header */}
-        <PageHeader title={routeLabel('/inventory/balances')}
-            description="كم بقي من كل منتج، وكم منه محجوز لطلبات لم تخرج بعد."
-            actions={
-              <><Button
-            size="sm"
-            onClick={() => setAdjustModalOpen(true)}
-            className="flex items-center space-x-1.5"
-          >
-            <RiArrowUpDownLine className="w-4 h-4" />
-            <span>جرد مخزون</span>
-          </Button></>
-            }
-          />
+        <PageHeader
+          title={routeLabel('/inventory/balances')}
+          description="كم بقي من كل منتج، وكم يخرج منه يومياً، وكم يوماً يكفي ما بقي."
+          actions={
+            <>
+              <Button size="sm" onClick={() => setAdjustModalOpen(true)} className="flex items-center space-x-1.5">
+                <RiArrowUpDownLine className="w-4 h-4" />
+                <span>جرد مخزون</span>
+              </Button>
+            </>
+          }
+        />
 
         {/* Before anything else, once: the store's stock has never been
             counted. It is not a warning that repeats — the server refuses the
             count after the first movement and this disappears with it. */}
         <OpeningStockCountBanner onCounted={loadData} />
 
-        {/* Every product and what it holds. 105 cards need a way in, so the
-            search comes before them rather than after the scroll. */}
-        <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-3">
+        {/* THE ALERTS — the owner's «تنبيهات».
+            Counted by the server over the whole store, not by this component
+            over the list it happens to be showing: an alert row that counts
+            the filtered page tells you about your own filter. Each one is a
+            filter, so a count is never a dead end. */}
+        {alerts.length > 0 && (
+          <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {alerts.map((a) => {
+                const active = only === a.state;
+                return (
+                  <button
+                    key={a.state}
+                    type="button"
+                    onClick={() => setOnly(active ? null : a.state)}
+                    aria-pressed={active}
+                    className={`rounded-lg p-0.5 ${active ? 'ring-2 ring-[var(--sys-primary)]' : ''}`}
+                  >
+                    <HealthChip
+                      health={{
+                        tone: a.tone,
+                        label: `${a.ar} · ${a.count}`,
+                        why: active ? 'اضغط لإلغاء التصفية' : `اعرض ${a.count} منتجاً في هذه الحالة فقط`,
+                      }}
+                    />
+                  </button>
+                );
+              })}
+              {only !== null && (
+                <button
+                  type="button"
+                  onClick={() => setOnly(null)}
+                  className="text-xs font-medium text-[var(--sys-primary)] hover:underline"
+                >
+                  اعرض الكل
+                </button>
+              )}
+            </div>
+
+            {/* THE WINDOW, SAID OUT LOUD. Every rate on this screen is units
+                divided by this number of days, and a reader who does not know
+                it cannot judge any of them. On a young record it is also the
+                explanation for most of the screen saying «لا يكفي». */}
+            <p className="mt-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+              {ledgerDays === null || ledgerDays < MIN_LEDGER_DAYS ? (
+                <>
+                  سجل التسليمات لا يعود لأكثر من {ledgerDays ?? 0} يوم، و{MIN_LEDGER_DAYS} أيام هي أقلّ ما
+                  تُقاس به سرعةُ بيع — فلا معدَّل يومياً على هذه الشاشة بعد.
+                </>
+              ) : (
+                <>
+                  سرعة البيع مقيسة على آخر {ledgerDays} يوماً — وهو عمق سجل التسليمات نفسه، لا مدّةً
+                  مختارة. منتجٌ تحت {MIN_DELIVERED_LINES} تسليمات لا يُعطى معدَّلاً، و«راكد» لا تُقال قبل{' '}
+                  {IDLE_WINDOW_DAYS} يوماً على الرف.
+                </>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* 114 cards need a way in, so the search comes before them rather
+            than after the scroll. */}
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
           <input
             value={term}
             onChange={(e) => setTerm(e.target.value)}
@@ -119,53 +271,124 @@ export function InventoryBalancesScreen() {
             className="w-full min-w-0 h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
           />
           <p className="mt-1.5 text-xs text-[var(--sys-muted-foreground)]">
-            {visible.length} من {stockSummary.length} منتج
+            {visible.length} من {stockSummary.length} منتج — الأسوأ أوّلاً
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {visible.map((s) => (
-            <Card key={s.id}>
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-lg">
-                      {s.sku}
-                    </span>
-                    <a
-                      href={`/products/${s.id}`}
-                      className="mt-1 block text-sm font-bold text-[var(--sys-heading)] hover:text-[var(--sys-primary)]"
-                    >
-                      {s.name}
-                    </a>
-                    {/* Which door adds to this one — the question you ask
-                        the moment you see it is empty. */}
-                    <span className="mt-1 inline-block rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-xs font-semibold text-[var(--sys-foreground)]">
-                      {s.sourceType === 'PURCHASED' ? 'جاهز — يُستلم' : 'مصنّع — تشغيلة'}
-                    </span>
-                  </div>
-                  <Badge variant={s.remaining > 50 ? 'success' : 'danger'}>
-                    {s.remaining > 50 ? 'متوفر' : 'رصيد منخفض'}
-                  </Badge>
-                </div>
+        {!loading && stockSummary.length > 0 && visible.length === 0 && (
+          <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 text-sm text-[var(--sys-muted-foreground)]">
+            لا منتجَ يطابق ما اخترته.
+          </p>
+        )}
 
-                <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
-                  <div className="bg-[var(--sys-surface)] p-2 rounded-lg">
-                    <span className="text-[var(--sys-muted)] block text-xs">دخل</span>
-                    <span className="font-bold text-[var(--sys-heading)]">{s.produced}</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {visible.map((s) => {
+            const h = s.health;
+            const bandsOpen = openBands === s.id;
+            return (
+              <Card key={s.id}>
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-lg">
+                        {s.sku}
+                      </span>
+                      <a
+                        href={`/products/${s.id}`}
+                        className="mt-1 block text-sm font-bold text-[var(--sys-heading)] hover:text-[var(--sys-primary)]"
+                      >
+                        {s.name}
+                      </a>
+                      {/* Which door adds to this one — the question you ask
+                          the moment you see it is running out. */}
+                      <span className="mt-1 inline-block rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-xs font-semibold text-[var(--sys-foreground)]">
+                        {s.sourceType === 'PURCHASED' ? 'جاهز — يُستلم' : 'مصنّع — تشغيلة'}
+                      </span>
+                    </div>
+                    {/* The verdict, in the product's one verdict chip. */}
+                    <HealthChip health={h} className="shrink-0" />
                   </div>
-                  <div className="bg-[var(--sys-destructive-soft)] p-2 rounded-lg">
-                    <span className="text-[var(--sys-destructive)] block text-xs">خرج</span>
-                    <span className="font-bold text-[var(--sys-destructive)]">{s.sold}</span>
+
+                  {/* THE REASON, PRINTED — not a tooltip nobody finds.
+                      «قارب على الانتهاء» tells a reader nothing they can act
+                      on. «12 متاحة و1.9 تخرج يومياً — تكفي 6 أيام» tells them
+                      how many to buy. */}
+                  <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{h.why}</p>
+
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    <Figure label="على الرف" value={s.remaining} hint="ما تحمله دفعات هذا المستودع فعلاً." />
+                    <Figure
+                      label="محجوز"
+                      value={s.remaining - h.available}
+                      hint="موعودٌ به لطلبات مفتوحة — لا يُوعَد به مرّتين."
+                    />
+                    <Figure label="متاح" value={h.available} strong hint="ما يمكن أن يأخذه طلبٌ جديد." />
+                    <Figure
+                      label="يومياً"
+                      value={h.perDay}
+                      hint={
+                        h.perDay === null
+                          ? `لا معدَّل: العيّنة تحت ${MIN_DELIVERED_LINES} تسليمات أو السجل أقصر من ${MIN_LEDGER_DAYS} أيام.`
+                          : `${h.perDay} وحدة يومياً، مقيسةً على ${h.windowDays} يوماً من التسليمات.`
+                      }
+                    />
+                    <Figure
+                      label="تكفي (يوم)"
+                      value={h.coverDays === null ? null : Math.round(h.coverDays)}
+                      hint={
+                        h.coverDays === null
+                          ? 'لا معدَّلَ يوميّاً تُحسب به مدّةُ الكفاية.'
+                          : 'المتاح مقسوماً على المعدَّل اليومي.'
+                      }
+                    />
+                    <Figure
+                      label="الدرجة"
+                      value={h.score}
+                      strong
+                      hint={
+                        h.score === null
+                          ? 'لا درجة: مدّةُ الكفاية — وهي 55 من 100 — لا تُحسب لهذا المنتج.'
+                          : `${h.score} من 100. اضغط «من أين الدرجة؟» لبنودها.`
+                      }
+                    />
                   </div>
-                  <div className="bg-[var(--sys-destructive-soft)] p-2 rounded-lg">
-                    <span className="text-[var(--sys-destructive)] block text-xs">متبقٍّ</span>
-                    <span className="font-black text-[var(--sys-destructive)]">{s.remaining}</span>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="text-xs text-[var(--sys-muted)]">
+                      دخل {s.produced} · خرج {s.sold}
+                    </span>
+                    {h.bands.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setOpenBands(bandsOpen ? null : s.id)}
+                        aria-expanded={bandsOpen}
+                        className="text-xs font-medium text-[var(--sys-primary)] hover:underline"
+                      >
+                        {bandsOpen ? 'أخفِ البنود' : 'من أين الدرجة؟'}
+                      </button>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  {/* A score whose bands are hidden is a number people work
+                      around. Each band names the fact it measured, what that
+                      fact was, and what it earned out of its fixed weight. */}
+                  {bandsOpen && (
+                    <ul className="space-y-1.5 rounded-lg bg-[var(--sys-surface)] p-2.5">
+                      {h.bands.map((b) => (
+                        <li key={b.key} className="text-xs leading-relaxed">
+                          <span className="font-semibold text-[var(--sys-heading)]">{b.ar}</span>{' '}
+                          <span className="tabular-nums text-[var(--sys-foreground)]" dir="ltr">
+                            {Math.round(b.earned)}/{b.weight}
+                          </span>
+                          <span className="block text-[var(--sys-muted-foreground)]">{b.why}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* THE MOVEMENTS LOG IS NOT REDRAWN HERE.

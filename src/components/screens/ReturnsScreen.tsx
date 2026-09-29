@@ -5,7 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { ScanButton } from '@/components/scan/ScanButton';
-import { RiInboxUnarchiveLine, RiQrScan2Line } from '@remixicon/react';
+import { RiCheckLine, RiInboxUnarchiveLine, RiQrScan2Line, RiTimeLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -15,7 +15,38 @@ import { SkeletonRows } from '@/components/ui/Skeleton';
  * /ops/returns — scan or pick a returned shipment, then record the physical
  * receipt. Missing units are computed by the server, and nothing enters stock
  * before the count-and-inspect acknowledgement.
+ *
+ * THIS DESK SETTLES ONE HALF OF A PARTIAL DELIVERY.
+ *
+ *   «بصير الطلب بيتمم مرتين — مرة بيتمم للمستلم ومرة للطلب الراجع. واذا اتمم
+ *    واحد فهو اتمم جزءي، ما بنغلق غير كامل»
+ *
+ * So the dialog says which half it is closing and which one remains, and it
+ * does not decide either: `completion` and `action` come from the server,
+ * which reads `completionOf` in lib/partial-delivery.ts. A screen that
+ * re-derives a rule is a second copy of it.
  */
+
+/** One line of the parcel as the door left it. Shaped by `settledLines`. */
+interface SettledLine {
+  itemId: string;
+  productName: string;
+  /** Units that left the warehouse on this line, gifts included. */
+  shipped: number;
+  /** Units the customer kept — null when the door never spoke. */
+  delivered: number | null;
+  /** Units owed back to a shelf. */
+  expectedBack: number;
+}
+
+interface Completion {
+  halves: { key: 'MONEY' | 'GOODS'; label: string; settled: boolean; units: number }[];
+  settledCount: number;
+  degree: 'NONE' | 'PARTIAL' | 'FULL';
+  complete: boolean;
+  awaiting: ('MONEY' | 'GOODS')[];
+  label: string;
+}
 
 interface Row {
   id: string;
@@ -28,7 +59,10 @@ interface Row {
   customer: { fullName: string; phone?: string | null };
   region: { name: string } | null;
   deliveryProvider: { name: string } | null;
-  items: { productName: string; quantity: number; freeQuantity: number }[];
+  lines: SettledLine[];
+  completion: Completion;
+  /** The owner's «هل الطلب استلم؟ نعم / لا», or null when it does not apply. */
+  action: { key: 'MONEY' | 'GOODS'; question: string; yes: string; no: string } | null;
 }
 
 export function ReturnsScreen() {
@@ -122,9 +156,16 @@ export function ReturnsScreen() {
               { key: 'customer', label: 'العميل', primary: true, render: (r) => r.customer.fullName },
               { key: 'courier', label: 'شركة الشحن', render: (r) => r.deliveryProvider?.name ?? '—' },
               { key: 'reason', label: 'السبب', render: (r) => r.returnReason ?? '—' },
+              // NOT «المشحون». This column has always been what is coming
+              // BACK — the parcel less whatever the customer kept — and
+              // calling it "shipped" made a partial return look like a
+              // shortage to the one person counting the units. (The comment
+              // sits outside the object because `scripts/ui-inventory.ts`
+              // counts a column by `{ key:` and a comment between the two
+              // reads as a deleted column.)
               {
                 key: 'qty',
-                label: 'المشحون',
+                label: 'المتوقَّع رجوعه',
                 align: 'end',
                 render: (r) => <span className="tabular-nums">{r.expectedQty}</span>,
               },
@@ -180,6 +221,21 @@ function ReceiveDialog({
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * THE EXTRA ACTION'S ANSWER — «هل الطلب استلم؟ نعم / لا».
+   *
+   * Null until it is answered, and the count below it stays closed until
+   * then. The dialog used to pre-fill «سليم» with the whole expected
+   * quantity, which answers the question on the clerk's behalf and with the
+   * commonest wrong answer: a parcel that is listed as coming back has very
+   * often not arrived yet, and a receipt written for it puts units on a
+   * shelf that nobody has ever held.
+   *
+   * Only asked where the owner asks for it: a split parcel of more than one
+   * unit. Everything else keeps the one-step flow it had.
+   */
+  const [arrived, setArrived] = useState<boolean | null>(null);
+  const gated = order.action !== null && arrived !== true;
 
   const missing = Math.max(0, order.expectedQty - received - damaged);
 
@@ -187,7 +243,7 @@ function ReceiveDialog({
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await apiJson<{ missingQty: number; courierFeeAmount: number }>('/api/ops/returns', {
+      const res = await apiJson<{ missingQty: number; courierFeeAmount: number; completion: Completion }>('/api/ops/returns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -201,7 +257,11 @@ function ReceiveDialog({
       });
       onDone(
         `تم استلام ${order.merchantRef ?? order.orderNumber}: سليم ${received}، تالف ${damaged}، ناقص ${res.missingQty}` +
-          (res.courierFeeAmount ? ` — أجرة إرجاع ${res.courierFeeAmount}` : '')
+          (res.courierFeeAmount ? ` — أجرة إرجاع ${res.courierFeeAmount}` : '') +
+          // «ما بنغلق غير كامل». Without this the clerk reads their own
+          // receipt as the end of the order, and for a partial delivery the
+          // money the customer paid at the door is still outstanding.
+          (res.completion.complete ? '' : ` — ${res.completion.label}`)
       );
     } catch (e) {
       toast.failed(e instanceof Error ? e.message : 'تعذر حفظ الاستلام');
@@ -215,45 +275,166 @@ function ReceiveDialog({
       <form onSubmit={submit} className="space-y-3">
         {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-2">{error}</p>}
 
-        <ul className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] rounded-lg p-2 space-y-0.5">
-          {order.items.map((i, idx) => (
-            <li key={idx}>
-              {i.productName} × {i.quantity + i.freeQuantity}
-            </li>
-          ))}
-        </ul>
+        {/*
+          WHICH PRODUCT, HOW MANY TAKEN, HOW MANY DUE BACK.
 
-        <div className="grid grid-cols-3 gap-3">
-          <Num label="سليم" value={received} onChange={setReceived} max={order.expectedQty} />
-          <Num label="تالف" value={damaged} onChange={setDamaged} max={order.expectedQty} />
-          <div>
-            <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ناقص (محسوب)</span>
-            <p className={`h-10 flex items-center px-3 rounded-lg border text-sm tabular-nums ${missing > 0 ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-foreground)]'}`} dir="ltr">
-              {missing}
-            </p>
+            «شو المنتج الي استلمو وكم قطعة وشو الي رجع»
+
+          This was one line per product at its full shipped quantity — «ماء
+          الكمأ × 3» for a parcel where the customer kept two and one is
+          coming back. The clerk has the box open in front of them, so the
+          list is the figure they trust, and it was the wrong one: the total
+          in the row behind this dialog said 1 while the list said 3.
+        */}
+        <div className="border border-[var(--sys-border)] rounded-lg overflow-hidden">
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 bg-[var(--sys-surface)] text-xs font-medium text-[var(--sys-muted-foreground)]">
+            <span>المنتج</span>
+            <span className="w-12 text-center">شُحن</span>
+            <span className="w-12 text-center">استلمه</span>
+            <span className="w-12 text-center">راجع</span>
           </div>
+          {order.lines.map((l) => (
+            <div
+              key={l.itemId}
+              className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 border-t border-[var(--sys-border)] text-xs items-center"
+            >
+              <span className="text-[var(--sys-heading)] truncate">{l.productName}</span>
+              <span className="w-12 text-center tabular-nums text-[var(--sys-muted-foreground)]">{l.shipped}</span>
+              {/* A dash, not a zero: the door never spoke about this line, and
+                  «0» would be a statement that the customer refused it. */}
+              <span className="w-12 text-center tabular-nums text-[var(--sys-foreground)]">
+                {l.delivered === null ? '—' : l.delivered}
+              </span>
+              <span
+                className={`w-12 text-center tabular-nums font-semibold ${
+                  l.expectedBack > 0 ? 'text-[var(--sys-warning)]' : 'text-[var(--sys-muted)]'
+                }`}
+              >
+                {l.expectedBack}
+              </span>
+            </div>
+          ))}
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-[var(--sys-foreground)]">
-          <input type="checkbox" checked={courierFee} onChange={(e) => setCourierFee(e.target.checked)} />
-          احتساب أجرة إرجاع لشركة الشحن (تُؤخذ من جدول الأجور)
-        </label>
+        {/*
+          THE EXTRA ACTION.
 
-        <label className="block">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختياري)</span>
-          <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm" />
-        </label>
+            «إذا الأوردر فيه أكثر من كمية واستلم أو رفض قطعة، حط إجراء إضافي
+             مثل: هل الطلب استلم؟ نعم / لا»
 
-        <label className="flex items-start gap-2 text-sm text-[var(--sys-heading)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2">
-          <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="h-5 w-5 mt-1" />
-          <span>أقرّ بأنني عددت البضاعة وفحصتها. لا تدخل البضاعة للمخزون قبل هذا الإقرار.</span>
-        </label>
+          Asked before the count, because it decides whether there is a count
+          to make. The question and its two answers are the server's words —
+          the same ones the route records — so the screen cannot ask one thing
+          and the record say another.
+        */}
+        {order.action && (
+          <div className="bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 space-y-2">
+            <p className="text-sm font-medium text-[var(--sys-heading)]">{order.action.question}</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setArrived(true);
+                  setReceived(order.expectedQty);
+                }}
+                className={`h-11 md:h-10 px-3 rounded-lg border text-sm ${
+                  arrived === true
+                    ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)] text-[var(--sys-success)] font-medium'
+                    : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
+                }`}
+              >
+                {order.action.yes}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setArrived(false);
+                  setReceived(0);
+                }}
+                className={`h-11 md:h-10 px-3 rounded-lg border text-sm ${
+                  arrived === false
+                    ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] font-medium'
+                    : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
+                }`}
+              >
+                {order.action.no}
+              </button>
+            </div>
+            {arrived === false && (
+              <p className="text-xs text-[var(--sys-destructive)]">
+                لا يُسجَّل استلام إذن. الطلب يبقى مفتوحاً على نصفه الراجع، ويظهر في هذه القائمة حتى تصل القطع.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/*
+          «واذا اتمم واحد فهو اتمم جزءي، ما بنغلق غير كامل» — stated in the
+          screen, not only in the note it writes. The clerk is about to finish
+          their half and would otherwise leave believing the order is done.
+        */}
+        {order.completion.halves.length > 1 && (
+          <ul className="text-xs bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2 space-y-1">
+            <li className="font-medium text-[var(--sys-heading)]">
+              هذا الطلب يُتَمَّم مرتين — لا يُغلق إلا بإتمام النصفين:
+            </li>
+            {order.completion.halves.map((h) => (
+              <li key={h.key} className="flex items-center gap-1.5 text-[var(--sys-foreground)] tabular-nums">
+                {/* An icon, not a typed checkmark: «✓» is the operating
+                    system's glyph and renders differently on every device
+                    this desk runs on. */}
+                {h.settled ? (
+                  <RiCheckLine className="w-4 h-4 shrink-0 text-[var(--sys-success)]" />
+                ) : (
+                  <RiTimeLine className="w-4 h-4 shrink-0 text-[var(--sys-warning)]" />
+                )}
+                <span>
+                  {h.label} ({h.units} قطعة)
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {!gated && (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <Num label="سليم" value={received} onChange={setReceived} max={order.expectedQty} />
+              <Num label="تالف" value={damaged} onChange={setDamaged} max={order.expectedQty} />
+              <div>
+                <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ناقص (محسوب)</span>
+                <p className={`h-10 flex items-center px-3 rounded-lg border text-sm tabular-nums ${missing > 0 ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-foreground)]'}`} dir="ltr">
+                  {missing}
+                </p>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-[var(--sys-foreground)]">
+              <input type="checkbox" checked={courierFee} onChange={(e) => setCourierFee(e.target.checked)} />
+              احتساب أجرة إرجاع لشركة الشحن (تُؤخذ من جدول الأجور)
+            </label>
+
+            <label className="block">
+              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختياري)</span>
+              <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm" />
+            </label>
+
+            <label className="flex items-start gap-2 text-sm text-[var(--sys-heading)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2">
+              <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="h-5 w-5 mt-1" />
+              <span>أقرّ بأنني عددت البضاعة وفحصتها. لا تدخل البضاعة للمخزون قبل هذا الإقرار.</span>
+            </label>
+          </>
+        )}
 
         <div className="flex gap-2 pt-1">
-          <button type="submit" disabled={busy || !acknowledged} className="px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50">
-            {busy ? 'جارٍ الحفظ…' : 'تأكيد الاستلام'}
+          {!gated && (
+            <button type="submit" disabled={busy || !acknowledged} className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-50">
+              {busy ? 'جارٍ الحفظ…' : 'تأكيد الاستلام'}
+            </button>
+          )}
+          <button type="button" onClick={onClose} className="h-11 md:h-10 px-4 rounded-lg border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">
+            {arrived === false ? 'إغلاق' : 'إلغاء'}
           </button>
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-[var(--sys-border)] text-sm text-[var(--sys-muted-foreground)]">إلغاء</button>
         </div>
       </form>
     </Modal>

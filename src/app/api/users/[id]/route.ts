@@ -27,6 +27,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const target = await db.user.findUnique({
       where: { id },
       include: { assignedBy: { select: { name: true } } },
+      // `totpEnabledAt` comes through with the rest of the scalars; the
+      // SECRET never leaves the database and is encrypted where it sits.
+
     });
     if (!target) {
       return NextResponse.json({ error: USER_NOT_FOUND }, { status: 404 });

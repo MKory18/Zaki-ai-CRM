@@ -12,11 +12,14 @@ import { LandingAnalyticsTab } from '@/components/performance/LandingAnalyticsTa
 import { userCan } from '@/lib/can';
 import { ScoreBoard } from '@/components/performance/ScoreBoard';
 import { findRoute, routeLabel } from '@/lib/route-registry';
-import { RiAlertLine, RiCheckboxCircleLine, RiCopperCoinLine, RiDownload2Line, RiEBike2Line, RiTrophyLine, RiTruckLine } from '@remixicon/react';
+import { RiAlertLine, RiCopperCoinLine, RiDownload2Line, RiEBike2Line, RiInboxUnarchiveLine, RiTrophyLine, RiTruckLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { Rows } from '@/components/ui/Rows';
+import { healthOf } from '@/lib/health';
+import { HealthChip } from '@/components/ui/HealthChip';
+import { rowCostStated, type Trust } from '@/lib/cod-vitals';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
 function lastThirtyDays() {
@@ -83,10 +86,15 @@ export function PerformanceScreen() {
 
   useEffect(() => {
     setTeam(null);
+    // The team endpoint's totals belong to the TEAM table. They were being
+    // put into `attrTotals`, which is the attribution tables' state, while
+    // the attribution endpoint's totals were being put into `totals`, which
+    // is the team table's — so each table's footer was summing the other
+    // table's rows. Two states, two endpoints, swapped once.
     apiJson<{ employees: any[]; totals: any }>(`/api/orders/confirmation/team?${dateQuery}`)
       .then((d) => {
         setTeam(d.employees ?? []);
-        setAttrTotals(d.totals ?? null);
+        setTotals(d.totals ?? null);
       })
       .catch(() => setTeam([]));
   }, [dateQuery]);
@@ -103,7 +111,7 @@ export function PerformanceScreen() {
       .then((d) => {
         setModerators(d.moderators ?? []);
         setChannels(d.channels ?? []);
-        setTotals(d.totals ?? null);
+        setAttrTotals(d.totals ?? null);
       })
       .catch(() => {
         setModerators([]);
@@ -136,6 +144,43 @@ export function PerformanceScreen() {
   const handleExport = () => {
     window.open('/api/reports/export', '_blank');
   };
+
+  /**
+   * THE VITALS THE SERVER SENT, AND THE VERDICT ON THE COST DATA.
+   *
+   * Nothing here is recomputed from money. `cost` is not a figure — it is
+   * whether the figures that REST on a cost may be printed at all, and it
+   * governs three places on this screen: the «الأكثر ربحاً» card, the net
+   * profit column, and the margin column. On the measured database it says
+   * no: cost of goods is recorded on 4 of 119 delivered orders, and the
+   * margins this table printed were 80.7%, 82.3%, 82.2%, 80%, 81.7% and 76%
+   * — six products, one number, which is what a missing input looks like
+   * when somebody draws a figure over it.
+   */
+  const vitals = analytics?.vitals as
+    | {
+        door: { delivered: number; failed: number; returned: number; decided: number; returnRate: number | null };
+        cost: Trust;
+        returnsByProduct: { productId: string; returned: number; decided: number; rate: number | null }[];
+      }
+    | undefined;
+  const costStated = vitals ? vitals.cost.level !== 'WITHHELD' : false;
+
+  /** Returns per product, by id, for the two columns and the headline card. */
+  const returnsOf = new Map((vitals?.returnsByProduct ?? []).map((r) => [r.productId, r]));
+
+  // Already sorted by parcels-back on the server; the name comes from
+  // `productStats` in the same payload rather than a second lookup, so the
+  // card and the table can never spell one product two ways.
+  const topReturnedRow = (vitals?.returnsByProduct ?? []).find((r) => r.returned > 0);
+  const topReturned = topReturnedRow
+    ? {
+        ...topReturnedRow,
+        name: (analytics?.productStats ?? []).find((p: any) => p.id === topReturnedRow.productId)?.name as
+          | string
+          | undefined,
+      }
+    : null;
 
   return (
     <>
@@ -195,8 +240,27 @@ export function PerformanceScreen() {
           <LandingAnalyticsTab dateQuery={dateQuery} from={range.from} />
         ) : (
         <>
-        {/* The five headlines, read at a glance before any table. */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {/*
+          ─── THE FOUR HEADLINES, AND WHY IT IS FOUR AND NOT FIVE ───
+
+          «الأكثر تأكيداً» is gone. Measured on all three stores in the live
+          database, it named the SAME product as «الأكثر طلباً» every time —
+          which is what a 97% confirmation rate does to it: confirmed orders
+          are very nearly total orders, so the two cards have the same
+          argmax and one of them is a second drawing of the other.
+
+          «الأكثر ربحاً» stays, but only when there is a profit to rank. With
+          cost of goods recorded on 4 of 119 delivered orders, ranking by
+          profit IS ranking by revenue — and measured, it named the same
+          product as «الأكثر توصيلاً» in all three stores too. So the card
+          says which field is empty rather than crowning the same product a
+          third time under a money word.
+
+          «الأكثر إرجاعاً» takes the freed slot. It is the only one of these
+          five questions that costs money twice — the outbound fee and the
+          fee to bring it back — and nothing in this product answered it.
+        */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Rank
             icon={<RiTrophyLine className="w-4 h-4" />}
             label="الأكثر طلباً"
@@ -206,14 +270,14 @@ export function PerformanceScreen() {
           <Rank
             icon={<RiCopperCoinLine className="w-4 h-4" />}
             label="الأكثر ربحاً"
-            name={analytics?.rankings?.mostProfitable?.name}
-            note={<>صافي <Money value={analytics?.rankings?.mostProfitable?.netProfit || 0} /></>}
-          />
-          <Rank
-            icon={<RiCheckboxCircleLine className="w-4 h-4" />}
-            label="الأكثر تأكيداً"
-            name={analytics?.rankings?.mostConfirmed?.name}
-            note={`${analytics?.rankings?.mostConfirmed?.confirmedOrders || 0} مؤكد`}
+            name={costStated ? analytics?.rankings?.mostProfitable?.name : undefined}
+            note={
+              costStated ? (
+                <>صافي <Money value={analytics?.rankings?.mostProfitable?.netProfit || 0} /></>
+              ) : (
+                'كلفة البضاعة غير مسجَّلة'
+              )
+            }
           />
           <Rank
             icon={<RiTruckLine className="w-4 h-4" />}
@@ -222,19 +286,63 @@ export function PerformanceScreen() {
             note={`${analytics?.rankings?.mostDelivered?.deliveredOrders || 0} موصَّل`}
           />
           <Rank
-            icon={<RiAlertLine className="w-4 h-4" />}
-            label="الأكثر رفضاً"
-            name={analytics?.rankings?.highestRejection?.name}
-            note={`${analytics?.rankings?.highestRejection?.rejectedOrders || 0} مرفوض`}
+            icon={<RiInboxUnarchiveLine className="w-4 h-4" />}
+            label="الأكثر إرجاعاً"
+            name={topReturned?.name}
+            note={
+              topReturned
+                ? `${topReturned.returned} من ${topReturned.decided} بتَّ فيه الباب`
+                : 'لا مرتجعات في هذه المدة'
+            }
             warn
           />
         </div>
+
+        {/*
+          THE WHOLE COMPANY'S RETURN RATE, ABOVE THE TABLE THAT BREAKS IT UP.
+
+          It belongs here rather than only on the dashboard because every
+          per-product rate below is read against it: a product at 24% in a
+          shop at 22% is normal, and the same product in a shop at 6% is the
+          problem. Measured: 34 of 153 parcels that reached a verdict came
+          back, against a bar of 8% good and 15% acceptable.
+        */}
+        {vitals && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-4 py-3">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--sys-heading)]">
+              <RiAlertLine className="w-4 h-4 text-[var(--sys-warning)]" aria-hidden />
+              الإرجاع في هذه المدة
+            </span>
+            <span className="text-sm font-black tabular-nums text-[var(--sys-heading)]">
+              {vitals.door.returnRate === null ? '—' : `${vitals.door.returnRate}%`}
+            </span>
+            <span className="text-xs text-[var(--sys-muted-foreground)] tabular-nums">
+              {vitals.door.returned} من {vitals.door.decided} طلب بتَّ فيه الباب
+            </span>
+            <HealthChip
+              className="ms-auto"
+              withWhy
+              health={healthOf('returnRate', vitals.door.returnRate, vitals.door.decided)}
+            />
+          </div>
+        )}
 
         {/* Section 18: Product Profit Analysis Table */}
         <Card>
           <CardHeader
             title="ربح كل منتج"
-            subtitle="الإيراد من الموصَّل فقط، ناقص كلفة البضاعة من الدفعات وكلفة الشحن"
+            /**
+             * THE SUBTITLE SAYS WHETHER THE TABLE'S MONEY COLUMNS MEAN
+             * ANYTHING, BEFORE ANYBODY READS THEM.
+             *
+             * It used to describe the arithmetic — «الإيراد ناقص الكلفة» —
+             * which is true and useless: the arithmetic was never the
+             * problem, the empty cost field was. Now it names the coverage
+             * out loud, and the two profit columns below refuse per row.
+             */
+            subtitle={
+              vitals ? `${vitals.cost.ar} · الإيراد من الموصَّل فقط، ناقص كلفة البضاعة وكلفة الشحن` : undefined
+            }
           />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -249,33 +357,83 @@ export function PerformanceScreen() {
                 ) },
                   { key: 'c1', label: "الطلبات", primary: true,
                     render: (prod: any) => (prod.totalOrders) },
-                  { key: 'c2', label: "مؤكد",
+                  // Hidden from the phone cards, not from the table. With a
+                  // 97% confirmation rate «مؤكد» is «الطلبات» again to within
+                  // a few orders, and a card that spends a line on it spends
+                  // it instead of on what came back.
+                  { key: 'c2', label: "مؤكد", hideOnPhone: true,
                     render: (prod: any) => (prod.confirmedOrders) },
                   { key: 'c3', label: "موصَّل",
                     render: (prod: any) => (prod.deliveredOrders) },
-                  { key: 'c4', label: "مرفوض",
+                  { key: 'c4', label: "مرفوض على الهاتف", hideOnPhone: true,
                     render: (prod: any) => (prod.rejectedOrders) },
-                  { key: 'c5', label: "إيراد الموصَّل",
+                  /**
+                   * AND WHAT CAME BACK FROM THE DOOR, WHICH IS THE OTHER
+                   * HALF OF THE SAME QUESTION AND THE EXPENSIVE ONE.
+                   *
+                   * «مرفوض» beside it is a refusal on the PHONE: nothing was
+                   * spent, no parcel moved, no fee was paid. This column is
+                   * a refusal AFTER the fee — billed out and billed back —
+                   * and the table had no column for it at all, so the
+                   * cheapest loss was reported per product and the dearest
+                   * one was not reported anywhere.
+                   */
+                  { key: 'c5', label: "مرتجع من الباب",
+                    render: (prod: any) => (returnsOf.get(prod.id)?.returned ?? 0) },
+                  { key: 'c6', label: "نسبة الإرجاع",
+                    render: (prod: any) => {
+                      const r = returnsOf.get(prod.id);
+                      // The verdict rather than the bare percentage, because
+                      // one parcel back out of two is «50%» and means
+                      // nothing — `healthOf` refuses a sample under ten and
+                      // says «لا يكفي» instead of dressing it as a rate.
+                      return (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="tabular-nums">{r?.rate === null || !r ? '—' : `${r.rate}%`}</span>
+                          {r && <HealthChip health={healthOf('returnRate', r.rate, r.decided)} />}
+                        </span>
+                      );
+                    } },
+                  { key: 'c7', label: "إيراد الموصَّل",
                     render: (prod: any) => (
                   <><Money value={prod.revenue} /></>
                 ) },
-                  { key: 'c6', label: "كلفة البضاعة",
+                  { key: 'c8', label: "كلفة البضاعة",
                     render: (prod: any) => (
-                  <><Money value={-prod.cogs} /></>
+                  rowCostStated(prod)
+                    ? <Money value={-prod.cogs} />
+                    : <span className="text-[var(--sys-muted)]">غير مسجَّلة</span>
                 ) },
-                  { key: 'c7', label: "كلفة الشحن",
+                  { key: 'c9', label: "كلفة الشحن", hideOnPhone: true,
                     render: (prod: any) => (
                   <><Money value={-prod.shippingCost} /></>
                 ) },
-                  { key: 'c8', label: "صافي الربح",
+                  /**
+                   * THE TWO COLUMNS THAT REFUSE THEMSELVES, ROW BY ROW.
+                   *
+                   * The table-wide verdict in the subtitle answers «is this
+                   * shop's cost data usable». It cannot answer «is THIS
+                   * product's margin usable», and on the measured data the
+                   * two differ: 5 of the 7 products that sold carry no cost
+                   * at all while 2 carry one. Gated only at the top, the two
+                   * true rows would be blanked with the five false ones;
+                   * gated nowhere, a product whose cost nobody has typed
+                   * printed «82%» — the revenue, in a green pill, called a
+                   * margin.
+                   */
+                  { key: 'c10', label: "صافي الربح",
                     render: (prod: any) => (
-                  <><Money value={prod.netProfit} /></>
+                  rowCostStated(prod)
+                    ? <Money value={prod.netProfit} />
+                    : <span className="text-[var(--sys-muted)]">—</span>
                 ) },
-                  { key: 'c9', label: "هامش الربح",
+                  { key: 'c11', label: "هامش الربح",
                     render: (prod: any) => (
-                  <><span className="font-bold text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] px-2 py-0.5 rounded-lg text-xs">
+                  rowCostStated(prod)
+                    ? <span className="font-bold text-[var(--sys-primary)] bg-[var(--sys-primary-soft)] px-2 py-0.5 rounded-lg text-xs">
                           {prod.profitMargin}%
-                        </span></>
+                        </span>
+                    : <span className="text-[var(--sys-muted)]" title="لا كلفة مسجَّلة لهذا المنتج — الهامش سيكون الإيراد نفسه">—</span>
                 ) },
                 ]}
               />

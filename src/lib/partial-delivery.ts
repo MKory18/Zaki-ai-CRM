@@ -59,6 +59,16 @@ export interface PartialOutcome {
   returnedUnits: { itemId: string; productId: string; productName: string; quantity: number }[];
   linesDelivered: number;
   linesReturned: number;
+  /** Units the customer kept, and units the courier is carrying back. */
+  deliveredUnits: number;
+  refusedUnits: number;
+  /**
+   * The two settlements this delivery just created, and which of them is
+   * still open — see `completionOf` at the foot of this file. A partial
+   * delivery is reported as half-done from the moment it is recorded, rather
+   * than discovered to be half-done later by whoever chases it.
+   */
+  completion: Completion;
 }
 
 /** What the door saw, in the words the note is prefixed with. */
@@ -105,6 +115,9 @@ export async function recordPartialDelivery(
     select: {
       id: true, orderNumber: true, shippingStatus: true, deliveryFee: true, customerId: true,
       priceIncludesDelivery: true, deliveredAt: true, returnedAt: true, deliveryProviderId: true,
+      // Read, never written here: the money half belongs to the courier's
+      // statement, and this only needs to know whether it is already closed.
+      settlementStatus: true,
       items: {
         select: {
           id: true, productId: true, productName: true,
@@ -348,6 +361,9 @@ export async function recordPartialDelivery(
     },
   });
 
+  const deliveredUnits = updates.reduce((sum, u) => sum + u.deliveredQty, 0);
+  const refusedUnits = updates.reduce((sum, u) => sum + u.returnedQty, 0);
+
   return {
     status,
     collectedAmount,
@@ -356,5 +372,289 @@ export async function recordPartialDelivery(
     returnedUnits,
     linesDelivered,
     linesReturned,
+    deliveredUnits,
+    refusedUnits,
+    // No receipt can exist yet: the refused units are in the van, and the
+    // returns desk counts them in later. Saying so here is what turns «سُلّم
+    // جزئياً» from an end state into the first of two.
+    completion: completionOf({
+      deliveredUnits,
+      refusedUnits,
+      settlementStatus: order.settlementStatus,
+      hasReturnReceipt: false,
+    }),
   };
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * THE ORDER IS SETTLED TWICE.
+ *
+ *   «بصير الطلب بيتمم مرتين — مرة بيتمم للمستلم ومرة للطلب الراجع. واذا
+ *    اتمم واحد فهو اتمم جزءي، ما بنغلق غير كامل»
+ *
+ * A partial delivery splits one order into two obligations, settled by two
+ * different people, on two different days, out of two different facts:
+ *
+ *   MONEY — what the customer kept. Settled when the courier's statement
+ *           lands and the collection is recorded.
+ *   GOODS — what the customer refused. Settled when the returns desk counts
+ *           the units in and puts the sound ones back on a shelf.
+ *
+ * Neither half knew about the other, and nothing in the system did. The door
+ * writes PARTIALLY_DELIVERED; `order-state.ts` maps that state to the CLOSED
+ * zone; so an order with units still in a courier's van and money still in
+ * his pocket read, everywhere, as finished. The returns desk's own branch in
+ * `/api/ops/returns` is careful NOT to rewrite the status — correctly,
+ * because stamping RETURNED would erase the delivery — but that left the
+ * completion of the first half recorded nowhere at all.
+ *
+ * So completion is DERIVED, never stored. That is this repository's rule for
+ * the zone and for the core state, and for the same reason: a fourth column
+ * drifts from the facts it summarises, and then nobody can say which of them
+ * is lying. The facts are the delivered units, the settlement status, and
+ * whether a return receipt exists.
+ * ───────────────────────────────────────────────────────────────────── */
+
+/** The per-line facts both halves are read from. Any OrderItem row fits. */
+export interface SettledLineFacts {
+  itemId?: string;
+  id?: string;
+  productId?: string;
+  productName?: string;
+  quantity: number;
+  freeQuantity: number;
+  /** Units the customer kept. Null until the door settled the parcel. */
+  deliveredQty?: number | null;
+}
+
+export interface SettledLine {
+  itemId: string;
+  productId: string;
+  productName: string;
+  /** Units that left the warehouse on this line — gift units included. */
+  shipped: number;
+  /** Units the customer kept, or null while the door has not spoken. */
+  delivered: number | null;
+  /** Units owed back to a shelf: shipped minus delivered. */
+  expectedBack: number;
+}
+
+/**
+ * WHICH PRODUCT, HOW MANY TAKEN, HOW MANY COMING BACK — per line.
+ *
+ *   «شو المنتج الي استلمو وكم قطعة وشو الي رجع»
+ *
+ * The door records this per line already. The returns desk could not read
+ * it: its screen listed every line at the full shipped quantity, so a clerk
+ * holding one refused unit was told to expect three, and the one figure that
+ * was right — the total in the next column — contradicted the list beside it.
+ */
+export function settledLines(items: SettledLineFacts[]): SettledLine[] {
+  return items.map((i) => {
+    const shipped = i.quantity + i.freeQuantity;
+    const delivered = i.deliveredQty ?? null;
+    return {
+      itemId: i.itemId ?? i.id ?? '',
+      productId: i.productId ?? '',
+      productName: i.productName ?? '',
+      shipped,
+      delivered,
+      // A line the door never spoke about owes the whole parcel back: that
+      // is the announced-return case, where nothing was handed over.
+      expectedBack: Math.max(0, shipped - (delivered ?? 0)),
+    };
+  });
+}
+
+/**
+ * How many units are actually coming back.
+ *
+ * The whole parcel, LESS whatever the customer kept at the door. Counting
+ * the full ordered quantity made every partial return read as a shortage —
+ * two units "missing" that the customer is holding and has paid for — and
+ * put that shortfall on the courier's record for goods he delivered right.
+ *
+ * The returns route held its own copy of this sum. One rule, one place: the
+ * route and the screen now read the same arithmetic, so the list of lines
+ * and the total above it cannot disagree again.
+ */
+export function expectedBackTotal(items: SettledLineFacts[]): number {
+  return settledLines(items).reduce((sum, l) => sum + l.expectedBack, 0);
+}
+
+/** Units kept and units refused, and whether the door spoke at all. */
+export function doorUnits(items: SettledLineFacts[]): {
+  delivered: number;
+  refused: number;
+  recorded: boolean;
+} {
+  const lines = settledLines(items);
+  return {
+    delivered: lines.reduce((sum, l) => sum + (l.delivered ?? 0), 0),
+    refused: lines.reduce((sum, l) => sum + l.expectedBack, 0),
+    // Null everywhere means no door settlement yet — an announced return,
+    // not a customer who refused every unit.
+    recorded: items.some((i) => i.deliveredQty != null),
+  };
+}
+
+export type HalfKey = 'MONEY' | 'GOODS';
+
+export interface DeliveryHalf {
+  key: HalfKey;
+  /** Arabic, Western digits — the screen prints this as it stands. */
+  label: string;
+  settled: boolean;
+  /** Units this half is about. */
+  units: number;
+}
+
+export interface Completion {
+  /** Only the halves this order actually has. A full delivery has one. */
+  halves: DeliveryHalf[];
+  settledCount: number;
+  /** «اتمم واحد فهو اتمم جزءي» — none of them, some, or all. */
+  degree: 'NONE' | 'PARTIAL' | 'FULL';
+  /** «ما بنغلق غير كامل» — the only thing allowed to close an order. */
+  complete: boolean;
+  awaiting: HalfKey[];
+  label: string;
+}
+
+/**
+ * Settlement states after which no money is outstanding.
+ *
+ * These are exactly the terminal states of `SETTLEMENT_TRANSITIONS` in
+ * finance-workflow.ts: the money has arrived, gone back, or been written
+ * off, and no further transition is offered from any of them.
+ *
+ * PARTIALLY_SETTLED is deliberately not one, and neither is
+ * PENDING_COLLECTION — every live order in this database sits in that
+ * second one. A partly-paid half is «اتمم جزءي», which is precisely the
+ * state the owner's rule refuses to call closed.
+ */
+export const MONEY_RESOLVED = ['SETTLED', 'REFUNDED', 'CANCELLED'] as const;
+
+const HALF_LABEL: Record<HalfKey, string> = {
+  MONEY: 'تحصيل مال ما استلمه العميل',
+  GOODS: 'استلام الراجع وعدّه في المستودع',
+};
+
+/**
+ * Is this order finished — both halves of it?
+ *
+ * Pure, so the route that writes the receipt and the screen that shows the
+ * row answer identically. It is fed units and the settlement status, and
+ * NOT the shipping status: a courier feed can write the word
+ * PARTIALLY_DELIVERED without ever recording a line, and then the units that
+ * word implies do not exist and neither half can be checked.
+ */
+export function completionOf(order: {
+  /** Units the customer kept. */
+  deliveredUnits: number;
+  /** Units refused at the door and owed back to a shelf. */
+  refusedUnits: number;
+  settlementStatus: string;
+  /** Has the returns desk counted the refused units in? */
+  hasReturnReceipt: boolean;
+}): Completion {
+  const halves: DeliveryHalf[] = [];
+
+  // The MONEY half exists because UNITS were handed over, not because a
+  // value was computed: a parcel of gift units is worth nothing, still owes
+  // the delivery fee, and the courier is still holding that fee.
+  if (order.deliveredUnits > 0) {
+    halves.push({
+      key: 'MONEY',
+      label: HALF_LABEL.MONEY,
+      settled: (MONEY_RESOLVED as readonly string[]).includes(order.settlementStatus),
+      units: order.deliveredUnits,
+    });
+  }
+  if (order.refusedUnits > 0) {
+    halves.push({
+      key: 'GOODS',
+      label: HALF_LABEL.GOODS,
+      settled: order.hasReturnReceipt,
+      units: order.refusedUnits,
+    });
+  }
+
+  const settledCount = halves.filter((h) => h.settled).length;
+  const awaiting = halves.filter((h) => !h.settled).map((h) => h.key);
+  const complete = halves.length > 0 && settledCount === halves.length;
+  const degree: Completion['degree'] =
+    halves.length === 0 || settledCount === 0 ? 'NONE' : complete ? 'FULL' : 'PARTIAL';
+
+  const label =
+    halves.length === 0
+      ? 'لم يُسجَّل تسليم على الباب بعد'
+      : complete
+        ? halves.length === 2
+          ? 'مكتمل — المستلَم والراجع كلاهما مُسوَّى'
+          : 'مكتمل'
+        : `تمّ ${settledCount} من ${halves.length} — بانتظار ${awaiting.map((k) => HALF_LABEL[k]).join(' و')}`;
+
+  return { halves, settledCount, degree, complete, awaiting, label };
+}
+
+/**
+ * Does this order need the extra question at all?
+ *
+ *   «إذا الأوردر فيه أكثر من كمية واستلم أو رفض قطعة»
+ *
+ * Two clauses, and ONE test covers both: a parcel with some units kept and
+ * some refused necessarily held more than one unit. A separate «شُحن أكثر من
+ * واحد» check was written here first and then deleted — a mutation that
+ * broke it changed nothing, which is how it was found to be unreachable, and
+ * an unreachable guard is a second rule that only looks like it is working.
+ *
+ * So the single-unit parcel is excluded by arithmetic rather than by a
+ * clause: it was taken or it was not, one yes/no answers it, and there is no
+ * second half to ask about. A parcel of three that came back whole is a
+ * plain return and is excluded the same way. The question exists for the
+ * case in between, and in this database that case is 48 of 171 orders — 41
+ * lines of 3 units and 7 of 2.
+ */
+export function needsExtraAction(items: SettledLineFacts[]): boolean {
+  const units = doorUnits(items);
+  return units.recorded && units.delivered > 0 && units.refused > 0;
+}
+
+/**
+ * THE EXTRA ACTION.
+ *
+ *   «إذا الأوردر فيه أكثر من كمية واستلم أو رفض قطعة، حط إجراء إضافي مثل:
+ *    هل الطلب استلم؟ نعم / لا»
+ *
+ * An order of three units that came back as two-kept-one-refused cannot be
+ * answered by the single yes/no the tracking screen offers. It needs a second
+ * one, asked later, about the half that is still open — and the words have to
+ * be the same in the screen that asks it and the route that records the
+ * answer, which is why they live here and not in either.
+ *
+ * THE CALLER NAMES ITS HALF. This picked the first open half instead, and
+ * that is wrong for every screen that owns one: the returns desk was handed
+ * the money question, because MONEY happens to be pushed first. A desk asks
+ * about the half it is standing at, and gets nothing back when that half is
+ * already settled — which is also how it knows not to ask.
+ */
+export function extraAction(
+  completion: Completion,
+  half: HalfKey
+): { key: HalfKey; question: string; yes: string; no: string } | null {
+  if (!completion.awaiting.includes(half)) return null;
+  return half === 'GOODS'
+    ? {
+        key: 'GOODS',
+        question: 'هل رجعت القطع المرفوضة إلى المستودع؟',
+        yes: 'نعم — عددتها واستلمتها',
+        no: 'لا — لم تصل بعد',
+      }
+    : {
+        key: 'MONEY',
+        question: 'هل وصل مال ما استلمه العميل؟',
+        yes: 'نعم — حُصِّل',
+        no: 'لا — بانتظار كشف شركة الشحن',
+      };
 }

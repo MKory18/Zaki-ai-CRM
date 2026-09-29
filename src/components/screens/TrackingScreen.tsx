@@ -12,6 +12,16 @@ import { Rows } from '@/components/ui/Rows';
 import { RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiEyeLine, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 import { ALERT_AR, ALERT_CONFIRM_AR, type TrackingAlertKind } from '@/lib/tracking-alert';
 import { useAsk, useConfirm } from '@/components/ui/Confirm';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { HealthChip } from '@/components/ui/HealthChip';
+import {
+  MATCHES,
+  URGENCY,
+  byUrgency,
+  canCollect,
+  trackingUrgency,
+  type ConditionKey,
+} from '@/lib/tracking-priority';
 
 /**
  * /ops/tracking — search by order, reference, barcode, customer or phone.
@@ -76,12 +86,18 @@ const STATUS_LABEL: Record<string, string> = {
   RETURNED: 'مرتجع',
 };
 
-type TaskFilter = 'all' | 'late' | 'failed' | 'returning' | 'nobarcode' | 'uncollected';
+/**
+ * The filter is «الكل» or one of the conditions, and the conditions are named
+ * in one place so a chip cannot drift from the rank that sorts the list.
+ */
+type TaskFilter = 'all' | ConditionKey;
 
+/** A chip's colour, from the same four tones the whole product judges with. */
 const TASK_TONE: Record<string, string> = {
-  rose: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]',
-  amber: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]',
-  emerald: 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]',
+  bad: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]',
+  ok: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]',
+  good: 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]',
+  unknown: 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]',
 };
 
 const COLLECTION_LABEL: Record<string, string> = {
@@ -233,26 +249,58 @@ export function TrackingScreen() {
     void load();
   }, [load]);
 
-  // Only a delivered parcel owes anything, and only once. A returned one
-  // owes nothing; one still in transit has not been collected yet.
-  // A partial delivery owes money too — the customer took some lines and paid
-  // for them at the door. Leaving it out hid the only button that records the
-  // cash arriving, so the debt stayed in the courier's list unclearable.
-  const canCollect = (o: Row) =>
-    ['DELIVERED', 'PARTIALLY_DELIVERED'].includes(o.shippingStatus) && o.settlementStatus !== 'SETTLED';
+  /**
+   * THE WORK WAITING, FROM ONE DEFINITION OF EACH CONDITION.
+   *
+   * Every predicate here used to be written inline, and `canCollect` was
+   * written a second time for the checkbox. They live in
+   * `tracking-priority.ts` now, which is also what ranks and sorts the rows —
+   * so a chip and the order of the list can never disagree about what
+   * «متأخرة» means.
+   *
+   * The two alert conditions are new chips. They were the most important
+   * thing on the row and the only way to find them was to scroll: measured,
+   * 9 rows of 171 carry one and all 9 were unacknowledged.
+   *
+   * A chip with nothing in it is not drawn. Seven greyed-out targets above
+   * the list is most of a phone screen spent saying "nothing here", and
+   * «الكل» already carries the total.
+   */
+  /**
+   * WHO WE ARE RINGING AND ABOUT WHAT — described once.
+   *
+   * The same buttons are drawn in two places: a column on the desk and a
+   * full-width row on the card. Two copies of this object is two message
+   * templates that fill differently depending on which screen width somebody
+   * happened to open.
+   */
+  const contactFor = (o: Row) => ({
+    phone: o.customer.phone,
+    countryCode: data?.dialCode ?? null,
+    context: {
+      orderNumber: o.merchantRef ?? o.orderNumber,
+      customerName: o.customer.fullName,
+      amount: o.totalAmount,
+      currency: o.currency,
+      courier: o.deliveryProvider?.name ?? null,
+      barcode: o.trackingNumber,
+      region: o.region?.name ?? o.customer.city,
+    },
+  });
 
-  // The work waiting in this screen, each one a thing somebody must do.
   const all = data?.orders ?? [];
-  const tasks: { key: TaskFilter; label: string; rows: Row[]; tone: string }[] = [
-    { key: 'late', label: 'متأخرة', rows: all.filter((o) => o.late), tone: 'rose' },
-    { key: 'failed', label: 'تعذّر التوصيل', rows: all.filter((o) => o.shippingStatus === 'FAILED_DELIVERY'), tone: 'rose' },
-    { key: 'returning', label: 'بانتظار الإرجاع', rows: all.filter((o) => o.shippingStatus === 'RETURN_REQUESTED'), tone: 'amber' },
-    // Shipped with no barcode: the courier's statement can never be matched
-    // to it, so it would silently fall out of settlement.
-    { key: 'nobarcode', label: 'بلا باركود', rows: all.filter((o) => !o.trackingNumber && o.shippingStatus !== 'READY_FOR_PICKUP'), tone: 'amber' },
-    { key: 'uncollected', label: 'بانتظار التحصيل', rows: all.filter(canCollect), tone: 'emerald' },
-  ];
-  const visible = task === 'all' ? all : (tasks.find((t) => t.key === task)?.rows ?? []);
+  const tasks = (['CANCELLED', 'CHANGED', 'FAILED', 'RETURNING', 'LATE', 'NO_BARCODE', 'COLLECT'] as ConditionKey[])
+    .map((key) => ({ key, rows: all.filter(MATCHES[key]) }))
+    .filter((t) => t.rows.length > 0);
+
+  // A filter on a condition that no longer holds for any row is a dead end:
+  // its chip is gone, so the list reads as empty with nothing highlighted to
+  // press back out of. Acknowledging the last alert does exactly that.
+  const openTask: TaskFilter = task !== 'all' && !tasks.some((t) => t.key === task) ? 'all' : task;
+
+  // Worst first, longest-waiting within that — see `byUrgency` for why the
+  // API's oldest-first order is kept as the tiebreak rather than dropped.
+  const visible = (openTask === 'all' ? all : all.filter(MATCHES[openTask])).slice().sort(byUrgency);
   const collectable = visible.filter(canCollect);
   const chosen = collectable.filter((o) => selected[o.id]);
   const netOfChosen = Number(
@@ -308,7 +356,7 @@ export function TrackingScreen() {
           <button
             onClick={() => { setTask('all'); setSelected({}); }}
             className={`min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1 rounded-full border ${
-              task === 'all' ? 'bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] border-[var(--sys-heading)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
+              openTask === 'all' ? 'bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] border-[var(--sys-heading)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
             }`}
           >
             الكل {all.length}
@@ -317,16 +365,14 @@ export function TrackingScreen() {
             <button
               key={t.key}
               onClick={() => { setTask(t.key); setSelected({}); }}
-              disabled={t.rows.length === 0}
-              className={`min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1 rounded-full border disabled:opacity-40 ${
-                task === t.key
+              title={URGENCY[t.key].why}
+              className={`min-h-11 md:min-h-0 inline-flex items-center text-xs px-2.5 py-1 rounded-full border ${
+                openTask === t.key
                   ? 'bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] border-[var(--sys-heading)]'
-                  : t.rows.length > 0
-                    ? TASK_TONE[t.tone]
-                    : 'border-[var(--sys-border)] text-[var(--sys-muted)]'
+                  : TASK_TONE[URGENCY[t.key].tone]
               }`}
             >
-              {t.label} {t.rows.length}
+              {URGENCY[t.key].label} {t.rows.length}
             </button>
           ))}
         </div>
@@ -372,8 +418,66 @@ export function TrackingScreen() {
         <Rows
           rows={visible}
           keyOf={(o) => o.id}
-          empty="لا توجد شحنات مطابقة."
-          alert={(o) => o.late}
+          empty={
+            <EmptyState
+              title="لا شحناتٍ في هذا المرشِّح"
+              why={
+                openTask === 'all'
+                  ? 'لا شحنة تطابق البحث أو الحالة المختارة أعلاه. وسّع البحث أو اختر «الكل» في الحالة.'
+                  : `لا شحنة ${URGENCY[openTask].label} الآن. اضغط «الكل» لترى كل ما هو قيد الشحن.`
+              }
+            />
+          }
+          /*
+            THE RED MEANS THE ALERT NOW, NOT LATENESS.
+            Measured: 152 of 171 rows are late, so tinting late rows red
+            tinted nine rows in ten — which is not a signal, it is the
+            background colour. The 9 rows carrying a live alert were the same
+            red as everything else. Lateness is still said, loudly, in its own
+            column: destructive colour, the day count, and «متأخرة N يوماً».
+          */
+          alert={(o) => !!o.alert && !o.alert.acknowledged}
+          /*
+            AND THE ALERT IS THE FIRST THING ON THE CARD, WITH ITS BUTTON.
+            On a phone it used to be a small chip beside the reference and the
+            button was a text link at the bottom of the card among five
+            others. All 9 live alerts in the database are unacknowledged,
+            which is what a button nobody can find looks like.
+          */
+          notice={(o) =>
+            o.alert && (
+              <div
+                className={`rounded-lg border p-2.5 ${
+                  o.alert.acknowledged ? ALERT_TONE[o.alert.kind].seen : ALERT_TONE[o.alert.kind].live
+                }`}
+              >
+                <p className="text-sm font-bold leading-relaxed">
+                  {ALERT_AR[o.alert.kind]}
+                  {o.alert.acknowledged && ' · رآه'}
+                </p>
+                {!o.alert.acknowledged && (
+                  <>
+                    {/* What to DO, not what the button writes — the dialog
+                        says that when it is pressed. A phone has room for one
+                        sentence and it should be the actionable one. */}
+                    <p className="mt-0.5 text-xs leading-relaxed">{URGENCY[o.alert.kind].why}</p>
+                    <button
+                      onClick={() => void acknowledge(o)}
+                      disabled={acking === o.id}
+                      className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-current px-3 text-sm font-bold disabled:opacity-50"
+                    >
+                      {acking === o.id ? (
+                        <RiLoader4Line className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RiEyeLine className="h-4 w-4" aria-hidden />
+                      )}
+                      أدركتُ الإجراء
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          }
           selection={{
             canSelect: canCollect,
             isSelected: (o) => !!selected[o.id],
@@ -389,9 +493,32 @@ export function TrackingScreen() {
                   <span dir="ltr" className="font-medium text-[var(--sys-heading)]">
                     {o.merchantRef ?? o.orderNumber}
                   </span>
+                  {/*
+                    WHY THIS ROW IS IN FRONT OF YOU, BESIDE ITS NAME.
+                    The list is sorted by this, so the chip is also what
+                    explains the order: a run of «أُلغي والطرد يسير», then
+                    «تعذّر التوصيل», then «متأخرة». Without it the new order
+                    would look arbitrary.
+                  */}
+                  {trackingUrgency(o) !== 'NONE' && (
+                    <HealthChip
+                      className="mt-1 flex"
+                      health={{
+                        tone: URGENCY[trackingUrgency(o)].tone,
+                        label: URGENCY[trackingUrgency(o)].label,
+                        why: URGENCY[trackingUrgency(o)].why,
+                      }}
+                    />
+                  )}
+                  {/*
+                    On the desk the alert is a cell read at a glance beside
+                    everything else. On a phone it is the card's notice, at the
+                    top and full width with its own button — so this one is the
+                    desk's copy and says so, rather than being drawn twice.
+                  */}
                   {o.alert && (
                     <span
-                      className={`mt-1 block w-fit rounded-md border px-2 py-0.5 text-xs font-semibold ${
+                      className={`mt-1 hidden w-fit rounded-md border px-2 py-0.5 text-xs font-semibold md:block ${
                         o.alert.acknowledged
                           ? ALERT_TONE[o.alert.kind].seen
                           : ALERT_TONE[o.alert.kind].live
@@ -408,6 +535,10 @@ export function TrackingScreen() {
             {
               key: 'barcode',
               label: 'الباركود',
+              // Measured: null on 100% of the default in-flight view and 15%
+              // overall, so on a phone this was a labelled line reading «—».
+              // The «بلا باركود» chip is how the missing ones are found.
+              hideOnPhone: true,
               render: (o) => (
                 <span dir="ltr" className="text-[var(--sys-muted-foreground)]">
                   {o.trackingNumber ?? '—'}
@@ -470,6 +601,9 @@ export function TrackingScreen() {
             {
               key: 'attempts',
               label: 'المحاولات',
+              // Measured: 0 on 97% of 171 rows and never above 1. A line that
+              // reads «0» on every card is a line nobody reads twice.
+              hideOnPhone: true,
               render: (o) => (
                 <span className="text-xs">
                   <span
@@ -486,6 +620,11 @@ export function TrackingScreen() {
             {
               key: 'collection',
               label: 'حالة التحصيل',
+              // Measured: the same single value on 91% of rows. What actually
+              // varies is whether money is waiting, and that is now the
+              // «بانتظار التحصيل» chip, the row's own rank, and the collect
+              // bar above the list.
+              hideOnPhone: true,
               render: (o) => COLLECTION_LABEL[o.collectionStatus] ?? o.collectionStatus,
             },
             {
@@ -500,39 +639,44 @@ export function TrackingScreen() {
             {
               key: 'contact',
               label: 'تواصل',
-              // On a desk it is a column of small buttons; on a card it is a
-              // row of its own under the actions, where a thumb can hit it.
-              render: (o) => (
-                <ContactButtons
-                  compact
-                  phone={o.customer.phone}
-                  countryCode={data.dialCode}
-                  context={{
-                    orderNumber: o.merchantRef ?? o.orderNumber,
-                    customerName: o.customer.fullName,
-                    amount: o.totalAmount,
-                    currency: o.currency,
-                    courier: o.deliveryProvider?.name ?? null,
-                    barcode: o.trackingNumber,
-                    region: o.region?.name ?? o.customer.city,
-                  }}
-                />
-              ),
+              /*
+                ON A DESK IT IS A COLUMN. ON A CARD IT IS A ROW OF ITS OWN.
+                That is what the comment here always said, and it was not what
+                happened: a card renders every visible column as a
+                label/value line, so the one action this screen exists for was
+                squeezed into the right half of a «تواصل» row. It is hidden
+                here and rendered full width in `actions` below, from the one
+                `contactFor` description of it — so the two cannot drift.
+              */
+              hideOnPhone: true,
+              render: (o) => <ContactButtons compact {...contactFor(o)} />,
             },
           ]}
           actions={(o) => (
             <>
               {/*
+                THE BUTTONS THIS SCREEN EXISTS FOR, WHERE A THUMB IS.
+                Full width and first on the card, hidden on the desk where the
+                «تواصل» column already carries them. Chasing a parcel is a
+                phone call; it should not be the hardest thing to press.
+              */}
+              <div className="w-full md:hidden">
+                <ContactButtons {...contactFor(o)} />
+              </div>
+              {/*
                 «مجرد ما تشوف، لازم زر» — and pressing it records who saw
                 it, on the order, rather than hiding a colour. A warning
                 anybody can switch off is a warning people learn to switch
                 off; this one asks first and says what it will write.
+
+                On a phone the card's notice carries this button at the TOP,
+                full width, so this copy is the desk's.
               */}
               {o.alert && !o.alert.acknowledged && (
                 <button
                   onClick={() => void acknowledge(o)}
                   disabled={acking === o.id}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-primary)] hover:underline disabled:opacity-50"
+                  className="hidden min-h-11 items-center gap-1 text-xs font-semibold text-[var(--sys-primary)] hover:underline disabled:opacity-50 md:inline-flex md:min-h-0"
                 >
                   {acking === o.id ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiEyeLine className="w-4 h-4" />}
                   أدركتُ الإجراء
@@ -555,10 +699,18 @@ export function TrackingScreen() {
               */}
               {['SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.shippingStatus) && (
                 <>
+                  {/*
+                    AND THEY STOP LOOKING LIKE THE SAME LINK.
+                    «استلم» and «رفض / ملغى» sat next to each other as two
+                    bare text links about sixteen pixels tall, eight pixels
+                    apart. A mis-tap there marks a parcel returned. Each is a
+                    bordered target now, 44px on a phone, sharing the row
+                    evenly so neither is the small one.
+                  */}
                   <button
                     onClick={() => void settle(o, 'ALL')}
                     disabled={settling === o.id}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-success)] hover:underline disabled:opacity-50"
+                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--sys-success)]/40 bg-[var(--sys-success-soft)] px-3 text-xs font-bold text-[var(--sys-success)] disabled:opacity-50 md:min-h-0 md:flex-none md:border-0 md:bg-transparent md:px-0 md:hover:underline"
                     title="استلم الطلب كاملاً — يُسجَّل ما حدث، والمبلغ يُكتب عند مطابقة كشف الشركة"
                   >
                     {settling === o.id ? (
@@ -571,7 +723,7 @@ export function TrackingScreen() {
                   <button
                     onClick={() => void settle(o, 'NONE')}
                     disabled={settling === o.id}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-destructive)] hover:underline disabled:opacity-50"
+                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 text-xs font-bold text-[var(--sys-destructive)] disabled:opacity-50 md:min-h-0 md:flex-none md:border-0 md:bg-transparent md:px-0 md:hover:underline"
                     title="رفضه أو أُلغي — لم يستلم شيئاً، ويصير مرتجعاً"
                   >
                     <RiCloseLine className="w-4 h-4" aria-hidden />
@@ -579,7 +731,7 @@ export function TrackingScreen() {
                   </button>
                   <button
                     onClick={() => setDeliverFor(o)}
-                    className="text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)] hover:underline"
+                    className="inline-flex min-h-11 items-center text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)] hover:underline md:min-h-0"
                     title="استلم بعض البنود فقط — أشّر ما أخذه بالضبط"
                   >
                     استلم جزءاً
@@ -588,7 +740,7 @@ export function TrackingScreen() {
               )}
               <button
                 onClick={() => setTransferFor(o)}
-                className="text-xs text-[var(--sys-primary)] hover:underline"
+                className="inline-flex min-h-11 items-center text-xs text-[var(--sys-primary)] hover:underline md:min-h-0"
                 title={
                   o.deliveryProvider?.kind === 'AGENT'
                     ? 'استلام من المندوب وتحويلها لجهة أخرى'
@@ -601,7 +753,7 @@ export function TrackingScreen() {
               <button
                 onClick={() => void addNote(o)}
                 disabled={noting === o.id}
-                className="inline-flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)] hover:underline disabled:opacity-50"
+                className="inline-flex min-h-11 items-center gap-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)] hover:underline disabled:opacity-50 md:min-h-0"
                 title="اكتب ما حدث — تُضاف كملاحظة داخلية على الطلب ولا تُغيّر حالته"
               >
                 {noting === o.id ? (
