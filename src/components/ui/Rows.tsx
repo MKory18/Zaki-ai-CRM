@@ -165,12 +165,33 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
               {actions && <th className="px-3 py-2" />}
             </tr>
           </thead>
+          {/*
+            A ROW THAT OPENS SOMETHING IS A CONTROL, AND ONLY THEN.
+            Every accessibility attribute below is conditional on
+            `onRowClick`: making a row that does nothing focusable would
+            put a tab stop on every line of every table in the product.
+          */}
           <tbody className="divide-y divide-[var(--sys-border)]">
             {rows.map((row) => (
               <tr
                 key={keyOf(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={`${onRowClick ? 'cursor-pointer hover:bg-[var(--sys-surface)]' : ''} ${
+                role={onRowClick ? 'button' : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        // Only when the row itself has focus — a key pressed
+                        // in a checkbox or a button inside it is theirs.
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+                className={`${onRowClick ? 'cursor-pointer hover:bg-[var(--sys-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sys-primary)] focus-visible:ring-inset' : ''} ${
                   alert?.(row) ? 'bg-[var(--sys-destructive-soft)]/40' : ''
                 }`}
               >
@@ -223,7 +244,24 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
           <li
             key={keyOf(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
+            role={onRowClick ? 'button' : undefined}
+            tabIndex={onRowClick ? 0 : undefined}
+            onKeyDown={
+              onRowClick
+                ? (e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onRowClick(row);
+                    }
+                  }
+                : undefined
+            }
             className={`rounded-lg border bg-[var(--sys-card)] p-3 ${
+              onRowClick
+                ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sys-primary)]'
+                : ''
+            } ${
               alert?.(row)
                 ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]/40'
                 : 'border-[var(--sys-border)]'

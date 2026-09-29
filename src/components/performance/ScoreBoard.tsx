@@ -45,9 +45,32 @@ function Row({ person, bars }: { person: Person; bars: BoardData['bars'] }) {
 
   return (
     <>
+      {/*
+        The row expands a person's score. An unmeasured row expands
+        nothing, so it is not a control and takes no focus — which is also
+        why every attribute below is conditional.
+      */}
       <tr
         onClick={() => !unmeasured && setOpen(!open)}
-        className={unmeasured ? '' : 'cursor-pointer hover:bg-[var(--sys-surface)]'}
+        role={unmeasured ? undefined : 'button'}
+        tabIndex={unmeasured ? undefined : 0}
+        aria-expanded={unmeasured ? undefined : open}
+        onKeyDown={
+          unmeasured
+            ? undefined
+            : (e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setOpen(!open);
+                }
+              }
+        }
+        className={
+          unmeasured
+            ? ''
+            : 'cursor-pointer hover:bg-[var(--sys-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sys-primary)] focus-visible:ring-inset'
+        }
       >
         <td className="px-3 py-2 tabular-nums text-[var(--sys-muted)]">{unmeasured ? '—' : person.rank}</td>
         <td className="px-3 py-2 font-medium text-[var(--sys-heading)]">{person.name}</td>

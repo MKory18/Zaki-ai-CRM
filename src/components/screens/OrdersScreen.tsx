@@ -582,10 +582,35 @@ export function OrdersScreen() {
             ) : (
               <ul className="divide-y divide-[var(--sys-border)]">
                 {orders.map((order) => (
+                  /*
+                   * OPENING AN ORDER IS THE POINT OF THIS SCREEN, AND IT WAS
+                   * REACHABLE ONLY BY MOUSE.
+                   *
+                   * A row is not a control until it says so: with no
+                   * `tabIndex` the Tab key walks straight past every order
+                   * on the page, and with no key handler Enter and Space do
+                   * nothing. A person working the queue from the keyboard —
+                   * or anyone using a screen reader, which announces a bare
+                   * `<li>` as a list item and offers no way to activate it —
+                   * could not open a single order from here.
+                   *
+                   * Space is prevented as well as handled, or it scrolls the
+                   * page under the person instead of opening the row.
+                   */
                   <li
                     key={order.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`افتح الطلب ${order.orderNumber}`}
                     onClick={() => setSelectedOrderId(order.id)}
-                    className={`px-4 py-3 cursor-pointer transition-colors ${
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return;
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedOrderId(order.id);
+                      }
+                    }}
+                    className={`px-4 py-3 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sys-primary)] focus-visible:ring-inset ${
                       selected.has(order.id) ? 'bg-[var(--sys-primary-soft)]' : 'hover:bg-[var(--sys-surface)]'
                     }`}
                   >
