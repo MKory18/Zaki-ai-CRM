@@ -219,6 +219,27 @@ export const FONT = {
 };
 
 // ── reading the product's palettes ───────────────────────────────────────
+/**
+ * A TOKEN WHOSE VALUE POINTS AT ANOTHER TOKEN MUST POINT AT OURS.
+ *
+ * `--sys-sidebar-scrollbar` is declared as `var(--sys-scrollbar)` in the
+ * product — correct there, and poison here: the studio is a separate page
+ * that has never heard of `--sys-` anything, so the reference resolves to
+ * nothing and the scrollbar loses its colour again, this time silently and
+ * only in the studio.
+ *
+ * Caught by the owner reading the output. The rewrite runs over every
+ * value, not just the ones I know about today, and a test asserts the
+ * string `--sys-` never appears in the generated CSS at all.
+ */
+function repoint(value, rename) {
+  return value.replace(/var\(--sys-([a-z0-9-]+)\)/g, (whole, name) => {
+    const to = rename[name];
+    if (!to) throw new Error(`a token points at --sys-${name}, which has no --zk- name`);
+    return `var(--zk-${to})`;
+  });
+}
+
 function paletteOf(css, selector) {
   const start = css.indexOf(selector);
   if (start === -1) throw new Error(`palette not found in system.css: ${selector}`);
@@ -245,8 +266,28 @@ export function build() {
         unmapped.add(key);
         continue;
       }
-      named[to] = value;
+      named[to] = repoint(value, RENAME);
     }
+    /**
+     * THE ONE BORDER THAT IS NOT DECORATION.
+     *
+     * WCAG 1.4.11 asks 3:1 of the boundary of a control a person has to
+     * find and click. Measured against the surface an input sits on,
+     * `color-border-strong` is 2.74:1 in the dark palette, **1.87:1 in the
+     * light one and 1.89:1 in the calm one** — and the plain `color-border`
+     * is 1.25:1. None of them passes, and the light palettes are not close.
+     *
+     * `color-text-faint` is the only colour already in the product that
+     * clears 3:1 in all three (5.16 / 5.05 / 5.13), so this points AT it
+     * rather than introducing a fourth grey. A reference, not a copy: one
+     * colour, one place to change it.
+     *
+     * The decorative borders keep their values on purpose. 1.4.11 is about
+     * the boundary of a CONTROL, and a rule between two paragraphs that
+     * met 3:1 would draw the eye to the furniture instead of the content.
+     */
+    named['color-border-input'] = 'var(--zk-color-text-faint)';
+
     themes[t.key] = { selector: t.selector, from: t.from, note: t.note, tokens: named };
   }
 
@@ -353,11 +394,18 @@ function jsonFor(built) {
          * studio does not guess. Both are real distinctions in the product,
          * and both are easy to use backwards.
          */
+        contrast: {
+          note: 'مقيسٌ مقابل السطح الذي يجلس عليه الحقل (color-surface-card). القاعدة WCAG 1.4.11 لحدود عناصر التحكّم: 3:1.',
+          'color-border-input': { dark: 5.16, light: 5.05, calm: 5.13, passes: true, isA: 'var(--zk-color-text-faint)' },
+          'color-border-strong': { dark: 2.74, light: 1.87, calm: 1.89, passes: false, why: 'فاصلٌ زخرفيٌّ لا حدَّ عنصرِ تحكّم — والقاعدة لا تسري عليه' },
+          'color-border': { dark: 1.48, light: 1.25, calm: 1.29, passes: false, why: 'الحدُّ الافتراضيّ، زخرفيٌّ كذلك' },
+        },
         glossary: {
           'color-text-muted': 'النصُّ الثانويُّ المقروء: سطرُ شرحٍ تحت عنوان، عمودٌ ثانٍ في جدول. يُقرأ بلا جهد.',
           'color-text-faint': 'أخفتُ منه، ولغيرِ المقروء: نائبُ الحقل، الفاصلةُ بين جزأين، «—» مكانَ قيمةٍ غائبة. لا تضع فيه معلومةً يحتاجها القارئ.',
           'color-border': 'الحدُّ الافتراضيُّ لكلّ شيء: بطاقة، حقل، صفّ.',
-          'color-border-strong': 'حدٌّ يُقصد أن يُرى: فاصلٌ بين قسمين، أو إطارُ شيءٍ مُنتقى. استعمالُه في كلّ مكانٍ يُلغي معناه.',
+          'color-border-strong': 'حدٌّ يُقصد أن يُرى: فاصلٌ بين قسمين، أو إطارُ شيءٍ مُنتقى. استعمالُه في كلّ مكانٍ يُلغي معناه. وهو زخرفيٌّ — لا تحدّ به حقلاً.',
+          'color-border-input': 'حدُّ الحقل والزرّ وكلِّ ما يُنقَر. الوحيدُ الملزَم بتباين 3:1، ويشير إلى text-faint لأنّه اللونُ الوحيدُ الموجود الذي يجتازه في اللوحات الثلاث.',
           'color-surface-sunken': 'سطحٌ أغمقُ من البطاقة داخلها: رأسُ جدول، شريطُ تلميح.',
           'color-surface-raised': 'سطحٌ أفتحُ منها: صفٌّ مُحدَّد، أو زرٌّ ثانويٌّ عليه.',
         },

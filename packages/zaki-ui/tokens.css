@@ -96,10 +96,11 @@
   --zk-color-text-sidebar: #9FB6C2;
   --zk-color-scrollbar: #1C3A52;
   --zk-color-scrollbar-hover: #597183;
-  --zk-color-scrollbar-sidebar: var(--sys-scrollbar);
-  --zk-color-scrollbar-sidebar-hover: var(--sys-scrollbar-hover);
+  --zk-color-scrollbar-sidebar: var(--zk-color-scrollbar);
+  --zk-color-scrollbar-sidebar-hover: var(--zk-color-scrollbar-hover);
   --zk-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.55);
   --zk-shadow-overlay: 0 2px 8px rgb(0 0 0 / 0.45), 0 16px 40px rgb(0 0 0 / 0.65);
+  --zk-color-border-input: var(--zk-color-text-faint);
 }
 
 /* ── light: لوحة «النهار» ─────────────────────────────── */
@@ -136,10 +137,11 @@
   --zk-color-text-sidebar: #4A6272;
   --zk-color-scrollbar: #D5E1E6;
   --zk-color-scrollbar-hover: #99acba;
-  --zk-color-scrollbar-sidebar: var(--sys-scrollbar);
-  --zk-color-scrollbar-sidebar-hover: var(--sys-scrollbar-hover);
+  --zk-color-scrollbar-sidebar: var(--zk-color-scrollbar);
+  --zk-color-scrollbar-sidebar-hover: var(--zk-color-scrollbar-hover);
   --zk-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.06), 0 1px 3px rgb(12 50 82 / 0.08);
   --zk-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.07), 0 12px 32px rgb(12 50 82 / 0.14);
+  --zk-color-border-input: var(--zk-color-text-faint);
 }
 
 /* ── calm: لوحة «الهادئة» — فاتحةٌ ثانيةٌ موجودةٌ في المنتج ─────────────────────────────── */
@@ -176,10 +178,11 @@
   --zk-color-text-sidebar: #566369;
   --zk-color-scrollbar: #D8CEBC;
   --zk-color-scrollbar-hover: #9b9f9c;
-  --zk-color-scrollbar-sidebar: var(--sys-scrollbar);
-  --zk-color-scrollbar-sidebar-hover: var(--sys-scrollbar-hover);
+  --zk-color-scrollbar-sidebar: var(--zk-color-scrollbar);
+  --zk-color-scrollbar-sidebar-hover: var(--zk-color-scrollbar-hover);
   --zk-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.05), 0 1px 3px rgb(12 50 82 / 0.07);
   --zk-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.06), 0 12px 32px rgb(12 50 82 / 0.12);
+  --zk-color-border-input: var(--zk-color-text-faint);
 }
 
 /*

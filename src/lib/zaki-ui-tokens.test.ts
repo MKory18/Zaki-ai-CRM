@@ -96,6 +96,49 @@ describe('what the package promises about itself', () => {
     }
   });
 
+  /**
+   * THE PACKAGE NEVER SPEAKS THE PRODUCT'S TOKEN NAMES.
+   *
+   * `--sys-sidebar-scrollbar` is declared in the product as
+   * `var(--sys-scrollbar)`, and copying that value across verbatim carried
+   * a reference to a name the STUDIO has never heard of: it resolves to
+   * nothing there, and the scrollbar loses its colour again — silently, and
+   * only on the machine nobody is testing on.
+   *
+   * Asserted over the whole file rather than over the tokens I know about,
+   * because the next token to point at another one will be written by
+   * somebody who has not read this.
+   */
+  it('references no --sys- name anywhere — the studio has never heard of them', () => {
+    const css = readFileSync(join(PKG, 'tokens.css'), 'utf8');
+    const json = readFileSync(join(PKG, 'tokens.json'), 'utf8');
+    expect(css, 'tokens.css يشير إلى رمزٍ من المنتج').not.toContain('--sys-');
+    expect(json, 'tokens.json يشير إلى رمزٍ من المنتج').not.toContain('--sys-');
+  });
+
+  /**
+   * AND THE ONE BORDER A PERSON HAS TO FIND IS ACTUALLY VISIBLE.
+   *
+   * WCAG 1.4.11 asks 3:1 of a control's boundary. Measured against the
+   * surface an input sits on, the product's `border-strong` is 2.74:1 dark,
+   * 1.87:1 light and 1.89:1 calm — so a fourth grey was NOT invented;
+   * `border-input` points at `text-faint`, the only colour already present
+   * that clears 3:1 in all three.
+   */
+  it('gives an input a border that meets 3:1, without inventing a colour', () => {
+    const d = data();
+    for (const [name, theme] of Object.entries(d.themes as Record<string, { tokens: Record<string, string> }>)) {
+      expect(theme.tokens['color-border-input'], name).toBe('var(--zk-color-text-faint)');
+    }
+    const c = d.contrast['color-border-input'];
+    expect(c.passes).toBe(true);
+    for (const t of ['dark', 'light', 'calm']) expect(c[t], t).toBeGreaterThanOrEqual(3);
+    // And the decorative borders are recorded as NOT passing, with why —
+    // an unmeasured claim of accessibility is worse than none.
+    expect(d.contrast['color-border-strong'].passes).toBe(false);
+    expect(d.contrast['color-border-strong'].why.length).toBeGreaterThan(10);
+  });
+
   it('and the sidebar scrollbar now has a colour in every theme', () => {
     const d = data();
     for (const theme of Object.values(d.themes) as { tokens: Record<string, string> }[]) {
@@ -111,10 +154,21 @@ describe('what the package promises about itself', () => {
   it('carries the product’s own values, character for character', () => {
     const system = repoFile('src/app/(system)/system.css');
     const d = data();
+    let checked = 0;
     for (const [name, value] of Object.entries(d.themes.dark.tokens as Record<string, string>)) {
       if (!name.startsWith('color-')) continue;
+      // A token whose value points at another token carries no colour of
+      // its own — it is checked by «no --sys- anywhere» and by the
+      // reference being one of ours. Only literals are compared here.
+      if (value.startsWith('var(')) {
+        expect(value, name).toMatch(/^var\(--zk-[a-z0-9-]+\)$/);
+        continue;
+      }
       expect(system, `${name} ليست قيمةً موجودةً في المنتج`).toContain(value);
+      checked++;
     }
+    // And the check is not vacuous: most of them ARE literals.
+    expect(checked).toBeGreaterThan(20);
   });
 
   it('invents no colour the product does not have', () => {
