@@ -12,12 +12,26 @@ import { ProductThumb } from '@/components/ui/ProductThumb';
 import { useApp } from '@/context/AppContext';
 import { productName } from '@/lib/product-name';
 import Link from 'next/link';
-import { RiAddCircleLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiPencilLine, RiSearchLine, RiStarLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiMedalLine, RiPencilLine, RiSearchLine, RiStarLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { CategoryPicker } from '@/components/products/CategoryPicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Rows } from '@/components/ui/Rows';
+import { HealthChip } from '@/components/ui/HealthChip';
+import type { CatalogueReadiness, ProductGrade } from '@/lib/product-grade';
+
+/**
+ * What the grades route answers with, so the screen never guesses a shape.
+ */
+interface GradeAnswer {
+  window: { start: string | null; end: string | null; days: number | null };
+  minSample: number;
+  salesVisible: boolean;
+  costVisible: boolean;
+  grades: ProductGrade[];
+  readiness: CatalogueReadiness;
+}
 
 export function ProductsScreen() {
   const { t, locale } = useApp();
@@ -27,6 +41,17 @@ export function ProductsScreen() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  /**
+   * THE GRADE, FETCHED — NEVER COMPUTED HERE.
+   *
+   * Not one number in this column is worked out on this side: the delivery
+   * rate, the margin, the value of a delivered order and every sentence
+   * printed under them arrive from `/api/products/grades`, which reads the
+   * orders and calls `product-grade.ts`. A screen that recomputed any of
+   * them would be a second answer to the same question, which is how this
+   * page came to print two different «متوسط تكلفة الوحدة» a fortnight ago.
+   */
+  const [gradeData, setGradeData] = useState<GradeAnswer | null>(null);
 
   /**
    * Whether this viewer was given costs at all — asked of the DATA, not of
@@ -132,13 +157,34 @@ export function ProductsScreen() {
     }
   };
 
+  /**
+   * The grade for exactly the products on screen — never for a set the list
+   * is not showing, or the number beside a name would belong to another row.
+   */
+  const loadGrades = async (ids: string[]) => {
+    setGradeData(null);
+    if (ids.length === 0) return;
+    try {
+      const res = await fetch(`/api/products/grades?ids=${ids.join(',')}`);
+      // A refusal here is the ordinary case for somebody who may see the
+      // catalogue but not the reports — not a failure worth a red box over
+      // the list.
+      if (!res.ok) return;
+      setGradeData(await res.json());
+    } catch {
+      // Same reasoning: the catalogue must render even when the grade cannot.
+    }
+  };
+
   const loadProducts = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/products');
       if (res.ok) {
         const data = await res.json();
-        setProducts(data.products || []);
+        const list: any[] = data.products || [];
+        setProducts(list);
+        void loadGrades(list.map((p) => p.id));
       }
     } catch (e) {
       console.error(e);
@@ -146,6 +192,9 @@ export function ProductsScreen() {
       setLoading(false);
     }
   };
+
+  const gradeOf = (id: string): ProductGrade | undefined =>
+    gradeData?.grades.find((g) => g.productId === id);
 
   useEffect(() => {
     loadProducts();
@@ -237,6 +286,44 @@ export function ProductsScreen() {
           </div></>
             }
           />
+
+        {/*
+          WHAT THE GRADE IS MADE OF, AND WHAT IS MISSING BEFORE IT SPEAKS.
+
+          Measured on this record, the column can grade three products out of
+          a hundred and fourteen: three clear the floor of ten confirmed
+          orders and the fourth-busiest has eight. A column blank on a
+          hundred and eleven rows teaches a reader that the feature is
+          broken, so the screen says out loud how many rows are blank and for
+          which of four reasons — and beside it the catalogue backlog, which
+          is the part anybody can act on today: ninety products with no price
+          cannot appear in the store at all.
+        */}
+        {gradeData && (
+          <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <RiMedalLine className="w-4 h-4 text-[var(--sys-primary)]" />
+              <h3 className="text-xs font-bold text-[var(--sys-heading)]">
+                تقدير المنتجات: ممّا يُبنى، وما ينقص قبل أن ينطق
+              </h3>
+            </div>
+            <p className="text-xs font-semibold text-[var(--sys-foreground)] leading-relaxed">
+              {gradeData.readiness.why}
+            </p>
+            {gradeData.salesVisible && (
+              <p className="text-xs text-[var(--sys-muted-foreground)] leading-relaxed">
+                يُبنى على: {gradeData.readiness.madeOf.join('، ')}
+                {gradeData.window.days !== null ? ` — عن طلبات آخر ${gradeData.window.days} يوماً` : ''} وفي المتجر
+                المختار وحده، ولا يُعطى رقمٌ لمنتجٍ عيّنتُه أقلّ من {gradeData.minSample} طلباً مؤكَّداً.
+                {!gradeData.costVisible && ' وكلفةُ البضاعة لا تُعرَض لهذا الحساب، فبندُ الهامش ساقطٌ من المجموع.'}
+              </p>
+            )}
+            <p className="text-xs text-[var(--sys-muted)] leading-relaxed">
+              لا يُستدعى أيُّ نموذجٍ في هذا الرقم. كلُّ جملةٍ هنا قالبٌ حول عددٍ مقروءٍ من السجل، والبندُ الذي لا
+              يستطيع السجلُّ قياسَه يسقط من المجموع ويقول لماذا — ولا يُحسَب صفراً.
+            </p>
+          </div>
+        )}
 
         {/* Products Table with Image Thumbnails */}
         <Card>
@@ -391,6 +478,64 @@ export function ProductsScreen() {
                         {p.analytics?.totalSold ?? 0}
                       </span>
                     ),
+                  },
+                  /*
+                    THE CHIP IS NEVER ALONE. «مقيَّم» on its own is the
+                    opaque figure this system refuses everywhere else; the
+                    sentence under it carries the counted numbers so the
+                    reader can check it by hand, and the readiness line under
+                    THAT is a second, independent fact — never added to the
+                    first. A product can sell perfectly and still be missing
+                    the price that would let the store show it.
+
+                    The total is printed in the primary colour and given no
+                    verdict colour of its own, exactly as the employees row
+                    prints its own: there is no owner-set bar for a composite
+                    out of seventy, and colouring it would be this screen
+                    inventing one.
+                  */
+                  {
+                    key: 'grade',
+                    label: 'التقدير',
+                    render: (p) => {
+                      const g = gradeOf(p.id);
+                      if (!g) return <span className="text-xs text-[var(--sys-muted)]">—</span>;
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <HealthChip health={{ tone: g.tone, label: g.label, why: g.why }} />
+                            {g.score && g.score.total !== null && (
+                              <span className="text-xs font-bold tabular-nums text-[var(--sys-primary)]">
+                                {g.score.total}
+                                <span className="font-normal text-[var(--sys-muted-foreground)]">
+                                  {' '}
+                                  / {g.score.possible}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-[var(--sys-muted-foreground)] leading-relaxed">{g.why}</p>
+                          {/* Every band that scored, with the fact it read —
+                              so the total can be added up by hand. */}
+                          {g.score?.bands
+                            .filter((b) => b.points !== null)
+                            .map((b) => (
+                              <p key={b.key} className="text-xs text-[var(--sys-muted)] leading-relaxed">
+                                {b.ar}: {b.points} / {b.weight} — {b.why}
+                              </p>
+                            ))}
+                          <span className="inline-flex">
+                            <HealthChip
+                              health={{
+                                tone: g.readiness.tone,
+                                label: g.readiness.label,
+                                why: g.readiness.why,
+                              }}
+                            />
+                          </span>
+                        </div>
+                      );
+                    },
                   },
                 ]}
                 actions={(p) => (
