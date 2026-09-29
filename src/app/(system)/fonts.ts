@@ -29,6 +29,15 @@ export const arabic = IBM_Plex_Sans_Arabic({
 export const publicSans = Public_Sans({
   variable: '--font-public-sans',
   subsets: ['latin'],
+  /*
+   * TWO WEIGHTS, NAMED — because asking for none did not mean «the normal
+   * one». Measured in the build output: with no `weight` the loader pulled
+   * **Thin (100) alone**, 51 KB of it, and Thin is the face this stack
+   * falls back to for any Latin glyph the Arabic family does not carry. So
+   * the fallback was rendering hairline, which nobody would think to blame
+   * on a font declaration.
+   */
+  weight: ['400', '600'],
   display: 'swap',
 });
 

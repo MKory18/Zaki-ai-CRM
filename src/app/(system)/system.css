@@ -85,6 +85,15 @@
   --sys-sidebar-foreground: #9FB6C2;
   --sys-scrollbar: #1C3A52;
   --sys-scrollbar-hover: #597183;
+
+  /*
+   * READ TWICE BY `.sidebar-scroll` AND DECLARED NOWHERE, until now: the
+   * sidebar thumb resolved to nothing and the browser drew its own. No new
+   * colour is introduced — the sidebar borrows the page scrollbar's, which
+   * is what it looked like it was meant to do.
+   */
+  --sys-sidebar-scrollbar: var(--sys-scrollbar);
+  --sys-sidebar-scrollbar-hover: var(--sys-scrollbar-hover);
   --sys-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.55);
   --sys-shadow-overlay: 0 2px 8px rgb(0 0 0 / 0.45), 0 16px 40px rgb(0 0 0 / 0.65);
 }
@@ -127,6 +136,15 @@
   --sys-sidebar-foreground: #4A6272;
   --sys-scrollbar: #D5E1E6;
   --sys-scrollbar-hover: #99acba;
+
+  /*
+   * READ TWICE BY `.sidebar-scroll` AND DECLARED NOWHERE, until now: the
+   * sidebar thumb resolved to nothing and the browser drew its own. No new
+   * colour is introduced — the sidebar borrows the page scrollbar's, which
+   * is what it looked like it was meant to do.
+   */
+  --sys-sidebar-scrollbar: var(--sys-scrollbar);
+  --sys-sidebar-scrollbar-hover: var(--sys-scrollbar-hover);
   --sys-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.06), 0 1px 3px rgb(12 50 82 / 0.08);
   --sys-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.07), 0 12px 32px rgb(12 50 82 / 0.14);
 }
@@ -166,6 +184,15 @@
   --sys-sidebar-foreground: #566369;
   --sys-scrollbar: #D8CEBC;
   --sys-scrollbar-hover: #9b9f9c;
+
+  /*
+   * READ TWICE BY `.sidebar-scroll` AND DECLARED NOWHERE, until now: the
+   * sidebar thumb resolved to nothing and the browser drew its own. No new
+   * colour is introduced — the sidebar borrows the page scrollbar's, which
+   * is what it looked like it was meant to do.
+   */
+  --sys-sidebar-scrollbar: var(--sys-scrollbar);
+  --sys-sidebar-scrollbar-hover: var(--sys-scrollbar-hover);
   --sys-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.05), 0 1px 3px rgb(12 50 82 / 0.07);
   --sys-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.06), 0 12px 32px rgb(12 50 82 / 0.12);
 }

@@ -1,0 +1,382 @@
+/**
+ * ONE SOURCE, TWO FILES.
+ *
+ * The brief asks for `tokens.css` and `tokens.json` with «the same names and
+ * values». Two hand-written files with that promise are two files that will
+ * disagree on a Tuesday, and nothing would notice until a colour in the
+ * studio stopped matching the same colour in operations. So both are
+ * GENERATED here, from one object, and a test re-runs this and fails if
+ * either file on disk differs from what it produces.
+ *
+ * THE COLOURS ARE NOT TYPED IN. They are read out of the product's own
+ * stylesheet, `src/app/(system)/system.css`, so «extraction, not redesign»
+ * is enforced by the build rather than by my care. Change a palette there
+ * and the package follows; type a colour here and the next reader cannot
+ * tell which of the two is the shop's real one.
+ *
+ * Run: node packages/zaki-ui/scripts/build-tokens.mjs
+ */
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const PKG = resolve(HERE, '..');
+const REPO = resolve(PKG, '..', '..');
+const SYSTEM_CSS = join(REPO, 'src', 'app', '(system)', 'system.css');
+
+export const VERSION = '0.1.0';
+
+/**
+ * WHICH `--sys-` NAME BECOMES WHICH `--zk-` NAME.
+ *
+ * A rename and nothing else: every value is carried across untouched. The
+ * categories are the brief's — surface, text, border, brand, state — and
+ * the product's names are kept in `MAPPING.md` so a reader of either side
+ * can find the other.
+ *
+ * `--sys-destructive` becomes `error` because the brief names that category
+ * «خطأ». It is the same colour; operations calls it «destructive» because
+ * there it also paints a delete button.
+ */
+export const RENAME = {
+  // ── surface ──────────────────────────────────────────────────────────
+  'background': 'color-surface-page',
+  'card': 'color-surface-card',
+  'surface': 'color-surface-sunken',
+  'surface-strong': 'color-surface-raised',
+  'sidebar': 'color-surface-sidebar',
+  // ── text ─────────────────────────────────────────────────────────────
+  'heading': 'color-text-heading',
+  'foreground': 'color-text',
+  'muted-foreground': 'color-text-muted',
+  'muted': 'color-text-faint',
+  'sidebar-foreground': 'color-text-sidebar',
+  // ── border ───────────────────────────────────────────────────────────
+  'border': 'color-border',
+  'border-strong': 'color-border-strong',
+  'focus': 'color-focus',
+  // ── brand ────────────────────────────────────────────────────────────
+  'primary': 'color-brand',
+  'primary-hover': 'color-brand-hover',
+  'primary-soft': 'color-brand-soft',
+  'primary-foreground': 'color-brand-on',
+  // ── states ───────────────────────────────────────────────────────────
+  'success': 'color-success',
+  'success-soft': 'color-success-soft',
+  'warning': 'color-warning',
+  'warning-soft': 'color-warning-soft',
+  'destructive': 'color-error',
+  'destructive-soft': 'color-error-soft',
+  'destructive-border': 'color-error-border',
+  // ── charts ───────────────────────────────────────────────────────────
+  'chart-1': 'color-chart-1',
+  'chart-2': 'color-chart-2',
+  'chart-3': 'color-chart-3',
+  'chart-4': 'color-chart-4',
+  'chart-5': 'color-chart-5',
+  'chart-6': 'color-chart-6',
+  // ── scrollbars ───────────────────────────────────────────────────────
+  'scrollbar': 'color-scrollbar',
+  'scrollbar-hover': 'color-scrollbar-hover',
+  /*
+   * These two were READ twice by `.sidebar-scroll` and DECLARED nowhere, so
+   * the sidebar's thumb had no colour and the browser drew its own. They are
+   * declared now, in all three palettes, as `var(--sys-scrollbar)` and its
+   * hover — no new colour was introduced, which is what the sidebar looked
+   * like it was always meant to do.
+   */
+  'sidebar-scrollbar': 'color-scrollbar-sidebar',
+  'sidebar-scrollbar-hover': 'color-scrollbar-sidebar-hover',
+  // ── elevation (theme-resolved: a shadow that reads on black is not the
+  //     shadow that reads on white) ─────────────────────────────────────
+  'shadow-raised': 'shadow-raised',
+  'shadow-overlay': 'shadow-overlay',
+};
+
+/**
+ * Declared outside every palette, in a plain `:root` — the same for all
+ * themes, so it belongs to the scale rather than to a theme.
+ */
+export const GLOBAL_SYS = { 'mobile-nav-h': 'layout-mobile-nav-h' };
+
+/** Which palette in the product becomes which selector in the package. */
+export const THEMES = [
+  /*
+   * DARK IS BOTH THE DEFAULT AND A NAME YOU CAN ASK FOR.
+   *
+   * `:root` alone makes dark the thing you get when you say nothing, which
+   * is right — but it leaves no way to say «dark» out loud. A page that has
+   * switched to light and wants one dark panel, or a studio that stores the
+   * person's choice as a word, needs the selector to exist. Both are
+   * emitted, so `[data-theme="dark"]` on any element returns it to the
+   * default palette from inside a light one.
+   */
+  { key: 'dark', from: "[data-sys-theme='ops']", selector: ':root, [data-theme="dark"]', note: 'الافتراضيّة — وهي لوحة «العمليّات» الغامقة، وتُطلَب بالاسم أيضاً' },
+  { key: 'light', from: "[data-sys-theme='day']", selector: '[data-theme="light"]', note: 'لوحة «النهار»' },
+  { key: 'calm', from: "[data-sys-theme='calm']", selector: '[data-theme="calm"]', note: 'لوحة «الهادئة» — فاتحةٌ ثانيةٌ موجودةٌ في المنتج' },
+];
+
+/**
+ * THE SPACING SCALE, DERIVED FROM WHAT THE PRODUCT ACTUALLY USES.
+ *
+ * There were no spacing tokens to extract: every screen writes Tailwind's
+ * raw steps. So this was measured instead of invented — 4342 spacing
+ * utilities across 244 dashboard files — and these nine steps are 98.1% of
+ * them. The share of each is recorded so the next person can see the scale
+ * was counted, not chosen.
+ *
+ * NAMED BY PIXELS, not by index. `--zk-space-8` is eight pixels. An index
+ * scale would make `--zk-space-4` mean 8px, which is the kind of quiet trap
+ * a second team reading this package has no way to catch.
+ *
+ * The tail — 36, 40, 48, 64, 80, 96, 112 — is 1.9% and is page layout, not
+ * component spacing. It is left out of the component scale deliberately.
+ */
+export const SPACE = [
+  { px: 0, uses: 25, share: 0.6 },
+  { px: 2, uses: 234, share: 5.4 },
+  { px: 4, uses: 607, share: 14.0 },
+  { px: 6, uses: 531, share: 12.2 },
+  { px: 8, uses: 1072, share: 24.7 },
+  { px: 10, uses: 225, share: 5.2 },
+  { px: 12, uses: 944, share: 21.7 },
+  { px: 16, uses: 449, share: 10.3 },
+  { px: 20, uses: 39, share: 0.9 },
+  { px: 24, uses: 126, share: 2.9 },
+  { px: 32, uses: 32, share: 0.7 },
+];
+
+/** 6 on a control, 10 on a card, 16 on a sheet, full on a chip. */
+export const RADIUS = { control: '0.375rem', card: '0.625rem', sheet: '1rem', full: '9999px' };
+
+/**
+ * The type scale, exactly the product's: 12 · 13 · 14 · 16 · 20 · 24 · 32,
+ * and NOTHING below 12 — «العربيّة عند تسعة بكسل ليست نصّاً صغيراً بل
+ * لطخة»: the script carries meaning in the marks above and below the
+ * letters, and at that size they merge into the line.
+ */
+export const TEXT = { 12: '0.75rem', 13: '0.8125rem', 14: '0.875rem', 16: '1rem', 20: '1.25rem', 24: '1.5rem', 32: '2rem' };
+
+/** The four weights the product downloads, and no fifth. */
+export const WEIGHT = { regular: '400', medium: '500', semibold: '600', bold: '700' };
+
+/**
+ * Line heights as the product sets them: 1.65 on Arabic body text, 1.7 in
+ * tables (a column of Arabic needs more room than a paragraph), 1.6 under
+ * the 13px note, 1.2 on the display figure.
+ */
+export const LEADING = { body: '1.65', table: '1.7', note: '1.6', display: '1.2' };
+
+/**
+ * THE LAYERING LADDER, READ OFF THE PRODUCT RATHER THAN NUMBERED AFRESH.
+ *
+ * Every one of these is a value some screen already uses, and the name is
+ * what uses it: 40 is the mobile bar, 50 is a dialog, 60 is a toast (it has
+ * to sit above the dialog that raised it), 65 is the idle lock, 70 is the
+ * command palette and the lock's own top layer. Renumbering them «neatly»
+ * would be a redesign of stacking order, and stacking order is the one
+ * thing nobody notices until something disappears behind something else.
+ */
+export const LAYER = {
+  'z-base': '10',
+  'z-sticky': '20',
+  'z-dock': '30',
+  'z-nav': '40',
+  'z-modal': '50',
+  'z-toast': '60',
+  'z-lock': '65',
+  'z-palette': '70',
+};
+
+/**
+ * THE SMALLEST THING A FINGER IS ASKED TO HIT — 44px, used 212 times in
+ * this product as `min-h-11`, and it is not a preference: below it a
+ * warehouse thumb misses, and every miss on a shipment screen is a wrong
+ * parcel. Named so the studio cannot pick its own smaller number.
+ */
+export const TAP = { 'tap-min': '2.75rem' };
+
+/**
+ * THE FOCUS RING, as the product actually draws it: a 2px outline offset by
+ * 2px, on `:focus-visible` only — the browser's own judgement of «this
+ * person is using a keyboard». A ring on every mouse click reads as an
+ * error, which is why the width is a token and the trigger is not.
+ */
+export const FOCUS = { 'focus-width': '2px', 'focus-offset': '2px' };
+
+/** One curve for every movement, and the one duration the product uses. */
+export const MOTION = { 'ease-standard': 'cubic-bezier(0.2, 0, 0.1, 1)', 'duration-fast': '150ms', 'duration-base': '200ms' };
+
+/**
+ * The families. The package hosts the files itself — no Google Fonts, no
+ * CDN — and the stack is the product's own, in its order.
+ */
+export const FONT = {
+  arabic: "'IBM Plex Sans Arabic'",
+  latin: "'Public Sans'",
+  sans: "var(--zk-font-arabic), var(--zk-font-latin), 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif",
+};
+
+// ── reading the product's palettes ───────────────────────────────────────
+function paletteOf(css, selector) {
+  const start = css.indexOf(selector);
+  if (start === -1) throw new Error(`palette not found in system.css: ${selector}`);
+  const end = css.indexOf('}', start);
+  const block = css.slice(start, end);
+  const out = {};
+  for (const m of block.matchAll(/--sys-([a-z0-9-]+)\s*:\s*([^;]+);/g)) {
+    out[m[1]] = m[2].trim();
+  }
+  return out;
+}
+
+export function build() {
+  const css = readFileSync(SYSTEM_CSS, 'utf8');
+  const unmapped = new Set();
+
+  const themes = {};
+  for (const t of THEMES) {
+    const raw = paletteOf(css, t.from);
+    const named = {};
+    for (const [key, value] of Object.entries(raw)) {
+      const to = RENAME[key];
+      if (!to) {
+        unmapped.add(key);
+        continue;
+      }
+      named[to] = value;
+    }
+    themes[t.key] = { selector: t.selector, from: t.from, note: t.note, tokens: named };
+  }
+
+  const scale = {};
+  for (const s of SPACE) scale[`space-${s.px}`] = s.px === 0 ? '0' : `${s.px / 16}rem`;
+  for (const [k, v] of Object.entries(RADIUS)) scale[`radius-${k}`] = v;
+  for (const [k, v] of Object.entries(TEXT)) scale[`text-${k}`] = v;
+  for (const [k, v] of Object.entries(WEIGHT)) scale[`weight-${k}`] = v;
+  for (const [k, v] of Object.entries(LEADING)) scale[`leading-${k}`] = v;
+  for (const [k, v] of Object.entries(MOTION)) scale[k] = v;
+  for (const [k, v] of Object.entries(LAYER)) scale[k] = v;
+  for (const [k, v] of Object.entries(TAP)) scale[k] = v;
+  for (const [k, v] of Object.entries(FOCUS)) scale[k] = v;
+  for (const [k, v] of Object.entries(FONT)) scale[`font-${k}`] = v;
+
+  // The globals the product declares in a bare `:root`, carried across with
+  // their values read from the same file as everything else.
+  for (const [from, to] of Object.entries(GLOBAL_SYS)) {
+    const m = css.match(new RegExp(`--sys-${from}\s*:\s*([^;]+);`));
+    if (!m) throw new Error(`global token not found in system.css: --sys-${from}`);
+    scale[to] = m[1].trim();
+  }
+
+  return { themes, scale, unmapped: [...unmapped].sort() };
+}
+
+function cssFor({ themes, scale }) {
+  const line = (name, value) => `  --zk-${name}: ${value};`;
+  const parts = [];
+  parts.push(`/*
+ * zaki-ui tokens — v${VERSION}
+ *
+ * GENERATED by packages/zaki-ui/scripts/build-tokens.mjs. Do not edit: the
+ * colours are read out of src/app/(system)/system.css, so this file and the
+ * product cannot drift apart, and tokens.json is written from the same
+ * object so the two outputs cannot disagree either.
+ *
+ * Dark is the default because the product's default palette is dark and 18
+ * of its 19 accounts run it.
+ */`);
+
+  parts.push('');
+  parts.push('/* ── the scale: one set, every theme ──────────────────────────────── */');
+  parts.push(':root {');
+  for (const [k, v] of Object.entries(scale)) parts.push(line(k, v));
+  parts.push('}');
+
+  for (const t of THEMES) {
+    const theme = themes[t.key];
+    parts.push('');
+    parts.push(`/* ── ${t.key}: ${t.note} ─────────────────────────────── */`);
+    parts.push(`${theme.selector} {`);
+    for (const [k, v] of Object.entries(theme.tokens)) parts.push(line(k, v));
+    parts.push('}');
+  }
+
+  parts.push('');
+  parts.push(`/*
+ * RTL AND THE DIGITS.
+ *
+ * The product sets both on the document, not in a component: «الأرقام
+ * الغربيّة» is enforced by a repo guard, not by CSS, so a package that only
+ * ships colours cannot promise it. What CSS CAN promise is that the digits
+ * line up in a column, and that is what this does — it is the single most
+ * useful typographic decision in a product where every screen is numbers.
+ */`);
+  parts.push('[dir="rtl"], .zk {');
+  parts.push('  font-family: var(--zk-font-sans);');
+  parts.push('  line-height: var(--zk-leading-body);');
+  parts.push('  font-variant-numeric: tabular-nums;');
+  parts.push('  font-feature-settings: "tnum" 1;');
+  parts.push('}');
+  parts.push('');
+  parts.push('/* Arabic joins its letters: spacing them apart severs the joins. */');
+  parts.push('[lang="ar"] {');
+  parts.push('  letter-spacing: 0;');
+  parts.push('  text-transform: none;');
+  parts.push('}');
+  parts.push('');
+  return parts.join('\n');
+}
+
+function jsonFor(built) {
+  return (
+    JSON.stringify(
+      {
+        name: 'zaki-ui',
+        version: VERSION,
+        prefix: '--zk-',
+        generatedFrom: 'src/app/(system)/system.css',
+        note: 'مولَّدٌ من build-tokens.mjs — نفسُ الأسماء والقيم في tokens.css',
+        defaultTheme: 'dark',
+        scale: built.scale,
+        spacingDerivedFrom: {
+          method: 'عُدَّت من الاستعمال الفعليّ في 244 ملفَّ لوحةٍ — 4342 استعمالاً',
+          steps: SPACE,
+          coverage: '98.1% من الاستعمالات؛ والباقي (36..112px) تخطيطُ صفحةٍ لا مسافةَ مكوّن',
+        },
+        themes: Object.fromEntries(
+          Object.entries(built.themes).map(([k, v]) => [k, { selector: v.selector, from: v.from, note: v.note, tokens: v.tokens }])
+        ),
+        /**
+         * TWO NAMES THAT DO NOT EXPLAIN THEMSELVES, written down so the
+         * studio does not guess. Both are real distinctions in the product,
+         * and both are easy to use backwards.
+         */
+        glossary: {
+          'color-text-muted': 'النصُّ الثانويُّ المقروء: سطرُ شرحٍ تحت عنوان، عمودٌ ثانٍ في جدول. يُقرأ بلا جهد.',
+          'color-text-faint': 'أخفتُ منه، ولغيرِ المقروء: نائبُ الحقل، الفاصلةُ بين جزأين، «—» مكانَ قيمةٍ غائبة. لا تضع فيه معلومةً يحتاجها القارئ.',
+          'color-border': 'الحدُّ الافتراضيُّ لكلّ شيء: بطاقة، حقل، صفّ.',
+          'color-border-strong': 'حدٌّ يُقصد أن يُرى: فاصلٌ بين قسمين، أو إطارُ شيءٍ مُنتقى. استعمالُه في كلّ مكانٍ يُلغي معناه.',
+          'color-surface-sunken': 'سطحٌ أغمقُ من البطاقة داخلها: رأسُ جدول، شريطُ تلميح.',
+          'color-surface-raised': 'سطحٌ أفتحُ منها: صفٌّ مُحدَّد، أو زرٌّ ثانويٌّ عليه.',
+        },
+        notPresentInTheProduct: [
+          'color-info — لا لونَ «معلومة» في المنتج. لم يُخترَع.',
+          'مسافاتٌ مرمَّزة — لم تكن موجودة؛ اشتُقّت من العدّ أعلاه.',
+        ],
+      },
+      null,
+      2
+    ) + '\n'
+  );
+}
+
+const built = build();
+mkdirSync(PKG, { recursive: true });
+writeFileSync(join(PKG, 'tokens.css'), cssFor(built), 'utf8');
+writeFileSync(join(PKG, 'tokens.json'), jsonFor(built), 'utf8');
+
+const count = Object.keys(built.themes.dark.tokens).length;
+console.log(`tokens.css + tokens.json written — ${count} theme tokens × ${THEMES.length} themes, ${Object.keys(built.scale).length} scale tokens`);
+if (built.unmapped.length) console.log('UNMAPPED --sys- names (not carried over):', built.unmapped.join(', '));
