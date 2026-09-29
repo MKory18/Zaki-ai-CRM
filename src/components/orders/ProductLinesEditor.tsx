@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ProductThumb } from '@/components/ui/ProductThumb';
+import { ProductPicker } from '@/components/ui/ProductPicker';
 import { amount, type Currency } from '@/lib/format';
 import { RiAddCircleLine, RiDeleteBinLine, RiSubtractLine } from '@remixicon/react';
 
@@ -102,18 +102,17 @@ export function ProductLinesEditor({
         return (
           <div key={line.key} className="rounded-lg border border-[var(--sys-border)] p-2.5 space-y-2">
             <div className="flex items-center gap-2">
-              <ProductThumb src={product?.image} alt={product?.name ?? ''} size="sm" />
-              <select
+              {/* SEARCHABLE, because a native dropdown of a hundred
+                  products is a scroll, not a choice. Reported from two
+                  screens — the new order and the return — and both come
+                  through this one editor. See ui/ProductPicker. */}
+              <ProductPicker
+                products={products}
                 value={line.productId}
-                onChange={(e) => pickProduct(line.key, e.target.value)}
+                onChange={(id) => pickProduct(line.key, id)}
                 disabled={disabled}
-                className={`${inputClass} flex-1`}
-              >
-                <option value="">— اختر المنتج —</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                className="flex-1"
+              />
               {lines.length > 1 && (
                 <button
                   type="button"

@@ -221,7 +221,7 @@
   },
   "src/components/orders/ProductLinesEditor.tsx": {
     "buttons": 4,
-    "inputs": 4,
+    "inputs": 3,
     "columns": 0,
     "cards": 0,
     "modals": 0,
@@ -1486,6 +1486,16 @@
     "cards": 0,
     "modals": 0,
     "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/ProductPicker.tsx": {
+    "buttons": 2,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
     "links": 0,
     "tabs": 0
   },
