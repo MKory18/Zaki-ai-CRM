@@ -9,7 +9,8 @@ import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { Rows } from '@/components/ui/Rows';
-import { RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiEyeLine, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { ALERT_AR, ALERT_CONFIRM_AR, type TrackingAlertKind } from '@/lib/tracking-alert';
 import { useAsk, useConfirm } from '@/components/ui/Confirm';
 
 /**
@@ -40,7 +41,30 @@ interface Row {
   collectedAmount?: number | null;
   settlementStatus?: string;
   _count?: { deliveryAttempts: number; notes: number };
+  /** Cancelled while the parcel moves, or changed after it left. */
+  alert?: { kind: TrackingAlertKind; at: string; acknowledged: boolean } | null;
 }
+
+/**
+ * THE TWO THINGS THAT MAKE CHASING A PARCEL POINTLESS OR WRONG.
+ *
+ * Red: the order was cancelled and the parcel is still out. Orange: an
+ * approved change was written onto it, so the address on this screen is
+ * not the one she last read.
+ *
+ * Both fade once acknowledged — they do not disappear. The row still says
+ * what happened; it stops shouting.
+ */
+const ALERT_TONE: Record<TrackingAlertKind, { live: string; seen: string }> = {
+  CANCELLED: {
+    live: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]',
+    seen: 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]',
+  },
+  CHANGED: {
+    live: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]',
+    seen: 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]',
+  },
+};
 
 const STATUS_LABEL: Record<string, string> = {
   READY_FOR_PICKUP: 'بانتظار الاستلام',
@@ -82,11 +106,43 @@ export function TrackingScreen() {
   const [settling, setSettling] = useState<string | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [collecting, setCollecting] = useState(false);
+  /** The row whose alert is being acknowledged right now. */
+  const [acking, setAcking] = useState<string | null>(null);
   const [task, setTask] = useState<TaskFilter>('all');
 
   const ask = useAsk();
   // A plain yes/no: refusing a parcel needs a confirmation, not a sentence.
   const confirm = useConfirm();
+
+  /**
+   * «رأيتُ هذا» — recorded, not dismissed.
+   *
+   * It asks first and says exactly what it will write, because the one
+   * thing this button must never be mistaken for is an action on the
+   * order: the parcel is still out there either way.
+   */
+  const acknowledge = async (o: Row) => {
+    if (!o.alert) return;
+    const ok = await confirm({
+      title: `${ALERT_AR[o.alert.kind]} — ${o.merchantRef ?? o.orderNumber}`,
+      body: ALERT_CONFIRM_AR[o.alert.kind],
+      confirmLabel: 'أدركتُ',
+    });
+    if (!ok) return;
+    setAcking(o.id);
+    try {
+      await apiJson('/api/ops/tracking/acknowledge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: o.id, kind: o.alert.kind }),
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر تسجيل الإقرار');
+    } finally {
+      setAcking(null);
+    }
+  };
 
   /**
    * MOST OF WHAT A FOLLOW-UP AGENT LEARNS IS NOT AN OUTCOME.
@@ -329,9 +385,23 @@ export function TrackingScreen() {
               label: 'المرجع',
               primary: true,
               render: (o) => (
-                <span dir="ltr" className="font-medium text-[var(--sys-heading)]">
-                  {o.merchantRef ?? o.orderNumber}
-                </span>
+                <>
+                  <span dir="ltr" className="font-medium text-[var(--sys-heading)]">
+                    {o.merchantRef ?? o.orderNumber}
+                  </span>
+                  {o.alert && (
+                    <span
+                      className={`mt-1 block w-fit rounded-md border px-2 py-0.5 text-xs font-semibold ${
+                        o.alert.acknowledged
+                          ? ALERT_TONE[o.alert.kind].seen
+                          : ALERT_TONE[o.alert.kind].live
+                      }`}
+                    >
+                      {ALERT_AR[o.alert.kind]}
+                      {o.alert.acknowledged && ' · رآه'}
+                    </span>
+                  )}
+                </>
               ),
             },
             { key: 'customer', label: 'العميل', primary: true, render: (o) => o.customer.fullName },
@@ -452,6 +522,22 @@ export function TrackingScreen() {
           ]}
           actions={(o) => (
             <>
+              {/*
+                «مجرد ما تشوف، لازم زر» — and pressing it records who saw
+                it, on the order, rather than hiding a colour. A warning
+                anybody can switch off is a warning people learn to switch
+                off; this one asks first and says what it will write.
+              */}
+              {o.alert && !o.alert.acknowledged && (
+                <button
+                  onClick={() => void acknowledge(o)}
+                  disabled={acking === o.id}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sys-primary)] hover:underline disabled:opacity-50"
+                >
+                  {acking === o.id ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiEyeLine className="w-4 h-4" />}
+                  أدركتُ الإجراء
+                </button>
+              )}
               {/*
                 THE TWO ANSWERS THE DOOR ACTUALLY GIVES, AS TWO BUTTONS.
 

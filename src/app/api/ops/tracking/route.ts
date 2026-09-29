@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { DEAD_CONFIRMATION, TRACKING_ACK_ACTION, trackingAlert } from '@/lib/tracking-alert';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { ruleFor } from '@/lib/phone-rules';
@@ -54,6 +55,10 @@ export async function GET(req: Request) {
       take: 200,
       select: {
         id: true, orderNumber: true, merchantRef: true, trackingNumber: true,
+        // The order may be dead while its parcel is still moving — see
+        // src/lib/tracking-alert.ts for why that is the one thing this
+        // screen was not saying.
+        confirmationStatus: true, updatedAt: true,
         shippingStatus: true, settlementStatus: true, shippedAt: true, outForDeliveryAt: true,
         deliveryFailureReason: true, totalAmount: true, deliveryFee: true, priceIncludesDelivery: true, collectedAmount: true, currency: true, regionId: true,
         deliveryProviderId: true,
@@ -63,6 +68,44 @@ export async function GET(req: Request) {
         _count: { select: { deliveryAttempts: true, notes: true } },
       },
     });
+
+    /**
+     * THE TWO THINGS THAT MAKE CHASING A PARCEL POINTLESS OR WRONG.
+     *
+     * Three small reads over the orders already fetched, not a join per
+     * row: when each was cancelled, when an approved change was last
+     * written onto it, and when somebody last said they saw either.
+     */
+    const ids = orders.map((o) => o.id);
+    const [cancelLogs, applied, acks] = ids.length
+      ? await Promise.all([
+          db.orderStatusLog.findMany({
+            where: { orderId: { in: ids }, statusType: 'CONFIRMATION', newValue: { in: [...DEAD_CONFIRMATION] } },
+            orderBy: { createdAt: 'desc' },
+            select: { orderId: true, createdAt: true },
+          }),
+          db.orderChangeRequest.findMany({
+            where: { orderId: { in: ids }, appliedAt: { not: null } },
+            orderBy: { appliedAt: 'desc' },
+            select: { orderId: true, appliedAt: true },
+          }),
+          db.orderActivity.findMany({
+            where: { orderId: { in: ids }, action: TRACKING_ACK_ACTION },
+            orderBy: { createdAt: 'desc' },
+            select: { orderId: true, createdAt: true },
+          }),
+        ])
+      : [[], [], []];
+
+    // Ordered newest-first above, so the first seen per order is the latest.
+    const newest = <T extends { orderId: string }>(rows: T[], pick: (r: T) => Date | null) => {
+      const m = new Map<string, Date>();
+      for (const r of rows) if (!m.has(r.orderId)) { const d = pick(r); if (d) m.set(r.orderId, d); }
+      return m;
+    };
+    const cancelledAt = newest(cancelLogs, (r) => r.createdAt);
+    const changedAt = newest(applied, (r) => r.appliedAt);
+    const ackedAt = newest(acks, (r) => r.createdAt);
 
     // One lookup per (courier, region) pair for the late thresholds.
     const pairs = [...new Set(orders.filter((o) => o.deliveryProviderId && o.regionId).map((o) => `${o.deliveryProviderId}|${o.regionId}`))];
@@ -100,6 +143,17 @@ export async function GET(req: Request) {
          * the rule correctly — records a different figure.
          */
         expectedCollection: expectedAmountFor(o),
+        /**
+         * The one thing worth saying about this row, or null. A cancelled
+         * order with no surviving status log still announces itself — its
+         * own last write is the honest approximation.
+         */
+        alert: trackingAlert({
+          confirmationStatus: o.confirmationStatus,
+          cancelledAt: cancelledAt.get(o.id) ?? o.updatedAt,
+          changeAppliedAt: changedAt.get(o.id) ?? null,
+          acknowledgedAt: ackedAt.get(o.id) ?? null,
+        }),
       };
     });
 
