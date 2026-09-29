@@ -56,9 +56,12 @@
   --zk-tap-min: 2.75rem;
   --zk-focus-width: 2px;
   --zk-focus-offset: 2px;
+  --zk-control-h: 2.5rem;
+  --zk-size-dialog: 32rem;
+  --zk-size-toast: 24rem;
+  --zk-measure: 60ch;
   --zk-font-arabic: 'IBM Plex Sans Arabic';
-  --zk-font-latin: 'Public Sans';
-  --zk-font-sans: var(--zk-font-arabic), var(--zk-font-latin), 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  --zk-font-sans: var(--zk-font-arabic), 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   --zk-layout-mobile-nav-h: calc(44px + 0.75rem + 1px);
 }
 
@@ -194,6 +197,12 @@
  * line up in a column, and that is what this does — it is the single most
  * useful typographic decision in a product where every screen is numbers.
  */
+.zk {
+  background-color: var(--zk-color-surface-page);
+  color: var(--zk-color-text);
+  min-block-size: 100%;
+}
+
 [dir="rtl"], .zk {
   font-family: var(--zk-font-sans);
   line-height: var(--zk-leading-body);

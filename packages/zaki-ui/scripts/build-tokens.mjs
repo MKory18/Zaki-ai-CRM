@@ -205,6 +205,29 @@ export const TAP = { 'tap-min': '2.75rem' };
  */
 export const FOCUS = { 'focus-width': '2px', 'focus-offset': '2px' };
 
+/**
+ * A CONTROL IS ONE HEIGHT, AND IT IS STATED.
+ *
+ * The product writes `h-11 md:h-10` on every field — 44px under a finger,
+ * 40px under a mouse — and the comment in `Input.tsx` says why it is stated
+ * rather than left to padding: «padding alone made the height a by-product
+ * of the font size, and a row of controls came out four heights».
+ */
+export const CONTROL = { 'control-h': '2.5rem' };
+
+/**
+ * THE FEW WIDTHS THAT ARE DECISIONS, NOT SPACING.
+ *
+ * A dialog's maximum width and a line's maximum measure are not steps on
+ * the spacing scale — they are judgements about reading. Naming them keeps
+ * them out of the components as bare numbers, which is the rule, and puts
+ * them somewhere a second team can see and argue with.
+ *
+ * `--zk-measure` is in `ch` on purpose: a line's comfortable length is
+ * counted in characters, and in `rem` it would change with the font.
+ */
+export const SIZE = { 'size-dialog': '32rem', 'size-toast': '24rem', 'measure': '60ch' };
+
 /** One curve for every movement, and the one duration the product uses. */
 export const MOTION = { 'ease-standard': 'cubic-bezier(0.2, 0, 0.1, 1)', 'duration-fast': '150ms', 'duration-base': '200ms' };
 
@@ -214,8 +237,25 @@ export const MOTION = { 'ease-standard': 'cubic-bezier(0.2, 0, 0.1, 1)', 'durati
  */
 export const FONT = {
   arabic: "'IBM Plex Sans Arabic'",
-  latin: "'Public Sans'",
-  sans: "var(--zk-font-arabic), var(--zk-font-latin), 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif",
+  /*
+   * `--zk-font-latin` IS GONE, and that was a choice between two honest
+   * options: ship Public Sans, or stop naming it.
+   *
+   * Operations lists it between Plex and the system stack, and it is only
+   * ever reached for a glyph Plex does not carry. Plex's Latin cut here
+   * carries 225 codepoints — the whole of Latin-1 and the punctuation a
+   * dashboard uses — so the fallback fires almost never, and shipping a
+   * second family for it would add weight to the one thing the studio
+   * cannot afford: a first load with the internet off.
+   *
+   * The difference against operations, stated rather than buried: for a
+   * glyph neither Plex nor the system faces have, operations would try
+   * Public Sans first and the package goes straight to Segoe UI. Naming a
+   * family the package does not ship would be worse — the browser would
+   * skip a name that resolves to nothing and land in the same place, while
+   * the token claimed otherwise.
+   */
+  sans: "var(--zk-font-arabic), 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif",
 };
 
 // ── reading the product's palettes ───────────────────────────────────────
@@ -301,6 +341,8 @@ export function build() {
   for (const [k, v] of Object.entries(LAYER)) scale[k] = v;
   for (const [k, v] of Object.entries(TAP)) scale[k] = v;
   for (const [k, v] of Object.entries(FOCUS)) scale[k] = v;
+  for (const [k, v] of Object.entries(CONTROL)) scale[k] = v;
+  for (const [k, v] of Object.entries(SIZE)) scale[k] = v;
   for (const [k, v] of Object.entries(FONT)) scale[`font-${k}`] = v;
 
   // The globals the product declares in a bare `:root`, carried across with
@@ -354,6 +396,25 @@ function cssFor({ themes, scale }) {
  * line up in a column, and that is what this does — it is the single most
  * useful typographic decision in a product where every screen is numbers.
  */`);
+  /*
+   * THE PAGE HAS A BACKGROUND, OR THE BROWSER'S WHITE SHOWS THROUGH.
+   *
+   * Found by LOOKING at the rendered demo rather than by reading the CSS:
+   * the shell painted correctly and the page behind it was transparent, so
+   * white appeared below the shell and on every overscroll — in the DARK
+   * theme. A dark product with a white edge is the same defect as a white
+   * dialog, seen from the other side.
+   *
+   * Scoped to `.zk` and not to `[dir="rtl"]`: that selector matches the
+   * operations app's own <html>, and a stylesheet this package ships must
+   * not be able to repaint a product that merely imports its tokens.
+   */
+  parts.push('.zk {');
+  parts.push('  background-color: var(--zk-color-surface-page);');
+  parts.push('  color: var(--zk-color-text);');
+  parts.push('  min-block-size: 100%;');
+  parts.push('}');
+  parts.push('');
   parts.push('[dir="rtl"], .zk {');
   parts.push('  font-family: var(--zk-font-sans);');
   parts.push('  line-height: var(--zk-leading-body);');

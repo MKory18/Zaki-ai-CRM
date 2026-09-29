@@ -28,15 +28,15 @@ OUT = os.path.join(PKG, 'fonts')
 
 # The four weights the product declares, and no fifth.
 WANT_FAMILY = 'IBM Plex Sans Arabic'
-# TWO WEIGHTS, by the owner's instruction — 400 and 600.
+# FOUR WEIGHTS, to match operations exactly.
 #
-# Worth knowing what that costs the STUDIO: operations declares four
-# (400/500/600/700) through next/font and keeps them, so nothing changes
-# there. A studio page asking for 500 or 700 gets the browser's synthetic
-# bolding of the nearest cut instead of a drawn one. That is a real
-# difference in the letterforms, and it is the trade the instruction makes:
-# two files per subset instead of four, on a machine that may be offline.
-WANT_WEIGHTS = {400: 'regular', 600: 'semibold'}
+# The product declares 400/500/600/700 and uses all four — `font-medium` and
+# `font-bold` are not decoration on a dashboard, they are how a total is
+# told apart from the row above it. Shipping two would have left the studio
+# synthesising the other two, and a synthesised bold is visibly not a drawn
+# one: the strokes thicken evenly instead of where a designer put the
+# weight.
+WANT_WEIGHTS = {400: 'regular', 500: 'medium', 600: 'semibold', 700: 'bold'}
 
 # Arabic block starts here; anything with these is the Arabic cut.
 ARABIC = range(0x0600, 0x0700)

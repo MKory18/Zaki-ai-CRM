@@ -14,7 +14,12 @@
     "test": "vitest run",
     "worker": "tsx scripts/worker.ts",
     "worker:once": "tsx scripts/worker.ts --once",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "zaki-ui:tokens": "node packages/zaki-ui/scripts/build-tokens.mjs",
+    "zaki-ui:icons": "node packages/zaki-ui/scripts/build-icons.mjs",
+    "zaki-ui:fonts": "python packages/zaki-ui/scripts/build-fonts.py",
+    "zaki-ui:dist": "node packages/zaki-ui/scripts/build-dist.mjs",
+    "zaki-ui:pack": "python packages/zaki-ui/scripts/pack.py"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

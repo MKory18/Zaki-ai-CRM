@@ -62,9 +62,32 @@ describe('the packaged fonts', () => {
     }
   });
 
-  it('carries the two weights that were asked for, and no others', () => {
+  /**
+   * FOUR WEIGHTS, THE SAME FOUR OPERATIONS DECLARES.
+   *
+   * `font-medium` and `font-bold` are not decoration on a dashboard — they
+   * are how a total is told apart from the row above it. Shipping two would
+   * leave the studio synthesising the other two, and a synthesised bold
+   * thickens every stroke evenly instead of where a designer put the weight.
+   */
+  it('carries the same four weights the product declares', () => {
     const weights = [...css().matchAll(/font-weight: (\d+);/g)].map((m) => Number(m[1]));
-    expect([...new Set(weights)].sort()).toEqual([400, 600]);
+    expect([...new Set(weights)].sort((a, b) => a - b)).toEqual([400, 500, 600, 700]);
+  });
+
+  /**
+   * AND IT NAMES NO FAMILY IT DOES NOT SHIP.
+   *
+   * A stack that lists «Public Sans» while the package carries no such file
+   * is a claim the browser quietly ignores: it skips the name and lands on
+   * the system face anyway, while the token says otherwise.
+   */
+  it('names no family it does not carry', () => {
+    const tokens = readFileSync(join(PKG, 'tokens.css'), 'utf8');
+    const families = [...css().matchAll(/font-family: '([^']+)'/g)].map((m) => m[1]);
+    expect(new Set(families)).toEqual(new Set(['IBM Plex Sans Arabic']));
+    expect(tokens, 'الحزمة تسمّي عائلةً لا تشحنها').not.toContain('Public Sans');
+    expect(tokens).not.toContain('--zk-font-latin');
   });
 
   /**

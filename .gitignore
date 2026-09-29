@@ -62,3 +62,12 @@ tmp*.cjs
 # the exact thing those licences prohibit. They stay out of git, and the
 # route that serves them refuses to exist in a production build.
 /fonts-local/
+
+# zaki-ui's shippable folder is built, never edited.
+#
+# Every file in it is produced by `scripts/build-dist.mjs` from sources that
+# ARE tracked, and the package's tests rebuild it and check its contents on
+# every run. Committing it would double the fonts in the repository, churn
+# a 260 KB zip on each build, and — the real cost — let a stale dist survive
+# a source fix while looking correct.
+packages/zaki-ui/dist/

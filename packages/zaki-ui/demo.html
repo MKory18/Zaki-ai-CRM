@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zaki-ui</title>
+
+    <!--
+      OPENS BY DOUBLE-CLICK, WITH NO SERVER.
+      That constraint decides three things on this page:
+        · the scripts are the bundled `zaki-ui.all.js`, not ES modules —
+          a browser refuses `type="module"` over file://
+        · the icon sprite is INLINED below rather than referenced, because
+          an external SVG `<use>` is blocked over file:// too
+        · every path is relative, and nothing is fetched from a network
+    -->
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="fonts.css" />
+    <link rel="stylesheet" href="components.css" />
+    <link rel="stylesheet" href="shell.css" />
+    <style>
+      /* Demo-only scaffolding. Not part of the package. */
+      .demo-section {
+        margin-block-end: var(--zk-space-24);
+      }
+      .demo-title {
+        margin-block: 0 var(--zk-space-8);
+        font-size: var(--zk-text-13);
+        font-weight: var(--zk-weight-semibold);
+        color: var(--zk-color-text-faint);
+        text-transform: uppercase;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--zk-space-8);
+        align-items: center;
+      }
+      .demo-grid {
+        display: grid;
+        gap: var(--zk-space-12);
+        grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+      }
+    </style>
+  </head>
+  <body class="zk">
+    <!--ZK_SPRITE-->
+
+    <zk-app-shell data-drawer="closed">
+      <header slot="header" class="zk-header">
+        <div class="zk-header__start">
+          <button class="zk-btn zk-btn--ghost zk-drawer-toggle" type="button" aria-label="القائمة">
+            <svg class="zk-icon" aria-hidden="true"><use href="#zk-menu"></use></svg>
+          </button>
+          <h1 class="zk-header__title">zaki-ui</h1>
+        </div>
+
+        <!-- The status-badge slot: any number of chips, and it wraps. -->
+        <div class="zk-header__badges">
+          <span class="zk-chip" data-tone="good">
+            <svg class="zk-icon" aria-hidden="true"><use href="#zk-cloud"></use></svg> متزامن
+          </span>
+          <span class="zk-chip" data-tone="ok">
+            <svg class="zk-icon" aria-hidden="true"><use href="#zk-inbox"></use></svg> الطابور 3
+          </span>
+          <span class="zk-chip" data-tone="unknown">
+            <svg class="zk-icon" aria-hidden="true"><use href="#zk-database"></use></svg> نسخة احتياطية
+          </span>
+        </div>
+
+        <div class="zk-header__end">
+          <div class="zk-dropdown" id="apps-dd">
+            <button class="zk-btn zk-btn--secondary" type="button" aria-haspopup="menu">
+              <svg class="zk-icon" aria-hidden="true"><use href="#zk-rocket"></use></svg> التطبيقات
+            </button>
+            <div class="zk-dropdown__menu" role="menu" hidden>
+              <zk-app-switcher id="switcher"></zk-app-switcher>
+            </div>
+          </div>
+          <button class="zk-btn zk-btn--ghost" type="button" id="theme" aria-label="الثيم">
+            <svg class="zk-icon" aria-hidden="true"><use href="#zk-settings"></use></svg>
+            <span id="theme-name">داكن</span>
+          </button>
+          <button class="zk-btn zk-btn--ghost" type="button" id="dir" aria-label="الاتجاه">RTL</button>
+        </div>
+      </header>
+
+      <nav slot="sidebar" class="zk-sidebar" aria-label="التنقّل">
+        <div class="zk-nav-group" aria-expanded="true">
+          <button class="zk-nav-group__head" type="button">
+            العمليّات
+            <svg class="zk-icon zk-nav-group__caret" aria-hidden="true"><use href="#zk-chevron-down"></use></svg>
+          </button>
+          <div class="zk-nav-group__items">
+            <a class="zk-nav-item" href="#" aria-current="page">
+              <svg class="zk-icon" aria-hidden="true"><use href="#zk-inbox"></use></svg> الطلبات
+              <span class="zk-nav-item__count">12</span>
+            </a>
+            <a class="zk-nav-item" href="#">
+              <svg class="zk-icon" aria-hidden="true"><use href="#zk-time"></use></svg> المتابعة
+              <span class="zk-nav-item__dot" aria-label="فيه جديد"></span>
+            </a>
+          </div>
+        </div>
+
+        <div class="zk-nav-group" aria-expanded="false">
+          <button class="zk-nav-group__head" type="button">
+            المال
+            <svg class="zk-icon zk-nav-group__caret" aria-hidden="true"><use href="#zk-chevron-down"></use></svg>
+          </button>
+          <div class="zk-nav-group__items" hidden>
+            <a class="zk-nav-item" href="#">
+              <svg class="zk-icon" aria-hidden="true"><use href="#zk-bar-chart"></use></svg> الأرباح
+            </a>
+            <a class="zk-nav-item" href="#">
+              <svg class="zk-icon" aria-hidden="true"><use href="#zk-history"></use></svg> الكشوفات
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <main slot="content">
+        <div class="zk-page-header">
+          <div>
+            <h2 class="zk-page-header__title">كلُّ المكوّنات</h2>
+            <p class="zk-page-header__description">
+              صفحةٌ واحدةٌ تعرض الحزمةَ كاملة. بدّل الثيمَ والاتّجاهَ من الترويسة، وصغّر النافذةَ إلى
+              360 بكسل: لا تمريرَ أفقيّاً في أيِّ حال.
+            </p>
+          </div>
+          <button class="zk-btn zk-btn--primary" type="button" id="open-modal">افتح نافذة</button>
+        </div>
+
+        <section class="demo-section">
+          <h3 class="demo-title">tabs</h3>
+          <div class="zk-tabs" role="tablist" id="tabs">
+            <button class="zk-tab" role="tab" data-tab="a" aria-selected="true" tabindex="0">الكلّ<span class="zk-tab__count">48</span></button>
+            <button class="zk-tab" role="tab" data-tab="b" aria-selected="false" tabindex="-1">المعلّق<span class="zk-tab__count">6</span></button>
+            <button class="zk-tab" role="tab" data-tab="c" aria-selected="false" tabindex="-1">المغلق</button>
+          </div>
+        </section>
+
+        <section class="demo-section">
+          <h3 class="demo-title">buttons</h3>
+          <div class="demo-row">
+            <button class="zk-btn zk-btn--primary" type="button">أساسيّ</button>
+            <button class="zk-btn zk-btn--secondary" type="button">ثانويّ</button>
+            <button class="zk-btn zk-btn--ghost" type="button">شفّاف</button>
+            <button class="zk-btn zk-btn--danger" type="button">خطر</button>
+            <button class="zk-btn zk-btn--primary" type="button" aria-busy="true" disabled>
+              <svg class="zk-icon zk-loader" aria-hidden="true"><use href="#zk-loader"></use></svg> يحفظ
+            </button>
+            <button class="zk-btn zk-btn--secondary" type="button" disabled>معطّل</button>
+          </div>
+        </section>
+
+        <section class="demo-section">
+          <h3 class="demo-title">fields</h3>
+          <div class="demo-grid">
+            <label class="zk-field">
+              <span class="zk-field__label">اسم العميل</span>
+              <input class="zk-input" placeholder="اكتب الاسم" />
+              <span class="zk-field__hint">كما هو على الهويّة.</span>
+            </label>
+            <label class="zk-field">
+              <span class="zk-field__label">المحافظة</span>
+              <select class="zk-select">
+                <option>دمشق</option>
+                <option>حلب</option>
+              </select>
+            </label>
+            <label class="zk-field">
+              <span class="zk-field__label">الهاتف</span>
+              <input class="zk-input" value="09" aria-invalid="true" aria-describedby="phone-err" />
+              <span class="zk-field__error" id="phone-err">الرقم ثمانيةُ أرقامٍ فقط.</span>
+            </label>
+            <label class="zk-field">
+              <span class="zk-field__label">ملاحظة</span>
+              <textarea class="zk-textarea" placeholder="اختياريّ"></textarea>
+            </label>
+          </div>
+          <div class="demo-row" style="margin-block-start: var(--zk-space-10)">
+            <label class="zk-checkbox"><input type="checkbox" checked /> احتسب أجرة الشحن</label>
+            <label class="zk-switch"><input type="checkbox" checked /><span class="zk-switch__track"><span class="zk-switch__thumb"></span></span> إشعارات</label>
+          </div>
+        </section>
+
+        <section class="demo-section">
+          <h3 class="demo-title">rows</h3>
+          <table class="zk-rows">
+            <thead>
+              <tr><th>الباركود</th><th>المنتج</th><th class="zk-rows__numeric">المبلغ</th><th data-desk-only="true">الحالة</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="الباركود">100508432454</td>
+                <td data-label="المنتج">ماء الكمأ</td>
+                <td data-label="المبلغ" class="zk-rows__numeric"><span class="zk-money">25.00<span class="zk-money__currency">$</span></span></td>
+                <td data-label="الحالة" data-desk-only="true"><span class="zk-chip" data-tone="good">مُسلَّم</span></td>
+              </tr>
+              <tr data-alert="true">
+                <td data-label="الباركود">100509134029</td>
+                <td data-label="المنتج">كريم إزالة الندبات</td>
+                <td data-label="المبلغ" class="zk-rows__numeric"><span class="zk-money" data-tone="out">0.00<span class="zk-money__currency">$</span></span></td>
+                <td data-label="الحالة" data-desk-only="true"><span class="zk-chip" data-tone="bad">فرق</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="demo-section">
+          <h3 class="demo-title">stepper</h3>
+          <div class="zk-stepper">
+            <div class="zk-step" data-state="approved"><svg class="zk-icon" aria-hidden="true"><use href="#zk-check"></use></svg> استيراد الكشف <span class="zk-step__state">تمّ</span></div>
+            <div class="zk-step" data-state="running"><svg class="zk-icon zk-loader" aria-hidden="true"><use href="#zk-loader"></use></svg> المطابقة <span class="zk-step__state">يعمل</span></div>
+            <div class="zk-step" data-state="awaiting_choice"><svg class="zk-icon" aria-hidden="true"><use href="#zk-alert"></use></svg> البتّ في الفروق <span class="zk-step__state">بانتظارك</span></div>
+            <div class="zk-step" data-state="failed"><svg class="zk-icon" aria-hidden="true"><use href="#zk-error-warning"></use></svg> الترحيل <span class="zk-step__state">فشل</span></div>
+            <div class="zk-step" data-state="stale"><svg class="zk-icon" aria-hidden="true"><use href="#zk-history"></use></svg> التقرير <span class="zk-step__state">قديم</span></div>
+            <div class="zk-step" data-state="not_started"><svg class="zk-icon" aria-hidden="true"><use href="#zk-time"></use></svg> الأرشفة <span class="zk-step__state">لم يبدأ</span></div>
+          </div>
+        </section>
+
+        <section class="demo-section">
+          <h3 class="demo-title">progress · tooltip · dropdown · toolbar</h3>
+          <div class="zk-task" style="margin-block-end: var(--zk-space-8)">
+            <div class="zk-task__head"><span>توليد المقاطع</span><span class="zk-task__count">3 من 9</span></div>
+            <div class="zk-progress" id="prog"><div class="zk-progress__bar"></div></div>
+          </div>
+          <div class="zk-toolbar">
+            <span class="zk-tooltip">
+              <button class="zk-btn zk-btn--ghost" type="button"><svg class="zk-icon" aria-hidden="true"><use href="#zk-information"></use></svg></button>
+              <span class="zk-tooltip__bubble" role="tooltip">تلميحٌ لا يحمل معلومةً لا توجد في الصفحة.</span>
+            </span>
+            <div class="zk-dropdown" id="dd">
+              <button class="zk-btn zk-btn--secondary" type="button" aria-haspopup="menu">اختر منتجاً</button>
+              <div class="zk-dropdown__menu" role="menu" hidden>
+                <button class="zk-dropdown__item" role="menuitem" data-value="1" aria-selected="true">ماء الكمأ</button>
+                <button class="zk-dropdown__item" role="menuitem" data-value="2" aria-selected="false">قطرة طنين الأذن</button>
+                <button class="zk-dropdown__item" role="menuitem" data-value="3" aria-selected="false">كريم حرير</button>
+              </div>
+            </div>
+            <span class="zk-toolbar__gap"></span>
+            <button class="zk-btn zk-btn--ghost" type="button" id="toast-ok">رسالة نجاح</button>
+            <button class="zk-btn zk-btn--ghost" type="button" id="toast-bad">رسالة خطأ</button>
+          </div>
+        </section>
+
+        <section class="demo-section">
+          <h3 class="demo-title">skeleton · empty</h3>
+          <div class="demo-grid">
+            <div class="zk-card"><div class="zk-card__body">
+              <span class="zk-skeleton" style="inline-size: 60%"></span>
+              <span class="zk-skeleton" style="margin-block-start: var(--zk-space-8)"></span>
+              <span class="zk-skeleton" style="margin-block-start: var(--zk-space-8); inline-size: 40%"></span>
+            </div></div>
+            <div class="zk-card"><div class="zk-empty">
+              <svg class="zk-icon" aria-hidden="true"><use href="#zk-inbox"></use></svg>
+              <span class="zk-empty__title">لا كشوفات بعد</span>
+              <span class="zk-empty__why">لم يُستورَد أيُّ كشفٍ من شركة الشحن هذا الشهر — وليس أنّها لم تُرسل شيئاً.</span>
+            </div></div>
+          </div>
+        </section>
+      </main>
+
+      <div class="zk-scrim" hidden></div>
+    </zk-app-shell>
+
+    <div class="zk-modal" id="modal" hidden>
+      <div class="zk-modal__panel" role="document">
+        <div class="zk-modal__head">
+          <h2 class="zk-modal__title" id="modal-title">نافذة</h2>
+          <button class="zk-modal__close" type="button" data-close aria-label="إغلاق">
+            <svg class="zk-icon" aria-hidden="true"><use href="#zk-close"></use></svg>
+          </button>
+        </div>
+        <div class="zk-modal__body">
+          <p>جرّب Tab: التركيزُ لا يخرج من هنا. وEscape يُغلق ويعيد التركيزَ إلى الزرّ الذي فتحها.</p>
+          <label class="zk-field" style="margin-block-start: var(--zk-space-12)">
+            <span class="zk-field__label">حقلٌ داخل النافذة</span>
+            <input class="zk-input" />
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <script src="zaki-ui.all.js"></script>
+    <script>
+      (function () {
+        var zk = window.zk;
+
+        zk.tabs(document.getElementById('tabs'));
+        zk.dropdown(document.getElementById('dd'));
+        zk.dropdown(document.getElementById('apps-dd'));
+        zk.progress(document.getElementById('prog'), 3, 9);
+
+        var close = null;
+        document.getElementById('open-modal').addEventListener('click', function () {
+          var root = document.getElementById('modal');
+          root.setAttribute('aria-labelledby', 'modal-title');
+          close = zk.openModal(root);
+        });
+        document.querySelector('#modal [data-close]').addEventListener('click', function () {
+          zk.closeModal(close);
+        });
+
+        document.getElementById('toast-ok').addEventListener('click', function () {
+          zk.toast('حُفظ.', { tone: 'success' });
+        });
+        document.getElementById('toast-bad').addEventListener('click', function () {
+          zk.toast('تعذّر الحفظ — والرسالةُ لا تختفي وحدَها.', { tone: 'error' });
+        });
+
+        // The studio's address is DATA here, not a request: the switcher
+        // decides whether it answers, and says «غير متاح» until it does.
+        document.getElementById('switcher').apps = [
+          { id: 'ops', name: 'العمليّات', icon: 'zk-bar-chart', url: '#', active: true },
+          { id: 'studio', name: 'استوديو الإعلانات', icon: 'zk-film', url: 'http://localhost:8000' }
+        ];
+
+        var THEMES = [
+          { key: 'dark', name: 'داكن' },
+          { key: 'light', name: 'فاتح' },
+          { key: 'calm', name: 'هادئ' }
+        ];
+        var at = 0;
+        document.getElementById('theme').addEventListener('click', function () {
+          at = (at + 1) % THEMES.length;
+          document.documentElement.setAttribute('data-theme', THEMES[at].key);
+          document.getElementById('theme-name').textContent = THEMES[at].name;
+        });
+
+        var dirBtn = document.getElementById('dir');
+        dirBtn.addEventListener('click', function () {
+          var next = document.documentElement.dir === 'rtl' ? 'ltr' : 'rtl';
+          document.documentElement.dir = next;
+          dirBtn.textContent = next.toUpperCase();
+        });
+      })();
+    </script>
+  </body>
+</html>
