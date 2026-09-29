@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { Input, Select } from '@/components/ui/Input';
 import { RiHandCoinLine } from '@remixicon/react';
 
 /**
@@ -126,38 +127,45 @@ export function CollectDialog({
           ))}
         </div>
 
-        <label className="block">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">المحفظة التي دخل إليها المبلغ</span>
-          <select
+        {/*
+          THE SHARED FIELD, FOR THE REASON THE RETURNS DESK NEEDED IT.
+
+          This dialog is where the drift was easiest to see: the wallet
+          `<select>` had been given `bg-[var(--sys-card)]` by hand and the two
+          `<input>`s beside it had not, so one control in the column was
+          themed and two were the class string somebody retyped. None of the
+          three carried the focus ring, which system.css deliberately does not
+          supply — it paints `:focus-visible` only, so a field a person TAPS
+          showed nothing at all.
+        */}
+        <div>
+          <Select
+            label="المحفظة التي دخل إليها المبلغ"
             value={walletId}
             onChange={(e) => setWalletId(e.target.value)}
             required
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {wallets.map((w) => (
               <option key={w.id} value={w.id}>{w.name} — {w.currencyCode}</option>
             ))}
-          </select>
+          </Select>
           {wallets.length === 0 && (
             <span className="block text-xs text-[var(--sys-destructive)] mt-1">
               لا توجد محفظة بعملة {currency} — أنشئ واحدة أولاً.
             </span>
           )}
-        </label>
+        </div>
 
-        <label className="block">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
-            المبلغ المستلم فعلياً (اتركه فارغاً إن كان مطابقاً)
-          </span>
-          <input
+        <div>
+          <Input
+            label="المبلغ المستلم فعلياً (اتركه فارغاً إن كان مطابقاً)"
             type="number"
             step="0.001"
             min="0.001"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder={String(expected)}
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
           {difference !== 0 && (
@@ -165,19 +173,16 @@ export function CollectDialog({
               فارق {difference} عن المتوقَّع — سيُسجَّل كما هو.
             </span>
           )}
-        </label>
+        </div>
 
-        <label className="block">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الملاحظة (إلزامية)</span>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            required
-            minLength={3}
-            placeholder="مثال: استلمت نقداً من المندوب"
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
-          />
-        </label>
+        <Input
+          label="الملاحظة (إلزامية)"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          required
+          minLength={3}
+          placeholder="مثال: استلمت نقداً من المندوب"
+        />
 
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 

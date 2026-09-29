@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { forgetHost } from '@/lib/landing-domain';
+import { publicPath } from '@/lib/public-address';
 import { openRefusal, openWarnings, storefrontFacts, refusalToOpen } from '@/lib/storefront-rules';
 
 /**
@@ -41,7 +42,7 @@ export async function GET() {
       where: { id: { in: ids }, companyId, type: 'SINGLE_PRODUCT' },
       select: {
         id: true, name: true, slug: true, logo: true, type: true, status: true, companyId: true,
-        storefrontEnabled: true, tagline: true, supportPhone: true, domain: true, landingPageId: true,
+        storefrontEnabled: true, tagline: true, supportPhone: true, domain: true, domainVerifiedAt: true, landingPageId: true,
         // Switching INTO this store needs its country: the selection is a
         // country and a store together, never a store alone.
         countryId: true,
@@ -97,9 +98,14 @@ export async function GET() {
           live: s.storefrontEnabled,
           tagline: s.tagline,
           domain: s.domain,
+          // WITHOUT THIS the card could not tell a connected domain from a
+          // WORKING one, so «انسخ الرابط» handed out `https://<domain>` for a
+          // hostname nobody had looked up. The address rule
+          // (src/lib/public-address.ts) needs the stamp, not just the name.
+          domainVerifiedAt: s.domainVerifiedAt,
           currency: s.country.currencyCode,
           countryId: s.countryId,
-          path: `/s/${s.slug}`,
+          path: publicPath({ kind: 'store', slug: s.slug }),
           /** Pages and the editor are read through the selected store. */
           current: s.id === currentStoreId,
           frontPage: front ? (({ productId: _p, ...page }) => page)(front) : null,

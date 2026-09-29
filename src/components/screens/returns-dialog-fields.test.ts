@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { repoFile, stripComments } from '@/lib/guard-source';
 
 /**
  * A FIELD THAT NAMES NO COLOUR IS A WHITE FIELD.
@@ -59,7 +58,22 @@ export interface FieldAudit {
  * separately needs no parser and cannot be fooled that way.
  */
 export function auditFields(src: string): FieldAudit {
-  const n = (re: RegExp) => (src.match(re) ?? []).length;
+  /**
+   * A GUARD THAT READS ITS OWN PROSE FAILS ON ITSELF.
+   *
+   * The note above each converted field names the very tags the rule
+   * forbids — «the `<select>` had a background and the `<input>`s beside it
+   * had not» — and a counter that read prose reported three phantom fields
+   * across CollectDialog and TransferDialog, which between them ship none.
+   *
+   * `stripComments` is the repository's own, from lib/guard-source.ts, used
+   * rather than a local copy for exactly the reason that file gives: the
+   * costliest bugs in this redesign were all bugs in a COPY of it. It also
+   * blanks rather than deletes, so a line number still points at the line
+   * it names — which the private one-liner here before quietly lost.
+   */
+  const code = stripComments(src);
+  const n = (re: RegExp) => (code.match(re) ?? []).length;
   const rawFields = n(/<(?:input|select|textarea)\b/g);
   const checkboxes = n(/type="checkbox"/g);
   return {
@@ -70,12 +84,22 @@ export function auditFields(src: string): FieldAudit {
   };
 }
 
-const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
+const read = repoFile;
 
-/** The dialogs the owner named. */
+/**
+ * The dialogs the owner named, and the two that shared their fault.
+ *
+ * CollectDialog and TransferDialog were not reported — they were found while
+ * reading the ones that were, and they are where the drift was easiest to
+ * see: in each, one `<select>` had been given `bg-[var(--sys-card)]` by hand
+ * and the field beside it had not. One list, so a fix to one is a fix to all
+ * four and a regression in any of them fails here.
+ */
 const DIALOGS = [
   'src/components/screens/ReturnsScreen.tsx',
   'src/components/screens/tracking/DeliverDialog.tsx',
+  'src/components/screens/tracking/CollectDialog.tsx',
+  'src/components/screens/tracking/TransferDialog.tsx',
 ] as const;
 
 describe('the returns dialogs use the system field', () => {
@@ -131,6 +155,23 @@ describe('the audit itself', () => {
     const audit = auditFields(src);
     expect(audit.unthemed).toBe(0); // a checkbox is the exception…
     expect(audit.tintedCheckboxes).not.toBe(audit.checkboxes); // …but an untinted one still fails
+  });
+
+  it('does not mistake a tag named in a comment for a tag that ships', () => {
+    // The note above each converted field quotes the tags it replaced. A
+    // counter that read prose reported three phantom fields across
+    // CollectDialog and TransferDialog, which between them ship none.
+    const src = '/* the <select> had a background and the <input>s beside it had not */ <Input />';
+    expect(auditFields(src)).toMatchObject({ rawFields: 0, unthemed: 0 });
+  });
+
+  it('still counts a tag that is real, next to one that is only described', () => {
+    const src = '/* replaced the <select> */ <input value={x} />';
+    expect(auditFields(src)).toMatchObject({ rawFields: 1, unthemed: 1 });
+  });
+
+  it('strips the JSX-braced form too, which is the one these files use', () => {
+    expect(stripComments('{/* <textarea /> */}<Input />')).not.toContain('textarea');
   });
 
   it('counts a select and a textarea too', () => {

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import type { DomainCheck } from '@/lib/domain-verify';
+import { publicAddress } from '@/lib/public-address';
 import { RiCheckboxBlankCircleLine, RiCheckLine, RiDeleteBinLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiShieldFlashLine, RiShieldKeyholeLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { routeLabel } from '@/lib/route-registry';
@@ -35,6 +36,7 @@ interface Payload {
   records: { type: string; name: string; value: string; ttl: string; note?: string }[];
   target: { kind: string; value: string } | null;
   storefrontEnabled: boolean;
+  slug: string;
   publicPath: string;
 }
 
@@ -137,12 +139,20 @@ export function StoreDomainScreen() {
 
   const last = data.lastCheck;
   const verified = !!data.verifiedAt;
+  const address = publicAddress(typeof window === 'undefined' ? '' : window.location.origin, {
+    kind: 'store', slug: data.slug, domain: data.domain, domainVerifiedAt: data.verifiedAt,
+  });
 
   return (
     <div className="space-y-4 p-4 sm:p-6" dir="rtl">
       <header className="flex flex-wrap items-center justify-between gap-3">
+        {/* `description` is a STRING rendered as text (PageHeader.tsx), so an
+            HTML tag written into it was printed to the seller verbatim: the
+            first line of this screen read «عنوانه الداخلي <code
+            dir="ltr">/s/…</code>». The address belongs in the address card
+            below, where it can be copied — not in a sentence. */}
         <PageHeader title={routeLabel('/store/domain')}
-          description={`عنوان المتجر الذي يراه الزبون. عنوانه الداخلي <code dir="ltr">${data.publicPath}</code> يبقى يعمل دائماً.`}
+          description={`عنوان المتجر الذي يراه الزبون. عنوانه الداخلي ${data.publicPath} يبقى يعمل دائماً.`}
         />
         {msg && (
           <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
@@ -215,6 +225,32 @@ export function StoreDomainScreen() {
             {!data.storefrontEnabled && (
               <p className="mt-2 text-xs text-[var(--sys-warning)]">
                 واجهة هذا المتجر مطفأة — النطاق لن يعرض شيئاً حتى تُشغّلها من «البلدان والمتاجر».
+              </p>
+            )}
+          </div>
+
+          {/* ── THE ONE LINE THE SELLER CAME FOR ──
+              This screen used to end without ever saying what the shop's
+              address now IS. The seller connected a domain, watched it turn
+              «متحقَّق», and still had to guess whether to advertise the
+              domain or the internal path.
+              The answer is the same rule the storefront card and the landing
+              page screens use (src/lib/public-address.ts): the domain is the
+              address only once a real lookup has passed. Before that the
+              internal address is shown, and the reason is said out loud —
+              a link that may not open is worse than no link. */}
+          <div className={CARD}>
+            <p className="text-sm font-bold text-[var(--sys-heading)]">عنوان متجرك الآن</p>
+            <div className="mt-2">
+              <CopyField label={address.source === 'DOMAIN' ? 'نطاقك' : 'العنوان الداخلي'} value={address.url} />
+            </div>
+            {address.pending && (
+              <p className="mt-2 text-xs leading-relaxed text-[var(--sys-warning)]">{address.pending.reason}</p>
+            )}
+            {address.source === 'DOMAIN' && (
+              <p className="mt-2 text-xs text-[var(--sys-muted-foreground)]" dir="ltr">
+                {data.publicPath}
+                <span dir="rtl"> — العنوان الداخلي يبقى يعمل أيضاً</span>
               </p>
             )}
           </div>

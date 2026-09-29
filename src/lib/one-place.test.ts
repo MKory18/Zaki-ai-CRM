@@ -124,6 +124,61 @@ describe('the store domain is written in one place', () => {
 });
 
 /**
+ * THE ADDRESS A CUSTOMER IS GIVEN IS BUILT IN ONE PLACE.
+ *
+ * It was built in four, and they disagreed about the one thing that matters.
+ *
+ *  - The landing page list and the page's own screen pasted
+ *    `origin + /lp/<slug>` and IGNORED the page's custom domain, so a seller
+ *    who had connected one was handed the internal address anyway.
+ *  - The storefront card used `https://<domain>` the moment a domain was
+ *    TYPED, without asking whether it had ever resolved — so «انسخ الرابط»
+ *    put a dead hostname into an advertisement.
+ *
+ * One rule now, in src/lib/public-address.ts: a connected domain is the
+ * address only once a real lookup has passed. A screen that goes back to
+ * assembling its own fails here.
+ */
+describe('the public address of a selling page is built in one place', () => {
+  const SCREENS = [
+    'src/components/screens/LandingPagesScreen.tsx',
+    'src/components/screens/LandingPageDetailScreen.tsx',
+    'src/components/screens/StorefrontsScreen.tsx',
+    'src/components/screens/StoreDomainScreen.tsx',
+  ];
+
+  it.each(SCREENS)('%s asks the shared rule', (file) => {
+    const src = read(file);
+    expect(src.length, `${file} is empty`).toBeGreaterThan(0);
+    expect(src, `${file} does not use publicAddress`).toContain("@/lib/public-address");
+  });
+
+  it.each(SCREENS)('%s does not glue an origin onto a selling path itself', (file) => {
+    const src = read(file);
+    expect(src.length, `${file} is empty`).toBeGreaterThan(0);
+    // `${...origin...}/lp/` or `${...origin...}/s/` — the shape of the copy.
+    expect(src, `${file} builds a public URL of its own`).not.toMatch(/\$\{[^}]*origin[^}]*\}\/(lp|s)\//);
+  });
+
+  it.each(SCREENS)('%s never offers https://<domain> without asking about the verification', (file) => {
+    const src = read(file);
+    expect(src.length, `${file} is empty`).toBeGreaterThan(0);
+    // An interpolated hostname straight into an https:// link is the bug:
+    // a domain nobody looked up, handed over as the shop's address.
+    expect(src, `${file} hands out an unverified host`).not.toMatch(/https:\/\/\$\{\s*\w+\.domain/);
+  });
+
+  it('and the rule itself is the only thing that decides it', () => {
+    const rule = read('src/lib/public-address.ts');
+    expect(rule).toContain('domainVerifiedAt');
+    // The campaign link reuses the path decision rather than repeating it.
+    const campaigns = read('src/lib/campaigns.ts');
+    expect(campaigns).toContain('publicPath(');
+    expect(campaigns, 'campaignLink builds the /lp-or-/s decision again').not.toMatch(/kind === 'lp' \? `\/lp\//);
+  });
+});
+
+/**
  * WHAT A COURIER OWES IS WORKED OUT IN ONE PLACE.
  *
  * `expectedAmountFor` in settlement.ts is the rule, and the statement

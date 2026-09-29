@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { stripComments } from './guard-source';
 import { join } from 'node:path';
 import {
   AUTO_DARK,
@@ -460,5 +461,122 @@ describe('a semantic colour keeps its meaning on every screen', () => {
     const box = src.slice(src.lastIndexOf('<div className="bg-[var(--sys-', i), i);
     expect(box.length, 'could not find the box markup').toBeGreaterThan(20);
     expect(box).toContain('sys-destructive');
+  });
+});
+
+/**
+ * A THEME IS A SURFACE COLOUR *AND* A SCHEME.
+ *
+ *   «إذا كانت بيضا فتكون أزرق» · «التبويبات المنبثقة … غير متناسبة مع التصميم»
+ *
+ * A checkbox, a radio, a date picker's calendar, a number spinner and the
+ * popup list a `<select>` opens are painted by the USER AGENT. Tailwind's
+ * preflight zeroes their `background-color`, so a bare field's box is
+ * transparent rather than white — but the widget inside it is still the
+ * browser's, and a browser with no `color-scheme` to go on assumes light.
+ *
+ * Measured in Chrome on this build, on `--sys-card` (#0A1A2E): an unchecked
+ * tick box rendered a WHITE square, a radio a white disc, and the date
+ * field's calendar glyph near-black. Declaring the scheme turned all three
+ * dark, and moved no explicitly-themed control by a pixel.
+ *
+ * `dark: boolean` on each theme is the source of truth here, exactly as
+ * `vars` is for the palette above. Reading it rather than repeating it is
+ * what stops a fourth palette being added with the scheme left behind —
+ * which is the failure this whole family of complaints came from.
+ */
+
+/**
+ * Every `color-scheme` declared in a rule whose selector names `selector`.
+ *
+ * A list rather than one value: `auto` is written twice — once on its own
+ * and once inside the light media query — and a guard that silently took
+ * the first would not notice the two disagreeing.
+ */
+export function declaredSchemes(css: string, selector: string): string[] {
+  // `stripComments` is lib/guard-source.ts's, not a copy: that file exists
+  // because the costliest bugs in this redesign were bugs in COPIES of it,
+  // and one of them was this exact fault — a guard reading its own prose.
+  // The ops rule's comment discusses schemes at length, so a reader that
+  // counted prose would pass whatever the stylesheet actually did.
+  const text = stripComments(css);
+  const found: string[] = [];
+  let i = text.indexOf(selector);
+  while (i !== -1) {
+    const open = text.indexOf('{', i);
+    const close = text.indexOf('}', open);
+    if (open === -1 || close === -1) break;
+    const m = text.slice(open + 1, close).match(/color-scheme:\s*([^;]+);/);
+    if (m) found.push(m[1].trim().replace(/\s+/g, ' '));
+    i = text.indexOf(selector, close);
+  }
+  return found;
+}
+
+describe('every palette declares the scheme its native controls are drawn in', () => {
+  it.each(SYSTEM_THEMES.map((t) => [t.key, t.dark] as const))(
+    '%s declares the scheme matching its own dark flag',
+    (key, dark) => {
+      const schemes = declaredSchemes(css(), `[data-sys-theme='${key}']`);
+      expect(schemes, `لا color-scheme للقلم ${key}`).toContain(dark ? 'dark' : 'light');
+    }
+  );
+
+  it('and the default root declares it too, so a page with no attribute is not left to the browser', () => {
+    // `:root` shares the ops rule, so this asserts the pair, not a copy.
+    expect(css()).toMatch(/:root,\s*\r?\n\[data-sys-theme='ops'\][\s\S]{0,2000}?color-scheme: dark;/);
+  });
+
+  it('تلقائي hands the scheme to the device, in both of its states', () => {
+    // `light dark` is the one value that answers a dark device AND a light
+    // one, which is what the palette below it does by media query. A flat
+    // `dark` here would put white tick boxes back on a light device.
+    expect(declaredSchemes(css(), "[data-sys-theme='auto']")).toEqual(['light dark']);
+  });
+
+  it('is declared inside the palette rule, never in a rule of its own', () => {
+    // Co-located so the two cannot drift. A theme whose surfaces are light
+    // and whose controls are dark is the bug this file exists to prevent,
+    // and splitting the declaration out is how that happens.
+    for (const theme of SYSTEM_THEMES) {
+      const text = stripComments(css());
+      const at = text.indexOf(`[data-sys-theme='${theme.key}']`);
+      const block = text.slice(text.indexOf('{', at), text.indexOf('}', at));
+      expect(block, theme.key).toContain('--sys-background:');
+      expect(block, theme.key).toContain('color-scheme:');
+    }
+  });
+
+  it('leaves the scroll bars alone, because they are painted explicitly', () => {
+    // `color-scheme` repaints a scroll bar unless CSS already does. This
+    // product does, so the declaration cannot move them — asserted because
+    // it is the one visible thing a scheme change is most likely to break.
+    expect(css()).toContain('::-webkit-scrollbar');
+  });
+});
+
+describe('the scheme reader itself', () => {
+  it('reads a declaration out of a block', () => {
+    expect(declaredSchemes("[data-sys-theme='x'] { color-scheme: dark; --a: 1; }", "[data-sys-theme='x']")).toEqual(['dark']);
+  });
+
+  it('does not mistake a mention in a comment for a declaration', () => {
+    // The ops block carries a long comment about schemes. A reader that
+    // counted prose would pass whatever the CSS actually did.
+    const css = "[data-sys-theme='x'] { /* color-scheme: dark; is what we want */ --a: 1; }";
+    expect(declaredSchemes(css, "[data-sys-theme='x']")).toEqual([]);
+  });
+
+  it('reports a block that declares nothing', () => {
+    expect(declaredSchemes("[data-sys-theme='x'] { --a: 1; }", "[data-sys-theme='x']")).toEqual([]);
+  });
+
+  it('collects every rule for the selector, not just the first', () => {
+    const css = "[data-sys-theme='a'] { color-scheme: light dark; } @media x { [data-sys-theme='a'] { color-scheme: light; } }";
+    expect(declaredSchemes(css, "[data-sys-theme='a']")).toEqual(['light dark', 'light']);
+  });
+
+  it('normalises the whitespace inside a value', () => {
+    expect(declaredSchemes("[a] {\n  color-scheme:   light   dark;\n}", '[a]')).toEqual(['light dark']);
   });
 });

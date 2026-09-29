@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { AttributionRow } from './attribution-performance';
+import { publicPath } from './public-address';
 
 /**
  * WHAT AN AD COST, AND WHAT IT BROUGHT BACK.
@@ -135,8 +136,10 @@ function round(n: number): number {
  * by every tool that touches them.
  */
 export function campaignLink(origin: string, code: string, target: { kind: 'lp'; slug: string } | { kind: 'store'; slug: string }): string {
-  const path = target.kind === 'lp' ? `/lp/${target.slug}` : `/s/${target.slug}`;
-  return `${origin.replace(/\/+$/, '')}${path}?c=${encodeURIComponent(code)}`;
+  // Where a selling page answers is decided in ONE place (public-address.ts);
+  // this adds the campaign code and nothing else. A second copy of the
+  // /lp-or-/s decision is a second answer waiting to disagree.
+  return `${origin.replace(/\/+$/, '')}${publicPath(target)}?c=${encodeURIComponent(code)}`;
 }
 
 /**

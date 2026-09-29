@@ -6,18 +6,26 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
+import { ProductPicker } from '@/components/ui/ProductPicker';
+import { useProducts } from '@/hooks/useProducts';
 import { Badge } from '@/components/ui/Badge';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { copyText } from '@/lib/clipboard';
-import { RiAddCircleLine, RiArrowRightLine, RiCheckLine, RiComputerLine, RiDashboard3Line, RiDeleteBinLine, RiExternalLinkLine, RiFileCodeLine, RiFileCopyLine, RiGiftLine, RiLoader4Line, RiPencilLine, RiUpload2Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiCheckLine, RiComputerLine, RiDashboard3Line, RiDeleteBinLine, RiExternalLinkLine, RiFileCodeLine, RiFileCopyLine, RiGiftLine, RiLoader4Line, RiPencilLine, RiRefreshLine, RiUpload2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { publicAddress } from '@/lib/public-address';
+import type { DomainCheck } from '@/lib/domain-verify';
 
 export function LandingPageDetailScreen() {
   const tell = useTell();
   const params = useParams<{ id: string }>();
   const lpId = params?.id ?? null;
   const [lp, setLp] = useState<any>(null);
-  const [products, setProducts] = useState<any[]>([]);
+  // `?limit=200` was silently capped at 100 by the route, so this screen
+  // could reach only 100 of the 114 products — and a search box over a
+  // truncated list is worse than a dropdown over a whole one: it answers
+  // «لا يوجد» about a product that exists. The hook asks for no limit.
+  const { products } = useProducts();
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -29,6 +37,25 @@ export function LandingPageDetailScreen() {
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [previewToken, setPreviewToken] = useState<string | null>(null);
+
+  /**
+   * The page's own domain, as the server sees it: the records the seller must
+   * create, and whether a real lookup has ever passed.
+   *
+   * The screen used to tell them to «point an A or CNAME at this server»
+   * without ever saying which value, and printed `https://<domain>` in
+   * success green the moment the field was saved. Both were the screen
+   * claiming something it had not checked.
+   */
+  const [domainInfo, setDomainInfo] = useState<{
+    domain: string | null;
+    verifiedAt: string | null;
+    records: { type: string; name: string; value: string; ttl: string; note?: string }[];
+    target: { kind: string; value: string } | null;
+    publicPath: string;
+  } | null>(null);
+  const [lastCheck, setLastCheck] = useState<DomainCheck | null>(null);
+  const [checking, setChecking] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Recommendations
@@ -40,6 +67,28 @@ export function LandingPageDetailScreen() {
     if (!lpId) return;
     try { const d = await crmApi(`/api/landing-pages/${lpId}/recommendations`); setRecs(d.recommendations || []); } catch {}
   }, [lpId]);
+
+  const loadDomain = useCallback(async () => {
+    if (!lpId) return;
+    try { setDomainInfo(await crmApi(`/api/landing-pages/${lpId}/domain`)); } catch { /* the field still works */ }
+  }, [lpId]);
+
+  /** A real DNS and TLS lookup. The only thing that can verify this domain. */
+  const checkDomainNow = async () => {
+    if (!lpId) return;
+    setChecking(true);
+    try {
+      const got = await crmApi(`/api/landing-pages/${lpId}/domain`, { method: 'POST' });
+      setDomainInfo(got);
+      setLastCheck(got.lastCheck ?? null);
+      // The public-link card reads the page's own verification stamp, so a
+      // check that just passed must reach it too — or the card keeps warning
+      // about a domain that is now the address.
+      await load();
+    } catch (e: any) {
+      void tell({ title: 'تعذّر التحقّق من النطاق', body: e.message, tone: 'danger' });
+    } finally { setChecking(false); }
+  };
 
   const load = useCallback(async () => {
     if (!lpId) return;
@@ -57,12 +106,10 @@ export function LandingPageDetailScreen() {
   }, [lpId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { void loadDomain(); }, [loadDomain]);
   useEffect(() => {
     if (lpId) { loadRecs(); }
   }, [lpId, loadRecs]);
-  useEffect(() => {
-    crmApi('/api/products?limit=200').then((d) => setProducts(d.products || [])).catch(() => {});
-  }, []);
 
   const save = async () => {
     setSaveMsg(null);
@@ -78,7 +125,11 @@ export function LandingPageDetailScreen() {
         }),
       });
       setSaveMsg('تم الحفظ');
-      await load();
+      // A saved domain is a NEW address with no verification behind it, so the
+      // records and the badge are re-read rather than left showing the old
+      // hostname's answer.
+      setLastCheck(null);
+      await Promise.all([load(), loadDomain()]);
     } catch (e: any) { setSaveMsg(e.message); } finally { setSaving(false); }
   };
 
@@ -138,7 +189,18 @@ export function LandingPageDetailScreen() {
     }
   };
 
-  const publicUrl = typeof window !== 'undefined' && lp ? `${window.location.origin}/lp/${lp.slug}` : '';
+  /**
+   * The link to hand over — built by the same rule every other screen uses
+   * (src/lib/public-address.ts). It used to be `origin + /lp/<slug>` and
+   * ignored the page's own domain completely, so a seller who had connected
+   * one was still given the internal address.
+   */
+  const address = lp
+    ? publicAddress(typeof window === 'undefined' ? '' : window.location.origin, {
+        kind: 'lp', slug: lp.slug, domain: lp.domain, domainVerifiedAt: lp.domainVerifiedAt,
+      })
+    : null;
+  const publicUrl = address?.url ?? '';
 
   useEffect(() => {
     if (lp && lpId) refreshPreviewRef.current();
@@ -233,24 +295,93 @@ export function LandingPageDetailScreen() {
                     placeholder="shop.example.com"
                   />
                   <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-                    وجّه النطاق إلى هذا الخادم بسجل <code dir="ltr">A</code> أو{' '}
-                    <code dir="ltr">CNAME</code> عند مزوّد النطاق، ثم اكتبه هنا. الصفحة
-                    تبقى تعمل على <code dir="ltr">/lp/{lp.slug}</code> في الحالتين، فالنطاق
-                    باب إضافي لا بديل — وخطأ في الـDNS لا يوقف صفحة تعمل.
+                    اكتب النطاق هنا أولاً، ثم أضف السجلّات التي ستظهر لك عند مزوّد النطاق.
+                    الصفحة تبقى تعمل على <code dir="ltr">/lp/{lp.slug}</code> في الحالتين،
+                    فالنطاق باب إضافي لا بديل — وخطأ في الـDNS لا يوقف صفحة تعمل.
                   </p>
-                  {lp.domain && (
-                    <p className="mt-1 text-xs text-[var(--sys-success)]" dir="ltr">
-                      https://{lp.domain}
-                    </p>
+
+                  {/* ── WHAT WAS HERE BEFORE ──
+                      A green `https://<domain>` printed the instant the field
+                      was saved. Nothing had been looked up: the screen was
+                      telling the seller the page was reachable while every
+                      customer could be meeting an error. And the sentence
+                      above told them to create «an A or CNAME record»
+                      without ever saying WHICH VALUE — a step no one can
+                      carry out.
+                      Now: the records, and a real lookup. */}
+                  {lp.domain && domainInfo && (
+                    <div className="mt-2 space-y-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                            domainInfo.verifiedAt
+                              ? 'bg-[var(--sys-success)]/10 text-[var(--sys-success)]'
+                              : 'bg-[var(--sys-warning)]/15 text-[var(--sys-warning)]'
+                          }`}
+                        >
+                          {domainInfo.verifiedAt ? 'متحقَّق' : 'غير متحقَّق بعد'}
+                        </span>
+                        <Button size="sm" variant="secondary" disabled={checking} onClick={() => void checkDomainNow()}>
+                          {checking ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiRefreshLine className="h-4 w-4" />}
+                          تحقّق الآن
+                        </Button>
+                      </div>
+
+                      {domainInfo.verifiedAt ? (
+                        <p className="text-xs text-[var(--sys-success)]" dir="ltr">
+                          https://{lp.domain}
+                        </p>
+                      ) : (
+                        <p className="text-xs leading-relaxed text-[var(--sys-warning)]">
+                          لا تنشر هذا النطاق في إعلان قبل أن يصير «متحقَّق» — قد لا يفتح عند الزبون.
+                        </p>
+                      )}
+
+                      {lastCheck && <p className="text-xs leading-relaxed text-[var(--sys-foreground)]">{lastCheck.detail}</p>}
+
+                      {domainInfo.records.length === 0 || !domainInfo.target ? (
+                        <p className="rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-2 text-xs leading-relaxed text-[var(--sys-warning)]">
+                          لم يُضبط عنوان التطبيق على الخادم بعد (<code dir="ltr">APP_DOMAIN</code> أو{' '}
+                          <code dir="ltr">APP_PUBLIC_IP</code>)، فلا يمكن إخبارك بقيمة التوجيه المطلوبة —
+                          ولن نخترع لك قيمة تُخرج صفحتك عن الخدمة. اضبطها على الخادم وستظهر هنا.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                            أضف سجل TXT <strong>وواحداً</strong> من سجلّي التوجيه في لوحة إدارة النطاق،
+                            ثم اضغط «تحقّق الآن». انتشار السجلّات قد يستغرق من دقائق إلى ساعات.
+                          </p>
+                          <ul className="space-y-1">
+                            {domainInfo.records.map((r, i) => (
+                              <li key={i} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 py-1.5">
+                                <code className="block truncate text-xs text-[var(--sys-heading)]" dir="ltr" title={`${r.type} ${r.name} ${r.value} ${r.ttl}`}>
+                                  {r.type} | {r.name} | {r.value} | TTL {r.ttl}
+                                </code>
+                                {r.note && <span className="text-xs text-[var(--sys-muted)]">{r.note}</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
 
                 <div>
                   <label className="text-xs font-semibold text-[var(--sys-foreground)]">المنتج المرتبط</label>
-                  <Select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
-                    <option value="">— اختر منتجًا —</option>
-                    {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </Select>
+                  {/*
+                    114 products, measured on this database. As a `<select>`
+                    that is a scroll, and the list it opens is painted by the
+                    browser rather than by the theme — «لما أجي أختار منتج
+                    يتضوي بيضا». `anyOption` keeps «لم يُختر» reachable,
+                    because a landing page is allowed to have no product.
+                  */}
+                  <ProductPicker
+                    products={products}
+                    value={form.productId}
+                    onChange={(productId) => setForm({ ...form, productId })}
+                    anyOption={{ value: '', label: '— بلا منتج —' }}
+                  />
                   <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">السعر يُؤخذ من المنتج في قاعدة البيانات — لا يُقبل من المتصفح أبدًا.</p>
                 </div>
                 <div className="flex items-center justify-between">
@@ -332,12 +463,25 @@ export function LandingPageDetailScreen() {
                 </div>
                 <p className="text-xs text-[var(--sys-muted-foreground)]">تظهر في شاشة النجاح بعد الطلب — يمكن للعميل إضافتها إلى نفس الطلب خلال 30 دقيقة.</p>
                 <div className="flex gap-2">
-                  <Select value={recProductId} onChange={(e: any) => setRecProductId(e.target.value)}>
-                    <option value="">— اختر منتجًا —</option>
-                    {products.filter((p: any) => !recs.some((r: any) => r.product?.id === p.id)).map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.basePrice})</option>
-                    ))}
-                  </Select>
+                  {/*
+                    The same 114-row dropdown, a second time on this screen —
+                    not reported, found while fixing the one above it. The
+                    already-recommended products are filtered out BEFORE the
+                    picker sees them, so the search never offers a product
+                    that would be refused on add.
+
+                    The row shows the SKU where it used to show the price:
+                    that is `ProductPicker`'s own row, and the price is not
+                    on `PickableProduct`. Named in the hand-back as the one
+                    thing this conversion costs.
+                  */}
+                  <ProductPicker
+                    className="flex-1"
+                    products={products.filter((p) => !recs.some((r: any) => r.product?.id === p.id))}
+                    value={recProductId}
+                    onChange={setRecProductId}
+                    anyOption={{ value: '', label: '— اختر منتجًا —' }}
+                  />
                   <Button size="sm" onClick={addRecommendation} disabled={recSaving || !recProductId}>
                     {recSaving ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiAddCircleLine className="w-4 h-4" />} إضافة
                   </Button>
@@ -369,11 +513,16 @@ export function LandingPageDetailScreen() {
                   <code className="flex-1 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg px-3 py-2 truncate">{publicUrl}</code>
                   <Button variant="secondary" size="sm" onClick={copyUrl}><RiFileCopyLine className="w-4 h-4" /> {copied ? 'تم' : 'نسخ'}</Button>
                   {lp.isPublished && (
-                    <a href={`/lp/${lp.slug}`} target="_blank" rel="noopener noreferrer">
+                    <a href={publicUrl} target="_blank" rel="noopener noreferrer">
                       <Button variant="ghost" size="sm"><RiExternalLinkLine className="icon-mirror w-4 h-4" /></Button>
                     </a>
                   )}
                 </div>
+                {/* A connected domain that has not passed a lookup is named
+                    with its reason instead of being handed over as the link. */}
+                {address?.pending && (
+                  <p className="text-xs leading-relaxed text-[var(--sys-warning)]">{address.pending.reason}</p>
+                )}
                 {/* The numbers are read on the performance screen, where they
                     sit beside the device, the campaign and a date range. Three
                     tiles here were the same three numbers with none of that,

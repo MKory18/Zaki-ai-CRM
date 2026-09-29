@@ -17,6 +17,14 @@ import type { PickableProduct } from '@/components/ui/ProductPicker';
  * Hence NO limit. The route returns the store's catalogue when none is
  * given, and `ProductPicker` narrows it in the browser, where the typing is.
  *
+ * IT CARRIES THE CATEGORY THROUGH, and that needed no change to the fetch:
+ * the route already selects it (`category: { select: { id: true, name: true } }`)
+ * and this hook never dropped it — `PickableProduct` simply did not name it,
+ * so every caller was typed as if it were not there. `ProductPicker` groups
+ * its list under it while nothing is typed, so a catalogue can be BROWSED
+ * and not only searched. Nothing extra is asked of the route, and the
+ * no-limit rule above is untouched.
+ *
  * `products.view` is held by the moderator, the confirmation agent and the
  * warehouse (see cost-visibility.ts), so every screen that offers a product
  * choice may read this. A refusal is not thrown at the caller: the list

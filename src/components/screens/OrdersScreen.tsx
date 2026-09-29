@@ -13,6 +13,8 @@ import { useTell } from '@/components/ui/Confirm';
 import { ScanButton } from '@/components/scan/ScanButton';
 import { userCan } from '@/lib/can';
 import { useRegions } from '@/hooks/useRegions';
+import { useProducts } from '@/hooks/useProducts';
+import { ProductPicker } from '@/components/ui/ProductPicker';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { ProductThumb } from '@/components/ui/ProductThumb';
@@ -63,7 +65,7 @@ export function OrdersScreen() {
   const [queue, setQueue] = useState('');
 
   // Metadata dropdowns
-  const [products, setProducts] = useState<any[]>([]);
+  const { products } = useProducts();
   const [moderators, setModerators] = useState<any[]>([]);
   const [couriers, setCouriers] = useState<any[]>([]);
   // The store's own currency, sent with the list — never assumed.
@@ -86,16 +88,14 @@ export function OrdersScreen() {
 
   const loadMetadata = async () => {
     try {
-      const [pRes, mRes, cRes, sRes] = await Promise.all([
-        fetch('/api/products'),
+      // The catalogue is no longer fetched here: `useProducts` owns it, so
+      // the screen has one product list rather than a private copy that
+      // could ask the route for a different slice of it.
+      const [mRes, cRes, sRes] = await Promise.all([
         fetch('/api/moderators'),
         fetch('/api/delivery-providers'),
         fetch('/api/orders/sources'),
       ]);
-      if (pRes.ok) {
-        const pData = await pRes.json();
-        setProducts(pData.products || []);
-      }
       if (mRes.ok) {
         const mData = await mRes.json();
         setModerators(mData.moderators || []);
@@ -424,12 +424,30 @@ export function OrdersScreen() {
               ))}
             </Select>
 
-            <Select value={productId} onChange={(e) => setProductId(e.target.value)} className="text-xs py-2">
-              <option value="all">كل المنتجات</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </Select>
+            {/*
+              A HUNDRED AND FOURTEEN PRODUCTS IS NOT A DROPDOWN.
+
+                «لما أضيف منتج … ما بطلع بحث»
+
+              Measured on this database: 114 products, every one of them
+              ACTIVE and every one with a SKU. As a native `<select>` that is
+              115 rows to scroll past on a phone, and the popup list a
+              `<select>` opens is drawn by the browser — which is the other
+              half of «لما أجي أختار منتج يتضوي بيضا».
+
+              A filter, not a line-item chooser: `anyOption` is what makes it
+              one. «كل المنتجات» is where it starts, where the ✕ returns it,
+              and it is never forced to hold a product just because somebody
+              opened the box.
+            */}
+            <ProductPicker
+              products={products}
+              value={productId}
+              onChange={setProductId}
+              anyOption={{ value: 'all', label: 'كل المنتجات' }}
+              placeholder="ابحث عن منتج…"
+              className="min-w-[200px]"
+            />
 
             <Select value={regionId} onChange={(e) => setRegionId(e.target.value)} className="text-xs py-2">
               <option value="all">كل المحافظات</option>

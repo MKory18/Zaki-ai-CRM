@@ -31,6 +31,28 @@
  */
 :root,
 [data-sys-theme='ops'] {
+  /*
+   * THE SCHEME THE BROWSER PAINTS ITS OWN CONTROLS IN.
+   *
+   * Declared beside the palette, never apart from it. A checkbox, a radio,
+   * a date picker's calendar, a number spinner, a range track and — the one
+   * actually reported — the popup list a <select> opens are drawn by the
+   * USER AGENT, not by CSS. Tailwind's preflight zeroes their
+   * `background-color`, so a bare field's BOX is transparent rather than
+   * white; the widget INSIDE it is still the user agent's, and with no
+   * scheme declared the user agent assumes light. Measured on this build,
+   * on `--sys-card` (#0A1A2E): an unchecked tick box rendered a WHITE
+   * square, a radio a white disc, and the calendar glyph near-black.
+   *
+   *   «إذا كانت بيضا فتكون أزرق» · «التبويبات المنبثقة … غير متناسبة»
+   *
+   * It sits in the same rule as the variables so the two cannot drift: a
+   * theme is a surface colour AND the scheme its native controls are drawn
+   * in, and splitting them is how a light palette comes to hold a dark
+   * tick box. Scroll bars are styled explicitly further down
+   * (`::-webkit-scrollbar`), so this does not move them.
+   */
+  color-scheme: dark;
   --sys-background: #050F1F;
   --sys-card: #0A1A2E;
   --sys-surface: #0F2438;
@@ -68,6 +90,11 @@
 }
 
 [data-sys-theme='day'] {
+  /* Light, stated. The user agent's own assumption is already light, so
+     this moves no pixel today — it is declared so the scheme belongs to
+     the palette rather than to a default, and so a later surface change
+     cannot leave the native controls behind. */
+  color-scheme: light;
   --sys-background: #FFFFFF;
   --sys-card: #F4F8FA;
   --sys-surface: #E9F0F3;
@@ -105,6 +132,8 @@
 }
 
 [data-sys-theme='calm'] {
+  /* Parchment surfaces, light controls. */
+  color-scheme: light;
   --sys-background: #F6F2EA;
   --sys-card: #EFE9DE;
   --sys-surface: #E6DECF;
@@ -139,6 +168,24 @@
   --sys-scrollbar-hover: #9b9f9c;
   --sys-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.05), 0 1px 3px rgb(12 50 82 / 0.07);
   --sys-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.06), 0 12px 32px rgb(12 50 82 / 0.12);
+}
+
+/*
+ * تلقائي HANDS THE CHOICE TO THE DEVICE, AND THE CONTROLS WITH IT.
+ *
+ * Outside the media query on purpose, because it has to answer in BOTH
+ * states: `light dark` lets the user agent pick, and it picks exactly what
+ * the palette below picks — the default (dark) palette is inherited on a
+ * dark device, and a light device is overridden to the light one. One
+ * declaration, both branches, no third place to keep in step.
+ *
+ * It must also override the `dark` inherited from `:root`, and it does:
+ * `data-sys-theme` is rendered on a div INSIDE the document element, so
+ * this declaration is on a descendant and wins over the inherited value
+ * whatever order the rules appear in.
+ */
+[data-sys-theme='auto'] {
+  color-scheme: light dark;
 }
 
 /* تلقائي on a light device. On a dark one it already has what it needs. */

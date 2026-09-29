@@ -179,6 +179,14 @@ describe('what the screen is handed', () => {
     expect((await (await GET()).json()).storefrontEnabled).toBe(false);
   });
 
+  it('the slug, so the screen builds the address with the shared rule', async () => {
+    // Without it the address card had nothing to build from and printed
+    // `/s/undefined`. The path is produced by publicPath, not pasted here.
+    const body = await (await GET()).json();
+    expect(body.slug).toBe('seha');
+    expect(body.publicPath).toBe('/s/seha');
+  });
+
   it('a corrupt stored check reads as no check, not as a crash', async () => {
     db.store.findFirst.mockResolvedValue({ ...STORE, domainCheck: '}{' });
     expect((await (await GET()).json()).lastCheck).toBeNull();

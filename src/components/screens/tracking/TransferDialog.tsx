@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { Input, Select } from '@/components/ui/Input';
 import { RiAlertLine, RiEBike2Line, RiTruckLine } from '@remixicon/react';
 
 /**
@@ -100,22 +101,26 @@ export function TransferDialog({
           )}
         </div>
 
-        <label className="block">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الجهة الجديدة</span>
-          <select
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            required
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
-          >
-            <option value="">اختر…</option>
-            {providers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} — {p.kind === 'AGENT' ? 'مندوب' : 'شركة شحن'}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/*
+          The shared field, as on the returns desk and in CollectDialog. This
+          `<select>` had `bg-[var(--sys-card)]` retyped onto it and the note
+          box below did not, which is the same class string drifting in the
+          same file — and neither carried the focus ring system.css leaves to
+          the component.
+        */}
+        <Select
+          label="الجهة الجديدة"
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          required
+        >
+          <option value="">اختر…</option>
+          {providers.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} — {p.kind === 'AGENT' ? 'مندوب' : 'شركة شحن'}
+            </option>
+          ))}
+        </Select>
 
         {to && (
           <p className="text-xs text-[var(--sys-muted-foreground)] flex items-center gap-1.5">
@@ -124,15 +129,12 @@ export function TransferDialog({
           </p>
         )}
 
-        <label className="block">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختيارية)</span>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="سبب التحويل"
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
-          />
-        </label>
+        <Input
+          label="ملاحظة (اختيارية)"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="سبب التحويل"
+        />
 
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 

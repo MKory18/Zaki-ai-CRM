@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { dashboardHosts, forgetHost, validateDomain } from '@/lib/landing-domain';
 import { checkDomain, requiredRecords, routingTarget, type DomainCheck } from '@/lib/domain-verify';
+import { publicPath } from '@/lib/public-address';
 import { z } from 'zod';
 
 /**
@@ -47,7 +48,11 @@ function payload(store: { slug: string; domain: string | null; domainVerifiedAt:
     // seller's shop off the air.
     target: routingTarget(),
     storefrontEnabled: store.storefrontEnabled,
-    publicPath: `/s/${store.slug}`,
+    // The slug, so the screen can build the address with the SAME function
+    // every other screen uses (src/lib/public-address.ts) rather than
+    // pasting one together from this path.
+    slug: store.slug,
+    publicPath: publicPath({ kind: 'store', slug: store.slug }),
   };
 }
 

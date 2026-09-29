@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useConfirm } from '@/components/ui/Confirm';
 import { STORE_TYPE_LABEL } from '@/lib/store-types';
+import { publicAddress } from '@/lib/public-address';
 import { RiAddCircleLine, RiAlertLine, RiBrushLine, RiCheckLine, RiEarthLine, RiEqualizer2Line, RiExternalLinkLine, RiImageLine, RiInformationLine, RiLayoutGridLine, RiLinksLine, RiLoader4Line, RiPaletteLine, RiStore2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
@@ -33,6 +34,19 @@ interface PageOption {
   product: { name: string } | null;
 }
 
+/**
+ * This card's shop, as the address rule wants it.
+ *
+ * An adapter and NOT a second rule: the decision of whether the custom
+ * domain is the address lives in src/lib/public-address.ts, and is the same
+ * decision the domain screen and the landing page screens make.
+ */
+function addressOf(shop: Shop, origin: string) {
+  return publicAddress(origin, {
+    kind: 'store', slug: shop.slug, domain: shop.domain, domainVerifiedAt: shop.domainVerifiedAt,
+  });
+}
+
 interface Shop {
   id: string;
   name: string;
@@ -42,6 +56,8 @@ interface Shop {
   live: boolean;
   tagline: string | null;
   domain: string | null;
+  /** When a real DNS + TLS lookup last passed. Null means never checked. */
+  domainVerifiedAt: string | null;
   currency: string;
   countryId: string;
   path: string;
@@ -149,7 +165,12 @@ export function StorefrontsScreen() {
   }
 
   async function copyLink(shop: Shop) {
-    const url = shop.domain ? `https://${shop.domain}` : `${window.location.origin}${shop.path}`;
+    // What gets copied is decided in one place (src/lib/public-address.ts).
+    // It used to be `https://<domain>` the moment a domain was TYPED — so
+    // «انسخ الرابط» handed the seller a hostname nobody had looked up, and
+    // the advertisement they pasted it into sent every paid click to a
+    // browser error.
+    const { url } = addressOf(shop, window.location.origin);
     try {
       await navigator.clipboard.writeText(url);
       setCopied(shop.id);
@@ -222,7 +243,8 @@ function Card({
   /** Opens one of this store's screens, switching into the store first. */
   onOpen: (href: string) => void;
 }) {
-  const url = shop.domain ? `https://${shop.domain}` : shop.path;
+  const address = addressOf(shop, typeof window === 'undefined' ? '' : window.location.origin);
+  const url = address.url;
   return (
     <div className={`rounded-lg border bg-[var(--sys-card)] p-3 ${shop.live ? 'border-[var(--sys-success-soft)]' : 'border-[var(--sys-border)]'}`}>
       <div className="flex items-start justify-between gap-2">
@@ -424,6 +446,14 @@ function Card({
       )}
 
       <p className="mt-1.5 truncate font-mono text-xs text-[var(--sys-muted)]" dir="ltr" title={url}>{url}</p>
+      {/* A connected domain that has not passed a lookup is named here, with
+          the reason, instead of being handed out as the shop's address. */}
+      {address.pending && (
+        <p className="mt-1 text-xs leading-relaxed text-[var(--sys-warning)]">
+          {address.pending.reason}{' '}
+          <Link href="/store/domain" className="font-semibold underline">تحقَّق من النطاق</Link>
+        </p>
+      )}
     </div>
   );
 }

@@ -6,10 +6,12 @@ import { useTell } from '@/components/ui/Confirm';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
+import { ProductPicker } from '@/components/ui/ProductPicker';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { screenApi as crmApi, qs } from '@/lib/screen-api';
 import { formatDate } from '@/lib/screen-api';
+import { publicAddress } from '@/lib/public-address';
 import { copyText } from '@/lib/clipboard';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
@@ -52,27 +54,14 @@ export function LandingPagesScreen() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    crmApi('/api/products?limit=200').then((d) => setProducts(d.products || [])).catch(() => {});
+    // NO LIMIT. `?limit=200` read as 200 and was capped at 100 by the route
+    // (`Math.min(…, 100)` in api/products/route.ts), so this modal could
+    // reach only 100 of the 114 products — and the search box below makes
+    // that worse, not better: it answers «لا يوجد» about a product that
+    // exists. Not `useProducts`, because the template previews below need
+    // `basePrice` and `currency`, which `PickableProduct` does not carry.
+    crmApi('/api/products').then((d) => setProducts(d.products || [])).catch(() => {});
   }, []);
-
-  /**
-   * THE PRODUCTS, UNDER THEIR CATEGORIES.
-   *
-   * 114 products in one flat list is a list nobody reads to the end. The
-   * grouping is also the only honest way to show the gap: everything with
-   * no category lands in one bucket that says so, instead of being spread
-   * invisibly through the alphabet.
-   */
-  const grouped = React.useMemo(() => {
-    const by = new Map<string, any[]>();
-    for (const p of products) {
-      const key = p.category?.name || '';
-      if (!by.has(key)) by.set(key, []);
-      by.get(key)!.push(p);
-    }
-    // Uncategorised last: it is a leftover, not a category.
-    return [...by.entries()].sort((a, b) => (a[0] ? (b[0] ? a[0].localeCompare(b[0], 'ar') : -1) : 1));
-  }, [products]);
 
   /** What the template previews should be selling: the product just picked. */
   const chosenProduct = React.useMemo(() => {
@@ -80,8 +69,20 @@ export function LandingPagesScreen() {
     return p ? { name: p.name, price: Number(p.basePrice ?? 0), currency: p.currency || '' } : null;
   }, [products, form.productId]);
 
-  const publicUrl = (lp: any) =>
-    typeof window !== 'undefined' ? `${window.location.origin}/lp/${lp.slug}` : `/lp/${lp.slug}`;
+  /**
+   * The link this row hands over.
+   *
+   * It used to be `origin + /lp/<slug>` and ignored the page's own domain
+   * entirely, so a seller who had connected one was still given the internal
+   * address and concluded the domain had done nothing. One rule now, shared
+   * with the storefront card and the domain screen: a connected domain is the
+   * address only once a real lookup has passed.
+   */
+  const addressOf = (lp: any) =>
+    publicAddress(typeof window === 'undefined' ? '' : window.location.origin, {
+      kind: 'lp', slug: lp.slug, domain: lp.domain, domainVerifiedAt: lp.domainVerifiedAt,
+    });
+  const publicUrl = (lp: any) => addressOf(lp).url;
 
   const copyUrl = async (lp: any) => {
     // Silence was the bug: over plain HTTP the clipboard API is missing and
@@ -312,15 +313,32 @@ export function LandingPagesScreen() {
             has — «هل يناسب هذا منتجي؟» — could not be answered by looking.
           */}
           <div>
-            <label className="text-xs font-semibold text-[var(--sys-foreground)]" htmlFor="lp-product">المنتج المرتبط</label>
-            <Select id="lp-product" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
-              <option value="">— اختر منتجًا —</option>
-              {grouped.map(([cat, items]) => (
-                <optgroup key={cat || 'none'} label={cat || 'بلا تصنيف'}>
-                  {items.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </optgroup>
-              ))}
-            </Select>
+            <label className="text-xs font-semibold text-[var(--sys-foreground)]">المنتج المرتبط</label>
+            {/*
+              SEARCH REPLACES THE GROUPING, AND THAT IS A TRADE.
+
+              What was here: 114 products under `<optgroup>` headings, with a
+              note saying a flat list of 114 is one nobody reads to the end.
+              That was right about the problem and it is the same problem the
+              owner reported — «لما أضيف منتج … ما بطلع بحث». Typing three
+              letters beats scrolling to the right heading, so the grouping
+              goes and the search comes in.
+
+              WHAT IS LOST, stated rather than hidden: the category headings,
+              and with them the bucket that showed which products have no
+              category at all. Nothing else on this screen displayed that, so
+              it is now not displayed anywhere — named in the hand-back.
+
+              The picker shows the SKU beside each name; every one of the 114
+              products in this database has one.
+            */}
+            <ProductPicker
+              products={products}
+              value={form.productId}
+              onChange={(productId) => setForm({ ...form, productId })}
+              anyOption={{ value: '', label: '— اختر منتجًا —' }}
+              groupByCategory
+            />
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">المنتج والسعر يُحدَّدان من السيرفر عند إرسال أي طلب — لا يمكن التلاعب بهما من الصفحة.</p>
           </div>
 

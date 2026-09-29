@@ -22,7 +22,11 @@ export function PendingScreen() {
         </div>
 
         <PageHeader title="الحساب بانتظار موافقة المدير"
-          description={`تم إنشاء حسابك بنجاح <strong className="text-[var(--sys-destructive)]">${currentUser?.email}</strong> <br /> وهو الآن بانتظار موافقة المدير. سيتم منحك صلاحيات الوصول بعد أن يقوم المدير بتعيين دور حسابك وتنشيطه.`}
+          /* `description` is a STRING rendered as text (PageHeader.tsx), so the
+             tags that were written into it were printed to the person
+             verbatim — `<strong className=...>` and `<br />` shown on the
+             screen of somebody who has just registered. */
+          description={`تم إنشاء حسابك بنجاح (${currentUser?.email ?? ''}) وهو الآن بانتظار موافقة المدير. سيتم منحك صلاحيات الوصول بعد أن يقوم المدير بتعيين دور حسابك وتنشيطه.`}
         />
 
         <div className="bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-4 text-xs text-[var(--sys-muted-foreground)] space-y-1">

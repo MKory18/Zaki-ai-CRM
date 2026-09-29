@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { repoFile, stripComments } from './guard-source';
+import { UNCATEGORISED_LABEL } from '@/components/ui/ProductPicker';
 import { ALL_ROUTES, NAV } from './route-registry';
 import { PAGE_TEMPLATES, buildTemplate } from './page-templates';
 
@@ -45,7 +46,7 @@ describe('the template gallery shows the template', () => {
     // The product is picked BEFORE the templates are shown — otherwise
     // every preview advertises «منتجك» and answers nothing.
     const screen = stripComments(repoFile('src/components/screens/LandingPagesScreen.tsx'));
-    const productAt = screen.indexOf('id="lp-product"');
+    const productAt = screen.indexOf('<ProductPicker');
     const galleryAt = screen.indexOf('<TemplateGallery');
     expect(productAt).toBeGreaterThan(-1);
     expect(galleryAt).toBeGreaterThan(-1);
@@ -54,11 +55,28 @@ describe('the template gallery shows the template', () => {
   });
 
   it('and the products are offered under their categories', () => {
+    /**
+     * SAME RULE, DIFFERENT MARKUP.
+     *
+     * This asked for `<optgroup>`, which was how a native `<select>` drew
+     * the headings. The field is now `ProductPicker` — searchable, because
+     * 114 products in any kind of list is a scroll — and it draws the same
+     * headings itself while nothing has been typed.
+     *
+     * The INTENT is unchanged and is what is asserted: the catalogue is
+     * offered under its categories, and the products with no category are
+     * a bucket that says so rather than a silent scattering. The headings
+     * themselves are proved in ProductPicker.test.tsx, where they render;
+     * `UNCATEGORISED_LABEL` is imported rather than retyped so the bucket
+     * cannot be renamed out from under this test.
+     */
     const screen = stripComments(repoFile('src/components/screens/LandingPagesScreen.tsx'));
-    expect(screen, 'لا تجميع حسب التصنيف').toMatch(/<optgroup/);
-    // The products with no category are a bucket that says so, not a
-    // silent scattering through the list.
-    expect(screen).toMatch(/بلا تصنيف/);
+    expect(screen, 'لا تجميع حسب التصنيف').toMatch(/groupByCategory/);
+    expect(screen).toMatch(/<ProductPicker/);
+
+    const picker = stripComments(repoFile('src/components/ui/ProductPicker.tsx'));
+    expect(picker, 'المجمِّع اختفى من المنتقي').toMatch(/export function groupProducts/);
+    expect(picker).toContain(UNCATEGORISED_LABEL);
   });
 
   /**
