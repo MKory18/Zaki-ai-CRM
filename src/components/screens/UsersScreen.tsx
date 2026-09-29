@@ -7,12 +7,12 @@ import { Select, Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
+import { arDate, arDateTime } from '@/lib/format';
 import { userCan } from '@/lib/can';
 import { CreateUserModal } from './users/CreateUserModal';
 import { useConfirm } from '@/components/ui/Confirm';
 import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '@/types/auth';
 import { findRoute, routeLabel } from '@/lib/route-registry';
-import { format } from 'date-fns';
 import { RiArrowLeftSLine, RiArrowRightSLine, RiForbidLine, RiGroupLine, RiKey2Line, RiLogoutBoxLine, RiMedalLine, RiPlayCircleLine, RiRefreshLine, RiSearchLine, RiShieldCheckLine, RiShieldCrossLine, RiUserAddLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
@@ -325,9 +325,9 @@ export function UsersScreen() {
                       );
                     } },
                   { key: 'c3', label: "تاريخ التسجيل",
-                    render: (u) => (format(new Date(u.createdAt), 'yyyy-MM-dd')) },
+                    render: (u) => arDate(u.createdAt) },
                   { key: 'c4', label: "آخر دخول",
-                    render: (u) => (u.lastLoginAt ? format(new Date(u.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—') },
+                    render: (u) => arDateTime(u.lastLoginAt) },
                   { key: 'c5', label: "عيّنه",
                     render: (u) => (u.assignedBy?.name || '—') },
                   { key: 'c6', label: "إجراءات", align: 'end',

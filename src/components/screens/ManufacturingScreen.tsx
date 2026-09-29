@@ -8,8 +8,8 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
+import { arDate } from '@/lib/format';
 import { BatchCostDialog, type BatchForCost } from '@/components/production/BatchCostDialog';
-import { format } from 'date-fns';
 import {
   RiAddCircleLine,
   RiCalculatorLine,
@@ -442,7 +442,7 @@ export function ManufacturingScreen() {
                     ),
                   },
                   { key: 'c7', label: "التاريخ",
-                    render: (b) => (format(new Date(b.productionDate), 'd MMM yyyy')) },
+                    render: (b) => arDate(b.productionDate) },
                 ]}
                 empty={
                   graded.length > 0 ? (

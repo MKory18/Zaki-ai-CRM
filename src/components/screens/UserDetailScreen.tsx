@@ -11,6 +11,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useApp } from '@/context/AppContext';
+import { arDate, arDateTime } from '@/lib/format';
 import { userCan } from '@/lib/can';
 import { ScoreCard } from '@/components/performance/ScoreCard';
 import { UserShift } from '@/components/screens/users/UserShift';
@@ -28,7 +29,6 @@ import { Modal } from '@/components/ui/Modal';
 import { UserGeoAccessSection, UserPhoneField } from '@/components/screens/users/UserAccessSections';
 import { UserCommissionCurrency } from '@/components/screens/users/UserCommissionCurrency';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
-import { format } from 'date-fns';
 import { RiAddCircleLine, RiArrowRightLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiLoader4Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiShieldKeyholeLine, RiTimerLine, RiUserLine } from '@remixicon/react';
 import { apiJson } from '@/lib/api-client';
 import { useConfirm } from '@/components/ui/Confirm';
@@ -49,7 +49,6 @@ export function UserDetailScreen() {
   const userId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : null;
 
   const [user, setUser] = useState<any>(null);
-  const [workload, setWorkload] = useState<{ assigned: number; claimed: number; created: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -233,12 +232,12 @@ export function UserDetailScreen() {
               <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
                 <p className="text-xs text-[var(--sys-muted)] flex items-center gap-1"><RiTimerLine className="w-4 h-4" />{ar ? 'آخر دخول' : 'Last Login'}</p>
                 <p className="font-bold text-[var(--sys-heading)]">
-                  {user.lastLoginAt ? format(new Date(user.lastLoginAt), 'yyyy-MM-dd HH:mm') : '—'}
+                  {arDateTime(user.lastLoginAt)}
                 </p>
               </div>
               <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
                 <p className="text-xs text-[var(--sys-muted)]">{ar ? 'تاريخ التسجيل' : 'Created'}</p>
-                <p className="font-bold text-[var(--sys-heading)]">{format(new Date(user.createdAt), 'yyyy-MM-dd')}</p>
+                <p className="font-bold text-[var(--sys-heading)]">{arDate(user.createdAt)}</p>
               </div>
               {userId && <UserPhoneField userId={userId} initial={user.phone ?? null} canEdit={userCan(currentUser, 'users.edit')} />}
               {/* Counting is one question, paying another: this names the

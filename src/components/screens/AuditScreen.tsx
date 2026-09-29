@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { format } from 'date-fns';
+import { arStamp } from '@/lib/format';
 import { routeLabel } from '@/lib/route-registry';
 import {  } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -52,7 +52,7 @@ export function AuditScreen() {
                 keyOf={(l) => l.id}
                 columns={[
                   { key: 'c0', label: "الوقت", primary: true,
-                    render: (l) => (format(new Date(l.createdAt), 'MMM d, yyyy HH:mm:ss')) },
+                    render: (l) => arStamp(l.createdAt) },
                   { key: 'c1', label: "مَن", primary: true,
                     render: (l) => (
                   <>{l.user?.name || 'System Auto'}

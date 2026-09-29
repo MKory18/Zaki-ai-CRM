@@ -10,11 +10,11 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
+import { arDate } from '@/lib/format';
 import Link from 'next/link';
 import { ProductOffers } from '@/components/products/ProductOffers';
 import { ProductStock } from '@/components/products/ProductStock';
 import { ProductHeadline } from '@/components/products/ProductHeadline';
-import { format } from 'date-fns';
 import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiShoppingCartLine, RiStackLine, RiStarLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { Rows } from '@/components/ui/Rows';
@@ -335,7 +335,7 @@ export function ProductDetailScreen() {
                   <><Money value={b.costPerUnit} className="font-black text-[var(--sys-heading)]" /></>
                 ) },
                 { key: 'c5', label: "التاريخ",
-                  render: (b: any) => (format(new Date(b.productionDate), 'yyyy-MM-dd')) },
+                  render: (b: any) => arDate(b.productionDate) },
               ]}
               empty={
                 <EmptyState title="لا تشغيلاتِ إنتاجٍ لهذا المنتج" why="التشغيلة هي ما تُحسب منه كلفةُ الوحدة. بلا واحدةٍ بكلفة، ربحُ هذا المنتج إجماليٌّ لا صافٍ." />
@@ -381,7 +381,7 @@ export function ProductDetailScreen() {
                 { key: 'c4', label: "المودريتور",
                   render: (o: any) => (o.moderator?.name || '—') },
                 { key: 'c5', label: "التاريخ",
-                  render: (o: any) => (format(new Date(o.createdAt), 'MMM d')) },
+                  render: (o: any) => arDate(o.createdAt) },
               ]}
               empty={
                 <EmptyState title="لا طلبات على هذا المنتج بعد" why="آخرُ طلباته تظهر هنا. فراغُها يعني أنّ لا أحد طلبه — أو أنّه لم يُنشر بعد." />

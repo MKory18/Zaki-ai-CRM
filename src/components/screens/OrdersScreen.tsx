@@ -23,11 +23,10 @@ import { AiOrderModal } from '@/components/orders/AiOrderModal';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
-import { format } from 'date-fns';
-import { ar as arLocale } from 'date-fns/locale';
 import { FILTERABLE_STATES, STATE_LABEL_AR } from '@/lib/order-state';
 import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiMagicLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine, RiUploadCloud2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
+import { arDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
 import { SkeletonRows } from '@/components/ui/Skeleton';
@@ -654,7 +653,7 @@ export function OrdersScreen() {
                           {order.source || '—'}
                           {order.moderator?.name ? ` · ${order.moderator.name}` : ''}
                           {' · '}
-                          {format(new Date(order.createdAt), 'd MMMM yyyy · HH:mm', { locale: arLocale })}
+                          {arDateTime(order.createdAt)}
                         </p>
                       </div>
 

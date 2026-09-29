@@ -32,8 +32,6 @@ export function LandingPageDetailScreen() {
   const [form, setForm] = useState({ name: '', slug: '', productId: '', domain: '' });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [publishing, setPublishing] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [previewToken, setPreviewToken] = useState<string | null>(null);

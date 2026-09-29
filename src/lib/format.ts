@@ -33,6 +33,22 @@ export function arDateShort(value: Date | string | null | undefined): string {
   return format(d, 'd MMM · HH:mm', { locale: arLocale });
 }
 
+/**
+ * 20 سبتمبر 2026 · 20:39:07 — to the second, for a record of who did what.
+ *
+ * The audit trail is the one screen where the seconds carry meaning: two
+ * entries in the same minute are a sequence, and `arDateTime` would show
+ * them as the same moment. It drew `MMM d, yyyy HH:mm:ss` before this —
+ * «Sep 29, 2026» down an Arabic column — so the choice was never between
+ * seconds and Arabic; it was a screen that had not been brought along.
+ */
+export function arStamp(value: Date | string | null | undefined): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return format(d, 'd MMMM yyyy · HH:mm:ss', { locale: arLocale });
+}
+
 /** 20 سبتمبر 2026 — a day with no time. */
 export function arDate(value: Date | string | null | undefined): string {
   if (!value) return '—';

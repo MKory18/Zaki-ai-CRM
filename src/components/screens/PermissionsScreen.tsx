@@ -13,12 +13,12 @@ import { Badge } from '@/components/ui/Badge';
 import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { useApp } from '@/context/AppContext';
+import { arDate } from '@/lib/format';
 import { userCan } from '@/lib/can';
 import {
   PERMISSION_MODULES, MODULE_LABELS, SCOPE_LABELS,
   type ScopeValue, type CatalogItem,
 } from '@/lib/permission-catalog';
-import { format } from 'date-fns';
 import { RiAddCircleLine, RiArrowDownSLine, RiArrowGoBackLine, RiArrowUpSLine, RiCloseLine, RiDeleteBinLine, RiFileCopyLine, RiGroupLine, RiKey2Line, RiPencilLine, RiSearchLine, RiShieldCheckLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
@@ -402,7 +402,7 @@ export function PermissionsScreen() {
                         </Badge>
                       </div>
                       <p className="text-xs text-[var(--sys-muted)] mt-1">
-                        {ar ? 'أُنشئ' : 'Created'} {format(new Date(role.createdAt), 'yyyy-MM-dd')}
+                        {ar ? 'أُنشئ' : 'Created'} {arDate(role.createdAt)}
                       </p>
                     </div>
                     {isSuperAdminRole && (
