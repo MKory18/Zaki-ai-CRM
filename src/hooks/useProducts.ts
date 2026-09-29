@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import type { PickableProduct } from '@/components/ui/ProductPicker';
 
@@ -31,13 +31,50 @@ import type { PickableProduct } from '@/components/ui/ProductPicker';
  * stays empty and `loading` ends, so a picker says «لا نتائج» instead of a
  * dialog breaking around it.
  */
-export function useProducts() {
-  const [products, setProducts] = useState<PickableProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+/**
+ * WHAT THE ROUTE ACTUALLY RETURNS, NAMED.
+ *
+ * `PickableProduct` describes what the PICKER needs. The route sends more
+ * — `basePrice` and the offers with their selling prices — and the three
+ * order dialogs need exactly that to price a line. They were each fetching
+ * the catalogue again by hand to get it, two of them through a bare
+ * `fetch` that does not redirect on an expired session: instead of being
+ * sent to sign in, the person got an empty product list, which reads as
+ * «المنتج مش موجود».
+ *
+ * Nothing extra is asked of the route. The fields were always in the
+ * answer; only the type stopped short of them.
+ */
+export interface CatalogueProduct extends PickableProduct {
+  basePrice?: number;
+  offers?: { id: string; name: string; quantity: number; sellingPrice: number }[];
+}
+
+/**
+ * `enabled: false` waits.
+ *
+ * Some callers need the catalogue only once a form opens — the order
+ * dialog's line editor is one, and it fetched lazily before it was moved
+ * onto this hook. Making every one of them fetch on mount would ask the
+ * route for the whole catalogue every time an order is merely LOOKED at,
+ * which is most of what happens on that screen.
+ *
+ * It is a delay, not a second behaviour: the moment it turns true the
+ * same one fetch runs, and `loading` reads false until then because
+ * nothing has been asked for yet.
+ */
+export function useProducts({ enabled = true }: { enabled?: boolean } = {}) {
+  const [products, setProducts] = useState<CatalogueProduct[]>([]);
+  const [loading, setLoading] = useState(enabled);
+  /** Asked once, and not again when a form is closed and reopened. */
+  const asked = useRef(false);
 
   useEffect(() => {
+    if (!enabled || asked.current) return;
+    asked.current = true;
     let cancelled = false;
-    apiJson<{ products: PickableProduct[] }>('/api/products')
+    setLoading(true);
+    apiJson<{ products: CatalogueProduct[] }>('/api/products')
       .then((data) => {
         if (!cancelled) setProducts(data.products ?? []);
       })
@@ -48,7 +85,7 @@ export function useProducts() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [enabled]);
 
   return { products, loading };
 }

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { apiJson } from '@/lib/api-client';
+import React, { useState } from 'react';
 import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { ProductThumb } from '@/components/ui/ProductThumb';
+import { useProducts } from '@/hooks/useProducts';
 import { amount, type Currency } from '@/lib/format';
-import { ProductLinesEditor, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
+import { ProductLinesEditor, type DraftLine } from '@/components/orders/ProductLinesEditor';
 import { RiArchiveLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 
 
@@ -70,16 +70,13 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
     customerNotes: order.customerNotes ?? '',
   });
   const [draft, setDraft] = useState<DraftLine[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-
-  // The catalogue is only needed once the form opens.
-  useEffect(() => {
-    if (!open || products.length) return;
-    fetch('/api/products')
-      .then((r) => (r.ok ? r.json() : { products: [] }))
-      .then((d) => setProducts(d.products ?? []))
-      .catch(() => setProducts([]));
-  }, [open, products.length]);
+  /*
+   * The catalogue comes from the one place that fetches it. This card had
+   * a bare `fetch` of its own, and a bare fetch does not redirect on an
+   * expired session: the person got an empty product list instead of the
+   * login screen, which reads as «المنتج مش موجود».
+   */
+  const { products } = useProducts({ enabled: open });
 
   const offerName = order.offer?.name || null;
   const lines: Line[] =

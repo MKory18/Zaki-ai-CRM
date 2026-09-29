@@ -7,6 +7,7 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
+import { useProducts } from '@/hooks/useProducts';
 import { ProductPicker } from '@/components/ui/ProductPicker';
 import { RiCheckboxCircleLine, RiClipboardLine, RiErrorWarningLine, RiMagicLine, RiSparkling2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
@@ -52,8 +53,8 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   const regionNames = regions.map((r) => r.name);
 
   // Editable confirmed fields
-  const [products, setProducts] = useState<any[]>([]);
   const [productId, setProductId] = useState('');
+  const { products } = useProducts({ enabled: isOpen });
   const [finalPrice, setFinalPrice] = useState(0);
 
   // Reset ALL form state whenever the modal opens — no stale AI parse result
@@ -64,23 +65,10 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       setParsing(false);
       setSaving(false);
       setResult(null);
-      setProducts([]);
       setProductId('');
       setFinalPrice(0);
     }
   }, [isOpen]);
-
-  const loadProducts = async () => {
-    try {
-      const res = await apiFetch('/api/products');
-      if (res.ok) {
-        const data = await res.json();
-        setProducts(data.products || []);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const handlePaste = async () => {
     try {
@@ -96,7 +84,6 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
     setParsing(true);
     setResult(null);
     try {
-      await loadProducts();
       const res = await apiFetch('/api/orders/ai-intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

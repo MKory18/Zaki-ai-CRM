@@ -92,7 +92,12 @@ describe('the raise dialog offers the whole list', () => {
   it('fetches the catalogue whole, through the one hook', () => {
     const hook = stripComments(repoFile('src/hooks/useProducts.ts'));
     expect(hook.length).toBeGreaterThan(200);
-    expect(hook).toMatch(/apiJson<\{ products: PickableProduct\[\] \}>\('\/api\/products'\)/);
+    // The type it is read into is not the point — the point is one fetch,
+    // through the client that redirects on an expired session, with no
+    // limit on it. (It is `CatalogueProduct` now: the route always sent
+    // `basePrice` and the offers, and three order dialogs were fetching
+    // the catalogue again by hand to reach them.)
+    expect(hook).toMatch(/apiJson<\{ products: \w+\[\] \}>\('\/api\/products'\)/);
     expect(hook, 'عاد الحدُّ الذي يقصّ آخر الكتالوج').not.toMatch(/limit=/);
   });
 

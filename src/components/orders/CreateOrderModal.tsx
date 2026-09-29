@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
+import { useProducts } from '@/hooks/useProducts';
 import { productName } from '@/lib/product-name';
 import { ProductLinesEditor, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
 import { amount } from '@/lib/format';
@@ -31,7 +32,6 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const toast = useToast();
   const [loading, setLoading] = useState(false);
 
-  const [products, setProducts] = useState<any[]>([]);
   const [moderators, setModerators] = useState<any[]>([]);
 
   const [customerName, setCustomerName] = useState('');
@@ -45,6 +45,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const customerCity = selectedRegion?.name ?? '';
   const [lines, setLines] = useState<DraftLine[]>([newLine()]);
   const [channelId, setChannelId] = useState('');
+  const { products } = useProducts({ enabled: isOpen });
   const [channels, setChannels] = useState<{ id: string; name: string; isActive: boolean }[]>([]);
   const [moderatorId, setModeratorId] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
@@ -77,23 +78,35 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
+  /**
+   * OPEN ON THE FIRST PRODUCT, AS THIS FORM ALWAYS HAS.
+   *
+   * One click less for the commonest order, and nothing is assumed about
+   * its price — `newLine` reads the product's own first offer, or its base
+   * price. It used to happen inside the catalogue fetch this dialog no
+   * longer makes; the catalogue now arrives from `useProducts`, so the
+   * seeding waits for it.
+   *
+   * Only while the form is still untouched: a line the person has already
+   * chosen is never overwritten by a list arriving late.
+   */
+  useEffect(() => {
+    if (!isOpen || products.length === 0) return;
+    setLines((current) =>
+      current.length === 1 && !current[0].productId ? [newLine(products[0])] : current
+    );
+  }, [isOpen, products]);
+
   const loadFormData = async () => {
     try {
-      const [prodRes, modRes, chRes] = await Promise.all([
-        fetch('/api/products'),
+      // The catalogue is `useProducts`'s; this loads what it does not.
+      const [modRes, chRes] = await Promise.all([
         fetch('/api/moderators'),
         fetch('/api/settings/channels'),
       ]);
       if (chRes.ok) {
         const chData = await chRes.json();
         setChannels((chData.channels ?? []).filter((c: any) => c.isActive));
-      }
-      if (prodRes.ok) {
-        const pData = await prodRes.json();
-        setProducts(pData.products || []);
-        // Start on the first product rather than an empty row: one click less
-        // for the commonest order, and nothing is assumed about its price.
-        if (pData.products?.length > 0) setLines([newLine(pData.products[0])]);
       }
       if (modRes.ok) {
         const mData = await modRes.json();
