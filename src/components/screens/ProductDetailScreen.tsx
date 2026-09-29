@@ -13,6 +13,7 @@ import { useApp } from '@/context/AppContext';
 import Link from 'next/link';
 import { ProductOffers } from '@/components/products/ProductOffers';
 import { ProductStock } from '@/components/products/ProductStock';
+import { ProductHeadline } from '@/components/products/ProductHeadline';
 import { format } from 'date-fns';
 import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiShoppingCartLine, RiStackLine, RiStarLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
@@ -153,6 +154,12 @@ export function ProductDetailScreen() {
               <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-lg">{product.sku}</span>
               <Badge variant={product.status === 'ACTIVE' ? 'success' : 'warning'}>{product.status}</Badge>
               <span className="text-xs text-[var(--sys-muted)]">{images.length} صورة</span>
+            </div>
+            {/* The two numbers this page is opened for. They are also in
+                the panel far below, from the same endpoint — see
+                ProductHeadline for why they are up here as well. */}
+            <div className="mt-3">
+              <ProductHeadline productId={productId} />
             </div>
           </div>
 
