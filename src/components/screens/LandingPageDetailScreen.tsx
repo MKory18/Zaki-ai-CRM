@@ -131,12 +131,24 @@ export function LandingPageDetailScreen() {
     } catch (e: any) { setSaveMsg(e.message); } finally { setSaving(false); }
   };
 
+  /*
+   * PUBLISHING IS OUTWARD-FACING, AND IT TOOK A ROUND TRIP IN SILENCE.
+   *
+   * The button gave no sign it had been pressed, so it invited a second
+   * press — two PATCHes and two reloads for one decision — and this state
+   * existed already, declared and never wired to anything. It is the
+   * guard somebody meant to add.
+   */
+  const [publishing, setPublishing] = useState(false);
   const togglePublish = async () => {
+    if (publishing) return;
+    setPublishing(true);
     setSaveMsg(null);
     try {
       await crmApi(`/api/landing-pages/${lpId}`, { method: 'PATCH', body: JSON.stringify({ isPublished: !lp.isPublished }) });
       await load();
     } catch (e: any) { setSaveMsg(e.message); }
+    finally { setPublishing(false); }
   };
 
   const uploadHtml = async (file: File) => {
@@ -257,7 +269,12 @@ export function LandingPageDetailScreen() {
             <Button variant="outline" size="sm" onClick={() => (window.location.href = `/store/landing-pages/${lpId}/editor`)}>
               <RiPencilLine className="w-4 h-4" /> المحرّر
             </Button>
-            <Button size="sm" onClick={togglePublish} variant={lp.isPublished ? 'outline' : 'success'}>
+            <Button
+              size="sm"
+              onClick={togglePublish}
+              loading={publishing}
+              variant={lp.isPublished ? 'outline' : 'success'}
+            >
               {lp.isPublished ? 'إلغاء النشر' : 'نشر الصفحة'}
             </Button>
           </div>

@@ -101,8 +101,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     try {
       // The catalogue is `useProducts`'s; this loads what it does not.
       const [modRes, chRes] = await Promise.all([
-        fetch('/api/moderators'),
-        fetch('/api/settings/channels'),
+        apiFetch('/api/moderators'),
+        apiFetch('/api/settings/channels'),
       ]);
       if (chRes.ok) {
         const chData = await chRes.json();

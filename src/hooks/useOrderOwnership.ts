@@ -11,6 +11,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { LOCK_CONFIG } from '@/lib/lock-config';
+import { apiFetch } from '@/lib/api-client';
 
 const { heartbeatIntervalMs } = LOCK_CONFIG;
 
@@ -46,7 +47,7 @@ export function useOrderOwnership(orderId: string | null) {
     const id = lockedOrderIdRef.current;
     if (!id) return false;
     try {
-      const res = await fetch(`/api/orders/${id}/lock`, { method: 'PUT' });
+      const res = await apiFetch(`/api/orders/${id}/lock`, { method: 'PUT' });
       if (!res.ok) {
         // 404/409 (lock lost/expired) or any other failure — exit edit mode
         stopHeartbeat();
@@ -114,7 +115,7 @@ export function useOrderOwnership(orderId: string | null) {
       setActionLoading('claim');
       setMessage(null);
       try {
-        const res = await fetch(`/api/orders/${orderId}/claim`, { method: 'POST' });
+        const res = await apiFetch(`/api/orders/${orderId}/claim`, { method: 'POST' });
         const data = await res.json().catch(() => ({}));
         if (res.status === 409) {
           setMessage({ type: 'conflict', text: `${t.alreadyClaimedBy} ${data.claimedBy ?? ''}` });
@@ -143,7 +144,7 @@ export function useOrderOwnership(orderId: string | null) {
       setActionLoading('lock');
       setMessage(null);
       try {
-        const res = await fetch(`/api/orders/${orderId}/lock`, { method: 'POST' });
+        const res = await apiFetch(`/api/orders/${orderId}/lock`, { method: 'POST' });
         const data = await res.json().catch(() => ({}));
         if (res.status === 423 || res.status === 409) {
           setMessage({ type: 'error', text: data.errorAr || data.error || t.editingBy });
@@ -176,7 +177,7 @@ export function useOrderOwnership(orderId: string | null) {
       setInEditMode(false);
       setActionLoading('release');
       try {
-        await fetch(`/api/orders/${orderId}/lock`, { method: 'DELETE' }).catch(() => {});
+        await apiFetch(`/api/orders/${orderId}/lock`, { method: 'DELETE' }).catch(() => {});
       } catch (e) {
         // Network failure releasing the lock is non-fatal — server expiry
         // remains the source of truth

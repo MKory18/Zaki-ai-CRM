@@ -94,8 +94,8 @@ export function OrdersScreen() {
        * nothing rendered.
        */
       const [cRes, sRes] = await Promise.all([
-        fetch('/api/delivery-providers'),
-        fetch('/api/orders/sources'),
+        apiFetch('/api/delivery-providers'),
+        apiFetch('/api/orders/sources'),
       ]);
       if (cRes.ok) {
         const cData = await cRes.json();

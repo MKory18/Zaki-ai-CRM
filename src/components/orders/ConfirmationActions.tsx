@@ -77,7 +77,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
     if (!order?.id) return;
     setLoadingAttempts(true);
     try {
-      const res = await fetch(`/api/orders/${order.id}/contact-attempts`);
+      const res = await apiFetch(`/api/orders/${order.id}/contact-attempts`);
       if (res.ok) {
         const data = await res.json();
         setAttempts(data.attempts || []);

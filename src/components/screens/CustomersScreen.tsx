@@ -19,6 +19,7 @@ import { AskAi } from '@/components/growth/AskAi';
 import { userCan } from '@/lib/can';
 import { GRADE_RANK, scoreCustomer } from '@/lib/customer-score';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { apiFetch } from '@/lib/api-client';
 
 export function CustomersScreen() {
   const { t, currentUser } = useApp();
@@ -54,7 +55,7 @@ export function CustomersScreen() {
   const loadCustomers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/customers?q=${encodeURIComponent(search)}`);
+      const res = await apiFetch(`/api/customers?q=${encodeURIComponent(search)}`);
       if (res.ok) {
         const data = await res.json();
         setCustomers(data.customers || []);
@@ -79,7 +80,7 @@ export function CustomersScreen() {
     setModalLoading(true);
     setModalMsg(null);
     try {
-      const res = await fetch('/api/customers', {
+      const res = await apiFetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName, phone, altPhone, address, city, notes }),
