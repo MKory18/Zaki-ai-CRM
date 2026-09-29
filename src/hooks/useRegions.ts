@@ -6,6 +6,14 @@ import { apiJson } from '@/lib/api-client';
 export interface RegionOption {
   id: string;
   name: string;
+  /**
+   * How long this governorate has ACTUALLY taken, measured from delivered
+   * orders — null where too few have been delivered to say anything
+   * honest. See src/lib/delivery-time.ts.
+   */
+  delivery?: { medianDays: number; slowDays: number; samples: number } | null;
+  /** The same thing in the words a person says, or null. */
+  deliveryAr?: string | null;
 }
 
 /**

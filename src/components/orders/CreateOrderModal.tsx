@@ -41,7 +41,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   // Governorates of the SELECTED country — never a hard-coded list.
   const { regions, countryName, currency } = useRegions();
   const [regionId, setRegionId] = useState('');
-  const customerCity = regions.find((r) => r.id === regionId)?.name ?? '';
+  const selectedRegion = regions.find((r) => r.id === regionId) ?? null;
+  const customerCity = selectedRegion?.name ?? '';
   const [lines, setLines] = useState<DraftLine[]>([newLine()]);
   const [channelId, setChannelId] = useState('');
   const [channels, setChannels] = useState<{ id: string; name: string; isActive: boolean }[]>([]);
@@ -269,6 +270,23 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
               {regions.length === 0 && (
                 <p className="mt-1 text-xs text-[var(--sys-destructive)]">
                   لا توجد محافظات لهذا البلد — أضفها من الإعدادات ← البلدان والمتاجر والمحافظ.
+                </p>
+              )}
+              {/*
+                WHAT THIS GOVERNORATE HAS ACTUALLY TAKEN.
+
+                «لما أدخل طلب بالمدينة والعنوان يعطيني خلال كم الفترة
+                المتوقعة للاستلام» — measured from delivered orders, not
+                typed by anybody. It says nothing where too few have been
+                delivered to say anything honest, which is most of the
+                country on the first day.
+              */}
+              {selectedRegion?.deliveryAr && (
+                <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
+                  {selectedRegion.deliveryAr}
+                  <span className="text-[var(--sys-muted)]">
+                    {' '}· من {selectedRegion.delivery?.samples} تسليماً سابقاً
+                  </span>
                 </p>
               )}
             </div>
