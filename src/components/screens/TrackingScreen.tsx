@@ -2,6 +2,7 @@
 
 import { lateLabel } from '@/lib/transit';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ContactButtons } from '@/components/orders/ContactButtons';
 import { TransferDialog } from '@/components/screens/tracking/TransferDialog';
 import { CollectDialog } from '@/components/screens/tracking/CollectDialog';
@@ -110,7 +111,13 @@ const COLLECTION_LABEL: Record<string, string> = {
 };
 
 export function TrackingScreen() {
-  const [term, setTerm] = useState('');
+  /*
+   * «شحنة مفقودة عند شركة الشحن» names one parcel and links here. The
+   * link is the order's number, which is one of the things this screen's
+   * own search matches — so clicking the alert shows that parcel, not
+   * every parcel in the store.
+   */
+  const [term, setTerm] = useState(useSearchParams().get('order') ?? '');
   const [status, setStatus] = useState('');
   const [data, setData] = useState<{ orders: Row[]; lateCount: number; dialCode?: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);

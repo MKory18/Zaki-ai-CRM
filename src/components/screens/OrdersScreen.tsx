@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DismissButton } from '@/components/ui/DismissButton';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -45,7 +46,28 @@ export function OrdersScreen() {
   const [searchInput, setSearchInput] = useState('');
   const [importing, setImporting] = useState(false);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('all');
+  /*
+    * TWO LINKS IN THE PRODUCT ALREADY POINT HERE WITH A FILTER ON THEM.
+    *
+    * The dashboard's «الإيراد المسلَّم» card, whose own subtitle counts
+    * «N طلب موصّل», links to `/orders?state=DELIVERED`; and every order
+    * number on تنبيهات الخصم links to `/orders?highlight=<id>`. Both
+    * navigated, the address bar showed the filter, and this screen read
+    * nothing from the URL — so a person asking for the delivered orders
+    * landed on all of them, and a person clicking one order number landed
+    * on the unfiltered list to look for it by hand.
+    *
+    * READ ONCE, at the start. The filters are not written back to the URL:
+    * that would be saved views, which is a feature and not a repair.
+    */
+  const asked = useSearchParams();
+  const askedState = asked.get('state');
+  const [status, setStatus] = useState(
+    // A URL is typed by anyone. An unknown state would reach the API and
+    // come back 400 «حالة غير معروفة» — a filter nobody chose, refusing
+    // to load the screen.
+    askedState && (FILTERABLE_STATES as string[]).includes(askedState) ? askedState : 'all'
+  );
   const [productId, setProductId] = useState('all');
   const [source, setSource] = useState('all');
   const [courierId, setCourierId] = useState('all');
@@ -79,7 +101,7 @@ export function OrdersScreen() {
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(asked.get('highlight'));
 
   const loadMetadata = async () => {
     try {

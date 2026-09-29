@@ -211,7 +211,11 @@ export const syncCourierStatus: JobDefinition = {
               message:
                 `الطلب ${order.orderNumber} بباركود ${order.trackingNumber} — ` +
                 `${provider.name} لا تعرفه منذ ${hours} ساعة. لم تعد تُستعلَم بصمت.`,
-              link: `/ops/tracking?order=${order.id}`,
+              // The NUMBER, not the id: the tracking screen searches by
+              // number, reference, barcode, customer and phone, and an id
+              // matches none of them — so this link used to land on every
+              // parcel in the store instead of the lost one.
+              link: `/ops/tracking?order=${order.orderNumber}`,
             });
           }
           continue;
