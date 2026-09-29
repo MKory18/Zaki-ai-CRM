@@ -11,6 +11,7 @@ import { OrderResponsibility } from '@/components/orders/OrderResponsibility';
 import { CustomerCard } from '@/components/orders/CustomerCard';
 import { OrderLinesCard } from '@/components/orders/OrderLinesCard';
 import { ConfirmationActions } from '@/components/orders/ConfirmationActions';
+import { ShapeRiskPanel } from '@/components/orders/ShapeRiskPanel';
 import { ChangeRequestDialog, type ChangeRequestValue } from '@/components/screens/confirmation/ActionDialogs';
 import { raiseChangeRequest } from '@/components/orders/raiseChangeRequest';
 import { hasLeftWarehouse, type StateSource } from '@/lib/order-state';
@@ -512,6 +513,15 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               </button>
             </div>
           )}
+
+          {/*
+            ABOVE THE BUTTONS, AND ONLY FOR WHOEVER WORKS THE PHONE.
+            The courier's statements say 29.8% of this shop's parcels come
+            back; once the waybill is printed that is a round trip whatever
+            anybody learns afterwards. So the one place this belongs is the
+            moment before the call ends. See orders/ShapeRiskPanel.
+          */}
+          {mayRecordCalls && order?.id && <ShapeRiskPanel orderId={order.id} />}
 
           {mayRecordCalls && (
           <ConfirmationActions

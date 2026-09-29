@@ -323,8 +323,27 @@ export function whereForState(state: CoreState): Record<string, unknown> | null 
 export const DELIVERED_SHIPPING = ['DELIVERED', 'PARTIALLY_DELIVERED'] as const;
 export const CONFIRMATION_REFUSED = ['REJECTED', 'CANCELLED'] as const;
 
+/**
+ * THE COURIER GAVE IT BACK.
+ *
+ * Named here because two files had each written this list by hand and they
+ * did not agree: `attribution-performance` counts `RETURNED` and
+ * `RETURN_REQUESTED`, and `customer-risk` adds `FAILED_DELIVERY` to them.
+ * Both are right for their own question and the difference is deliberate —
+ * a person who fails at the door IS the risk even while the parcel is still
+ * out with the courier, whereas a shop's return RATE must not count a
+ * parcel twice, once as failed and again as returned.
+ *
+ * So this is the narrow one: the parcel came back. A reader that means the
+ * other thing says so in its own words rather than editing this.
+ */
+export const RETURNED_SHIPPING = ['RETURNED', 'RETURN_REQUESTED'] as const;
+
 /** Prisma clause: the goods reached the customer. */
 export const whereDelivered = () => ({ shippingStatus: { in: [...DELIVERED_SHIPPING] } });
+
+/** Prisma clause: the parcel came back. */
+export const whereReturned = () => ({ shippingStatus: { in: [...RETURNED_SHIPPING] } });
 
 /** Prisma clause: this order was confirmed, whatever happened to it after. */
 export const whereEverConfirmed = () => ({ confirmationStatus: 'CONFIRMED' });
