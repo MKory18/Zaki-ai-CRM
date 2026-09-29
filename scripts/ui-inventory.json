@@ -70,7 +70,7 @@
     "tabs": 0
   },
   "src/components/ops/DelayShipmentDialog.tsx": {
-    "buttons": 2,
+    "buttons": 3,
     "inputs": 2,
     "columns": 0,
     "cards": 0,

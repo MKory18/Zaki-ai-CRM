@@ -59,7 +59,15 @@ export function DelayShipmentDialog({
   onClose: () => void;
   onChoose: (choice: DelayChoice) => void;
 }) {
-  const [day, setDay] = useState('');
+  /**
+   * IT OPENS ON A DAY, NOT ON AN EMPTY BOX.
+   *
+   * The field started blank with no minimum, so the commonest answer —
+   * tomorrow — was four interactions away, a date already past could be
+   * typed, and the only sign of that was two buttons that quietly refused
+   * to work. Reported as «ما في تقويم أختار منه تاريخ».
+   */
+  const [day, setDay] = useState(() => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10));
   const [reason, setReason] = useState('');
 
   /**
@@ -71,6 +79,21 @@ export function DelayShipmentDialog({
    * under somebody in the middle of typing a date.
    */
   const [openedAt] = useState(() => Date.now());
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
+
+  /**
+   * The four answers people actually give, as one press each.
+   *
+   * A calendar is the right control for «the fourteenth», and the wrong
+   * one for «tomorrow» — which is most of them.
+   */
+  const QUICK: { label: string; days: number }[] = [
+    { label: 'غداً', days: 1 },
+    { label: 'بعد يومين', days: 2 },
+    { label: 'بعد 3 أيام', days: 3 },
+    { label: 'بعد أسبوع', days: 7 },
+  ];
+  const dayAfter = (n: number) => new Date(openedAt + n * 86_400_000).toISOString().slice(0, 10);
 
   const parsed = /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(`${day}T09:00:00`) : null;
   const valid = !!parsed && !isNaN(parsed.getTime()) && parsed.getTime() > openedAt - 60_000;
@@ -92,11 +115,33 @@ export function DelayShipmentDialog({
           <input
             type="date"
             value={day}
+            min={today}
             onChange={(e) => setDay(e.target.value)}
             autoFocus
             className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
             dir="ltr"
           />
+          {/* One press for the four answers people actually give. */}
+          <span className="mt-2 flex flex-wrap gap-1.5">
+            {QUICK.map((q) => {
+              const value = dayAfter(q.days);
+              const on = day === value;
+              return (
+                <button
+                  key={q.days}
+                  type="button"
+                  onClick={() => setDay(value)}
+                  className={`min-h-11 md:min-h-0 rounded-lg border px-3 py-1 text-xs font-semibold transition-colors ${
+                    on
+                      ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
+                      : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]'
+                  }`}
+                >
+                  {q.label}
+                </button>
+              );
+            })}
+          </span>
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
             كلا الخيارَين يحتاج موعداً — بلا موعدٍ يختفي الطلبُ ولا يُعيده شيء.
           </span>

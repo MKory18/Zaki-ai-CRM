@@ -110,8 +110,24 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  * «مكرَّر — البضاعة عنده أصلاً» learns the rule instead of wondering where an
  * order went.
  */
+/**
+ * THE TWO WORDS FOR ONE THING.
+ *
+ * An order that did not happen ends as REJECTED when the agent records the
+ * customer's no, and as CANCELLED when a manager cancels it or the
+ * no-answer rule closes it. This screen read the first word only — so
+ * every order cancelled the second way was invisible on the one screen
+ * built to find them, and the seller reported it as «الإلغاء لا يظهر في
+ * استرجاع الملغي».
+ *
+ * Measured when it was fixed: three cancelled orders were missing, one of
+ * them closed by the no-answer rule — which is among the most winnable
+ * reasons there is.
+ */
+export const LOST_STATUSES: readonly string[] = ['REJECTED', 'CANCELLED'];
+
 export function winbackVerdict(order: WinbackSource, now: Date): WinbackVerdict {
-  if (order.confirmationStatus !== 'REJECTED') {
+  if (!LOST_STATUSES.includes(order.confirmationStatus)) {
     return { eligible: false, code: 'NOT_REJECTED', reason: 'هذا الطلب ليس ملغى' };
   }
   if (asDate(order.shippedAt)) {

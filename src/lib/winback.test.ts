@@ -96,6 +96,30 @@ describe('every rejection reason is decided, one way or the other', () => {
   });
 });
 
+describe('both words for an order that did not happen', () => {
+  /**
+   * An order ends REJECTED when the agent records the customer's no, and
+   * CANCELLED when a manager cancels it or the no-answer rule closes it.
+   * The screen read the first word only, so everything cancelled the
+   * second way was invisible on the one screen built to find it —
+   * reported as «الإلغاء لا يظهر في استرجاع الملغي». Measured at the
+   * time: three orders missing, one of them closed for no answer, which
+   * is among the most winnable reasons there is.
+   */
+  it('a cancelled order is as reachable as a rejected one', () => {
+    for (const confirmationStatus of ['REJECTED', 'CANCELLED']) {
+      const v = winbackVerdict({ ...base, confirmationStatus }, NOW);
+      expect(v.eligible, confirmationStatus).toBe(true);
+    }
+  });
+
+  it('and the listing asks for both, not for one', () => {
+    const route = stripComments(repoFile('src/app/api/confirmation/winback/route.ts'));
+    expect(route).toMatch(/confirmationStatus: \{ in: \[\.\.\.LOST_STATUSES\] \}/);
+    expect(route, 'ما زال يقرأ كلمةً واحدة').not.toMatch(/confirmationStatus: 'REJECTED'/);
+  });
+});
+
 describe('and the other four gates', () => {
   it('refuses one that is not rejected at all', () => {
     const v = winbackVerdict({ ...base, confirmationStatus: 'CONFIRMED' }, NOW);

@@ -11,6 +11,7 @@ import {
   maxWinbackDiscount,
   WINBACK_COOLING_DAYS,
   WINBACK_REASONS,
+  LOST_STATUSES,
   winbackVerdict,
   type WinbackSource,
 } from '@/lib/winback';
@@ -61,7 +62,8 @@ export async function GET(req: Request) {
       where: {
         companyId,
         ...(storeId ? { storeId } : {}),
-        confirmationStatus: 'REJECTED',
+        // Both words for an order that did not happen — see LOST_STATUSES.
+        confirmationStatus: { in: [...LOST_STATUSES] },
         createdAt: { gte: since },
       },
       orderBy: { createdAt: 'desc' },
@@ -172,7 +174,7 @@ export async function POST(req: Request) {
     if (!order) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
 
     const lastRejection = await db.orderStatusLog.findFirst({
-      where: { orderId, statusType: 'CONFIRMATION', newValue: 'REJECTED' },
+      where: { orderId, statusType: 'CONFIRMATION', newValue: { in: [...LOST_STATUSES] } },
       orderBy: { createdAt: 'desc' },
       select: { createdAt: true },
     });

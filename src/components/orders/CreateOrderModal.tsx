@@ -160,7 +160,19 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'فشل إنشاء الطلب');
-      onSuccess(data.order ?? data);
+      const created = data.order ?? data;
+      /**
+       * IT SAYS SO WHEN IT WORKS.
+       *
+       * Only the failure spoke: a successful create closed the dialog and
+       * left the moderator looking at a list, with no word that anything
+       * had happened and no order number to write down. Asked for in as
+       * many words: «لما أنشئ طلب وينجح: تم إنشاء الطلب بنجاح».
+       *
+       * With the number, because that is the thing she is about to need.
+       */
+      toast.done(created?.orderNumber ? `تم إنشاء الطلب ${created.orderNumber} بنجاح` : 'تم إنشاء الطلب بنجاح');
+      onSuccess(created);
       onClose();
     } catch (err: any) {
       toast.failed(err.message);
