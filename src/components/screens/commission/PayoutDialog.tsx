@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { apiJson } from '@/lib/api-client';
 import { RiLoader4Line, RiWallet3Line } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { Money } from '@/components/ui/Money';
 
 /**
  * HANDING OVER THE MONEY.
@@ -30,6 +31,8 @@ interface Wallet {
   id: string;
   name: string;
   currencyCode: string;
+  /** Its currency's decimals. Three was hard-coded here, and Syria is USD. */
+  country: { minorUnit: number };
 }
 
 export function PayoutDialog({
@@ -181,8 +184,12 @@ export function PayoutDialog({
               <p className="flex items-center gap-1.5 text-xs text-[var(--sys-muted-foreground)]">
                 <RiWallet3Line className="h-4 w-4" /> سيخرج من «{wallet.name}»
               </p>
-              <p className="text-lg font-black text-[var(--sys-destructive)] tabular-nums" dir="ltr">
-                {leaving.toFixed(3)} {wallet.currencyCode}
+              <p className="text-lg font-black text-[var(--sys-destructive)]">
+                <Money
+                  value={leaving}
+                  currency={wallet.currencyCode}
+                  minorUnit={wallet.country.minorUnit}
+                />
               </p>
               <p className="text-xs text-[var(--sys-muted)]">
                 ويُسجَّل مصروفاً على المحفظة، وتُقفل قيود العمولة المدفوعة.

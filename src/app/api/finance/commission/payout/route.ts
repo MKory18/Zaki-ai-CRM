@@ -46,7 +46,10 @@ export async function GET(req: Request) {
       // currency: the point is that the person's currency may have none.
       db.wallet.findMany({
         where: { companyId, isActive: true },
-        select: { id: true, name: true, currencyCode: true },
+        // The minor unit travels WITH the code. Sent apart, the dialog
+        // printed every figure to three decimals — right for JOD and
+        // wrong for the USD wallet the launch store actually uses.
+        select: { id: true, name: true, currencyCode: true, country: { select: { minorUnit: true } } },
         orderBy: { name: 'asc' },
       }),
     ]);

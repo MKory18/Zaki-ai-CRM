@@ -65,6 +65,10 @@ export async function GET(req: Request) {
           walletId: w.id,
           walletName: w.name,
           currencyCode: w.currencyCode,
+          // Sent so the screen prints this wallet's own decimals. It was
+          // rounding every difference to three, which is right for JOD
+          // and wrong for the USD wallet the launch store uses.
+          minorUnit: w.country.minorUnit,
           bookBalance: balance.balance,
           closing: closing
             ? {

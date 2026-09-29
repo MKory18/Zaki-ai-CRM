@@ -64,7 +64,8 @@ export async function GET(req: Request) {
         // chances for the halves to disagree about what exists.
         db.wallet.findMany({
           where: { companyId, isActive: true },
-          select: { id: true, name: true, currencyCode: true },
+          // The minor unit travels WITH the code — see the payout route.
+          select: { id: true, name: true, currencyCode: true, country: { select: { minorUnit: true } } },
           orderBy: { name: 'asc' },
         }),
       ]);

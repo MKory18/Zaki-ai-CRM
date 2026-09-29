@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { RiCashLine, RiLoader4Line, RiWallet3Line } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 /**
  * WHAT THIS PERSON IS PAID, AND PAYING IT.
@@ -42,6 +43,8 @@ interface WalletRow {
   id: string;
   name: string;
   currencyCode: string;
+  /** Its currency's decimals. Three was hard-coded here, and Syria is USD. */
+  country: { minorUnit: number };
 }
 
 const FIELD =
@@ -303,9 +306,12 @@ export function UserSalary({
               {leaves !== null && wallet && (
                 <p className="rounded-lg bg-[var(--sys-surface)] px-2 py-1.5 text-xs text-[var(--sys-foreground)]">
                   يخرج من المحفظة{' '}
-                  <span className="font-semibold tabular-nums" dir="ltr">
-                    {leaves.toFixed(3)} {wallet.currencyCode}
-                  </span>
+                  <Money
+                    value={leaves}
+                    currency={wallet.currencyCode}
+                    minorUnit={wallet.country.minorUnit}
+                    className="font-semibold"
+                  />
                   {!sameCurrency && ' — بالسعر الذي كتبته أنت، ويُحفظ ولا يُعاد حسابه.'}
                 </p>
               )}

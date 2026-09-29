@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiLoader4Line, RiLockLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { Money } from '@/components/ui/Money';
 
 /**
  * /finance/closing — count each wallet at the end of the day against its book
@@ -28,6 +29,8 @@ interface Row {
   walletId: string;
   walletName: string;
   currencyCode: string;
+  /** Its currency's decimals — three was hard-coded, and Syria is USD. */
+  minorUnit: number;
   bookBalance: number;
   closing: Closing | null;
   blockedBy: { id: string; date: string; difference: number } | null;
@@ -260,7 +263,10 @@ function CountDialog({
                 : 'text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40'
             }`}
           >
-            الفرق: <b>{Number(difference.toFixed(3))}</b> {row.currencyCode}
+            الفرق:{' '}
+            <b>
+              <Money value={difference} currency={row.currencyCode} minorUnit={row.minorUnit} />
+            </b>
             {needsExplanation && ' — يحتاج تفسيراً مكتوباً'}
           </p>
         )}
