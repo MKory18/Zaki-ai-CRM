@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
 import { RiArchiveDrawerLine } from '@remixicon/react';
 
 /**
@@ -15,6 +16,15 @@ import { RiArchiveDrawerLine } from '@remixicon/react';
  * The fee line is stated plainly and does not move as lines are unticked,
  * because it does not move in reality — the courier travelled to that door
  * whichever lines came back.
+ *
+ * EVERY FIELD HERE IS THE SHARED `Input`, and that is not tidiness. Nothing
+ * in this product declares `color-scheme`, so a native control that names no
+ * background of its own is painted by the user agent — WHITE, in every
+ * theme, which is «إذا كانت بيضا فتكون أزرق» reported from this screen. And
+ * system.css paints `:focus-visible` only, by design, so a field a clerk
+ * TAPS had no state at all until the shared component brought
+ * `focus:ring-[var(--sys-primary)]/25` with it. The shell was never the
+ * problem: this has always been the system `Modal`.
  */
 
 interface Line {
@@ -113,26 +123,40 @@ export function DeliverDialog({
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      {/* h-11 md:h-10, the scale — it was `min-h-11
+                          md:min-h-0` with `py-1`, which on a desk collapsed
+                          to the text's own height and stood a few pixels
+                          shorter than the box beside it. Two controls in one
+                          row at two heights is «غير متناسبة مع التصميم» in
+                          its plainest form. */}
                       <button
                         type="button"
                         onClick={() => setTaken((t) => ({ ...t, [l.id]: 0 }))}
-                        className={`min-h-11 md:min-h-0 inline-flex items-center text-xs px-2 py-1 rounded-md border ${
+                        className={`h-11 md:h-10 inline-flex items-center text-xs px-3 rounded-lg border transition-colors ${
                           value === 0 ? 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
                         }`}
                       >
                         رفضه
                       </button>
-                      <input
-                        type="number"
-                        min={0}
-                        max={shipped}
-                        value={value}
-                        onChange={(e) =>
-                          setTaken((t) => ({ ...t, [l.id]: Math.max(0, Math.min(shipped, Number(e.target.value))) }))
-                        }
-                        className="w-16 h-11 md:h-8 px-2 rounded-md border border-[var(--sys-border)] text-sm text-center tabular-nums"
-                        dir="ltr"
-                      />
+                      {/* The system's field, in a 64px box. The raw input it
+                          replaces named no background, so it fell back to the
+                          user agent's — and the app declares no
+                          `color-scheme`, which makes that WHITE in every
+                          theme: «لما أجي أختار منتج يتضوي بيضا». It also had
+                          `md:h-8`, off the scale in both directions. */}
+                      <div className="w-16">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={shipped}
+                          value={value}
+                          onChange={(e) =>
+                            setTaken((t) => ({ ...t, [l.id]: Math.max(0, Math.min(shipped, Number(e.target.value))) }))
+                          }
+                          className="px-2 text-center tabular-nums"
+                          dir="ltr"
+                        />
+                      </div>
                     </div>
                   </div>
                 );
@@ -216,11 +240,10 @@ export function DeliverDialog({
               <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
                 ملاحظة داخلية على الطلب
               </span>
-              <input
+              <Input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="مثال: رفض القطعة الثانية — اللون غير المطلوب"
-                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
               />
               <span className="block text-xs text-[var(--sys-muted)] mt-1">
                 تُضاف باسمك إلى ملاحظات الطلب، ويقرؤها التأكيد والمرتجعات.

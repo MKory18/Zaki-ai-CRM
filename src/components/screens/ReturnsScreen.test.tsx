@@ -128,6 +128,54 @@ describe('what came back, per product', () => {
   });
 });
 
+describe('nothing in the dialog draws white', () => {
+  /**
+   * «إذا كانت بيضا فتكون أزرق». Asserted on what RENDERS, not on the source:
+   * the source guard in returns-dialog-fields.test.ts proves the shared
+   * `Input` is used, and this proves the token survives to the DOM.
+   *
+   * Nothing declares `color-scheme` in this product, so a control with no
+   * background of its own is painted white by the browser whatever theme the
+   * clerk is in.
+   */
+  const themed = (el: Element) =>
+    el.className.includes('bg-[var(--sys-card)]') || el.className.includes('accent-[var(--sys-primary)]');
+
+  it('every field names a system background, tick boxes included', async () => {
+    await openDialog(PARTIAL_ROW);
+    await userEvent.click(screen.getByRole('button', { name: 'نعم — عددتها واستلمتها' }));
+    const fields = [...document.querySelectorAll('[role="dialog"] input')];
+    expect(fields.length).toBeGreaterThan(3);
+    expect(fields.filter((f) => !themed(f)).map((f) => f.getAttribute('type') ?? 'text')).toEqual([]);
+  });
+
+  it('and every field carries the focus ring the owner asked for', async () => {
+    await openDialog(PARTIAL_ROW);
+    await userEvent.click(screen.getByRole('button', { name: 'نعم — عددتها واستلمتها' }));
+    // system.css paints `:focus-visible` only — a keyboard signal, by
+    // design. A TAPPED box showed nothing at all until the shared field
+    // brought `focus:ring-[var(--sys-primary)]/25`.
+    const typed = [...document.querySelectorAll<HTMLInputElement>('[role="dialog"] input')].filter(
+      (f) => f.type !== 'checkbox'
+    );
+    expect(typed.length).toBeGreaterThan(0);
+    expect(typed.every((f) => f.className.includes('focus:ring-[var(--sys-primary)]/25'))).toBe(true);
+  });
+
+  it('keeps the three counted boxes on one height', async () => {
+    // Two inputs and a computed figure in one row. The computed one had a
+    // flat `h-10` and a label at `mb-1` while the fields had `h-11 md:h-10`
+    // and `mb-1.5`, so the row stood at three heights on a phone.
+    await openDialog(PARTIAL_ROW);
+    await userEvent.click(screen.getByRole('button', { name: 'نعم — عددتها واستلمتها' }));
+    const missing = screen.getByText('ناقص (محسوب)');
+    expect(missing.className).toContain('mb-1.5');
+    expect(missing.className).toContain('text-[var(--sys-heading)]');
+    expect(missing.nextElementSibling!.className).toContain('h-11');
+    expect(missing.nextElementSibling!.className).toContain('md:h-10');
+  });
+});
+
 describe('the extra action gates the count', () => {
   it('asks «هل الطلب استلم؟» before offering anything to count', async () => {
     await openDialog(PARTIAL_ROW);

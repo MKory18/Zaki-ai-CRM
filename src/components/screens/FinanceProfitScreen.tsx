@@ -17,6 +17,146 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+// `Record<SpendDirection, ...>` below is the exhaustiveness guard: a new
+// direction added to the rule fails this file at compile time rather than
+// rendering an undefined chip.
+import { categoryLabel, type ExpenseTypeGrade, type SpendDirection } from '@/lib/expense-grade';
+import type { Trust } from '@/lib/cod-vitals';
+
+/**
+ * ─── WHERE THE MONEY GOES, BY KIND OF SPENDING ───
+ *
+ * «المصاريف لازم Score لنوع المصروف». The ledger below this lists rows and
+ * nothing added them up per type, so the one question an owner has about
+ * spending had no answer anywhere in this product.
+ *
+ * WHAT THIS IS NOT, AND THE REFUSAL IS THE POINT. It is not a «worth it»
+ * score. «Worth it» is a ratio of what a kind of spending RETURNED to what
+ * it cost, and no expense row in this database links to anything it bought:
+ * `referenceId` is the only candidate field and it is documented as «batchId
+ * or orderId», which ties an expense to a production batch at best and to
+ * nothing at all for marketing. A score built on an assumed return would
+ * rank assumptions — which is exactly how this product's intelligence layer
+ * came to grade every customer the same and had to be abandoned.
+ *
+ * WHAT IT IS: two numbers and a direction, all three derived. The share of
+ * all spending, the share of DELIVERED revenue, and — the only graded part —
+ * whether this type's bite grew or shrank against the SAME type last month.
+ * A comparison against yourself needs no invented threshold; a comparison
+ * against an ideal needs one nobody has.
+ */
+const DIRECTION_AR: Record<SpendDirection, { label: string; cls: string }> = {
+  // A bigger bite out of revenue is the «quiet bleed» the note is about.
+  GROWING: { label: 'نصيبه يكبر', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
+  SHRINKING: { label: 'نصيبه يصغر', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/30' },
+  STEADY: { label: 'ثابت', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]' },
+  // Not «grew» — it did not exist before. A different thing to look into,
+  // and it gets its own word rather than an infinite growth percentage.
+  NEW: { label: 'بند جديد', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/30' },
+  UNKNOWN: { label: 'لا يكفي', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]' },
+};
+
+function SpendByType({
+  spend,
+  currency,
+}: {
+  spend?: {
+    byType: ExpenseTypeGrade[];
+    rows: number;
+    totalSpend: number;
+    deliveredRevenue: number;
+    priorDeliveredRevenue: number | null;
+    hasPrevious: boolean;
+    ledger: Trust;
+  };
+  currency?: string;
+}) {
+  if (!spend) return null;
+
+  return (
+    <Card>
+      <CardHeader
+        title="المصاريف حسب النوع — هذا الشهر"
+        subtitle="نصيب كل بند من الإيراد المسلَّم، ومقارنته بنصيبه في الشهر الماضي — لا بمبلغه، فالشهر الأكبر بيعاً يصرف أكثر بلا أن ينزف"
+      />
+      <CardContent className="p-0">
+        {spend.byType.length === 0 ? (
+          <div className="p-4">
+            {/*
+              THE HONEST EMPTY STATE, WITH THE COUNT.
+
+              Measured on the live database: ZERO expense rows have ever been
+              recorded in this system. Not «no expenses this month» — none,
+              ever. Which also means the net profit above subtracts nothing
+              for overheads, and this is the one place on the screen that can
+              say so to the person who would fix it.
+            */}
+            <EmptyState
+              title="لا مصروف مسجَّل في هذا الشهر"
+              why="بلا مصاريف مسجَّلة، صافي الربح أعلاه يطرح صفراً مقابل الرواتب والإيجار والإعلان — فهو إيراد ناقص كلفة البضاعة، لا صافي. سجّل المصروف وقتَ حدوثه ليظهر نصيب كل بند هنا."
+            />
+          </div>
+        ) : (
+          <>
+            <ul className="divide-y divide-[var(--sys-border)]">
+              {spend.byType.map((g) => (
+                <li key={g.category} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 py-3">
+                  <span className="text-sm font-bold text-[var(--sys-heading)]">{g.label}</span>
+                  {/* A type the label map has never heard of is named as it
+                      was stored AND flagged, so a typo cannot hide inside a
+                      composition that still adds up to a hundred. */}
+                  {!g.known && <span className="text-xs text-[var(--sys-warning)]">نوع غير معروف</span>}
+                  <span className="text-xs text-[var(--sys-muted)] tabular-nums">{g.rows} مصروف</span>
+
+                  <span className={`rounded-md border px-2 py-0.5 text-xs font-medium ${DIRECTION_AR[g.direction].cls}`} title={g.why}>
+                    {DIRECTION_AR[g.direction].label}
+                  </span>
+
+                  <span className="ms-auto flex flex-wrap items-baseline gap-x-3 gap-y-1 tabular-nums">
+                    {/* The burden carries no verdict of its own. Nobody can
+                        say what share of revenue office costs ought to be,
+                        and a bar invented per type would be nine verdicts
+                        dressed as arithmetic. */}
+                    <span className="text-xs text-[var(--sys-muted-foreground)]">
+                      {g.burden === null ? '—' : `${g.burden}% من الإيراد`}
+                    </span>
+                    <span className="text-xs text-[var(--sys-muted-foreground)]">
+                      {g.shareOfSpend === null ? '—' : `${g.shareOfSpend}% من المصروف`}
+                    </span>
+                    <span className="text-sm font-bold text-[var(--sys-heading)]">
+                      <Money value={g.amount} currency={currency} />
+                    </span>
+                  </span>
+
+                  {/* The reason, printed rather than left in a tooltip: a
+                      verdict whose figures are hidden is a verdict people
+                      argue with instead of acting on. */}
+                  <span className="w-full text-xs text-[var(--sys-muted)]">{g.why}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--sys-border)] px-5 py-3 text-xs text-[var(--sys-muted-foreground)]">
+              <span className="tabular-nums">
+                {spend.rows} مصروف · <Money value={spend.totalSpend} currency={currency} /> هذا الشهر
+              </span>
+              <span className="tabular-nums">
+                مقابل إيراد مسلَّم <Money value={spend.deliveredRevenue} currency={currency} />
+              </span>
+              {!spend.hasPrevious && <span>لا شهر سابق للمقارنة — الاتجاهات تظهر الشهر القادم.</span>}
+              {/* Every figure above assumes the ledger is a complete record of
+                  what left the shop. The wallet is what ties an expense to
+                  money actually leaving, and the schema says why it matters:
+                  an expense with no wallet makes the daily closing show a
+                  shortfall nobody can explain. */}
+              {spend.ledger.level !== 'STATED' && <span>{spend.ledger.ar}</span>}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export function FinanceProfitScreen() {
   const { t } = useApp();
@@ -192,6 +332,8 @@ export function FinanceProfitScreen() {
           </CardContent>
         </Card>
 
+        <SpendByType spend={data?.spend} currency={data?.currency} />
+
         {/* Expenses Ledger */}
         <Card>
           <CardHeader
@@ -208,9 +350,16 @@ export function FinanceProfitScreen() {
                     render: (e: any) => (format(new Date(e.expenseDate), 'MMM d, yyyy')) },
                   { key: 'c1', label: "البند", primary: true,
                     render: (e: any) => (e.title) },
+                  /* The stored value is an enum — MARKETING, PACKAGING — and
+                     this printed it raw: Latin capitals in a right-to-left
+                     Arabic table whose own form offers «تسويق وإعلانات» for
+                     the very same value. `categoryLabel` is the one place
+                     that list now lives, and it falls back to the stored
+                     string so a renamed or typo'd type is visible rather
+                     than folded into «أخرى». */
                   { key: 'c2', label: "النوع",
                     render: (e: any) => (
-                  <><Badge variant="purple">{e.category}</Badge></>
+                  <><Badge variant="purple">{categoryLabel(e.category)}</Badge></>
                 ) },
                   { key: 'c3', label: "المبلغ",
                     render: (e: any) => (

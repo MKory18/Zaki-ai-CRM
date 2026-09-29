@@ -52,6 +52,34 @@ const setTaken = async (value: string) => {
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 
+describe('nothing in the dialog draws white', () => {
+  it('every field is the system field, with its background and focus ring', async () => {
+    // «إذا كانت بيضا فتكون أزرق». Nothing in this product declares
+    // `color-scheme`, so a control that names no background is painted white
+    // by the browser in every theme — and the per-line quantity box was one.
+    await open();
+    const fields = [...document.querySelectorAll<HTMLInputElement>('[role="dialog"] input')];
+    expect(fields.length).toBeGreaterThan(1);
+    for (const f of fields) {
+      expect(f.className).toContain('bg-[var(--sys-card)]');
+      expect(f.className).toContain('focus:ring-[var(--sys-primary)]/25');
+    }
+  });
+
+  it('stands the refuse button and the quantity box at one height', async () => {
+    // `min-h-11 md:min-h-0` with `py-1` collapsed the button to its text on a
+    // desk, a few pixels short of the box beside it, and the box itself was
+    // `md:h-8` — off the scale in the other direction.
+    await open();
+    expect(screen.getByRole('button', { name: 'رفضه' }).className).toContain('h-11');
+    expect(screen.getByRole('button', { name: 'رفضه' }).className).toContain('md:h-10');
+    const qty = screen.getByRole('spinbutton');
+    expect(qty.className).toContain('h-11');
+    expect(qty.className).toContain('md:h-10');
+    expect(qty.className).not.toContain('md:h-8');
+  });
+});
+
 describe('the door names the second settlement it is creating', () => {
   it('says nothing on a whole delivery — there is no second half', async () => {
     await open();

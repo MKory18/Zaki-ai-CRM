@@ -6,6 +6,8 @@ import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { commissionCostForOrders } from '@/lib/commission';
+import { getCompanyAnalytics, getDateRange, previousRange } from '@/lib/analytics';
+import { gradeExpenseTypes, ledgerTrust, type ExpenseTypeInput } from '@/lib/expense-grade';
 
 export async function GET(req: Request) {
   try {
@@ -68,6 +70,97 @@ export async function GET(req: Request) {
       profitMargin: totalRevenue > 0 ? Number(((netProfit / totalRevenue) * 100).toFixed(1)) : 0,
     };
 
+    /**
+     * ─── WHERE THE MONEY GOES, BY KIND OF SPENDING ───
+     *
+     * The ledger below lists rows and nothing adds them up per type, so the
+     * one question an owner has about spending — «على أيّ بند يذهب مالي،
+     * وأيّ بندٍ يكبر من تحتي» — had no answer on any screen in this product.
+     *
+     * ON ITS OWN WINDOW, DELIBERATELY. Everything else this route returns is
+     * «since the beginning»: a lifetime total is the right shape for a
+     * profit summary and the wrong shape entirely for a spending habit,
+     * because a habit is only visible as a change. So the types are read
+     * over THIS MONTH against LAST MONTH, equally long, which is also the
+     * period people already think about salaries and rent in. The screen
+     * says which window it is showing.
+     *
+     * THE TWO ANALYTICS CALLS ARE SKIPPED WHEN THERE IS NOTHING TO GRADE.
+     * Revenue is the burden's denominator and it must come from the one
+     * profit engine — computing it here would be a second definition of
+     * «delivered revenue», which is the most expensive kind of duplication
+     * in this system. But it is only needed if an expense exists at all, and
+     * on this database none does, so the common case pays nothing.
+     */
+    const spendFilter = { period: 'month' as const };
+    const thisMonth = getDateRange(spendFilter);
+    const lastMonth = previousRange(spendFilter);
+
+    const [monthRows, priorRows] = await Promise.all([
+      db.expense.groupBy({
+        by: ['category'],
+        where: {
+          companyId,
+          ...(thisMonth.start && thisMonth.end ? { expenseDate: { gte: thisMonth.start, lte: thisMonth.end } } : {}),
+        },
+        _count: { _all: true },
+        _sum: { amount: true },
+      }),
+      lastMonth
+        ? db.expense.groupBy({
+            by: ['category'],
+            where: { companyId, expenseDate: { gte: lastMonth.start, lte: lastMonth.end } },
+            _count: { _all: true },
+            _sum: { amount: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const monthSpend = monthRows.reduce((t, g) => t + Number(g._sum.amount ?? 0), 0);
+    const monthCount = monthRows.reduce((t, g) => t + g._count._all, 0);
+
+    let spendByType: ReturnType<typeof gradeExpenseTypes> = [];
+    let spendWindow: { deliveredRevenue: number; priorDeliveredRevenue: number | null; totalSpend: number } = {
+      deliveredRevenue: 0,
+      priorDeliveredRevenue: null,
+      totalSpend: 0,
+    };
+
+    if (monthCount > 0) {
+      const [now, before] = await Promise.all([
+        getCompanyAnalytics({ companyId, storeId }, spendFilter),
+        lastMonth
+          ? getCompanyAnalytics({ companyId, storeId }, spendFilter, lastMonth)
+          : Promise.resolve(null),
+      ]);
+      spendWindow = {
+        totalSpend: Number(monthSpend.toFixed(2)),
+        deliveredRevenue: now.financials.deliveredRevenue,
+        priorDeliveredRevenue: before ? before.financials.deliveredRevenue : null,
+      };
+
+      const priorOf = new Map(priorRows.map((g) => [g.category, g]));
+      const inputs: ExpenseTypeInput[] = monthRows.map((g) => {
+        const was = priorOf.get(g.category);
+        return {
+          category: g.category,
+          rows: g._count._all,
+          amount: Number(g._sum.amount ?? 0),
+          // Zero, not null, when last month HAS expenses but none of this
+          // kind: «nothing was spent on packaging» and «there was no last
+          // month» are different facts, and only the first makes a type NEW.
+          priorAmount: was ? Number(was._sum.amount ?? 0) : lastMonth && priorRows.length > 0 ? 0 : null,
+          priorRows: was?._count._all ?? 0,
+        };
+      });
+      spendByType = gradeExpenseTypes(inputs, spendWindow);
+    }
+
+    // Does the ledger tie to money that actually left a wallet? Asked over
+    // the whole ledger, because it is a question about bookkeeping habit
+    // rather than about any one month.
+    const withWallet = expenses.filter((e) => !!e.walletId).length;
+
     return NextResponse.json({
       // The country's own currency. The screen printed "$" beside every
       // figure in a system that runs Syrian pounds, dinars and Egyptian
@@ -76,6 +169,19 @@ export async function GET(req: Request) {
       summary,
       expenses,
       recentDeliveredOrders: deliveredOrders.slice(0, 20),
+      spend: {
+        byType: spendByType,
+        rows: monthCount,
+        totalSpend: spendWindow.totalSpend,
+        deliveredRevenue: spendWindow.deliveredRevenue,
+        priorDeliveredRevenue: spendWindow.priorDeliveredRevenue,
+        hasPrevious: !!lastMonth,
+        ledger: ledgerTrust(withWallet, expenses.length),
+        window: {
+          from: thisMonth.start?.toISOString() ?? null,
+          to: thisMonth.end?.toISOString() ?? null,
+        },
+      },
     });
   } catch (error: any) {
     return apiErrorResponse(error);

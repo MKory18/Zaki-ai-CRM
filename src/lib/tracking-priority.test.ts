@@ -43,7 +43,11 @@ describe('the rank itself', () => {
 
   it('and no label or reason is written in Eastern digits', () => {
     const text = URGENCIES.map((k) => `${URGENCY[k].label} ${URGENCY[k].why}`).join(' ');
-    expect(text).not.toMatch(/[٠-٩]/);
+    // By code point, not by a character class: a file that forbids Eastern
+    // digits should not be the one place in the repo that contains them, and
+    // this way the failure names the character it found.
+    const eastern = [...text].filter((c) => c.charCodeAt(0) >= 0x660 && c.charCodeAt(0) <= 0x669);
+    expect(eastern).toEqual([]);
   });
 });
 

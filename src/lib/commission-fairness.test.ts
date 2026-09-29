@@ -95,6 +95,26 @@ describe('the calendar effect the owner asked for', () => {
     // Every failing precondition is named, not just the first one found.
     expect(r.why).toContain(String(MIN_MONTHS_FOR_CALENDAR));
     expect(r.why).toContain(String(MIN_DAYS_OF_MONTH_COVERED));
+    // The concentration is named too, not just the two easy counts.
+    expect(r.why).toContain(`${Math.round(r.busiestDayShare * 100)}%`);
+  });
+
+  it('refuses a record that spans months but piles up on one day', () => {
+    // The hardest case to catch and the one this record is: enough months and
+    // enough days-of-month to look respectable, with almost everything on a
+    // single date. A month-phase curve fitted to that describes one afternoon
+    // and calls it a season.
+    const dates: Date[] = [];
+    for (const month of ['01', '02', '03', '04'] as const) {
+      for (let d = 1; d <= 25; d++) dates.push(new Date(`2026-${month}-${String(d).padStart(2, '0')}T10:00:00Z`));
+    }
+    for (let i = 0; i < 2000; i++) dates.push(new Date('2026-03-01T10:00:00Z'));
+    const r = calendarReadiness(dates);
+    expect(r.months).toBeGreaterThanOrEqual(MIN_MONTHS_FOR_CALENDAR);
+    expect(r.daysOfMonthCovered).toBeGreaterThanOrEqual(MIN_DAYS_OF_MONTH_COVERED);
+    // Both other preconditions pass, so only the concentration can refuse it.
+    expect(r.busiestDayShare).toBeGreaterThan(MAX_SINGLE_DAY_SHARE);
+    expect(r.ready).toBe(false);
   });
 
   it('is allowed once the record actually spans months and spreads out', () => {
@@ -230,6 +250,19 @@ describe('the verdict', () => {
     const a = index(4, 4);
     expect(a.index).toBe(1);
     expect(a.tone).toBe('ok');
+    // Landing EXACTLY on the even share counts as meeting it, not as missing
+    // it. Two agents who did identical work would otherwise both be recorded
+    // as having been beaten by the room on every single day.
+    expect(a.winDays).toBe(MIN_COMPARABLE_DAYS);
+  });
+
+  it('ignores a day somebody was rostered but handled nothing', () => {
+    // A zero is not work, and admitting it as a day would put a colleague's
+    // even share in the denominator of a day this agent did not take part in.
+    const rows = [...pair(MIN_COMPARABLE_DAYS, 4, 4), w('2026-10-01', 'a', 0), w('2026-10-01', 'b', 40)];
+    const a = fairnessFor(rows).find((x) => x.userId === 'a')!;
+    expect(a.daysWorked).toBe(MIN_COMPARABLE_DAYS);
+    expect(a.index).toBe(1);
   });
 
   it('is «تحت نصيبه» below the lower line', () => {

@@ -126,6 +126,29 @@ describe('the direction, which is the only graded part', () => {
     expect(g.why).toContain('لم يُصرف');
   });
 
+  it('does not call a long-standing type NEW because last month sold nothing', () => {
+    /**
+     * The bug the dry run against the real database caught. Last month's
+     * delivered revenue is 0 on this shop, so every prior burden comes back
+     * null — and «رواتب 600 ثم 600» was being labelled «بند جديد».
+     */
+    const g = gradeExpenseType(
+      { category: 'SALARIES', rows: 2, amount: 600, priorAmount: 600 },
+      { totalSpend: 1050, deliveredRevenue: 2461.5, priorDeliveredRevenue: 0 }
+    );
+    expect(g.direction).not.toBe('NEW');
+    expect(g.direction).toBe('UNKNOWN');
+    expect(g.why).toContain('بلا إيراد');
+  });
+
+  it('and NEW is decided on the prior amount, never on the prior burden', () => {
+    const fresh = gradeExpenseType(
+      { category: 'MARKETING', rows: 3, amount: 240, priorAmount: 0 },
+      { totalSpend: 1050, deliveredRevenue: 2461.5, priorDeliveredRevenue: 0 }
+    );
+    expect(fresh.direction).toBe('NEW');
+  });
+
   it('refusing a direction on a single invoice', () => {
     const g = gradeExpenseType({ category: 'OFFICE', rows: 1, amount: 900, priorAmount: 100 }, WINDOW);
     expect(g.direction).toBe('UNKNOWN');
@@ -190,6 +213,15 @@ describe('whether the ledger is worth reading', () => {
     const t = ledgerTrust(0, 0);
     expect(t.level).toBe('WITHHELD');
     expect(t.share).toBeNull();
+  });
+
+  it('and saying it about EXPENSES, not about orders', () => {
+    // `trustOf` speaks of orders when it has nothing to measure, because
+    // every caller it was built for counts them. On the finance screen that
+    // sentence would answer a question nobody asked.
+    const t = ledgerTrust(0, 0);
+    expect(t.ar).toContain('مصروف');
+    expect(t.ar).not.toContain('طلبات');
   });
 });
 

@@ -92,7 +92,7 @@ export const URGENCY: Record<UrgencyKey, UrgencyFacts> = {
     tone: 'bad',
   },
   CHANGED: {
-    rank: 4.5,
+    rank: 1,
     label: 'تغيّرت بياناته',
     why: 'كُتب تعديل معتمد على الطلب بعد إرساله — اقرأ العنوان والمبلغ من جديد قبل أي اتصال.',
     tone: 'ok',

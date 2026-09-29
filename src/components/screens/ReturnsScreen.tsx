@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { ScanButton } from '@/components/scan/ScanButton';
 import { RiCheckLine, RiInboxUnarchiveLine, RiQrScan2Line, RiTimeLine } from '@remixicon/react';
@@ -102,13 +103,13 @@ export function ReturnsScreen() {
         <label className="flex-1">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">امسح الرمز (QR أو باركود) أو اكتب المرجع</span>
           <div className="relative">
-            <RiQrScan2Line className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
-            <input
+            <RiQrScan2Line className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3 z-10" />
+            <Input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               autoFocus
               placeholder="امسح الرمز هنا"
-              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="pr-9 pl-3"
               dir="ltr"
             />
           </div>
@@ -401,26 +402,62 @@ function ReceiveDialog({
             <div className="grid grid-cols-3 gap-3">
               <Num label="سليم" value={received} onChange={setReceived} max={order.expectedQty} />
               <Num label="تالف" value={damaged} onChange={setDamaged} max={order.expectedQty} />
-              <div>
-                <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ناقص (محسوب)</span>
-                <p className={`h-10 flex items-center px-3 rounded-lg border text-sm tabular-nums ${missing > 0 ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-foreground)]'}`} dir="ltr">
+              {/*
+                A COMPUTED FIGURE IS NOT AN INPUT, BUT IT STANDS IN A ROW OF
+                THEM. So it borrows the field's measurements exactly — the
+                `--sys-heading` label at `mb-1.5` and `h-11 md:h-10` — because
+                it had `--sys-foreground` at `mb-1` and a flat `h-10`, which
+                put its label two pixels high and its box a pixel short of the
+                two beside it. Three boxes in a row at three heights is what
+                «غير متناسبة مع التصميم» looks like from a desk.
+
+                It is deliberately NOT a disabled `Input`: nobody typed this,
+                and a greyed-out box invites somebody to try.
+              */}
+              <div className="w-full min-w-0">
+                <span className="block text-xs font-medium text-[var(--sys-heading)] mb-1.5">ناقص (محسوب)</span>
+                <p className={`h-11 md:h-10 flex items-center px-3 rounded-lg border text-sm tabular-nums ${missing > 0 ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]' : 'border-[var(--sys-border)] bg-[var(--sys-surface)] text-[var(--sys-foreground)]'}`} dir="ltr">
                   {missing}
                 </p>
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-[var(--sys-foreground)]">
-              <input type="checkbox" checked={courierFee} onChange={(e) => setCourierFee(e.target.checked)} />
+            {/*
+              A TICK BOX NAMES ITS OWN COLOUR, OR THE BROWSER PICKS WHITE.
+
+                «إذا كانت بيضا فتكون أزرق»
+
+              `accent-color` is the one property that tints a native
+              checkbox, and nothing in the product set it — not here and not
+              in system.css. So every tick box on this desk drew the user
+              agent's own grey-and-white control, on a surface built out of
+              `--sys-*` tokens, and a checked box did not read as checked.
+              `min-h-11 min-w-11` on the label keeps the phone tap target at
+              44px while the box itself stays 20px.
+            */}
+            <label className="flex min-h-11 items-center gap-2 text-sm text-[var(--sys-foreground)] md:min-h-0">
+              <input
+                type="checkbox"
+                checked={courierFee}
+                onChange={(e) => setCourierFee(e.target.checked)}
+                className="h-5 w-5 shrink-0 accent-[var(--sys-primary)]"
+              />
               احتساب أجرة إرجاع لشركة الشحن (تُؤخذ من جدول الأجور)
             </label>
 
-            <label className="block">
-              <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">ملاحظة (اختياري)</span>
-              <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm" />
-            </label>
+            <Input
+              label="ملاحظة (اختياري)"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
 
-            <label className="flex items-start gap-2 text-sm text-[var(--sys-heading)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2">
-              <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="h-5 w-5 mt-1" />
+            <label className="flex min-h-11 items-start gap-2 text-sm text-[var(--sys-heading)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-2 md:min-h-0">
+              <input
+                type="checkbox"
+                checked={acknowledged}
+                onChange={(e) => setAcknowledged(e.target.checked)}
+                className="h-5 w-5 mt-1 shrink-0 accent-[var(--sys-primary)]"
+              />
               <span>أقرّ بأنني عددت البضاعة وفحصتها. لا تدخل البضاعة للمخزون قبل هذا الإقرار.</span>
             </label>
           </>
@@ -441,19 +478,28 @@ function ReceiveDialog({
   );
 }
 
+/**
+ * A counted quantity, on the system's field.
+ *
+ * It hand-rolled the input and named no background, so the browser used its
+ * own — and because nothing in this app declares `color-scheme`, the user
+ * agent's own is WHITE whatever theme the clerk is in. Three white boxes on
+ * a dark card is «التنبيهات المنبثقة … غير متناسبة مع التصميم» exactly. The
+ * shared `Input` also brings the focus ring — `--sys-primary` at 25% — which
+ * a hand-rolled field has no way to inherit: system.css styles
+ * `:focus-visible` only, deliberately, so a TAPPED field showed nothing at
+ * all. «إذا كانت بيضا فتكون أزرق».
+ */
 function Num({ label, value, onChange, max }: { label: string; value: number; onChange: (v: number) => void; max: number }) {
   return (
-    <label className="block">
-      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">{label}</span>
-      <input
-        type="number"
-        min={0}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(Math.max(0, Math.min(max, Number(e.target.value))))}
-        dir="ltr"
-        className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
-      />
-    </label>
+    <Input
+      label={label}
+      type="number"
+      min={0}
+      max={max}
+      value={value}
+      onChange={(e) => onChange(Math.max(0, Math.min(max, Number(e.target.value))))}
+      dir="ltr"
+    />
   );
 }

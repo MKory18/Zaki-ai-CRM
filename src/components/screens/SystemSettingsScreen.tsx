@@ -90,9 +90,25 @@ export function SystemSettingsScreen() {
             <form onSubmit={save} className="flex flex-wrap items-end gap-3">
               <div className="min-w-[220px] flex-1">
                 <Input label="اسم الشركة" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
+                {/*
+                  THE SENTENCE USED TO PROMISE MORE THAN IS TRUE.
+                  It read «لا يظهر هذا الاسم لزبائنك» flatly. The shop and
+                  the landing pages do indeed carry the STORE's name and
+                  logo — but /api/public/landing-pages/[slug]/meta is a
+                  public, CORS-open endpoint that answers with
+                  `company.name` to anybody holding a published page's
+                  slug. It exists so a seller can embed a page on their own
+                  site, and the key is kept for embeds already pasted out
+                  there. So the promise is narrowed to what is actually
+                  kept: a reassurance that is not true is worse than none.
+                */}
                 <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-                  لا يظهر هذا الاسم لزبائنك: صفحاتُ الهبوط والمتجر تحمل اسمَ المتجر وشعارَه، لا اسمَ الشركة.
-                  هو اسمُ حسابك في المنصّة، وبه تُعرَف شركتك في سجلّ التدقيق.
+                  هذا اسمُ حسابك في المنصّة، لا اسمُ متجرك — شركتُك قد تملك عدّة متاجر، وكلُّ متجرٍ
+                  يحمل اسمَه وشعارَه على صفحاته. وبه تُعرَف شركتك في سجلّ التدقيق.
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                  ويظهر في موضعٍ واحدٍ للعلن: بياناتُ التضمين التي يقرؤها من يلصق إحدى صفحات هبوطك
+                  على موقعه. فاجعله اسماً لا يضيرك أن يُقرأ.
                 </p>
               </div>
               <Button type="submit" disabled={busy || !dirty || name.trim().length < 2}>

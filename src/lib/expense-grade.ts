@@ -218,13 +218,31 @@ export function gradeExpenseType(input: ExpenseTypeInput, window: ExpenseWindow)
       why: `${burden}% من الإيراد المسلَّم — ولا مدة سابقة تُقارن بها.`,
     };
   }
-  if (priorBurden === null || priorBurden === 0) {
-    // It did not exist before and it does now. Not «grew» — «appeared», which
-    // is a different thing to look into and deserves its own word.
+  /**
+   * NEW MEANS «NOTHING WAS SPENT ON THIS BEFORE» — and it is decided on the
+   * prior AMOUNT, never on the prior burden.
+   *
+   * Deciding it on the burden is a bug this had, and the dry run against the
+   * real database caught it: last month's delivered revenue is zero, so every
+   * prior burden came back null, so «رواتب 600 ثم 600» was labelled «بند
+   * جديد». A type somebody has been paying for months is not new because the
+   * shop happened to deliver nothing in the window before.
+   */
+  if (priorAmount === 0) {
     return {
       ...grade,
       direction: 'NEW',
       why: `${burden}% من الإيراد المسلَّم — ولم يُصرف على هذا البند شيء في المدة السابقة.`,
+    };
+  }
+  if (priorBurden === null || priorBurden === 0) {
+    // Spent on before, but there is no prior revenue to take a share of. The
+    // amounts could be compared instead — and that is exactly the comparison
+    // this file refuses, because it calls a bigger shop a leak.
+    return {
+      ...grade,
+      direction: 'UNKNOWN',
+      why: `${burden}% من الإيراد المسلَّم — وصُرف على هذا البند في المدة السابقة بلا إيراد مسلَّم فيها، فلا نسبة تُقارن.`,
     };
   }
 
@@ -282,5 +300,14 @@ export function gradeExpenseTypes(
  * no wallet is not a ledger; it is a list.
  */
 export function ledgerTrust(withWallet: number, rows: number): Trust {
-  return trustOf({ present: withWallet, population: rows, subject: 'المحفظة على المصروف' });
+  const trust = trustOf({ present: withWallet, population: rows, subject: 'المحفظة على المصروف' });
+  /**
+   * `trustOf` says «لا طلبات في هذه المدة» when it has nothing to measure,
+   * because every caller it was built for counts orders. An empty EXPENSE
+   * ledger is not an absence of orders, and printing that sentence on the
+   * finance screen would answer a question nobody asked. The gate's
+   * arithmetic is reused; only the noun is the caller's to own.
+   */
+  if (trust.population === 0) return { ...trust, ar: 'لا مصروف مسجَّل بعد — لا شيء يُحكم على دفتره.' };
+  return trust;
 }

@@ -5,6 +5,7 @@ import { userCan } from '@/lib/can';
 import { PayoutDialog } from '@/components/screens/commission/PayoutDialog';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
 import { PeriodProgress } from '@/components/screens/commission/PeriodProgress';
+import { FairnessPanel, type FairnessData } from '@/components/screens/commission/FairnessPanel';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import {
   COMMISSION_METRICS, COMMISSION_TYPES, METRIC_LABEL_AR, PERIOD_LABEL_AR, TYPE_LABEL_AR,
@@ -102,6 +103,10 @@ export function CommissionSettingsScreen() {
   const { currentUser } = useApp();
   const canPay = userCan(currentUser, 'finance.create');
   const [totals, setTotals] = useState<Totals[] | null>(null);
+  // Whether the volume each person is paid on reflects their work or the
+  // calendar. Read from the same response as the money, so the two cannot
+  // describe different months.
+  const [fairness, setFairness] = useState<FairnessData | null>(null);
   const [currency, setCurrency] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -112,13 +117,16 @@ export function CommissionSettingsScreen() {
     try {
       const [r, c] = await Promise.all([
         apiJson<{ rules: Rule[]; noRuleInForce: boolean }>('/api/settings/commission'),
-        apiJson<{ totals: Totals[]; currencyCode: string }>(`/api/finance/commission?period=${period()}`).catch(() => null),
+        apiJson<{ totals: Totals[]; currencyCode: string; fairness: FairnessData }>(
+          `/api/finance/commission?period=${period()}`
+        ).catch(() => null),
       ]);
       setRules(r.rules);
       setNoRuleInForce(!!r.noRuleInForce);
       if (c) {
         setTotals(c.totals);
         setCurrency(c.currencyCode);
+        setFairness(c.fairness ?? null);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحميل');
@@ -144,6 +152,12 @@ export function CommissionSettingsScreen() {
       {/* A period rule only becomes money once its span closes, so without
           this there was nothing to see while it could still be changed. */}
       <PeriodProgress />
+
+      {/* Whether the count a rule bands on reflects the person or the roster.
+          It sits ABOVE the money table on purpose: the question «is this
+          number fair» has to be asked before the number is read, not after
+          somebody has already decided who deserves what. */}
+      <FairnessPanel data={fairness} />
 
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--sys-border)]">
