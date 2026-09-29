@@ -107,7 +107,6 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   >([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   // 30s tick so lockActive (expiry-based) re-renders and expired locks clear.
   // Stores the current server clock read inside the interval (not during render)
@@ -158,117 +157,27 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
    * `ConfirmationActions`.
    *
    * Calls are logged where they are made: the confirmation screen, which
-   * demands a structured reason before it will reject anything.
+   * demands a structured reason before it will reject anything. The last of
+   * its state — a note nothing read — went with the form.
    */
-  const [statusNote, setStatusNote] = useState('');
 
 
-  // ─── Order data editing form (customer info + price fields) ───
-  // Expiry-based lock state (same rule as the render-time check below) but
-  // available before the early returns for the edit-form open handler.
-  const lockActiveNow =
-    !!order?.lockedById && !!order.lockExpiresAt && new Date(order.lockExpiresAt).getTime() > nowMs;
-  const [editOpen, setEditOpen] = useState(false);
-  const emptyEdit = {
-    customerName: '', customerPhone: '', customerAddress: '',
-    sellingPrice: '', quantity: '', discountAmount: '', shippingCost: '',
-  };
-  const [editForm, setEditForm] = useState(emptyEdit);
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [editSuccess, setEditSuccess] = useState<string | null>(null);
-
-  const openEditForm = async () => {
-    if (!order?.id) return;
-    setEditOpen((v) => !v);
-    setEditError(null);
-    setEditSuccess(null);
-    if (!editOpen) {
-      // Reuse the same backend lock as status editing so concurrent editors are blocked
-      if (!(order.lockedById === currentUser?.id && lockActiveNow)) {        const lock = await ownership.acquireLock(order.id);
-        if (!lock.ok) return;
-        setOrder((prev: any) => ({
-          ...prev,
-          lockedById: currentUser?.id,
-          lockHolder: { id: currentUser?.id, name: currentUser?.name },
-          lockExpiresAt: lock.lockExpiresAt ?? prev.lockExpiresAt,
-        }));
-      }
-      setEditForm({
-        customerName: order.customer?.fullName || '',
-        customerPhone: order.customer?.rawPhone || order.customer?.phone || '',
-        customerAddress: order.customer?.address || '',
-        sellingPrice: String(order.sellingPrice ?? ''),
-        quantity: String(order.quantity ?? ''),
-        discountAmount: String(order.discountAmount ?? '0'),
-        shippingCost: String(order.shippingCost ?? '0'),
-      });
-    }
-  };
-
-  const handleEditSave = async () => {
-    if (!order?.id) return;
-    setEditLoading(true);
-    setEditError(null);
-    setEditSuccess(null);
-    try {
-      const body: any = { expectedVersion: order.version };
-      const name = editForm.customerName.trim();
-      const phone = editForm.customerPhone.trim();
-      const address = editForm.customerAddress.trim();
-      if (name && name !== order.customer?.fullName) body.customerName = name;
-      if (phone && phone !== (order.customer?.rawPhone || order.customer?.phone)) body.customerPhone = phone;
-      if (address && address !== order.customer?.address) body.customerAddress = address;
-      const num = (v: string) => (v === '' ? undefined : Number(v));
-      if (num(editForm.sellingPrice) !== undefined && num(editForm.sellingPrice) !== order.sellingPrice) body.sellingPrice = num(editForm.sellingPrice);
-      if (num(editForm.quantity) !== undefined && num(editForm.quantity) !== order.quantity) body.quantity = num(editForm.quantity);
-      if (num(editForm.discountAmount) !== undefined && num(editForm.discountAmount) !== order.discountAmount) body.discountAmount = num(editForm.discountAmount);
-      // Shipping belongs to the shipping authority. Without it the field is
-      // not sent at all — an unchanged value is not an edit, and sending it
-      // would earn a 403 for a number nobody touched.
-      if (
-        mayChangeShipping &&
-        num(editForm.shippingCost) !== undefined &&
-        num(editForm.shippingCost) !== order.shippingCost
-      ) {
-        body.shippingCost = num(editForm.shippingCost);
-      }
-      const fields = Object.keys(body).filter((k) => k !== 'expectedVersion');
-      if (fields.length === 0) {
-        setEditError('لا توجد تغييرات للحفظ');
-        return;
-      }
-      if (body.sellingPrice !== undefined && (isNaN(body.sellingPrice) || body.sellingPrice < 0)) {
-        setEditError('السعر يجب أن يكون رقماً موجباً');
-        return;
-      }
-      if (body.quantity !== undefined && (!Number.isInteger(body.quantity) || body.quantity < 1)) {
-        setEditError('الكمية يجب أن تكون رقماً صحيحاً ≥ 1');
-        return;
-      }
-      const res = await patchOrder(order.id, body);
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 409) {
-        setEditError('تم تعديل هذا الطلب بواسطة مستخدم آخر. يرجى تحديث البيانات قبل الحفظ.');
-        return;
-      }
-      if (res.status === 423) {
-        setEditError(data.errorAr || data.error || 'الطلب محتجز للتحرير من موظف آخر');
-        return;
-      }
-      if (!res.ok) {
-        setEditError(data.errorAr || data.error || `فشل حفظ التعديلات (HTTP ${res.status})`);
-        return;
-      }
-      setEditSuccess('تم حفظ التعديلات بنجاح');
-      await loadOrder(order.id);
-      onRefresh();
-    } catch (e: any) {
-      setEditError(e?.message || 'فشل حفظ التعديلات');
-    } finally {
-      setEditLoading(false);
-    }
-  };
+  /**
+   * THE EDIT FORM THAT WAS NOT HERE EITHER.
+   *
+   * A hundred lines stood here — a lock acquirer, a seven-field draft, a
+   * validator and a PATCH — and NOTHING CALLED ANY OF IT. openEditForm and
+   * handleEditSave were each referenced exactly once, at their own
+   * definitions. Editing moved into CustomerCard and OrderLinesCard, which
+   * take the same server lock and ask the two questions separately; the
+   * machinery for the form they replaced stayed behind and read, to anybody
+   * opening this file, as a third way to edit an order.
+   *
+   * OrderRegionField went with it, and it was the worse of the two: a
+   * complete, working governorate picker, never rendered, sitting beside the
+   * live one in CustomerCard — two answers to «which governorate is this
+   * order in», one of them unreachable.
+   */
 
   useEffect(() => {
     if (isOpen && orderId) loadOrder(orderId);
@@ -308,20 +217,10 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           previousOrderId: data.previousOrderId ?? null,
           nextOrderId: data.nextOrderId ?? null,
         });
-        // Reset in-progress forms so stale input from the previous order never leaks
-        setStatusNote('');
-        setEditForm({
-          customerName: data.order.customer?.fullName || '',
-          customerPhone: data.order.customer?.rawPhone || data.order.customer?.phone || '',
-          customerAddress: data.order.customer?.address || '',
-          sellingPrice: String(data.order.sellingPrice ?? ''),
-          quantity: String(data.order.quantity ?? ''),
-          discountAmount: String(data.order.discountAmount ?? '0'),
-          shippingCost: String(data.order.shippingCost ?? '0'),
-        });
-        setEditOpen(false);
-        setEditError(null);
-        setEditSuccess(null);
+        // The cards that actually hold forms — CustomerCard, OrderLinesCard,
+        // ShippingSection — are keyed off the order they are handed and
+        // reset themselves. What used to be reset here belonged to a form
+        // that no longer exists.
       } else {
         // 403/404 (not found / not assigned) — show a clear error panel
         const data = await res.json().catch(() => ({}));
@@ -357,14 +256,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--sys-destructive)]"></div>
         </div>
-        {historyOpen && order.customer?.id && (
-        <CustomerHistoryModal
-          customerId={order.customer.id}
-          orderId={order.id}
-          onClose={() => setHistoryOpen(false)}
-        />
-      )}
-    </Modal>
+      </Modal>
     );
   }
   if (loadError) {
@@ -836,6 +728,29 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         </div>
       </div>
 
+      {/*
+        «طلبات سابقة» DID NOTHING FROM THIS SCREEN.
+
+        `CustomerCard`'s history button sets `historyOpen`, and the only place
+        that read it was inside the `if (!order && loading)` early return —
+        the loading skeleton, where `order` is null by definition. So on the
+        one path where the button exists, pressing it rendered nothing; and
+        had that branch ever been reached with the flag set, `order.customer`
+        would have thrown. The customer's history was reachable from the list
+        row and from «طلباتي», and not from the order itself, which is the
+        screen somebody is looking at when they wonder whether this person has
+        ordered before.
+
+        It renders here, on the path where the order actually exists.
+      */}
+      {historyOpen && order.customer?.id && (
+        <CustomerHistoryModal
+          customerId={order.customer.id}
+          orderId={order.id}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
+
       {askOpen && (
         <ChangeRequestDialog
           open
@@ -860,107 +775,5 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         />
       )}
     </Modal>
-  );
-}
-
-/**
- * The order's governorate, shown and editable.
- *
- * It is a Region row, not the free-text city: the delivery-fee table is keyed
- * on regionId, and an order that never resolved one reaches the shipment
- * screen as "no governorate — cannot price delivery". The server re-checks
- * that the chosen region belongs to this order's country.
- */
-function OrderRegionField({
-  order,
-  onSaved,
-}: {
-  order: any;
-  onSaved: () => void | Promise<void>;
-}) {
-  const { regions, loading } = useRegions();
-  const patchOrder = useOrderPatch();
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState<string>(order.regionId ?? '');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const current = regions.find((r) => r.id === order.regionId);
-
-  if (!editing) {
-    return (
-      <div className="flex items-start gap-1.5">
-        <RiMapPinLine className="w-4 h-4 text-[var(--sys-muted)] mt-0.5 shrink-0" />
-        <div className="flex-1">
-          <p className="text-xs text-[var(--sys-muted)]">المحافظة</p>
-          <div className="flex items-center gap-2">
-            {order.regionId ? (
-              <p className="text-[var(--sys-foreground)] text-xs font-medium">{current?.name ?? order.customer?.city}</p>
-            ) : (
-              <p className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-md px-2 py-0.5">
-                لم تُحدَّد — لا يمكن حساب أجرة التوصيل
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={() => { setValue(order.regionId ?? ''); setEditing(true); }}
-              className="text-xs text-[var(--sys-primary)] hover:underline"
-            >
-              {order.regionId ? 'تغيير' : 'تحديد'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-start gap-1.5">
-      <RiMapPinLine className="w-4 h-4 text-[var(--sys-muted)] mt-0.5 shrink-0" />
-      <div className="flex-1">
-        <p className="text-xs text-[var(--sys-muted)] mb-1">المحافظة</p>
-        <div className="flex items-center gap-2">
-          <select
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            disabled={loading || saving}
-            className="flex-1 h-11 md:h-8 px-2 rounded-lg border border-[var(--sys-border)] text-xs bg-[var(--sys-card)]"
-          >
-            <option value="">اختر…</option>
-            {regions.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            disabled={saving || !value}
-            onClick={async () => {
-              setSaving(true);
-              setError(null);
-              try {
-                const res = await patchOrder(order.id, { regionId: value, expectedVersion: order.version });
-                if (!res.ok) {
-                  const data = await res.json().catch(() => ({}));
-                  throw new Error(data.errorAr || data.error || 'تعذر الحفظ');
-                }
-                setEditing(false);
-                await onSaved();
-              } catch (e) {
-                setError(e instanceof Error ? e.message : 'تعذر الحفظ');
-              } finally {
-                setSaving(false);
-              }
-            }}
-            className="h-8 px-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-bold disabled:opacity-50"
-          >
-            {saving ? '…' : 'حفظ'}
-          </button>
-          <button type="button" onClick={() => setEditing(false)} className="text-xs text-[var(--sys-muted-foreground)]">
-            إلغاء
-          </button>
-        </div>
-        {error && <p className="text-xs text-[var(--sys-destructive)] mt-1">{error}</p>}
-      </div>
-    </div>
   );
 }

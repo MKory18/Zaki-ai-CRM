@@ -138,7 +138,33 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
           <Row label="الاسم" value={order.customer.fullName} />
           <Row label="رقم الهاتف" value={order.customer.rawPhone || order.customer.phone} ltr />
           <Row label="رقم إضافي" value={order.customer.altPhone || '—'} ltr />
-          <Row label="المحافظة" value={order.region?.name ?? order.customer.city ?? '—'} />
+          {/*
+            A GOVERNORATE IS A ROW IN THE FEE TABLE, NOT A WORD SOMEBODY TYPED.
+
+            This printed `region?.name ?? customer.city`, so an order that
+            never resolved a Region showed the free text the customer's file
+            happened to carry — «دمشق» — under the label «المحافظة», and read
+            as settled. It is not: the delivery fee and the late threshold are
+            keyed on `regionId`, and with none the shipment screen answers «لا
+            يمكن حساب أجرة التوصيل». Measured on this database: 2 orders of
+            171 are in exactly that state, and both have a city written on
+            them, so both of them looked fine.
+
+            The typed city is still shown — it is the clue for whoever fixes
+            it — but it is named as what it is, and «تعديل» above sets the
+            real one.
+          */}
+          {order.regionId ? (
+            <Row label="المحافظة" value={order.region?.name ?? '—'} />
+          ) : (
+            <div>
+              <dt className="text-xs text-[var(--sys-muted)]">المحافظة</dt>
+              <dd className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-md px-2 py-0.5 inline-block font-medium">
+                لم تُحدَّد — لا يمكن حساب أجرة التوصيل
+                {order.customer.city ? ` · المكتوب: ${order.customer.city}` : ''}
+              </dd>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <Row label="عنوان التوصيل" value={order.customer.address || '—'} />
           </div>

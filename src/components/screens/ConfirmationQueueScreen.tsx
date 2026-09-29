@@ -82,6 +82,9 @@ export function ConfirmationQueueScreen() {
     );
   }
 
+  /** The server's word for «this account does not pull, it supervises». */
+  const notMyDesk = data.refusal?.code === 'NOT_YOUR_DESK';
+
   return (
     <div className="max-w-3xl mx-auto space-y-4">
       <ScreenTitle />
@@ -107,36 +110,62 @@ export function ConfirmationQueueScreen() {
           </p>
         )}
 
-        <button
-          onClick={pullNext}
-          disabled={!data.canPull || pulling || data.waiting === 0}
-          className="mt-6 px-8 py-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold disabled:opacity-50"
-        >
-          {pulling ? 'جارٍ السحب…' : 'اسحب الطلب التالي'}
-        </button>
+        {/*
+          NOT «NOT NOW» BUT «NOT YOURS».
+
+          Every other refusal is temporary — finish the order in your hand,
+          come back under the cap — so the button stays, greyed, and the
+          sentence says what to do about it. `NOT_YOUR_DESK` is the server
+          saying this account never holds `confirmation.pull`: a supervisor
+          watching the pool. A button drawn for her could only ever answer
+          403, so it is not drawn, and the sentence is a plain statement
+          rather than a complaint about something she did.
+        */}
+        {!notMyDesk && (
+          <button
+            onClick={pullNext}
+            disabled={!data.canPull || pulling || data.waiting === 0}
+            className="mt-6 px-8 py-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold disabled:opacity-50"
+          >
+            {pulling ? 'جارٍ السحب…' : 'اسحب الطلب التالي'}
+          </button>
+        )}
 
         {(error || data.refusal) && (
-          <p className="mt-4 text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">
+          <p
+            className={`mt-4 text-sm rounded-lg p-3 ${
+              notMyDesk && !error
+                ? 'text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)]'
+                : 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)]'
+            }`}
+          >
             {error ?? data.refusal?.message}
           </p>
         )}
 
-        <div className="mt-6 grid grid-cols-2 gap-3 text-right">
-          <Stat
-            icon={<RiPhoneLockLine className="w-4 h-4" />}
-            label="لديك بلا محاولة اتصال"
-            value={`${data.owned.withoutAttempt} / ${data.caps.withoutAttempt}`}
-          />
-          <Stat
-            icon={<RiTimerFlashLine className="w-4 h-4" />}
-            label="إجمالي ما بيدك"
-            value={`${data.owned.total} / ${data.caps.total}`}
-          />
-        </div>
-        <p className="mt-4 text-xs text-[var(--sys-muted)]">
-          الأولوية للطلبات المؤجلة المستحقة خلال {data.leadDays} يوم، ثم الأقدم. يُحرَّر أي طلب بلا محاولة اتصال بعد 90
-          دقيقة عمل.
-        </p>
+        {/* The caps are what bounds HER pulling. They mean nothing on a desk
+            that does not pull, and two zeroes over two ceilings read as a
+            quota she has failed to use. */}
+        {!notMyDesk && (
+          <>
+            <div className="mt-6 grid grid-cols-2 gap-3 text-right">
+              <Stat
+                icon={<RiPhoneLockLine className="w-4 h-4" />}
+                label="لديك بلا محاولة اتصال"
+                value={`${data.owned.withoutAttempt} / ${data.caps.withoutAttempt}`}
+              />
+              <Stat
+                icon={<RiTimerFlashLine className="w-4 h-4" />}
+                label="إجمالي ما بيدك"
+                value={`${data.owned.total} / ${data.caps.total}`}
+              />
+            </div>
+            <p className="mt-4 text-xs text-[var(--sys-muted)]">
+              الأولوية للطلبات المؤجلة المستحقة خلال {data.leadDays} يوم، ثم الأقدم. يُحرَّر أي طلب بلا محاولة اتصال بعد 90
+              دقيقة عمل.
+            </p>
+          </>
+        )}
       </div>
 
       {data.orders && (

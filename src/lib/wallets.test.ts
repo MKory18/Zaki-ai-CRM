@@ -64,7 +64,7 @@ describe('reverseMovement — the only correction there is', () => {
     db.walletMovement.findUnique.mockResolvedValue(null);
 
     const reversal = await reverseMovement(db as never, {
-      companyId: 'c1', movementId: 'm1', reason: 'مبلغ مسجَّل مرتين', createdById: 'u2',
+      companyId: 'c1', walletId: 'w1', movementId: 'm1', reason: 'مبلغ مسجَّل مرتين', createdById: 'u2',
     });
     expect(reversal).toMatchObject({
       direction: 'OUT', amount: 50, reversalOfId: 'm1', reversalReason: 'مبلغ مسجَّل مرتين',
@@ -75,15 +75,43 @@ describe('reverseMovement — the only correction there is', () => {
     db.walletMovement.findFirst.mockResolvedValue(original);
     db.walletMovement.findUnique.mockResolvedValue({ id: 'm2' });
     await expect(
-      reverseMovement(db as never, { companyId: 'c1', movementId: 'm1', reason: 'مرة ثانية', createdById: 'u2' })
+      reverseMovement(db as never, { companyId: 'c1', walletId: 'w1', movementId: 'm1', reason: 'مرة ثانية', createdById: 'u2' })
     ).rejects.toThrow(/already reversed/i);
   });
 
   it('refuses to reverse a reversing entry', async () => {
     db.walletMovement.findFirst.mockResolvedValue({ ...original, reversalOfId: 'm0' });
     await expect(
-      reverseMovement(db as never, { companyId: 'c1', movementId: 'm1', reason: 'x', createdById: 'u2' })
+      reverseMovement(db as never, { companyId: 'c1', walletId: 'w1', movementId: 'm1', reason: 'x', createdById: 'u2' })
     ).rejects.toThrow();
+  });
+
+  /**
+   * THE STORE BOUNDARY. The route checks that the WALLET in the URL belongs to
+   * the current store and then passed a `movementId` from the body straight
+   * through — so naming one of your own wallets in the path let you reverse a
+   * movement sitting in another store's wallet.
+   */
+  it('looks for the movement INSIDE the wallet it was authorised for', async () => {
+    db.walletMovement.findFirst.mockResolvedValue(original);
+    db.walletMovement.findUnique.mockResolvedValue(null);
+
+    await reverseMovement(db as never, {
+      companyId: 'c1', walletId: 'w1', movementId: 'm1', reason: 'سبب مكتوب', createdById: 'u2',
+    });
+    expect(db.walletMovement.findFirst.mock.calls[0][0].where).toMatchObject({
+      id: 'm1', companyId: 'c1', walletId: 'w1',
+    });
+  });
+
+  it('refuses a movement that belongs to a different wallet', async () => {
+    // The scoped query finds nothing — which is the refusal.
+    db.walletMovement.findFirst.mockResolvedValue(null);
+    await expect(
+      reverseMovement(db as never, {
+        companyId: 'c1', walletId: 'w1', movementId: 'in-another-store', reason: 'سبب مكتوب', createdById: 'u2',
+      })
+    ).rejects.toThrow(/not found/i);
   });
 });
 

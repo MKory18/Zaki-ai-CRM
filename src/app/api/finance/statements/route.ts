@@ -56,6 +56,10 @@ export async function GET() {
           reference: s.reference,
           fileName: s.fileName,
           status: s.status,
+          // The stamp of the act, not the place in the flow. The screens gate
+          // their match and approve buttons on this, because `status` alone
+          // could be written back to MATCHED over an approved statement.
+          approvedAt: s.approvedAt,
           currencyCode: s.currencyCode,
           totalAmount: Number(s.totalAmount),
           createdAt: s.createdAt,

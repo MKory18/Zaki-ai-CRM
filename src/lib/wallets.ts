@@ -102,13 +102,20 @@ export async function recordMovement(tx: Tx, input: MovementInput) {
 /**
  * Reverse a movement. The original row is never touched: the reversal is a
  * new movement in the opposite direction, linked to it, with a reason.
+ *
+ * `walletId` IS REQUIRED, AND IT IS NOT DECORATION. The route that calls this
+ * checks that the wallet in the URL belongs to the current store, and then
+ * passed a `movementId` from the request body straight through — so a movement
+ * in a DIFFERENT store's wallet could be reversed by naming one of your own in
+ * the path. The store boundary is checked on the wallet; the movement has to be
+ * checked against the same wallet or the check is on nothing.
  */
 export async function reverseMovement(
   tx: Tx,
-  params: { companyId: string; movementId: string; reason: string; createdById: string }
+  params: { companyId: string; walletId: string; movementId: string; reason: string; createdById: string }
 ) {
   const original = await tx.walletMovement.findFirst({
-    where: { id: params.movementId, companyId: params.companyId },
+    where: { id: params.movementId, companyId: params.companyId, walletId: params.walletId },
   });
   if (!original) throw new Error('Movement not found');
   if (original.reversalOfId) throw new Error('A reversing entry cannot be reversed');

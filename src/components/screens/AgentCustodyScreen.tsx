@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { amount, arDateShort, type Currency } from '@/lib/format';
-import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiWallet3Line } from '@remixicon/react';
+import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiQuestionLine, RiWallet3Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -18,14 +18,34 @@ import { EmptyState } from '@/components/ui/EmptyState';
  * custody figure to correct and none to drift. And nothing here moves money:
  * receiving from an agent is a settlement, and settlements go through their
  * own chain.
+ *
+ * ── THE FIGURE THAT USED TO LIE ──
+ *
+ * «حصّله» means «he collected it». The screen printed the ORDER TOTAL under
+ * that word whenever nothing had recorded what he actually took — which, on
+ * this database, is every delivered order there is: the door does not write
+ * `collectedAmount` any more, the courier's settlement does, on approval. So
+ * this screen told an owner a man owed him money nothing had established the
+ * man ever held.
+ *
+ * Confirmed cash and delivered-but-unrecorded orders are now two separate
+ * columns that never add together, and the screen says in words why the second
+ * one carries no amount. Every figure comes from the server; nothing on this
+ * page computes money.
  */
 
 interface Totals {
   inHandCount: number;
   inHandValue: number;
+  /** Cash recorded at the door. Only this is money. */
   collected: number;
   fees: number;
   balance: number;
+  /** Delivered orders nobody has recorded an amount for. */
+  awaitingCount: number;
+  awaitingValue: number;
+  awaitingFees: number;
+  hasUnconfirmed: boolean;
 }
 
 interface CustodyOrder {
@@ -36,7 +56,10 @@ interface CustodyOrder {
   shippingStatus: string;
   shippedAt: string | null;
   deliveredAt: string | null;
-  collected: number;
+  /** What the order is worth. */
+  orderValue: number;
+  /** What he took at the door — null while nothing has recorded it. */
+  collected: number | null;
   fee: number;
 }
 
@@ -57,6 +80,10 @@ const STATUS_AR: Record<string, string> = {
   PARTIALLY_DELIVERED: 'سُلّم جزئياً',
 };
 
+/** Said once, wherever an unrecorded amount has to be explained. */
+const WHY_NO_AMOUNT =
+  'المبلغ المحصَّل يُكتب حين تُعتمد التسوية التي تغطّي الطلب — لا عند الطَرق على الباب. فما لم تُعتمد تسويةٌ لهذه الطلبات، لا يعرف النظام كم قبض فعلاً، ولا يخمّنه.';
+
 export function AgentCustodyScreen() {
   const [agents, setAgents] = useState<{ agent: Detail['agent']; totals: Totals }[] | null>(null);
   const [currency, setCurrency] = useState<Currency | null>(null);
@@ -66,9 +93,9 @@ export function AgentCustodyScreen() {
 
   const load = useCallback(async () => {
     try {
-      const res = await apiJson<{ agents: typeof agents; currencyCode: string }>('/api/finance/agents');
+      const res = await apiJson<{ agents: typeof agents; currencyCode: string; minorUnit: number }>('/api/finance/agents');
       setAgents(res.agents ?? []);
-      setCurrency({ code: res.currencyCode, minorUnit: res.currencyCode === 'JOD' ? 3 : 2 });
+      setCurrency({ code: res.currencyCode, minorUnit: res.minorUnit });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحميل');
     }
@@ -102,6 +129,9 @@ export function AgentCustodyScreen() {
   const money = (n: number) => amount(n, currency);
 
   if (open) {
+    const confirmed = open.owing.filter((o) => o.collected !== null);
+    const awaiting = open.owing.filter((o) => o.collected === null);
+
     return (
       <div className="max-w-4xl space-y-4">
         <button
@@ -129,26 +159,46 @@ export function AgentCustodyScreen() {
 
         <Section
           title="حصّله ولم يسلّمه"
-          subtitle="سُلّمت وقُبض ثمنها، ولم تصل إلينا بعد"
+          subtitle="سُلّمت، وسُجِّل ما قُبض فيها، ولم يصل إلينا بعد"
           icon={RiWallet3Line}
-          orders={open.owing}
+          orders={confirmed}
           money={money}
           showFee
         />
 
         {/*
-          WHERE THE MONEY IS ACTUALLY RECEIVED.
+          DELIVERED, AND NOBODY WROTE DOWN WHAT HE TOOK.
 
-          This screen counts what he holds and stops there — deliberately:
-          taking cash in is a settlement, and a settlement goes through
-          upload → receipt → approval so the guards that protect the
-          company's cash are not bypassed by a screen that happens to be
-          about a person rather than a company.
+          These used to sit in the section above with the ORDER TOTAL printed
+          beside them as if it were cash he was holding. They are the same
+          orders; what changed is that the screen no longer answers a question
+          it has not been told the answer to.
+        */}
+        {awaiting.length > 0 && (
+          <Section
+            title="سُلّمت ولا مبلغ مؤكَّد"
+            subtitle={WHY_NO_AMOUNT}
+            icon={RiQuestionLine}
+            orders={awaiting}
+            money={money}
+            showFee
+          />
+        )}
 
-          But saying nothing about it left the screen looking broken: it
-          shows money owed and offers no way to receive it, which is what
-          «عهدة المندوب ما بتظهر إشي عشان التحصيل وإغلاق الطلب» is
-          describing. The rule stays; the door is now visible from here.
+        {/*
+          WHERE THE MONEY IS ACTUALLY RECEIVED — AND IT IS NOT /finance/collection.
+
+          This screen counts what he holds and stops there, deliberately:
+          taking cash in writes a wallet movement, and that belongs to the
+          endpoint with the guards on it, not to a report.
+
+          The door it pointed at was the wrong one. /finance/collection is the
+          STATEMENT chain — upload a file, record the receipt, approve — and an
+          agent sends no file; its form cannot be submitted without one. Taking
+          cash from a مندوب is the manual collection on متابعة الشحن: name the
+          delivered orders, name the wallet, and the movement is written there
+          with the same gate on it (orders already settled are refused, and the
+          commission becomes payable only then).
         */}
         {open.owing.length > 0 && (
           <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 space-y-2">
@@ -156,15 +206,16 @@ export function AgentCustodyScreen() {
               استلام ما بذمّته
             </h4>
             <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-              استلامُ المال من المندوب تسويةٌ كأيّ تسوية: تُرفع، ويُسجَّل الإيصال، ثمّ تُعتمد —
-              وعند الاعتماد تُغلق طلباتُه وتُطابَق أرقامُه. لا يُكتب مالٌ من هذه الشاشة.
+              المندوب لا يرسل كشفاً، فتحصيلُه يدويّ: من شاشة متابعة الشحن تُختار طلباتُه
+              المسلَّمة وتُسمّى المحفظة، فتُكتب حركةُ المحفظة هناك وتُغلق الطلبات وتصبح عمولتُها
+              مستحقّة. لا يُكتب مالٌ من هذه الشاشة، ولا تصلح شاشةُ الكشوف لمندوب.
             </p>
             <a
-              href="/finance/collection"
+              href="/ops/tracking"
               className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg bg-[var(--sys-primary)] px-4 py-1.5 text-xs font-medium text-[var(--sys-primary-foreground)]"
             >
               <RiWallet3Line className="w-4 h-4" aria-hidden />
-              سجّل تحصيلاً من {open.agent.name}
+              سجّل تحصيلاً يدويّاً من {open.agent.name}
             </a>
           </div>
         )}
@@ -175,7 +226,7 @@ export function AgentCustodyScreen() {
   return (
     <div className="max-w-4xl space-y-4">
       <PageHeader title="عهدة المندوبين"
-          description="ما بيد كل مندوب الآن: بضاعة لم تُغلق، ومال حصّله ولم يسلّمه."
+          description="ما بيد كل مندوب الآن: بضاعة لم تُغلق، ومال مؤكَّد حصّله ولم يسلّمه، وطلبات سُلّمت بلا مبلغ مسجَّل."
         />
 
       {error && (
@@ -184,7 +235,7 @@ export function AgentCustodyScreen() {
 
       {agents.length === 0 ? (
         <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لا مندوبين بعد — يُضافون من الإعدادات ← شركات الشحن بنوع «مندوب».
+          لا مندوبين لهذا المتجر — يُضافون من الإعدادات ← شركات الشحن بنوع «مندوب».
         </p>
       ) : (
         <ul className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
@@ -208,15 +259,24 @@ export function AgentCustodyScreen() {
                   </span>
 
                   <span className="text-xs text-[var(--sys-muted-foreground)]">
-                    حصّل: <span className="font-semibold text-[var(--sys-heading)] tabular-nums">{money(totals.collected)}</span>
+                    حصّل مؤكَّد: <span className="font-semibold text-[var(--sys-heading)] tabular-nums">{money(totals.collected)}</span>
                   </span>
 
                   <span className="text-xs text-[var(--sys-muted-foreground)]">
                     له: <span className="font-semibold text-[var(--sys-heading)] tabular-nums">{money(totals.fees)}</span>
                   </span>
 
-                  <Balance value={totals.balance} money={money} />
+                  <Balance totals={totals} money={money} />
                 </div>
+
+                {/* Not a footnote. An owner reading «صافي عليه 0» beside an
+                    agent carrying twelve delivered orders needs to know which
+                    of the two facts he is looking at. */}
+                {totals.hasUnconfirmed && (
+                  <p className="mt-1.5 text-xs text-[var(--sys-warning)] tabular-nums">
+                    و{totals.awaitingCount} طلباً سُلّم بلا مبلغ مسجَّل (قيمة الطلبات {money(totals.awaitingValue)}) — غير محتسب
+                  </p>
+                )}
               </button>
             </li>
           ))}
@@ -225,52 +285,80 @@ export function AgentCustodyScreen() {
 
       <p className="text-xs text-[var(--sys-muted)]">
         الأرقام محسوبة من الطلبات نفسها لحظة فتح الشاشة — لا رصيد مخزَّن يمكن أن يختلف عن الواقع.
+        و«حصّل مؤكَّد» هو ما سُجِّل فعلاً لا ما نتوقّعه: {WHY_NO_AMOUNT}
       </p>
     </div>
   );
 }
 
-function Balance({ value, money }: { value: number; money: (n: number) => string }) {
+/**
+ * The net, and the refusal to call it balanced when it is merely unknown.
+ *
+ * «متوازن» over an agent carrying delivered orders nobody has priced is the
+ * reassurance this screen was giving; it is the thing that had to go.
+ */
+function Balance({ totals, money }: { totals: Totals; money: (n: number) => string }) {
+  const value = totals.balance;
   const owesUs = value > 0;
   const weOwe = value < 0;
+  const unknownOnly = value === 0 && totals.hasUnconfirmed;
+
   return (
     <span
       className={`ms-auto text-xs font-bold tabular-nums px-2.5 py-1 rounded-md border ${
-        owesUs
+        owesUs || unknownOnly
           ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]'
-          : weOwe
-            ? 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
-            : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
+          : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
       }`}
     >
-      {owesUs ? 'عليه ' : weOwe ? 'له ' : 'متوازن '}
-      {money(Math.abs(value))}
+      {unknownOnly
+        ? 'لا مبلغ مؤكَّد بعد'
+        : `${owesUs ? 'عليه ' : weOwe ? 'له ' : 'متوازن '}${money(Math.abs(value))}`}
     </span>
   );
 }
 
 function Summary({ totals, money }: { totals: Totals; money: (n: number) => string }) {
+  const unknownOnly = totals.balance === 0 && totals.hasUnconfirmed;
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-      <Tile label="طلبات بيده" value={String(totals.inHandCount)} hint={money(totals.inHandValue)} />
-      <Tile label="حصّله" value={money(totals.collected)} />
-      <Tile label="أجوره علينا" value={money(totals.fees)} />
-      <div
-        className={`rounded-lg border p-3 ${
-          totals.balance > 0
-            ? 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]'
-            : totals.balance < 0
-              ? 'bg-[var(--sys-surface)] border-[var(--sys-border)]'
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <Tile label="طلبات بيده" value={String(totals.inHandCount)} hint={money(totals.inHandValue)} />
+        <Tile label="حصّله (مؤكَّد)" value={money(totals.collected)} />
+        <Tile label="أجوره علينا (مؤكَّد)" value={money(totals.fees)} />
+        <div
+          className={`rounded-lg border p-3 ${
+            totals.balance > 0 || unknownOnly
+              ? 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]'
               : 'bg-[var(--sys-surface)] border-[var(--sys-border)]'
-        }`}
-      >
-        <p className="text-xs text-[var(--sys-muted-foreground)]">
-          {totals.balance > 0 ? 'صافي عليه' : totals.balance < 0 ? 'صافي له' : 'متوازن'}
-        </p>
-        <p className="text-sm font-black text-[var(--sys-heading)] tabular-nums mt-0.5" dir="ltr">
-          {money(Math.abs(totals.balance))}
-        </p>
+          }`}
+        >
+          <p className="text-xs text-[var(--sys-muted-foreground)]">
+            {unknownOnly
+              ? 'لا مبلغ مؤكَّد'
+              : totals.balance > 0
+                ? 'صافي عليه'
+                : totals.balance < 0
+                  ? 'صافي له'
+                  : 'متوازن'}
+          </p>
+          <p className="text-sm font-black text-[var(--sys-heading)] tabular-nums mt-0.5" dir="ltr">
+            {unknownOnly ? '—' : money(Math.abs(totals.balance))}
+          </p>
+        </div>
       </div>
+
+      {/* The other half of the picture, in a strip of its own so it can never
+          be mistaken for cash. */}
+      {totals.hasUnconfirmed && (
+        <p className="rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] p-3 text-xs leading-relaxed text-[var(--sys-warning)]">
+          <RiAlertLine className="w-4 h-4 inline align-[-3px] me-1" aria-hidden />
+          <span className="tabular-nums">{totals.awaitingCount}</span> طلباً سُلّم ولم يُسجَّل له مبلغ محصَّل —
+          قيمة هذه الطلبات <span className="tabular-nums">{money(totals.awaitingValue)}</span> وأجورها{' '}
+          <span className="tabular-nums">{money(totals.awaitingFees)}</span>، وكلاهما خارج الصافي أعلاه.
+          {' '}{WHY_NO_AMOUNT}
+        </p>
+      )}
     </div>
   );
 }
@@ -303,7 +391,7 @@ function Section({
           {title}
           <span className="text-xs font-medium text-[var(--sys-muted)] tabular-nums">{orders.length}</span>
         </h4>
-        <p className="text-xs text-[var(--sys-muted)] mt-0.5">{subtitle}</p>
+        <p className="text-xs text-[var(--sys-muted)] mt-0.5 leading-relaxed">{subtitle}</p>
       </div>
 
       {orders.length === 0 ? (
@@ -334,8 +422,17 @@ function Section({
                     أجرة {money(o.fee)}
                   </span>
                 )}
+                {/* One amount per row, and it says which amount it is. A
+                    delivered order with nothing recorded shows the order's
+                    value, labelled as the order's value. */}
                 <span className="ms-auto font-bold text-[var(--sys-heading)] tabular-nums" dir="ltr">
-                  {money(o.collected)}
+                  {o.collected === null ? (
+                    <span className="font-medium text-[var(--sys-warning)]">
+                      قيمة الطلب {money(o.orderValue)}
+                    </span>
+                  ) : (
+                    money(o.collected)
+                  )}
                 </span>
               </li>
             );

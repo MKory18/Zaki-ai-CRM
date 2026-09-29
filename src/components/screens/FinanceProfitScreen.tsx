@@ -8,8 +8,11 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { findRoute, routeLabel } from '@/lib/route-registry';
-import { format } from 'date-fns';
+import { routeLabel } from '@/lib/route-registry';
+// The one Arabic date format the rest of the product uses. This screen drew
+// its own with `format(..., 'MMM d, yyyy')`, printing «Sep 29, 2026» down an
+// Arabic column in an Arabic table.
+import { arDate } from '@/lib/format';
 import { apiJson } from '@/lib/api-client';
 import { ZERO_SUMMARY, type ProfitSummary } from '@/lib/profit-summary';
 import { RiAddCircleLine, RiArrowRightDownLine, RiArrowUpCircleLine, RiFileList3Line, RiMoneyDollarCircleLine } from '@remixicon/react';
@@ -347,7 +350,7 @@ export function FinanceProfitScreen() {
                 keyOf={(e: any) => e.id}
                 columns={[
                   { key: 'c0', label: "التاريخ", primary: true,
-                    render: (e: any) => (format(new Date(e.expenseDate), 'MMM d, yyyy')) },
+                    render: (e: any) => (arDate(e.expenseDate)) },
                   { key: 'c1', label: "البند", primary: true,
                     render: (e: any) => (e.title) },
                   /* The stored value is an enum — MARKETING, PACKAGING — and
@@ -493,7 +496,7 @@ export function FinanceProfitScreen() {
 
           <Textarea
             label="ملاحظات"
-            placeholder="e.g. Targeting Cairo/Alexandria campaign"
+            placeholder="مثلاً: استهداف دمشق وحلب"
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -504,7 +507,7 @@ export function FinanceProfitScreen() {
               {t.cancel}
             </Button>
             <Button type="submit" loading={modalLoading}>
-              Save Expense
+              احفظ المصروف
             </Button>
           </div>
         </form>

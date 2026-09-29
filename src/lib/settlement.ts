@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { roundMinor } from './money';
+import { receiptsInStatementCurrency } from './receipt-conversion';
 import { looksLikeXlsx, readXlsxRows } from './xlsx-reader';
 
 type Tx = Prisma.TransactionClient | typeof db;
@@ -384,16 +385,37 @@ export async function runMatching(
   return outcome;
 }
 
-/** Receipts total vs the statement total, and the gap that needs explaining. */
+/**
+ * Receipts total vs the statement total, and the gap that needs explaining.
+ *
+ * The receipts are converted into the STATEMENT's currency first. They are
+ * stored in the currency of the wallet each one landed in, and this used to
+ * `SUM(amount)` across all of them and print the answer under the statement's
+ * currency code — dinars added to dollars and the total labelled dollars. See
+ * lib/receipt-conversion. A receipt that cannot be expressed in the
+ * statement's currency at all is counted apart and named, never dropped
+ * silently into a total that then looks short for an invented reason.
+ */
 export async function receiptGap(tx: Tx, statementId: string, minorUnit: number) {
   const statement = await tx.courierStatement.findUnique({
     where: { id: statementId },
-    select: { totalAmount: true, gapExplanation: true },
+    select: { totalAmount: true, currencyCode: true, gapExplanation: true },
   });
   if (!statement) throw new Error('Statement not found');
 
-  const sum = await tx.statementReceipt.aggregate({ where: { statementId }, _sum: { amount: true } });
-  const received = roundMinor(Number(sum._sum.amount ?? 0), minorUnit);
+  const rows = await tx.statementReceipt.findMany({
+    where: { statementId },
+    select: { amount: true, currencyCode: true, exchangeRate: true },
+  });
+  const { received, unconvertible } = receiptsInStatementCurrency(
+    rows.map((r) => ({
+      amount: Number(r.amount),
+      currencyCode: r.currencyCode,
+      exchangeRate: r.exchangeRate === null ? null : Number(r.exchangeRate),
+    })),
+    statement.currencyCode,
+    minorUnit
+  );
   const claimed = roundMinor(Number(statement.totalAmount), minorUnit);
   const gap = roundMinor(received - claimed, minorUnit);
 
@@ -401,6 +423,8 @@ export async function receiptGap(tx: Tx, statementId: string, minorUnit: number)
     claimed,
     received,
     gap,
+    /** Receipts whose money is in neither figure, because no rate says how. */
+    unconvertible,
     needsExplanation: gap !== 0,
     explained: !!statement.gapExplanation,
   };

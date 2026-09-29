@@ -8,7 +8,7 @@ const { db } = vi.hoisted(() => ({
     courierStatement: { findFirst: vi.fn(), findUnique: vi.fn() },
     settlementMatch: { deleteMany: vi.fn(), create: vi.fn() },
     order: { findFirst: vi.fn(), findMany: vi.fn() },
-    statementReceipt: { aggregate: vi.fn() },
+    statementReceipt: { findMany: vi.fn() },
   },
 }));
 vi.mock('./db', () => ({ db }));
@@ -312,18 +312,60 @@ describe('the delivery fee is matched too', () => {
 });
 
 describe('receiptGap', () => {
+  const statement = (over: Record<string, unknown> = {}) =>
+    db.courierStatement.findUnique.mockResolvedValue({
+      totalAmount: 100, currencyCode: 'JOD', gapExplanation: null, ...over,
+    });
+  const receipts = (...rows: { amount: number; currencyCode?: string; exchangeRate?: number | null }[]) =>
+    db.statementReceipt.findMany.mockResolvedValue(
+      rows.map((r) => ({ amount: r.amount, currencyCode: r.currencyCode ?? 'JOD', exchangeRate: r.exchangeRate ?? null }))
+    );
+
   it('reports the gap between what was claimed and what arrived', async () => {
-    db.courierStatement.findUnique.mockResolvedValue({ totalAmount: 100, gapExplanation: null });
-    db.statementReceipt.aggregate.mockResolvedValue({ _sum: { amount: 90 } });
+    statement();
+    receipts({ amount: 90 });
 
     const gap = await receiptGap(db as never, 'st1', 3);
     expect(gap).toMatchObject({ claimed: 100, received: 90, gap: -10, needsExplanation: true, explained: false });
   });
 
   it('needs no explanation when the receipts add up exactly', async () => {
-    db.courierStatement.findUnique.mockResolvedValue({ totalAmount: 100, gapExplanation: null });
-    db.statementReceipt.aggregate.mockResolvedValue({ _sum: { amount: 100 } });
+    statement();
+    receipts({ amount: 60 }, { amount: 40 });
 
     expect((await receiptGap(db as never, 'st1', 3)).needsExplanation).toBe(false);
+  });
+
+  /**
+   * A courier pays part in cash into one wallet and part by transfer into
+   * another, and the second wallet need not hold the statement's currency.
+   * Summing the two raw amounts compared dinars with dollars.
+   */
+  it('converts a receipt taken in another currency before comparing', async () => {
+    statement({ totalAmount: 100, currencyCode: 'JOD' });
+    receipts({ amount: 50 }, { amount: 70.5, currencyCode: 'USD', exchangeRate: 1.41 });
+
+    const gap = await receiptGap(db as never, 'st1', 3);
+    expect(gap.received).toBe(100);
+    expect(gap.gap).toBe(0);
+    expect(gap.unconvertible).toBe(0);
+  });
+
+  it('converts by the STATEMENT’s currency, whichever receipt happens to be first', async () => {
+    statement({ totalAmount: 100, currencyCode: 'JOD' });
+    receipts({ amount: 70.5, currencyCode: 'USD', exchangeRate: 1.41 }, { amount: 50 });
+
+    const gap = await receiptGap(db as never, 'st1', 3);
+    expect(gap.received).toBe(100);
+    expect(gap.gap).toBe(0);
+  });
+
+  it('never folds a rate-less foreign receipt into the total — it names it', async () => {
+    statement({ totalAmount: 100, currencyCode: 'JOD' });
+    receipts({ amount: 50 }, { amount: 70.5, currencyCode: 'USD', exchangeRate: null });
+
+    const gap = await receiptGap(db as never, 'st1', 3);
+    expect(gap.received, 'دولارٌ جُمِع مع الدينار').toBe(50);
+    expect(gap.unconvertible).toBe(1);
   });
 });

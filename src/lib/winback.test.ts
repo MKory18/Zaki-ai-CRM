@@ -267,11 +267,23 @@ describe('the offer raises a new order and leaves the loss where it is', () => {
    * The order carries no rejection timestamp, and `updatedAt` is not one: a
    * note added yesterday would reset the customer's cooling period to
    * yesterday and hide them for another fortnight.
+   *
+   * AND BY BOTH WORDS FOR THE CLOSING. This guard used to spell the lookup
+   * out as `newValue: 'REJECTED'`, which is how it came to certify the bug it
+   * was written to prevent: `LOST_STATUSES` had been widened to REJECTED and
+   * CANCELLED so the no-answer rule's closures could be reached, the listing's
+   * lookup was not, and every cancelled order arrived with no date and the
+   * verdict NO_DATE — a state with no way out. The guard passed throughout.
+   * It now names the rule instead of one of its two values.
    */
-  it('and reads when it was closed from the log, not from updatedAt', () => {
+  it('and reads when it was closed from the log, by both words, not from updatedAt', () => {
     const src = route();
     expect(src).toContain("statusType: 'CONFIRMATION'");
-    expect(src).toContain("newValue: 'REJECTED'");
+    const lookups = [...src.matchAll(/newValue:\s*([^,\n]+)/g)].map((m) => m[1].trim());
+    expect(lookups.length, 'لا قراءةَ لسجلّ الحالة').toBeGreaterThanOrEqual(2);
+    for (const lookup of lookups) {
+      expect(lookup, 'قراءةٌ بكلمةٍ واحدةٍ من كلمتَي الإلغاء').toContain('LOST_STATUSES');
+    }
     expect(src, 'اعتمد على updatedAt').not.toContain('updatedAt');
   });
 

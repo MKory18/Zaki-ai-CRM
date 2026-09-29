@@ -6,6 +6,7 @@ import { requireContext } from '@/lib/geo-context';
 import { rateLimit } from '@/lib/rate-limit';
 import { requirePermission } from '@/lib/authorization';
 import { CORE_STATES, whereForState, type CoreState } from '@/lib/order-state';
+import { applyQueueFilter } from '@/lib/rbac';
 
 /**
  * CSV export safety:
@@ -79,6 +80,7 @@ export async function GET(req: Request) {
     const sourceParam = searchParams.get('source')?.trim();
     const courierId = searchParams.get('courierId')?.trim();
     const regionId = searchParams.get('regionId')?.trim();
+    const lateDays = searchParams.get('lateDays')?.trim();
 
     if (status && status !== 'all' && CORE_STATES.includes(status as CoreState)) {
       const stateWhere = whereForState(status as CoreState);
@@ -98,9 +100,73 @@ export async function GET(req: Request) {
       ];
     }
 
-    const where = ids
-      ? { companyId, storeId, id: { in: ids } }
-      : { companyId, storeId, createdAt: { gte: start, lte: end }, ...filters };
+    /**
+     * «متأخرة 10 أيام+ من الشحن» WAS A BUTTON THE EXPORT COULD NOT SEE.
+     *
+     * The orders screen sends this filter to the list and to the export
+     * through the same builder. The list narrowed on it; this route read
+     * every other parameter and not this one — so pressing تصدير while the
+     * late filter was lit handed back the whole window instead of the
+     * fourteen rows on the screen, silently, with no clue that the CSV and
+     * the list disagreed. A filter whose value never reaches the query is
+     * the one defect a person cannot see happening.
+     *
+     * The same three conditions the list applies — see
+     * `src/app/api/orders/route.ts`. Late means "shipped and still open":
+     * measured from `shippedAt`, never `createdAt`, and the closed states
+     * are excluded because a delivered order from last year is finished,
+     * not late.
+     */
+    if (lateDays) {
+      const days = Number(lateDays);
+      if (!Number.isFinite(days) || days < 1 || days > 365) {
+        return NextResponse.json(
+          { error: 'عدد أيام التأخير غير صالح' },
+          { status: 400 }
+        );
+      }
+      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      filters.AND = [
+        ...((filters.AND as unknown[]) ?? []),
+        { shippedAt: { lte: cutoff } },
+        { shippingStatus: { notIn: ['DELIVERED', 'PARTIALLY_DELIVERED', 'RETURNED', 'CANCELLED'] } },
+        { confirmationStatus: { notIn: ['CANCELLED', 'REJECTED'] } },
+      ];
+    }
+
+    /**
+     * THE ENVELOPE THE LIST NEVER LETS GO OF, AND THIS ROUTE HAD NEVER HELD.
+     *
+     * `GET /api/orders` ends every query with `applyQueueFilter`, which is
+     * both things at once: the requested workflow queue, and — when none is
+     * requested — the role's own order-visibility envelope. This route had
+     * neither. It checked `reports.export` and then read the whole store.
+     *
+     * Measured on this database: every role holding `reports.export`
+     * (SUPER_ADMIN, COMPANY_ADMIN, MANAGER, MODERATOR, DELIVERY_MANAGER,
+     * SETTLEMENT_OFFICER, ACCOUNTANT) also holds `orders.view` at
+     * ALL_COMPANY, for which `orderVisibilityWhere` returns `{}` — so today
+     * this narrows nothing for anybody. It is the custom role that makes it
+     * matter: one built with `reports.export` and a narrower `orders.view`
+     * would read a list of its own orders on screen and download every
+     * customer name and phone number in the store. The single largest way
+     * customer data leaves this system should not be the one door with no
+     * envelope on it.
+     *
+     * It also makes `queue` mean something. The orders screen sends it with
+     * the export and this route ignored it, so the two could disagree.
+     *
+     * The hand-picked branch goes through it too: ticking a row you may not
+     * see is still a row you may not see.
+     */
+    const queue = searchParams.get('queue');
+    const where = applyQueueFilter(
+      user,
+      ids
+        ? { companyId, storeId, id: { in: ids } }
+        : { companyId, storeId, createdAt: { gte: start, lte: end }, ...filters },
+      queue
+    );
 
     // Guard: reject exports exceeding the row cap before fetching anything
     const totalRows = await db.order.count({ where });
@@ -201,6 +267,7 @@ export async function GET(req: Request) {
           source: sourceParam || null,
           courierId: courierId || null,
           regionId: regionId || null,
+          lateDays: lateDays || null,
         },
         // The columns that make this worth recording at all.
         withContact: true,

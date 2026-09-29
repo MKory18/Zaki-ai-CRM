@@ -52,6 +52,7 @@ export async function ownedCounts(tx: Tx, scope: QueueScope, userId: string): Pr
 }
 
 export type PullRefusal =
+  | { code: 'NOT_YOUR_DESK'; message: string }
   | { code: 'UNTOUCHED_ORDER'; message: string }
   | { code: 'CAP_WITHOUT_ATTEMPT'; message: string }
   | { code: 'CAP_TOTAL'; message: string }
@@ -78,6 +79,37 @@ export function pullRefusal(counts: OwnedCounts): PullRefusal | null {
     return { code: 'UNTOUCHED_ORDER', message: 'سجّل محاولة اتصال على طلبك الحالي قبل سحب طلب جديد.' };
   }
   return null;
+}
+
+/**
+ * WHETHER THIS ACCOUNT MAY PULL AT ALL, BEFORE ASKING WHETHER IT MAY PULL NOW.
+ *
+ * `pullRefusal` answers the operational question — have you finished with
+ * what you hold — and it is the whole answer for an agent. It is not the
+ * whole answer for a supervisor.
+ *
+ * Measured on this database: COMPANY_ADMIN, MANAGER and CONFIRMATION_SUPERVISOR
+ * hold `confirmation.supervise` and NOT `confirmation.pull` — three of the
+ * nineteen accounts. All three reach `/confirmation/queue`, because the route
+ * admits either key so a supervisor can watch the pool. The screen then drew
+ * «اسحب الطلب التالي» enabled for them, on the strength of a `canPull` that
+ * had only ever been asked about caps, and `POST /api/confirmation/pull`
+ * answers `confirmation.pull` with a 403. A button whose every press is
+ * refused is a broken button, and hiding it in the browser is not the fix
+ * either: the server is the one that knows, so the server says so.
+ *
+ * Pure, and the authority refusal comes FIRST — telling a supervisor to
+ * «سجّل محاولة اتصال» before pulling would be advice about a thing she is
+ * never going to be allowed to do.
+ */
+export function pullPermission(mayPull: boolean, counts: OwnedCounts): PullRefusal | null {
+  if (!mayPull) {
+    return {
+      code: 'NOT_YOUR_DESK',
+      message: 'السحب من عمل موظّف التأكيد — هذه الشاشة للإشراف على الطابور لا للعمل عليه.',
+    };
+  }
+  return pullRefusal(counts);
 }
 
 /**

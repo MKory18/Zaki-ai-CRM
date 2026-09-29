@@ -143,6 +143,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     try {
       const reversal = await reverseMovement(db, {
         companyId,
+        // The wallet the caller was authorised for, not one the body names.
+        walletId: id,
         movementId: parsed.data.movementId,
         reason: parsed.data.reason,
         createdById: user.id,

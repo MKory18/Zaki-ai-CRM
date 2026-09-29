@@ -283,10 +283,31 @@ export function ConfirmationMineScreen() {
           }
         />
         <div className="space-y-3">
+          {/*
+            AN EMPTY LIST AND A HIDDEN ONE ARE NOT THE SAME SENTENCE.
+
+            «لا يوجد طلب بيدك الآن» was printed whenever this list rendered
+            nothing — including while the search box above it was holding
+            eleven orders out of view. She types a customer's number, misses
+            a digit, and the screen tells her that her desk is empty. The
+            count in the heading says «0 من 11» at the same moment, so the
+            screen contradicted itself.
+          */}
           {inConfirmation.length === 0 && (
-            <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-              لا يوجد طلب بيدك الآن. اسحب طلباً من مركز التأكيد.
-            </p>
+            <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg">
+              {findOpen.trim() ? (
+                <EmptyState
+                  title="لا طلبَ بيدك يطابق هذا البحث"
+                  why={`لا شيءَ من الـ${data.inConfirmation.length} التي بيدك يطابق «${findOpen.trim()}» — البحث يمرّ على رقم الطلب والاسم والهاتف.`}
+                  action={{ label: 'امسح البحث', onClick: () => setFindOpen('') }}
+                />
+              ) : (
+                <EmptyState
+                  title="لا يوجد طلب بيدك الآن"
+                  why="اسحب طلباً من مركز التأكيد. ما تسحبه يبقى لك حتى تؤكّده أو ترفضه أو يُحرَّر تلقائيّاً."
+                />
+              )}
+            </div>
           )}
           {inConfirmation.map((order) => {
             const remaining = Math.max(0, data.noAnswerLimit - order.noAnswerCount);
@@ -487,11 +508,23 @@ export function ConfirmationMineScreen() {
                   <>{order.totalAmount} {order.currency}</>
                 ) },
             ]}
+            /* The CONFIRMED list's own words. It used to carry the copy of
+               the section above it — «اسحب طلباً من الطابور» — which is
+               advice about the other list, and it said it while a search
+               was hiding rows too. */
             empty={
-              <EmptyState
-                title="لا طلبات في يدك الآن"
-                why="اسحب طلباً من الطابور لتبدأ. ما تسحبه يبقى لك حتى تؤكّده أو ترفضه أو يُحرَّر تلقائيّاً."
-              />
+              findDone.trim() ? (
+                <EmptyState
+                  title="لا طلبَ مؤكَّداً يطابق هذا البحث"
+                  why={`لا شيءَ من الـ${data.confirmed.length} التي أكّدتَها يطابق «${findDone.trim()}» — البحث يمرّ على رقم الطلب والاسم والهاتف.`}
+                  action={{ label: 'امسح البحث', onClick: () => setFindDone('') }}
+                />
+              ) : (
+                <EmptyState
+                  title="لم تؤكّد طلباً بعد"
+                  why="ما تؤكّده يظهر هنا للقراءة — وتعديلُه بعدها يمرّ بطلبِ تعديل، لا بتحريرٍ مباشر."
+                />
+              )
             }
             actions={(order) => (
               <>{order.changeRequests && order.changeRequests.length > 0 ? (

@@ -37,6 +37,10 @@ export async function GET(req: Request) {
     const agents = await allAgentCustody(db, scope);
     return NextResponse.json({
       currencyCode: country.currencyCode,
+      // The country's own minor unit. The screen used to decide it with
+      // `currencyCode === 'JOD' ? 3 : 2` — a currency table in a component,
+      // wrong for every currency nobody had thought of yet.
+      minorUnit: country.minorUnit,
       agents: agents.map((a) => ({ agent: a.agent, totals: a.totals })),
     });
   } catch (error) {

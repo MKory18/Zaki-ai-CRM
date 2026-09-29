@@ -8,6 +8,7 @@ import { RiAlertLine, RiCheckboxCircleLine, RiFileExcel2Line, RiLoader4Line, RiU
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Money } from '@/components/ui/Money';
+import { approvalRefusal, isApproved, rematchRefusal } from '@/lib/settlement-gates';
 
 /**
  * /finance/collection — the three sequential steps, in order and visible as
@@ -21,6 +22,12 @@ interface Gap {
   claimed: number;
   received: number;
   gap: number;
+  /**
+   * Receipts taken in another currency with no rate stored. Their money is in
+   * neither `received` nor `gap`, so the row has to say so rather than let the
+   * shortfall be read as the courier's.
+   */
+  unconvertible: number;
   needsExplanation: boolean;
   explained: boolean;
 }
@@ -30,6 +37,8 @@ interface StatementRow {
   reference: string;
   fileName: string;
   status: string;
+  /** Set when the money moved. Nothing about the statement reopens after it. */
+  approvedAt: string | null;
   currencyCode: string;
   totalAmount: number;
   createdAt: string;
@@ -145,7 +154,7 @@ export function CollectionScreen() {
           <Rows
             rows={rows}
             keyOf={(s) => s.id}
-            alert={(s) => s.gap.needsExplanation && !s.gap.explained}
+            alert={(s) => (s.gap.needsExplanation && !s.gap.explained) || s.gap.unconvertible > 0}
             columns={[
               {
                 key: 'ref',
@@ -178,7 +187,16 @@ export function CollectionScreen() {
                 key: 'received',
                 label: 'وصل فعلاً',
                 align: 'end',
-                render: (s) => <Money value={s.gap.received} currency={s.currencyCode} />,
+                render: (s) => (
+                  <>
+                    <Money value={s.gap.received} currency={s.currencyCode} />
+                    {s.gap.unconvertible > 0 && (
+                      <span className="block text-xs text-[var(--sys-warning)]">
+                        عدا <span className="tabular-nums">{s.gap.unconvertible}</span> إيصالاً بعملة أخرى بلا سعر صرف
+                      </span>
+                    )}
+                  </>
+                ),
               },
               {
                 key: 'gap',
@@ -208,13 +226,22 @@ export function CollectionScreen() {
               },
             ]}
             actions={(s) => {
-              // The one thing this row decides: may it be approved yet.
-              const approvable =
-                s.status !== 'APPROVED' &&
-                s.counts.receipts > 0 &&
-                s.counts.matches > 0 &&
-                (!s.gap.needsExplanation || s.gap.explained);
-              return s.status === 'APPROVED' ? (
+              /**
+               * The one thing this row decides: may it be approved yet — asked
+               * of lib/settlement-gates, the same function the server answers
+               * with, so the greyed button carries the server's own sentence
+               * instead of a second copy of the rule that can drift from it.
+               */
+              const refusal = approvalRefusal({
+                status: s.status,
+                approvedAt: s.approvedAt,
+                receipts: s.counts.receipts,
+                matches: s.counts.matches,
+                gap: s.gap,
+                explanation: s.gap.explained ? 'explained' : null,
+              });
+              const noRematch = rematchRefusal(s);
+              return isApproved(s) ? (
                 <span className="text-xs text-[var(--sys-success)] inline-flex items-center gap-1">
                   <RiCheckboxCircleLine className="w-4 h-4" /> معتمد
                 </span>
@@ -224,7 +251,8 @@ export function CollectionScreen() {
                     إيصال استلام
                   </button>
                   <button
-                    disabled={s.counts.receipts === 0 || busy === s.id}
+                    disabled={s.counts.receipts === 0 || !!noRematch || busy === s.id}
+                    title={noRematch?.error ?? (s.counts.receipts === 0 ? 'سجّل إيصال الاستلام أولاً' : 'شغّل المطابقة')}
                     onClick={() =>
                       act(s.id, 'تمت المطابقة', () =>
                         apiJson(`/api/finance/statements/${s.id}/match`, { method: 'POST' })
@@ -240,16 +268,8 @@ export function CollectionScreen() {
                     </button>
                   )}
                   <button
-                    disabled={!approvable || busy === s.id}
-                    title={
-                      s.counts.receipts === 0
-                        ? 'سجّل إيصال الاستلام أولاً'
-                        : s.counts.matches === 0
-                          ? 'شغّل المطابقة أولاً'
-                          : s.gap.needsExplanation && !s.gap.explained
-                            ? 'الفرق يحتاج تفسيراً مكتوباً'
-                            : 'اعتماد الكشف — عندها تُسجَّل حركة المحفظة'
-                    }
+                    disabled={!!refusal || busy === s.id}
+                    title={refusal?.error ?? 'اعتماد الكشف — عندها تُسجَّل حركة المحفظة'}
                     onClick={() =>
                       act(s.id, 'اعتُمد الكشف وسُجِّلت حركة المحفظة', () =>
                         apiJson(`/api/finance/statements/${s.id}`, {

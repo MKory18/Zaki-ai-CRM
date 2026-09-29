@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * it, and an unexplained difference blocks the next day.
  */
 
-const { db, requireContext, requirePermission, logAudit, recordMovement, markPayableForOrders, receiptGap, blockingClosing, walletBalance } =
+const { db, requireContext, requirePermission, logAudit, recordMovement, markPayableForOrders, receiptGap, runMatching, blockingClosing, walletBalance } =
   vi.hoisted(() => ({
     db: {
       courierStatement: { findFirst: vi.fn(), update: vi.fn() },
@@ -30,6 +30,7 @@ const { db, requireContext, requirePermission, logAudit, recordMovement, markPay
     recordMovement: vi.fn(),
     markPayableForOrders: vi.fn(),
     receiptGap: vi.fn(),
+    runMatching: vi.fn(),
     blockingClosing: vi.fn(),
     walletBalance: vi.fn(),
   }));
@@ -41,6 +42,7 @@ vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) })
 vi.mock('@/lib/settlement', async (orig) => ({
   ...(await orig<typeof import('@/lib/settlement')>()),
   receiptGap: (...a: unknown[]) => receiptGap(...a),
+  runMatching: (...a: unknown[]) => runMatching(...a),
 }));
 vi.mock('@/lib/wallets', async (orig) => ({
   ...(await orig<typeof import('@/lib/wallets')>()),
@@ -56,6 +58,7 @@ vi.mock('@/lib/commission', async (orig) => ({
 vi.mock('@/lib/stock-consumption', () => ({ consumeOrderStock: vi.fn().mockResolvedValue({ taken: 0, short: 0, alreadyDone: false }) }));
 
 import { PATCH as approveStatement } from '@/app/api/finance/statements/[id]/route';
+import { POST as runMatch } from '@/app/api/finance/statements/[id]/match/route';
 import { POST as recordClosing, PATCH as approveClosing } from '@/app/api/finance/closing/route';
 
 const ID = '88888888-8888-4888-8888-888888888888';
@@ -126,9 +129,91 @@ describe('statement approval', () => {
     expect(markPayableForOrders).toHaveBeenCalledWith(expect.anything(), 'c1', ['o1']);
   });
 
+  /**
+   * The early gate is not a duplicate of the approval gate: it stands BEFORE
+   * the branch that saves a gap explanation. Without it, a statement whose
+   * money has moved can still have its written reason rewritten.
+   */
+  it('refuses to rewrite the gap explanation of one whose money has moved', async () => {
+    db.courierStatement.findFirst.mockResolvedValue(
+      statement({ status: 'MATCHED', approvedAt: new Date('2026-09-20T00:00:00.000Z') })
+    );
+    const res = await approveStatement(body({ gapExplanation: 'سببٌ جديدٌ بعد الاعتماد' }), params);
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe('ALREADY_APPROVED');
+    expect(db.courierStatement.update).not.toHaveBeenCalled();
+  });
+
   it('never approves twice', async () => {
     db.courierStatement.findFirst.mockResolvedValue(statement({ status: 'APPROVED' }));
     expect((await approveStatement(body({ approve: true }), params)).status).toBe(409);
+  });
+
+  /**
+   * ── THE DOUBLE-POST ──
+   *
+   * `status` carried two facts: where the statement is in the flow, and
+   * whether its money has moved. Re-running matching wrote MATCHED over
+   * APPROVED, every gate below then passed a second time, and a second IN
+   * movement was written for the same receipt. Proved on the dev database:
+   * 1,889.48 USD posted twice.
+   */
+  it('never approves one whose status was reset after the money moved', async () => {
+    db.courierStatement.findFirst.mockResolvedValue(
+      statement({ status: 'MATCHED', approvedAt: new Date('2026-09-20T00:00:00.000Z') })
+    );
+    receiptGap.mockResolvedValue({ claimed: 90, received: 90, gap: 0, needsExplanation: false, explained: false });
+
+    const res = await approveStatement(body({ approve: true }), params);
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe('ALREADY_APPROVED');
+    expect(recordMovement).not.toHaveBeenCalled();
+  });
+});
+
+describe('re-running matching', () => {
+  const found = (over: Record<string, unknown> = {}) => ({
+    id: ID, status: 'RECEIPTED', approvedAt: null, reference: 'ST-1',
+    _count: { receipts: 1 },
+    ...over,
+  });
+
+  beforeEach(() => {
+    runMatching.mockResolvedValue({ matched: 1, mismatched: 0, feeMismatched: 0, missingInSystem: 0, missingInStatement: 0 });
+    db.courierStatement.update.mockResolvedValue({ id: ID, status: 'MATCHED' });
+  });
+
+  it('runs while the statement is unapproved', async () => {
+    db.courierStatement.findFirst.mockResolvedValue(found());
+    expect((await runMatch(body({}, 'POST'), params)).status).toBe(200);
+    expect(runMatching).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses before a receipt exists', async () => {
+    db.courierStatement.findFirst.mockResolvedValue(found({ _count: { receipts: 0 } }));
+    const res = await runMatch(body({}, 'POST'), params);
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe('RECEIPT_REQUIRED');
+    expect(runMatching).not.toHaveBeenCalled();
+  });
+
+  /** The fix: it must not touch an approved statement, and above all must
+   *  not write its status back to MATCHED. */
+  it('refuses an APPROVED statement and leaves its status alone', async () => {
+    db.courierStatement.findFirst.mockResolvedValue(found({ status: 'APPROVED', approvedAt: new Date() }));
+    const res = await runMatch(body({}, 'POST'), params);
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe('ALREADY_APPROVED');
+    expect(runMatching).not.toHaveBeenCalled();
+    expect(db.courierStatement.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses one whose status was already reset but whose money moved', async () => {
+    db.courierStatement.findFirst.mockResolvedValue(
+      found({ status: 'MATCHED', approvedAt: new Date('2026-09-20T00:00:00.000Z') })
+    );
+    expect((await runMatch(body({}, 'POST'), params)).status).toBe(409);
+    expect(db.courierStatement.update).not.toHaveBeenCalled();
   });
 });
 

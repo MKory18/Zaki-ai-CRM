@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { consumeOrderStock } from '@/lib/stock-consumption';
 import { receiptGap } from '@/lib/settlement';
+import { approvalRefusal, isApproved } from '@/lib/settlement-gates';
 import { recordMovement } from '@/lib/wallets';
 import { markPayableForOrders } from '@/lib/commission';
 import { zodMessage } from '@/lib/zod-message';
@@ -78,7 +79,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       include: { receipts: true, matches: { select: { orderId: true, result: true, statementAmount: true } } },
     });
     if (!statement) return NextResponse.json({ error: 'الكشف غير موجود' }, { status: 404 });
-    if (statement.status === 'APPROVED') {
+    // Read from the stamp of the act, not from `status`: a re-match used to
+    // write MATCHED over APPROVED, and this gate then let the money through
+    // a second time. See lib/settlement-gates.
+    if (isApproved(statement)) {
       return NextResponse.json({ error: 'الكشف معتمد مسبقاً', code: 'ALREADY_APPROVED' }, { status: 409 });
     }
 
@@ -97,30 +101,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!parsed.data.approve) return NextResponse.json({ error: 'لا يوجد إجراء' }, { status: 400 });
 
     // ── Approval gates ──
-    if (statement.receipts.length === 0) {
-      return NextResponse.json(
-        { error: 'لا يمكن اعتماد كشف بلا إيصالات استلام', code: 'NO_RECEIPTS' },
-        { status: 409 }
-      );
-    }
+    // One rule, in lib/settlement-gates, read here and by the screen that
+    // greys the button out — so the sentence on the disabled button is the
+    // sentence the server would have answered with.
     const gap = await receiptGap(db, id, country.minorUnit);
     const explanation = parsed.data.gapExplanation ?? statement.gapExplanation;
-    if (gap.needsExplanation && !explanation) {
-      return NextResponse.json(
-        {
-          error: `الفرق ${gap.gap} بين ما أقرّته الشركة وما وصل يحتاج تفسيراً مكتوباً قبل الاعتماد`,
-          code: 'GAP_REQUIRES_EXPLANATION',
-          gap,
-        },
-        { status: 409 }
-      );
-    }
-    if (statement.matches.length === 0) {
-      return NextResponse.json(
-        { error: 'شغّل المطابقة قبل الاعتماد', code: 'MATCHING_REQUIRED' },
-        { status: 409 }
-      );
-    }
+    const refusal = approvalRefusal({
+      status: statement.status,
+      approvedAt: statement.approvedAt,
+      receipts: statement.receipts.length,
+      matches: statement.matches.length,
+      gap,
+      explanation,
+    });
+    if (refusal) return NextResponse.json({ ...refusal, gap }, { status: 409 });
 
     const approved = await db.$transaction(async (tx) => {
       const row = await tx.courierStatement.update({

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiAddCircleLine, RiArrowGoBackLine, RiForbidLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowGoBackLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -35,7 +35,6 @@ interface Block {
 
 export function BlacklistScreen() {
   const [blocks, setBlocks] = useState<Block[] | null>(null);
-  const [activeCount, setActiveCount] = useState(0);
   const [term, setTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -47,9 +46,8 @@ export function BlacklistScreen() {
     setError(null);
     try {
       const q = term.trim() ? `?q=${encodeURIComponent(term.trim())}` : '';
-      const data = await apiJson<{ blocks: Block[]; activeCount: number }>(`/api/control/blacklist${q}`);
+      const data = await apiJson<{ blocks: Block[] }>(`/api/control/blacklist${q}`);
       setBlocks(data.blocks);
-      setActiveCount(data.activeCount);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحميل');
     }
@@ -60,6 +58,9 @@ export function BlacklistScreen() {
   }, [load]);
 
   const rows = (blocks ?? []).filter((b) => (showReleased ? true : b.active));
+  /** Why the list is empty, if it is — the three answers are not the same. */
+  const searching = term.trim().length > 0;
+  const releasedHidden = !showReleased && (blocks ?? []).some((b) => !b.active);
 
   return (
     <div className="max-w-5xl space-y-3">
@@ -105,15 +106,25 @@ export function BlacklistScreen() {
       {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
       {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
+      {/*
+        «لا أرقام محظورة» WAS NOT SOMETHING THIS SCREEN KNEW.
+
+        Two empty states stood here and the worse one won. A bare paragraph
+        short-circuited the list, so the `Rows` empty state below — the one
+        with the reason in it — could never render at all. And the paragraph's
+        sentence was read off `activeCount`, which the route computes over the
+        SEARCHED rows: type a number nobody blocked, and a screen holding a
+        full blacklist announced «لا أرقام محظورة». A reassurance that is not
+        true is worse than no reassurance.
+
+        One empty state, and it says WHICH of the three things is true:
+        nothing searched and nothing blocked, a search that matched nothing,
+        or every block released and the released ones hidden.
+      */}
       {!blocks ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
-      ) : rows.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <RiForbidLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
-          {activeCount === 0 ? 'لا أرقام محظورة.' : 'لا نتائج مطابقة.'}
-        </p>
       ) : (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
                     <Rows
@@ -148,10 +159,24 @@ export function BlacklistScreen() {
                 ) },
             ]}
             empty={
-              <EmptyState
-                title="لا أرقامَ محظورة"
-                why="الحظر على الهاتف لا على الاسم: مَن رفض الاستلام ثلاث مرّات يطلب من جديد باسمٍ آخر. أضِف رقماً حين يلزم."
-              />
+              searching ? (
+                <EmptyState
+                  title="لا نتائج مطابقة"
+                  why={`لا رقمَ محظوراً يطابق «${term.trim()}». البحث يمرّ على الرقم والاسم وسبب الحظر — والقائمة قد تكون عامرةً وراء هذا البحث.`}
+                  action={{ label: 'امسح البحث', onClick: () => setTerm('') }}
+                />
+              ) : releasedHidden ? (
+                <EmptyState
+                  title="لا حظرَ سارياً الآن"
+                  why="كلُّ ما في السجلّ فُكَّ حظرُه. السجلّ باقٍ — أظهِر المفكوكين لتراه."
+                  action={{ label: 'أظهر المفكوكين', onClick: () => setShowReleased(true) }}
+                />
+              ) : (
+                <EmptyState
+                  title="لا أرقامَ محظورة"
+                  why="الحظر على الهاتف لا على الاسم: مَن رفض الاستلام ثلاث مرّات يطلب من جديد باسمٍ آخر. أضِف رقماً حين يلزم."
+                />
+              )
             }
             actions={(b) => (
               <>{b.active ? (

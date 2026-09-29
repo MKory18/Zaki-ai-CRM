@@ -6,7 +6,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import {
   CLAIM_CAPS,
   ownedCounts,
-  pullRefusal,
+  pullPermission,
   releaseStaleClaims,
   waitingCount,
   postponedNotDueCount,
@@ -41,7 +41,13 @@ export async function GET() {
       // folded into a number that promises a pull.
       postponedNotDueCount(db, scope),
     ]);
-    const refusal = pullRefusal(counts);
+    /**
+     * The authority first, then the caps. A supervisor holds
+     * `confirmation.supervise` and not `confirmation.pull`, so she reaches
+     * this screen and `POST /api/confirmation/pull` refuses her — the screen
+     * must know that from here rather than discover it on the press.
+     */
+    const refusal = pullPermission(can(user, 'confirmation.pull'), counts);
 
     const isSupervisor = can(user, 'confirmation.supervise');
     const rows = isSupervisor

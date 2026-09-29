@@ -90,13 +90,28 @@ export async function GET(req: Request) {
      * The status log holds the real moment, and the LAST one is the one
      * that counts: an order rejected, re-opened and rejected again cools
      * from the second time.
+     *
+     * AND BOTH WORDS FOR IT, not just the first one. `LOST_STATUSES` was
+     * widened to REJECTED **and** CANCELLED so that an order closed by the
+     * no-answer rule could be found here at all — and this lookup was left
+     * asking for REJECTED alone, so every cancelled order arrived with no
+     * closing date and the verdict said «لا تاريخَ لإلغائه» about an order
+     * whose cancellation is stamped in the log. It could never leave that
+     * state, which made «ثلاث محاولات بلا ردّ» — named on this very screen as
+     * one of the three reasons worth a second call, and the most winnable of
+     * them — a promise the screen could not keep.
+     *
+     * Measured on this database: SY-2026-0147, cancelled 2026-09-22 at
+     * NO_ANSWER_3_ATTEMPTS, was permanently skipped. The POST below has read
+     * both words all along, so the two halves of one feature disagreed about
+     * which orders exist.
      */
     const logs = orders.length
       ? await db.orderStatusLog.findMany({
           where: {
             orderId: { in: orders.map((o) => o.id) },
             statusType: 'CONFIRMATION',
-            newValue: 'REJECTED',
+            newValue: { in: [...LOST_STATUSES] },
           },
           orderBy: { createdAt: 'desc' },
           select: { orderId: true, createdAt: true },

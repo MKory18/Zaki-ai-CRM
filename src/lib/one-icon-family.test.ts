@@ -38,9 +38,25 @@ const BRAND_MARKS = '/src/components/settings/TrackingPixelsSection.tsx';
  * Emoji, dingbats, the geometric shapes people reach for as bullets, and
  * the two tick/cross characters that look like an icon and are not:
  * ✓ U+2713, ✔ U+2714, ✕ U+2715, ✖ U+2716, ✅, ❌, ⚠, ↩.
+ *
+ * AND THE BLOCK THIS TABLE USED TO SKIP OVER.
+ *
+ * Miscellaneous Technical, U+2300–U+23FF, holds ⏰ ⏱ ⏳ ⌚ ⌛ ⏩ — the clocks
+ * and the media keys, which are emoji on every phone and a thin monochrome
+ * outline on a desk, exactly the split this guard exists to stop. The table
+ * jumped from U+21AA to U+25A0, so «⏰ الاتصال لاحقاً» sat in
+ * `ConfirmationActions.tsx` — an emoji clock in a button that already draws
+ * `RiTimerLine` beside it, the same icon twice — and this guard reported no
+ * offenders. A range table with a hole in it is a guard that passes about the
+ * thing it is looking for.
+ *
+ * ⌘ U+2318 is the Command key, which is a key on a keyboard and not an icon
+ * of ours, and it appears only in a comment (`stripComments` removes it). The
+ * arrows below U+2300 stay out: → U+2192 is punctuation in this codebase's
+ * prose and appears in hundreds of comments.
  */
 const EMOJI =
-  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{21A9}\u{21AA}\u{25A0}-\u{25FF}]/u;
+  /[\u{1F000}-\u{1FAFF}\u{2300}-\u{23FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{21A9}\u{21AA}\u{25A0}-\u{25FF}]/u;
 
 describe('an icon', () => {
   it('comes from the icon set, never from the operating system', () => {

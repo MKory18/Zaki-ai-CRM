@@ -233,7 +233,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
             disabled={busy}
             className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RiTimerLine className="w-4 h-4" />{ar ? '⏰ الاتصال لاحقاً' : '⏰ Call Later'}
+            <RiTimerLine className="w-4 h-4" />{ar ? 'الاتصال لاحقاً' : 'Call Later'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('followup'); }}
@@ -340,7 +340,7 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
       confirm: { ar: 'تأكيد الطلب', en: 'Confirm Order' },
       reject: { ar: 'رفض الطلب', en: 'Reject Order' },
       followup: { ar: 'جدولة متابعة', en: 'Schedule Follow-Up' },
-      call_later: { ar: '⏰ الاتصال لاحقاً', en: '⏰ Call Later' },
+      call_later: { ar: 'الاتصال لاحقاً', en: 'Call Later' },
     };
     const t = map[openForm];
     return t ? (ar ? t.ar : t.en) : '';

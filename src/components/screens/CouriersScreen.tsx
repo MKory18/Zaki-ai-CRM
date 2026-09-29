@@ -12,7 +12,7 @@ import { COURIER_PLATFORMS } from '@/lib/couriers';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
-import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiEBike2Line, RiLoader4Line, RiPencilLine, RiTruckLine } from '@remixicon/react';
+import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiEBike2Line, RiLoader4Line, RiPencilLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
@@ -521,6 +521,31 @@ export function CouriersScreen() {
             feature the other keeps.
           */}
           <div className="space-y-4">
+            {/*
+              WHERE HIS CUSTODY IS — because it is not here, and nothing said so.
+
+              «لما أدخل صفحة كل مندوب، العهدة ما بتظهر إشي». It does not, and it
+              should not: custody is derived from his orders and belongs on the
+              money side, where the collection that clears it also lives. What
+              was missing was any word of it on the page people open first. The
+              figure is not repeated here — one owner, one place — only the door.
+            */}
+            {opened.kind === 'AGENT' && (
+              <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 space-y-2">
+                <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                  هذه الصفحة تضبط من هو المندوب وكم أجرته. ما بيده الآن — بضاعة لم تُغلق، ومال
+                  مؤكَّد حصّله ولم يسلّمه — يُحسب من طلباته لحظةَ فتح شاشة العهدة، ولا يُخزَّن هنا.
+                </p>
+                <a
+                  href="/finance/agents"
+                  className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-primary)] px-3 py-1.5 text-xs font-medium text-[var(--sys-primary)]"
+                >
+                  <RiWallet3Line className="w-4 h-4" aria-hidden />
+                  افتح عهدة المندوبين
+                </a>
+              </div>
+            )}
+
             {opened.kind !== 'AGENT' && (
               <Tabs
                 tabs={[

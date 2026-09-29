@@ -7,6 +7,7 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
+import { ProductPicker } from '@/components/ui/ProductPicker';
 import { RiCheckboxCircleLine, RiClipboardLine, RiErrorWarningLine, RiMagicLine, RiSparkling2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { useToast } from '@/components/ui/Toast';
@@ -44,8 +45,10 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<ParseResult | null>(null);
-  // Governorates of the selected country (never a hard-coded country list).
-  const { regions, countryName } = useRegions();
+  // Governorates of the selected country (never a hard-coded country list),
+  // and the store's own currency — the price box used to be labelled «($)»
+  // on every store in the world.
+  const { regions, countryName, currency } = useRegions();
   const regionNames = regions.map((r) => r.name);
 
   // Editable confirmed fields
@@ -113,6 +116,13 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
 
   const handleConfirm = async () => {
     if (!result) return;
+    // The parser matches what it can. When it matched nothing, say so in one
+    // sentence instead of letting the route answer with a schema error about
+    // a box the screen had drawn as filled in.
+    if (!productId) {
+      toast.failed('اختر المنتج — لم يُطابق النص أيّ منتج في الكتالوج');
+      return;
+    }
     setSaving(true);
     try {
       const res = await apiFetch('/api/orders/ai-intake', {
@@ -234,22 +244,38 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Select
-                label="المنتج (تم مطابقته تلقائياً)"
-                value={productId}
-                onChange={(e) => {
-                  setProductId(e.target.value);
-                  const prod = products.find((x) => x.id === e.target.value);
-                  if (prod?.offers?.length) setFinalPrice(prod.offers[0].sellingPrice);
-                }}
-                className={result.matchedProduct && !result.productMatchConfident ? 'border-[var(--sys-warning)]/60' : ''}
-              >
-                {products.map((prod) => (
-                  <option key={prod.id} value={prod.id}>
-                    {prod.name}
-                  </option>
-                ))}
-              </Select>
+              {/*
+                A HUNDRED AND FOURTEEN PRODUCTS, AND THE ONE THE MESSAGE MEANT.
+
+                This was a native `<select>` over the whole catalogue with no
+                search — the same fault already fixed on the new-order form and
+                the return, both of which come through `ProductPicker`. Worse
+                here: it had NO empty row, so when the parser matched nothing
+                and `productId` stayed `''` the browser drew the FIRST product
+                as though it were chosen. Accepting what the screen showed sent
+                an empty productId, which the route's schema refuses
+                (`z.string().min(10)`) — a 400 about a field that looked filled
+                in.
+
+                «— اختر منتجًا —» is that empty row, so the box now says what
+                it holds.
+              */}
+              <div>
+                <label className="block text-xs font-medium text-[var(--sys-foreground)] mb-1.5">
+                  المنتج (تم مطابقته تلقائياً)
+                </label>
+                <ProductPicker
+                  products={products}
+                  value={productId}
+                  anyOption={{ value: '', label: '— اختر منتجًا —' }}
+                  placeholder="ابحث عن منتج…"
+                  onChange={(id) => {
+                    setProductId(id);
+                    const prod = products.find((x) => x.id === id);
+                    if (prod?.offers?.length) setFinalPrice(prod.offers[0].sellingPrice);
+                  }}
+                />
+              </div>
 
               <Input
                 label="الكمية"
@@ -260,7 +286,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               />
 
               <Input
-                label="السعر ($)"
+                label={`السعر${currency?.code ? ` (${currency.code})` : ''}`}
                 type="number"
                 step="0.01"
                 value={finalPrice}

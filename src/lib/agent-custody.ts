@@ -1,6 +1,14 @@
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
-import { roundMinor } from './money';
+import { courierScope } from './courier-scope';
+import {
+  CUSTODY_DELIVERED,
+  CUSTODY_IN_HAND,
+  CUSTODY_UNSETTLED,
+  custodyTotals,
+  wasDelivered,
+  type CustodyTotals,
+} from './agent-custody-totals';
 
 /**
  * AGENT CUSTODY — what a courier is holding right now.
@@ -23,16 +31,12 @@ import { roundMinor } from './money';
  * The balance is what he owes us minus what we owe him. It is never stored:
  * the moment a receipt is recorded the orders behind it settle, and the same
  * calculation returns a smaller number.
+ *
+ * WHAT THIS FILE DOES NOT DECIDE. The arithmetic lives in
+ * agent-custody-totals.ts, which is pure and takes no database — because
+ * «did anybody actually record what he took at this door?» is a rule, not a
+ * query, and it was being answered wrongly here by a `??`.
  */
-
-/** Statuses that mean the parcel is still out with him. */
-const IN_HAND = ['SHIPPED', 'OUT_FOR_DELIVERY', 'FAILED_DELIVERY', 'RETURN_REQUESTED'];
-
-/** Statuses that mean he has taken money for it. */
-const COLLECTED = ['DELIVERED', 'PARTIALLY_DELIVERED'];
-
-/** Settlement states that mean the cash has NOT reached us yet. */
-const UNSETTLED = ['PENDING', 'PENDING_COLLECTION', 'COLLECTED'];
 
 export interface CustodyOrder {
   id: string;
@@ -43,8 +47,14 @@ export interface CustodyOrder {
   shippingStatus: string;
   shippedAt: Date | null;
   deliveredAt: Date | null;
-  /** What the customer paid at the door. */
-  collected: number;
+  /** What the order is worth. Always known. */
+  orderValue: number;
+  /**
+   * What he actually took at the door. NULL when nothing has recorded it —
+   * the normal state until the settlement covering it is approved. It is never
+   * filled in from the order total: that is our expectation, not his debt.
+   */
+  collected: number | null;
   /** His fee for that door. */
   fee: number;
 }
@@ -54,19 +64,9 @@ export interface AgentCustody {
   currencyCode: string;
   /** Parcels still out with him. */
   inHand: CustodyOrder[];
-  /** Delivered, money taken, not yet handed over. */
+  /** Delivered — whatever we know about the money. */
   owing: CustodyOrder[];
-  totals: {
-    inHandCount: number;
-    /** Value of the goods still out with him. */
-    inHandValue: number;
-    /** Cash he has collected and not handed over. */
-    collected: number;
-    /** Delivery fees we owe him on that same work. */
-    fees: number;
-    /** collected − fees: positive means he owes us. */
-    balance: number;
-  };
+  totals: CustodyTotals;
 }
 
 type Tx = Prisma.TransactionClient | typeof db;
@@ -78,14 +78,26 @@ interface Scope {
   currencyCode: string;
 }
 
-/** One agent's custody, or null when that provider is not an agent of ours. */
+/**
+ * One agent's custody, or null when that provider is not an agent of ours.
+ *
+ * «Of ours» is checked twice and both halves matter. The STORE, because a
+ * courier belongs to one store and this function counts only that store's
+ * orders — answering for another store's agent returned his name over an
+ * empty custody, which reads as «he is holding nothing». And the KIND,
+ * because a shipping COMPANY settles by statement: custody is not a thing it
+ * has, and a derived «balance» for one would compete with the matched figure
+ * the statement produces.
+ */
 export async function agentCustody(
   tx: Tx,
   providerId: string,
   scope: Scope
 ): Promise<AgentCustody | null> {
   const agent = await tx.deliveryProvider.findFirst({
-    where: { id: providerId, companyId: scope.companyId },
+    // `courierScope` LAST: with no store in context it narrows `id` to an
+    // empty set, and an `id` spread after it would quietly undo that.
+    where: { id: providerId, kind: 'AGENT', ...courierScope(scope.companyId, scope.storeId) },
     select: { id: true, name: true, code: true, kind: true },
   });
   if (!agent) return null;
@@ -96,8 +108,8 @@ export async function agentCustody(
       storeId: scope.storeId,
       deliveryProviderId: providerId,
       OR: [
-        { shippingStatus: { in: IN_HAND } },
-        { shippingStatus: { in: COLLECTED }, settlementStatus: { in: UNSETTLED } },
+        { shippingStatus: { in: [...CUSTODY_IN_HAND] } },
+        { shippingStatus: { in: [...CUSTODY_DELIVERED] }, settlementStatus: { in: [...CUSTODY_UNSETTLED] } },
       ],
     },
     select: {
@@ -123,39 +135,37 @@ export async function agentCustody(
       shippingStatus: o.shippingStatus,
       shippedAt: o.shippedAt,
       deliveredAt: o.deliveredAt,
-      // What he actually took at the door when it is recorded; the order's
-      // own total only while it is still out and nothing has been taken.
-      collected: Number(o.collectedAmount ?? o.totalAmount ?? 0),
+      orderValue: Number(o.totalAmount ?? 0),
+      // Read, never inferred.
+      collected: o.collectedAmount === null || o.collectedAmount === undefined ? null : Number(o.collectedAmount),
       fee: Number(o.deliveryFee ?? 0),
     };
-    if (COLLECTED.includes(o.shippingStatus)) owing.push(row);
+    if (wasDelivered(o.shippingStatus)) owing.push(row);
     else inHand.push(row);
   }
-
-  const round = (n: number) => roundMinor(n, scope.minorUnit);
-  const collected = round(owing.reduce((sum, o) => sum + o.collected, 0));
-  const fees = round(owing.reduce((sum, o) => sum + o.fee, 0));
 
   return {
     agent: { id: agent.id, name: agent.name, code: agent.code },
     currencyCode: scope.currencyCode,
     inHand,
     owing,
-    totals: {
-      inHandCount: inHand.length,
-      inHandValue: round(inHand.reduce((sum, o) => sum + o.collected, 0)),
-      collected,
-      fees,
-      balance: round(collected - fees),
-    },
+    totals: custodyTotals([...inHand, ...owing], scope.minorUnit),
   };
 }
 
-/** Every agent of this company, with their custody. Quiet agents included:
- *  a zero balance is an answer, and its absence looks like a missing page. */
+/**
+ * Every agent OF THIS STORE, with their custody. Quiet agents included: a zero
+ * balance is an answer, and its absence looks like a missing page.
+ *
+ * Scoped through `courierScope` — the one function that decides which couriers
+ * a store may see. This listed every agent in the COMPANY while counting only
+ * the selected store's orders, so an agent who works for another store showed
+ * up here as «متوازن 0»: a settled-looking figure about work this store cannot
+ * see at all.
+ */
 export async function allAgentCustody(tx: Tx, scope: Scope): Promise<AgentCustody[]> {
   const agents = await tx.deliveryProvider.findMany({
-    where: { companyId: scope.companyId, kind: 'AGENT' },
+    where: { ...courierScope(scope.companyId, scope.storeId), kind: 'AGENT' },
     select: { id: true },
     orderBy: { name: 'asc' },
   });

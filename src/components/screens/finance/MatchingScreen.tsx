@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { Money } from '@/components/ui/Money';
+import { isApproved } from '@/lib/settlement-gates';
 
 /**
  * /finance/matching — the outcome of matching, read as four queues: agreed,
@@ -35,6 +36,8 @@ interface StatementRow {
   id: string;
   reference: string;
   status: string;
+  /** Set when the money moved. Matching is refused after it. */
+  approvedAt: string | null;
   currencyCode: string;
   counts: { lines: number; receipts: number; matches: number };
 }
@@ -76,6 +79,23 @@ export function MatchingScreen() {
   const statement = statements?.find((s) => s.id === selected);
   const queue = (result: Match['result']) => (matches ?? []).filter((m) => m.result === result);
 
+  /**
+   * MATCHING IS REFUSED AFTER APPROVAL, AND THE BUTTON SAYS SO.
+   *
+   * Re-running it rewrites the rows that decide which orders were settled and
+   * whose commission became payable — and it used to write `status` back to
+   * MATCHED, which reopened the approval and let the courier's cash be posted
+   * into the wallet a second time. The server refuses it now; this is the same
+   * rule, read from the same function, so the button is grey instead of red.
+   */
+  const closed = statement ? isApproved(statement) : false;
+  const noReceipt = (statement?.counts.receipts ?? 0) === 0;
+  const whyNot = closed
+    ? 'الكشف معتمد — لا تُعاد مطابقته. أيّ تصحيح بعد الاعتماد يكون بقيد عكسي.'
+    : noReceipt
+      ? 'سجّل إيصال الاستلام أولاً'
+      : 'إعادة تشغيل المطابقة';
+
   return (
     <div className="max-w-6xl space-y-3">
       <ScreenTitle />
@@ -96,8 +116,8 @@ export function MatchingScreen() {
           </select>
         </label>
         <button
-          disabled={!selected || busy || (statement?.counts.receipts ?? 0) === 0}
-          title={(statement?.counts.receipts ?? 0) === 0 ? 'سجّل إيصال الاستلام أولاً' : 'إعادة تشغيل المطابقة'}
+          disabled={!selected || busy || noReceipt || closed}
+          title={whyNot}
           onClick={async () => {
             setBusy(true);
             try {
@@ -116,6 +136,12 @@ export function MatchingScreen() {
         </button>
       </div>
 
+      {closed && (
+        <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
+          هذا الكشف معتمد ومالُه في المحفظة — تُقرأ نتيجتُه هنا ولا تُعاد مطابقتُه. أيّ تصحيح بعد
+          الاعتماد يكون بقيد عكسي على المحفظة، لا بإعادة حساب الكشف.
+        </p>
+      )}
 
       {!selected ? null : !matches ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
