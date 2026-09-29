@@ -3,9 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { db, adapterFor, logAudit } = vi.hoisted(() => ({
   db: {
     shippingBatch: { findFirst: vi.fn() },
-    order: { findMany: vi.fn(), update: vi.fn() },
+    order: { findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     orderActivity: { create: vi.fn() },
     deliveryFee: { findMany: vi.fn() },
+    /*
+     * The claim is one conditional UPDATE … RETURNING, so the double has to
+     * speak raw SQL. `$queryRaw` is called as a tagged template: the first
+     * argument is the SQL fragments, the rest the values.
+     */
+    $queryRaw: vi.fn(),
+    $executeRaw: vi.fn(),
   },
   adapterFor: vi.fn(),
   logAudit: vi.fn(),
@@ -15,6 +22,7 @@ vi.mock('./couriers', () => ({ adapterFor: (...a: unknown[]) => adapterFor(...a)
 vi.mock('./audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
 
 import { dispatchBatch } from './courier-dispatch';
+import { markOutcomeUnknown } from './couriers/types';
 
 /**
  * Handing orders to the courier and taking back the barcode.
@@ -46,15 +54,28 @@ beforeEach(() => {
   adapterFor.mockReturnValue({ code: 'LOGESTECHS', automated: true, createShipment });
   createShipment.mockResolvedValue({ trackingNumber: 'BC-777' });
   db.order.update.mockResolvedValue({});
+  db.order.updateMany.mockResolvedValue({ count: 1 });
   db.deliveryFee.findMany.mockResolvedValue([]);
+  // By default the claim is won: the ordinary case is one dispatcher.
+  db.$queryRaw.mockImplementation(async (frags: string[]) =>
+    frags.join(' ').includes('UPDATE') ? [{ id: 'o1' }] : [{ tracking: null }]
+  );
+  db.$executeRaw.mockResolvedValue(1);
 });
+
+/** The SQL of each raw call, whitespace-flattened, with its values. */
+const raw = (fn: { mock: { calls: unknown[][] } }) =>
+  fn.mock.calls.map((c) => ({
+    sql: (c[0] as string[]).join(' ? ').replace(/\s+/g, ' ').trim(),
+    args: c.slice(1),
+  }));
 
 describe('dispatching a batch', () => {
   it('stores the courier barcode as the tracking number', async () => {
     db.order.findMany.mockResolvedValue([order()]);
     const res = await dispatchBatch(input);
     expect(res.sent).toBe(1);
-    expect(db.order.update.mock.calls[0][0].data.trackingNumber).toBe('BC-777');
+    expect(db.order.updateMany.mock.calls[0][0].data.trackingNumber).toBe('BC-777');
   });
 
   it('sends OUR order number as the merchant reference', async () => {
@@ -102,7 +123,7 @@ describe('dispatching a batch', () => {
     const res = await dispatchBatch(input);
     expect(res.sent).toBe(2);
     expect(res.failed).toBe(1);
-    expect(db.order.update).toHaveBeenCalledTimes(2);
+    expect(db.order.updateMany).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the courier's own words about why", async () => {
@@ -216,5 +237,110 @@ describe("a courier that is not this store's", () => {
     db.order.findMany.mockResolvedValue([order()]);
     await dispatchBatch(input);
     expect(createShipment).toHaveBeenCalledOnce();
+  });
+});
+
+/**
+ * TWO PEOPLE PRESSING «DISPATCH» ON ONE BATCH.
+ *
+ * The old guard read `trackingNumber` once, before the loop, and trusted it
+ * for the whole run. Two runs overlapping therefore both saw null, both
+ * created a parcel at the courier, and the second barcode overwrote the
+ * first — leaving a real parcel, billed and out for delivery, that nothing
+ * in this system could name. The row is claimed now, and the database, not
+ * the snapshot, decides who won.
+ */
+describe('one parcel per order, decided by the row and not by the snapshot', () => {
+  beforeEach(() => {
+    db.order.findMany.mockResolvedValue([order()]);
+  });
+
+  it('claims the order before a word is said to the courier', async () => {
+    await dispatchBatch(input);
+    const claim = raw(db.$queryRaw)[0];
+    expect(claim.sql).toMatch(/UPDATE "orders"[\s\S]*courier_send_started_at/);
+    // Both conditions, or the claim is not a claim: an order already sent
+    // and an order already claimed must BOTH fail to be taken.
+    expect(claim.sql).toContain('"trackingNumber" IS NULL');
+    expect(claim.sql).toContain('"courier_send_started_at" IS NULL');
+    expect(claim.args).toEqual(['o1']);
+    expect(
+      db.$queryRaw.mock.invocationCallOrder[0],
+      'كُلِّمت الشركةُ قبل حجز الطلب'
+    ).toBeLessThan(createShipment.mock.invocationCallOrder[0]);
+  });
+
+  it('leaves the parcel alone when another run already holds it', async () => {
+    db.$queryRaw.mockImplementation(async (frags: string[]) =>
+      frags.join(' ').includes('UPDATE') ? [] : [{ tracking: null }]
+    );
+    const res = await dispatchBatch(input);
+    expect(createShipment, 'أرسلت طرداً ثانياً لطلبٍ قيد الإرسال').not.toHaveBeenCalled();
+    expect(res.outcomes[0].skipped).toBe('SEND_IN_FLIGHT');
+    expect(res.skipped).toBe(1);
+  });
+
+  it('calls it already sent when the row turns out to carry a barcode', async () => {
+    db.$queryRaw.mockImplementation(async (frags: string[]) =>
+      frags.join(' ').includes('UPDATE') ? [] : [{ tracking: 'BC-EARLIER' }]
+    );
+    const res = await dispatchBatch(input);
+    expect(createShipment).not.toHaveBeenCalled();
+    expect(res.outcomes[0].skipped).toBe('ALREADY_SENT');
+  });
+
+  it('never overwrites a barcode that arrived while the courier was answering', async () => {
+    db.order.updateMany.mockResolvedValue({ count: 0 });
+    const res = await dispatchBatch(input);
+    // Two parcels exist now. Saying so is the only honest outcome —
+    // overwriting would erase the first one's number for good.
+    expect(res.sent).toBe(0);
+    expect(res.failed).toBe(1);
+    expect(res.outcomes[0].error).toContain('BC-777');
+  });
+
+  it('records the barcode only while the order still has none', async () => {
+    await dispatchBatch(input);
+    expect(db.order.updateMany.mock.calls[0][0].where).toMatchObject({ id: 'o1', trackingNumber: null });
+  });
+});
+
+/**
+ * A REFUSAL AND A SILENCE ARE DIFFERENT NEWS.
+ *
+ * «Unknown city» means nothing was created: fix the field, send again. A
+ * request that timed out may have created the parcel and simply not said
+ * so — pressing retry on THAT is how one order becomes two waybills.
+ */
+describe('what happens to the claim when the call fails', () => {
+  beforeEach(() => {
+    db.order.findMany.mockResolvedValue([order()]);
+  });
+
+  it('gives the order back after a refusal, so the correction can be sent', async () => {
+    createShipment.mockRejectedValue(new Error('LOGESTECHS_CITY_UNKNOWN: لم يُعرف رمز المدينة'));
+    const res = await dispatchBatch(input);
+    expect(raw(db.$executeRaw)[0]?.sql, 'لم يُفكّ الحجز بعد رفضٍ صريح').toMatch(
+      /UPDATE "orders"[\s\S]*courier_send_started_at" = NULL/
+    );
+    expect(res.outcomes[0].outcomeUnknown).toBeUndefined();
+  });
+
+  it('keeps the claim when the courier never answered, and says why', async () => {
+    const timedOut = markOutcomeUnknown(new Error('LOGESTECHS_TIMEOUT: لم تردّ شركةُ الشحن'));
+    createShipment.mockRejectedValue(timedOut);
+    const res = await dispatchBatch(input);
+    expect(db.$executeRaw, 'فكَّ الحجزَ بعد صمتٍ — الضغطةُ التالية تصنع طرداً ثانياً').not.toHaveBeenCalled();
+    expect(res.outcomes[0].outcomeUnknown).toBe(true);
+    expect(res.outcomes[0].error).toContain('اسأل الشركة');
+  });
+
+  it('counts an unknown outcome as a failure, not as a quiet skip', async () => {
+    createShipment.mockRejectedValue(markOutcomeUnknown(new Error('LOGESTECHS_TIMEOUT')));
+    const res = await dispatchBatch(input);
+    // It must appear in the failed count: a number the operator reads as
+    // «nothing to do here» would bury the one parcel that needs a call.
+    expect(res.failed).toBe(1);
+    expect(res.skipped).toBe(0);
   });
 });

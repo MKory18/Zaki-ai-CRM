@@ -10,7 +10,7 @@ const { db, requireContext, requirePermission, logAudit, recordMovement, markPay
   vi.hoisted(() => ({
     db: {
       courierStatement: { findFirst: vi.fn(), update: vi.fn() },
-      statementReceipt: { create: vi.fn(), aggregate: vi.fn() },
+      statementReceipt: { create: vi.fn(), aggregate: vi.fn(), findFirst: vi.fn() },
       wallet: { findFirst: vi.fn() },
       // Approving a statement now also closes the deliveries it reports.
       order: { updateMany: vi.fn(), findMany: vi.fn(), update: vi.fn() },
@@ -20,7 +20,7 @@ const { db, requireContext, requirePermission, logAudit, recordMovement, markPay
       orderItem: { findMany: vi.fn() },
       inventoryMovement: { findFirst: vi.fn(), create: vi.fn() },
       productionBatch: { findMany: vi.fn(), update: vi.fn() },
-      dailyClosing: { findFirst: vi.fn(), findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn() },
+      dailyClosing: { findFirst: vi.fn(), findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
       walletMovement: { findFirst: vi.fn() },
       $transaction: vi.fn(async (fn: any) => fn(db)),
     },
@@ -60,6 +60,7 @@ vi.mock('@/lib/stock-consumption', () => ({ consumeOrderStock: vi.fn().mockResol
 import { PATCH as approveStatement } from '@/app/api/finance/statements/[id]/route';
 import { POST as runMatch } from '@/app/api/finance/statements/[id]/match/route';
 import { POST as recordClosing, PATCH as approveClosing } from '@/app/api/finance/closing/route';
+import { POST as addReceipt } from '@/app/api/finance/statements/[id]/receipts/route';
 
 const ID = '88888888-8888-4888-8888-888888888888';
 const body = (b: unknown, method = 'PATCH') =>
@@ -82,6 +83,11 @@ beforeEach(() => {
   db.courierStatement.update.mockResolvedValue({ id: ID, status: 'APPROVED' });
   db.order.updateMany.mockResolvedValue({ count: 0 });
   markPayableForOrders.mockResolvedValue(0);
+  // The approval recomputes the book balance; by default nothing moved
+  // since the count, so the recorded difference still holds.
+  walletBalance.mockResolvedValue({ balance: 100 });
+  db.dailyClosing.updateMany.mockResolvedValue({ count: 1 });
+  db.dailyClosing.findUnique.mockResolvedValue({ id: CLOSING_ID, status: 'APPROVED' });
 });
 
 describe('statement approval', () => {
@@ -250,8 +256,8 @@ describe('daily closing', () => {
 
   it('refuses approval by the person who recorded it', async () => {
     db.dailyClosing.findFirst.mockResolvedValue({
-      id: CLOSING_ID, walletId: 'w1', date: new Date('2026-09-20'), difference: 0, status: 'OPEN',
-      recordedById: 'u1', explanation: null, wallet: { id: 'w1', name: 'الصندوق' },
+      id: CLOSING_ID, walletId: 'w1', date: new Date('2026-09-20'), difference: 0, actualBalance: 100, status: 'OPEN',
+      recordedById: 'u1', explanation: null, wallet: { id: 'w1', name: 'الصندوق', country: { minorUnit: 3 } },
     });
     db.walletMovement.findFirst.mockResolvedValue(null);
 
@@ -262,8 +268,8 @@ describe('daily closing', () => {
 
   it('refuses approval by someone who recorded that wallet’s movements that day', async () => {
     db.dailyClosing.findFirst.mockResolvedValue({
-      id: CLOSING_ID, walletId: 'w1', date: new Date('2026-09-20'), difference: 0, status: 'OPEN',
-      recordedById: 'someone-else', explanation: null, wallet: { id: 'w1', name: 'الصندوق' },
+      id: CLOSING_ID, walletId: 'w1', date: new Date('2026-09-20'), difference: 0, actualBalance: 100, status: 'OPEN',
+      recordedById: 'someone-else', explanation: null, wallet: { id: 'w1', name: 'الصندوق', country: { minorUnit: 3 } },
     });
     db.walletMovement.findFirst.mockResolvedValue({ id: 'm1' });
 
@@ -272,14 +278,76 @@ describe('daily closing', () => {
 
   it('approves when a different person signs it off', async () => {
     db.dailyClosing.findFirst.mockResolvedValue({
-      id: CLOSING_ID, walletId: 'w1', date: new Date('2026-09-20'), difference: 0, status: 'OPEN',
-      recordedById: 'someone-else', explanation: null, wallet: { id: 'w1', name: 'الصندوق' },
+      id: CLOSING_ID, walletId: 'w1', date: new Date('2026-09-20'), difference: 0, actualBalance: 100, status: 'OPEN',
+      recordedById: 'someone-else', explanation: null, wallet: { id: 'w1', name: 'الصندوق', country: { minorUnit: 3 } },
     });
     db.walletMovement.findFirst.mockResolvedValue(null);
-    db.dailyClosing.update.mockResolvedValue({ id: 'cl1', status: 'APPROVED' });
 
     const res = await approveClosing(body({ closingId: CLOSING_ID }));
     expect(res.status).toBe(200);
+  });
+
+  /**
+   * THE DIFFERENCE WAS WORKED OUT WHEN THE CASH WAS COUNTED.
+   *
+   * Every movement posted between the count and the approval moves the
+   * book balance under it, so a row can still say «zero» while the till is
+   * short by whatever went through in between. Approving that number signs
+   * off a discrepancy nobody ever looked at.
+   */
+  it('refuses to approve a difference the book has moved away from', async () => {
+    db.dailyClosing.findFirst.mockResolvedValue({
+      id: CLOSING_ID, walletId: 'w1', date: new Date('2026-09-20'), difference: 0, actualBalance: 100,
+      status: 'OPEN', recordedById: 'someone-else', explanation: null,
+      wallet: { id: 'w1', name: 'الصندوق', country: { minorUnit: 3 } },
+    });
+    db.walletMovement.findFirst.mockResolvedValue(null);
+    // 40 went out after the count: the till is now 40 over the book.
+    walletBalance.mockResolvedValue({ balance: 60 });
+
+    const res = await approveClosing(body({ closingId: CLOSING_ID }));
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.code).toBe('CLOSING_OUT_OF_DATE');
+    // Both numbers, because «it changed» without them is unactionable.
+    expect(json).toMatchObject({ recordedDifference: 0, currentDifference: 40 });
+    expect(db.dailyClosing.updateMany, 'اعتمد رغم أن الرقم تغيّر').not.toHaveBeenCalled();
+  });
+
+  /**
+   * TWO APPROVERS PRESSING AT ONCE.
+   *
+   * The status check above the write is a read: both passed it, both
+   * wrote, and the second name and timestamp replaced the first on the
+   * record of a cash count. The row decides now.
+   */
+  it('lets exactly one approval land, and tells the loser', async () => {
+    db.dailyClosing.findFirst.mockResolvedValue({
+      id: CLOSING_ID, walletId: 'w1', date: new Date('2026-09-20'), difference: 0, actualBalance: 100,
+      status: 'OPEN', recordedById: 'someone-else', explanation: null,
+      wallet: { id: 'w1', name: 'الصندوق', country: { minorUnit: 3 } },
+    });
+    db.walletMovement.findFirst.mockResolvedValue(null);
+    db.dailyClosing.updateMany.mockResolvedValue({ count: 0 });
+
+    const res = await approveClosing(body({ closingId: CLOSING_ID }));
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe('ALREADY_APPROVED');
+    expect(logAudit, 'كتب في السجلّ اعتماداً لم يحدث').not.toHaveBeenCalled();
+  });
+
+  it('writes the approval only while the row is not approved yet', async () => {
+    db.dailyClosing.findFirst.mockResolvedValue({
+      id: CLOSING_ID, walletId: 'w1', date: new Date('2026-09-20'), difference: 0, actualBalance: 100,
+      status: 'OPEN', recordedById: 'someone-else', explanation: null,
+      wallet: { id: 'w1', name: 'الصندوق', country: { minorUnit: 3 } },
+    });
+    db.walletMovement.findFirst.mockResolvedValue(null);
+
+    await approveClosing(body({ closingId: CLOSING_ID }));
+    expect(db.dailyClosing.updateMany.mock.calls[0][0].where).toMatchObject({
+      id: CLOSING_ID, status: { not: 'APPROVED' },
+    });
   });
 });
 
@@ -386,5 +454,83 @@ describe('the statement is the delivery proof', () => {
   it('and never overwrites an amount that is already there', async () => {
     await approveWith([{ orderId: 'o3', result: 'MATCHED', statementAmount: 9 }], []);
     expect(db.order.findMany.mock.calls[1][0].where.collectedAmount).toBeNull();
+  });
+});
+
+/**
+ * RECORDING WHAT ARRIVED — ONCE.
+ *
+ * Many receipts on one statement are correct: a courier pays part in cash
+ * and part by transfer. That is exactly why the server cannot recognise a
+ * double-click — two identical receipts seconds apart are also a courier
+ * paying the same amount twice. The caller carries an id for its attempt,
+ * and a replay of that attempt finds the row it already wrote.
+ */
+describe('recording a receipt', () => {
+  const RECEIPT_ID = '77777777-7777-4777-8777-777777777777';
+  const payload = (over: Record<string, unknown> = {}) => ({
+    receiptId: RECEIPT_ID, walletId: '11111111-1111-4111-8111-111111111111', amount: 90, ...over,
+  });
+
+  beforeEach(() => {
+    db.courierStatement.findFirst.mockResolvedValue({ id: ID, status: 'MATCHED', currencyCode: 'JOD', reference: 'ST-1' });
+    db.wallet.findFirst.mockResolvedValue({ id: '11111111-1111-4111-8111-111111111111', name: 'الصندوق', currencyCode: 'JOD' });
+    db.statementReceipt.findFirst.mockResolvedValue(null);
+    db.statementReceipt.create.mockResolvedValue({ id: RECEIPT_ID, amount: 90 });
+    receiptGap.mockResolvedValue({ claimed: 90, received: 90, gap: 0, needsExplanation: false, explained: true });
+  });
+
+  it('writes the receipt and the statement status in one transaction', async () => {
+    const res = await addReceipt(body(payload(), 'POST'), params);
+    expect(res.status).toBe(201);
+    // Both writes go through the transaction client, not around it: a
+    // failure between them would record money against a statement that
+    // still says nobody has paid.
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    expect(db.statementReceipt.create).toHaveBeenCalledTimes(1);
+    expect(db.courierStatement.update).toHaveBeenCalledWith({ where: { id: ID }, data: { status: 'RECEIPTED' } });
+  });
+
+  it('uses the caller’s id as the row’s own, so the database enforces it', async () => {
+    await addReceipt(body(payload(), 'POST'), params);
+    expect(db.statementReceipt.create.mock.calls[0][0].data.id).toBe(RECEIPT_ID);
+  });
+
+  it('answers a repeat of the same attempt with the row already written', async () => {
+    db.statementReceipt.findFirst.mockResolvedValue({ id: RECEIPT_ID, amount: 90 });
+    const res = await addReceipt(body(payload(), 'POST'), params);
+    expect(res.status).toBe(200);
+    expect((await res.json()).replay).toBe(true);
+    // The second press must not add a second 90 to the money that arrived.
+    expect(db.statementReceipt.create, 'سجَّل الإيصال مرّتين').not.toHaveBeenCalled();
+  });
+
+  it('looks for the earlier attempt inside this company and statement only', async () => {
+    await addReceipt(body(payload(), 'POST'), params);
+    expect(db.statementReceipt.findFirst.mock.calls[0][0].where).toMatchObject({
+      id: RECEIPT_ID, companyId: 'c1', statementId: ID,
+    });
+  });
+
+  it('still records a genuine second payment carrying its own id', async () => {
+    await addReceipt(body(payload({ receiptId: '66666666-6666-4666-8666-666666666666', amount: 40 }), 'POST'), params);
+    expect(db.statementReceipt.create).toHaveBeenCalledTimes(1);
+    expect(db.statementReceipt.create.mock.calls[0][0].data.amount).toBe(40);
+  });
+
+  it('refuses an id that is taken, rather than reporting a success it did not have', async () => {
+    const conflict = Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
+    Object.setPrototypeOf(conflict, (await import('@prisma/client')).Prisma.PrismaClientKnownRequestError.prototype);
+    db.$transaction.mockRejectedValueOnce(conflict);
+    const res = await addReceipt(body(payload(), 'POST'), params);
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe('RECEIPT_EXISTS');
+  });
+
+  it('refuses to record anything against an approved statement', async () => {
+    db.courierStatement.findFirst.mockResolvedValue({ id: ID, status: 'APPROVED', currencyCode: 'JOD', reference: 'ST-1' });
+    const res = await addReceipt(body(payload(), 'POST'), params);
+    expect(res.status).toBe(409);
+    expect(db.statementReceipt.create).not.toHaveBeenCalled();
   });
 });

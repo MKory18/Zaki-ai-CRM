@@ -712,6 +712,19 @@ model Order {
   trackingMissCount         Int       @default(0) @map("tracking_miss_count")
   trackingMissingSince      DateTime? @map("tracking_missing_since")
   trackingMissingAlertedAt  DateTime? @map("tracking_missing_alerted_at")
+  /// When this order was handed to the courier's API, set BEFORE the call.
+  ///
+  /// The claim, not the record: a second dispatcher finds it already set
+  /// and leaves the parcel alone. Without it, two runs of the same batch
+  /// both read `trackingNumber` as null, both created a parcel, and the
+  /// second barcode overwrote the first — leaving a real parcel at the
+  /// courier that nothing in here can name.
+  ///
+  /// It is NOT cleared when the courier does not answer in time. A request
+  /// that timed out may well have created the parcel; clearing it would
+  /// invite exactly the second waybill this prevents. Someone checks with
+  /// the courier and either types the barcode in or releases the order.
+  courierSendStartedAt      DateTime? @map("courier_send_started_at")
   // Snapshot of the offer's delivery policy: if ANY line includes delivery the
   // whole order does, and the fee is deducted from revenue instead of added.
   priceIncludesDelivery     Boolean   @default(false)
@@ -786,6 +799,7 @@ model Order {
   @@index([storeId, createdAt])
   @@index([countryId])
   @@index([companyId, labelPrintedAt])
+  @@index([companyId, courierSendStartedAt])
   @@index([regionId])
   @@map("orders")
 }

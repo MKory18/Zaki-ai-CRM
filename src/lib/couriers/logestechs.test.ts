@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LogesTechsAdapter, LOGESTECHS_STATUS, splitName } from './logestechs';
+import { DEFAULT_TIMEOUT_MS, LogesTechsAdapter, LOGESTECHS_STATUS, splitName, TIMEOUT_PREFIX } from './logestechs';
 import { isAutoApplicable } from './types';
 
 /**
@@ -169,5 +169,77 @@ describe('the receiver name their documentation disagrees with itself about', ()
   it('survives extra spacing and an empty name', () => {
     expect(splitName('  أبو   عمر  ')).toEqual({ receiverFirstName: 'أبو', receiverLastName: 'عمر' });
     expect(splitName('')).toEqual({ receiverFirstName: '', receiverLastName: '' });
+  });
+});
+
+/**
+ * A SERVER THAT ACCEPTS THE CONNECTION AND THEN SAYS NOTHING.
+ *
+ * This is not the rare case — it is what a courier's server does while it
+ * is being restarted, and `fetch` has no timeout of its own, so the call
+ * simply never returned. On the dispatch path that means an operator
+ * watching a spinner; on the paths that run inside a transaction it means
+ * database locks held open behind a hung socket.
+ */
+describe('no request waits forever', () => {
+  /** Answers only when the signal it was handed gives up. */
+  const silent = () =>
+    vi.fn((_url: string, init: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(init.signal!.reason));
+      })
+    ) as unknown as typeof fetch;
+
+  it('gives up on a server that never answers, and says which call it was', async () => {
+    const adapter = new LogesTechsAdapter({ ...config(silent()), timeoutMs: 40 });
+    const started = performance.now();
+    await expect(adapter.findCityId('عمّان')).rejects.toThrow(TIMEOUT_PREFIX);
+    // Which call gave up matters: «the courier did not answer» with no path
+    // sends whoever reads the log looking through every endpoint.
+    await expect(adapter.findCityId('عمّان')).rejects.toThrow('addresses/cities');
+    expect(performance.now() - started, 'انتظر أطولَ من الميزانيّة').toBeLessThan(2000);
+  });
+
+  it('hands the signal to fetch rather than timing out beside it', async () => {
+    const seen: (AbortSignal | null | undefined)[] = [];
+    const fetchImpl = vi.fn(async (_u: string, init: RequestInit) => {
+      seen.push(init.signal);
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await new LogesTechsAdapter(config(fetchImpl)).findCityId('عمّان');
+    // A timeout the request does not carry cancels nothing: the socket
+    // stays open and the process keeps the work alive behind it.
+    expect(seen[0], 'الطلبُ خرج بلا إشارةِ إلغاء').toBeInstanceOf(AbortSignal);
+  });
+
+  it('does not rename an ordinary network failure as a timeout', async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error('ECONNREFUSED 10.0.0.1:443');
+    }) as unknown as typeof fetch;
+    const adapter = new LogesTechsAdapter({ ...config(fetchImpl), timeoutMs: 5000 });
+    // A refused connection is a refusal — it is KNOWN that nothing was
+    // created. Calling it a timeout would tell the dispatch layer the
+    // outcome is unknown and stop it retrying something it safely could.
+    await expect(adapter.findCityId('عمّان')).rejects.toThrow('ECONNREFUSED');
+    await expect(adapter.findCityId('عمّان')).rejects.not.toThrow(TIMEOUT_PREFIX);
+  });
+
+  it('counts the body against the budget, not only the handshake', async () => {
+    const fetchImpl = vi.fn(async (_u: string, init: RequestInit) => {
+      const body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"data":'));
+          init.signal?.addEventListener('abort', () => controller.error(init.signal!.reason));
+        },
+      });
+      return new Response(body, { status: 200 });
+    }) as unknown as typeof fetch;
+    const adapter = new LogesTechsAdapter({ ...config(fetchImpl), timeoutMs: 40 });
+    await expect(adapter.findCityId('عمّان')).rejects.toThrow(new RegExp(TIMEOUT_PREFIX));
+  });
+
+  it('has a default, so a caller that names no budget still has one', () => {
+    expect(DEFAULT_TIMEOUT_MS).toBeGreaterThan(0);
+    expect(DEFAULT_TIMEOUT_MS).toBeLessThanOrEqual(60_000);
   });
 });

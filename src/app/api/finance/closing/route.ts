@@ -175,7 +175,7 @@ export async function PATCH(req: Request) {
       // Approving is the same boundary as creating: a closing belongs to
       // the store whose wallet it counts.
       where: { id: parsed.data.closingId, companyId, wallet: { storeId } },
-      include: { wallet: { select: { id: true, name: true } } },
+      include: { wallet: { select: { id: true, name: true, country: { select: { minorUnit: true } } } } },
     });
     if (!closing) return NextResponse.json({ error: 'الإغلاق غير موجود' }, { status: 404 });
     if (closing.status === 'APPROVED') {
@@ -200,6 +200,34 @@ export async function PATCH(req: Request) {
       );
     }
 
+    /*
+     * THE DIFFERENCE IS RECHECKED, NOT TRUSTED.
+     *
+     * It was worked out when the cash was counted. Every movement posted
+     * between then and now has moved the book balance under it, so the
+     * number on the row can say «zero» while the till is short. Approving
+     * that signs off a discrepancy nobody ever saw.
+     *
+     * Refused rather than silently corrected: if the book has moved, the
+     * count itself may no longer be the right count either, and only a
+     * person standing at the till can say. The recorder re-records, and
+     * the approver approves what is true now.
+     */
+    const minorUnit = closing.wallet.country?.minorUnit ?? 3;
+    const now = await walletBalance(db, closing.walletId, minorUnit);
+    const nowDifference = roundMinor(Number(closing.actualBalance) - now.balance, minorUnit);
+    if (nowDifference !== Number(closing.difference)) {
+      return NextResponse.json(
+        {
+          error: `تحرّك رصيدُ الدفتر بعد الجرد: الفرقُ المسجَّل ${Number(closing.difference)} والفرقُ الآن ${nowDifference} — أعِد تسجيل الجرد قبل الاعتماد`,
+          code: 'CLOSING_OUT_OF_DATE',
+          recordedDifference: Number(closing.difference),
+          currentDifference: nowDifference,
+        },
+        { status: 409 }
+      );
+    }
+
     const explanation = parsed.data.explanation ?? closing.explanation;
     if (Number(closing.difference) !== 0 && !explanation) {
       return NextResponse.json(
@@ -208,10 +236,21 @@ export async function PATCH(req: Request) {
       );
     }
 
-    const approved = await db.dailyClosing.update({
-      where: { id: closing.id },
+    /*
+     * ONE APPROVAL, decided by the row and not by the read above it.
+     *
+     * Two approvers pressing at once both passed that check and both
+     * wrote, and the second one's name and timestamp replaced the first's
+     * — a signature quietly overwritten on the record of a money count.
+     */
+    const claimed = await db.dailyClosing.updateMany({
+      where: { id: closing.id, status: { not: 'APPROVED' } },
       data: { status: 'APPROVED', approvedById: user.id, approvedAt: new Date(), explanation: explanation ?? null },
     });
+    if (claimed.count === 0) {
+      return NextResponse.json({ error: 'معتمد مسبقاً', code: 'ALREADY_APPROVED' }, { status: 409 });
+    }
+    const approved = await db.dailyClosing.findUnique({ where: { id: closing.id } });
 
     await logAudit({
       companyId, userId: user.id, action: 'DAILY_CLOSING_APPROVED',

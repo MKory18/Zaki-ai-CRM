@@ -14,6 +14,35 @@ import type { ShippingStatus } from '@/lib/shipping-workflow';
  * events, the caller applies them through the normal transition machine.
  */
 
+/**
+ * «IT FAILED» AND «I DO NOT KNOW» ARE DIFFERENT ANSWERS.
+ *
+ * A refused request — bad phone, unknown city, wrong password — is a
+ * failure whose outcome is KNOWN: nothing was created, and retrying is
+ * free. A request that timed out is not: the courier may have made the
+ * parcel and simply not told us in time. Retrying that one books a second
+ * waybill for goods that already have one, and the first barcode becomes a
+ * parcel nothing in here can name.
+ *
+ * Any adapter that cannot know marks its error, and whoever retries reads
+ * the mark. A message string would do the same job until somebody rewords
+ * it, so it is a property.
+ */
+export interface CourierOutcomeUnknown extends Error {
+  outcomeUnknown: true;
+}
+
+/** Marks an error as «the courier may have done it anyway». */
+export function markOutcomeUnknown(error: Error): CourierOutcomeUnknown {
+  (error as CourierOutcomeUnknown).outcomeUnknown = true;
+  return error as CourierOutcomeUnknown;
+}
+
+/** True when nobody can say whether the courier acted on the request. */
+export function isOutcomeUnknown(error: unknown): boolean {
+  return error instanceof Error && (error as Partial<CourierOutcomeUnknown>).outcomeUnknown === true;
+}
+
 export interface CourierShipmentRequest {
   orderId: string;
   merchantRef: string;

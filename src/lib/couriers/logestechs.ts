@@ -1,5 +1,6 @@
 import type { ShippingStatus } from '@/lib/shipping-workflow';
 import { limitFor, paced } from '../outbound-limit';
+import { markOutcomeUnknown } from './types';
 import type {
   CourierAdapter,
   CourierEvent,
@@ -43,9 +44,35 @@ export interface LogesTechsConfig {
   /** Where parcels are collected from. */
   origin: { addressLine1: string; addressLine2?: string; cityId: number };
   fetchImpl?: typeof fetch;
+  /** Milliseconds before a request is abandoned. See DEFAULT_TIMEOUT_MS. */
+  timeoutMs?: number;
 }
 
 const DEFAULT_BASE = 'https://apisv2.logestechs.com/api';
+
+/**
+ * NO REQUEST WAITS FOREVER.
+ *
+ * `fetch` has no timeout of its own: a server that accepts the connection
+ * and then says nothing holds the caller until the socket dies, which on a
+ * healthy network can be minutes. This is a courier's server, reached while
+ * an operator stands at a screen and — worse — on paths that run inside a
+ * database transaction, where a hung call holds locks open behind it.
+ *
+ * Thirty seconds is chosen against their own slowest observed answer, the
+ * city lookup, and is long enough that a merely slow reply still arrives.
+ */
+export const DEFAULT_TIMEOUT_MS = 30_000;
+
+/**
+ * A TIMED-OUT WRITE IS NOT A FAILED WRITE.
+ *
+ * When a POST times out, the parcel may well have been created — we simply
+ * never heard. Anything that retries on failure must be able to tell this
+ * apart from a refusal, or it books a second waybill for one parcel. The
+ * prefix is the seam: `courier-dispatch` reads it and stops.
+ */
+export const TIMEOUT_PREFIX = 'LOGESTECHS_TIMEOUT';
 
 /**
  * Their status codes, copied from the documentation's own table.
@@ -129,10 +156,12 @@ export class LogesTechsAdapter implements CourierAdapter {
 
   private readonly base: string;
   private readonly http: typeof fetch;
+  private readonly timeoutMs: number;
 
   constructor(readonly config: LogesTechsConfig) {
     this.base = (config.baseUrl ?? DEFAULT_BASE).replace(/\/+$/, '');
     this.http = config.fetchImpl ?? fetch;
+    this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
   private get auth() {
@@ -140,11 +169,51 @@ export class LogesTechsAdapter implements CourierAdapter {
   }
 
   private async call<T>(path: string, init: RequestInit): Promise<T> {
-    const res = await this.http(`${this.base}${path}`, {
-      ...init,
-      headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
-    });
-    const text = await res.text();
+    /*
+     * The caller's own signal is kept, not replaced: a request cancelled
+     * because the operator navigated away must still cancel. Whichever
+     * fires first wins.
+     */
+    const budget = AbortSignal.timeout(this.timeoutMs);
+    const signal = init.signal ? AbortSignal.any([init.signal, budget]) : budget;
+
+    let res: Response;
+    try {
+      res = await this.http(`${this.base}${path}`, {
+        ...init,
+        headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+        signal,
+      });
+    } catch (e) {
+      /*
+       * `AbortSignal.timeout` aborts with a TimeoutError, and the caller's
+       * own cancellation with an AbortError. Only the first is ours to
+       * rename — the second is not a courier problem at all.
+       */
+      if (budget.aborted) {
+        throw markOutcomeUnknown(
+          new Error(`${TIMEOUT_PREFIX}: لم تردّ شركةُ الشحن خلال ${Math.round(this.timeoutMs / 1000)} ثانية على ${path}`)
+        );
+      }
+      throw e;
+    }
+
+    /*
+     * THE BODY IS INSIDE THE BUDGET TOO. A server can send headers at once
+     * and then dribble the body forever; a timeout that covered only the
+     * handshake would be a timeout in name.
+     */
+    let text: string;
+    try {
+      text = await res.text();
+    } catch (e) {
+      if (budget.aborted) {
+        throw markOutcomeUnknown(
+          new Error(`${TIMEOUT_PREFIX}: انقطع الردُّ من شركة الشحن قبل اكتماله على ${path}`)
+        );
+      }
+      throw e;
+    }
     if (!res.ok) {
       throw new Error(`LogesTechs ${res.status}: ${text.slice(0, 300)}`);
     }

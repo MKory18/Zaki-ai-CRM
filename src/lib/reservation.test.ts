@@ -6,6 +6,13 @@ const { db } = vi.hoisted(() => ({
   db: {
     orderItem: { findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), aggregate: vi.fn() },
     productionBatch: { aggregate: vi.fn() },
+    /*
+     * The double now models a TRANSACTION client, not the root one: it has
+     * `$executeRaw` and no `$transaction`. That is not decoration — the
+     * function refuses to run on a client that can open transactions,
+     * because the lock it takes would be released the instant it is taken.
+     */
+    $executeRaw: vi.fn(),
   },
 }));
 vi.mock('./db', () => ({ db }));
@@ -25,7 +32,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   db.orderItem.update.mockResolvedValue({});
   db.orderItem.updateMany.mockResolvedValue({ count: 1 });
+  db.$executeRaw.mockResolvedValue(1);
 });
+
+/** The SQL a `$executeRaw` tagged template was called with, joined back up. */
+const rawCalls = () =>
+  db.$executeRaw.mock.calls.map((c: unknown[]) => ({
+    sql: (c[0] as string[]).join('?').replace(/\s+/g, ' ').trim(),
+    args: c.slice(1),
+  }));
 
 describe('reserveOrderLines', () => {
   it('reserves quantity plus gift units', async () => {
@@ -58,6 +73,59 @@ describe('reserveOrderLines', () => {
     const out = await reserveOrderLines(db as never, 'o1', { allowNegativeStock: true });
     expect(db.orderItem.update).toHaveBeenCalledWith(expect.objectContaining({ data: { reservedQty: 5 } }));
     expect(out.shortages).toHaveLength(1);
+  });
+
+  /**
+   * THE RACE THIS CLOSES, AND WHY A UNIT TEST CANNOT SHOW IT.
+   *
+   * Two workers reserving 400 each out of a batch of 500 both used to
+   * succeed, both reported no shortage, and the shelf ended 800 reserved of
+   * 500 — reproduced against the real database, which is the only place two
+   * transactions can actually overlap. What a unit test CAN hold is the
+   * shape of the fix, and the shape is where every regression would land:
+   * the lock taken, on the right pool, before the first read, for every
+   * product, in a fixed order, and never outside a transaction.
+   */
+  describe('the lock that makes the answer safe to act on', () => {
+    it('is taken before availability is read', async () => {
+      db.orderItem.findMany.mockResolvedValue([line()]);
+      stock(10, 0);
+      await reserveOrderLines(db as never, 'o1', { allowNegativeStock: false });
+      const lockedAt = db.$executeRaw.mock.invocationCallOrder[0];
+      const readAt = db.productionBatch.aggregate.mock.invocationCallOrder[0];
+      expect(lockedAt, 'قُرئ المخزونُ قبل قفله').toBeLessThan(readAt);
+    });
+
+    it('names the same pool availability is computed for', async () => {
+      db.orderItem.findMany.mockResolvedValue([line()]);
+      stock(10, 0);
+      await reserveOrderLines(db as never, 'o1', { allowNegativeStock: false });
+      const [call] = rawCalls();
+      expect(call.sql).toContain('pg_advisory_xact_lock');
+      expect(call.args).toEqual([4711, 'stock:c1:*:p1']);
+    });
+
+    it('locks every product of the order, once each, in a fixed order', async () => {
+      db.orderItem.findMany.mockResolvedValue([
+        line({ id: 'i1', productId: 'p9' }),
+        line({ id: 'i2', productId: 'p3' }),
+        // The same product twice is one pool, so one lock.
+        line({ id: 'i3', productId: 'p9' }),
+      ]);
+      stock(100, 0);
+      await reserveOrderLines(db as never, 'o1', { allowNegativeStock: false });
+      // Sorted, and that is the whole deadlock story: two orders holding
+      // p3 and p9 in opposite order would otherwise wait on each other.
+      expect(rawCalls().map((c) => c.args[1])).toEqual(['stock:c1:*:p3', 'stock:c1:*:p9']);
+    });
+
+    it('refuses a client that can open transactions, since the lock would not hold', async () => {
+      const root = { ...db, $transaction: vi.fn() };
+      await expect(reserveOrderLines(root as never, 'o1', { allowNegativeStock: false })).rejects.toThrow(
+        /داخل معاملة/
+      );
+      expect(db.orderItem.findMany, 'قرأ الطلبَ قبل أن يرفض').not.toHaveBeenCalled();
+    });
   });
 
   it('does not re-reserve a line that is already covered', async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
@@ -441,6 +441,18 @@ function ReceiptDialog({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  /**
+   * ONE ID PER ATTEMPT, KEPT ACROSS RETRIES.
+   *
+   * Many receipts on one statement are normal — a courier pays part in
+   * cash and part by transfer — so the server cannot tell a genuine second
+   * payment from this form being submitted twice. This id is what tells
+   * it: it survives a failed submit and a second press, so the retry lands
+   * on the row the first attempt may already have written, and it is
+   * renewed only after a receipt is actually saved.
+   */
+  const attemptId = useRef(crypto.randomUUID());
+
   const wallet = wallets.find((w) => w.id === walletId);
   const needsRate = !!wallet && wallet.currencyCode !== statement.currencyCode;
 
@@ -455,6 +467,7 @@ function ReceiptDialog({
             await apiJson(`/api/finance/statements/${statement.id}/receipts`, {
               method: 'POST',
               body: JSON.stringify({
+                receiptId: attemptId.current,
                 walletId,
                 amount: Number(amount),
                 ...(needsRate && rate ? { exchangeRate: Number(rate) } : {}),

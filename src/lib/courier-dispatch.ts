@@ -1,6 +1,7 @@
 import { db } from './db';
 import { adapterFor } from './couriers';
 import { courierBelongsToStore } from './courier-scope';
+import { isOutcomeUnknown } from './couriers/types';
 import { logAudit } from './audit';
 
 /**
@@ -25,7 +26,10 @@ import { logAudit } from './audit';
  *   NEVER twice for one order. A second create is a second parcel at the
  *   courier, billed and collected twice, and the customer opens the door to
  *   a duplicate. An order that already carries a tracking number is skipped,
- *   not retried.
+ *   not retried — and the skip is decided by a CLAIM WRITTEN TO THE ROW
+ *   before the call, not by the snapshot this function read when it began.
+ *   Two operators pressing «dispatch» on one batch used to read the same
+ *   null, both create a parcel, and the second barcode overwrite the first.
  *
  *   ONE order at a time, reported per order. Twenty orders where three fail
  *   is seventeen parcels that must still ship — an all-or-nothing dispatch
@@ -38,8 +42,56 @@ export interface DispatchOutcome {
   ok: boolean;
   /** The courier's barcode — our tracking number from now on. */
   trackingNumber?: string;
-  skipped?: 'ALREADY_SENT' | 'NOT_AUTOMATED' | 'NO_PROVIDER';
+  skipped?: 'ALREADY_SENT' | 'NOT_AUTOMATED' | 'NO_PROVIDER' | 'SEND_IN_FLIGHT';
+  /**
+   * True when the courier may have created the parcel and we never heard.
+   * Whoever retries must ask the courier first — this is the one failure
+   * that is not safe to press again.
+   */
+  outcomeUnknown?: boolean;
   error?: string;
+}
+
+/**
+ * TAKE THE ORDER BEFORE TELLING THE COURIER ANYTHING.
+ *
+ * One statement: the row is claimed only if it is still unclaimed and still
+ * has no barcode, and the database decides which of two callers wins. A read
+ * followed by a write cannot do this — that is the very shape of the bug.
+ *
+ * Raw SQL, deliberately: `updateMany` returns a count and not the row, and
+ * this needs the conditional update and its result in a single round trip.
+ */
+async function claimForSend(orderId: string): Promise<'CLAIMED' | 'ALREADY_SENT' | 'SEND_IN_FLIGHT'> {
+  const won = await db.$queryRaw<{ id: string }[]>`
+    UPDATE "orders"
+       SET "courier_send_started_at" = now()
+     WHERE "id" = ${orderId}
+       AND "trackingNumber" IS NULL
+       AND "courier_send_started_at" IS NULL
+    RETURNING "id"`;
+  if (won.length > 0) return 'CLAIMED';
+
+  // Lost, and the two reasons are different news: one parcel exists, or one
+  // is mid-flight and nobody yet knows.
+  const [row] = await db.$queryRaw<{ tracking: string | null }[]>`
+    SELECT "trackingNumber" AS tracking FROM "orders" WHERE "id" = ${orderId}`;
+  return row?.tracking ? 'ALREADY_SENT' : 'SEND_IN_FLIGHT';
+}
+
+/**
+ * Give the order back, for a refusal whose outcome is KNOWN.
+ *
+ * A bad phone number is corrected and sent again; holding the claim would
+ * make the correction unsendable. The `trackingNumber IS NULL` guard is not
+ * ceremony: if a barcode arrived by another route meanwhile, the claim is
+ * that parcel's record and releasing it would erase when it was sent.
+ */
+async function releaseClaim(orderId: string): Promise<void> {
+  await db.$executeRaw`
+    UPDATE "orders"
+       SET "courier_send_started_at" = NULL
+     WHERE "id" = ${orderId} AND "trackingNumber" IS NULL`;
 }
 
 export interface DispatchSummary {
@@ -119,8 +171,9 @@ export async function dispatchBatch(input: {
   const outcomes: DispatchOutcome[] = [];
 
   for (const order of orders) {
-    // Already has a barcode: sending again would create a second parcel at
-    // the courier for the same goods.
+    // Already has a barcode in the snapshot: cheap, and it spares the
+    // database a write for the ordinary case. It is NOT the guard — the
+    // claim below is, because this snapshot was read before the loop.
     if (order.trackingNumber) {
       outcomes.push({ orderId: order.id, orderNumber: order.orderNumber, ok: false, skipped: 'ALREADY_SENT' });
       continue;
@@ -133,6 +186,17 @@ export async function dispatchBatch(input: {
     // the tracking number is typed in when they give one.
     if (!adapter.automated) {
       outcomes.push({ orderId: order.id, orderNumber: order.orderNumber, ok: false, skipped: 'NOT_AUTOMATED' });
+      continue;
+    }
+
+    /*
+     * From here on a parcel may come into existence, so the row is taken
+     * first. Everything above is a decision we can make from our own data;
+     * this is the last moment before somebody else's system is involved.
+     */
+    const claim = await claimForSend(order.id);
+    if (claim !== 'CLAIMED') {
+      outcomes.push({ orderId: order.id, orderNumber: order.orderNumber, ok: false, skipped: claim });
       continue;
     }
 
@@ -162,13 +226,29 @@ export async function dispatchBatch(input: {
         note: order.customerNotes ?? null,
       });
 
-      await db.order.update({
-        where: { id: order.id },
+      /*
+       * CONDITIONAL, even holding the claim. A barcode may have been typed
+       * in by hand while the courier was answering, and overwriting it
+       * would leave a real parcel with no record of its number — the exact
+       * loss this whole section exists to prevent. Better to report two
+       * parcels than to hide one.
+       */
+      const recorded = await db.order.updateMany({
+        where: { id: order.id, trackingNumber: null },
         data: {
           trackingNumber: result.trackingNumber,
           version: { increment: 1 },
         },
       });
+      if (recorded.count === 0) {
+        outcomes.push({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          ok: false,
+          error: `أُنشئ طردٌ ثانٍ عند الشركة برقم ${result.trackingNumber} — الطلب كان قد حمل رقماً قبله. راجع الشركة لإلغاء أحدهما.`,
+        });
+        continue;
+      }
 
       await db.orderActivity.create({
         data: {
@@ -192,13 +272,26 @@ export async function dispatchBatch(input: {
         trackingNumber: result.trackingNumber,
       });
     } catch (e) {
+      /*
+       * A REFUSAL RETURNS THE ORDER; A SILENCE KEEPS IT.
+       *
+       * «Unknown city» and «invalid phone» are answers: nothing was made,
+       * the operator fixes the field and sends again, so the claim goes
+       * back. A timeout is not an answer — the parcel may exist — and
+       * releasing it there would hand the next click a second waybill.
+       */
+      const unknown = isOutcomeUnknown(e);
+      if (!unknown) await releaseClaim(order.id);
+
       // The courier's own words, kept: "city unknown" and "invalid phone"
       // are different problems, and a generic failure teaches nothing.
+      const said = e instanceof Error ? e.message.slice(0, 300) : 'تعذر الإرسال';
       outcomes.push({
         orderId: order.id,
         orderNumber: order.orderNumber,
         ok: false,
-        error: e instanceof Error ? e.message.slice(0, 300) : 'تعذر الإرسال',
+        outcomeUnknown: unknown || undefined,
+        error: unknown ? `${said} — قد يكون الطردُ أُنشئ. اسأل الشركة قبل إعادة الإرسال.` : said,
       });
     }
   }

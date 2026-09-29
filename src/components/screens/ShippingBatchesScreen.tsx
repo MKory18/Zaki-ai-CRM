@@ -332,7 +332,21 @@ export function ShippingBatchesScreen() {
                     {result.summary.outcomes
                       .filter((o) => !o.ok)
                       .map((o) => (
-                        <p key={o.orderId} className="text-xs text-[var(--sys-muted-foreground)]">
+                        <p
+                          key={o.orderId}
+                          /*
+                           * «Maybe it was sent» is not the same news as «it
+                           * failed», and the difference is a second parcel
+                           * at the customer's door. It is coloured as the
+                           * warning it is, not left in the grey list where
+                           * the eye reads it as one more failure to retry.
+                           */
+                          className={
+                            o.outcomeUnknown
+                              ? 'text-xs font-bold text-[var(--sys-warning)]'
+                              : 'text-xs text-[var(--sys-muted-foreground)]'
+                          }
+                        >
                           <span className="font-mono" dir="ltr">{o.orderNumber}</span>
                           {' — '}
                           {o.skipped === 'ALREADY_SENT'
@@ -341,7 +355,9 @@ export function ShippingBatchesScreen() {
                               ? 'شركة يدوية — لا API'
                               : o.skipped === 'NO_PROVIDER'
                                 ? 'بلا شركة شحن'
-                                : o.error}
+                                : o.skipped === 'SEND_IN_FLIGHT'
+                                  ? 'قيد الإرسال الآن من مكانٍ آخر'
+                                  : o.error}
                         </p>
                       ))}
                     {result.summary.outcomes.filter((o) => o.ok).length > 0 && (
