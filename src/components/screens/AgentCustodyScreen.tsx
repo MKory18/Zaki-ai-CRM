@@ -135,6 +135,39 @@ export function AgentCustodyScreen() {
           money={money}
           showFee
         />
+
+        {/*
+          WHERE THE MONEY IS ACTUALLY RECEIVED.
+
+          This screen counts what he holds and stops there — deliberately:
+          taking cash in is a settlement, and a settlement goes through
+          upload → receipt → approval so the guards that protect the
+          company's cash are not bypassed by a screen that happens to be
+          about a person rather than a company.
+
+          But saying nothing about it left the screen looking broken: it
+          shows money owed and offers no way to receive it, which is what
+          «عهدة المندوب ما بتظهر إشي عشان التحصيل وإغلاق الطلب» is
+          describing. The rule stays; the door is now visible from here.
+        */}
+        {open.owing.length > 0 && (
+          <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 space-y-2">
+            <h4 className="text-xs font-black uppercase tracking-wide text-[var(--sys-foreground)]">
+              استلام ما بذمّته
+            </h4>
+            <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+              استلامُ المال من المندوب تسويةٌ كأيّ تسوية: تُرفع، ويُسجَّل الإيصال، ثمّ تُعتمد —
+              وعند الاعتماد تُغلق طلباتُه وتُطابَق أرقامُه. لا يُكتب مالٌ من هذه الشاشة.
+            </p>
+            <a
+              href="/finance/collection"
+              className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg bg-[var(--sys-primary)] px-4 py-1.5 text-xs font-medium text-[var(--sys-primary-foreground)]"
+            >
+              <RiWallet3Line className="w-4 h-4" aria-hidden />
+              سجّل تحصيلاً من {open.agent.name}
+            </a>
+          </div>
+        )}
       </div>
     );
   }
