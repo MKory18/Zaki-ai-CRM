@@ -10,6 +10,7 @@ import { releaseOrderLines } from '@/lib/reservation';
 import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { ordersWhere } from '@/lib/order-filters';
 import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
@@ -112,25 +113,25 @@ async function buildNavigationWhere(order: { createdAt: Date; companyId: string 
     }
   }
 
-  const moderatorId = searchParams.get('moderatorId')?.trim();
-  if (moderatorId && moderatorId !== 'all') where.moderatorId = moderatorId;
+  /*
+   * THE SAME BUILDER THE LIST USES — this is what «matches the exact list
+   * context» above finally means.
+   *
+   * It used to be a third, smaller copy that filtered on the LEGACY
+   * `status` column, knew nothing of the governorate, the courier, the
+   * source, the dates or «late», and therefore walked a different set of
+   * orders from the one on screen behind the dialog.
+   */
+  const from = searchParams.get('from')?.trim();
+  const to = searchParams.get('to')?.trim();
+  const createdAt: { gte?: Date; lte?: Date } = {};
+  if (from) createdAt.gte = new Date(`${from}T00:00:00.000Z`);
+  if (to) createdAt.lte = new Date(`${to}T23:59:59.999Z`);
 
-  const status = searchParams.get('status')?.trim();
-  if (status && status !== 'all') where.status = status;
-
-  const productId = searchParams.get('productId')?.trim();
-  if (productId && productId !== 'all') where.productId = productId;
-
-  const search = searchParams.get('q')?.trim();
-  if (search) {
-    const normalizedSearch = normalizePhoneNumber(search);
-    where.OR = [
-      { orderNumber: { contains: search } },
-      { customer: { fullName: { contains: search } } },
-      { customer: { phone: { contains: normalizedSearch || search } } },
-      { customer: { rawPhone: { contains: search } } },
-    ];
-  }
+  const built = ordersWhere(searchParams, { createdAt });
+  // A filter this route cannot parse is not worth refusing the order over:
+  // the dialog still opens, and the arrows simply span the unfiltered list.
+  if (built.ok) Object.assign(where, built.where);
 
   return where;
 }

@@ -15,6 +15,7 @@ import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { applyQueueFilter } from '@/lib/rbac';
+import { ordersWhere } from '@/lib/order-filters';
 import { apiError } from '@/lib/api-error';
 import { requirePermission, getPermissionScope } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
@@ -29,15 +30,6 @@ export async function GET(req: Request) {
     }
     const { searchParams } = new URL(req.url);
 
-    const search = searchParams.get('q')?.trim();
-    const status = searchParams.get('status')?.trim();
-    const productId = searchParams.get('productId')?.trim();
-    const moderatorId = searchParams.get('moderatorId')?.trim();
-    const courierId = searchParams.get('courierId')?.trim();
-    const from = searchParams.get('from')?.trim();
-    const to = searchParams.get('to')?.trim();
-    const lateDays = searchParams.get('lateDays')?.trim();
-    const regionId = searchParams.get('regionId')?.trim();
     const page = parseInt(searchParams.get('page') || '1', 10);
     // Cap page size (hard server-side limit) with a NaN guard
     const parsedLimit = parseInt(searchParams.get('limit') || '25', 10);
@@ -46,93 +38,24 @@ export async function GET(req: Request) {
     // response says the real total either way, so the count never lies.
     const limit = Math.min(Number.isNaN(parsedLimit) ? 25 : parsedLimit, 500);
 
-    const whereClause: any = { companyId, storeId };
+    /*
+     * THE FILTERS ARE BUILT IN ONE PLACE — see src/lib/order-filters.ts.
+     *
+     * This route, the CSV export and the ‹previous›/‹next› arrows all ask
+     * the same question of the same table, and each used to answer it in
+     * its own words. They had already drifted three ways.
+     */
+    // Created between two dates, inclusive of the whole closing day. The
+    // export applies its own ninety-day rule, so the range is the caller's.
+    const from = searchParams.get('from')?.trim();
+    const to = searchParams.get('to')?.trim();
+    const createdAt: { gte?: Date; lte?: Date } = {};
+    if (from) createdAt.gte = new Date(`${from}T00:00:00.000Z`);
+    if (to) createdAt.lte = new Date(`${to}T23:59:59.999Z`);
 
-    // Explicit moderatorId filter (used by admin dashboards) — RBAC still applies below
-    if (moderatorId && moderatorId !== 'all') {
-      whereClause.moderatorId = moderatorId;
-    }
-
-    // Filter by the SAME state the table labels each row with. The legacy
-    // `status` column drifts from confirmation/shipping status, so filtering
-    // on it returned rows the screen was calling something else.
-    if (status && status !== 'all') {
-      if (!CORE_STATES.includes(status as CoreState)) {
-        return NextResponse.json({ error: `حالة غير معروفة: ${status}` }, { status: 400 });
-      }
-      const stateWhere = whereForState(status as CoreState);
-      // A state nothing can currently be in returns nothing, rather than
-      // silently returning everything.
-      whereClause.AND = [...(whereClause.AND ?? []), stateWhere ?? { id: '' }];
-    }
-
-    if (regionId && regionId !== 'all') {
-      whereClause.regionId = regionId;
-    }
-
-    // Which courier is carrying it — 'none' finds the ones nobody has taken.
-    if (courierId && courierId !== 'all') {
-      whereClause.deliveryProviderId = courierId === 'none' ? null : courierId;
-    }
-
-    if (productId && productId !== 'all') {
-      whereClause.productId = productId;
-    }
-
-    // Created between two dates, inclusive of the whole closing day.
-    if (from || to) {
-      whereClause.createdAt = {};
-      if (from) whereClause.createdAt.gte = new Date(`${from}T00:00:00.000Z`);
-      if (to) whereClause.createdAt.lte = new Date(`${to}T23:59:59.999Z`);
-    }
-
-    // Orders still open N days AFTER SHIPPING. "Late" means nothing has
-    // closed them — a delivered order from last year is not late, it is
-    // finished — so the closed states are excluded rather than the date
-    // alone being tested.
-    //
-    // Measured from shippedAt, never createdAt. From creation, an order that
-    // waited a week to be confirmed and shipped yesterday showed as eight
-    // days late — the courier blamed for the confirmation queue. An order
-    // that has not shipped cannot be late in transit, and `lte` on a null
-    // shippedAt excludes it without a separate test.
-    if (lateDays) {
-      const days = Number(lateDays);
-      if (!Number.isFinite(days) || days < 1 || days > 365) {
-        return NextResponse.json({ error: 'عدد أيام غير صالح' }, { status: 400 });
-      }
-      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-      whereClause.AND = [
-        ...(whereClause.AND ?? []),
-        { shippedAt: { lte: cutoff } },
-        { shippingStatus: { notIn: ['DELIVERED', 'PARTIALLY_DELIVERED', 'RETURNED', 'CANCELLED'] } },
-        { confirmationStatus: { notIn: ['CANCELLED', 'REJECTED'] } },
-      ];
-    }
-
-    // Source filter (Manual, Facebook Ads, WhatsApp, Landing Page, ...)
-    const source = searchParams.get('source')?.trim();
-    if (source && source !== 'all') {
-      whereClause.source = source;
-    }
-
-    if (search) {
-      const normalizedSearch = normalizePhoneNumber(search);
-      whereClause.OR = [
-        { orderNumber: { contains: search } },
-        // The two references a LABEL carries. Our QR holds the merchant
-        // reference and the courier's barcode sits beside it, so a parcel
-        // scanned on this screen used to find nothing at all — the one
-        // search in the system that could not answer the one question
-        // somebody holding a parcel actually has. Returns and tracking have
-        // matched all three since they were written; this caught up.
-        { merchantRef: { contains: search } },
-        { trackingNumber: { contains: search } },
-        { customer: { fullName: { contains: search } } },
-        { customer: { phone: { contains: normalizedSearch || search } } },
-        { customer: { rawPhone: { contains: search } } },
-      ];
-    }
+    const built = ordersWhere(searchParams, { createdAt });
+    if (!built.ok) return NextResponse.json({ error: built.error }, { status: 400 });
+    const whereClause: any = { companyId, storeId, ...built.where };
 
     // ─── Role-based visibility + workflow queues (backend-enforced) ───
     // applyQueueFilter enforces per-role visibility envelopes; never trust the

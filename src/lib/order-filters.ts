@@ -1,0 +1,160 @@
+import { CORE_STATES, whereForState, type CoreState } from './order-state';
+import { normalizePhoneNumber } from './phone';
+
+/**
+ * THE ORDERS LIST'S «WHERE», WRITTEN ONCE.
+ *
+ * Three places asked the same question of the same table and answered it
+ * three different ways:
+ *
+ *   GET /api/orders            the list on screen
+ *   GET /api/reports/export    the CSV of «what I am looking at»
+ *   GET /api/orders/:id        the ‹previous› and ‹next› arrows
+ *
+ * They had drifted, and each drift is something a person sees and cannot
+ * explain:
+ *
+ *   · Scanning a courier barcode into the search box found the parcel in
+ *     the list and found NOTHING in the CSV of that same search — the
+ *     export's search looked at the order number, the name and the phone,
+ *     and not at `trackingNumber` or `merchantRef`.
+ *   · The arrows filtered on the LEGACY `status` column. The list stopped
+ *     doing that deliberately — its own comment says «the legacy status
+ *     column drifts from confirmation/shipping status, so filtering on it
+ *     returned rows the screen was calling something else» — and the
+ *     arrows were never brought along. With a state filter active they
+ *     walked a different set, or none.
+ *   · The arrows knew nothing of the governorate, the courier, the source,
+ *     the dates or «late»: filter the list six ways, open an order, press
+ *     ‹next›, and you leave the list you were reading.
+ *
+ * The export route has already been patched twice for exactly this — its
+ * own comments record the CSV that ignored «متأخرة ١٠ أيام» and the one
+ * that ignored the role's visibility envelope. A comment that says «keep
+ * this in step with the other file» is the defect, not the fix.
+ *
+ * So: one function, three callers, and a test that asks all three the same
+ * question and fails if the answers differ.
+ *
+ * WHAT IS NOT HERE, and why:
+ *   · the tenant (`companyId`/`storeId`) — the caller already resolved it;
+ *   · `createdAt` — the list takes the dates as given, while the export
+ *     forces a ninety-day window and clamps a wider one. Two rules, both
+ *     deliberate, so each caller passes its own resolved range;
+ *   · `applyQueueFilter` — it needs the session and decides which queues a
+ *     role may use at all. It wraps the result of this function.
+ */
+
+export interface OrdersWhereInput {
+  /** Already resolved by the caller: the list's from/to, or the export's clamped window. */
+  createdAt?: { gte?: Date; lte?: Date };
+}
+
+export type OrdersWhereResult =
+  | { ok: true; where: Record<string, unknown> }
+  | { ok: false; error: string };
+
+/** The states that close an order: a delivered parcel from last year is finished, not late. */
+const CLOSED_SHIPPING = ['DELIVERED', 'PARTIALLY_DELIVERED', 'RETURNED', 'CANCELLED'];
+const CLOSED_CONFIRMATION = ['CANCELLED', 'REJECTED'];
+
+export function ordersWhere(params: URLSearchParams, input: OrdersWhereInput = {}): OrdersWhereResult {
+  const where: Record<string, unknown> = {};
+  const and: unknown[] = [];
+
+  const moderatorId = params.get('moderatorId')?.trim();
+  if (moderatorId && moderatorId !== 'all') where.moderatorId = moderatorId;
+
+  /*
+   * THE SAME STATE THE ROW IS LABELLED WITH.
+   *
+   * `status` on the table is the legacy combined column and the schema
+   * says so. Everything a person reads comes from the derived state, so
+   * everything a person filters by must come from it too.
+   */
+  const status = params.get('status')?.trim();
+  if (status && status !== 'all') {
+    if (!CORE_STATES.includes(status as CoreState)) {
+      return { ok: false, error: `حالة غير معروفة: ${status}` };
+    }
+    // A state nothing can currently be in returns nothing, rather than
+    // silently returning everything.
+    and.push(whereForState(status as CoreState) ?? { id: '' });
+  }
+
+  const productId = params.get('productId')?.trim();
+  if (productId && productId !== 'all') where.productId = productId;
+
+  const regionId = params.get('regionId')?.trim();
+  if (regionId && regionId !== 'all') where.regionId = regionId;
+
+  // Which courier is carrying it — 'none' finds the ones nobody has taken.
+  const courierId = params.get('courierId')?.trim();
+  if (courierId && courierId !== 'all') {
+    where.deliveryProviderId = courierId === 'none' ? null : courierId;
+  }
+
+  const source = params.get('source')?.trim();
+  if (source && source !== 'all') where.source = source;
+
+  /*
+   * «Late» is measured from `shippedAt`, never `createdAt`: from creation,
+   * an order that waited a week to be confirmed and shipped yesterday
+   * showed as eight days late and the courier was blamed for the
+   * confirmation queue. An order that has not shipped cannot be late in
+   * transit, and `lte` on a null `shippedAt` excludes it with no extra test.
+   */
+  const lateDays = params.get('lateDays')?.trim();
+  if (lateDays) {
+    const days = Number(lateDays);
+    if (!Number.isFinite(days) || days < 1 || days > 365) {
+      return { ok: false, error: 'عدد أيام غير صالح' };
+    }
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    and.push(
+      { shippedAt: { lte: cutoff } },
+      { shippingStatus: { notIn: CLOSED_SHIPPING } },
+      { confirmationStatus: { notIn: CLOSED_CONFIRMATION } }
+    );
+  }
+
+  /*
+   * EVERYTHING A PARCEL IN SOMEBODY'S HAND CAN BE IDENTIFIED BY.
+   *
+   * A label carries two references — our merchant reference in the QR and
+   * the courier's barcode printed beside it — so a scan must find the
+   * order by either. The phone is matched both as typed and normalised,
+   * because a person searches with the spacing they read off a screen.
+   */
+  const search = params.get('q')?.trim();
+  if (search) {
+    const normalised = normalizePhoneNumber(search);
+    where.OR = [
+      { orderNumber: { contains: search } },
+      { merchantRef: { contains: search } },
+      { trackingNumber: { contains: search } },
+      { customer: { fullName: { contains: search } } },
+      { customer: { phone: { contains: normalised || search } } },
+      { customer: { rawPhone: { contains: search } } },
+    ];
+  }
+
+  if (input.createdAt && (input.createdAt.gte || input.createdAt.lte)) {
+    where.createdAt = input.createdAt;
+  }
+
+  if (and.length > 0) where.AND = and;
+  return { ok: true, where };
+}
+
+/** Every parameter this builder reads — the list of what a caller may forward. */
+export const ORDER_FILTER_PARAMS = [
+  'q',
+  'status',
+  'productId',
+  'moderatorId',
+  'regionId',
+  'courierId',
+  'source',
+  'lateDays',
+] as const;

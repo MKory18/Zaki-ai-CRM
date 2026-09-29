@@ -48,7 +48,6 @@ export function OrdersScreen() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [productId, setProductId] = useState('all');
-  const [moderatorId, setModeratorId] = useState('all');
   const [source, setSource] = useState('all');
   const [courierId, setCourierId] = useState('all');
   const [fromDate, setFromDate] = useState('');
@@ -61,12 +60,9 @@ export function OrdersScreen() {
   const [showAll, setShowAll] = useState(false);
   const [sources, setSources] = useState<{ name: string; count: number }[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  // Workflow queue (backend-enforced per role — server rejects unauthorized queues)
-  const [queue, setQueue] = useState('');
 
   // Metadata dropdowns
   const { products } = useProducts();
-  const [moderators, setModerators] = useState<any[]>([]);
   const [couriers, setCouriers] = useState<any[]>([]);
   // The store's own currency, sent with the list — never assumed.
   const [currency, setCurrency] = useState({ code: '', minorUnit: 2 });
@@ -91,15 +87,17 @@ export function OrdersScreen() {
       // The catalogue is no longer fetched here: `useProducts` owns it, so
       // the screen has one product list rather than a private copy that
       // could ask the route for a different slice of it.
-      const [mRes, cRes, sRes] = await Promise.all([
-        fetch('/api/moderators'),
+      /*
+       * `/api/moderators` used to be fetched here for a «كل المودريتورز»
+       * dropdown. That filter was removed with the eleven-column table on
+       * 2026-09-21 — the moderator's name moved into the row itself — and
+       * the request stayed behind, asked on every page load, for a list
+       * nothing rendered.
+       */
+      const [cRes, sRes] = await Promise.all([
         fetch('/api/delivery-providers'),
         fetch('/api/orders/sources'),
       ]);
-      if (mRes.ok) {
-        const mData = await mRes.json();
-        setModerators(mData.moderators || []);
-      }
       if (cRes.ok) {
         const cData = await cRes.json();
         setCouriers(cData.providers ?? cData.deliveryProviders ?? []);
@@ -124,7 +122,6 @@ export function OrdersScreen() {
         q: search,
         status,
         productId,
-        moderatorId,
         source,
       });
       if (courierId !== 'all') params.set('courierId', courierId);
@@ -133,7 +130,6 @@ export function OrdersScreen() {
       if (lateOnly) params.set('lateDays', '10');
       if (regionId !== 'all') params.set('regionId', regionId);
       if (showAll) params.set('limit', '500');
-      if (queue) params.set('queue', queue);
 
       const res = await apiFetch(`/api/orders?${params.toString()}`);
       // Discard stale response — a newer request (filter change / poll) started
@@ -160,7 +156,7 @@ export function OrdersScreen() {
       // Only the latest request may clear the shared loading flag
       if (seq === loadOrdersSeq.current) setLoading(false);
     }
-  }, [search, status, productId, moderatorId, source, courierId, regionId, fromDate, toDate, lateOnly, showAll, queue]);
+  }, [search, status, productId, source, courierId, regionId, fromDate, toDate, lateOnly, showAll]);
 
   // Keep the ref in sync each render (after loadOrders exists)
   useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
@@ -285,13 +281,12 @@ export function OrdersScreen() {
 
   /** Everything the filters match — not the page in front of you. */
   const handleExportCSV = () => {
-    const params = new URLSearchParams({ q: search, status, productId, moderatorId, source });
+    const params = new URLSearchParams({ q: search, status, productId, source });
     if (courierId !== 'all') params.set('courierId', courierId);
     if (regionId !== 'all') params.set('regionId', regionId);
     if (fromDate) params.set('from', fromDate);
     if (toDate) params.set('to', toDate);
     if (lateOnly) params.set('lateDays', '10');
-    if (queue) params.set('queue', queue);
     window.open(`/api/reports/export?${params.toString()}`, '_blank');
   };
 
@@ -765,7 +760,23 @@ export function OrdersScreen() {
         isOpen={!!selectedOrderId}
         onClose={() => setSelectedOrderId(null)}
         onRefresh={() => loadOrders(pagination.page)}
-        filters={{ q: search, status, productId, moderatorId, queue, source }}
+        /*
+         * EVERY filter, not three of them. The arrows walk the list behind
+         * the dialog, and they used to be handed `q`, `status` and
+         * `productId` only — so with a governorate or a courier selected,
+         * ‹next› left the list the person was reading.
+         */
+        filters={{
+          q: search,
+          status,
+          productId,
+          source,
+          regionId,
+          courierId,
+          from: fromDate,
+          to: toDate,
+          lateDays: lateOnly ? '10' : '',
+        }}
       />
 
       {/* Reads the file, shows every row, then creates through the ordinary

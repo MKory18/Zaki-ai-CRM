@@ -6,7 +6,8 @@ import { requireContext } from '@/lib/geo-context';
 import { rateLimit } from '@/lib/rate-limit';
 import { requirePermission } from '@/lib/authorization';
 import { CORE_STATES, whereForState, type CoreState } from '@/lib/order-state';
-import { applyQueueFilter } from '@/lib/rbac';
+import { applyQueueFilter } from '@/lib/rbac';
+import { ORDER_FILTER_PARAMS, ordersWhere } from '@/lib/order-filters';
 
 /**
  * CSV export safety:
@@ -73,66 +74,18 @@ export async function GET(req: Request) {
     // The same narrowing the screen was showing. Exporting "the filtered
     // orders" used to mean the date window only, so a CSV taken while a
     // courier or a state was selected quietly contained everything else too.
-    const filters: Record<string, unknown> = {};
-    const q = searchParams.get('q')?.trim();
-    const status = searchParams.get('status')?.trim();
-    const productId = searchParams.get('productId')?.trim();
-    const sourceParam = searchParams.get('source')?.trim();
-    const courierId = searchParams.get('courierId')?.trim();
-    const regionId = searchParams.get('regionId')?.trim();
-    const lateDays = searchParams.get('lateDays')?.trim();
-
-    if (status && status !== 'all' && CORE_STATES.includes(status as CoreState)) {
-      const stateWhere = whereForState(status as CoreState);
-      if (stateWhere) filters.AND = [stateWhere];
-    }
-    if (productId && productId !== 'all') filters.productId = productId;
-    if (sourceParam && sourceParam !== 'all') filters.source = sourceParam;
-    if (regionId && regionId !== 'all') filters.regionId = regionId;
-    if (courierId && courierId !== 'all') {
-      filters.deliveryProviderId = courierId === 'none' ? null : courierId;
-    }
-    if (q) {
-      filters.OR = [
-        { orderNumber: { contains: q } },
-        { customer: { fullName: { contains: q } } },
-        { customer: { phone: { contains: q } } },
-      ];
-    }
-
-    /**
-     * «متأخرة 10 أيام+ من الشحن» WAS A BUTTON THE EXPORT COULD NOT SEE.
-     *
-     * The orders screen sends this filter to the list and to the export
-     * through the same builder. The list narrowed on it; this route read
-     * every other parameter and not this one — so pressing تصدير while the
-     * late filter was lit handed back the whole window instead of the
-     * fourteen rows on the screen, silently, with no clue that the CSV and
-     * the list disagreed. A filter whose value never reaches the query is
-     * the one defect a person cannot see happening.
-     *
-     * The same three conditions the list applies — see
-     * `src/app/api/orders/route.ts`. Late means "shipped and still open":
-     * measured from `shippedAt`, never `createdAt`, and the closed states
-     * are excluded because a delivered order from last year is finished,
-     * not late.
+    /*
+     * THE SAME FILTERS THE LIST APPLIES — the same code, not the same
+     * intention. This route had its own copy and it had already drifted
+     * twice: once past «متأخرة ١٠ أيام», and once past the courier barcode,
+     * so scanning a parcel found it on screen and found nothing in the CSV
+     * of that very search. See src/lib/order-filters.ts.
      */
-    if (lateDays) {
-      const days = Number(lateDays);
-      if (!Number.isFinite(days) || days < 1 || days > 365) {
-        return NextResponse.json(
-          { error: 'عدد أيام التأخير غير صالح' },
-          { status: 400 }
-        );
-      }
-      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-      filters.AND = [
-        ...((filters.AND as unknown[]) ?? []),
-        { shippedAt: { lte: cutoff } },
-        { shippingStatus: { notIn: ['DELIVERED', 'PARTIALLY_DELIVERED', 'RETURNED', 'CANCELLED'] } },
-        { confirmationStatus: { notIn: ['CANCELLED', 'REJECTED'] } },
-      ];
+    const built = ordersWhere(searchParams, { createdAt: { gte: start, lte: end } });
+    if (!built.ok) {
+      return NextResponse.json({ error: built.error, errorAr: built.error }, { status: 400 });
     }
+    const filters = built.where;
 
     /**
      * THE ENVELOPE THE LIST NEVER LETS GO OF, AND THIS ROUTE HAD NEVER HELD.
@@ -164,7 +117,7 @@ export async function GET(req: Request) {
       user,
       ids
         ? { companyId, storeId, id: { in: ids } }
-        : { companyId, storeId, createdAt: { gte: start, lte: end }, ...filters },
+        : { companyId, storeId, ...filters },
       queue
     );
 
@@ -260,15 +213,11 @@ export async function GET(req: Request) {
         from: start.toISOString(),
         to: end.toISOString(),
         handPicked: ids ? ids.length : null,
-        filters: {
-          q: q || null,
-          status: status || null,
-          productId: productId || null,
-          source: sourceParam || null,
-          courierId: courierId || null,
-          regionId: regionId || null,
-          lateDays: lateDays || null,
-        },
+        // Read off the shared list, so a filter added later is recorded
+        // here without anybody remembering to come back and add it.
+        filters: Object.fromEntries(
+          ORDER_FILTER_PARAMS.map((name) => [name, searchParams.get(name) || null])
+        ),
         // The columns that make this worth recording at all.
         withContact: true,
       },

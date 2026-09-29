@@ -48,8 +48,23 @@ interface OrderDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRefresh: () => void;
-  /** Current list filters so prev/next navigation matches the list context */
-  filters?: { q?: string; status?: string; productId?: string; moderatorId?: string; queue?: string; source?: string };
+  /**
+   * The list's filters, so ‹previous› and ‹next› walk the list behind this
+   * dialog and not some wider one. Every filter, or the arrows quietly
+   * leave the set the person was reading — which is what they did while
+   * only three of the nine were forwarded.
+   */
+  filters?: {
+    q?: string;
+    status?: string;
+    productId?: string;
+    source?: string;
+    regionId?: string;
+    courierId?: string;
+    from?: string;
+    to?: string;
+    lateDays?: string;
+  };
 }
 
 export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters }: OrderDetailModalProps) {
@@ -195,12 +210,10 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
     setLoadError(null);
     try {
       const params = new URLSearchParams();
-      if (filters) {
-        if (filters.q) params.set('q', filters.q);
-        if (filters.status && filters.status !== 'all') params.set('status', filters.status);
-        if (filters.productId && filters.productId !== 'all') params.set('productId', filters.productId);
-        if (filters.moderatorId && filters.moderatorId !== 'all') params.set('moderatorId', filters.moderatorId);
-        if (filters.queue) params.set('queue', filters.queue);
+      // Forwarded by name rather than one line per filter: the line that
+      // was missing is how the arrows came to walk a different list.
+      for (const [key, value] of Object.entries(filters ?? {})) {
+        if (value && value !== 'all') params.set(key, value);
       }
       const res = await apiFetch(`/api/orders/${id}?${params.toString()}`);
       // Discard stale response — a newer loadOrder (rapid prev/next) superseded it
