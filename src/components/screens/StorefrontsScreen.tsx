@@ -309,7 +309,7 @@ function Card({
             value={shop.frontPage?.id ?? ''}
             disabled={busy}
             onChange={(e) => onPick(e.target.value || null)}
-            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-heading)]"
+            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-heading)]"
           >
             <option value="">— لم تُختر بعد —</option>
             {shop.pages.map((p) => (

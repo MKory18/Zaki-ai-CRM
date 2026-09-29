@@ -155,7 +155,7 @@ export function OrderNotes({ orderId }: { orderId: string }) {
               }
             }}
             placeholder="اكتب ملاحظة لمن يكمل هذا الطلب…"
-            className="flex-1 min-h-9 max-h-32 px-3 py-2 rounded-lg border border-[var(--sys-border)] text-xs resize-y focus:outline-none focus:border-[var(--sys-primary)]"
+            className="flex-1 min-h-9 max-h-32 px-3 py-2 rounded-lg border border-[var(--sys-border-input)] text-xs resize-y focus:outline-none focus:border-[var(--sys-primary)]"
           />
           <button
             onClick={send}

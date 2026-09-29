@@ -247,7 +247,7 @@ export function ProductPicker({
      */
     const clears = !!anyOption && !!chosen;
     return (
-      <div className={`flex items-center gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 ${className}`}>
+      <div className={`flex items-center gap-2 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 ${className}`}>
         {chosen ? (
           <ProductThumb src={chosen.image ?? undefined} alt={chosen.name} size="sm" />
         ) : (
@@ -324,7 +324,7 @@ export function ProductPicker({
             setOpen(false);
           }
         }}
-        className="h-11 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] ps-8 pe-2 text-sm text-[var(--sys-heading)] focus:border-[var(--sys-primary)] focus:outline-none md:h-10"
+        className="h-11 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] ps-8 pe-2 text-sm text-[var(--sys-heading)] focus:border-[var(--sys-primary)] focus:outline-none md:h-10"
       />
 
       {open && (

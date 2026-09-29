@@ -100,7 +100,7 @@ export function CategoryPicker({
             }}
             placeholder="اسم التصنيف الجديد"
             maxLength={60}
-            className="h-11 md:h-10 min-w-0 flex-1 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+            className="h-11 md:h-10 min-w-0 flex-1 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
           />
           <button
             type="button"
@@ -127,7 +127,7 @@ export function CategoryPicker({
             id="product-category"
             value={value ?? ''}
             onChange={(e) => onChange(e.target.value || null)}
-            className="h-11 md:h-10 min-w-0 flex-1 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+            className="h-11 md:h-10 min-w-0 flex-1 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
           >
             <option value="">بلا تصنيف</option>
             {(cats ?? []).map((c) => (

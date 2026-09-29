@@ -537,7 +537,7 @@ export function AiSettingsScreen() {
                       onChange={(e) => setDrafts({ ...drafts, [job.key]: e.target.value.slice(0, MAX_PROMPT) })}
                       rows={8}
                       placeholder={job.default || 'لا نصّ افتراضي لهذه الوظيفة — اكتب تعليماتك.'}
-                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 w-full rounded-lg border border-[var(--sys-border)] p-2 font-mono text-xs leading-relaxed text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 w-full rounded-lg border border-[var(--sys-border-input)] p-2 font-mono text-xs leading-relaxed text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
                     />
 
                     <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">

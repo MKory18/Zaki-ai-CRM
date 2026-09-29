@@ -251,7 +251,7 @@ export function StorePagesScreen() {
                     maxLength={20000}
                     value={draft.body}
                     onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-                    className="w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm leading-7 focus:border-[var(--sys-primary)] focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 py-2 text-sm leading-7 focus:border-[var(--sys-primary)] focus:outline-none"
                   />
                   <span className="mt-1 block text-xs text-[var(--sys-muted)]">
                     نصّ فقط — سطر فارغ يفصل فقرة عن فقرة. لا وسوم ولا سكربتات: صفحة كلام، لا صفحة تصميم.

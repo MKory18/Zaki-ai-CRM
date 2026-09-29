@@ -218,7 +218,7 @@ export function IssueDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+            className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
             placeholder="مثال: رقم الهاتف 8 أرقام فقط"
           />
         </Field>
@@ -484,7 +484,7 @@ export function ChangeRequestDialog({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+            className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
             placeholder={
               intent === 'EDIT'
                 ? 'مثال: العميل أعطى عنواناً جديداً عند الاتصال'

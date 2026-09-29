@@ -129,7 +129,7 @@ export function SavedViews({
             }}
             placeholder="سمِّ هذه الفلاتر"
             aria-label="اسم العرض المحفوظ"
-            className="h-11 md:h-8 w-40 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs outline-none focus:border-[var(--sys-primary)]"
+            className="h-11 md:h-8 w-40 rounded-md border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs outline-none focus:border-[var(--sys-primary)]"
           />
           <button type="button" onClick={save} className="min-h-11 md:min-h-0 inline-flex items-center px-2 py-1 text-xs font-semibold text-[var(--sys-primary)]">
             احفظ

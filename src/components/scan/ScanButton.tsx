@@ -397,7 +397,7 @@ export function ScanSheet({
               onChange={(e) => setTyped(e.target.value)}
               placeholder="أو اكتب المرجع"
               dir="ltr"
-              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] ps-9 pe-3 text-sm"
+              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] ps-9 pe-3 text-sm"
             />
           </label>
           <button

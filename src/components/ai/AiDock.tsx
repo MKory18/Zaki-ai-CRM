@@ -257,7 +257,7 @@ export function AiDock() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="اكتب سؤالك…"
-          className="min-h-11 md:min-h-0 inline-flex items-center flex-1 rounded-lg border border-[var(--sys-border)] px-2.5 py-1.5 text-xs text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
+          className="min-h-11 md:min-h-0 inline-flex items-center flex-1 rounded-lg border border-[var(--sys-border-input)] px-2.5 py-1.5 text-xs text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
         />
         <button aria-label="إرسال"
           type="submit"

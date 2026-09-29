@@ -249,7 +249,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
               value={form.customerNotes}
               onChange={(e) => setForm({ ...form, customerNotes: e.target.value })}
               placeholder="ما طلبه العميل: وقت التوصيل المفضل، تفاصيل العنوان…"
-              className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
+              className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border-input)] text-sm focus:outline-none focus:border-[var(--sys-primary)]"
             />
           </label>
 

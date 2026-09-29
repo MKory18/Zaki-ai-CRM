@@ -233,7 +233,7 @@ export function MessageTemplatesCard() {
                       onChange={(e) => patch(t.id, { body: e.target.value })}
                       rows={2}
                       maxLength={1000}
-                      className="w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 py-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]"
+                      className="w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 py-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]"
                     />
 
                     {/* Clicked, never typed: a hand-written placeholder with a

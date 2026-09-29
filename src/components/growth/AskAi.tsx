@@ -158,7 +158,7 @@ export function AskAi({
           rows={3}
           maxLength={2000}
           placeholder="الصق برومبتك هنا، أو اسأل مباشرة — مثلاً: أي منتج أخسره من كثرة الرفض ولماذا؟"
-          className="w-full px-2.5 py-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
+          className="w-full px-2.5 py-2 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
         />
 
         <div className="flex flex-wrap items-center gap-2">

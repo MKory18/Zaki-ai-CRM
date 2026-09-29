@@ -87,7 +87,7 @@ export function CourierNotifyDialog({
             value={ask.message}
             readOnly
             rows={7}
-            className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border)] text-sm leading-relaxed bg-[var(--sys-surface)]"
+            className="w-full px-3 py-2 rounded-lg border border-[var(--sys-border-input)] text-sm leading-relaxed bg-[var(--sys-surface)]"
           />
         </label>
 

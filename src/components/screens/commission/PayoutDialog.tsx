@@ -120,7 +120,7 @@ export function PayoutDialog({
               <select
                 value={pick}
                 onChange={(e) => setPick(Number(e.target.value))}
-                className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+                className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
               >
                 {owed.map((o, i) => (
                   <option key={o.currencyCode} value={i}>
@@ -147,7 +147,7 @@ export function PayoutDialog({
             <select
               value={walletId}
               onChange={(e) => setWalletId(e.target.value)}
-              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
             >
               <option value="">— اختر المحفظة —</option>
               {wallets.map((w) => (
@@ -170,7 +170,7 @@ export function PayoutDialog({
                 min="0"
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
-                className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm"
+                className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] px-3 text-sm"
                 dir="ltr"
               />
               <span className="mt-1 block text-xs text-[var(--sys-muted)]">
@@ -204,7 +204,7 @@ export function PayoutDialog({
               onChange={(e) => setNote(e.target.value)}
               maxLength={200}
               placeholder="تحويل بنكي، نقداً باليد…"
-              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm"
+              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] px-3 text-sm"
             />
           </label>
 

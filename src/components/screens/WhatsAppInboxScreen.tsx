@@ -325,7 +325,7 @@ export function WhatsAppInboxScreen() {
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && loadConversations()}
                     placeholder="بحث برقم أو اسم..."
-                    className="w-full pl-9 rtl:pr-9 rtl:pl-3 py-2 text-xs rounded-lg border border-[var(--sys-border)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
+                    className="w-full pl-9 rtl:pr-9 rtl:pl-3 py-2 text-xs rounded-lg border border-[var(--sys-border-input)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                   />
                 </div>
                 <div className="flex gap-1 text-xs font-semibold">
@@ -411,7 +411,7 @@ export function WhatsAppInboxScreen() {
                         value={selected.assignedUserId || ''}
                         disabled={assigning}
                         onChange={(e) => assign(e.target.value || null)}
-                        className="min-h-11 md:min-h-0 inline-flex items-center text-xs border border-[var(--sys-border)] rounded-lg px-2 py-1 bg-[var(--sys-card)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
+                        className="min-h-11 md:min-h-0 inline-flex items-center text-xs border border-[var(--sys-border-input)] rounded-lg px-2 py-1 bg-[var(--sys-card)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                       >
                         <option value="">غير معين</option>
                         {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -472,7 +472,7 @@ export function WhatsAppInboxScreen() {
                           }}
                           rows={1}
                           placeholder="اكتب رسالة..."
-                          className="flex-1 resize-none max-h-32 px-3 py-2.5 text-sm rounded-lg border border-[var(--sys-border)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
+                          className="flex-1 resize-none max-h-32 px-3 py-2.5 text-sm rounded-lg border border-[var(--sys-border-input)] focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/20"
                         />
                         <button onClick={sendMessage} disabled={sending || !composing.trim()}
                           className="shrink-0 w-10 h-11 md:h-10 rounded-full bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] flex items-center justify-center disabled:opacity-40 hover:opacity-90">

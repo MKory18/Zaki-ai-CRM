@@ -167,7 +167,7 @@ function VerifyStep({
           autoComplete="one-time-code"
           placeholder="______"
           dir="ltr"
-          className="h-11 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-center text-lg tracking-[0.4em] tabular-nums"
+          className="h-11 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-center text-lg tracking-[0.4em] tabular-nums"
         />
       </label>
 
@@ -302,7 +302,7 @@ function EnrolStep({ challenge, email, onCancel }: { challenge: string; email: s
           autoComplete="one-time-code"
           placeholder="______"
           dir="ltr"
-          className="h-11 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-center text-lg tracking-[0.4em] tabular-nums"
+          className="h-11 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-center text-lg tracking-[0.4em] tabular-nums"
         />
       </label>
 

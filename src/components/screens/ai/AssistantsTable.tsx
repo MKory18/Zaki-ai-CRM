@@ -78,7 +78,7 @@ function ModelPicker({
         }}
         dir="ltr"
         aria-label={label}
-        className="h-11 md:h-8 w-44 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs"
+        className="h-11 md:h-8 w-44 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs"
       >
         <option value="">{fallbackLabel ? `\u200fالافتراضي — ${fallbackLabel}` : '\u200fالافتراضي'}</option>
         {models.map((m) => (
@@ -228,7 +228,7 @@ export function AssistantsTable({
                     <select
                       value={mine.provider ?? ''}
                       onChange={(e) => set({ provider: e.target.value || undefined })}
-                      className="h-11 md:h-8 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs"
+                      className="h-11 md:h-8 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs"
                       aria-label={`مزوّد ${a.label}`}
                     >
                       <option value="">الافتراضي — {providers.find((p) => p.id === fallback.provider)?.label}</option>

@@ -59,6 +59,27 @@
   --sys-surface-strong: #16304A;
   --sys-border: #1C3A52;
   --sys-border-strong: #486276;
+  /*
+   * THE EDGE OF SOMETHING YOU OPERATE — 3:1, WHICH `--sys-border` IS NOT.
+   *
+   * WCAG 1.4.11 asks 3:1 for the boundary of a CONTROL. Measured on this
+   * palette, `--sys-border` on `--sys-card` gives 1.48 in ops, 1.25 in
+   * day and 1.29 in calm — at 1.25 a field has no visible edge at all for
+   * a reader with reduced contrast sensitivity, and the box is found with
+   * the cursor rather than with the eye.
+   *
+   * `--sys-border` STAYS as it is, and that is deliberate: it divides two
+   * paragraphs, and a divider that clears 3:1 pulls the eye to the
+   * furniture instead of the content. The rule is about controls, so the
+   * controls get their own token.
+   *
+   * It points at `--sys-muted` — the faintest TEXT colour, and the only
+   * colour already in this palette that clears 3:1 in all three themes
+   * (5.16 / 5.05 / 5.13). Nothing new is invented, so nothing new can
+   * drift. The same decision was taken for the zaki-ui package, where it
+   * is `--zk-color-border-input`.
+   */
+  --sys-border-input: var(--sys-muted);
   --sys-heading: #E6F1F4;
   --sys-foreground: #E6F1F4;
   --sys-muted-foreground: #9FB6C2;
@@ -110,6 +131,7 @@
   --sys-surface-strong: #DCE7EC;
   --sys-border: #D5E1E6;
   --sys-border-strong: #a9bac5;
+  --sys-border-input: var(--sys-muted);
   --sys-heading: #0C3252;
   --sys-foreground: #0C3252;
   --sys-muted-foreground: #4A6272;
@@ -158,6 +180,7 @@
   --sys-surface-strong: #DDD3C2;
   --sys-border: #D8CEBC;
   --sys-border-strong: #abaca5;
+  --sys-border-input: var(--sys-muted);
   --sys-heading: #0C3252;
   --sys-foreground: #0C3252;
   --sys-muted-foreground: #566369;
@@ -224,6 +247,7 @@
     --sys-surface-strong: #DCE7EC;
     --sys-border: #D5E1E6;
     --sys-border-strong: #a9bac5;
+    --sys-border-input: var(--sys-muted);
     --sys-heading: #0C3252;
     --sys-foreground: #0C3252;
     --sys-muted-foreground: #4A6272;

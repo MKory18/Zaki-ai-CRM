@@ -367,7 +367,7 @@ function ImportCard({
           value={providerId}
           onChange={(e) => setProviderId(e.target.value)}
           required
-          className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+          className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm bg-[var(--sys-card)]"
         >
           <option value="">اختر…</option>
           {providers.map((p) => (
@@ -384,7 +384,7 @@ function ImportCard({
           required
           minLength={2}
           placeholder="ST-2026-09"
-          className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+          className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
         />
       </label>
 
@@ -494,7 +494,7 @@ function ReceiptDialog({
             value={walletId}
             onChange={(e) => setWalletId(e.target.value)}
             required
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {wallets.map((w) => (
@@ -512,7 +512,7 @@ function ReceiptDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
         </label>
@@ -529,7 +529,7 @@ function ReceiptDialog({
               value={rate}
               onChange={(e) => setRate(e.target.value)}
               required
-              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
               dir="ltr"
             />
           </label>
@@ -540,7 +540,7 @@ function ReceiptDialog({
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
 
@@ -607,7 +607,7 @@ function ExplainDialog({
           required
           minLength={5}
           rows={3}
-          className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
+          className="w-full p-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           placeholder="مثال: خصمت الشركة رسوم إرجاع شحنتين"
         />
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}

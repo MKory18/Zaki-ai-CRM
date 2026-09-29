@@ -118,7 +118,7 @@ export function DelayShipmentDialog({
             min={today}
             onChange={(e) => setDay(e.target.value)}
             autoFocus
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
           {/* One press for the four answers people actually give. */}
@@ -155,7 +155,7 @@ export function DelayShipmentDialog({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="مثال: الزبون مسافر حتى الخميس"
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
 

@@ -333,13 +333,13 @@ export function TrackingScreen() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="رقم الطلب، المرجع، الباركود، اسم العميل أو الهاتف"
-              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             />
           </div>
         </label>
         <label>
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الحالة</span>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm">
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm">
             <option value="">قيد الشحن</option>
             {Object.entries(STATUS_LABEL).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>

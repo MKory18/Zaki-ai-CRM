@@ -237,7 +237,7 @@ export function PenaltiesScreen() {
               rows={3}
               maxLength={500}
               autoFocus
-              className="w-full rounded-lg border border-[var(--sys-border)] px-2 py-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]"
+              className="w-full rounded-lg border border-[var(--sys-border-input)] px-2 py-2 text-xs text-[var(--sys-foreground)] outline-none focus:border-[var(--sys-primary)]"
             />
             <div className="flex gap-2">
               <button

@@ -360,7 +360,7 @@ export function AssistantScreen() {
                 placeholder="اسأل عن الإيراد، أو أكثر المنتجات ربحاً، أو أداء المودريتورات، أو التشغيل…"
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
-                className="flex-1 px-4 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
+                className="flex-1 px-4 py-2 text-xs bg-[var(--sys-surface)] border border-[var(--sys-border-input)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
               <Button type="submit" size="sm" loading={chatLoading}>
                 <RiSendPlaneLine className="icon-mirror w-4 h-4" />

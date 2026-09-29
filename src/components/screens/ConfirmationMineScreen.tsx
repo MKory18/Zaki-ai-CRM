@@ -679,7 +679,7 @@ function SectionHead({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="رقم الهاتف أو الطلب أو الاسم"
-          className="h-11 md:h-8 w-56 ps-2.5 pe-8 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
+          className="h-11 md:h-8 w-56 ps-2.5 pe-8 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
         />
         {value && (
           <button

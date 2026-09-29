@@ -73,7 +73,7 @@ export function ClosingScreen() {
             value={date}
             max={today()}
             onChange={(e) => setDate(e.target.value)}
-            className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
         </label>
@@ -250,7 +250,7 @@ function CountDialog({
             onChange={(e) => setActual(e.target.value)}
             required
             autoFocus
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
         </label>
@@ -279,7 +279,7 @@ function CountDialog({
               onChange={(e) => setExplanation(e.target.value)}
               required
               rows={3}
-              className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full p-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
               placeholder="مثال: سلفة نقدية لمندوب لم تُسجَّل بعد"
             />
           </label>

@@ -181,7 +181,7 @@ export function InventoryReceivingScreen() {
               onChange={(e) => setTerm(e.target.value)}
               autoFocus
               placeholder="اسم المنتج"
-              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             />
           </div>
         </label>
@@ -343,7 +343,7 @@ function ReceiveDialog({
             onChange={(e) => setQuantity(e.target.value)}
             required
             autoFocus
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
         </label>
@@ -369,7 +369,7 @@ function ReceiveDialog({
             onChange={(e) => setUnitCost(e.target.value)}
             placeholder={product.lastUnitCost !== null ? String(product.lastUnitCost) : 'اكتب الكلفة'}
             required={product.lastUnitCost === null}
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
@@ -403,7 +403,7 @@ function ReceiveDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="مثال: وصلت من المورّد"
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
 

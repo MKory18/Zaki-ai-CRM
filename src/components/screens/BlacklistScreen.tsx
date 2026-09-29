@@ -86,7 +86,7 @@ export function BlacklistScreen() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="رقم الهاتف، الاسم أو السبب"
-              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border)] text-sm"
+              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             />
           </div>
         </label>
@@ -256,7 +256,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
             required
             autoFocus
             placeholder="0790123456"
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
@@ -269,7 +269,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
 
@@ -282,7 +282,7 @@ function BlockDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (m: s
             minLength={3}
             rows={3}
             placeholder="مثال: رفض الاستلام 3 مرات متتالية"
-            className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full p-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
 
@@ -355,7 +355,7 @@ function ReleaseDialog({
             minLength={3}
             rows={3}
             placeholder="مثال: تواصل واعتذر والتزم بالاستلام"
-            className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full p-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
 

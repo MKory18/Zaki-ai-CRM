@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 
 /**
  * CONTRAST, MEASURED, IN EVERY THEME.
@@ -10,16 +10,17 @@ import { join } from 'node:path';
  * run is the same as a rule nobody has.
  *
  * THERE ARE THREE THEMES, NOT FOUR. `ops`, `day` and `calm` carry
- * colours; `auto` carries none — it follows the operating system and
- * resolves to one of the other two. Four is the count of choices in the
- * picker, not of palettes.
+ * colours; `auto` carries none of its own — it follows the operating
+ * system and resolves to one of the other two. Four is the count of
+ * choices in the picker, not of palettes.
  *
- * Every text pair passes today. This is here so that stays true: a colour
- * is changed for how it looks on one screen, and nothing else in a
- * codebase objects.
+ * Every text pair passes. This is here so that stays true: a colour gets
+ * changed for how it looks on one screen, and nothing else in a codebase
+ * objects.
  */
 
-const css = readFileSync(join(process.cwd(), 'src/app/(system)/system.css'), 'utf8');
+const root = process.cwd();
+const css = readFileSync(join(root, 'src/app/(system)/system.css'), 'utf8');
 
 function themes(): Map<string, Map<string, string>> {
   const out = new Map<string, Map<string, string>>();
@@ -39,7 +40,7 @@ function lum(hex: string): number {
   const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
   return 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b);
 }
-export function contrast(a: string, b: string): number {
+function contrast(a: string, b: string): number {
   const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
   return Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100;
 }
@@ -69,11 +70,9 @@ const TEXT_PAIRS: [string, string][] = [
 ];
 
 describe('every text pair clears 4.5:1, in every theme', () => {
-  const all = themes();
-
   it('found the palettes — a sweep over nothing proves nothing', () => {
-    expect([...all.keys()].sort()).toEqual(['calm', 'day', 'ops']);
-    for (const vars of all.values()) expect(vars.size).toBeGreaterThan(30);
+    expect([...themes().keys()].sort()).toEqual(['calm', 'day', 'ops']);
+    for (const vars of themes().values()) expect(vars.size).toBeGreaterThan(30);
   });
 
   for (const [theme, vars] of themes()) {
@@ -90,47 +89,92 @@ describe('every text pair clears 4.5:1, in every theme', () => {
 });
 
 /**
- * AND THE ONE THAT DOES NOT PASS, MEASURED AND WAITING ON A DECISION.
+ * AND THE BOUNDARY OF A CONTROL — 3:1, WHICH THE DIVIDER IS NOT.
  *
- * WCAG 1.4.11 asks 3:1 for the BOUNDARY OF A CONTROL. Every field in the
- * product draws its edge with `--sys-border` on `--sys-card`:
+ * WCAG 1.4.11 asks 3:1 for the edge of something a person OPERATES. Every
+ * field in the product drew its edge with `--sys-border`, and measured on
+ * this palette that is 1.48 in ops, 1.25 in day and 1.29 in calm — at
+ * 1.25 the box is found with the cursor rather than with the eye.
  *
- *   ops   1.48 : 1
- *   day   1.25 : 1
- *   calm  1.29 : 1
+ * Fixed with the owner's word, the same way the zaki-ui package was: a
+ * token of its own pointing at the faintest TEXT colour, which is the only
+ * colour already in these palettes that clears 3:1 in all three. Nothing
+ * new was invented, so nothing new can drift.
  *
- * At 1.25 the field has no visible edge at all for a reader with reduced
- * contrast sensitivity — the box is found by the cursor, not by the eye.
- *
- * The fix is known and already agreed ELSEWHERE: the zaki-ui package was
- * asked for «--zk-color-border-input بتباين ≥3:1» and points it at the
- * faintest text colour, which is the only existing colour that clears 3:1
- * in all three palettes. Here that colour is `--sys-muted` (5.16 / 5.05 /
- * 5.13).
- *
- * NOT APPLIED. It darkens the edge of every field on every screen, and
- * this audit is told not to redesign. The numbers are written down so the
- * decision is a decision and not an oversight — and this test fails if
- * somebody applies it without removing the note.
+ * `--sys-border` IS DELIBERATELY LEFT WHERE IT WAS. It divides two
+ * paragraphs, and a divider that clears 3:1 pulls the eye to the furniture
+ * instead of the content. The rule is about controls.
  */
-describe('the control boundary that is below 3:1', () => {
-  const expected: Record<string, number> = { ops: 1.48, day: 1.25, calm: 1.29 };
-
+describe('the boundary of a control clears 3:1', () => {
   for (const [theme, vars] of themes()) {
-    it(`${theme}: --sys-border on --sys-card is still ${expected[theme]}:1`, () => {
+    it(`${theme}: --sys-border-input on --sys-card`, () => {
+      const input = resolve(vars, 'border-input');
+      const card = resolve(vars, 'card');
+      expect(input, `${theme}: --sys-border-input غيرُ معرَّف`).toBeTruthy();
+      expect(contrast(input!, card!), `${theme} border-input/card`).toBeGreaterThanOrEqual(3);
+    });
+
+    it(`${theme}: and the divider stays below it, on purpose`, () => {
+      // Not an oversight. If this ever passes 3, somebody changed the
+      // decision without changing the paragraph above it.
       const border = resolve(vars, 'border')!;
       const card = resolve(vars, 'card')!;
-      expect(contrast(border, card), `${theme}: تغيّر الرقم — راجِع القرار المعلَّق`).toBe(
-        expected[theme]
-      );
+      expect(contrast(border, card), `${theme}: صار الفاصلُ بقوّة حدِّ أداة`).toBeLessThan(3);
     });
   }
+});
 
-  it('and the colour that would fix it still clears 3:1 in all three', () => {
-    for (const [theme, vars] of themes()) {
-      const muted = resolve(vars, 'muted')!;
-      const card = resolve(vars, 'card')!;
-      expect(contrast(muted, card), `${theme}: --sys-muted`).toBeGreaterThanOrEqual(3);
+/**
+ * AND EVERY FIELD USES IT — not only the three that come from `ui/Input`.
+ *
+ * A hundred and thirty-three fields drew their own edge, so changing the
+ * shared component alone would have left most of the product faint and the
+ * rest edged, which is worse than either.
+ *
+ * A checkbox, a radio, a range and a colour well are drawn by the user
+ * agent (`accent-color`, and `color-scheme` per theme); their box is not
+ * this border, and giving them one would draw a second edge around it.
+ */
+describe('no field draws its edge with the divider', () => {
+  const NATIVE = /type="(?:checkbox|radio|range|color)"/;
+
+  function tsxFiles(): string[] {
+    const out: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (p.endsWith('.tsx') && !p.includes('.test.')) out.push(relative(root, p).split('\\').join('/'));
+      }
+    };
+    walk(join(root, 'src', 'components'));
+    walk(join(root, 'src', 'app'));
+    return out;
+  }
+
+  const files = tsxFiles();
+  const offenders: string[] = [];
+  for (const file of files) {
+    // Arrows masked so `=>` inside an attribute is not read as the tag's
+    // end — a lesson three guards in this repo have already paid for.
+    const src = readFileSync(join(root, file), 'utf8').replace(/=>/g, '=\u0001');
+    for (const m of src.matchAll(/<(?:input|select|textarea)\b[^>]*>/g)) {
+      const tag = m[0];
+      if (NATIVE.test(tag)) continue;
+      if (/border-\[var\(--sys-border\)\]/.test(tag)) {
+        offenders.push(`${file}: ${tag.replace(/\u0001/g, '>').slice(0, 60)}…`);
+      }
     }
+  }
+
+  it('found fields to check — a sweep over nothing proves nothing', () => {
+    expect(files.length).toBeGreaterThan(80);
+  });
+
+  it('and every one of them uses the control token', () => {
+    expect(
+      offenders,
+      `حقولٌ ترسم حدَّها بلون الفاصل (١٫٢٥:١):\n${offenders.join('\n')}`
+    ).toEqual([]);
   });
 });

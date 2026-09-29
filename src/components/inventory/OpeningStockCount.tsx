@@ -160,7 +160,7 @@ function OpeningCountDialog({
           aria-label={`الكمية المعدودة من ${p.name}`}
           value={row(p.id).qty}
           onChange={(e) => set(p.id, { qty: e.target.value })}
-          className="h-11 md:h-10 w-full min-w-0 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-sm tabular-nums md:w-24"
+          className="h-11 md:h-10 w-full min-w-0 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-sm tabular-nums md:w-24"
         />
       ),
     },
@@ -178,7 +178,7 @@ function OpeningCountDialog({
               aria-label={`كلفة وحدة ${p.name}`}
               value={r.cost}
               onChange={(e) => set(p.id, { cost: e.target.value })}
-              className="h-11 md:h-10 w-full min-w-0 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-sm tabular-nums md:w-28"
+              className="h-11 md:h-10 w-full min-w-0 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-sm tabular-nums md:w-28"
             />
             {/* Asked where the zero was typed, not in a summary at the bottom
                 that names a product the reader has to go back and find. */}
@@ -260,7 +260,7 @@ function OpeningCountDialog({
               onChange={(e) => setCountedByName(e.target.value)}
               placeholder="الاسم كما يُوقَّع على ورقة العدّ"
               maxLength={120}
-              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
             />
           </label>
           <label className="block">
@@ -269,7 +269,7 @@ function OpeningCountDialog({
               type="datetime-local"
               value={countedAt}
               onChange={(e) => setCountedAt(e.target.value)}
-              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
             />
           </label>
           <label className="block">
@@ -278,7 +278,7 @@ function OpeningCountDialog({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               maxLength={500}
-              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+              className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
             />
           </label>
         </div>

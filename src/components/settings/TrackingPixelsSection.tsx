@@ -224,7 +224,7 @@ export function TrackingPixelsSection() {
                 onChange={(e) =>
                   void send(`/api/settings/tracking-pixels/${p.id}`, { method: 'PATCH', body: JSON.stringify({ scope: e.target.value }) }, 'حُفظ.')
                 }
-                className="h-11 md:h-8 rounded-md border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] disabled:bg-[var(--sys-surface)]"
+                className="h-11 md:h-8 rounded-md border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] disabled:bg-[var(--sys-surface)]"
               >
                 {SCOPE_CHOICES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
@@ -263,13 +263,13 @@ export function TrackingPixelsSection() {
                 maxLength={64}
                 disabled={busy}
                 aria-label={`رقم بكسل ${meta.label}`}
-                className="h-11 md:h-10 min-w-[200px] flex-1 rounded-lg border border-[var(--sys-border)] px-3 font-mono text-sm outline-none focus:border-[var(--sys-primary)]"
+                className="h-11 md:h-10 min-w-[200px] flex-1 rounded-lg border border-[var(--sys-border-input)] px-3 font-mono text-sm outline-none focus:border-[var(--sys-primary)]"
               />
               <select
                 aria-label="أين يعمل"
                 value={newScope}
                 onChange={(e) => setNewScope(e.target.value as TrackingScope)}
-                className="h-11 md:h-10 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)]"
+                className="h-11 md:h-10 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)]"
               >
                 {SCOPE_CHOICES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>

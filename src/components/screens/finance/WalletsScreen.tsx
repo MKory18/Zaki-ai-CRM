@@ -241,7 +241,7 @@ export function WalletsScreen() {
                   <input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="h-11 md:h-8 w-44 rounded-lg border border-[var(--sys-border)] px-2 text-sm"
+                    className="h-11 md:h-8 w-44 rounded-lg border border-[var(--sys-border-input)] px-2 text-sm"
                   />
                   <button
                     onClick={() => patchWallet({ name: newName.trim() }, 'تم تغيير الاسم')}
@@ -503,7 +503,7 @@ function OpeningCountDialog({
             inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm tabular-nums"
+            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm tabular-nums"
           />
         </label>
 
@@ -514,7 +514,7 @@ function OpeningCountDialog({
             onChange={(e) => setCountedByName(e.target.value)}
             placeholder="الاسم كما يُوقَّع على ورقة العدّ"
             maxLength={120}
-            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
           />
           <span className="mt-1 block text-xs text-[var(--sys-muted-foreground)]">
             اسمُ من عدَّ بيده، لا اسمُك — أنت مُسجَّلٌ أصلاً بوصفك من أدخل العدّ.
@@ -527,7 +527,7 @@ function OpeningCountDialog({
             type="datetime-local"
             value={countedAt}
             onChange={(e) => setCountedAt(e.target.value)}
-            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm"
+            className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
           />
         </label>
 
@@ -538,7 +538,7 @@ function OpeningCountDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             maxLength={500}
-            className="w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 py-2 text-sm"
           />
         </label>
 
@@ -640,7 +640,7 @@ function RecordDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
         </label>
@@ -653,7 +653,7 @@ function RecordDialog({
             required
             minLength={2}
             placeholder="اسم الشخص أو الجهة"
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
 
@@ -662,7 +662,7 @@ function RecordDialog({
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm bg-[var(--sys-card)]"
           >
             {Object.entries(CATEGORY_AR)
               .filter(([key]) => key !== 'TRANSFER_IN' && key !== 'TRANSFER_OUT')
@@ -680,7 +680,7 @@ function RecordDialog({
             onChange={(e) => setNote(e.target.value)}
             required
             minLength={3}
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
 
@@ -753,7 +753,7 @@ function ReverseDialog({
             required
             minLength={5}
             rows={3}
-            className="w-full p-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full p-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             placeholder="مثال: سُجِّل المبلغ مرتين بالخطأ"
           />
         </label>
@@ -855,7 +855,7 @@ function CreateWalletDialog({
               if (picked && !currency) setCurrency(picked.currencyCode);
             }}
             required
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm bg-[var(--sys-card)]"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm bg-[var(--sys-card)]"
           >
             <option value="">اختر…</option>
             {countries.map((c) => (
@@ -873,7 +873,7 @@ function CreateWalletDialog({
             minLength={2}
             autoFocus
             placeholder="مثال: الصندوق النقدي، حساب البنك العربي"
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
 
@@ -885,7 +885,7 @@ function CreateWalletDialog({
             required
             maxLength={3}
             placeholder="USD"
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
@@ -906,7 +906,7 @@ function CreateWalletDialog({
             value={opening}
             onChange={(e) => setOpening(e.target.value)}
             placeholder="0"
-            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-sm"
+            className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">

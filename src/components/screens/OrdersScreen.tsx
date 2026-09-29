@@ -389,7 +389,7 @@ export function OrdersScreen() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
-                className="h-11 md:h-10 w-full ps-9 pe-3 text-sm bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
+                className="h-11 md:h-10 w-full ps-9 pe-3 text-sm bg-[var(--sys-surface)] border border-[var(--sys-border-input)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)]"
               />
             </div>
             <Button onClick={runSearch} className="shrink-0 gap-1.5">

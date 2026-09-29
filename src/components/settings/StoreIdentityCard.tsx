@@ -86,7 +86,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
-            className="mt-1 block h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-sm focus:border-[var(--sys-primary)] focus:outline-none"
+            className="mt-1 block h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm focus:border-[var(--sys-primary)] focus:outline-none"
           />
         </label>
         <label className="block text-xs font-medium text-[var(--sys-foreground)]">
@@ -98,7 +98,7 @@ export function StoreIdentityCard({ store, onSaved }: { store: IdentityRow; onSa
             inputMode="tel"
             maxLength={24}
             placeholder="0999 000 000"
-            className="mt-1 block h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 text-left text-sm focus:border-[var(--sys-primary)] focus:outline-none"
+            className="mt-1 block h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-left text-sm focus:border-[var(--sys-primary)] focus:outline-none"
           />
           <span className="mt-1 block text-xs text-[var(--sys-muted)]">يظهر للزبون في المتجر وتذييل الصفحات، ويُطبع على البوليصة.</span>
         </label>

@@ -158,7 +158,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           value={form.about}
           onChange={(e) => setForm({ ...form, about: e.target.value })}
           placeholder="نوصّل لكل المحافظات، والدفع عند الاستلام."
-          className="w-full min-w-0 resize-y rounded-lg border border-[var(--sys-border)] px-3 py-2 text-sm outline-none focus:border-[var(--sys-primary)]"
+          className="w-full min-w-0 resize-y rounded-lg border border-[var(--sys-border-input)] px-3 py-2 text-sm outline-none focus:border-[var(--sys-primary)]"
         />
       </div>
 

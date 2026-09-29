@@ -224,7 +224,7 @@ export function CourierFees({
                   min={0}
                   step="0.001"
                   dir="ltr"
-                  className="h-11 w-24 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-sm md:h-10"
+                  className="h-11 w-24 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-sm md:h-10"
                 />
               ),
             },
@@ -240,7 +240,7 @@ export function CourierFees({
                   min={0}
                   max={90}
                   dir="ltr"
-                  className="h-11 w-20 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-sm md:h-10"
+                  className="h-11 w-20 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-sm md:h-10"
                 />
               ),
             },
@@ -256,7 +256,7 @@ export function CourierFees({
                   min={0}
                   step="0.001"
                   dir="ltr"
-                  className="h-11 w-24 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2 text-sm md:h-10"
+                  className="h-11 w-24 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-sm md:h-10"
                 />
               ),
             },
@@ -401,7 +401,7 @@ function BulkFillDialog({
           <input
             type="number" min="0" step="0.001" value={fee} onChange={(e) => setFee(e.target.value)}
             required autoFocus dir="ltr"
-            className="h-11 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm md:h-10"
+            className="h-11 w-full rounded-lg border border-[var(--sys-border-input)] px-3 text-sm md:h-10"
           />
         </label>
 
@@ -410,14 +410,14 @@ function BulkFillDialog({
             <span className="mb-1 block text-xs font-medium text-[var(--sys-foreground)]">حد التأخير (أيام)</span>
             <input
               type="number" min="0" max="90" value={days} onChange={(e) => setDays(e.target.value)} dir="ltr"
-              className="h-11 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm md:h-10"
+              className="h-11 w-full rounded-lg border border-[var(--sys-border-input)] px-3 text-sm md:h-10"
             />
           </label>
           <label>
             <span className="mb-1 block text-xs font-medium text-[var(--sys-foreground)]">أجرة الإرجاع</span>
             <input
               type="number" min="0" step="0.001" value={returnFee} onChange={(e) => setReturnFee(e.target.value)} dir="ltr"
-              className="h-11 w-full rounded-lg border border-[var(--sys-border)] px-3 text-sm md:h-10"
+              className="h-11 w-full rounded-lg border border-[var(--sys-border-input)] px-3 text-sm md:h-10"
             />
           </label>
         </div>
@@ -477,7 +477,7 @@ function ReasonDialog({
             value={reason} onChange={(e) => setReason(e.target.value)}
             required minLength={3} rows={3} autoFocus
             placeholder="مثال: اتفاق جديد مع الشركة على هذه المحافظة"
-            className="w-full rounded-lg border border-[var(--sys-border)] p-3 text-sm"
+            className="w-full rounded-lg border border-[var(--sys-border-input)] p-3 text-sm"
           />
         </label>
         <div className="flex justify-end gap-2">
