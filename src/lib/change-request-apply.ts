@@ -58,6 +58,10 @@ const APPLIES_AS: Partial<Record<(typeof CHANGEABLE_FIELDS)[number], string>> = 
   quantity: 'quantity',
   discountAmount: 'discountAmount',
   productId: 'productId',
+  // The order route names it the same and recomputes the amount due from
+  // it, so the invoice and the COD follow the approval by themselves —
+  // «وينعكس هذا على الفاتورة».
+  sellingPrice: 'sellingPrice',
 };
 
 export interface ApplySource {

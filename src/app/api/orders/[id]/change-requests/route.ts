@@ -136,7 +136,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const snapshot = await db.order.findFirst({
       where: { id, companyId },
       select: {
-        quantity: true, productId: true, offerId: true, discountAmount: true, customerNotes: true,
+        quantity: true, productId: true, sellingPrice: true, discountAmount: true, customerNotes: true,
         // The governorate it ships to — what a «change the city» request
         // actually means, and the only one of the two the order can write.
         regionId: true,

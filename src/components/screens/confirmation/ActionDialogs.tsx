@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { PICKABLE_REJECTION_REASONS, REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
 import { CHANGE_INTENTS, INTENT_AR, refusalFor, type ChangeIntent } from '@/lib/change-request-intent';
 import { CHANGEABLE_FIELDS, CHANGE_FIELD_AR } from '@/lib/change-request-fields';
+import { ProductPicker } from '@/components/ui/ProductPicker';
+import { useProducts } from '@/hooks/useProducts';
 import { useRegions } from '@/hooks/useRegions';
 import { Modal } from '@/components/ui/Modal';
 
@@ -16,12 +18,23 @@ import { Modal } from '@/components/ui/Modal';
 const FIELD_CLS =
   'w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] text-sm focus:outline-none focus:border-[var(--sys-primary)]';
 
-function Buttons({ onCancel, busy, submitLabel }: { onCancel: () => void; busy?: boolean; submitLabel: string }) {
+function Buttons({
+  onCancel,
+  busy,
+  disabled,
+  submitLabel,
+}: {
+  onCancel: () => void;
+  busy?: boolean;
+  /** Not ready — as opposed to `busy`, which is «جارٍ الحفظ…». */
+  disabled?: boolean;
+  submitLabel: string;
+}) {
   return (
     <div className="flex gap-2 pt-2">
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || disabled}
         className="px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium disabled:opacity-60"
       >
         {busy ? 'جارٍ الحفظ…' : submitLabel}
@@ -216,21 +229,25 @@ export function IssueDialog({
 }
 
 /**
- * DERIVED, NOT COPIED.
+ * DERIVED, NOT COPIED — AND NOW NOTHING IS WITHHELD.
  *
  * This was a fourth hand-written copy of the changeable fields, and the
  * copies had already drifted once — four of the ten reached the person
- * deciding under their English code names. It now comes from the one list,
- * less the two the apply path cannot carry out: the product needs a picker
- * this dialog does not have, and the offer has no column on the order.
+ * deciding under their English code names.
  *
- * Adding a field to the list is now all it takes to offer it here.
+ * Two were then held back for reasons that have both gone: the product had
+ * no picker to choose it with, and `ProductPicker` now exists; the offer had
+ * no way to be applied, and it has left the list rather than sit in a menu
+ * promising something the apply path would refuse.
+ *
+ * So the list is the list. Adding a field to `CHANGEABLE_FIELDS` offers it
+ * here, and a guard refuses one the apply path cannot carry out — which is
+ * what kept the city, and then the offer, in this menu for months.
  */
-const NOT_OFFERED_HERE: readonly string[] = ['productId', 'offerId'];
-
-export const CHANGE_FIELDS = CHANGEABLE_FIELDS.filter((f) => !NOT_OFFERED_HERE.includes(f)).map(
-  (value) => ({ value, label: CHANGE_FIELD_AR[value] })
-);
+export const CHANGE_FIELDS = CHANGEABLE_FIELDS.map((value) => ({
+  value,
+  label: CHANGE_FIELD_AR[value],
+}));
 
 export interface ChangeRequestValue {
   intent: ChangeIntent;
@@ -289,7 +306,16 @@ export function ChangeRequestDialog({
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   );
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
-  const numeric = field === 'quantity' || field === 'discountAmount';
+  const numeric = field === 'quantity' || field === 'discountAmount' || field === 'sellingPrice';
+  /**
+   * THE CATALOGUE, FOR THE OTHER FIELD THAT IS A CHOICE.
+   *
+   * «منتج آخر اختاره وكميته وسعره». A typed product name is the city's
+   * bug again — the order takes an id — and a plain dropdown over a
+   * hundred products on a phone is what the seller reported twice. One
+   * hook, one fetch, the whole catalogue: see hooks/useProducts.
+   */
+  const { products, loading: productsLoading } = useProducts();
   const blockedPostpone = refusalFor('POSTPONE', { hasLeftWarehouse });
   /**
    * THE GOVERNORATES, FOR THE ONE FIELD THAT IS A CHOICE.
@@ -358,7 +384,15 @@ export function ChangeRequestDialog({
               </select>
             </Field>
             <Field label="القيمة الجديدة">
-              {field === 'regionId' ? (
+              {field === 'productId' ? (
+                <ProductPicker
+                  products={products}
+                  value={to}
+                  onChange={setTo}
+                  disabled={productsLoading}
+                  placeholder={productsLoading ? 'جارٍ تحميل المنتجات…' : 'ابحث بالاسم أو الرمز…'}
+                />
+              ) : field === 'regionId' ? (
                 <select
                   required
                   value={to}
@@ -391,6 +425,24 @@ export function ChangeRequestDialog({
             {field === 'quantity' && (
               <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                 تغيير الكمية يعيد حساب المبلغ المطلوب عند التسليم تلقائياً.
+              </p>
+            )}
+            {/* THE PRICE IS THE LINE'S TOTAL, NOT THE PRICE OF ONE UNIT —
+                the order stores it that way. Saying it here is the whole
+                difference between «سعر القطعة ستّون» and a discount nobody
+                asked for, and the person asking is on the phone. */}
+            {field === 'sellingPrice' && (
+              <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                هذا سعر السطر كاملاً للكمية الحالية، لا سعر القطعة — ويعيد حساب المبلغ
+                المطلوب عند التسليم وينعكس على الفاتورة.
+              </p>
+            )}
+            {/* A different product is a different price. Said before the
+                request is sent, because the approval applies both. */}
+            {field === 'productId' && (
+              <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                تغيير المنتج لا يغيّر السعر — إن كان سعر الجديد مختلفاً، ارفع طلباً آخر
+                على السعر بعد الموافقة.
               </p>
             )}
           </>
@@ -442,7 +494,15 @@ export function ChangeRequestDialog({
             }
           />
         </Field>
-        <Buttons onCancel={onClose} busy={busy} submitLabel="إرسال الطلب" />
+        {/* `required` cannot guard the picker — it is not an input — so the
+            one rule covers all three: an EDIT with no new value is not a
+            request, it is an empty queue entry somebody has to chase. */}
+        <Buttons
+          onCancel={onClose}
+          busy={busy}
+          disabled={intent === 'EDIT' && !to.trim()}
+          submitLabel="إرسال الطلب"
+        />
       </form>
     </Modal>
   );

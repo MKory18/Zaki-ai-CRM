@@ -22,10 +22,30 @@
  *
  * The governorate is a real list and a real column, so the request can be
  * carried out to the end — which is the whole point of the door.
+ *
+ * AND `sellingPrice` IS HERE, WHILE `offerId` IS NOT.
+ *
+ * «كمية كم عدد والسعر الجديد… منتج آخر اختاره وكميته وسعره وينعكس هذا على
+ * الفاتورة» — so the price had to become askable. The order route already
+ * accepts it, so the request can be carried out to the end.
+ *
+ * The offer could not, and that was the city's bug wearing another name:
+ * the door accepted it, a supervisor approved it, and the apply path then
+ * answered «لا يمكن تطبيق العرض من هنا — عدّلها يدوياً». An offer is not one
+ * value: it carries quantity, free units, price, discount AND whether the
+ * price includes delivery, so applying one by copying an id would move five
+ * money inputs at once through a path built for none of them. And the ask
+ * behind it is already sayable in three fields that DO apply — the product,
+ * the quantity and the price.
+ *
+ * A field belongs in this list only if `APPLIES_AS` in change-request-apply
+ * can carry it out. A guard holds the two lists together, because this is
+ * the second time they drifted apart and both times the seller found it
+ * before we did.
  */
 export const CHANGEABLE_FIELDS = [
   'customerName', 'customerPhone', 'customerAltPhone', 'customerAddress', 'regionId',
-  'quantity', 'productId', 'offerId', 'discountAmount', 'customerNotes',
+  'quantity', 'productId', 'sellingPrice', 'discountAmount', 'customerNotes',
 ] as const;
 
 export type ChangeableField = (typeof CHANGEABLE_FIELDS)[number];
@@ -38,13 +58,24 @@ export const CHANGE_FIELD_AR: Record<ChangeableField, string> = {
   regionId: 'المحافظة',
   quantity: 'الكمية',
   productId: 'المنتج',
-  offerId: 'العرض',
+  sellingPrice: 'السعر (إجمالي الكمية)',
   discountAmount: 'الخصم',
   customerNotes: 'ملاحظات العميل',
 };
 
+/**
+ * Fields no new request may carry, kept only so an OLD row still reads in
+ * Arabic. Dropping the name with the field would print `offerId` to a reader
+ * of a request raised before it was retired — and the apply path refuses it
+ * by its label, so the label is what the refusal says.
+ */
+const RETIRED_FIELD_AR: Record<string, string> = {
+  offerId: 'العرض',
+  customerCity: 'المدينة',
+};
+
 export function changeFieldLabel(field: string): string {
-  return (CHANGE_FIELD_AR as Record<string, string>)[field] ?? field;
+  return (CHANGE_FIELD_AR as Record<string, string>)[field] ?? RETIRED_FIELD_AR[field] ?? field;
 }
 
 export type ChangeValue = string | number | null;
@@ -54,7 +85,8 @@ export type Changes = Partial<Record<ChangeableField, { from?: ChangeValue; to: 
 export interface OrderSnapshot {
   quantity: number;
   productId: string;
-  offerId: string | null;
+  /** The line total for the quantity, not the per-unit price — see below. */
+  sellingPrice: number;
   discountAmount: number;
   customerNotes: string | null;
   /** The governorate it ships to — what the delivery fee is keyed on. */
@@ -77,7 +109,16 @@ function current(order: OrderSnapshot, field: ChangeableField): ChangeValue {
     case 'regionId': return order.regionId ?? null;
     case 'quantity': return order.quantity;
     case 'productId': return order.productId;
-    case 'offerId': return order.offerId;
+    /**
+     * THE LINE TOTAL, NOT THE PER-UNIT PRICE.
+     *
+     * `Order.sellingPrice` is the whole line — the order route's own words:
+     * «the single-line shorthand: price is the TOTAL for the quantity». A
+     * request that showed «50 ← 60» while the person meant sixty EACH would
+     * be approved as a discount, so the label says which it is and the
+     * decider sees the current figure beside it.
+     */
+    case 'sellingPrice': return order.sellingPrice;
     case 'discountAmount': return order.discountAmount;
     case 'customerNotes': return order.customerNotes;
   }
