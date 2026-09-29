@@ -2238,6 +2238,10 @@ model SettlementMatch {
   statementFee    Decimal?  @db.Decimal(14, 3)
   feeDifference   Decimal?  @db.Decimal(14, 3)
   note            String?
+  /// How the difference was settled: ACCEPTED_COURIER | OURS_STANDS.
+  /// Null while it is still an open difference nobody has answered.
+  resolution      String?
+  resolutionNote  String?
   resolvedById    String?
   resolvedAt      DateTime?
   createdAt       DateTime  @default(now())
@@ -2247,6 +2251,7 @@ model SettlementMatch {
   order         Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   @@index([companyId, statementId, result])
+  @@index([companyId, resolution])
   @@index([orderId])
   @@map("settlement_matches")
 }

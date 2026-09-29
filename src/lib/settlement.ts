@@ -238,7 +238,17 @@ export interface MatchOutcome {
   feeMismatched: number;
   missingInSystem: number;
   missingInStatement: number;
+  /** The sweep hit its cap, so «not listed» is not the whole answer. */
+  sweepTruncated?: boolean;
 }
+
+/**
+ * How many delivered orders the «did the courier leave one out» sweep will
+ * read. A cap is necessary — a busy month is a lot of rows — but a SILENT
+ * one turns «none are missing» into «none of the first thousand», which
+ * reads the same and is not. When it is hit, the outcome says so.
+ */
+export const SWEEP_LIMIT = 5000;
 
 /**
  * Run matching for one statement. Called on demand, and only after a
@@ -365,12 +375,58 @@ export async function runMatching(
           }
         : {}),
     },
-    select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true, collectedAmount: true },
-    take: 1000,
+    select: {
+      id: true, shippingStatus: true, totalAmount: true, deliveryFee: true, collectedAmount: true,
+      // How a courier names this parcel — needed to ask whether ANY of their
+      // statements mentions it.
+      trackingNumber: true, merchantRef: true,
+    },
+    take: SWEEP_LIMIT,
   });
+  if (delivered.length === SWEEP_LIMIT) outcome.sweepTruncated = true;
+
+  /**
+   * «MISSING» MEANS NO STATEMENT MENTIONS IT — NOT «THIS ONE DOES NOT».
+   *
+   * A courier issues a statement every day or two, each covering parcels
+   * delivered over an overlapping window. Sweeping the period and flagging
+   * everything this statement did not match therefore flags the parcels that
+   * belong to the courier's OTHER statements — which is most of the shop.
+   *
+   * Measured on the real record the day this was found: 28 statements over
+   * five weeks, and a single statement of 120 lines produced **940 rows,
+   * 1754 of them «طلب مسلَّم لم يرد في كشف الشركة»**. Every one of those was
+   * listed — on another statement. The screen was unreadable, and the one
+   * check whose whole job is to catch a parcel the courier quietly left out
+   * was buried under its own false alarms.
+   *
+   * So the question is asked of the whole record: does any line, on any
+   * statement, name this parcel? Asked that way the answer does not depend
+   * on which statement happens to be matched first — the old sweep gave a
+   * different result for the same data depending on the order the operator
+   * pressed the buttons in.
+   */
+  const refs = delivered.flatMap((o) => [o.trackingNumber, o.merchantRef].filter(Boolean) as string[]);
+  const mentioned = new Set(
+    (
+      await tx.statementLine.findMany({
+        where: {
+          statement: { companyId },
+          OR: [{ barcode: { in: refs } }, { merchantRef: { in: refs } }],
+        },
+        select: { barcode: true, merchantRef: true },
+      })
+    ).flatMap((l) => [l.barcode, l.merchantRef].filter(Boolean) as string[])
+  );
 
   for (const order of delivered) {
     if (matchedOrderIds.has(order.id)) continue;
+    if (
+      (order.trackingNumber && mentioned.has(order.trackingNumber)) ||
+      (order.merchantRef && mentioned.has(order.merchantRef))
+    ) {
+      continue;
+    }
     await tx.settlementMatch.create({
       data: {
         companyId, statementId, orderId: order.id,

@@ -369,3 +369,48 @@ describe('receiptGap', () => {
     expect(gap.unconvertible).toBe(1);
   });
 });
+
+/**
+ * «MISSING FROM THE STATEMENT» MEANS NO STATEMENT NAMES IT.
+ *
+ * Measured on the real record: 28 statements over five weeks, and one
+ * statement of 120 lines produced 940 rows — 1754 of them «طلب مسلَّم لم
+ * يرد في كشف الشركة», every one of which WAS listed, on another statement.
+ *
+ * These two tests are behavioural rather than source guards on purpose: the
+ * defect was not in how the code read, it was in which set the question was
+ * asked of. The `statementLine.findMany` mock below answers according to the
+ * refs it is actually given, so a sweep that stops collecting them fails
+ * here instead of passing on a mock that always says yes.
+ */
+describe('the sweep for parcels the courier left out', () => {
+  const scope = { companyId: 'c1', storeId: 's1', statementId: 'st1', minorUnit: 3 };
+
+  const mentionedElsewhere = (barcode: string | null) => {
+    db.statementLine.findMany.mockImplementation((args: any) => {
+      if (args?.where?.statementId) return Promise.resolve([]);
+      const refs: string[] = args?.where?.OR?.[0]?.barcode?.in ?? [];
+      return Promise.resolve(barcode && refs.includes(barcode) ? [{ barcode, merchantRef: null }] : []);
+    });
+  };
+
+  it('does not flag a parcel that another statement lists', async () => {
+    mentionedElsewhere('BC-OTHER');
+    db.order.findMany.mockResolvedValue([
+      { id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3, collectedAmount: null, trackingNumber: 'BC-OTHER', merchantRef: null },
+    ]);
+    const outcome = await runMatching(db as never, scope);
+    expect(outcome.missingInStatement).toBe(0);
+    expect(db.settlementMatch.create).not.toHaveBeenCalled();
+  });
+
+  it('and does flag one that no statement names anywhere', async () => {
+    mentionedElsewhere(null);
+    db.order.findMany.mockResolvedValue([
+      { id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3, collectedAmount: null, trackingNumber: 'BC-NOWHERE', merchantRef: null },
+    ]);
+    const outcome = await runMatching(db as never, scope);
+    expect(outcome.missingInStatement).toBe(1);
+    expect(db.settlementMatch.create.mock.calls[0][0].data).toMatchObject({ result: 'MISSING_IN_STATEMENT' });
+  });
+});

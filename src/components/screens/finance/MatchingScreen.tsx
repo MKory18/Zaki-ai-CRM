@@ -5,6 +5,8 @@ import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiGitBranchLine, RiLoader4Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { DifferenceActions } from '@/components/screens/finance/DifferenceActions';
+import { DifferencesByPerson } from '@/components/screens/finance/DifferencesByPerson';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { Money } from '@/components/ui/Money';
@@ -28,6 +30,9 @@ interface Match {
   statementFee: string | number | null;
   feeDifference: string | number | null;
   note: string | null;
+  /** ACCEPTED_COURIER | OURS_STANDS — null while nobody has answered. */
+  resolution: string | null;
+  resolutionNote: string | null;
   order: { id: string; orderNumber: string; merchantRef: string | null; shippingStatus: string } | null;
   statementLine: { merchantRef: string | null; barcode: string | null; amount: string | number } | null;
 }
@@ -153,6 +158,8 @@ export function MatchingScreen() {
         </p>
       ) : (
         <div className="space-y-3">
+          {/* The sum of the answers given below it: who keeps arriving short. */}
+          <DifferencesByPerson currency={statement?.currencyCode ?? ''} />
           <Queue
             title="مطابق"
             tone="emerald"
@@ -162,6 +169,9 @@ export function MatchingScreen() {
           />
           <Queue
             title="فرق في المبلغ"
+            resolvable
+            statementId={selected}
+            onResolved={() => void load(selected!)}
             tone="rose"
             currency={statement?.currencyCode ?? ''}
             rows={queue('MISMATCHED')}
@@ -169,6 +179,9 @@ export function MatchingScreen() {
           />
           <Queue
             title="في الكشف وليس عندنا"
+            resolvable
+            statementId={selected}
+            onResolved={() => void load(selected!)}
             tone="amber"
             currency={statement?.currencyCode ?? ''}
             rows={queue('MISSING_IN_SYSTEM')}
@@ -176,6 +189,9 @@ export function MatchingScreen() {
           />
           <Queue
             title="مسلَّم عندنا وليس في الكشف"
+            resolvable
+            statementId={selected}
+            onResolved={() => void load(selected!)}
             tone="amber"
             currency={statement?.currencyCode ?? ''}
             rows={queue('MISSING_IN_STATEMENT')}
@@ -199,12 +215,19 @@ function Queue({
   rows,
   hint,
   currency,
+  resolvable,
+  statementId,
+  onResolved,
 }: {
   title: string;
   tone: string;
   rows: Match[];
   hint: string;
   currency: string;
+  /** A difference queue: every row here is a question somebody must answer. */
+  resolvable?: boolean;
+  statementId?: string | null;
+  onResolved?: () => void;
 }) {
   const [open, setOpen] = useState(rows.length > 0 && tone !== 'emerald');
 
@@ -306,6 +329,25 @@ function Queue({
                     );
                   },
                 },
+                ...(resolvable && statementId
+                  ? [
+                      {
+                        key: 'resolve',
+                        label: 'البتّ في الفرق',
+                        render: (m: Match) => (
+                          <DifferenceActions
+                            statementId={statementId}
+                            matchId={m.id}
+                            orderId={m.order?.id ?? null}
+                            orderNumber={m.order?.orderNumber ?? null}
+                            resolution={m.resolution}
+                            resolutionNote={m.resolutionNote}
+                            onResolved={() => onResolved?.()}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
                 {
                   key: 'via',
                   label: 'طوبق عبر',
