@@ -221,10 +221,14 @@ export async function POST(req: Request) {
       // every batch held exactly what it held before, and the shipment
       // screen still reported the shortage. The goods now go back into a
       // batch of their own at the cost they left at.
+      // The damaged units travel with the sound ones — not to be shelved,
+      // but so their cost stays on this product instead of being written off
+      // the business. See absorbDamaged.
       await restoreOrderStock(tx, {
         orderId: order.id,
         companyId,
         receivedQty: input.receivedQty,
+        damagedQty: input.damagedQty,
         userId: user.id,
       });
 

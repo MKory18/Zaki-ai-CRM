@@ -122,6 +122,59 @@ export async function consumeOrderStock(
 }
 
 /**
+ * WHAT THE DAMAGED UNITS COST, CARRIED BY THE ONES THAT SURVIVED.
+ *
+ * «إذا في توالف (تالف) لازم تنقص من المخزون بس داخلة ضمن التكلفة تبع
+ * المخزون للمنتج» — the owner's ruling, and it is not the obvious one.
+ *
+ * The obvious treatment writes the damaged units off: the shelf loses four
+ * units and the business books their cost as a loss. That is what a
+ * factory's accounts do. This shop is not asking for that. It is saying the
+ * money is already spent on this product and must stay ON it — so the units
+ * still on the shelf are what it has to be earned back from. Twelve
+ * survivors of a run of sixteen each carry a sixteenth of the run, not a
+ * twelfth, and a price set from that cost is the one that actually recovers
+ * the money.
+ *
+ * So nothing is written off and nothing is invented: the SAME total money
+ * goes back into stock over FEWER units, and the unit cost rises by exactly
+ * the ratio between them.
+ *
+ * AND WHEN NOTHING CAME BACK SOUND, NOTHING CAN CARRY IT. A parcel whose
+ * every unit is damaged leaves no survivor to absorb anything, and inventing
+ * a unit to hold the cost would be inventing stock. That case returns zero
+ * and says so, rather than quietly pushing the cost onto another batch.
+ *
+ * Pure, so the arithmetic can be read and tested without a database.
+ */
+export interface AbsorbedDamage {
+  /** Units that go back on the shelf — the sound ones, never the damaged. */
+  quantity: number;
+  /** The money those units carry, including the damaged ones' share. */
+  totalCost: number;
+  /** What one surviving unit now costs. */
+  costPerUnit: number;
+  /** The money moved off the damaged units and onto the survivors. */
+  absorbed: number;
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+export function absorbDamaged(input: { sound: number; damaged: number; costPerUnit: number }): AbsorbedDamage {
+  const sound = Math.max(0, Math.trunc(input.sound));
+  const damaged = Math.max(0, Math.trunc(input.damaged));
+  const cost = Number.isFinite(input.costPerUnit) && input.costPerUnit > 0 ? input.costPerUnit : 0;
+  if (sound <= 0) return { quantity: 0, totalCost: 0, costPerUnit: 0, absorbed: 0 };
+  const totalCost = round2(cost * (sound + damaged));
+  return {
+    quantity: sound,
+    totalCost,
+    costPerUnit: round2(totalCost / sound),
+    absorbed: round2(cost * damaged),
+  };
+}
+
+/**
  * Put returned goods back on the shelf.
  *
  * The returns screen already wrote a RETURN line to the ledger — and stopped
@@ -137,9 +190,11 @@ export async function restoreOrderStock(
     companyId: string;
     /** Units confirmed sound after counting — never the shipped quantity. */
     receivedQty: number;
+    /** Units that came back broken. They do not return to stock; their cost does. */
+    damagedQty?: number;
     userId?: string | null;
   }
-): Promise<{ restored: number; alreadyDone: boolean; neverConsumed?: boolean }> {
+): Promise<{ restored: number; alreadyDone: boolean; neverConsumed?: boolean; absorbed?: number }> {
   if (input.receivedQty <= 0) return { restored: 0, alreadyDone: false };
   if (await alreadyMoved(tx, input.orderId, RETURN)) {
     return { restored: 0, alreadyDone: true };
@@ -171,6 +226,13 @@ export async function restoreOrderStock(
 
   let remaining = input.receivedQty;
   let restored = 0;
+  let absorbedTotal = 0;
+  // The damaged units belong to whichever line they were counted from, and
+  // the counting does not say which. They are shared out in the same
+  // proportion as the sound ones: exact on a single-line order, and the only
+  // defensible split on any other.
+  let damagedLeft = Math.max(0, Math.trunc(input.damagedQty ?? 0));
+  const soundTotal = input.receivedQty;
 
   for (const line of order.items) {
     if (remaining <= 0) break;
@@ -187,6 +249,14 @@ export async function restoreOrderStock(
     });
     const costPerUnit = lastCost?.costPerUnit ?? 0;
 
+    // This line's share of the damage, with the last line to take units
+    // absorbing whatever the rounding left, so no unit's cost is dropped.
+    const share = soundTotal > 0 ? Math.round(damagedLeft * (take / soundTotal)) : 0;
+    const damagedHere = remaining <= 0 ? damagedLeft : Math.min(damagedLeft, share);
+    damagedLeft -= damagedHere;
+    const carried = absorbDamaged({ sound: take, damaged: damagedHere, costPerUnit });
+    absorbedTotal += carried.absorbed;
+
     const batch = await tx.productionBatch.create({
       data: {
         companyId: input.companyId,
@@ -196,10 +266,13 @@ export async function restoreOrderStock(
         quantityRemaining: take,
         quantitySold: 0,
         manufacturingCost: 0,
-        totalProductionCost: costPerUnit * take,
-        costPerUnit,
+        totalProductionCost: carried.totalCost,
+        costPerUnit: carried.costPerUnit,
         productionDate: new Date(),
-        notes: `مرتجع الطلب ${order.orderNumber} — بعد العد والفحص`,
+        notes:
+          damagedHere > 0
+            ? `مرتجع الطلب ${order.orderNumber} — بعد العد والفحص. ${damagedHere} تالفة لا تعود للرفّ وكلفتُها محمولةٌ على ${take} السليمة`
+            : `مرتجع الطلب ${order.orderNumber} — بعد العد والفحص`,
         status: 'COMPLETED',
       },
     });
@@ -221,5 +294,5 @@ export async function restoreOrderStock(
     restored += take;
   }
 
-  return { restored, alreadyDone: false };
+  return { restored, alreadyDone: false, absorbed: round2(absorbedTotal) };
 }

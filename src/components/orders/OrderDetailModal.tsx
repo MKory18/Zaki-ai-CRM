@@ -12,6 +12,7 @@ import { CustomerCard } from '@/components/orders/CustomerCard';
 import { OrderLinesCard } from '@/components/orders/OrderLinesCard';
 import { ConfirmationActions } from '@/components/orders/ConfirmationActions';
 import { ShapeRiskPanel } from '@/components/orders/ShapeRiskPanel';
+import { STAGE_AR, STAGE_STATE_AR, type StageState } from '@/lib/order-closing';
 import { ChangeRequestDialog, type ChangeRequestValue } from '@/components/screens/confirmation/ActionDialogs';
 import { raiseChangeRequest } from '@/components/orders/raiseChangeRequest';
 import { hasLeftWarehouse, type StateSource } from '@/lib/order-state';
@@ -423,6 +424,36 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                   }`}
                 >
                   {SETTLEMENT_AR[order.settlementStatus] ?? order.settlementStatus}
+                </span>
+              )}
+
+              {/*
+                IS IT FINISHED? — TWO STAGES, AND A PARTIAL RUNS BOTH.
+                «الكاش لحال والمرتجع لحال». The chip beside this says what
+                settlement CALLS the order; these say what the business is
+                still waiting for. A delivered parcel whose money is in a
+                courier's pocket is not finished, and a partly delivered one
+                is unfinished twice: the money for what was kept, and the
+                units that were refused. The rule is in lib/order-closing —
+                this only renders it.
+              */}
+              {order.closing && (order.closing.cash !== 'NONE' || order.closing.goods !== 'NONE') && (
+                <span className="inline-flex items-center gap-1.5">
+                  {(['cash', 'goods'] as const)
+                    .filter((k) => order.closing[k] !== 'NONE')
+                    .map((k) => (
+                      <span
+                        key={k}
+                        title={order.closing.why}
+                        className={`px-2.5 py-1 rounded-full border text-xs font-semibold ${
+                          order.closing[k] === 'DONE'
+                            ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success)]/40 text-[var(--sys-success)]'
+                            : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/40 text-[var(--sys-warning)]'
+                        }`}
+                      >
+                        {STAGE_AR[k]}: {STAGE_STATE_AR[order.closing[k] as StageState]}
+                      </span>
+                    ))}
                 </span>
               )}
 

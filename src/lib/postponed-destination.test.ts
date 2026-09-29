@@ -29,9 +29,10 @@ describe('postponing a shipment', () => {
     const dialog = stripComments(repoFile('src/components/ops/DelayShipmentDialog.tsx'));
     expect(dialog).toContain('إلى متى؟');
     expect(dialog).toMatch(/type="date"/);
-    // Both outcomes need one: a hold with no end is an order nothing returns.
-    expect(dialog).toMatch(/kind: 'HOLD'; until: string/);
-    expect(dialog).toMatch(/kind: 'RELEASE'; until: string/);
+    // ONE outcome now, by the owner's ruling — and it still needs a date:
+    // a postponement with no end is an order nothing brings back.
+    expect(dialog).toMatch(/kind: 'POSTPONE'; until: string/);
+    expect(dialog, 'عاد الخيار الثاني').not.toMatch(/kind: 'RELEASE'/);
   });
 
   it('and the tab it lands in cannot be mistaken for the other list', () => {
@@ -57,7 +58,11 @@ describe('postponing a shipment', () => {
     expect(api).toMatch(/shipHoldUntil: \{ not: null \}/);
   });
 
-  it('and the message names where it went', () => {
-    expect(screen()).toMatch(/محجوزٌ له حتى[\s\S]{0,80}مؤجَّلة الشحن/);
+  it('and the message names where it went, and what became of the goods', () => {
+    // It no longer says «محجوزٌ له» — the goods go back on sale for the
+    // length of the postponement, which is the half of the ruling a toast
+    // is the last chance to tell somebody.
+    expect(screen()).toMatch(/مؤجَّل حتى[\s\S]{0,80}عادت للبيع/);
+    expect(screen(), 'ما زال يَعِد بحجز البضاعة').not.toContain('محجوزٌ له حتى');
   });
 });

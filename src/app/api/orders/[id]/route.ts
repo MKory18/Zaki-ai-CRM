@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { notify } from '@/lib/notify';
+import { closingStages } from '@/lib/order-closing';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -264,6 +265,27 @@ export async function GET(
     // is already READY_TO_SHIP. One truth, computed in one place.
     const state = deriveCoreState(order as unknown as StateSource);
 
+    /**
+     * WHAT THE BUSINESS IS STILL WAITING FOR — beside the zone, not instead.
+     *
+     * «الكاش لحال والمرتجع لحال», and a partly delivered order runs both.
+     * The zone already says nobody in operations is working on a delivered
+     * parcel; it does not say whether its money arrived. Measured here: 3190
+     * concluded parcels and none settled.
+     *
+     * The receipt is the authority for the goods half — a status saying
+     * «تم إرجاعها» is the courier's word for a parcel that may still be on
+     * his van, and closing an order on it would count goods back onto a
+     * shelf that never received them.
+     */
+    const returnReceived =
+      (await db.returnReceipt.count({ where: { orderId: order.id, companyId } })) > 0;
+    const closing = closingStages({
+      shippingStatus: order.shippingStatus,
+      settlementStatus: order.settlementStatus,
+      returnReceived,
+    });
+
     // What the customer actually pays at the door, from the ONE cod function
     // (contract invariant: never computed in a screen). With a price that
     // includes delivery the fee is already inside the line prices, so the
@@ -287,7 +309,7 @@ export async function GET(
     );
 
     return NextResponse.json({
-      order: { ...order, state, zone: getZone(state), commission },
+      order: { ...order, state, zone: getZone(state), commission, closing },
       // The store's own currency, so the detail screen shows the same money
       // the list does instead of a hard-coded dollar sign.
       currency: { code: country.currencyCode, minorUnit: country.minorUnit },

@@ -93,9 +93,20 @@ describe('return receiving', () => {
     await POST(body({ orderId: ORDER_ID, receivedQty: 2, damagedQty: 1, countedAndInspected: true }));
     expect(db.productionBatch.create).toHaveBeenCalledTimes(1);
     expect(db.productionBatch.create.mock.calls[0][0].data).toMatchObject({
+      // TWO units go back on the shelf, not three: the broken one does not.
       quantityRemaining: 2,
       quantitySold: 0,
-      costPerUnit: 4,
+      /**
+       * AND THEY CARRY THE THIRD ONE'S MONEY.
+       *
+       * «إذا في توالف لازم تنقص من المخزون بس داخلة ضمن التكلفة تبع المخزون
+       * للمنتج» — the owner's ruling. Three units at 4.00 left; the two that
+       * survived come back holding all twelve, at 6.00 each. Writing the
+       * broken one off instead would put 8.00 on the shelf and lose 4.00,
+       * and every price set from that cost would under-recover.
+       */
+      totalProductionCost: 12,
+      costPerUnit: 6,
     });
   });
 

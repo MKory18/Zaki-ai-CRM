@@ -6,6 +6,8 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { zodMessage } from '@/lib/zod-message';
+import { holdReservation } from '@/lib/shipment-hold';
+import { releaseOrderLines, reserveOrderLines } from '@/lib/reservation';
 
 /**
  * POST /api/ops/shipments/hold — keep an order out of today's shipment.
@@ -24,9 +26,18 @@ import { zodMessage } from '@/lib/zod-message';
  * it in a van yet" and belongs to whoever builds the shipment. One column
  * doing both would make each one lie about the other.
  *
- * The goods stay reserved throughout — a held order is a sale that is
- * waiting, not one that was abandoned, and releasing its units would let
- * somebody else's order take them.
+ * ── THE GOODS DO NOT STAY RESERVED ──
+ *
+ * They used to, and the owner ruled it out: «وما تحجز رصيد الا بعد ما اشيلو
+ * من التأجيل وارجعو لانشاء شحنة». A postponement froze its units for its
+ * whole length, so a hopeful date took stock off the shelf that a customer
+ * ready to buy today could not be sold — decided by somebody who had not
+ * spoken to the customer. Now the units go back on sale, and they are taken
+ * again when the hold is lifted, against whatever is actually there.
+ *
+ * The one exception is a parcel already out of the warehouse: its units are
+ * packed under this order's name and are not on any shelf. See
+ * `lib/shipment-hold`, which owns that question.
  */
 
 /**
@@ -66,7 +77,7 @@ export const MAX_HOLD_DAYS = 30;
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId, storeId } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('ops.ship');
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -82,10 +93,11 @@ export async function POST(req: Request) {
     /**
      * THE DATE HAS TO BE A DATE, AND NOT A YEAR FROM NOW.
      *
-     * The goods stay reserved for the whole of a hold — that is the point of
-     * it — so a long one is stock nobody can sell, quietly. Past thirty days
-     * the honest instrument is the other one: un-confirm it, let the goods go
-     * back on sale, and let the follow-up team talk to the customer again.
+     * The cap is no longer about frozen stock — the goods go back on sale
+     * now. It is about the order: a shipment postponed for six months is not
+     * a delayed shipment, it is an abandoned sale nobody is reading, and the
+     * honest instrument for that is to stand it down and talk to the
+     * customer again.
      */
     if (!release) {
       const due = new Date(until as string);
@@ -97,8 +109,8 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             error:
-              `التأجيل مع حجز البضاعة لا يتجاوز ${MAX_HOLD_DAYS} يوماً — البضاعة محجوزة طوال المدّة. ` +
-              'لمدّةٍ أطول أعِده إلى المتابعة، فتعود بضاعتُه للبيع.',
+              `التأجيل لا يتجاوز ${MAX_HOLD_DAYS} يوماً — أطولُ من ذلك ليس تأجيلَ شحنٍ بل طلبٌ متروك. ` +
+              'لمدّةٍ أطول أعِده إلى المتابعة ليتكلّم أحدٌ مع الزبون من جديد.',
             code: 'HOLD_TOO_LONG',
           },
           { status: 400 }
@@ -111,9 +123,14 @@ export async function POST(req: Request) {
       select: {
         id: true,
         orderNumber: true,
+        confirmationStatus: true,
         shippingStatus: true,
         shippingBatchId: true,
         shipHoldUntil: true,
+        // What `hasLeftWarehouse` reads: units already packed under this
+        // order's name are not on a shelf anybody else can be sold from.
+        shippedAt: true,
+        labelPrintedAt: true,
       },
     });
     if (!order) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
@@ -131,16 +148,37 @@ export async function POST(req: Request) {
       );
     }
 
-    const updated = await db.order.update({
-      where: { id: order.id },
-      data: release
-        ? { shipHoldUntil: null, shipHoldReason: null, version: { increment: 1 } }
-        : {
-            shipHoldUntil: new Date(until as string),
-            shipHoldReason: reason?.trim() || null,
-            version: { increment: 1 },
-          },
-      select: { id: true, orderNumber: true, shipHoldUntil: true, shipHoldReason: true },
+    /**
+     * THE STOCK AND THE HOLD MOVE TOGETHER OR NOT AT ALL.
+     *
+     * One transaction, because the two halves contradict each other if only
+     * one lands: an order marked postponed with its units still reserved is
+     * the behaviour the owner removed, and units released with no hold
+     * recorded is a sale whose goods somebody else can take while it still
+     * sits in today's shipment list.
+     */
+    const reservation = holdReservation(order as never);
+    const updated = await db.$transaction(async (tx) => {
+      const row = await tx.order.update({
+        where: { id: order.id },
+        data: release
+          ? { shipHoldUntil: null, shipHoldReason: null, version: { increment: 1 } }
+          : {
+              shipHoldUntil: new Date(until as string),
+              shipHoldReason: reason?.trim() || null,
+              version: { increment: 1 },
+            },
+        select: { id: true, orderNumber: true, shipHoldUntil: true, shipHoldReason: true },
+      });
+      if (release) {
+        // Back in the shipment list, so its units are taken again — against
+        // what is on the shelf NOW. A shortage is not hidden: the lines stay
+        // short and `shipmentBlocks` refuses the shipment by name.
+        await reserveOrderLines(tx, order.id, { allowNegativeStock: country.allowNegativeStock });
+      } else if (reservation.releases) {
+        await releaseOrderLines(tx, order.id);
+      }
+      return row;
     });
 
     await db.orderActivity.create({
@@ -149,7 +187,13 @@ export async function POST(req: Request) {
         orderId: order.id,
         userId: user.id,
         action: release ? 'SHIP_HOLD_RELEASED' : 'SHIP_HOLD_SET',
-        metadata: JSON.stringify({ until: until ?? null, reason: reason ?? null }),
+        metadata: JSON.stringify({
+          until: until ?? null,
+          reason: reason ?? null,
+          // What happened to the goods, in the order's own timeline — so
+          // «why is this stock free» has an answer months later.
+          stock: release ? 'RESERVED_AGAIN' : reservation.releases ? 'RELEASED' : 'KEPT',
+        }),
       },
     });
 
@@ -166,8 +210,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       order: updated,
       message: release
-        ? `${order.orderNumber} عاد إلى قائمة الشحن.`
-        : `${order.orderNumber} مؤجَّل حتى ${String(until).slice(0, 10)} — ويعود إلى قائمة الشحن يومَها وحده.`,
+        ? `${order.orderNumber} عاد إلى قائمة الشحن، وحُجزت بضاعتُه من جديد.`
+        : `${order.orderNumber} مؤجَّل حتى ${String(until).slice(0, 10)} — ويعود إلى قائمة الشحن يومَها وحده. ${reservation.why}.`,
     });
   } catch (error) {
     return apiErrorResponse(error);

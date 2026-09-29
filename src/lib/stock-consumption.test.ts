@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { repoFile, stripComments } from './guard-source';
 
 vi.mock('./db', () => ({ db: {} }));
 
@@ -9,7 +10,7 @@ vi.mock('./receiving', () => ({
   onHandTotal: (...a: unknown[]) => onHandTotal(...a),
 }));
 
-import { consumeOrderStock, restoreOrderStock } from './stock-consumption';
+import { consumeOrderStock, restoreOrderStock, absorbDamaged } from './stock-consumption';
 
 /**
  * Delivering an order used to consume nothing: the reservation was released,
@@ -206,5 +207,93 @@ describe('a return of goods that never left the shelf', () => {
     await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 3 });
     const asked = (tx as any).inventoryMovement.findFirst.mock.calls.map((c: any) => c[0].where.type);
     expect(asked).toContain('SALE');
+  });
+});
+
+/**
+ * THE DAMAGED UNITS LEAVE THE SHELF; THEIR MONEY DOES NOT LEAVE THE PRODUCT.
+ *
+ * The owner ruled it: «إذا في توالف لازم تنقص من المخزون بس داخلة ضمن
+ * التكلفة تبع المخزون للمنتج». Writing them off would be the ordinary
+ * treatment and it is not what was asked — the cost stays on the product,
+ * carried by whatever survived, so the price set from that cost is the one
+ * that earns the money back.
+ */
+describe('absorbDamaged — the cost of what broke', () => {
+  it('puts the whole parcel’s money onto the units that survived', () => {
+    // Sixteen units at 2.00 went out; twelve came back sound, four broken.
+    const r = absorbDamaged({ sound: 12, damaged: 4, costPerUnit: 2 });
+    expect(r.quantity).toBe(12);
+    expect(r.totalCost).toBe(32);
+    expect(r.costPerUnit).toBe(2.67);
+    expect(r.absorbed).toBe(8);
+  });
+
+  /**
+   * THE INVARIANT. Absorption moves money between units; it never creates
+   * or destroys any. A mutation that "spreads" the cost by inventing some
+   * of it would pass every rate check and fail this.
+   */
+  it('and not one piastre more or less than went out', () => {
+    for (const [sound, damaged, cost] of [[12, 4, 2], [1, 9, 3.5], [7, 0, 1.25], [100, 3, 0.99]] as const) {
+      const r = absorbDamaged({ sound, damaged, costPerUnit: cost });
+      expect(r.totalCost).toBeCloseTo(cost * (sound + damaged), 1);
+    }
+  });
+
+  it('changes nothing at all when nothing broke', () => {
+    const r = absorbDamaged({ sound: 12, damaged: 0, costPerUnit: 2 });
+    expect(r.costPerUnit).toBe(2);
+    expect(r.totalCost).toBe(24);
+    expect(r.absorbed).toBe(0);
+  });
+
+  /**
+   * AND WHEN EVERY UNIT BROKE THERE IS NOBODY TO CARRY IT.
+   *
+   * Returning a cost with no units to hold it would put money into a batch
+   * of nothing, and the average cost of the product would divide by zero or
+   * — worse — quietly land on a different batch. The loss is real here, and
+   * the function says so by returning nothing rather than pretending.
+   */
+  it('carries nothing when no unit came back sound', () => {
+    expect(absorbDamaged({ sound: 0, damaged: 6, costPerUnit: 2 })).toEqual({
+      quantity: 0,
+      totalCost: 0,
+      costPerUnit: 0,
+      absorbed: 0,
+    });
+  });
+
+  it('returns the units even when what they cost was never recorded', () => {
+    // Cost of goods is unrecorded on almost every order in this shop, so
+    // this is the common case, not the edge: the units still go back.
+    const r = absorbDamaged({ sound: 5, damaged: 2, costPerUnit: 0 });
+    expect(r.quantity).toBe(5);
+    expect(r.totalCost).toBe(0);
+    expect(r.absorbed).toBe(0);
+  });
+
+  it('refuses nonsense instead of writing it into a batch', () => {
+    expect(absorbDamaged({ sound: -3, damaged: 2, costPerUnit: 2 }).quantity).toBe(0);
+    expect(absorbDamaged({ sound: 4, damaged: -2, costPerUnit: 2 }).totalCost).toBe(8);
+    expect(absorbDamaged({ sound: 4, damaged: 1, costPerUnit: Number.NaN }).totalCost).toBe(0);
+    expect(absorbDamaged({ sound: 4.9, damaged: 1.9, costPerUnit: 2 }).quantity).toBe(4);
+  });
+});
+
+/**
+ * AND THE COUNTING DESK ACTUALLY HANDS THE DAMAGE OVER.
+ *
+ * The rule can be perfect and reach nothing: `restoreOrderStock` takes the
+ * damaged count as an OPTIONAL argument, so a caller that forgets it gets
+ * the old write-off behaviour silently, with every test above still green.
+ * This is the wire.
+ */
+describe('the returns desk passes the damaged count to the shelf', () => {
+  it('hands both counts to restoreOrderStock', () => {
+    const src = stripComments(repoFile('src/app/api/ops/returns/route.ts'));
+    expect(src.length).toBeGreaterThan(200);
+    expect(src).toMatch(/restoreOrderStock\(tx, \{[\s\S]{0,200}?damagedQty: input\.damagedQty/);
   });
 });

@@ -78,16 +78,21 @@ export function ShipmentsNewScreen() {
   /**
    * THE ORDER STOPS, NOT ONLY THE SHIPMENT.
    *
-   * Different from the hold beside it, and the difference is the whole point:
-   * a HOLD keeps the order confirmed with its stock reserved, for when we
-   * cannot ship today and the customer still wants it. This is for when the
-   * ORDER has to stop — the confirmation is undone, the stock goes back on
-   * the shelf, and the order returns to the people whose job is talking to
-   * customers.
+   * Different from the postponement beside it, and the difference is the
+   * whole point: postponing keeps the order confirmed and brings it back to
+   * the shipment list on the day. This is for when the ORDER has to stop —
+   * the confirmation is undone and it returns to the people whose job is
+   * talking to customers.
+   *
+   * ITS POSTPONE OUTCOME IS GONE. The delay dialog used to reach this door
+   * too, with `outcome: 'POSTPONE'`, and no longer does: postponing is one
+   * action now and it goes to the hold door. Leaving the branch here would
+   * be a path nobody can reach and nobody can check, and the next reader
+   * would take it for a second way of postponing that still works.
    */
   const standDown = async (
     row: Row,
-    body: { outcome: 'POSTPONE'; until: string } | { outcome: 'CANCEL'; reason: string; note: string }
+    body: { outcome: 'CANCEL'; reason: string; note: string }
   ) => {
     setStandingDown(row.id);
     try {
@@ -96,11 +101,7 @@ export function ShipmentsNewScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: row.id, ...body }),
       });
-      toast.done(
-        body.outcome === 'POSTPONE'
-          ? `${row.orderNumber} عاد إلى المتابعة — وبضاعته رجعت للبيع`
-          : `${row.orderNumber} أُلغي — وبضاعته رجعت للبيع`
-      );
+      toast.done(`${row.orderNumber} أُلغي — وبضاعته رجعت للبيع`);
       await load();
     } catch (e) {
       toast.failed(e instanceof Error ? e.message : 'تعذّر التنفيذ');
@@ -110,38 +111,24 @@ export function ShipmentsNewScreen() {
   };
 
   /**
-   * NOT SHIPPING TODAY — and the dialog asked which kind.
+   * NOT SHIPPING TODAY.
    *
-   * Both outcomes now carry a date, because the two ways of losing an order
-   * on this screen were both dateless: the hold stored the year 2999 when
-   * nobody typed one, and «للمتابعة» was a second button saying the same
-   * word as the first.
+   * One action with a date on it. The date is what the two older controls
+   * both lacked — the hold stored the year 2999 when nobody typed one, and
+   * «للمتابعة» was a second button saying the same word as the first — and
+   * the choice between them is the one the owner removed.
    */
   const delay = async (row: Row, choice: DelayChoice) => {
     setHolding(row.id);
     try {
-      if (choice.kind === 'HOLD') {
-        await apiJson('/api/ops/shipments/hold', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: row.id, until: choice.until, reason: choice.reason }),
-        });
-        toast.done(
-          `${row.orderNumber} محجوزٌ له حتى ${choice.until.slice(0, 10)} — تجده في تبويب «مؤجَّلة الشحن»`
-        );
-      } else {
-        await apiJson('/api/ops/shipments/stand-down', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: row.id,
-            outcome: 'POSTPONE',
-            until: choice.until,
-            note: choice.reason,
-          }),
-        });
-        toast.done(`${row.orderNumber} عاد إلى المتابعة — وبضاعته رجعت للبيع`);
-      }
+      await apiJson('/api/ops/shipments/hold', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: row.id, until: choice.until, reason: choice.reason }),
+      });
+      toast.done(
+        `${row.orderNumber} مؤجَّل حتى ${choice.until.slice(0, 10)} — وبضاعته عادت للبيع`
+      );
       setDelaying(null);
       await load();
     } catch (e) {
@@ -445,7 +432,7 @@ export function ShipmentsNewScreen() {
                     type="button"
                     onClick={() => setDelaying(r)}
                     disabled={holding === r.id}
-                    title="لن يُشحن اليوم — تختار بعدها: تحجز له بضاعته، أم يعود إلى المتابعة"
+                    title="لن يُشحن اليوم — تختار موعداً، وتعود بضاعتُه للبيع حتى ذلك الموعد"
                     className="min-h-11 md:min-h-0 inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-[var(--sys-border)] text-[var(--sys-muted-foreground)] transition-colors hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)] disabled:opacity-50"
                   >
                     {holding === r.id ? (
@@ -472,8 +459,16 @@ export function ShipmentsNewScreen() {
                   <button
                     type="button"
                     onClick={() => setCancelling(r)}
-                    disabled={standingDown === r.id}
-                    title="ألغِ الطلب — تعود بضاعتُه للبيع"
+                    disabled={standingDown === r.id || !!r.standDownBlocked}
+                    /* THE VERDICT BELONGS TO THIS CONTROL NOW.
+                       It was spent disabling half of the postpone dialog,
+                       and that half is gone — but the rule it carries was
+                       always about CANCELLING: `assertCancellable` is what
+                       the stand-down door runs, and a printed waybill is
+                       what it refuses. Two of five rows measured on this
+                       database already had one, so the button failed every
+                       time it was pressed on them. */
+                    title={r.standDownBlocked?.message ?? 'ألغِ الطلب — تعود بضاعتُه للبيع'}
                     className="min-h-11 md:min-h-0 ms-1 inline-flex items-center gap-1 rounded-md border border-[var(--sys-border)] px-2 py-1 text-xs text-[var(--sys-muted-foreground)] transition-colors hover:border-[var(--sys-destructive-border)] hover:text-[var(--sys-destructive)] disabled:opacity-50"
                   >
                     <RiCloseCircleLine className="w-4 h-4" aria-hidden />
@@ -505,7 +500,6 @@ export function ShipmentsNewScreen() {
         <DelayShipmentDialog
           orderNumber={delaying.orderNumber}
           busy={holding === delaying.id}
-          standDownBlocked={delaying.standDownBlocked}
           onClose={() => setDelaying(null)}
           onChoose={(choice) => void delay(delaying, choice)}
         />

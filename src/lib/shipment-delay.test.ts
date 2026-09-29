@@ -114,31 +114,42 @@ describe('and the row asks once, instead of offering two words for it', () => {
   });
 });
 
-describe('the dialog puts the choice in words, with the date first', () => {
-  it('asks the date before either outcome, because both need one', () => {
+describe('the dialog asks a date and then does ONE thing', () => {
+  /**
+   * THE FORK IS GONE, BY THE OWNER'S RULING.
+   *
+   * «ما زال الزبون يريده؟ الغيها ك خيار». The question asked a packer to
+   * predict a customer's mind and then charged the shop for the guess: a
+   * hopeful «yes» reserved stock for the whole postponement, decided by
+   * somebody who had not spoken to anybody.
+   */
+  it('asks the date, and has one button that needs it', () => {
     const src = dialog();
     expect(src).toContain('إلى متى؟');
     expect(src).toMatch(/type="date"/);
-    // NEITHER button can be pressed without a valid one — asserted on the
-    // condition rather than on one exact spelling, because the second button
-    // carries a further condition of its own.
     const guards = src.match(/disabled=\{!valid \|\| busy[^}]*\}/g) ?? [];
-    expect(guards.length, 'زرٌّ لا يشترط موعداً').toBe(2);
+    expect(guards.length, 'عاد الخيار الثاني').toBe(1);
+    expect(src, 'السؤال الملغى عاد').not.toContain('هل ما زال الزبون يريده؟');
   });
 
-  it('names what each outcome does to the goods', () => {
+  it('and says what becomes of the goods — that they go back on sale', () => {
     const src = dialog();
-    expect(src).toContain('وبضاعتُه محجوزةً له');
-    expect(src).toContain('وتعود بضاعتُه للبيع فوراً');
-    expect(src).toContain('الطلبات المؤجلة');
+    expect(src).toContain('تعود للبيع');
+    expect(src).toContain('حين تُبنى الشحنة');
+    expect(src).toContain('مؤجَّلة الشحن');
+    expect(src, 'ما زال يَعِد بحجز البضاعة').not.toContain('وبضاعتُه محجوزةً له');
   });
 
-  it('and one goes to the hold door while the other stands the order down', () => {
+  it('and the screen has one door to knock on, not two', () => {
     const src = screen();
-    expect(src).toMatch(/if \(choice\.kind === 'HOLD'\) \{/);
     expect(src).toContain("'/api/ops/shipments/hold'");
-    expect(src).toContain("'/api/ops/shipments/stand-down'");
-    expect(src).toContain("outcome: 'POSTPONE'");
+    // WITH THE DATE ON IT. The dialog refuses to submit without one and the
+    // route refuses a request without one — and between them sits a body
+    // built by hand, where a dropped field turns every postponement into a
+    // 400 that reads as «تعذّر التنفيذ».
+    expect(src, 'الموعد لا يُرسَل').toContain('until: choice.until');
+    expect(src, 'التأجيل ما زال يوقف الطلب أحياناً').not.toMatch(/if \(choice\.kind === 'HOLD'\) \{/);
+    expect(src, 'ما زال يُلغي التأكيد في مسار التأجيل').not.toContain("outcome: 'POSTPONE'");
   });
 
   /**
@@ -184,23 +195,66 @@ describe('the half that cannot work is not offered', () => {
     expect(src, 'الحارس يقرأ حقولاً غير مُحمَّلة').toContain('labelPrintedAt: true');
   });
 
-  it('and the dialog disables that outcome, with the reason in its place', () => {
-    const src = dialog();
-    expect(src, 'الخيار المرفوض ما زال قابلاً للضغط').toMatch(
-      /disabled=\{!valid \|\| busy \|\| !!standDownBlocked\}/
-    );
-    expect(src).toMatch(/standDownBlocked\s*\?\s*standDownBlocked\.message/);
-  });
-
-  /** Keeping the parcel back is still possible with a printed label. */
-  it('while the hold stays available', () => {
-    const src = dialog();
-    const holdBtn = src.slice(src.indexOf("choose('HOLD')") - 200, src.indexOf("choose('HOLD')"));
-    expect(holdBtn, 'الحجز عُطِّل أيضاً').not.toContain('standDownBlocked');
-  });
-
-  it('and the screen passes the verdict down rather than guessing', () => {
+  /**
+   * AND THE VERDICT MOVED TO THE CONTROL IT ACTUALLY GOVERNS.
+   *
+   * It used to disable half of the postpone dialog. That half is gone, but
+   * the rule it carries was always about CANCELLING: `assertCancellable` is
+   * what the stand-down door runs and a printed waybill is what it refuses.
+   * Spending it on the postpone button left the cancel button offering
+   * something the door would refuse — measured: two of five rows here
+   * already had a label printed.
+   */
+  it('the cancel button carries it, and the postpone dialog no longer knows it', () => {
     const src = screen();
-    expect(src).toContain('standDownBlocked={delaying.standDownBlocked}');
+    expect(src).toContain('disabled={standingDown === r.id || !!r.standDownBlocked}');
+    expect(src).toContain('title={r.standDownBlocked?.message ??');
+    expect(src, 'الحوار ما زال يستقبل حكماً لا يخصّه').not.toContain('standDownBlocked={delaying.standDownBlocked}');
+    expect(dialog(), 'الحوار ما زال يعرف الحكم').not.toContain('standDownBlocked');
+  });
+
+  /**
+   * A printed label never stopped the postponement, and still does not —
+   * what it stops is the goods going back on sale, which is a different
+   * sentence and is said by `holdReservation`.
+   */
+  it('and a printed label does not block postponing, only releasing its goods', () => {
+    const src = dialog();
+    expect(src).toMatch(/onClick=\{postpone\}/);
+    const hold = stripComments(repoFile('src/app/api/ops/shipments/hold/route.ts'));
+    expect(hold).toContain('holdReservation(order as never)');
+    expect(hold).toContain('labelPrintedAt: true');
+  });
+});
+
+/**
+ * THE GOODS GO BACK ON SALE — the half of the ruling that is not on screen.
+ *
+ * «وما تحجز رصيد الا بعد ما اشيلو من التأجيل وارجعو لانشاء شحنة». The
+ * dialog can say it perfectly and the route can still freeze the stock, and
+ * nobody would see the difference until a customer was refused goods that
+ * were sitting on the shelf under a postponed order.
+ */
+describe('the hold door moves the stock as well as the date', () => {
+  const hold = () => stripComments(repoFile('src/app/api/ops/shipments/hold/route.ts'));
+
+  it('releases the lines when the shipment is postponed', () => {
+    const src = hold();
+    expect(src.length).toBeGreaterThan(200);
+    expect(src).toMatch(/reservation\.releases\) \{\s*await releaseOrderLines\(tx, order\.id\);/);
+  });
+
+  it('and takes them again when the hold is lifted', () => {
+    expect(hold()).toMatch(/if \(release\) \{[\s\S]{0,400}?await reserveOrderLines\(tx, order\.id, \{ allowNegativeStock: country\.allowNegativeStock \}\)/);
+  });
+
+  it('in one transaction, so a postponed order never keeps its reservation', () => {
+    // Half of this landing is the behaviour the owner removed, wearing a
+    // new label.
+    expect(hold()).toMatch(/await db\.\$transaction\(async \(tx\) => \{/);
+  });
+
+  it('and the timeline records what happened to the goods', () => {
+    expect(hold()).toMatch(/stock: release \? 'RESERVED_AGAIN' : reservation\.releases \? 'RELEASED' : 'KEPT'/);
   });
 });
