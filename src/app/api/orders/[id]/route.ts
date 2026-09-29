@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { computeCod } from '@/lib/money';
-import { hasEverShipped, assertCancellable, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
+import { hasEverShipped, hasLeftWarehouse, assertCancellable, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines } from '@/lib/reservation';
 import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
@@ -15,7 +15,7 @@ import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
 import { authorize, can, getPermissionScope } from '@/lib/authorization';
 import { MAX_REASON, reasonRefusal } from '@/lib/order-edit-reason';
-import { orderSeal, sealedFieldsIn, sealMessage } from '@/lib/order-seal';
+import { orderSeal, sealedFieldsIn, sealMessage, handedToCourier } from '@/lib/order-seal';
 import { courierActionAr, courierActionFor, courierMessage, sealedAmong } from '@/lib/courier-change';
 import { expandApproved, mayApply, strayFields } from '@/lib/change-request-apply';
 import { zodMessage } from '@/lib/zod-message';
@@ -377,6 +377,14 @@ export async function PATCH(
         id: existing.id,
         confirmationStatus: existing.confirmationStatus,
         claimedById: existing.claimedById ?? null,
+        // The handover, not the printer: a labelled parcel still on our
+        // floor is the warehouse's to carry out. The batch is read below
+        // for the seal; this asks the order's own state, and the seal
+        // check that follows covers the batch.
+        handedToCourier: handedToCourier({
+          shippingStatus: existing.shippingStatus,
+          shippedAt: (existing as { shippedAt?: Date | null }).shippedAt ?? null,
+        }),
       });
       if (!verdict.ok) {
         return NextResponse.json({ error: verdict.error, code: verdict.code }, { status: verdict.status });

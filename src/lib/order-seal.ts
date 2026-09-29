@@ -29,6 +29,35 @@ import { SHIPPING_GONE } from './order-state';
 export const SEALED_BATCH_STATUSES = ['SHIPPED', 'CLOSED'] as const;
 
 /**
+ * HAS THE COURIER ACTUALLY TAKEN IT — «انضغط زر سلّمت الشركة».
+ *
+ * NOT the same question as `hasLeftWarehouse`, and the difference is a
+ * whole stage. A printed waybill, or a parcel sitting on the out-tray
+ * waiting for pickup, commits the GOODS — nobody may count those units as
+ * available again. But the box is still on our floor and can still be
+ * opened, and the label can still be printed again.
+ *
+ * So for «may the warehouse still say yes to a change?» the line is the
+ * handover, not the print. The two were conflated once and the warehouse
+ * lost its say the moment a label came off the printer, with the parcel
+ * still three feet away.
+ *
+ * Whichever comes first: the order's own shipping state, or its batch
+ * being handed over.
+ */
+export function handedToCourier(order: {
+  shippingStatus: string;
+  shippedAt?: Date | string | null;
+  batchStatus?: string | null;
+}): boolean {
+  if (order.shippedAt) return true;
+  if ((SHIPPING_GONE as readonly string[]).includes(order.shippingStatus)) return true;
+  return SEALED_BATCH_STATUSES.includes(
+    (order.batchStatus ?? '') as (typeof SEALED_BATCH_STATUSES)[number]
+  );
+}
+
+/**
  * The fields the courier is already acting on.
  *
  * Deliberately NOT here: internalNotes, customerNotes, confirmationStatus,

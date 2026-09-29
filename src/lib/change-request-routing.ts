@@ -14,10 +14,24 @@ import { can } from './authorization';
  *   supervisor who has never spoken to this customer adds a wait and
  *   subtracts the only informed opinion.
  *
- *   CONFIRMED AND INTO OPERATIONS — the supervisor decides. The order is no
- *   longer on anybody's call list; it is in a batch, or on a van, and the
- *   question is now whether the courier can still be reached. That is not
- *   the agent's authority and never was.
+ *   CONFIRMED AND STILL IN THE WAREHOUSE — the warehouse decides too. The
+ *   question at this stage is «can what goes in the box still change?»,
+ *   and the only person who knows is the one standing at the packing
+ *   table. Asked for in as many words: «مين بشوفه؟ المالك، السوبر أدمن،
+ *   والمسؤول عن المخزن» — and «بس في حالة إنشاء شحنة وما انترحّل للشحن».
+ *
+ *   ONCE THE COURIER HAS TAKEN IT — the supervisor alone. The order is
+ *   on a van and the question is now whether the courier can still be
+ *   reached, which is neither the agent's authority nor the warehouse's.
+ *
+ *   THE LINE IS THE HANDOVER, NOT THE PRINTER. This first used
+ *   `hasLeftWarehouse` — which starts at the printed waybill — and that
+ *   is the wrong line for THIS question: a label coming off the printer
+ *   commits the goods, but the box is still three feet away and can still
+ *   be opened. «بحالة ما انضغط على زر سلّمت الشركة… ولما يوافق يقدر يعدل
+ *   حقيقة عشان تظهر بالطباعة» — the approval is what the reprint shows.
+ *   So the line is `handedToCourier`, and the two questions keep their
+ *   two answers.
  *
  * A supervisor may decide either way. The agent might be off shift, the
  * request might be urgent, and an escalation path that stops working
@@ -34,11 +48,23 @@ export interface RoutingSource {
   confirmationStatus: string;
   /** The agent who pulled it from the pool, if anyone still holds it. */
   claimedById: string | null;
+  /**
+   * Has the courier actually taken it — «انضغط زر سلّمت الشركة»?
+   * `handedToCourier`, computed by the caller. NOT `hasLeftWarehouse`:
+   * a printed label commits the goods but leaves the box openable.
+   *
+   * Absent reads as «taken», which is the safe way round: a caller that
+   * has not been taught to pass it denies the warehouse rather than
+   * granting it on a parcel already in a van.
+   */
+  handedToCourier?: boolean;
 }
 
 export type Decider =
   /** The agent holding the order, plus any supervisor. */
   | { kind: 'HOLDING_AGENT'; userId: string }
+  /** The packing table, plus any supervisor. */
+  | { kind: 'WAREHOUSE' }
   /** Supervisors only. */
   | { kind: 'SUPERVISOR' };
 
@@ -46,7 +72,19 @@ export function deciderFor(order: RoutingSource): Decider {
   if (BEFORE_OPERATIONS.includes(order.confirmationStatus) && order.claimedById) {
     return { kind: 'HOLDING_AGENT', userId: order.claimedById };
   }
+  // Confirmed and the courier has not taken it: the box can still be
+  // opened, so the person who would open it may answer.
+  if (!BEFORE_OPERATIONS.includes(order.confirmationStatus) && order.handedToCourier === false) {
+    return { kind: 'WAREHOUSE' };
+  }
   return { kind: 'SUPERVISOR' };
+}
+
+/** What the packing table holds. A role OR the permission that names it. */
+export const WAREHOUSE_ROLES = ['WAREHOUSE'] as const;
+
+function isWarehouse(user: SessionUser): boolean {
+  return can(user, 'ops.ship') || (WAREHOUSE_ROLES as readonly string[]).includes(user.role);
 }
 
 export interface RoutingVerdict {
@@ -79,12 +117,18 @@ export function mayDecide(user: SessionUser, order: RoutingSource): RoutingVerdi
     return { allowed: true, decider };
   }
 
+  if (decider.kind === 'WAREHOUSE' && isWarehouse(user)) {
+    return { allowed: true, decider };
+  }
+
   return {
     allowed: false,
     decider,
     reason:
       decider.kind === 'HOLDING_AGENT'
         ? 'هذا الطلب بيد موظف التأكيد الذي يعمل عليه — هو أو المشرف يبتّ في التعديل.'
-        : 'الطلب دخل مرحلة التشغيل — المشرف وحده يبتّ في التعديل.',
+        : decider.kind === 'WAREHOUSE'
+          ? 'الطلب في المستودع — المسؤول عن المخزن أو المشرف يبتّ في التعديل.'
+          : 'الطرد سُلّم لشركة الشحن — المشرف وحده يبتّ في التعديل، ويكون بمراسلتهم.',
   };
 }

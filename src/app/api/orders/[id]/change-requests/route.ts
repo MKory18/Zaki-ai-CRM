@@ -13,7 +13,7 @@ import { CHANGE_INTENTS, INTENT_AR, INTENT_ASK_AR, carryOut, missingFor, type Ch
 import { hasLeftWarehouse, type StateSource } from '@/lib/order-state';
 import { createNotification } from '@/lib/notification';
 import { deciderFor, mayDecide, SUPERVISOR_ROLES } from '@/lib/change-request-routing';
-import { orderSeal } from '@/lib/order-seal';
+import { orderSeal, handedToCourier } from '@/lib/order-seal';
 
 /**
  * Change requests on an order (contract PART 2 / invariant 7).
@@ -198,6 +198,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const mine = mayDecide(user, {
       confirmationStatus: order.confirmationStatus,
       claimedById: (order as { claimedById?: string | null }).claimedById ?? null,
+      // The handover, not the printer: a labelled parcel still on our
+      // floor is the warehouse's to answer. `batch` is already loaded
+      // above for the seal.
+      handedToCourier: handedToCourier({
+        shippingStatus: (order as { shippingStatus?: string }).shippingStatus ?? '',
+        shippedAt: (order as { shippedAt?: Date | null }).shippedAt ?? null,
+        batchStatus: batch?.status ?? null,
+      }),
     });
     const readyToApply = mine.allowed && !seal.sealed;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { orderSeal, sealedFieldsIn, sealMessage, SEALED_BATCH_STATUSES } from './order-seal';
+import { orderSeal, sealedFieldsIn, sealMessage, SEALED_BATCH_STATUSES, handedToCourier } from './order-seal';
 
 /**
  * The line between "fix it" and "ask for it to be fixed".
@@ -166,5 +166,51 @@ describe('a waybill already on the box', () => {
   it('lets shipping win when both are true — it is the later fact', () => {
     const seal = orderSeal({ shippingStatus: 'SHIPPED', labelPrintedAt: new Date() });
     expect(seal.reason).toBe('SHIPPED');
+  });
+});
+
+/**
+ * TWO QUESTIONS, TWO LINES.
+ *
+ * `hasLeftWarehouse` answers «may these units be counted as available
+ * again?» and starts at the printed waybill: a label on a box commits the
+ * goods inside it.
+ *
+ * `handedToCourier` answers «may the warehouse still say yes to a change?»
+ * and starts at the handover — «انضغط زر سلّمت الشركة». A label coming off
+ * the printer leaves the box on our floor, openable, and reprintable.
+ *
+ * Conflating them cost the warehouse its say the moment a label printed,
+ * with the parcel still three feet away.
+ */
+describe('handed to the courier, which is not the same as labelled', () => {
+  const order = (over: Partial<Parameters<typeof handedToCourier>[0]> = {}) => ({
+    shippingStatus: 'READY_FOR_PICKUP',
+    shippedAt: null,
+    batchStatus: null,
+    ...over,
+  });
+
+  it('a labelled parcel waiting for pickup has NOT been handed over', () => {
+    expect(handedToCourier(order())).toBe(false);
+    expect(handedToCourier(order({ shippingStatus: 'PACKING' }))).toBe(false);
+    expect(handedToCourier(order({ shippingStatus: 'READY_FOR_SHIPPING' }))).toBe(false);
+  });
+
+  it('but a shipped one has, by its own state', () => {
+    expect(handedToCourier(order({ shippingStatus: 'SHIPPED' }))).toBe(true);
+    expect(handedToCourier(order({ shippingStatus: 'OUT_FOR_DELIVERY' }))).toBe(true);
+  });
+
+  it('and a shipped timestamp counts even if the status was rolled back', () => {
+    expect(handedToCourier(order({ shippingStatus: 'PACKING', shippedAt: new Date() }))).toBe(true);
+  });
+
+  it('and so does its batch being handed over', () => {
+    for (const batchStatus of SEALED_BATCH_STATUSES) {
+      expect(handedToCourier(order({ batchStatus })), batchStatus).toBe(true);
+    }
+    expect(handedToCourier(order({ batchStatus: 'READY' }))).toBe(false);
+    expect(handedToCourier(order({ batchStatus: 'SOMETHING_NEW' }))).toBe(false);
   });
 });

@@ -7,6 +7,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { zodMessage } from '@/lib/zod-message';
 import { createNotification } from '@/lib/notification';
+import { handedToCourier } from '@/lib/order-seal';
 import { afterResponse } from '@/lib/notify';
 
 /**
@@ -44,7 +45,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       // stage travels with the request.
       include: {
         order: {
-          select: { id: true, orderNumber: true, confirmationStatus: true, claimedById: true },
+          // What `handedToCourier` reads: the warehouse may decide until
+          // the courier takes the parcel, and not after — a printed label
+          // is not the line. See change-request-routing.
+          select: {
+            id: true, orderNumber: true, confirmationStatus: true, claimedById: true,
+            shippingStatus: true, shippedAt: true,
+            shippingBatch: { select: { status: true } },
+          },
         },
       },
     });
@@ -65,7 +73,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // question becomes whether the courier can still be reached — which was
     // never the agent's authority. A supervisor may decide either way, so an
     // escalation path never depends on one person being at their desk.
-    const routing = mayDecide(user, request.order);
+    const routing = mayDecide(user, {
+      ...request.order,
+      handedToCourier: handedToCourier({
+        shippingStatus: request.order.shippingStatus,
+        shippedAt: request.order.shippedAt,
+        batchStatus: request.order.shippingBatch?.status ?? null,
+      }),
+    });
     if (!routing.allowed) {
       return NextResponse.json(
         {

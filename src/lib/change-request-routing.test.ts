@@ -21,6 +21,14 @@ const user = (id: string, role: string) => ({ id, role, permissions: [] }) as un
 const onHerDesk = { confirmationStatus: 'IN_PROGRESS', claimedById: SARA };
 const inOperations = { confirmationStatus: 'CONFIRMED', claimedById: SARA };
 const unclaimed = { confirmationStatus: 'NEW', claimedById: null };
+/**
+ * Confirmed, and the courier has NOT taken it. The waybill may well be
+ * printed — that commits the goods, not the box — so this is still the
+ * warehouse's to answer, and its approval is what the reprint shows.
+ */
+const onOurFloor = { confirmationStatus: 'CONFIRMED', claimedById: SARA, handedToCourier: false };
+/** Confirmed, and «زر سلّمت الشركة» has been pressed: it is gone. */
+const goneOut = { confirmationStatus: 'CONFIRMED', claimedById: SARA, handedToCourier: true };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -69,7 +77,10 @@ describe('who may decide', () => {
     // Whether the courier can still be reached was never her authority.
     const verdict = mayDecide(user(SARA, 'CONFIRMATION_AGENT'), inOperations);
     expect(verdict.allowed).toBe(false);
-    expect(verdict.reason).toContain('مرحلة التشغيل');
+    // The refusal now names WHERE the parcel is rather than the stage it
+    // is in, because the stage no longer decides on its own: a confirmed
+    // order still on our floor is the warehouse's to answer.
+    expect(verdict.reason).toContain('شركة الشحن');
   });
 
   it('lets a supervisor decide at either stage', () => {
@@ -94,5 +105,90 @@ describe('who may decide', () => {
     const verdict = mayDecide(user('other', 'MODERATOR'), onHerDesk);
     expect(verdict.allowed).toBe(false);
     expect(verdict.decider).toEqual({ kind: 'HOLDING_AGENT', userId: SARA });
+  });
+});
+
+/**
+ * THE WAREHOUSE'S WINDOW.
+ *
+ * «مين بشوفه؟ المالك، السوبر أدمن، والمسؤول عن المخزن» — and «بس في حالة
+ * إنشاء شحنة وما انترحّل للشحن». The question at that stage is «can what
+ * goes in the box still change?», and the only person who knows is the one
+ * standing at the packing table. Once the waybill is printed the box
+ * cannot be opened, and their answer would be about goods they no longer
+ * control.
+ */
+describe('the warehouse, while the goods are on its floor', () => {
+  const warehouse = user('user-w', 'WAREHOUSE');
+
+  it('decides a confirmed order that has not left', () => {
+    expect(deciderFor(onOurFloor)).toEqual({ kind: 'WAREHOUSE' });
+    expect(mayDecide(warehouse, onOurFloor).allowed).toBe(true);
+  });
+
+  it('and does not once the waybill is printed', () => {
+    expect(deciderFor(goneOut)).toEqual({ kind: 'SUPERVISOR' });
+    const v = mayDecide(warehouse, goneOut);
+    expect(v.allowed).toBe(false);
+    expect(v.reason).toContain('شركة الشحن');
+  });
+
+  /**
+   * A PRINTED LABEL IS NOT THE LINE.
+   *
+   * The first version of this used `hasLeftWarehouse`, which starts at the
+   * printed waybill — so the warehouse lost its say the moment a label
+   * came off the printer, with the parcel still three feet away. The
+   * commitment of the GOODS and the openability of the BOX are two
+   * questions and they keep two answers.
+   */
+  it('and a labelled parcel still on our floor is theirs to answer', () => {
+    // hasLeftWarehouse would be true here — labelled, not handed over.
+    const labelledNotGone = {
+      confirmationStatus: 'CONFIRMED',
+      claimedById: SARA,
+      handedToCourier: false,
+    };
+    expect(deciderFor(labelledNotGone)).toEqual({ kind: 'WAREHOUSE' });
+    expect(mayDecide(warehouse, labelledNotGone).allowed).toBe(true);
+  });
+
+  /**
+   * THE SAFE WAY ROUND. A caller that has not been taught to pass the fact
+   * must deny the warehouse, never grant it on a parcel already in a van.
+   */
+  it('and a caller that says nothing about the parcel denies them', () => {
+    const silent = { confirmationStatus: 'CONFIRMED', claimedById: SARA };
+    expect(deciderFor(silent)).toEqual({ kind: 'SUPERVISOR' });
+    expect(mayDecide(warehouse, silent).allowed).toBe(false);
+  });
+
+  it('and the packing permission counts as much as the job title', () => {
+    can.mockImplementation((_u: unknown, p: string) => p === 'ops.ship');
+    expect(mayDecide(user('user-x', 'SOMETHING_ELSE'), onOurFloor).allowed).toBe(true);
+  });
+
+  /**
+   * AND NOBODY ELSE. Asserting only who MAY decide leaves the rule open at
+   * the other end: a version of `isWarehouse` that returned true for
+   * everyone passed every test above it, and the confirmation agent whose
+   * order it is would have been deciding her own requests at the packing
+   * stage. The mutation run is what found that.
+   */
+  it('and a passer-by with neither the role nor the permission is refused', () => {
+    can.mockReturnValue(false);
+    for (const role of ['CONFIRMATION_AGENT', 'MODERATOR', 'ACCOUNTANT', 'DELIVERY_MANAGER']) {
+      const v = mayDecide(user('user-' + role, role), onOurFloor);
+      expect(v.allowed, role).toBe(false);
+      expect(v.reason, role).toContain('المستودع');
+    }
+  });
+
+  /** Before confirmation nothing changed: it is still the agent's call. */
+  it('and it does not take the order off the agent before confirmation', () => {
+    expect(deciderFor({ ...onHerDesk, handedToCourier: false })).toEqual({
+      kind: 'HOLDING_AGENT',
+      userId: SARA,
+    });
   });
 });

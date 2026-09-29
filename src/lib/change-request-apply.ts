@@ -162,7 +162,17 @@ export type OrderVerdict = { ok: true } | { ok: false; status: number; code: str
 export function mayApply(
   user: SessionUser,
   request: { orderId: string },
-  order: { id: string; confirmationStatus: string; claimedById: string | null }
+  /**
+   * `handedToCourier` travels with the order because the warehouse may
+   * carry out a decision until the courier takes the parcel, and not
+   * after. Absent reads as «taken», which denies rather than grants.
+   */
+  order: {
+    id: string;
+    confirmationStatus: string;
+    claimedById: string | null;
+    handedToCourier?: boolean;
+  }
 ): OrderVerdict {
   if (request.orderId !== order.id) {
     return { ok: false, status: 404, code: 'WRONG_ORDER', error: 'طلب التعديل لا يخص هذا الطلب' };
