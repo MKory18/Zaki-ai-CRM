@@ -95,3 +95,63 @@ describe('every icon-only control in the orders group says what it does', () => 
     ).toEqual([]);
   });
 });
+
+/**
+ * AND A FILTER IS NOT NAMED BY WHAT IT HAPPENS TO BE SET TO.
+ *
+ * Measured on the running orders list: four `<Select>`s side by side, and
+ * the accessibility tree gave every one of them the name «كل الحالات»,
+ * «كل الجهات», «كل المحافظات», «كل شركات الشحن» — their own first option,
+ * which is the browser's fallback when a select has no label. Change the
+ * state filter and its name becomes «مشحون»: a control whose name is its
+ * value has no name.
+ *
+ * `ui/Input`'s `Select` was built with a `label` prop that renders a real
+ * `<label htmlFor>`; these call sites passed neither it nor `aria-label`.
+ * The compact filter rows have no room for a visible label, so the fix is
+ * `aria-label` — the name without the layout.
+ */
+describe('every filter in the orders group names itself', () => {
+  const unnamed: string[] = [];
+  let checked = 0;
+
+  for (const file of files()) {
+    /*
+     * `=>` ENDS AN ARROW FUNCTION, NOT A TAG.
+     *
+     * The first version matched `<Select …>` with `[^>]*?`, which stops at
+     * the first `>` — and every one of these carries
+     * `onChange={(e) => …}`. So it read four characters of the tag, never
+     * saw the `aria-label` that had just been added, and reported the
+     * controls it was written to verify as still broken. The same trap
+     * `rows-open-by-keyboard` records; the same answer: mask the arrows.
+     */
+    const src = readFileSync(join(ROOT, file), 'utf8').split('=>').join('\u0000\u0000');
+
+    /*
+     * ONLY THE SHARED COMPONENT, whose contract is explicit: `ui/Input`'s
+     * `Select` renders a `<label htmlFor>` when told and nothing when not,
+     * so a call site with neither `label` nor `aria-label` provably has no
+     * name. A raw `<select>` may be WRAPPED in a `<label>`, and whether the
+     * browser then associates the two is a question for the browser — the
+     * live read is where those are judged, not here.
+     */
+    for (const m of src.matchAll(/<Select(\s[^>]*?)?>/g)) {
+      const attrs = m[1] ?? '';
+      checked++;
+      if (/aria-label=|aria-labelledby=|\blabel=/.test(attrs)) continue;
+      unnamed.push(`${file}: ${m[0].replace(/\s+/g, ' ').slice(0, 90)}`);
+    }
+  }
+
+  it('found selects to check — a sweep over nothing proves nothing', () => {
+    expect(checked).toBeGreaterThan(3);
+  });
+
+  it('and none is left to be named by its current value', () => {
+    expect(
+      unnamed,
+      `قوائمُ اختيارٍ بلا اسمٍ — يُسمّيها المتصفّحُ بقيمتها:\n${unnamed.join('\n')}`
+    ).toEqual([]);
+  });
+});

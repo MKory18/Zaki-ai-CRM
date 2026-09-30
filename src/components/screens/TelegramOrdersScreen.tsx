@@ -129,7 +129,7 @@ export function TelegramOrdersScreen() {
                 <Button variant="outline" size="sm"><RiEqualizer2Line className="w-4 h-4 ml-1" /> الإعدادات</Button>
               </Link>
             )}
-            <Button variant="ghost" size="sm" onClick={() => loadAll()}><RiRefreshLine className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => loadAll()} aria-label="تحديث" title="تحديث"><RiRefreshLine className="w-4 h-4" /></Button>
           </div></>
             }
           />
@@ -190,7 +190,7 @@ export function TelegramOrdersScreen() {
             className="border-b-0 pb-0 px-6 pt-4"
             action={
               <div className="w-40">
-                <Select value={statusFilter} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)} className="text-xs py-1.5">
+                <Select value={statusFilter} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)} aria-label="فلتر الحالة" className="text-xs py-1.5">
                   <option value="">كل الحالات</option>
                   {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </Select>

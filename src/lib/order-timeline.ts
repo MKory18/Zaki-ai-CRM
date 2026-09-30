@@ -1,5 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
+import { STATE_LABEL_AR } from './order-state';
+import { SHIPPING_STATUS_AR } from './shipping-workflow';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -56,17 +58,40 @@ export interface TimelineEvent {
  * terminology defect for the consistency pass, recorded not hidden.
  */
 export const STATUS_VALUE_AR: Record<string, string> = {
-  NEW: 'جديد', IN_PROGRESS: 'قيد التأكيد', NO_ANSWER: 'لا يرد',
-  FOLLOW_UP_REQUIRED: 'يحتاج متابعة', POSTPONED: 'مؤجل', CONFIRMED: 'مؤكد',
-  REJECTED: 'مرفوض', CANCELLED: 'ملغى',
-  NOT_READY: 'غير جاهز', READY_FOR_SHIPPING: 'جاهز للشحن', PACKING: 'قيد التغليف',
-  READY_FOR_PICKUP: 'جاهز للاستلام', SHIPPED: 'مشحون', OUT_FOR_DELIVERY: 'خرج للتوصيل',
-  DELIVERED: 'مسلَّم', PARTIALLY_DELIVERED: 'مسلَّم جزئياً', FAILED_DELIVERY: 'فشل التوصيل',
-  RETURN_REQUESTED: 'طلب إرجاع', RETURNED: 'مرتجع',
-  PENDING: 'معلّق', PENDING_COLLECTION: 'لم يُحصَّل', COLLECTED: 'محصَّل',
-  PARTIALLY_SETTLED: 'مسوّى جزئياً', SETTLED: 'مسوّى', UNSETTLED: 'غير مسوّى',
-  REFUNDED: 'مُسترد', APPROVED: 'موافَق عليه', OPEN: 'مفتوح', CORRECTED: 'تم التصحيح',
-  VOIDED: 'مُبطَل',
+  /*
+   * THE TWO AXES' OWN WORDS, NOT A THIRD COPY OF THEM.
+   *
+   * This map used to re-list every core state and every shipping status by
+   * hand, and one of them had drifted: `READY_FOR_PICKUP` read «جاهز
+   * للاستلام» here while `SHIPPING_STATUS_AR` — which chose deliberately
+   * between the two spellings it found in the wild — reads «بانتظار
+   * الاستلام». So the same parcel was «جاهز للاستلام» in the order
+   * dialog's timeline and «بانتظار الاستلام» on the tracking screen,
+   * which is the whole defect `one-word-per-state` exists to prevent. It
+   * could not catch this one: «جاهز للاستلام» was never added to its list
+   * of retired spellings.
+   *
+   * The two owners agree wherever they overlap — that guard's first test
+   * asserts it — so the spread order does not matter.
+   */
+  ...STATE_LABEL_AR,
+  ...SHIPPING_STATUS_AR,
+
+  // And the values neither axis names: the confirmation column, the
+  // settlement column, and the words a change request carries.
+  IN_PROGRESS: 'قيد التأكيد',
+  FOLLOW_UP_REQUIRED: 'يحتاج متابعة',
+  REJECTED: 'مرفوض',
+  PENDING: 'معلّق',
+  PENDING_COLLECTION: 'لم يُحصَّل',
+  COLLECTED: 'محصَّل',
+  PARTIALLY_SETTLED: 'مسوّى جزئياً',
+  SETTLED: 'مسوّى',
+  UNSETTLED: 'غير مسوّى',
+  REFUNDED: 'مُسترد',
+  APPROVED: 'موافَق عليه',
+  OPEN: 'مفتوح',
+  CORRECTED: 'تم التصحيح',
 };
 
 const CLAIM_REASON_AR: Record<string, string> = {

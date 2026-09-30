@@ -97,6 +97,14 @@ describe('no screen keeps its own copy', () => {
     'طُلب إرجاعه': 'طلب إرجاع',
     'مطلوب إرجاعه': 'طلب إرجاع',
     'مُرتجع': 'مرتجع',
+    /*
+     * `SHIPPING_STATUS_AR`'s own note lists both spellings of
+     * READY_FOR_PICKUP and says which won. It was never added here, so
+     * `order-timeline.ts` kept the loser in a private copy of the whole
+     * vocabulary — and the same parcel read «جاهز للاستلام» in the order
+     * dialog's timeline and «بانتظار الاستلام» on the tracking screen.
+     */
+    'جاهز للاستلام': 'بانتظار الاستلام',
   };
 
   const offenders: string[] = [];

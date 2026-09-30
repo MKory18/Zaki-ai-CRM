@@ -429,14 +429,14 @@ export function OrdersScreen() {
 
           {/* Narrowing */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 p-3">
-            <Select value={status} onChange={(e) => setStatus(e.target.value)} className="text-xs py-2">
+            <Select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="فلتر الحالة" className="text-xs py-2">
               <option value="all">كل الحالات</option>
               {FILTERABLE_STATES.map((st) => (
                 <option key={st} value={st}>{STATE_LABEL_AR[st]}</option>
               ))}
             </Select>
 
-            <Select value={source} onChange={(e) => setSource(e.target.value)} className="text-xs py-2">
+            <Select value={source} onChange={(e) => setSource(e.target.value)} aria-label="فلتر الجهة" className="text-xs py-2">
               <option value="all">كل الجهات</option>
               {sources.map((sc) => (
                 <option key={sc.name} value={sc.name}>{sc.name} ({sc.count})</option>
@@ -468,14 +468,14 @@ export function OrdersScreen() {
               className="min-w-[200px]"
             />
 
-            <Select value={regionId} onChange={(e) => setRegionId(e.target.value)} className="text-xs py-2">
+            <Select value={regionId} onChange={(e) => setRegionId(e.target.value)} aria-label="فلتر المحافظة" className="text-xs py-2">
               <option value="all">كل المحافظات</option>
               {regions.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </Select>
 
-            <Select value={courierId} onChange={(e) => setCourierId(e.target.value)} className="text-xs py-2">
+            <Select value={courierId} onChange={(e) => setCourierId(e.target.value)} aria-label="فلتر شركة الشحن" className="text-xs py-2">
               <option value="all">كل شركات الشحن</option>
               <option value="none">بلا شركة شحن بعد</option>
               {couriers.map((c) => (

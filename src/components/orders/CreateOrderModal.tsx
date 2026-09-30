@@ -274,7 +274,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
               <label className="block text-xs font-medium text-[var(--sys-foreground)] mb-1.5">
                 المحافظة{countryName ? ` — ${countryName}` : ''} *
               </label>
-              <Select value={regionId} onChange={(e) => setRegionId(e.target.value)} required>
+              <Select value={regionId} onChange={(e) => setRegionId(e.target.value)} aria-label="المحافظة" required>
                 <option value="">اختر المحافظة</option>
                 {regions.map((r) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
@@ -349,7 +349,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
               <label className="block text-xs font-medium text-[var(--sys-foreground)] mb-1.5">قناة الطلب</label>
               {/* The shop's own channels, not a list written into this form —
                   they are what the numbers are counted by. */}
-              <Select value={channelId} onChange={(e) => setChannelId(e.target.value)}>
+              <Select value={channelId} onChange={(e) => setChannelId(e.target.value)} aria-label="قناة الطلب">
                 <option value="">— اختر القناة —</option>
                 {channels.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
