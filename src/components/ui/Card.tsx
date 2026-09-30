@@ -9,7 +9,6 @@ import clsx from 'clsx';
 interface CardProps {
   children: React.ReactNode;
   className?: string;
-  onClick?: () => void;
 }
 
 /**
@@ -25,15 +24,23 @@ interface CardProps {
  * anyway, since a surface with neither an edge nor a shadow is invisible
  * against the page it sits on.
  */
-export function Card({ children, className, onClick }: CardProps) {
+/*
+ * AND IT IS NOT A CONTROL.
+ *
+ * `Card` took an `onClick` and rendered it on a plain `<div>`: no keyboard
+ * could reach it, a screen reader announced nothing, and `system.css` gives
+ * its pressed state to buttons — so a pressable card would have answered
+ * nothing. Nothing passed the prop, so it was a dead capability rather than
+ * a live defect; it is removed because the next caller would have written
+ * the defect by using it, the way the product image did.
+ *
+ * A card that leads somewhere puts a real button or link INSIDE itself.
+ */
+export function Card({ children, className }: CardProps) {
   return (
     <div
-      onClick={onClick}
       className={clsx(
         'bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] transition-shadow',
-        // Raised only where it can be pressed. A card that lifts without
-        // being pressable is a card people try to press.
-        onClick && 'cursor-pointer hover:shadow-raised',
         className
       )}
     >

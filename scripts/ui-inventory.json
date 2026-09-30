@@ -850,7 +850,7 @@
     "tabs": 0
   },
   "src/components/screens/ProductDetailScreen.tsx": {
-    "buttons": 7,
+    "buttons": 9,
     "inputs": 1,
     "columns": 12,
     "cards": 6,

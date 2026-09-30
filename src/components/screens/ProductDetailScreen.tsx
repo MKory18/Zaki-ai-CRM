@@ -181,8 +181,18 @@ export function ProductDetailScreen() {
             <CardHeader title="معرض صور المنتج" subtitle="الصورة الرئيسية كبيرة + صور إضافية — اضغط للتكبير" />
             <CardContent className="space-y-4">
               {/* Primary large */}
-              <div
-                className="relative w-full h-72 bg-[var(--sys-surface)] rounded-lg overflow-hidden border border-[var(--sys-border)] cursor-zoom-in"
+              {/*
+                  THE HEADER SAYS «اضغط للتكبير», SO IT HAS TO BE PRESSABLE.
+                  This was a <div onClick>: no keyboard could reach it, a
+                  screen reader announced nothing, and `system.css` gives its
+                  0.97 sink to buttons — so the one control the subtitle names
+                  was the one control that did not answer a press.
+              */}
+              <button
+                type="button"
+                disabled={!primary}
+                aria-label="كبّر الصورة الرئيسية"
+                className="relative block w-full h-72 bg-[var(--sys-surface)] rounded-lg overflow-hidden border border-[var(--sys-border)] cursor-zoom-in disabled:cursor-default"
                 onClick={() => primary && setLightbox(primary.url)}
               >
                 {primary ? (
@@ -199,7 +209,7 @@ export function ProductDetailScreen() {
                     <span>الصورة الرئيسية</span>
                   </span>
                 )}
-              </div>
+              </button>
 
               {/* Thumbnails */}
               {images.length > 1 && (
@@ -212,12 +222,20 @@ export function ProductDetailScreen() {
                       }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={img.url}
-                        alt={img.altText || product.name}
+                      {/* The button wraps the image; the hover overlay below is
+                          its SIBLING, so no button ends up inside a button. */}
+                      <button
+                        type="button"
                         onClick={() => setLightbox(img.url)}
-                        className="w-full h-16 object-cover cursor-zoom-in"
-                      />
+                        aria-label={`كبّر الصورة ${idx + 1}`}
+                        className="block w-full cursor-zoom-in"
+                      >
+                        <img
+                          src={img.url}
+                          alt={img.altText || product.name}
+                          className="w-full h-16 object-cover"
+                        />
+                      </button>
                       {canManage && (
                         <div className="absolute inset-0 bg-[var(--sys-sidebar)]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-1 rtl:space-x-reverse">
                           <button onClick={() => setPrimary(img.id)} aria-label="تعيين كرئيسية" title="تعيين كرئيسية" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-warning)] hover:bg-[var(--sys-card)] cursor-pointer">
