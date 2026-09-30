@@ -26,6 +26,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Tabs } from '@/components/ui/Tabs';
 import { HealthChip } from '@/components/ui/HealthChip';
 import { ORIGIN, gradeBatch, readBatches, type BatchOrigin } from '@/lib/batch-grade';
+import { ProductPicker } from '@/components/ui/ProductPicker';
 
 /**
  * The costs that keep coming back, offered instead of typed.
@@ -183,6 +184,8 @@ export function ManufacturingScreen() {
 
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
+    // The picker carries no `required` — the form says so itself.
+    if (!productId) { setModalError('اختر المنتج أوّلاً.'); return; }
     setModalLoading(true);
     setModalError(null);
     try {
@@ -505,18 +508,18 @@ export function ManufacturingScreen() {
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="المنتج *"
-              value={productId}
-              onChange={(e) => setProductId(e.target.value)}
-              required
-            >
-              {manufacturedProducts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.sku})
-                </option>
-              ))}
-            </Select>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">
+                المنتج *
+              </label>
+              {/* The same scroll, and the same answer — see the note on the
+                  stock count in InventoryBalancesScreen. */}
+              <ProductPicker
+                products={manufacturedProducts.map((p) => ({ id: p.id, name: p.name, sku: p.sku }))}
+                value={productId}
+                onChange={setProductId}
+              />
+            </div>
 
             <Input
               label="رقم التشغيلة *"

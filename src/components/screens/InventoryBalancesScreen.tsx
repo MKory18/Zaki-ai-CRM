@@ -20,6 +20,7 @@ import {
   type StockHealth,
   type StockState,
 } from '@/lib/stock-health';
+import { ProductPicker } from '@/components/ui/ProductPicker';
 
 /**
  * WHAT IS LEFT — AND WHETHER THAT IS TOO MUCH, TOO LITTLE, OR RIGHT.
@@ -136,6 +137,8 @@ export function InventoryBalancesScreen() {
 
   const handleAdjustStock = async (e: React.FormEvent) => {
     e.preventDefault();
+    // The picker carries no `required` — the form says so itself.
+    if (!productId) { setCountError('اختر المنتج أوّلاً.'); return; }
     setModalLoading(true);
     setCountError(null);
     try {
@@ -415,18 +418,28 @@ export function InventoryBalancesScreen() {
         subtitle="عندما يختلف الرف عن النظام — تُدخل ما عددته، والفرق يُحسب ويُسجَّل"
       >
         <form onSubmit={handleAdjustStock} className="space-y-4">
-          <Select
-            label="المنتج *"
-            value={productId}
-            onChange={(e) => { setProductId(e.target.value); setCountedQuantity(0); }}
-            required
-          >
-            {stockSummary.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.sku}) — النظام يقول {s.remaining}
-              </option>
-            ))}
-          </Select>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">
+              المنتج *
+            </label>
+            {/*
+              «لما أضيف منتج … ما بطلع بحث». A `<select>` over a hundred
+              products is a scroll, and the list it opens is painted by the
+              browser. `LandingPageDetailScreen` measured that and moved to
+              the picker; this field and the production run were the two
+              left behind.
+
+              The option text used to carry «النظام يقول N». Nothing is lost:
+              «رصيد النظام» below shows the same number the moment a product
+              is chosen, beside the counted quantity it is there to be
+              compared with.
+            */}
+            <ProductPicker
+              products={stockSummary.map((s) => ({ id: s.id, name: s.name, sku: s.sku }))}
+              value={productId}
+              onChange={(id) => { setProductId(id); setCountedQuantity(0); }}
+            />
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>

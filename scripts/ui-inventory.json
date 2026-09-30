@@ -781,7 +781,7 @@
   },
   "src/components/screens/ManufacturingScreen.tsx": {
     "buttons": 9,
-    "inputs": 10,
+    "inputs": 9,
     "columns": 11,
     "cards": 2,
     "modals": 1,
