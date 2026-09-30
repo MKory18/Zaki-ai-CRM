@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 
 /**
@@ -94,6 +95,10 @@ export async function GET(req: Request) {
       db.order.count({ where: { companyId, storeId, shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED'] } } }),
       db.order.count({ where: { companyId, storeId, shippingStatus: { in: ['READY_FOR_SHIPPING', 'PACKING', 'READY_FOR_PICKUP'] }, deliveryProviderId: null } }),
     ]);
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة الشحن', rows: orders });
 
     return NextResponse.json({
       orders,

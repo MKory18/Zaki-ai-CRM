@@ -8,6 +8,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { createNotification } from '@/lib/notification';
 import { logAudit } from '@/lib/audit';
 import { zodMessage } from '@/lib/zod-message';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * ENTRY ISSUES — data errors on orders a MODERATOR entered.
@@ -43,7 +44,7 @@ const createSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('confirmation.issues');
 
     const status = new URL(req.url).searchParams.get('status') ?? 'OPEN';
@@ -73,6 +74,10 @@ export async function GET(req: Request) {
         },
       },
     });
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'مشاكل التأكيد', rows });
+
     return NextResponse.json({ count: rows.length, issues: rows });
   } catch (error) {
     return apiErrorResponse(error);

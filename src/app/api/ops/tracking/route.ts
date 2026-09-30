@@ -8,6 +8,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { transitStatus } from '@/lib/transit';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { expectedAmountFor } from '@/lib/settlement';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * GET /api/ops/tracking?q=&status=
@@ -21,7 +22,7 @@ const IN_FLIGHT = ['SHIPPED', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP', 'FAILED_DE
 
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId, country } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('ops.track');
 
     const q = new URL(req.url).searchParams;
@@ -156,6 +157,10 @@ export async function GET(req: Request) {
         }),
       };
     });
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'شاشة التتبّع', rows });
 
     return NextResponse.json({
       // wa.me needs the number in full international form, and the rows

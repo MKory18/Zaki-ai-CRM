@@ -14,6 +14,7 @@ import { reverseForOrder } from '@/lib/commission';
 import {
   completionOf, doorUnits, expectedBackTotal, extraAction, needsExtraAction, settledLines,
 } from '@/lib/partial-delivery';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * Return receiving.
@@ -79,6 +80,10 @@ export async function GET(req: Request) {
         items: { select: { id: true, productName: true, quantity: true, freeQuantity: true, deliveredQty: true, productId: true } },
       },
     });
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة المرتجعات', rows: orders });
 
     return NextResponse.json({
       count: orders.length,

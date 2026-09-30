@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireContext } from '@/lib/geo-context';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { pullNextOrder } from '@/lib/confirmation-queue';
@@ -43,6 +44,12 @@ export async function POST() {
         customer: { select: { id: true, fullName: true, phone: true, rawPhone: true, city: true, address: true } },
         items: { select: { id: true, productName: true, quantity: true, freeQuantity: true, lineTotal: true } },
       },
+    });
+
+    // Pulling is the by-one path through the whole queue, so it counts
+    // toward the same tally as the lists.
+    await noteCustomersHandedOut({
+      companyId, storeId, user, where: 'سحب طلب للتأكيد', rows: order ? [order] : [],
     });
 
     return NextResponse.json({ order, autoReleased: result.released }, { status: 201 });

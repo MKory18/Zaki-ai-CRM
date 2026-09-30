@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant, requirePermission } from '@/lib/auth';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { apiErrorResponse } from '@/lib/api-error';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 export async function GET(req: Request) {
   try {
@@ -45,6 +46,10 @@ export async function GET(req: Request) {
       },
     });
     const hasMore = conversations.length > take;
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId: null, user, where: 'محادثات واتساب', rows: conversations });
+
     return NextResponse.json({
       conversations: conversations.slice(0, take),
       nextCursor: hasMore ? conversations[take - 1].id : null,

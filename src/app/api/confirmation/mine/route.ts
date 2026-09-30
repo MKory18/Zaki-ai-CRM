@@ -8,6 +8,7 @@ import { POSTPONE_LEAD_DAYS } from '@/lib/confirmation-queue';
 import { deriveCoreState, type StateSource } from '@/lib/order-state';
 import { NO_ANSWER_LIMIT } from '@/lib/confirmation-workflow';
 import { firstActionTimes } from '@/lib/response-clock';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * GET /api/confirmation/mine — the agent's own two sections:
@@ -97,6 +98,10 @@ export async function GET() {
     const waitingLater = await db.order.count({
       where: { ...scope, confirmationStatus: { in: WAITING }, postponedUntil: { gt: now } },
     });
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'طلباتي', rows: [...inConfirmation, ...confirmed] });
 
     return NextResponse.json({
       leadDays: POSTPONE_LEAD_DAYS,

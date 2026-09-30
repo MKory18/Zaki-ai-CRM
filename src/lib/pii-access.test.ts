@@ -101,12 +101,20 @@ describe('the numbers it ships with', () => {
 describe('the route that feeds it', () => {
   const route = readFileSync(join(process.cwd(), 'src', 'app', 'api', 'customers', 'route.ts'), 'utf8');
 
-  it('counts the rows it actually returned', () => {
-    expect(route).toMatch(/noteCustomerAccess\(`customers:\$\{user\.id\}`, customers\.length\)/);
+  /*
+   * These three used to pin the FIRST shape of this: a tally keyed
+   * `customers:<user id>`, counted and announced by each route itself.
+   * Both halves of that were the defect — see
+   * `customers-are-counted-once.test.ts`. The key is the person's now,
+   * and the counting and the announcing are one call every route makes,
+   * so what is checked here is that these two routes still make it.
+   */
+  it('counts the customers it actually returned', () => {
+    expect(route).toMatch(/noteCustomersHandedOut\(\{[^}]*rows: customers/);
   });
 
-  it('and announces only the crossing', () => {
-    expect(route).toMatch(/if \(seen\.crossed\)[\s\S]{0,200}announceBulkCustomerView/);
+  it('and does not keep a second, private tally beside the shared one', () => {
+    expect(route, 'عادت الشاشةُ تعدُّ لنفسها').not.toMatch(/noteCustomerAccess\(/);
   });
 
   it('and the profile page feeds the same tally', () => {
@@ -116,8 +124,8 @@ describe('the route that feeds it', () => {
       join(process.cwd(), 'src', 'app', 'api', 'customers', '[id]', 'history', 'route.ts'),
       'utf8'
     );
-    expect(history).toMatch(/noteCustomerAccess\(`customers:\$\{user\.id\}`, 1\)/);
-    expect(history).toMatch(/if \(seen\.crossed\)[\s\S]{0,200}announceBulkCustomerView/);
+    expect(history).toMatch(/noteCustomersHandedOut\(\{/);
+    expect(history).toMatch(/rows: \[\{ customerId: id \}\]/);
   });
 
   it('and blocks nobody', () => {

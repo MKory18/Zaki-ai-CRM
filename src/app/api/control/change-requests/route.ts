@@ -6,6 +6,7 @@ import { BEFORE_OPERATIONS } from '@/lib/change-request-routing';
 import { apiErrorResponse } from '@/lib/api-error';
 import { carryOut, type ChangeIntent } from '@/lib/change-request-intent';
 import { hasLeftWarehouse, type StateSource } from '@/lib/order-state';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * GET /api/control/change-requests?status=PENDING
@@ -86,6 +87,10 @@ export async function GET(req: Request) {
       ? await db.user.findMany({ where: { id: { in: requesterIds } }, select: { id: true, name: true } })
       : [];
     const nameOf = new Map(requesters.map((u) => [u.id, u.name]));
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'طلبات التعديل', rows });
 
     return NextResponse.json({
       count: rows.length,

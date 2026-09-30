@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 import { logAudit } from '@/lib/audit';
 import { can } from '@/lib/authorization';
@@ -44,6 +45,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       },
     });
     if (!batch) return NextResponse.json({ error: 'الدفعة غير موجودة' }, { status: 404 });
+
+    // A batch is a list of parcels, and every parcel carries a person.
+    await noteCustomersHandedOut({
+      companyId, storeId, user, where: 'دفعة شحن', rows: batch.orders,
+    });
 
     return NextResponse.json({ batch });
   } catch (error) {

@@ -8,6 +8,7 @@ import { renderLabelSheet, storeLogoForPrint } from '@/lib/label-sheet';
 import { csvCell, loadWaybillOrders, printRefusal, toLabelView, waybillCod } from '@/lib/waybill';
 import { formatMoney } from '@/lib/money';
 import { placeLine } from '@/lib/address';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * GET /api/ops/labels/print?t=<batch token>[&mode=pdf|&format=csv]
@@ -29,7 +30,7 @@ import { placeLine } from '@/lib/address';
  */
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId, country } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('ops.labels');
 
     const url = new URL(req.url);
@@ -54,6 +55,16 @@ export async function GET(req: Request) {
     if (printable.length === 0) {
       return NextResponse.json({ error: 'لا يوجد طلب صالح للطباعة', skipped }, { status: 409 });
     }
+
+    /*
+     * A sheet of waybills and the courier's CSV are both a list of names,
+     * phones and addresses — the CSV is a file that walks out of the
+     * building. Counted before either is built, so the tally does not
+     * depend on which format was asked for.
+     */
+    await noteCustomersHandedOut({
+      companyId, storeId, user, where: 'طباعة البوالص', rows: printable,
+    });
 
     const minorUnit = country.minorUnit;
 

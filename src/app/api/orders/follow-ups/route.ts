@@ -3,6 +3,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { deriveFollowUpState } from '@/lib/confirmation-workflow';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * GET /api/orders/follow-ups — backend-enforced follow-up queues.
@@ -109,6 +110,10 @@ export async function GET(req: Request) {
         } as any,
       }),
     ]);
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة المتابعة', rows: orders });
 
     return NextResponse.json({
       orders: enriched,

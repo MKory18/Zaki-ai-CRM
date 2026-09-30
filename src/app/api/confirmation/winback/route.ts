@@ -15,6 +15,7 @@ import {
   winbackVerdict,
   type WinbackSource,
 } from '@/lib/winback';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * GET  /api/confirmation/winback — the lost orders worth one more call.
@@ -51,7 +52,7 @@ const LOOKBACK_DAYS = 120;
 
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('confirmation.supervise');
 
     const showAll = new URL(req.url).searchParams.get('all') === '1';
@@ -156,6 +157,10 @@ export async function GET(req: Request) {
      * cannot find it here concludes the screen is broken. They are behind a
      * switch, so the default view is still the work.
      */
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'استعادة العملاء', rows: orders });
+
     return NextResponse.json({
       eligible: rows.filter((r) => r.verdict.eligible),
       skipped: showAll ? rows.filter((r) => !r.verdict.eligible) : [],

@@ -8,6 +8,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { signLabelBatch } from '@/lib/labels';
 import { printRefusal } from '@/lib/waybill';
 import { zodMessage } from '@/lib/zod-message';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * Labels.
@@ -66,6 +67,10 @@ export async function GET(req: Request) {
         deliveryProvider: { select: { name: true, code: true } },
       },
     });
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة البوالص', rows: orders });
 
     return NextResponse.json({
       count: orders.length,

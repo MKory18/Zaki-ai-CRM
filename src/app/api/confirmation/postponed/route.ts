@@ -5,6 +5,7 @@ import { can, requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { POSTPONE_LEAD_DAYS } from '@/lib/confirmation-queue';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * GET /api/confirmation/postponed — orders waiting on a date, with that
@@ -58,6 +59,10 @@ export async function GET() {
         actionable: !!due && new Date(due) <= leadEnd,
       };
     });
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'الطلبات المؤجّلة', rows: orders });
 
     return NextResponse.json({ leadDays: POSTPONE_LEAD_DAYS, count: orders.length, orders });
   } catch (error) {

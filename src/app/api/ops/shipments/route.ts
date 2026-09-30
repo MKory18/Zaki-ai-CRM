@@ -9,6 +9,7 @@ import { shipmentBlocks } from '@/lib/operations';
 import { codForOrder, resolveDeliveryFee } from '@/lib/delivery-fees';
 import { assertCancellable, assertReadyToShip, type StateSource } from '@/lib/order-state';
 import { zodMessage } from '@/lib/zod-message';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * Shipment creation.
@@ -33,7 +34,7 @@ const createSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId, country } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('ops.ship');
 
     const q = new URL(req.url).searchParams;
@@ -152,6 +153,10 @@ export async function GET(req: Request) {
         shipHoldUntil: { not: null },
       },
     });
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة الشحنات', rows });
 
     return NextResponse.json({
       count: rows.length,

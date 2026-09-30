@@ -19,6 +19,7 @@ import { ordersWhere } from '@/lib/order-filters';
 import { apiError } from '@/lib/api-error';
 import { requirePermission, getPermissionScope } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 export async function GET(req: Request) {
   try {
@@ -94,6 +95,10 @@ export async function GET(req: Request) {
         take: limit,
       }),
     ]);
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة الطلبات', rows: orders });
 
     return NextResponse.json({
       // The ONE state the whole app shows, derived from the stored fields —

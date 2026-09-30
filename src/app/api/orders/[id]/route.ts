@@ -15,6 +15,7 @@ import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 import { authorize, can, getPermissionScope } from '@/lib/authorization';
 import { MAX_REASON, reasonRefusal } from '@/lib/order-edit-reason';
 import { orderSeal, sealedFieldsIn, sealMessage, handedToCourier } from '@/lib/order-seal';
@@ -308,6 +309,16 @@ export async function GET(
     const commission = Number(
       order.commissions.reduce((sum, e) => sum + Number(e.amount), 0).toFixed(country.minorUnit)
     );
+
+    /*
+     * One order, one person's contact details — and the same tally the
+     * lists feed. Counted here too, or the hole is the obvious one: open
+     * five hundred orders one at a time and no list endpoint sees any of
+     * it. The same argument the customer profile already makes.
+     */
+    await noteCustomersHandedOut({
+      companyId, storeId, user, where: 'تفاصيل الطلب', rows: [order],
+    });
 
     return NextResponse.json({
       order: { ...order, state, zone: getZone(state), commission, closing },

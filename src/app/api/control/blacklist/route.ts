@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { AlreadyBlocked, blockPhone, releaseBlock } from '@/lib/blacklist';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { zodMessage } from '@/lib/zod-message';
+import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
  * GET    /api/control/blacklist   the list, active first
@@ -31,7 +32,7 @@ const releaseSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireContext();
+    const { user, companyId } = await requireContext();
     await requirePermission('control.blacklist');
 
     const term = new URL(req.url).searchParams.get('q')?.trim();
@@ -74,6 +75,10 @@ export async function GET(req: Request) {
         })
       : [];
     const byPhone = new Map(customers.map((c) => [c.phone, c]));
+
+    // Contact details left the building; the tally is the person's, not
+    // this screen's. See noteCustomersHandedOut.
+    await noteCustomersHandedOut({ companyId, storeId: null, user, where: 'القائمة السوداء', rows: blocks });
 
     return NextResponse.json({
       blocks: blocks.map((b) => ({
