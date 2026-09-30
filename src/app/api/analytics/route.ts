@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { requireContext } from '@/lib/geo-context';
-import { requirePermission } from '@/lib/authorization';
+import { can, requirePermission } from '@/lib/authorization';
 import { getCompanyAnalytics, getDateRange, previousRange, DateFilter } from '@/lib/analytics';
 import { rateLimit } from '@/lib/rate-limit';
 import { db } from '@/lib/db';
@@ -235,9 +235,54 @@ export async function GET(req: Request) {
     const outstandingMoney =
       Number(collected._sum.collectedAmount || 0) + Number(uncollected._sum.totalAmount || 0);
 
+    /*
+     * THE MONEY LEAVES ONLY FOR SOMEBODY ALLOWED TO SEE MONEY.
+     *
+     * This route is gated on `analytics.view`, which the engine resolves
+     * to `reports.view` — and a MODERATOR holds that. So the payload was
+     * handing a salesperson the company's `netProfit`, `grossProfit`,
+     * `profitMargin`, `costOfGoodsSold`, `commission` and
+     * `operationalExpenses`.
+     *
+     * The dashboard never SHOWED them those cards: it wraps every
+     * financial tile in `canFinance`, which reads `finance.view`. So the
+     * rule was already decided and already written down — on the client,
+     * where it is a decoration. «A control hidden in the UI but permitted
+     * by the API is not a permission.»
+     *
+     * Verified as `sara@bioderma.com` (MODERATOR, no `finance.view`):
+     * `GET /api/analytics?period=today` answered 200 with the whole
+     * `financials` object.
+     *
+     * The COUNTS stay. How many orders were confirmed or delivered is
+     * this person's own work, and the rates are what the screen is for.
+     */
+    const maySeeMoney = can(user, 'finance.view');
+    const { financials, aiContext, ...rest } = analytics as unknown as Record<string, unknown> & {
+      financials?: unknown;
+      aiContext?: Record<string, unknown>;
+    };
+
     return NextResponse.json({
-      ...analytics,
-      previous,
+      ...rest,
+      ...(maySeeMoney ? { financials } : {}),
+      // The AI context carries the same figures in another shape — net
+      // profit, production cost, margin, the most profitable product —
+      // and a second copy is a second door.
+      ...(aiContext
+        ? {
+            aiContext: maySeeMoney
+              ? aiContext
+              : Object.fromEntries(
+                  Object.entries(aiContext).filter(
+                    ([k]) => !/cost|profit|margin|expense|commission/i.test(k)
+                  )
+                ),
+          }
+        : {}),
+      previous: maySeeMoney
+        ? previous
+        : previous && (({ netProfit, ...p }) => p)(previous),
       vitals: {
         door: {
           delivered: door.delivered,
