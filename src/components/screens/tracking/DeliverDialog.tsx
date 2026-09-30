@@ -18,12 +18,16 @@ import { Money } from '@/components/ui/Money';
  * because it does not move in reality — the courier travelled to that door
  * whichever lines came back.
  *
- * EVERY FIELD HERE IS THE SHARED `Input`, and that is not tidiness. Nothing
- * in this product declares `color-scheme`, so a native control that names no
- * background of its own is painted by the user agent — WHITE, in every
- * theme, which is «إذا كانت بيضا فتكون أزرق» reported from this screen. And
- * system.css paints `:focus-visible` only, by design, so a field a clerk
- * TAPS had no state at all until the shared component brought
+ * EVERY FIELD HERE IS THE SHARED `Input`, and that is not tidiness. A
+ * native control that names no background of its own is painted by the user
+ * agent, and this screen's report — «إذا كانت بيضا فتكون أزرق» — was that
+ * white box on a dark card. `color-scheme` is declared per palette now
+ * (system.css, guarded in system-themes.test.ts), so the user agent draws
+ * the widget in the right scheme and that half of it is fixed at the root.
+ *
+ * The shared field is still the right one for the other half: system.css
+ * paints `:focus-visible` only, by design, so a field a clerk TAPS has no
+ * state at all unless the component brings
  * `focus:ring-[var(--sys-primary)]/25` with it. The shell was never the
  * problem: this has always been the system `Modal`.
  */
@@ -140,11 +144,11 @@ export function DeliverDialog({
                         رفضه
                       </button>
                       {/* The system's field, in a 64px box. The raw input it
-                          replaces named no background, so it fell back to the
-                          user agent's — and the app declares no
-                          `color-scheme`, which makes that WHITE in every
-                          theme: «لما أجي أختار منتج يتضوي بيضا». It also had
-                          `md:h-8`, off the scale in both directions. */}
+                          replaces named no background and fell back to the
+                          user agent's — «لما أجي أختار منتج يتضوي بيضا» —
+                          which `color-scheme` per palette now answers at the
+                          root. It also had `md:h-8`, off the scale in both
+                          directions, which is this component's own job. */}
                       <div className="w-16">
                         <Input
                           type="number"

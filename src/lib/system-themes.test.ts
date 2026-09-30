@@ -580,3 +580,60 @@ describe('the scheme reader itself', () => {
     expect(declaredSchemes("[a] {\n  color-scheme:   light   dark;\n}", '[a]')).toEqual(['light dark']);
   });
 });
+
+/**
+ * AND THE PROSE THAT JUSTIFIED THE OLD STATE.
+ *
+ * When `color-scheme` was undeclared, six comments across three files said
+ * so — and said WHY the shared `Input` was used because of it. The
+ * declaration landed; the comments did not. One of them even instructed the
+ * reader: «Grep it: not in src/app/globals.css, not in
+ * src/app/(system)/system.css, nowhere», which now fails the moment anybody
+ * follows it.
+ *
+ * In this codebase the comments are the documentation — they are how a
+ * reader learns that saved views were declined, that an action is not a
+ * state, that a ledger leads with the date. A comment asserting a fact the
+ * code contradicts sends the next person to fix what is already fixed, and
+ * costs more than the silence would have.
+ *
+ * So the pair is held together: the declaration has a test above, and the
+ * claim that there is no declaration cannot come back.
+ */
+describe('and nothing in the product still says the scheme is undeclared', () => {
+  const CLAIM = /(nothing|not)\b[^.\n]{0,80}declares?\b[^.\n]{0,40}color-scheme|declares? no\b[^.\n]{0,20}color-scheme/i;
+
+  /* `.ts` as well as `.tsx`: four of the six lived in test files. */
+  const everySource = (dir: string): string[] => {
+    const out: string[] = [];
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) out.push(...everySource(p));
+      else if (/\.tsx?$/.test(p)) out.push(p);
+    }
+    return out;
+  };
+
+  const files = () => everySource(join(process.cwd(), 'src'));
+
+  it('found files to check — a sweep over nothing proves nothing', () => {
+    expect(files().length).toBeGreaterThan(200);
+  });
+
+  it('and no comment contradicts the declaration', () => {
+    const offenders: string[] = [];
+    for (const file of files()) {
+      const src = readFileSync(file, 'utf8');
+      const lines = src.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        if (CLAIM.test(lines[i])) {
+          offenders.push(`${file.split('src')[1]}:${i + 1}  ${lines[i].trim().slice(0, 90)}`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      `نصٌّ يقول إنّ color-scheme غيرُ معلَن — وهو معلَنٌ في كلّ لوحة:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+});

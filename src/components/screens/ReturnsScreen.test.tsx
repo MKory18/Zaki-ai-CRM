@@ -134,9 +134,11 @@ describe('nothing in the dialog draws white', () => {
    * the source guard in returns-dialog-fields.test.ts proves the shared
    * `Input` is used, and this proves the token survives to the DOM.
    *
-   * Nothing declares `color-scheme` in this product, so a control with no
-   * background of its own is painted white by the browser whatever theme the
-   * clerk is in.
+   * A control with no background of its own is painted by the browser, and
+   * that is what «بيضا» was. The scheme half is answered at the root now —
+   * `color-scheme` per palette, guarded in system-themes.test.ts — and this
+   * still asserts the token, because the card's own colour is not the user
+   * agent's to supply.
    */
   const themed = (el: Element) =>
     el.className.includes('bg-[var(--sys-card)]') || el.className.includes('accent-[var(--sys-primary)]');

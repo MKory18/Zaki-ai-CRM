@@ -482,11 +482,14 @@ function ReceiveDialog({
  * A counted quantity, on the system's field.
  *
  * It hand-rolled the input and named no background, so the browser used its
- * own — and because nothing in this app declares `color-scheme`, the user
- * agent's own is WHITE whatever theme the clerk is in. Three white boxes on
- * a dark card is «التنبيهات المنبثقة … غير متناسبة مع التصميم» exactly. The
- * shared `Input` also brings the focus ring — `--sys-primary` at 25% — which
- * a hand-rolled field has no way to inherit: system.css styles
+ * own — white, whatever theme the clerk was in. Three white boxes on a dark
+ * card is «التنبيهات المنبثقة … غير متناسبة مع التصميم» exactly. That half
+ * is answered at the root now: `color-scheme` is declared per palette in
+ * system.css and guarded in system-themes.test.ts.
+ *
+ * The shared `Input` is still what belongs here, for the half the root
+ * cannot reach: it brings the focus ring — `--sys-primary` at 25% — which a
+ * hand-rolled field has no way to inherit, because system.css styles
  * `:focus-visible` only, deliberately, so a TAPPED field showed nothing at
  * all. «إذا كانت بيضا فتكون أزرق».
  */

@@ -54,9 +54,10 @@ afterEach(cleanup);
 
 describe('nothing in the dialog draws white', () => {
   it('every field is the system field, with its background and focus ring', async () => {
-    // «إذا كانت بيضا فتكون أزرق». Nothing in this product declares
-    // `color-scheme`, so a control that names no background is painted white
-    // by the browser in every theme — and the per-line quantity box was one.
+    // «إذا كانت بيضا فتكون أزرق». A control that names no background is
+    // painted by the browser — the per-line quantity box was one. The scheme
+    // is declared per palette now (system-themes.test.ts guards it); this
+    // asserts the part the root cannot give: the field's own token and ring.
     await open();
     const fields = [...document.querySelectorAll<HTMLInputElement>('[role="dialog"] input')];
     expect(fields.length).toBeGreaterThan(1);

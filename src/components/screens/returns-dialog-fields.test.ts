@@ -11,12 +11,16 @@ import { repoFile, stripComments } from '@/lib/guard-source';
  * Two facts about this codebase turn a missing class into the owner's
  * complaint, and neither is obvious from reading one component:
  *
- *   1. NOTHING IN THE PRODUCT DECLARES `color-scheme`. Grep it: not in
- *      src/app/globals.css, not in src/app/(system)/system.css, nowhere. So
- *      a native control with no `background-color` of its own is painted by
- *      the user agent, and the user agent's default is WHITE — in every
- *      theme, including the dark one the warehouse runs. Three such boxes on
- *      a `--sys-card` surface is «بيضا» precisely.
+ *   1. THE PRODUCT DECLARED NO `color-scheme` — and that has since been
+ *      fixed at the root. When these complaints were written, a native
+ *      control with no `background-color` of its own was painted by the
+ *      user agent, whose default is WHITE, in every theme including the
+ *      dark one the warehouse runs; three such boxes on a `--sys-card`
+ *      surface is «بيضا» precisely. `system.css` now declares the scheme
+ *      per palette and `system-themes.test.ts` holds it there, so the
+ *      user agent draws its widgets in the right one.
+ *
+ *      This rule still stands on reason 2 alone.
  *
  *   2. system.css styles `:focus-visible` ONLY, and says why — a ring on
  *      every mouse click reads as an error. That is right for buttons and
