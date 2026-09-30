@@ -9,6 +9,7 @@ import type { LandingSection } from '@/lib/landing-sections';
 import type { StoreTheme } from '@/lib/store-theme';
 import { RiCheckLine, RiExternalLinkLine, RiLoader4Line, RiRocketLine, RiSaveLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { arDateTime } from '@/lib/format';
 
 /**
  * THE SHOP'S HOME PAGE.
@@ -137,7 +138,7 @@ export function StoreDesignScreen() {
           title={`الصفحة الرئيسية لـ«${data.store.name}»`}
           description={
             (data.publishedAt
-              ? `آخر نشر: ${new Date(data.publishedAt).toLocaleString('ar-u-nu-latn')}`
+              ? `آخر نشر: ${arDateTime(data.publishedAt)}`
               : data.store.singleProduct && data.store.landingPageId
                 ? // It has a front page, and that page is what its address
                   // opens today. Saying so here is the difference between

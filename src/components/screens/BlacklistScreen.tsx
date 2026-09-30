@@ -7,6 +7,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAddCircleLine, RiArrowGoBackLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { arDate } from '@/lib/format';
 
 /**
  * /control/blacklist — who may not order again.
@@ -154,7 +155,7 @@ export function BlacklistScreen() {
                 render: (b) => (
                   <>{b.blockedByName ?? '—'}
                     <span className="block text-xs text-[var(--sys-muted)]">
-                      {new Date(b.createdAt).toLocaleDateString('ar-u-nu-latn', { dateStyle: 'short' })}
+                      {arDate(b.createdAt)}
                     </span></>
                 ) },
             ]}

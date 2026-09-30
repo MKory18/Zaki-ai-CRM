@@ -11,6 +11,7 @@ import { RiAddCircleLine, RiDeleteBinLine, RiFlaskLine, RiShutDownLine } from '@
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { arDateTime } from '@/lib/format';
 
 /**
  * WHICH TELEGRAM GROUPS AND TOPICS BECOME ORDERS — configuration, on the
@@ -120,7 +121,7 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
       void tell({
         title: 'نتيجة اختبار المجموعة',
         body: r.lastMessage
-          ? `آخر رسالة: ${new Date(r.lastMessage.createdAt).toLocaleString('ar-u-nu-latn')} — الحالة: ${STATUS_LABELS[r.lastMessage.processingStatus] || r.lastMessage.processingStatus}`
+          ? `آخر رسالة: ${arDateTime(r.lastMessage.createdAt)} — الحالة: ${STATUS_LABELS[r.lastMessage.processingStatus] || r.lastMessage.processingStatus}`
           : 'لا توجد رسائل مستلمة من هذه المجموعة بعد',
       });
     }, 'تعذر الاختبار');
@@ -166,7 +167,7 @@ export function TelegramSourcesCard({ canManage }: { canManage: boolean }) {
               { key: 'c4', label: "الطلبات",
                 render: (s) => (s.ordersCount) },
               { key: 'c5', label: "آخر رسالة",
-                render: (s) => (s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString('ar-u-nu-latn') : '—') },
+                render: (s) => (arDateTime(s.lastMessageAt)) },
               { key: 'c6', label: "إجراءات",
                 render: (s) => (
                   <><div className="flex items-center justify-end gap-1">

@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Rows } from '@/components/ui/Rows';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiDiscountPercentLine, RiLoader4Line } from '@remixicon/react';
+import { arDate } from '@/lib/format';
 
 /**
  * /control/discount-alerts — what was given away, and by whom.
@@ -213,7 +214,7 @@ export function DiscountAlertsScreen() {
                   hideOnPhone: true,
                   render: (r) => (
                     <span className="whitespace-nowrap text-xs text-[var(--sys-muted-foreground)]">
-                      {new Date(r.createdAt).toLocaleDateString('ar-u-nu-latn', { dateStyle: 'short' })}
+                      {arDate(r.createdAt)}
                     </span>
                   ),
                 },

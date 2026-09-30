@@ -9,6 +9,7 @@ import { RiAddCircleLine, RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiDeleteB
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { arDateTime } from '@/lib/format';
 
 /**
  * /finance/wallets — balances and the movement ledger. A recorded movement is
@@ -338,7 +339,7 @@ export function WalletsScreen() {
                 columns={[
                   { key: 'c0', label: "التاريخ", primary: true,
                     render: (m) => (
-                  <>{new Date(m.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}</>
+                  <>{arDateTime(m.createdAt)}</>
                 ) },
                   { key: 'c1', label: "الطرف", primary: true,
                     render: (m) => (

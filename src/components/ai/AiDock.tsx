@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiRobot2Line, RiSendPlaneLine, RiSubtractLine } from '@remixicon/react';
 import { useBulkActive } from '@/components/shell/BulkBar';
+import { arTime } from '@/lib/format';
 
 /**
  * THE ASSISTANT, WHEREVER YOU ARE.
@@ -91,7 +92,7 @@ export function AiDock() {
     const question = (text ?? q).trim();
     if (!question || busy) return;
 
-    const at = new Date().toLocaleTimeString('ar-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
+    const at = arTime(new Date());
     setMsgs((m) => [...m, { role: 'user', content: question, at }]);
     setQ('');
     setBusy(true);
@@ -109,7 +110,7 @@ export function AiDock() {
           content: res.ok
             ? json.answer || 'لم يصل جواب.'
             : json.error || 'تعذر الوصول إلى المساعد. تأكد من إعداده في الإعدادات.',
-          at: new Date().toLocaleTimeString('ar-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
+          at: arTime(new Date()),
         },
       ]);
     } catch {

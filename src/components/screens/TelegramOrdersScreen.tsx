@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
+import { arDateTime } from '@/lib/format';
 
 interface TelegramMsg {
   id: string;
@@ -228,7 +229,7 @@ export function TelegramOrdersScreen() {
                   <>{m.order ? <span className="font-mono text-[var(--sys-primary)] font-semibold" dir="ltr">{m.order.orderNumber}</span> : '—'}</>
                 ) },
                   { key: 'c6', label: "الوقت",
-                    render: (m) => (new Date(m.createdAt).toLocaleString('ar-u-nu-latn')) },
+                    render: (m) => (arDateTime(m.createdAt)) },
                   { key: 'c7', label: "إجراء", align: 'end',
                     render: (m) => (
                   <>{['NEEDS_REVIEW', 'FAILED'].includes(m.processingStatus) && canManage && (

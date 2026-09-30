@@ -7,6 +7,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowLeftLine, RiLoader4Line, RiRepeatLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { arDateTime } from '@/lib/format';
 
 /**
  * /finance/transfers — moving money between wallets. One transfer writes two
@@ -297,7 +298,7 @@ export function TransfersScreen() {
             columns={[
               { key: 'c0', label: "التاريخ", primary: true,
                 render: (t) => (
-                  <>{new Date(t.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}</>
+                  <>{arDateTime(t.createdAt)}</>
                 ) },
               { key: 'c1', label: "النوع", primary: true,
                 render: (t) => (

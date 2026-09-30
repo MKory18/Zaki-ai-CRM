@@ -8,6 +8,7 @@ import { findRoute, routeLabel } from '@/lib/route-registry';
 import { RiArrowRightSLine, RiChat3Line, RiCheckDoubleLine, RiCheckLine, RiCloseLine, RiErrorWarningLine, RiPhoneLine, RiRefreshLine, RiSearchLine, RiSendPlaneLine, RiSettings3Line, RiShieldFlashLine, RiShoppingBagLine, RiUserLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { arTime } from '@/lib/format';
 
 interface Conversation {
   id: string;
@@ -437,7 +438,7 @@ export function WhatsAppInboxScreen() {
                             )}
                             <p className="whitespace-pre-wrap break-words" dir="auto">{m.text || ''}</p>
                             <div className="flex items-center gap-1 justify-end mt-0.5">
-                              <span className="text-xs text-[var(--sys-muted)]">{new Date(m.createdAt).toLocaleTimeString('ar-u-nu-latn', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-xs text-[var(--sys-muted)]">{arTime(m.createdAt)}</span>
                               {m.direction === 'OUTBOUND' && (
                                 m.status === 'READ' ? <RiCheckDoubleLine className="w-4 h-4 text-[#53bdeb]" />
                                 : m.status === 'FAILED' ? <RiCloseLine className="w-4 h-4 text-[var(--sys-destructive)]" />

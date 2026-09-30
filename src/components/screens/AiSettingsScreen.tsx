@@ -8,6 +8,7 @@ import { MAX_PROMPT, missingSlots, type AiJob, type PromptVersion } from '@/lib/
 import { tierOf } from '@/lib/ai-provider';
 import { RiAlertLine, RiArrowDownSLine, RiArrowGoBackLine, RiCheckLine, RiKey2Line, RiLoader4Line, RiPlugLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { arDate } from '@/lib/format';
 
 /**
  * THE AI, AND EVERY WORD THE SYSTEM SAYS TO IT.
@@ -368,7 +369,7 @@ export function AiSettingsScreen() {
                         </span>
                         {system.providerKeys[p.id]?.savedAt && (
                           <span className="text-xs text-[var(--sys-muted)]">
-                            منذ {new Date(system.providerKeys[p.id]!.savedAt as string).toLocaleDateString('en-GB')}
+                            منذ {arDate(system.providerKeys[p.id]!.savedAt as string)}
                           </span>
                         )}
                         <button
@@ -440,7 +441,7 @@ export function AiSettingsScreen() {
               </button>
               {system.savedAt && (
                 <span className="text-xs text-[var(--sys-muted)]">
-                  آخر تعديل {new Date(system.savedAt).toLocaleDateString('en-GB')}
+                  آخر تعديل {arDate(system.savedAt)}
                   {system.savedBy ? ` — ${system.savedBy}` : ''}
                 </span>
               )}

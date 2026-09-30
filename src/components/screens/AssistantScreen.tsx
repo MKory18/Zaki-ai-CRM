@@ -9,6 +9,7 @@ import { findRoute, routeLabel } from '@/lib/route-registry';
 import { RiCheckboxCircleLine, RiLightbulbLine, RiRobot2Line, RiSendPlaneLine, RiShieldFlashLine, RiSparkling2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { arTime } from '@/lib/format';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -28,7 +29,7 @@ export function AssistantScreen() {
       role: 'assistant',
       content:
         'أهلاً. أمامي أرقام متجرك الحقيقية: الطلبات، ودفعات الإنتاج، ونسب تحويل المودريتورية، وصافي الربح من المسلَّم. اسألني عمّا تريد معرفته.',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: arTime(new Date()),
     },
   ]);
   const [inputQuery, setInputQuery] = useState('');
@@ -83,7 +84,7 @@ export function AssistantScreen() {
     const userMsg: ChatMessage = {
       role: 'user',
       content: q,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: arTime(new Date()),
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -104,7 +105,7 @@ export function AssistantScreen() {
           {
             role: 'assistant',
             content: data.answer,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            time: arTime(new Date()),
           },
         ]);
       } else {
@@ -116,7 +117,7 @@ export function AssistantScreen() {
         {
           role: 'assistant',
           content: 'تعذّر الوصول إلى الأرقام. حاول مرّة أخرى، وإن تكرّر فالمشكلة في إعداد الذكاء لا في سؤالك.',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: arTime(new Date()),
         },
       ]);
     } finally {

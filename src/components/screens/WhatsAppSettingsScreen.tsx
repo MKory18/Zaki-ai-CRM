@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiRefreshLine, RiShieldFlashLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { arDateTime } from '@/lib/format';
 
 export function WhatsAppSettingsScreen() {
   const { currentUser } = useApp();
@@ -77,8 +78,8 @@ export function WhatsAppSettingsScreen() {
     { label: 'رقم الهاتف', value: c?.phoneNumber ? <span dir="ltr">{c.phoneNumber}</span> : '—' },
     { label: 'WABA ID', value: c?.wabaId || (conn?.envConfigured ? 'من متغيرات البيئة' : '—') },
     { label: 'Phone Number ID', value: c?.phoneNumberId || (conn?.envConfigured ? 'من متغيرات البيئة' : '—') },
-    { label: 'آخر Webhook', value: c?.lastWebhookAt ? new Date(c.lastWebhookAt).toLocaleString('ar-u-nu-latn') : 'لا يوجد' },
-    { label: 'آخر رسالة', value: c?.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString('ar-u-nu-latn') : 'لا يوجد' },
+    { label: 'آخر Webhook', value: c?.lastWebhookAt ? arDateTime(c.lastWebhookAt) : 'لا يوجد' },
+    { label: 'آخر رسالة', value: c?.lastMessageAt ? arDateTime(c.lastMessageAt) : 'لا يوجد' },
     { label: 'آخر خطأ', value: c?.lastError || 'لا يوجد' },
   ];
 

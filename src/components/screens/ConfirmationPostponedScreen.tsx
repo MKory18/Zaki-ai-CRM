@@ -6,6 +6,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiInboxUnarchiveLine, RiLoader4Line } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { arDate } from '@/lib/format';
 
 /**
  * /confirmation/postponed — order, customer, due date, days remaining,
@@ -121,7 +122,7 @@ export function ConfirmationPostponedScreen() {
               key: 'due',
               label: 'تاريخ الاستحقاق',
               render: (o) => (
-                <span dir="ltr">{o.dueAt ? new Date(o.dueAt).toLocaleDateString('ar-u-nu-latn') : '—'}</span>
+                <span dir="ltr">{arDate(o.dueAt)}</span>
               ),
             },
             {

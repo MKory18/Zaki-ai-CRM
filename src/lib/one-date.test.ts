@@ -69,6 +69,37 @@ describe('every date on every screen comes from the same four helpers', () => {
     for (const m of src.matchAll(/(^|[^.\w])format\([^\n]*?,\s*['"]([^'"\n]+)['"]/g)) {
       offenders.push(`${file}  →  ${m[2]}`);
     }
+
+    /*
+     * AND THE OTHER WAY TO WRITE ONE.
+     *
+     * This guard policed `format(…, '…')` alone, so two money ledgers —
+     * the wallet movements and the transfers — went on printing
+     * `toLocaleString('ar-u-nu-latn', {dateStyle:'short', timeStyle:'short'})`,
+     * which reads «30‏/9‏/2026، 1:27 م»: slashes, an Arabic comma and a
+     * twelve-hour clock, beside a product that prints «30 سبتمبر 2026 ·
+     * 13:27» everywhere else. Eleven shapes were found the first time; these
+     * two were a twelfth the sweep could not see.
+     */
+    /*
+     * `toLocaleDateString` and `toLocaleTimeString` are always a date.
+     * `toLocaleString` is usually a NUMBER — it is how this product writes
+     * thousands separators for a price — so it counts only when the call
+     * says it is about time: a `Date` on the left, or a date option inside.
+     * A first version flagged every one of them and named fourteen files,
+     * eleven of which were prices.
+     */
+    for (const m of src.matchAll(/\.toLocale(Date|Time)String\s*\(/g)) {
+      offenders.push(`${file}  →  .toLocale${m[1]}String(`);
+    }
+    for (const m of src.matchAll(/([\w.)\]]+)\s*\.toLocaleString\s*\(([^)]*)\)/g)) {
+      const receiver = m[1];
+      const args = m[2];
+      const aboutTime =
+        /Date\b|At\b|[Dd]ate|[Tt]ime/.test(receiver) ||
+        /dateStyle|timeStyle|year|month|day|hour|minute|second|weekday/.test(args);
+      if (aboutTime) offenders.push(`${file}  →  ${receiver}.toLocaleString(`);
+    }
   }
 
   it('found screens to check — a sweep over nothing proves nothing', () => {

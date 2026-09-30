@@ -22,6 +22,7 @@ import { RiAlertLine, RiChat3Line, RiCheckboxCircleLine, RiCloseCircleLine, RiCl
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { arDate } from '@/lib/format';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
@@ -354,7 +355,7 @@ export function ConfirmationMineScreen() {
                 {order.postponedUntil && (
                   <p className="text-xs text-[var(--sys-warning)]">
                     مؤجل حتى{' '}
-                    <span dir="ltr">{new Date(order.postponedUntil).toLocaleDateString('ar-u-nu-latn')}</span>
+                    <span dir="ltr">{arDate(order.postponedUntil)}</span>
                     {order.postponePreferredTime && ` · ${order.postponePreferredTime}`} · تأجيل رقم{' '}
                     {order.postponeCount}
                   </p>

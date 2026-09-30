@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
 import { RiAlertLine, RiArrowDownSLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiMegaphoneLine, RiPlugLine } from '@remixicon/react';
+import { arDateTime } from '@/lib/format';
 
 /**
  * CONNECTING THE PLACES THE SPEND COMES FROM.
@@ -188,7 +189,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
                     {a._count.campaigns} حملة مربوطة
-                    {a.lastSyncAt && ` · آخر سحب ${new Date(a.lastSyncAt).toLocaleString('ar-u-nu-latn')}`}
+                    {a.lastSyncAt && ` · آخر سحب ${arDateTime(a.lastSyncAt)}`}
                   </p>
                 </div>
                 <button

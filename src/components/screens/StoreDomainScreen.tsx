@@ -10,6 +10,7 @@ import { publicAddress } from '@/lib/public-address';
 import { RiCheckboxBlankCircleLine, RiCheckLine, RiDeleteBinLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiShieldFlashLine, RiShieldKeyholeLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { routeLabel } from '@/lib/route-registry';
+import { arDateTime } from '@/lib/format';
 
 /**
  * THE SHOP'S OWN ADDRESS.
@@ -283,7 +284,7 @@ export function StoreDomainScreen() {
                         {verified ? 'متحقَّق' : last.status === 'FAILED' ? 'فشل' : 'بانتظار'}
                       </span>
                       <span className="text-xs text-[var(--sys-muted-foreground)]">
-                        آخر فحص: {new Date(last.checkedAt).toLocaleString('ar-u-nu-latn')}
+                        آخر فحص: {arDateTime(last.checkedAt)}
                       </span>
                     </div>
                     <p className="text-xs leading-relaxed text-[var(--sys-foreground)]">{last.detail}</p>

@@ -6,6 +6,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowDownLine, RiArrowUpLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { arDateTime } from '@/lib/format';
 
 /**
  * /inventory/movements — how the stock got to where it is.
@@ -118,7 +119,7 @@ export function InventoryMovementsScreen() {
             columns={[
               { key: 'c0', label: "التاريخ", primary: true,
                 render: (m) => (
-                  <>{new Date(m.createdAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}</>
+                  <>{arDateTime(m.createdAt)}</>
                 ) },
               { key: 'c1', label: "المنتج", primary: true,
                 render: (m) => (

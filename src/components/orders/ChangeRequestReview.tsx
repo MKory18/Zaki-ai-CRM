@@ -7,6 +7,7 @@ import { apiJson } from '@/lib/api-client';
 import { changeFieldLabel } from '@/lib/change-request-fields';
 import { RiAlertLine, RiArrowLeftLine, RiCheckLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { arDateTime } from '@/lib/format';
 
 /**
  * ONE CHANGE REQUEST, DECIDED.
@@ -100,7 +101,7 @@ export function ChangeRequestReview({
         {row && (
           <>
             <p className="text-xs text-[var(--sys-muted-foreground)]">
-              {row.requestedByName ?? 'موظف'} · {new Date(row.createdAt).toLocaleString('ar-u-nu-latn')}
+              {row.requestedByName ?? 'موظف'} · {arDateTime(row.createdAt)}
             </p>
 
             <div className="rounded-lg border border-[var(--sys-border)] divide-y divide-[var(--sys-border)]">

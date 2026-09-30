@@ -7,6 +7,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiPlayLine, RiTimerLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { arDateTime } from '@/lib/format';
 
 /**
  * /admin/jobs — is anything quietly not running?
@@ -295,7 +296,7 @@ export function JobsScreen() {
                 ) },
                   { key: 'c2', label: "البدء",
                     render: (run) => (
-                  <>{new Date(run.startedAt).toLocaleString('ar-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' })}</>
+                  <>{arDateTime(run.startedAt)}</>
                 ) },
                   { key: 'c3', label: "عدد", align: 'end',
                     render: (run) => (run.processed) },
