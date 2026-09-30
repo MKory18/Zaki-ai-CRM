@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { apiFetch } from '@/lib/api-client';
-import { PICKABLE_REJECTION_REASONS, REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
+import { CONFIRMATION_STATUS_AR, PICKABLE_REJECTION_REASONS, REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
 import { arDateShort, arDateTime } from '@/lib/format';
 import { RiCalendarScheduleLine, RiCheckLine, RiCloseCircleLine, RiHistoryLine, RiPhoneLine, RiPhoneLockLine, RiRefreshLine, RiTimerLine } from '@remixicon/react';
 
@@ -36,14 +36,14 @@ const RESULTS: Record<string, { ar: string; en: string }> = {
 };
 
 const WORKFLOW_STATE: Record<string, { ar: string; en: string; cls: string }> = {
-  NEW: { ar: 'جديد', en: 'New', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-muted-foreground)]/50' },
-  IN_PROGRESS: { ar: 'قيد المعالجة', en: 'In Progress', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
-  NO_ANSWER: { ar: 'لا يجيب', en: 'No Answer', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
-  FOLLOW_UP_REQUIRED: { ar: 'يتطلب متابعة', en: 'Follow-Up Required', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
-  POSTPONED: { ar: 'مؤجل', en: 'Postponed', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
-  CONFIRMED: { ar: 'مؤكد', en: 'Confirmed', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
-  REJECTED: { ar: 'مرفوض', en: 'Rejected', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
-  CANCELLED: { ar: 'ملغى', en: 'Cancelled', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
+  NEW: { ar: CONFIRMATION_STATUS_AR.NEW, en: 'New', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-muted-foreground)]/50' },
+  IN_PROGRESS: { ar: CONFIRMATION_STATUS_AR.IN_PROGRESS, en: 'In Progress', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
+  NO_ANSWER: { ar: CONFIRMATION_STATUS_AR.NO_ANSWER, en: 'No Answer', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
+  FOLLOW_UP_REQUIRED: { ar: CONFIRMATION_STATUS_AR.FOLLOW_UP_REQUIRED, en: 'Follow-Up Required', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
+  POSTPONED: { ar: CONFIRMATION_STATUS_AR.POSTPONED, en: 'Postponed', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
+  CONFIRMED: { ar: CONFIRMATION_STATUS_AR.CONFIRMED, en: 'Confirmed', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
+  REJECTED: { ar: CONFIRMATION_STATUS_AR.REJECTED, en: 'Rejected', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
+  CANCELLED: { ar: CONFIRMATION_STATUS_AR.CANCELLED, en: 'Cancelled', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
 };
 
 const METHOD_LABELS: Record<string, { ar: string; en: string }> = {

@@ -19,6 +19,7 @@ import { apiError } from '@/lib/api-error';
 import { can, authorize } from '@/lib/authorization';
 import { assertCancellable, assertReadyToShip, type StateSource } from '@/lib/order-state';
 import { orderLinesForGuard } from '@/lib/reservation';
+import { CONFIRMATION_STATUS_AR } from '@/lib/confirmation-workflow';
 
 /**
  * POST /api/orders/[id]/shipping — controlled shipping workflow action.
@@ -43,16 +44,15 @@ import { orderLinesForGuard } from '@/lib/reservation';
  * `OUT_FOR_DELIVERY` at somebody is a refusal in a second language on top
  * of the first.
  */
-const CONFIRMATION_AR: Record<string, string> = {
-  NEW: 'جديد',
-  IN_PROGRESS: 'قيد المعالجة',
-  NO_ANSWER: 'لا يرد',
-  FOLLOW_UP_REQUIRED: 'بحاجة متابعة',
-  POSTPONED: 'مؤجَّل',
-  CONFIRMED: 'مؤكَّد',
-  REJECTED: 'مرفوض',
-  CANCELLED: 'ملغى',
-};
+/*
+ * THE ONE VOCABULARY, NOT A FIFTH COPY OF IT.
+ *
+ * The name stays `CONFIRMATION_AR` because the sentences below read it.
+ * What changed is where the words come from: this copy said «قيد
+ * المعالجة», «بحاجة متابعة», «مؤجَّل» and «مؤكَّد» where the rest of the
+ * product says «قيد التأكيد», «يحتاج متابعة», «مؤجل» and «مؤكد».
+ */
+const CONFIRMATION_AR: Record<string, string> = CONFIRMATION_STATUS_AR;
 
 /* The words come from `SHIPPING_STATUS_AR`; this was a sixth copy, and
  * it called PACKING «قيد التجهيز» — which is the core state PREPARING. */

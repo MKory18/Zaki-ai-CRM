@@ -4,10 +4,7 @@ import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { ORDER_ACCESS_STATUS, assertOrderAccess } from '@/lib/rbac';
 import { AlreadyBlocked, blockPhone } from '@/lib/blacklist';
-import {
-  isValidTransition, REJECTION_REASONS, FOLLOW_UP_REASONS,
-  CONFIRMATION_STATUSES, type ConfirmationStatus,
-} from '@/lib/confirmation-workflow';
+import { CONFIRMATION_STATUSES, CONFIRMATION_STATUS_AR, FOLLOW_UP_REASONS, REJECTION_REASONS, isValidTransition, type ConfirmationStatus } from '@/lib/confirmation-workflow';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can, authorize } from '@/lib/authorization';
@@ -37,16 +34,15 @@ import { queueConversions } from '@/lib/conversions/emit';
  * that prints `FOLLOW_UP_REQUIRED` at somebody is a refusal in a second
  * language on top of the first.
  */
-const CONFIRMATION_AR: Record<string, string> = {
-  NEW: 'جديد',
-  IN_PROGRESS: 'قيد المعالجة',
-  NO_ANSWER: 'لا يرد',
-  FOLLOW_UP_REQUIRED: 'بحاجة متابعة',
-  POSTPONED: 'مؤجَّل',
-  CONFIRMED: 'مؤكَّد',
-  REJECTED: 'مرفوض',
-  CANCELLED: 'ملغى',
-};
+/*
+ * THE ONE VOCABULARY, NOT A FIFTH COPY OF IT.
+ *
+ * The name stays `CONFIRMATION_AR` because the sentences below read it.
+ * What changed is where the words come from: this copy said «قيد
+ * المعالجة», «بحاجة متابعة», «مؤجَّل» and «مؤكَّد» where the rest of the
+ * product says «قيد التأكيد», «يحتاج متابعة», «مؤجل» and «مؤكد».
+ */
+const CONFIRMATION_AR: Record<string, string> = CONFIRMATION_STATUS_AR;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

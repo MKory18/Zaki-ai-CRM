@@ -151,3 +151,105 @@ describe('no screen keeps its own copy', () => {
     expect(src).toMatch(/NO_ANSWER: 'لا يرد'/);
   });
 });
+
+/**
+ * AND THE CONFIRMATION AXIS, WHICH HAD FOUR VOCABULARIES.
+ *
+ * The shipping axis was settled and guarded; the confirmation axis was not.
+ * Measured: `CONFIRMATION_STATUSES`' eight values were spelled in four
+ * places and five of the eight disagreed —
+ *
+ *   NO_ANSWER           لا يرد (six files)  ·  لا يجيب (the order dialog)
+ *   IN_PROGRESS         قيد التأكيد  ·  قيد المعالجة
+ *   FOLLOW_UP_REQUIRED  يحتاج متابعة  ·  يتطلب متابعة  ·  بحاجة متابعة
+ *   POSTPONED           مؤجل  ·  مؤجَّل
+ *   CONFIRMED           مؤكد  ·  مؤكَّد
+ *
+ * So an agent read «لا يجيب» in the order dialog and «لا يرد» in the list
+ * about the same order, and the server refused in a third wording again.
+ *
+ * `CONFIRMATION_STATUS_AR` is the owner, and six of its eight values are
+ * read from `STATE_LABEL_AR` rather than retyped, because the core axis
+ * names the same states — which is the rule `shipping-workflow.ts` wrote.
+ *
+ * WHAT THIS DOES NOT FORBID: the shadda spellings «مؤجَّل» and «مؤكَّد»
+ * appear in about twenty files as ordinary prose («طلبٌ مؤكَّد»), which is
+ * writing, not a label. The rule is about MAPPING a status name to a word.
+ */
+describe('one vocabulary for the confirmation axis', () => {
+  const OWNER = 'src/lib/confirmation-workflow.ts';
+
+  /* `sourceFiles` above belongs to another describe's closure. */
+  const allFiles = (): string[] => {
+    const out: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (/\.tsx?$/.test(p) && !p.includes('.test.')) out.push(relative(root, p).split('\\').join('/'));
+      }
+    };
+    walk(join(root, 'src'));
+    return out;
+  };
+
+  /*
+   * WHICH MAP IS A CONFIRMATION VOCABULARY, AND WHICH ONLY SHARES A KEY.
+   *
+   * A first version flagged any map from a confirmation status name to an
+   * Arabic word, and named seven files that were right: `STATE_LABEL_AR`
+   * (the CORE axis's own owner, which names NEW and CONFIRMED because they
+   * are core states), `i18n.ts` (the translation table the other block here
+   * checks by value instead), `SETTLEMENT_AR`, `LEGACY_ONLY`, and the
+   * courier's own `LOGESTECHS_STATUS_AR`. Every one of them collides on a
+   * key like CANCELLED without being about confirmation at all.
+   *
+   * So the discriminator is not a list of exemptions to maintain: it is
+   * `IN_PROGRESS` and `FOLLOW_UP_REQUIRED`, the two names NO other axis in
+   * this product has. A map that spells either of them is a confirmation
+   * vocabulary, and there may be only one.
+   */
+  const ONLY_CONFIRMATION = /\b(IN_PROGRESS|FOLLOW_UP_REQUIRED)\s*:\s*(?:\{\s*ar\s*:\s*)?['"`]([\u0600-\u06FF][^'"`]*)['"`]/g;
+
+  const offenders: string[] = [];
+  for (const file of allFiles()) {
+    if (file === OWNER) continue;
+    const src = readFileSync(join(root, file), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    for (const m of src.matchAll(ONLY_CONFIRMATION)) {
+      offenders.push(`${file}  ${m[1]} = «${m[2]}»`);
+    }
+  }
+
+  it('found files to check — a sweep over nothing proves nothing', () => {
+    expect(allFiles().length).toBeGreaterThan(200);
+  });
+
+  it('and only one file spells a confirmation status', () => {
+    expect(
+      offenders,
+      `نسخةٌ أخرى من مفردات التأكيد:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('and six of the eight are read from the core axis, not retyped', async () => {
+    const { CONFIRMATION_STATUS_AR } = await import('./confirmation-workflow');
+    const { STATE_LABEL_AR } = await import('./order-state');
+    expect(CONFIRMATION_STATUS_AR.NO_ANSWER).toBe(STATE_LABEL_AR.NO_ANSWER);
+    // The confirmation axis's name for the core axis's CLAIMED.
+    expect(CONFIRMATION_STATUS_AR.IN_PROGRESS).toBe(STATE_LABEL_AR.CLAIMED);
+    expect(CONFIRMATION_STATUS_AR.POSTPONED).toBe(STATE_LABEL_AR.POSTPONED);
+    expect(CONFIRMATION_STATUS_AR.CONFIRMED).toBe(STATE_LABEL_AR.CONFIRMED);
+    expect(CONFIRMATION_STATUS_AR.CANCELLED).toBe(STATE_LABEL_AR.CANCELLED);
+    expect(CONFIRMATION_STATUS_AR.NEW).toBe(STATE_LABEL_AR.NEW);
+  });
+
+  it('and every status has a word', async () => {
+    const { CONFIRMATION_STATUS_AR, CONFIRMATION_STATUSES } = await import('./confirmation-workflow');
+    for (const key of CONFIRMATION_STATUSES) {
+      expect(CONFIRMATION_STATUS_AR[key], key).toMatch(/[\u0600-\u06FF]/);
+    }
+  });
+});

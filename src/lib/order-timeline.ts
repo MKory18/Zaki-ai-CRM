@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { STATE_LABEL_AR } from './order-state';
 import { SHIPPING_STATUS_AR } from './shipping-workflow';
+import { CONFIRMATION_STATUS_AR } from './confirmation-workflow';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -79,9 +80,7 @@ export const STATUS_VALUE_AR: Record<string, string> = {
 
   // And the values neither axis names: the confirmation column, the
   // settlement column, and the words a change request carries.
-  IN_PROGRESS: 'قيد التأكيد',
-  FOLLOW_UP_REQUIRED: 'يحتاج متابعة',
-  REJECTED: 'مرفوض',
+  ...CONFIRMATION_STATUS_AR,
   PENDING: 'معلّق',
   PENDING_COLLECTION: 'لم يُحصَّل',
   COLLECTED: 'محصَّل',

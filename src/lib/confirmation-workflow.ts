@@ -1,3 +1,4 @@
+import { STATE_LABEL_AR } from './order-state';
 /**
  * SALESFLOW — Phase D1: Confirmation Workflow Validator
  *
@@ -93,6 +94,41 @@ export const PICKABLE_REJECTION_REASONS = REJECTION_REASONS.filter(
  * rendered as a raw English constant to an Arabic reader. The same divergence
  * that the delivery-attempt vocabulary already cost once.
  */
+/**
+ * ONE WORD PER CONFIRMATION STATUS — AND THE CORE AXIS'S WORD WHERE IT
+ * NAMES THE SAME STATE.
+ *
+ * This vocabulary was written FOUR times, and the copies disagreed on
+ * five of the eight values:
+ *
+ *   NO_ANSWER           لا يرد (six files)  ·  لا يجيب (the order dialog)
+ *   IN_PROGRESS         قيد التأكيد  ·  قيد المعالجة
+ *   FOLLOW_UP_REQUIRED  يحتاج متابعة  ·  يتطلب متابعة  ·  بحاجة متابعة
+ *   POSTPONED           مؤجل  ·  مؤجَّل
+ *   CONFIRMED           مؤكد  ·  مؤكَّد
+ *
+ * So an agent read «لا يجيب» in the order dialog and «لا يرد» in the list
+ * about the same order, and «يحتاج متابعة» in its timeline while the
+ * server refused in «بحاجة متابعة».
+ *
+ * WHICH WORD WINS is not a taste: `shipping-workflow.ts` wrote the rule
+ * when it settled the shipping axis — «where a core state carries the
+ * same name, its word wins». Six of these are core states under another
+ * name, so six of these read from `STATE_LABEL_AR` rather than repeating
+ * it. The two the core axis does not name are spelled here, once.
+ */
+export const CONFIRMATION_STATUS_AR: Record<ConfirmationStatus, string> = {
+  NEW: STATE_LABEL_AR.NEW,
+  // The confirmation axis's name for what the core axis calls CLAIMED.
+  IN_PROGRESS: STATE_LABEL_AR.CLAIMED,
+  NO_ANSWER: STATE_LABEL_AR.NO_ANSWER,
+  POSTPONED: STATE_LABEL_AR.POSTPONED,
+  CONFIRMED: STATE_LABEL_AR.CONFIRMED,
+  CANCELLED: STATE_LABEL_AR.CANCELLED,
+  FOLLOW_UP_REQUIRED: 'يحتاج متابعة',
+  REJECTED: 'مرفوض',
+};
+
 export const REJECTION_REASON_AR: Record<string, string> = {
   PRICE_TOO_HIGH: 'السعر مرتفع',
   CUSTOMER_CHANGED_MIND: 'غيّر رأيه',
