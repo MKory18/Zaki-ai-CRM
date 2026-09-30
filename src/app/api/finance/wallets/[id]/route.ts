@@ -26,30 +26,58 @@ const patchSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-interface WalletUsage {
-  movements: number;
-  closings: number;
-  receipts: number;
-  transfers: number;
-}
+/**
+ * EVERY TABLE THAT POINTS AT A WALLET, NOT THE FOUR THAT CAME TO MIND.
+ *
+ * The first version counted movements, closings, receipts and transfers.
+ * The schema has eight: expenses, payslips, commission payouts and the
+ * opening count also carry a `walletId`. Measured against the real
+ * database — a wallet with one expense against it and nothing else:
+ *
+ *   usageOf says {movements:0, closings:0, receipts:0, transfers:0}
+ *   → touched = false → db.wallet.delete → P2003 on expenses_wallet_id_fkey
+ *
+ * The money survived, because every one of those relations is
+ * `onDelete: Restrict` and the database refused. But the person asking
+ * got «حدث خطأ» where the route had a real answer to give them: this
+ * wallet paid for things, so it is stopped, not deleted.
+ *
+ * `one-wallet-usage.test.ts` reads the schema and fails if a ninth
+ * relation is ever added without being counted here.
+ */
+const USAGE_LABEL_AR = {
+  movements: 'حركة',
+  transfers: 'تحويل',
+  closings: 'إغلاق يومي',
+  receipts: 'إيصال',
+  expenses: 'مصروف',
+  payslips: 'كشف راتب',
+  commissionPayouts: 'صرف عمولة',
+  openingCount: 'جرد افتتاحي',
+} as const;
+
+type WalletUsage = Record<keyof typeof USAGE_LABEL_AR, number>;
 
 async function usageOf(id: string): Promise<WalletUsage> {
-  const [movements, closings, receipts, transfers] = await Promise.all([
-    db.walletMovement.count({ where: { walletId: id } }),
-    db.dailyClosing.count({ where: { walletId: id } }),
-    db.statementReceipt.count({ where: { walletId: id } }),
-    db.walletTransfer.count({ where: { OR: [{ fromWalletId: id }, { toWalletId: id }] } }),
-  ]);
-  return { movements, closings, receipts, transfers };
+  const [movements, closings, receipts, transfers, expenses, payslips, commissionPayouts, openingCount] =
+    await Promise.all([
+      db.walletMovement.count({ where: { walletId: id } }),
+      db.dailyClosing.count({ where: { walletId: id } }),
+      db.statementReceipt.count({ where: { walletId: id } }),
+      db.walletTransfer.count({ where: { OR: [{ fromWalletId: id }, { toWalletId: id }] } }),
+      db.expense.count({ where: { walletId: id } }),
+      db.payslip.count({ where: { walletId: id } }),
+      db.commissionPayout.count({ where: { walletId: id } }),
+      db.walletOpeningCount.count({ where: { walletId: id } }),
+    ]);
+  return { movements, closings, receipts, transfers, expenses, payslips, commissionPayouts, openingCount };
 }
 
 function describe(u: WalletUsage): string {
-  const parts: string[] = [];
-  if (u.movements) parts.push(`${u.movements} حركة`);
-  if (u.transfers) parts.push(`${u.transfers} تحويل`);
-  if (u.closings) parts.push(`${u.closings} إغلاق يومي`);
-  if (u.receipts) parts.push(`${u.receipts} إيصال`);
-  return parts.join(' · ');
+  return (Object.keys(USAGE_LABEL_AR) as (keyof WalletUsage)[])
+    .filter((k) => u[k] > 0)
+    .map((k) => `${u[k]} ${USAGE_LABEL_AR[k]}`)
+    .join(' · ');
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
