@@ -7,7 +7,7 @@ import { requireContext } from '@/lib/geo-context';
 import { computeCod } from '@/lib/money';
 import { hasEverShipped, hasLeftWarehouse, assertCancellable, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines } from '@/lib/reservation';
-import { assertOrderAccess, orderVisibilityWhere } from '@/lib/rbac';
+import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { ordersWhere } from '@/lib/order-filters';
@@ -149,10 +149,9 @@ export async function GET(
     // ── Phase S: role-scoped access (same envelope as the list API) ──
     // Self-scoped roles may only read orders assigned/claimed/created by them
     // or claimable queue items — never another employee's private orders.
-    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
+    const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'Order not found' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'Order not found' }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
 
     const order = await db.order.findUnique({
@@ -401,8 +400,7 @@ export async function PATCH(
     // own-assignment, so no separate any/own check is needed) ──
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const existing = access.order;
 

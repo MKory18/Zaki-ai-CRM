@@ -25,7 +25,13 @@ const { db, requireContext, assertOrderAccess, authorize, can, logAudit } = vi.h
 
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
-vi.mock('@/lib/rbac', () => ({ assertOrderAccess: (...a: unknown[]) => assertOrderAccess(...a) }));
+vi.mock('@/lib/rbac', () => ({
+  assertOrderAccess: (...a: unknown[]) => assertOrderAccess(...a),
+  // Reads go through the list's envelope; the same verdict feeds both
+  // here, because these tests are about what follows a verdict.
+  assertOrderReadable: (...a: unknown[]) => assertOrderAccess(...a),
+  ORDER_ACCESS_STATUS: { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 404 },
+}));
 vi.mock('@/lib/order-locks', () => ({ ownershipSnapshot: vi.fn() }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
 vi.mock('@/lib/authorization', () => ({

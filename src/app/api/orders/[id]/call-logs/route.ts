@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { assertOrderAccess } from '@/lib/rbac';
+import { ORDER_ACCESS_STATUS, assertOrderAccess } from '@/lib/rbac';
 import { isValidTransition, CONTACT_RESULTS, REJECTION_REASONS } from '@/lib/confirmation-workflow';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
@@ -29,8 +29,7 @@ export async function POST(
     // Order access first, then editing authority evaluated against the order
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 

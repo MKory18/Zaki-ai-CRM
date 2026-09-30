@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { assertOrderAccess } from '@/lib/rbac';
+import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable } from '@/lib/rbac';
 import { DELIVERY_ATTEMPT_RESULTS, type DeliveryAttemptResult } from '@/lib/shipping-workflow';
 import { logAudit } from '@/lib/audit';
 import { can, authorize } from '@/lib/authorization';
@@ -18,10 +18,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
-    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
+    const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'Order not found' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'Order not found' }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
 
     const attempts = await db.deliveryAttempt.findMany({
@@ -46,8 +45,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 

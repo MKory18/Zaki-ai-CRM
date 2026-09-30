@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { notify } from '@/lib/notify';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { assertOrderAccess } from '@/lib/rbac';
+import { ORDER_ACCESS_STATUS, assertOrderAccess } from '@/lib/rbac';
 import { AlreadyBlocked, blockPhone } from '@/lib/blacklist';
 import {
   isValidTransition, REJECTION_REASONS, FOLLOW_UP_REASONS,
@@ -56,8 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Confirmation status authority (scope evaluated against the loaded order)
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'الطلب غير موجود أو ليس بين يديك' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'الطلب غير موجود أو ليس بين يديك' }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 

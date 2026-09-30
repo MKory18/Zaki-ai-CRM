@@ -2,7 +2,7 @@ import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { assertOrderAccess } from '@/lib/rbac';
+import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable } from '@/lib/rbac';
 import { ownershipSnapshot } from '@/lib/order-locks';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
@@ -59,8 +59,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
     const isReassigner = authorize(user, 'orders.assign', order).allowed;
@@ -180,7 +179,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
 
-    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
+    const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }

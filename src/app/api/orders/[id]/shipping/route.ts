@@ -7,7 +7,7 @@ import { requireContext } from '@/lib/geo-context';
 import { consumeOrderStock } from '@/lib/stock-consumption';
 import { emitAppEvent, type AppEvent } from '@/lib/apps/events';
 import { queueConversions } from '@/lib/conversions/emit';
-import { assertOrderAccess } from '@/lib/rbac';
+import { ORDER_ACCESS_STATUS, assertOrderAccess } from '@/lib/rbac';
 import {
   isValidShippingTransition, canEnterShipping, STATUS_TIMESTAMP,
   DELIVERY_FAILURE_REASONS, RETURN_REASONS, SHIPPING_STATUSES, attemptForShippingStatus,
@@ -66,8 +66,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Order access first, then shipping authority evaluated against the order
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      const map = { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 403 } as const;
-      return NextResponse.json({ error: 'الطلب غير موجود أو ليس بين يديك' }, { status: map[access.reason] });
+      return NextResponse.json({ error: 'الطلب غير موجود أو ليس بين يديك' }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 

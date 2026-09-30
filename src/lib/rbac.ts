@@ -173,6 +173,65 @@ export async function assertOrderAccess(
   return { allowed: true, order };
 }
 
+/**
+ * THE STATUS FOR AN ORDER THIS ACCOUNT MAY NOT HAVE.
+ *
+ * This map was written out by hand at eighteen call sites, and every copy
+ * of it said `NOT_ASSIGNED: 403` under a body reading «Order not found».
+ * The two halves of that response contradict each other, and the status is
+ * the half that talks: a 404 says «no such order for you», a 403 says «it
+ * exists, it is somebody else's» — which is a fact about a colleague's work
+ * handed to whoever holds an id from a link, an export or a feed.
+ *
+ * All three answers are 404 on purpose. One place, so the next reason
+ * added to `OrderAccessResult` is one decision, not nineteen.
+ */
+export const ORDER_ACCESS_STATUS = {
+  NOT_FOUND: 404,
+  WRONG_COMPANY: 404,
+  NOT_ASSIGNED: 404,
+} as const;
+
+/**
+ * MAY THIS ACCOUNT *READ* THIS ORDER — BY THE LIST'S OWN RULE.
+ *
+ * `assertOrderAccess` asks whether the order is ASSIGNED to the caller,
+ * and that is the right question before a write. It is the wrong question
+ * before a read, and the two answers disagreed about the same order:
+ *
+ *   orderVisibilityWhere(agent)  → includes the CLAIMABLE QUEUE
+ *   assertOrderAccess(agent, …)  → NOT_ASSIGNED for anything unclaimed
+ *
+ * So an agent's queue listed an order and opening it answered 403. The
+ * claim route already carries a hand-written patch for exactly this, and
+ * its comment says why: «Without this the agent sees the order in their
+ * queue but gets 403 when actually claiming it». Reading was never fixed.
+ *
+ * This does not re-state the envelope; it USES it, in one query, so the
+ * list and the detail cannot drift again. Writes keep asking about
+ * assignment — reading a parcel you may pick up is not owning it.
+ */
+export async function assertOrderReadable(
+  orderId: string,
+  user: SessionUser,
+  scope: { companyId: string; storeId: string },
+  permission?: Permission
+): Promise<OrderAccessResult> {
+  if (permission && !can(user, permission)) {
+    throw new Error(`Forbidden: missing required permission ${permission}`);
+  }
+
+  const order = await db.order.findFirst({
+    where: {
+      AND: [{ id: orderId, companyId: scope.companyId, storeId: scope.storeId }, orderVisibilityWhere(user)],
+    },
+  });
+  // Absent, another company's, another store's, or another person's work:
+  // all one answer, because telling them apart is the leak.
+  if (!order) return { allowed: false, reason: 'NOT_FOUND' };
+  return { allowed: true, order };
+}
+
 // ─────────────────────────────────────────────────────
 // Role helpers
 // ─────────────────────────────────────────────────────

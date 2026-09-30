@@ -3,7 +3,7 @@ import { afterResponse } from '@/lib/notify';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { assertOrderAccess } from '@/lib/rbac';
+import { assertOrderAccess, assertOrderReadable } from '@/lib/rbac';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { addBusinessMinutes } from '@/lib/business-calendar';
@@ -62,7 +62,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   try {
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
-    const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
+    const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 
     const requests = await db.orderChangeRequest.findMany({
