@@ -31,7 +31,7 @@ const { requireContext, requirePermission, can, getCompanyAnalytics, rateLimit }
   requirePermission: vi.fn(),
   can: vi.fn(),
   getCompanyAnalytics: vi.fn(),
-  rateLimit: vi.fn(() => ({ allowed: true, remaining: 29, retryAfterSec: 0 })),
+  rateLimit: vi.fn((_key: string, _limit: number, _windowMs: number) => ({ allowed: true, remaining: 29, retryAfterSec: 0 })),
 }));
 
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
@@ -40,7 +40,7 @@ vi.mock('@/lib/authorization', () => ({
   can: (...a: unknown[]) => can(...a),
   getPermissionScope: () => ({ scope: 'ALL_COMPANY' }),
 }));
-vi.mock('@/lib/rate-limit', () => ({ rateLimit: (...a: unknown[]) => rateLimit(...a) }));
+vi.mock('@/lib/rate-limit', () => ({ rateLimit: (key: string, limit: number, windowMs: number) => rateLimit(key, limit, windowMs) }));
 vi.mock('@/lib/analytics', async (orig) => ({
   ...(await orig<typeof import('@/lib/analytics')>()),
   getCompanyAnalytics: (...a: unknown[]) => getCompanyAnalytics(...a),

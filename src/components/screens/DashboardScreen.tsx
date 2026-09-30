@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { AiOrderModal } from '@/components/orders/AiOrderModal';
 import { useApp } from '@/context/AppContext';
+import { canAccessRoute, findRoute } from '@/lib/route-registry';
+import { userCan } from '@/lib/can';
 import { apiFetch } from '@/lib/api-client';
 import Link from 'next/link';
 import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiFireLine, RiHandCoinLine, RiInboxUnarchiveLine, RiPercentLine, RiMagicLine, RiShoppingBagLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
@@ -27,6 +29,27 @@ const PERIODS = [
 
 export function DashboardScreen() {
   const { t, locale, isRtl, currentUser } = useApp();
+
+  /**
+   * A LINK IS A PROMISE THAT CLICKING LEADS SOMEWHERE.
+   *
+   * `notification.ts` already says this, and drops a link the recipient's
+   * own guard would refuse. This screen did not: signed in as a moderator,
+   * its cards offered «طابور التأكيد»، «متابعة الشحن»، «المرتجعات» and
+   * «الموظفون», and every one of them landed on «لا تملك صلاحية لهذه
+   * الشاشة».
+   *
+   * The rule is not written a second time here. `canAccessRoute` takes the
+   * permission check as a PARAMETER precisely so the sidebar can pass the
+   * server's `can` and a screen can pass the client's `userCan`.
+   */
+  const mayOpen = (path: string): boolean => {
+    if (!currentUser) return false;
+    const route = findRoute(path.split('?')[0]);
+    return !!route && canAccessRoute(currentUser, route, userCan);
+  };
+  /** The href, or nothing — a card with no link is still a card. */
+  const linkTo = (path: string): string | undefined => (mayOpen(path) ? path : undefined);
   const canFinance =
     currentUser?.role === 'SUPER_ADMIN' ||
     currentUser?.role === 'COMPANY_ADMIN' ||
@@ -363,7 +386,7 @@ export function DashboardScreen() {
               previous={profitStated ? prev.netProfit : undefined}
               health={profitStated ? verdicts.profitMargin : undefined}
               goodWhen="rising"
-              href="/finance/profit"
+              href={linkTo("/finance/profit")}
             />
           )}
 
@@ -375,7 +398,7 @@ export function DashboardScreen() {
               icon={RiArrowUpCircleLine}
               previous={prev.deliveredRevenue}
               goodWhen="rising"
-              href="/orders?state=DELIVERED"
+              href={linkTo("/orders?state=DELIVERED")}
             />
           )}
 
@@ -387,7 +410,7 @@ export function DashboardScreen() {
             previous={prev.confirmationRate}
             health={verdicts.confirmationRate}
             goodWhen="rising"
-            href="/confirmation/queue"
+            href={linkTo("/confirmation/queue")}
           />
 
           <KpiCard
@@ -398,7 +421,7 @@ export function DashboardScreen() {
             previous={prev.deliveryRate}
             health={verdicts.deliveryRate}
             goodWhen="rising"
-            href="/ops/tracking"
+            href={linkTo("/ops/tracking")}
           />
 
           <KpiCard
@@ -413,7 +436,7 @@ export function DashboardScreen() {
             previous={prev.returnRate}
             health={verdicts.returnRate}
             goodWhen="falling"
-            href="/ops/returns"
+            href={linkTo("/ops/returns")}
           />
 
           {canFinance && (
@@ -437,7 +460,7 @@ export function DashboardScreen() {
                   : '')
               }
               icon={RiHandCoinLine}
-              href="/finance/collection"
+              href={linkTo("/finance/collection")}
             />
           )}
         </div>
@@ -474,13 +497,15 @@ export function DashboardScreen() {
                 </span>
               }
               action={
-                <Link href="/products" className="tap-safe inline-flex items-center gap-1 text-xs text-[var(--sys-destructive)] font-medium hover:underline">
-                  {locale === 'ar' ? 'المنتجات' : 'View Products'}
-                  {/* The same arrow, from the same set, mirrored the same way
-                      as the one at line 219 — not the character ←, whose
-                      weight and size are whatever the device's font says. */}
-                  <RiArrowRightLine className="icon-mirror h-4 w-4" aria-hidden />
-                </Link>
+                mayOpen('/products') ? (
+                  <Link href="/products" className="tap-safe inline-flex items-center gap-1 text-xs text-[var(--sys-destructive)] font-medium hover:underline">
+                    {locale === 'ar' ? 'المنتجات' : 'View Products'}
+                    {/* The same arrow, from the same set, mirrored the same way
+                        as the one at line 219 — not the character ←, whose
+                        weight and size are whatever the device's font says. */}
+                    <RiArrowRightLine className="icon-mirror h-4 w-4" aria-hidden />
+                  </Link>
+                ) : undefined
               }
             />
             <CardContent className="space-y-2.5">
@@ -535,10 +560,14 @@ export function DashboardScreen() {
                 </span>
               }
               action={
-                <Link href="/admin/users" className="tap-safe inline-flex items-center gap-1 text-xs text-[var(--sys-destructive)] font-medium hover:underline">
-                  {locale === 'ar' ? 'الفريق' : 'View Team'}
-                  <RiArrowRightLine className="icon-mirror h-4 w-4" aria-hidden />
-                </Link>
+                /* The card stays; only the way OUT of it goes, for whoever
+                   would land on «لا تملك صلاحية لهذه الشاشة». */
+                mayOpen('/admin/users') ? (
+                  <Link href="/admin/users" className="tap-safe inline-flex items-center gap-1 text-xs text-[var(--sys-destructive)] font-medium hover:underline">
+                    {locale === 'ar' ? 'الفريق' : 'View Team'}
+                    <RiArrowRightLine className="icon-mirror h-4 w-4" aria-hidden />
+                  </Link>
+                ) : undefined
               }
             />
             <CardContent className="p-0">
