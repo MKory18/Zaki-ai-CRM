@@ -8,7 +8,7 @@ import { AiOrderModal } from '@/components/orders/AiOrderModal';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import Link from 'next/link';
-import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiFireLine, RiHandCoinLine, RiInboxUnarchiveLine, RiPercentLine, RiShoppingBagLine, RiSparkling2Line, RiTruckLine, RiWallet3Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiFireLine, RiHandCoinLine, RiInboxUnarchiveLine, RiPercentLine, RiMagicLine, RiShoppingBagLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { IntelligenceStrip } from '@/components/growth/IntelligenceStrip';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -291,7 +291,7 @@ export function DashboardScreen() {
               onClick={() => setAiModalOpen(true)}
               className="items-center gap-1.5 text-[var(--sys-primary)] border-[var(--sys-primary)]/35 hover:bg-[var(--sys-primary-soft)]"
             >
-              <RiSparkling2Line className="w-4 h-4" />
+              <RiMagicLine className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
             </Button>
 

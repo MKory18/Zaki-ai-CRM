@@ -14,7 +14,7 @@ import {
   type LandingSection, parseSections, ensureForm, starterSections,
 } from '@/lib/landing-sections';
 import { useHistory } from '@/lib/use-history';
-import { RiArchiveLine, RiArrowGoBackLine, RiBookOpenLine, RiArrowGoForwardLine, RiArrowRightLine, RiCodeSLine, RiComputerLine, RiCursorLine, RiEarthLine, RiEyeLine, RiFullscreenExitLine, RiFullscreenLine, RiGiftLine, RiImageLine, RiInputMethodLine, RiLoader4Line, RiPaletteLine, RiPlayListAddLine, RiSaveLine, RiSmartphoneLine, RiTabletLine, RiUpload2Line } from '@remixicon/react';
+import { RiArchiveLine, RiArrowGoBackLine, RiBookOpenLine, RiArrowGoForwardLine, RiArrowRightLine, RiCodeSLine, RiComputerLine, RiCursorLine, RiEarthLine, RiEyeLine, RiFullscreenExitLine, RiFullscreenLine, RiGiftLine, RiImageLine, RiInputMethodLine, RiLoader4Line, RiPaletteLine, RiPlayListAddLine, RiRefreshLine, RiSaveLine, RiSmartphoneLine, RiTabletLine, RiUpload2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
@@ -832,8 +832,10 @@ data-zaki-z-index="9999"`}</pre>
                       <Icon className="h-4 w-4" />
                     </button>
                   ))}
+                  {/* «تحديث» is the refresh this product draws fifteen other times.
+                      The eye is its «معاينة», and it is on the button above. */}
                   <Button variant="ghost" size="sm" onClick={() => setPreviewKey((k) => k + 1)} title="تحديث">
-                    <RiEyeLine className="h-4 w-4" />
+                    <RiRefreshLine className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

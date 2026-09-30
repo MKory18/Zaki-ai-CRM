@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
-import { RiAlertLine, RiArrowGoForwardLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiShieldCheckLine, RiTimerLine } from '@remixicon/react';
+import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiTimerLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
@@ -158,7 +158,7 @@ export function InstalledAppsScreen() {
               </button>
             ))}
             <Button size="sm" variant="outline" onClick={load}>
-              <RiArrowGoForwardLine className="icon-mirror h-4 w-4" /> تحديث
+              <RiRefreshLine className="h-4 w-4" /> تحديث
             </Button>
           </div>
         </div>

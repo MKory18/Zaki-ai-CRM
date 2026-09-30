@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { useApp } from '@/context/AppContext';
-import { RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiMessage3Line, RiRefreshLine, RiSettings3Line, RiShoppingBagLine } from '@remixicon/react';
+import { RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine, RiEqualizer2Line, RiMessage3Line, RiRefreshLine, RiShoppingBagLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
@@ -126,7 +126,7 @@ export function TelegramOrdersScreen() {
               <><div className="flex items-center gap-2">
             {canManage && (
               <Link href="/settings/telegram">
-                <Button variant="outline" size="sm"><RiSettings3Line className="w-4 h-4 ml-1" /> الإعدادات</Button>
+                <Button variant="outline" size="sm"><RiEqualizer2Line className="w-4 h-4 ml-1" /> الإعدادات</Button>
               </Link>
             )}
             <Button variant="ghost" size="sm" onClick={() => loadAll()}><RiRefreshLine className="w-4 h-4" /></Button>
