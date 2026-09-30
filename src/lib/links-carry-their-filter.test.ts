@@ -159,3 +159,46 @@ describe('the lost-parcel alert lands on the parcel', () => {
     expect(screen).toMatch(/useSearchParams\(\)\.get\('order'\)/);
   });
 });
+
+/**
+ * AND A NOTIFICATION ABOUT ONE ORDER OPENS THAT ORDER.
+ *
+ * Five notifications named an order in their own message — «الطلب #1234
+ * أصبح بالحالة …», «طُبِّق تعديلك على 1234» — and linked to `/orders`,
+ * the list of everything, leaving the reader to find it by hand. The list
+ * has read `?highlight=<id>` since the dashboard's own dead filters were
+ * fixed, and `DiscountAlertsScreen` already links that way.
+ */
+describe('a notification about an order carries the order', () => {
+  const routeFiles = (): string[] => {
+    const out: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (p.endsWith('route.ts')) out.push(p);
+      }
+    };
+    walk(join(process.cwd(), 'src', 'app', 'api'));
+    return out;
+  };
+
+  it('never sends the reader to the whole list instead', () => {
+    const bare: string[] = [];
+    for (const file of routeFiles()) {
+      const src = readFileSync(file, 'utf8');
+      if (src.includes("link: '/orders',")) bare.push(file.split('src')[1]);
+    }
+    expect(
+      bare,
+      `إشعاراتٌ تُسمّي طلباً وتُرسل إلى القائمة كاملة:\n${bare.join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('and the list still reads the parameter they send', () => {
+    const screen = readFileSync(join(process.cwd(), 'src/components/screens/OrdersScreen.tsx'), 'utf8');
+    expect(screen).toContain("asked.get('highlight')");
+    // …into the dialog, not into a variable nothing renders.
+    expect(screen).toMatch(/orderId=\{selectedOrderId\}/);
+  });
+});

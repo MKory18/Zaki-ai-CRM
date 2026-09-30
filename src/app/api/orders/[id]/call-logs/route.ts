@@ -6,6 +6,8 @@ import { isValidTransition, CONTACT_RESULTS, REJECTION_REASONS } from '@/lib/con
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can, authorize } from '@/lib/authorization';
+import { ORDER_NOT_FOUND } from '@/lib/order-refusals';
+import { STATUS_VALUE_AR } from '@/lib/order-timeline';
 
 /**
  * POST /api/orders/[id]/call-logs — record a call + optionally drive workflow.
@@ -29,7 +31,7 @@ export async function POST(
     // Order access first, then editing authority evaluated against the order
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 
@@ -38,9 +40,9 @@ export async function POST(
     if (!editAuth.allowed) {
       // Secure policy: out-of-scope/other-tenant orders are reported as missing
       if (editAuth.reason === 'NO_TENANT') {
-        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
       }
-      return NextResponse.json({ error: 'Forbidden: cannot record calls' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: cannot record calls', errorAr: 'لا تملك صلاحية تسجيل الاتصالات.' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -49,7 +51,7 @@ export async function POST(
     // Whitelisted result values only (CONTACT_RESULTS + POSTPONED used by the UI)
     const ALLOWED_CALL_RESULTS = [...CONTACT_RESULTS, 'POSTPONED'] as string[];
     if (!result || !ALLOWED_CALL_RESULTS.includes(result)) {
-      return NextResponse.json({ error: 'Call Result is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Call Result is required', errorAr: 'اختر نتيجة الاتصال.' }, { status: 400 });
     }
 
     /**
@@ -74,14 +76,14 @@ export async function POST(
     if (nextFollowUpDate !== undefined && nextFollowUpDate !== null && nextFollowUpDate !== '') {
       nextFollowUp = new Date(nextFollowUpDate);
       if (isNaN(nextFollowUp.getTime())) {
-        return NextResponse.json({ error: 'Invalid nextFollowUpDate' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid nextFollowUpDate', errorAr: 'تاريخ المتابعة غير صالح.' }, { status: 400 });
       }
     }
     let callAt = new Date();
     if (callDate !== undefined && callDate !== null && callDate !== '') {
       callAt = new Date(callDate);
       if (isNaN(callAt.getTime())) {
-        return NextResponse.json({ error: 'Invalid callDate' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid callDate', errorAr: 'تاريخ الاتصال غير صالح.' }, { status: 400 });
       }
     }
 
@@ -144,7 +146,7 @@ export async function POST(
         return NextResponse.json(
           {
             error: `Invalid workflow transition: ${order.confirmationStatus} → ${confirmEquiv}`,
-            errorAr: `انتقال غير صالح في سير العمل: ${order.confirmationStatus} → ${confirmEquiv}`,
+            errorAr: `لا يمكن الانتقال من «${STATUS_VALUE_AR[order.confirmationStatus] ?? order.confirmationStatus}» إلى «${STATUS_VALUE_AR[confirmEquiv] ?? confirmEquiv}».`,
             code: 'INVALID_TRANSITION',
           },
           { status: 409 }

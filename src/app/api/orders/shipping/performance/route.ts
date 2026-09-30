@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     // Access gate: canonical permission checks (role bypass replaced by the
     // scope engine — management roles hold orders.change_status anyway)
     if (!can(user, 'reports.view') && !can(user, 'finance.view') && !can(user, 'orders.change_status')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحياتك. راجع مدير النظام إن كان من عملك.' }, { status: 403 });
     }
 
     const providers = await db.deliveryProvider.findMany({

@@ -63,7 +63,11 @@ describe('requireContext', () => {
     const err = await requireContext().catch((e) => e);
     expect(err).toBeInstanceOf(ContextError);
     expect(err.code).toBe('CONTEXT_REQUIRED');
-    expect(apiError(err)).toEqual({ body: { error: err.message, code: 'CONTEXT_REQUIRED' }, status: 400 });
+    // `errorAr` travels beside `error` now — see api-error.ts. Matched
+    // rather than deep-equalled so the sentence can be reworded without
+    // this test being about wording.
+    expect(apiError(err)).toMatchObject({ body: { error: err.message, code: 'CONTEXT_REQUIRED' }, status: 400 });
+    expect(apiError(err).body.errorAr, 'بلا جملةٍ يقرأها الإنسان').toBeTruthy();
   });
 
   it('rejects a country without a store (STORE_REQUIRED)', async () => {

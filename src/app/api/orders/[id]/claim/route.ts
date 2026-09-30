@@ -6,6 +6,7 @@ import { atomicClaim, isLockActive, lockConfig, ownershipSnapshot } from '@/lib/
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can } from '@/lib/authorization';
+import { ORDER_CLAIM_NOT_HELD, ORDER_NOT_FOUND, ORDER_STALE, orderClaimedBy } from '@/lib/order-refusals';
 
 /**
  * POST /api/orders/[id]/claim        → claim + digital signature
@@ -24,14 +25,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // ── Override mode: SUPER_ADMIN only, reason mandatory ──
     if (mode === 'override') {
       if (!can(user, 'orders.unlock')) {
-        return NextResponse.json({ error: 'Forbidden: missing required permission orders.unlock' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden: missing required permission orders.unlock', errorAr: 'فكّ القفل للمشرف وحده.' }, { status: 403 });
       }
       if (!reason || reason.trim().length < 5) {
         return NextResponse.json({ error: 'Override requires a reason (min 5 chars)' }, { status: 400 });
       }
 
       const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
-      if (!access.allowed) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      if (!access.allowed) return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
 
       const order = access.order;
       const snap = ownershipSnapshot(order);
@@ -58,7 +59,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         },
       });
       if (won.count !== 1) {
-        return NextResponse.json({ error: 'Order is being modified concurrently. Retry the override.' }, { status: 409 });
+        return NextResponse.json({ error: 'Order is being modified concurrently. Retry the override.', errorAr: 'يُعدَّل الطلب الآن من مكان آخر. أعد المحاولة بعد لحظة.' }, { status: 409 });
       }
 
       await db.orderClaimHistory.create({
@@ -85,7 +86,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // ── Normal claim ──
     if (!can(user, 'orders.claim')) {
-      return NextResponse.json({ error: 'Forbidden: missing required permission orders.claim' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission orders.claim', errorAr: 'لا تملك صلاحية سحب الطلبات من الطابور.' }, { status: 403 });
     }
 
     let access = await assertOrderAccess(id, user, { companyId, storeId });
@@ -104,7 +105,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (claimable) access = { allowed: true, order: maybe };
     }
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 
@@ -112,7 +113,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (order.claimedById && order.claimedById !== user.id) {
       const claimer = await db.user.findUnique({ where: { id: order.claimedById }, select: { name: true } });
       return NextResponse.json(
-        { error: `This order has already been claimed by ${claimer?.name ?? 'another employee'}.`, code: 'ALREADY_CLAIMED', claimedBy: claimer?.name },
+        { error: `This order has already been claimed by ${claimer?.name ?? 'another employee'}.`, errorAr: orderClaimedBy(claimer?.name), code: 'ALREADY_CLAIMED', claimedBy: claimer?.name },
         { status: 409 }
       );
     }
@@ -136,7 +137,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         ? await db.user.findUnique({ where: { id: fresh.claimedById }, select: { name: true } })
         : null;
       return NextResponse.json(
-        { error: `This order has already been claimed by ${claimer?.name ?? 'another employee'}.`, code: 'ALREADY_CLAIMED', claimedBy: claimer?.name },
+        { error: `This order has already been claimed by ${claimer?.name ?? 'another employee'}.`, errorAr: orderClaimedBy(claimer?.name), code: 'ALREADY_CLAIMED', claimedBy: claimer?.name },
         { status: 409 }
       );
     }
@@ -184,11 +185,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Forbidden: missing required permission orders.release' }, { status: 403 });
     }
     const access = await assertOrderAccess(id, user, { companyId, storeId });
-    if (!access.allowed) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (!access.allowed) return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
 
     const order = access.order;
     if (order.claimedById !== user.id) {
-      return NextResponse.json({ error: 'You do not hold the claim on this order.' }, { status: 403 });
+      return NextResponse.json({ error: 'You do not hold the claim on this order.', errorAr: ORDER_CLAIM_NOT_HELD }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -218,7 +219,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     });
     if (released.count !== 1) {
       return NextResponse.json(
-        { error: 'This order was updated by another user. Please refresh before saving.', code: 'VERSION_CONFLICT' },
+        { error: 'This order was updated by another user. Please refresh before saving.', errorAr: ORDER_STALE, code: 'VERSION_CONFLICT' },
         { status: 409 }
       );
     }

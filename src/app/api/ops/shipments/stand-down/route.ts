@@ -278,7 +278,7 @@ export async function POST(req: Request) {
         title: `نُفِّذ طلبك على ${order.orderNumber}`,
         message: outcome === 'CANCEL' ? `أُلغي الطلب: ${viaRequest.reason}` : `أُجِّل الطلب: ${viaRequest.reason}`,
         type: 'SYSTEM_ALERT',
-        link: '/orders',
+        link: `/orders?highlight=${order.id}`,
       });
     }
 

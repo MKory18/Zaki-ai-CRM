@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { NO_ANSWER_LIMIT } from '@/lib/confirmation-workflow';
 import { releaseOrderLines } from '@/lib/reservation';
 import { can, authorize } from '@/lib/authorization';
+import { ORDER_NOT_FOUND } from '@/lib/order-refusals';
 
 /**
  * GET  /api/orders/[id]/contact-attempts — chronological attempt history
@@ -22,7 +23,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { user, companyId, storeId } = await requireContext();
     const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
 
     const attempts = await db.orderContactAttempt.findMany({
@@ -47,12 +48,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-function parseFollowUpDate(v: unknown): { ok: true; date: Date | null } | { ok: false; error: string } {
+function parseFollowUpDate(
+  v: unknown
+): { ok: true; date: Date | null } | { ok: false; error: string; errorAr: string } {
   if (v === undefined || v === null || v === '') return { ok: true, date: null };
   const d = new Date(v as string);
-  if (isNaN(d.getTime())) return { ok: false, error: 'Invalid nextFollowUpAt date' };
+  if (isNaN(d.getTime())) return { ok: false, error: 'Invalid nextFollowUpAt date', errorAr: 'موعد المتابعة غير صالح.' };
   // Server-time check: follow-up must be in the future (1 min tolerance)
-  if (d.getTime() < Date.now() - 60_000) return { ok: false, error: 'nextFollowUpAt must be in the future' };
+  if (d.getTime() < Date.now() - 60_000) return { ok: false, error: 'nextFollowUpAt must be in the future', errorAr: 'موعد المتابعة يجب أن يكون في المستقبل.' };
   return { ok: true, date: d };
 }
 
@@ -67,14 +70,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 
     // Edit authority is scope-evaluated (ASSIGNED covers own-assignment);
     // claim holders may record attempts on the claimable queue.
     if (!authorize(user, 'orders.edit', order).allowed && !can(user, 'orders.claim')) {
-      return NextResponse.json({ error: 'Forbidden: cannot record contact attempts' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: cannot record contact attempts', errorAr: 'لا تملك صلاحية تسجيل محاولات التواصل.' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -84,16 +87,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // ── Server-side validation (never trust frontend) ──
     if (!contactMethod || !(CONTACT_METHODS as readonly string[]).includes(contactMethod)) {
-      return NextResponse.json({ error: 'Invalid contactMethod' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid contactMethod', errorAr: 'طريقة التواصل غير معروفة. اختر واحدة من القائمة.' }, { status: 400 });
     }
     if (!result || !(CONTACT_RESULTS as readonly string[]).includes(result)) {
-      return NextResponse.json({ error: 'Invalid contact result' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid contact result', errorAr: 'نتيجة التواصل غير معروفة. اختر واحدة من القائمة.' }, { status: 400 });
     }
     if (note && note.length > 2000) {
-      return NextResponse.json({ error: 'Note too long (max 2000)' }, { status: 400 });
+      return NextResponse.json({ error: 'Note too long (max 2000)', errorAr: 'الملاحظة أطول من 2000 حرف. اختصرها.' }, { status: 400 });
     }
     const fu = parseFollowUpDate(nextFollowUpAt);
-    if (!fu.ok) return NextResponse.json({ error: fu.error }, { status: 400 });
+    if (!fu.ok) return NextResponse.json({ error: fu.error, errorAr: fu.errorAr }, { status: 400 });
 
     // Attempt number computed server-side; unique(orderId, attemptNumber) backstops races
     const lastAttempt = await db.orderContactAttempt.findFirst({

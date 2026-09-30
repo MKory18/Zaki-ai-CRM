@@ -411,7 +411,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         title: target === 'CONFIRMED' ? 'تأكيد طلب' : target === 'REJECTED' ? 'رفض طلب' : 'إلغاء طلب',
         message: `الطلب #${order.orderNumber} أصبح بالحالة ${target} بواسطة ${user.name}.`,
         type: 'SYSTEM_ALERT',
-        link: '/orders',
+        link: `/orders?highlight=${order.id}`,
       });
     }
 

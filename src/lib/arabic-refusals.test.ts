@@ -80,6 +80,18 @@ describe('the rest of the sweep', () => {
    * second script that would count slightly differently and let the two
    * drift. 207 before the two routes below were translated; 167 after.
    */
+  /*
+   * AND WHY THIS NUMBER DID NOT FALL WHEN THE ORDERS GROUP WAS DONE.
+   *
+   * `orders-refuse-in-arabic.test.ts` gave all ninety-four refusals in
+   * `src/app/api/orders/**` an Arabic sentence — but as `errorAr`,
+   * beside the English `error`, which is the channel ten components
+   * already prefer. The English strings were kept on purpose: fifteen
+   * test files assert on them and support reads the permission key out
+   * of them. So this ratchet, which counts English `error:` values,
+   * reads the same as before and is still honest about what it
+   * measures. What a person SEES is the other guard's subject.
+   */
   const KNOWN_REMAINING = 167;
 
   it('has not grown', () => {

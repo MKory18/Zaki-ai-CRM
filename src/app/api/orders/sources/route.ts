@@ -17,7 +17,7 @@ export async function GET() {
   try {
     const { user, companyId, storeId } = await requireContext();
     if (!getPermissionScope(user, 'orders.view')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحياتك. راجع مدير النظام إن كان من عملك.' }, { status: 403 });
     }
 
     const rows = await db.order.groupBy({

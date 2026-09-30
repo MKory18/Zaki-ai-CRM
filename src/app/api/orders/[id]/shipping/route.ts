@@ -141,7 +141,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           return NextResponse.json(
             {
               error: `الشحن يحتاج طلباً مؤكَّداً — هذا «${CONFIRMATION_AR[order.confirmationStatus] ?? order.confirmationStatus}»`,
-              errorAr: `الشحن يتطلب طلباً مؤكداً (الحالة الحالية: ${order.confirmationStatus})`,
+              errorAr: `الشحن يحتاج طلباً مؤكَّداً — هذا «${CONFIRMATION_AR[order.confirmationStatus] ?? order.confirmationStatus}». أكِّده أوّلاً ثمّ اشحنه.`,
               code: 'CONFIRMATION_REQUIRED',
             },
             { status: 409 }
@@ -169,7 +169,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             return NextResponse.json(
               {
                 error: `لا يمكن الانتقال من «${SHIPPING_AR[from] ?? from}» إلى «${SHIPPING_AR[newShippingStatus] ?? newShippingStatus}»`,
-                errorAr: `انتقال شحن غير صالح: ${from} → ${newShippingStatus}`,
+                errorAr: `لا يمكن الانتقال من «${SHIPPING_AR[from] ?? from}» إلى «${SHIPPING_AR[newShippingStatus] ?? newShippingStatus}». أعد تحميل الصفحة لترى حالته الآن.`,
                 code: 'INVALID_TRANSITION',
               },
               { status: 409 }

@@ -256,7 +256,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         title: `صدر بديلٌ عن ${order.orderNumber}`,
         message: `أُلغيت البوليصة وصدر ${replacement.orderNumber} بالتعديل: ${request.reason}`,
         type: 'SYSTEM_ALERT',
-        link: '/orders',
+        link: `/orders?highlight=${replacement.id}`,
       });
     }
 

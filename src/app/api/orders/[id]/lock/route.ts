@@ -8,6 +8,7 @@ import {
 } from '@/lib/order-locks';
 import { logAudit } from '@/lib/audit';
 import { authorize } from '@/lib/authorization';
+import { ORDER_LOCK_EXPIRED, ORDER_LOCK_NOT_HELD, ORDER_NOT_FOUND } from '@/lib/order-refusals';
 
 /**
  * Editing-lock endpoint (server-enforced expiration).
@@ -22,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { user, companyId, storeId } = await requireContext();
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 
@@ -31,9 +32,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!editAuth.allowed) {
       // Secure policy: out-of-scope/other-tenant orders are reported as missing
       if (editAuth.reason === 'NO_TENANT' || editAuth.reason === 'OUT_OF_SCOPE') {
-        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
       }
-      return NextResponse.json({ error: 'Forbidden: no order editing permission' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: no order editing permission', errorAr: 'لا تملك صلاحية تعديل الطلبات.' }, { status: 403 });
     }
 
     // My own active lock → idempotent, just refresh it
@@ -99,10 +100,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const order = await db.order.findUnique({ where: { id }, select: { companyId: true, storeId: true, lockedById: true } });
     if (!order || order.companyId !== companyId || order.storeId !== storeId) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
     }
     if (order.lockedById !== user.id) {
-      return NextResponse.json({ error: 'You do not hold the editing lock on this order.' }, { status: 403 });
+      return NextResponse.json({ error: 'You do not hold the editing lock on this order.', errorAr: ORDER_LOCK_NOT_HELD }, { status: 403 });
     }
 
     const { lockDurationMs } = lockConfig();
@@ -110,7 +111,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const renewed = await atomicRenewLock({ orderId: id, userId: user.id, from: new Date(), lockExpiresAt });
 
     if (!renewed) {
-      return NextResponse.json({ error: 'Lock expired. Please re-acquire the lock.' }, { status: 409 });
+      return NextResponse.json({ error: 'Lock expired. Please re-acquire the lock.', errorAr: ORDER_LOCK_EXPIRED }, { status: 409 });
     }
     return NextResponse.json({ success: true, lockExpiresAt });
   } catch (error: any) {
@@ -126,11 +127,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     const order = await db.order.findUnique({ where: { id }, select: { companyId: true, storeId: true, lockedById: true } });
     if (!order || order.companyId !== companyId || order.storeId !== storeId) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
     }
     if (order.lockedById && order.lockedById !== user.id) {
       // Only SUPER_ADMIN override (claim?mode=override) may break someone else's lock
-      return NextResponse.json({ error: 'You do not hold the editing lock.' }, { status: 403 });
+      return NextResponse.json({ error: 'You do not hold the editing lock.', errorAr: ORDER_LOCK_NOT_HELD }, { status: 403 });
     }
 
     const released = await atomicReleaseLock({ orderId: id, userId: user.id });

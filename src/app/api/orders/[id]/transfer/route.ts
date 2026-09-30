@@ -1,4 +1,4 @@
-import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
+import { STATE_LABEL_AR, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -7,6 +7,7 @@ import { ownershipSnapshot } from '@/lib/order-locks';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can, authorize } from '@/lib/authorization';
+import { ORDER_NOT_FOUND, ORDER_STALE } from '@/lib/order-refusals';
 
 /**
  * POST /api/orders/[id]/transfer
@@ -51,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { targetUserId, reason } = body as { targetUserId?: string; reason?: string };
 
     if (!targetUserId) {
-      return NextResponse.json({ error: 'targetUserId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'targetUserId is required', errorAr: 'اختر الموظّف الذي يُحوَّل إليه الطلب.' }, { status: 400 });
     }
     if (!reason || reason.trim().length < 3) {
       return NextResponse.json({ error: 'A reason is required for transferring an order.' }, { status: 400 });
@@ -59,7 +60,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
     const isReassigner = authorize(user, 'orders.assign', order).allowed;
@@ -71,7 +72,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const state = deriveCoreState(order as StateSource);
     if (getZone(state) === 'CLOSED') {
       return NextResponse.json(
-        { error: `Cannot transfer an order in terminal status ${state}`, code: 'TERMINAL_STATUS' },
+        { error: `Cannot transfer an order in terminal status ${state}`, errorAr: `لا يُحوَّل طلبٌ في حالة «${STATE_LABEL_AR[state] ?? state}» — انتهى العمل عليه.`, code: 'TERMINAL_STATUS' },
         { status: 409 }
       );
     }
@@ -79,10 +80,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // A non-reassigner may only transfer an order THEY currently own/claimed
     if (!isReassigner) {
       if (!can(user, 'orders.release')) {
-        return NextResponse.json({ error: 'Forbidden: missing required permission orders.assign' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden: missing required permission orders.assign', errorAr: 'لا تملك صلاحية تحويل الطلبات لموظّف آخر.' }, { status: 403 });
       }
       if (order.currentOwnerId !== user.id && order.claimedById !== user.id) {
-        return NextResponse.json({ error: 'You can only transfer an order you own.' }, { status: 403 });
+        return NextResponse.json({ error: 'You can only transfer an order you own.', errorAr: 'لا تحوّل إلا طلباً بين يديك.' }, { status: 403 });
       }
     }
 
@@ -92,7 +93,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       select: { id: true, name: true, companyId: true, status: true, role: true, roleId: true },
     });
     if (!target || target.companyId !== companyId || target.status !== 'ACTIVE') {
-      return NextResponse.json({ error: 'Target user not found in your company or not active' }, { status: 400 });
+      return NextResponse.json({ error: 'Target user not found in your company or not active', errorAr: 'الموظّف غير موجود في شركتك أو حسابه غير نشِط.' }, { status: 400 });
     }
 
     // An order moves sideways, never across jobs. Whoever is holding a
@@ -110,7 +111,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       );
     }
     if (target.id === order.currentOwnerId) {
-      return NextResponse.json({ error: 'This order is already owned by that user' }, { status: 400 });
+      return NextResponse.json({ error: 'This order is already owned by that user', errorAr: 'الطلب بين يدي هذا الموظّف أصلاً.' }, { status: 400 });
     }
 
     const previousOwnerId = order.currentOwnerId;
@@ -137,7 +138,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
     if (won.count !== 1) {
       return NextResponse.json(
-        { error: 'This order was updated by another user. Please refresh before saving.', code: 'VERSION_CONFLICT' },
+        { error: 'This order was updated by another user. Please refresh before saving.', errorAr: ORDER_STALE, code: 'VERSION_CONFLICT' },
         { status: 409 }
       );
     }
@@ -181,7 +182,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
     }
     const order = access.order;
 

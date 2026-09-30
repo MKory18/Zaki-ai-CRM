@@ -8,6 +8,8 @@ import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can } from '@/lib/authorization';
 import { commissionCostForOrders } from '@/lib/commission';
+import { ORDER_NOT_FOUND } from '@/lib/order-refusals';
+import { STATUS_VALUE_AR } from '@/lib/order-timeline';
 
 const D = (v: any) => new Prisma.Decimal(v ?? 0);
 const toMoney = (v: any) => (v === null || v === undefined ? null : new Prisma.Decimal(v));
@@ -27,13 +29,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!hasFinanceView) {
       const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
       if (!access.allowed) {
-        return NextResponse.json({ error: 'Order not found' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+        return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
       }
     } else {
       // Finance viewers still must stay inside their own company (tenant isolation)
       const exists = await db.order.findFirst({ where: { id, companyId }, select: { id: true } });
       if (!exists) {
-        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
       }
     }
 
@@ -75,7 +77,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 
@@ -84,10 +86,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (refundAmount !== undefined && refundAmount !== null) {
       refundNum = Number(refundAmount);
       if (!isFinite(refundNum) || refundNum < 0) {
-        return NextResponse.json({ error: 'refundAmount must be a finite number ≥ 0' }, { status: 400 });
+        return NextResponse.json({ error: 'refundAmount must be a finite number ≥ 0', errorAr: 'مبلغ الاسترداد يجب أن يكون رقماً صفراً أو أكثر.' }, { status: 400 });
       }
       if (refundNum > Number(order.totalAmount)) {
-        return NextResponse.json({ error: 'refundAmount cannot exceed the order total' }, { status: 400 });
+        return NextResponse.json({ error: 'refundAmount cannot exceed the order total', errorAr: 'مبلغ الاسترداد أكبر من قيمة الطلب.' }, { status: 400 });
       }
     }
 
@@ -95,7 +97,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const isFinanceAuth = can(user, 'finance.create') || can(user, 'finance.update');
     const isSettlementAuth = can(user, 'settlement.review') || can(user, 'finance.update');
     if (!isFinanceAuth && !isSettlementAuth) {
-      return NextResponse.json({ error: 'Forbidden: no financial authority' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: no financial authority', errorAr: 'لا تملك صلاحية على أرقام المال في الطلب.' }, { status: 403 });
     }
 
     if (typeof expectedVersion !== 'number') {
@@ -119,7 +121,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (productCost !== undefined || packagingCost !== undefined || advertisingCost !== undefined ||
         otherCost !== undefined || discount !== undefined || shippingRevenue !== undefined) {
       if (!isFinanceAuth) {
-        return NextResponse.json({ error: 'Forbidden: finance.update required to modify costs' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden: finance.update required to modify costs', errorAr: 'تعديل التكاليف يحتاج صلاحية المال.' }, { status: 403 });
       }
       // validate numerics (fail closed)
       const numOrReject = (v: any, name: string) => {
@@ -150,13 +152,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     let settlementAmount: number | undefined;
     if (settlementStatus !== undefined) {
       if (!isSettlementAuth) {
-        return NextResponse.json({ error: 'Forbidden: settlement authority required' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden: settlement authority required', errorAr: 'التسوية لمراجع التسويات وحده.' }, { status: 403 });
       }
       if (!isValidSettlementTransition(order.settlementStatus, settlementStatus)) {
         return NextResponse.json(
           {
             error: `Invalid settlement transition: ${order.settlementStatus} → ${settlementStatus}`,
-            errorAr: `انتقال تسوية غير صالح: ${order.settlementStatus} → ${settlementStatus}`,
+            errorAr: `لا يمكن الانتقال من «${STATUS_VALUE_AR[order.settlementStatus] ?? order.settlementStatus}» إلى «${STATUS_VALUE_AR[settlementStatus] ?? settlementStatus}».`,
             code: 'INVALID_TRANSITION',
           },
           { status: 409 }
@@ -167,13 +169,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (settlementStatus === 'PARTIALLY_SETTLED') {
         const amt = Number(amount);
         if (amount === undefined || !isFinite(amt) || amt <= 0) {
-          return NextResponse.json({ error: 'PARTIALLY_SETTLED requires a positive amount' }, { status: 400 });
+          return NextResponse.json({ error: 'PARTIALLY_SETTLED requires a positive amount', errorAr: 'التسوية الجزئية تحتاج مبلغاً أكبر من صفر.' }, { status: 400 });
         }
         const total = Number(order.totalAmount);
         const alreadyRefunded = Number(order.refundAmount ?? 0);
         const remaining = Math.max(0, total - alreadyRefunded);
         if (amt > remaining) {
-          return NextResponse.json({ error: `Amount exceeds the remaining balance (${remaining})` }, { status: 400 });
+          return NextResponse.json({ error: `Amount exceeds the remaining balance (${remaining})`, errorAr: `المبلغ أكبر من المتبقّي (${remaining}).` }, { status: 400 });
         }
         settlementAmount = amt;
       }

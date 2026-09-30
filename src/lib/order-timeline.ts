@@ -44,7 +44,18 @@ export interface TimelineEvent {
  * {"source":"...","intakeMethod":"AI_PASTE"} to whoever opened it.
  */
 
-const STATUS_VALUE_AR: Record<string, string> = {
+/**
+ * EVERY STORED STATUS VALUE AS A WORD.
+ *
+ * Exported because routes need it too: an Arabic sentence with
+ * FOLLOW_UP_REQUIRED inside it is not an Arabic sentence, and
+ * `arabic-refusals.test.ts` says so. Four other copies of this
+ * vocabulary exist (OrderDetailModal, TrackingScreen, and the
+ * confirmation route's own CONFIRMATION_AR) and they do not all agree —
+ * IN_PROGRESS is «قيد التأكيد» here and «قيد المعالجة» there. That is a
+ * terminology defect for the consistency pass, recorded not hidden.
+ */
+export const STATUS_VALUE_AR: Record<string, string> = {
   NEW: 'جديد', IN_PROGRESS: 'قيد التأكيد', NO_ANSWER: 'لا يرد',
   FOLLOW_UP_REQUIRED: 'يحتاج متابعة', POSTPONED: 'مؤجل', CONFIRMED: 'مؤكد',
   REJECTED: 'مرفوض', CANCELLED: 'ملغى',

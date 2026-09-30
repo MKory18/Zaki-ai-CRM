@@ -27,7 +27,7 @@ export async function GET(req: Request) {
 
     // Explicit canonical gate — orders.view scope decides order visibility
     if (!getPermissionScope(user, 'orders.view')) {
-      return NextResponse.json({ error: 'Forbidden: missing required permission orders.view' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission orders.view', errorAr: 'لا تملك صلاحية عرض الطلبات.' }, { status: 403 });
     }
     const { searchParams } = new URL(req.url);
 

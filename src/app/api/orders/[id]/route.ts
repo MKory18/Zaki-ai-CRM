@@ -22,6 +22,7 @@ import { orderSeal, sealedFieldsIn, sealMessage, handedToCourier } from '@/lib/o
 import { courierActionAr, courierActionFor, courierMessage, sealedAmong } from '@/lib/courier-change';
 import { expandApproved, mayApply, strayFields } from '@/lib/change-request-apply';
 import { zodMessage } from '@/lib/zod-message';
+import { ORDER_NOT_FOUND, ORDER_VERSION_MISSING } from '@/lib/order-refusals';
 
 /** Legacy combined status whitelist (mirrors the UI status config) */
 const ALLOWED_COMBINED_STATUSES = [
@@ -151,7 +152,7 @@ export async function GET(
     // or claimable queue items — never another employee's private orders.
     const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
 
     const order = await db.order.findUnique({
@@ -210,7 +211,7 @@ export async function GET(
     });
 
     if (!order || order.companyId !== companyId) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
     }
 
     // Prev/next ids following the list order (createdAt DESC), scoped to the
@@ -400,7 +401,7 @@ export async function PATCH(
     // own-assignment, so no separate any/own check is needed) ──
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const existing = access.order;
 
@@ -430,10 +431,10 @@ export async function PATCH(
     if (!editAuth.allowed) {
       // Secure policy: out-of-scope/other-tenant orders are reported as missing
       if (editAuth.reason === 'NO_TENANT' || editAuth.reason === 'OUT_OF_SCOPE') {
-        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
       }
       return NextResponse.json(
-        { error: 'Forbidden: missing required permission orders.edit' }, { status: 403 }
+        { error: 'Forbidden: missing required permission orders.edit', errorAr: 'لا تملك صلاحية تعديل الطلبات.' }, { status: 403 }
       );
     }
 
@@ -462,7 +463,7 @@ export async function PATCH(
       const confirmAuth = authorize(user, 'orders.confirm', existing);
       if (!confirmAuth.allowed) {
         return NextResponse.json(
-          { error: 'Forbidden: you are not allowed to change order confirmation status' }, { status: 403 }
+          { error: 'Forbidden: you are not allowed to change order confirmation status', errorAr: 'لا تملك صلاحية تغيير حالة التأكيد.' }, { status: 403 }
         );
       }
     }
@@ -470,7 +471,7 @@ export async function PATCH(
       const shippingAuth = authorize(user, 'orders.change_status', existing);
       if (!shippingAuth.allowed) {
         return NextResponse.json(
-          { error: 'Forbidden: you are not allowed to change shipping status' }, { status: 403 }
+          { error: 'Forbidden: you are not allowed to change shipping status', errorAr: 'لا تملك صلاحية تغيير حالة الشحن.' }, { status: 403 }
         );
       }
     }
@@ -481,7 +482,7 @@ export async function PATCH(
     if (typeof expectedVersion !== 'number') {
       return NextResponse.json(
         {
-          error: 'expectedVersion is required for order updates.',
+          error: 'expectedVersion is required for order updates.', errorAr: ORDER_VERSION_MISSING,
           code: 'VERSION_REQUIRED',
         },
         { status: 400 }
@@ -559,7 +560,7 @@ export async function PATCH(
       const shippingAuth = authorize(user, 'orders.change_status', existing);
       if (!shippingAuth.allowed) {
         return NextResponse.json(
-          { error: 'Forbidden: orders.change_status required' }, { status: 403 }
+          { error: 'Forbidden: orders.change_status required', errorAr: 'لا تملك صلاحية تغيير حالة الطلب.' }, { status: 403 }
         );
       }
     }
@@ -1196,7 +1197,7 @@ export async function PATCH(
           title: `طُبِّق تعديلك على ${existing.orderNumber}`,
           message: `${user.name ?? 'المشرف'} كتبه على الطلب: ${viaRequest.reason}`,
           type: 'SYSTEM_ALERT',
-          link: '/orders',
+          link: `/orders?highlight=${existing.id}`,
         });
       }
     }
@@ -1220,7 +1221,7 @@ export async function PATCH(
         title: status === 'CONFIRMED' ? 'تأكيد طلب' : status === 'REJECTED' ? 'رفض طلب' : 'إلغاء طلب',
         message: `الطلب #${existing.orderNumber} أصبح بالحالة ${status} بواسطة ${user.name}.`,
         type: 'SYSTEM_ALERT',
-        link: '/orders',
+        link: `/orders?highlight=${existing.id}`,
       });
     }
 

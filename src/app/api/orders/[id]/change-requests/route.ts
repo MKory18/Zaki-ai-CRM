@@ -14,6 +14,7 @@ import { hasLeftWarehouse, type StateSource } from '@/lib/order-state';
 import { createNotification } from '@/lib/notification';
 import { deciderFor, mayDecide, SUPERVISOR_ROLES } from '@/lib/change-request-routing';
 import { orderSeal, handedToCourier } from '@/lib/order-seal';
+import { ORDER_NOT_FOUND } from '@/lib/order-refusals';
 
 /**
  * Change requests on an order (contract PART 2 / invariant 7).
@@ -63,7 +64,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
     const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
-    if (!access.allowed) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (!access.allowed) return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
 
     const requests = await db.orderChangeRequest.findMany({
       where: { orderId: id, companyId },
@@ -81,7 +82,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { user, companyId, storeId, country } = await requireContext();
 
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
-    if (!access.allowed) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (!access.allowed) return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
     const order = access.order;
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
@@ -143,7 +144,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         customer: { select: { fullName: true, phone: true, altPhone: true, address: true, city: true } },
       },
     });
-    if (!snapshot) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (!snapshot) return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
 
     const created = await db.orderChangeRequest.create({
       data: {

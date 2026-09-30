@@ -32,11 +32,24 @@ describe('the mappings that carry meaning', () => {
   });
 
   /**
-   * The two words are English, so only the English sentences the guards
-   * throw take these branches. An Arabic «غير موجودة» has always fallen
-   * through to a 500 with the generic body — recorded here because it
-   * looks like an oversight until you see it written down, and because
-   * widening the match to Arabic would widen what gets echoed.
+   * THE MATCH NOW HEARS ARABIC TOO — AND WHY THAT IS NOT A WIDER LEAK.
+   *
+   * This test used to assert the opposite, with the reason «widening the
+   * match to Arabic would widen what gets echoed». That reason belongs to
+   * a version of this file where the match WAS the gate. It is not: `ours`
+   * is the gate — it refuses Prisma classes by name, multi-line messages,
+   * filesystem paths and anything over two hundred characters — and it is
+   * untouched. Widening the match only routes messages `ours` has already
+   * approved to the status they were written for.
+   *
+   * What the old behaviour cost, measured: `blacklist.ts` throws «الحظر
+   * غير موجود» and «الحظر مفكوك مسبقاً». Both fell past every branch, so
+   * releasing a block that was already released answered 500 «حدث خطأ
+   * داخلي» — and the sentence the code had written for that exact case was
+   * thrown away on the way out.
+   *
+   * The leak tests below are the check that matters here, and they still
+   * pass unchanged.
    */
   it('still shows a sentence written here for a person to read', () => {
     expect(apiError(new Error('Wallet not found'))).toMatchObject({
@@ -44,7 +57,11 @@ describe('the mappings that carry meaning', () => {
       body: { error: 'Wallet not found' },
     });
     expect(apiError(new Error('Version conflict: the order moved'))).toMatchObject({ status: 409 });
-    expect(apiError(new Error('المحفظة غير موجودة')).status, 'العربيّةُ لا تطابق الكلمتين').toBe(500);
+    expect(apiError(new Error('المحفظة غير موجودة')), 'عربيّةٌ تقول «غير موجود»').toMatchObject({
+      status: 404,
+      body: { error: 'المحفظة غير موجودة', errorAr: 'المحفظة غير موجودة' },
+    });
+    expect(apiError(new Error('الحظر مفكوك مسبقاً')).status, 'عربيّةٌ تقول «مسبقاً»').toBe(409);
   });
 });
 

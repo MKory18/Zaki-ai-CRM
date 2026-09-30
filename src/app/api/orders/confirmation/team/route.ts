@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     const mayViewTeam =
       can(user, 'users.view') || ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER'].includes(user.role);
     if (!mayViewTeam) {
-      return NextResponse.json({ error: 'Forbidden: cannot view team performance' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: cannot view team performance', errorAr: 'أداء الفريق للمشرف وحده.' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);

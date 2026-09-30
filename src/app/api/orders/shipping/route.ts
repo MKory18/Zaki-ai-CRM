@@ -28,7 +28,7 @@ export async function GET(req: Request) {
       can(user, 'orders.change_status') ||
       can(user, 'orders.view');
     if (!mayViewShipping) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحياتك. راجع مدير النظام إن كان من عملك.' }, { status: 403 });
     }
 
     const base: Record<string, unknown> = { companyId, storeId };

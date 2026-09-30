@@ -6,6 +6,7 @@ import { DELIVERY_ATTEMPT_RESULTS, type DeliveryAttemptResult } from '@/lib/ship
 import { logAudit } from '@/lib/audit';
 import { can, authorize } from '@/lib/authorization';
 import { appendDeliveryAttempt } from '@/lib/delivery-attempts';
+import { ORDER_NOT_FOUND } from '@/lib/order-refusals';
 
 /**
  * GET  /api/orders/[id]/delivery-attempts — chronological attempt history
@@ -20,7 +21,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { user, companyId, storeId } = await requireContext();
     const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
 
     const attempts = await db.deliveryAttempt.findMany({
@@ -45,13 +46,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const access = await assertOrderAccess(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found or not assigned to you' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found or not assigned to you', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order;
 
     // Shipping authority — scope evaluated against the loaded order
     if (!authorize(user, 'orders.change_status', order).allowed) {
-      return NextResponse.json({ error: 'Forbidden: cannot record delivery attempts' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: cannot record delivery attempts', errorAr: 'لا تملك صلاحية تسجيل محاولات التوصيل.' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -60,17 +61,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     };
 
     if (!result || !(DELIVERY_ATTEMPT_RESULTS as readonly string[]).includes(result)) {
-      return NextResponse.json({ error: 'Invalid delivery attempt result' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid delivery attempt result', errorAr: 'نتيجة محاولة التوصيل غير معروفة. اختر واحدة من القائمة.' }, { status: 400 });
     }
     if (result === 'FAILED' && (!failureReason || failureReason.length > 60)) {
-      return NextResponse.json({ error: 'A failure reason is required for failed attempts' }, { status: 400 });
+      return NextResponse.json({ error: 'A failure reason is required for failed attempts', errorAr: 'محاولة فاشلة تحتاج سبباً — هو ما يُقرأ حين يُسأل عن الطرد.' }, { status: 400 });
     }
 
     let providerId: string | null = order.deliveryProviderId;
     if (deliveryProviderId !== undefined) {
       if (deliveryProviderId) {
         const p = await db.deliveryProvider.findFirst({ where: { id: deliveryProviderId, companyId } });
-        if (!p) return NextResponse.json({ error: 'Provider not found in your company' }, { status: 404 });
+        if (!p) return NextResponse.json({ error: 'Provider not found in your company', errorAr: 'شركة الشحن هذه ليست من شركات شركتك.' }, { status: 404 });
         providerId = p.id;
       } else {
         providerId = null;

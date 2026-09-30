@@ -30,14 +30,14 @@ export async function GET(req: Request) {
       const mayViewTeam = can(user, 'users.view') ||
         ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER'].includes(user.role);
       if (!mayViewTeam) {
-        return NextResponse.json({ error: 'Forbidden: cannot view other employees\u2019 performance' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden: cannot view other employees\u2019 performance', errorAr: 'ترى أداءك وحدك — أداء الآخرين للمشرف.' }, { status: 403 });
       }
     }
     if (requestedEmployeeId) {
       const mayViewTeam = can(user, 'users.view') ||
         ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER'].includes(user.role);
       if (!mayViewTeam && requestedEmployeeId !== user.id) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحياتك. راجع مدير النظام إن كان من عملك.' }, { status: 403 });
       }
       employeeId = requestedEmployeeId;
     }

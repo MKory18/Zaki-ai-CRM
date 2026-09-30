@@ -5,6 +5,7 @@ import { ORDER_ACCESS_STATUS, assertOrderReadable } from '@/lib/rbac';
 import { apiErrorResponse } from '@/lib/api-error';
 import { orderTimeline } from '@/lib/order-timeline';
 import { deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
+import { ORDER_NOT_FOUND } from '@/lib/order-refusals';
 
 /**
  * GET /api/orders/:id/timeline — the merged history of one order, plus its
@@ -18,7 +19,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
     if (!access.allowed) {
-      return NextResponse.json({ error: 'Order not found' }, { status: ORDER_ACCESS_STATUS[access.reason] });
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
     }
     const order = access.order as StateSource & { orderNumber: string };
 
