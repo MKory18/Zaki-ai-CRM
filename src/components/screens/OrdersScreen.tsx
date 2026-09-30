@@ -383,9 +383,12 @@ export function OrdersScreen() {
           <div className="flex flex-wrap items-center gap-2 p-3">
             <div className="relative flex-1 min-w-[220px]">
               <RiSearchLine className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
+              {/* The accessible name does not depend on the placeholder,
+                  which is gone the moment somebody types. */}
               <input
                 type="text"
                 placeholder="ابحث برقم الطلب، الرمز، اسم العميل، أو الهاتف…"
+                aria-label="ابحث في الطلبات"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
@@ -760,12 +763,19 @@ export function OrdersScreen() {
                 عرض <strong>{orders.length}</strong> من <strong>{pagination.total}</strong> طلب
               </span>
 
+              {/* An arrow on its own is not a name. Every other icon-only
+                  button on this screen says what it does — the printer, the
+                  refresh, the «late» filter — and these two were the only
+                  controls in the page body that a screen reader announces
+                  as «button» and nothing more. */}
               <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={pagination.page <= 1}
                   onClick={() => loadOrders(pagination.page - 1)}
+                  aria-label="الصفحة السابقة"
+                  title="الصفحة السابقة"
                   className="p-1.5"
                 >
                   <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
@@ -778,6 +788,8 @@ export function OrdersScreen() {
                   variant="outline"
                   disabled={pagination.page >= pagination.totalPages}
                   onClick={() => loadOrders(pagination.page + 1)}
+                  aria-label="الصفحة التالية"
+                  title="الصفحة التالية"
                   className="p-1.5"
                 >
                   <RiArrowRightSLine className="icon-mirror w-4 h-4" />
