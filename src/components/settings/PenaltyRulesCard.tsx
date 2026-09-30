@@ -7,6 +7,7 @@ import { apiJson } from '@/lib/api-client';
 import { ROLE_LABELS } from '@/types/auth';
 import { RiAddCircleLine, RiLoader4Line, RiShieldKeyholeLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { Money } from '@/components/ui/Money';
 
 /**
  * THE RULES THAT PROPOSE A DEDUCTION.
@@ -144,7 +145,7 @@ export function PenaltyRulesCard() {
                 {r.role ? (ROLE_LABELS[r.role as keyof typeof ROLE_LABELS]?.ar ?? r.role) : 'كل الأدوار'}
               </span>
               <span className="tabular-nums text-[var(--sys-foreground)]" dir="ltr">
-                {r.perUnit} {r.currencyCode}/{k?.unitAr}
+                <Money value={r.perUnit} currency={r.currencyCode} />/{k?.unitAr}
               </span>
               <span className="text-[var(--sys-muted-foreground)]">
                 سماح <span className="tabular-nums">{r.grace}</span>

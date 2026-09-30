@@ -2,7 +2,7 @@
 
 import React from 'react';
 import clsx from 'clsx';
-import { moneyText } from '@/lib/money';
+import { moneyDigits, moneyText } from '@/lib/money';
 import { useStoreCurrency } from '@/context/StoreCurrency';
 
 /**
@@ -57,7 +57,7 @@ export function Money({
   // `currency === null` is a deliberate "print it bare"; `undefined` means
   // "whatever this store is in".
   const code = currency !== undefined ? currency : store?.code ?? null;
-  const digits = minorUnit ?? (currency !== undefined ? 2 : store?.minorUnit ?? 2);
+  const digits = moneyDigits({ minorUnit, currency, store });
   const text = moneyText(Number.isFinite(n) ? n : 0, code, digits);
 
   return (

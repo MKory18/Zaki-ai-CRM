@@ -8,6 +8,7 @@ import { RiArrowLeftLine, RiLoader4Line, RiRepeatLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arDateTime } from '@/lib/format';
+import { Money } from '@/components/ui/Money';
 
 /**
  * /finance/transfers — moving money between wallets. One transfer writes two
@@ -111,7 +112,7 @@ export function TransfersScreen() {
           <optgroup key={`${country}/${store}`} label={`${country} · ${store}`}>
             {shown.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.name} — {w.balance} {w.currencyCode}
+                {w.name} — <Money value={w.balance} currency={w.currencyCode} />
               </option>
             ))}
           </optgroup>
@@ -229,7 +230,7 @@ export function TransfersScreen() {
 
         {from && to && amountOut && (
           <p className="text-sm text-[var(--sys-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 flex items-center gap-2 flex-wrap">
-            <span className="tabular-nums">{amountOut} {from.currencyCode}</span>
+            <span className="tabular-nums"><Money value={amountOut} currency={from.currencyCode} /></span>
             <RiArrowLeftLine className="icon-mirror w-4 h-4 text-[var(--sys-muted)]" />
             <span className="tabular-nums font-medium">
               {crossCurrency && !rate ? '— (أدخل سعر الصرف)' : `${amountIn} ${to.currencyCode}`}
@@ -322,11 +323,11 @@ export function TransfersScreen() {
                 ) },
               { key: 'c4', label: "الصادر", align: 'end',
                 render: (t) => (
-                  <>{t.amountOut} {t.from?.currencyCode}</>
+                  <Money value={t.amountOut} currency={t.from?.currencyCode} />
                 ) },
               { key: 'c5', label: "الوارد", align: 'end',
                 render: (t) => (
-                  <>{t.amountIn} {t.to?.currencyCode}</>
+                  <Money value={t.amountIn} currency={t.to?.currencyCode} />
                 ) },
               { key: 'c6', label: "السعر", align: 'end',
                 render: (t) => (t.exchangeRate) },

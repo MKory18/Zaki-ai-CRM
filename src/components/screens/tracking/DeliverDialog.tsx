@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { RiArchiveDrawerLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 /**
  * Settling a parcel at the door.
@@ -166,14 +167,14 @@ export function DeliverDialog({
             <div className="text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 space-y-1 tabular-nums">
               <p className="flex justify-between text-[var(--sys-foreground)]">
                 <span>قيمة ما استُلم</span>
-                <span>{Math.round(goods * 100) / 100} {order.currency}</span>
+                <span><Money value={goods} currency={order.currency} /></span>
               </p>
               <p className="flex justify-between text-[var(--sys-foreground)]">
                 <span>
                   أجرة التوصيل
                   {order.priceIncludesDelivery && <span className="text-[var(--sys-muted)]"> (داخلة في السعر)</span>}
                 </span>
-                <span>{chargedFee} {order.currency}</span>
+                <span><Money value={chargedFee} currency={order.currency} /></span>
               </p>
               {/*
                 «المتوقَّع», not «المحصَّل».
@@ -184,7 +185,7 @@ export function DeliverDialog({
               */}
               <p className="flex justify-between font-semibold text-[var(--sys-heading)] border-t border-[var(--sys-border)] pt-1">
                 <span>المتوقَّع تحصيله</span>
-                <span>{Math.round(collected * 100) / 100} {order.currency}</span>
+                <span><Money value={collected} currency={order.currency} /></span>
               </p>
               <p className="text-xs text-[var(--sys-muted)]">
                 المبلغ الفعليّ يُسجَّل من كشف شركة الشحن عند المطابقة — لا من هنا.

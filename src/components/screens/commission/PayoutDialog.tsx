@@ -124,7 +124,7 @@ export function PayoutDialog({
               >
                 {owed.map((o, i) => (
                   <option key={o.currencyCode} value={i}>
-                    {o.amount} {o.currencyCode} · {o.entries.length} قيد
+                    <Money value={o.amount} currency={o.currencyCode} /> · {o.entries.length} قيد
                   </option>
                 ))}
               </select>
@@ -137,7 +137,7 @@ export function PayoutDialog({
           <div className="rounded-lg bg-[var(--sys-surface)] px-3 py-2.5">
             <p className="text-xs text-[var(--sys-muted-foreground)]">المستحق</p>
             <p className="text-lg font-black text-[var(--sys-heading)] tabular-nums" dir="ltr">
-              {row?.amount} {row?.currencyCode}
+              <Money value={row?.amount} currency={row?.currencyCode} />
             </p>
             <p className="text-xs text-[var(--sys-muted)]">{row?.entries.length} قيد عمولة</p>
           </div>

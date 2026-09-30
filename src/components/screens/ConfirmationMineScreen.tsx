@@ -23,6 +23,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arDate } from '@/lib/format';
+import { Money } from '@/components/ui/Money';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
@@ -334,7 +335,7 @@ export function ConfirmationMineScreen() {
                     serverNow={data.serverNow}
                   />
                   <span className="mr-auto text-sm font-semibold text-[var(--sys-heading)] tabular-nums" dir="ltr">
-                    {order.totalAmount} {order.currency}
+                    <Money value={order.totalAmount} currency={order.currency} />
                   </span>
                 </header>
 
@@ -506,7 +507,7 @@ export function ConfirmationMineScreen() {
                 ) },
               { key: 'c3', label: "المبلغ", align: 'end',
                 render: (order) => (
-                  <>{order.totalAmount} {order.currency}</>
+                  <><Money value={order.totalAmount} currency={order.currency} /></>
                 ) },
             ]}
             /* The CONFIRMED list's own words. It used to carry the copy of

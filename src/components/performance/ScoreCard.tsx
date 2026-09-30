@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import type { ScoreResult, ScoredBand } from '@/lib/performance-score';
 import { RiArrowDownCircleLine, RiLoader4Line, RiMedalLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 /**
  * THE CARD, SPELLED OUT.
@@ -168,7 +169,7 @@ export function ScoreCard({ userId }: { userId?: string }) {
             عمولة مستحقة لم تُصرف بعد:{' '}
             {data.owed.map((o) => (
               <span key={o.currencyCode} className="ms-2 font-semibold tabular-nums text-[var(--sys-heading)]" dir="ltr">
-                {o.amount} {o.currencyCode}
+                <Money value={o.amount} currency={o.currencyCode} />
               </span>
             ))}
           </p>

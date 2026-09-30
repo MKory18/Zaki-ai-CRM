@@ -266,7 +266,7 @@ export function UserSalary({
                   وله عمولة مستحقة لم تُصرف:{' '}
                   {data.commission.map((c) => (
                     <span key={c.currencyCode} className="ms-1 tabular-nums text-[var(--sys-heading)]" dir="ltr">
-                      {c.amount} {c.currencyCode}
+                      <Money value={c.amount} currency={c.currencyCode} />
                     </span>
                   ))}{' '}
                   — تُصرف من شاشة العمولات بزرّها.

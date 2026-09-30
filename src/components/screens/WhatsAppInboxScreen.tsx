@@ -9,6 +9,7 @@ import { RiArrowRightSLine, RiChat3Line, RiCheckDoubleLine, RiCheckLine, RiClose
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arTime } from '@/lib/format';
+import { Money } from '@/components/ui/Money';
 
 interface Conversation {
   id: string;
@@ -533,7 +534,7 @@ export function WhatsAppInboxScreen() {
                             <Link key={o.id} href={`/orders/${o.id}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[var(--sys-surface)] hover:bg-[var(--sys-primary-soft)] text-xs">
                               <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">#{o.orderNumber}</span>
                               <span className="text-xs text-[var(--sys-muted-foreground)]">{o.status}</span>
-                              <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{o.totalAmount} {o.currency}</span>
+                              <span className="font-semibold text-[var(--sys-heading)]" dir="ltr"><Money value={o.totalAmount} currency={o.currency} /></span>
                             </Link>
                           ))}
                         </div>

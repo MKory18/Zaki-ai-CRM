@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { OrderStateBadge } from './OrderStateBadge';
 import { arDate } from '@/lib/format';
 import { RiHistoryLine, RiLoader4Line, RiShieldFlashLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 /**
  * "Has this customer ordered before?" — a small counter next to the order
@@ -142,7 +143,7 @@ export function CustomerHistoryModal({
                 </span>
                 {o.store && <span className="text-xs text-[var(--sys-muted)]">{o.store.name}</span>}
                 <span className="mr-auto tabular-nums text-[var(--sys-heading)]" dir="ltr">
-                  {o.totalAmount} {o.currency}
+                  <Money value={o.totalAmount} currency={o.currency} />
                 </span>
               </header>
               <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">

@@ -484,7 +484,7 @@ function ReceiptDialog({
         className="space-y-3"
       >
         <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
-          أقرّت الشركة {statement.gap.claimed} {statement.currencyCode} ووصل حتى الآن {statement.gap.received}.
+          أقرّت الشركة <Money value={statement.gap.claimed} currency={statement.currencyCode} /> ووصل حتى الآن <Money value={statement.gap.received} currency={statement.currencyCode} />.
           يمكن تسجيل أكثر من إيصال لنفس الكشف (نقد + حوالة).
         </p>
 

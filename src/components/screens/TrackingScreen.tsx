@@ -24,6 +24,7 @@ import {
   trackingUrgency,
   type ConditionKey,
 } from '@/lib/tracking-priority';
+import { Money } from '@/components/ui/Money';
 
 /**
  * /ops/tracking — search by order, reference, barcode, customer or phone.
@@ -636,7 +637,7 @@ export function TrackingScreen() {
               label: 'المبلغ',
               render: (o) => (
                 <span dir="ltr" className="tabular-nums">
-                  {o.totalAmount} {o.currency}
+                  <Money value={o.totalAmount} currency={o.currency} />
                 </span>
               ),
             },

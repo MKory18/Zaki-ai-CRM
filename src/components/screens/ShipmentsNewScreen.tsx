@@ -12,6 +12,7 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Money } from '@/components/ui/Money';
 
 /**
  * /ops/shipments/new — pick a courier, filter, review each row's COD and its
@@ -360,7 +361,7 @@ export function ShipmentsNewScreen() {
                   <span className="text-xs" dir="ltr">
                     {r.cod.subtotal} − {r.cod.discount} + {r.cod.deliveryFee} ={' '}
                     <strong className="tabular-nums">
-                      {r.cod.cod} {r.cod.currency}
+                      <Money value={r.cod.cod} currency={r.cod.currency} />
                     </strong>
                     {r.cod.feeSource === 'NONE' && (
                       <span className="text-[var(--sys-destructive)]"> (بلا أجرة)</span>

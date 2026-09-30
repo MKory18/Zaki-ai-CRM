@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
+import { Money } from '@/components/ui/Money';
 
 /**
  * WHAT THE SYSTEM PROPOSED, AND WHAT A PERSON DECIDES.
@@ -158,7 +159,7 @@ export function PenaltiesScreen() {
                   <span className="tabular-nums">{row.units}</span> {unitAr(row.kind)} ·{' '}
                   المحتسَب <span className="tabular-nums">{row.chargedUnits}</span> ·{' '}
                   <span className="font-semibold tabular-nums text-[var(--sys-heading)]" dir="ltr">
-                    {row.amount} {row.currencyCode}
+                    <Money value={row.amount} currency={row.currencyCode} />
                   </span>
                 </p>
 

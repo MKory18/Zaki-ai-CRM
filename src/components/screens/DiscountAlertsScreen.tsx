@@ -6,6 +6,7 @@ import { Rows } from '@/components/ui/Rows';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiDiscountPercentLine, RiLoader4Line } from '@remixicon/react';
 import { arDate } from '@/lib/format';
+import { Money } from '@/components/ui/Money';
 
 /**
  * /control/discount-alerts — what was given away, and by whom.
@@ -118,7 +119,7 @@ export function DiscountAlertsScreen() {
           <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4">
             <p className="text-sm text-[var(--sys-foreground)] tabular-nums">
               <b>{data.totals.orders}</b> طلباً بخصم، بإجمالي{' '}
-              <b className="text-[var(--sys-destructive)]">{data.totals.discount} {data.currency}</b>
+              <b className="text-[var(--sys-destructive)]"><Money value={data.totals.discount} currency={data.currency} /></b>
               {data.totals.notable > 0 && (
                 <span className="text-[var(--sys-destructive)]">
                   {' '}— منها <b>{data.totals.notable}</b> فوق {data.notableThreshold}%
@@ -141,7 +142,7 @@ export function DiscountAlertsScreen() {
                   label: 'إجمالي الخصم',
                   render: (p) => (
                     <span className="font-medium tabular-nums text-[var(--sys-destructive)]">
-                      {p.total} {data.currency}
+                      <Money value={p.total} currency={data.currency} />
                     </span>
                   ),
                 },
@@ -188,7 +189,7 @@ export function DiscountAlertsScreen() {
                   label: 'الخصم',
                   render: (r) => (
                     <span className="font-medium tabular-nums text-[var(--sys-destructive)]">
-                      {r.discount} {r.currency}
+                      <Money value={r.discount} currency={r.currency} />
                     </span>
                   ),
                 },

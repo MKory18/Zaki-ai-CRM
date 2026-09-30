@@ -149,6 +149,33 @@ export function formatMoney(value: number, currencyCode: string, minorUnit: numb
  *   renders it inside an LTR box, so a right-to-left paragraph cannot move
  *   «JOD» to the front of «37,500» on one screen and not on another.
  */
+/**
+ * HOW MANY DECIMALS A FIGURE GETS.
+ *
+ * This lived inside `Money` as one ternary, and it read «a code was passed
+ * → two». Every row that carries its own `currencyCode` passes one, so on a
+ * Jordanian store a fils was lost: 1.234 JOD printed «1.23 JOD» with the
+ * code and «1.234 JOD» without it.
+ *
+ * Out here because a rule that cannot be called cannot be tested: the guard
+ * that was supposed to hold it could only read the source text, and passed a
+ * mutation that disabled the check while leaving the words in place.
+ */
+export function moneyDigits(opts: {
+  minorUnit?: number;
+  /** `undefined` = this store's currency; `null` = print it bare. */
+  currency?: string | null;
+  store?: { code: string; minorUnit: number } | null;
+}): number {
+  if (opts.minorUnit !== undefined) return opts.minorUnit;
+  const code = opts.currency !== undefined ? opts.currency : opts.store?.code ?? null;
+  // A code that IS this store's currency knows its own decimals.
+  if (code && opts.store?.code === code) return opts.store.minorUnit;
+  // A genuinely foreign code has to be guessed at, and two is the common case.
+  if (opts.currency !== undefined) return 2;
+  return opts.store?.minorUnit ?? 2;
+}
+
 export function moneyText(value: number, currencyCode: string | null | undefined, minorUnit: number): string {
   const n = Number.isFinite(value) ? roundMinor(value, minorUnit) : 0;
   const fixed = Math.abs(n).toFixed(minorUnit);

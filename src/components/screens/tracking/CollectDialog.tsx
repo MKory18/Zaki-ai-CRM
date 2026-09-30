@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { Input, Select } from '@/components/ui/Input';
 import { RiHandCoinLine } from '@remixicon/react';
+import { Money } from '@/components/ui/Money';
 
 /**
  * "استلمت منه" — settling a مندوب, or a company that sends no file, by hand.
@@ -106,7 +107,7 @@ export function CollectDialog({
       >
         <div className="text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 space-y-1">
           <p className="text-[var(--sys-foreground)]">
-            المتوقَّع منه: <b className="tabular-nums">{expected} {currency}</b>
+            المتوقَّع منه: <b className="tabular-nums"><Money value={expected} currency={currency} /></b>
           </p>
           <p className="text-[var(--sys-muted)]">
             وهو صافي ما يسلّمه بعد خصم أجرة التوصيل، لا المبلغ الذي دفعه العميل.

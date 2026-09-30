@@ -98,7 +98,7 @@ export function ClosingScreen() {
                 <div>
                   <h3 className="text-sm font-medium text-[var(--sys-heading)]">{r.walletName}</h3>
                   <p className="text-xs text-[var(--sys-muted-foreground)] tabular-nums mt-0.5">
-                    رصيد الدفاتر {r.bookBalance} {r.currencyCode}
+                    رصيد الدفاتر <Money value={r.bookBalance} currency={r.currencyCode} />
                     {r.closing && ` · الجرد ${r.closing.actualBalance}`}
                   </p>
                 </div>
