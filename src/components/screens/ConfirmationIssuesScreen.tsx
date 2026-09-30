@@ -8,6 +8,7 @@ import { arDateTime } from '@/lib/format';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiForbidLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /confirmation/issues — entry issues on moderator-entered orders only.
@@ -227,10 +228,20 @@ export function ConfirmationIssuesScreen() {
 
       {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
 
+      {/*
+          THE SHARED EMPTY STATE, WHICH ASKS FOR THE «WHY».
+          This screen wrote its own paragraph and said only that the list was
+          empty. Every sibling — the returns desk, the pull queue, the
+          postponed list, the change requests — says what fills it, because
+          `ui/EmptyState` takes `title` AND `why` and this was the one place
+          that did not use it.
+      */}
       {issues.length === 0 && (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لا توجد إشكالات مفتوحة.
-        </p>
+        <EmptyState
+          icon={RiAlertLine}
+          title="لا إشكالات مفتوحة"
+          why="الإشكالُ يُفتَح حين يعلق طلبٌ على موظّف التأكيد — رقمٌ خاطئ، عنوانٌ ناقص، أو سعرٌ يحتاج قراراً. فراغُ القائمة يعني أنّ لا طلبَ ينتظر قراراً من أحد."
+        />
       )}
 
       {issues.map((issue) => {
