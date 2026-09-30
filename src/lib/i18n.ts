@@ -235,7 +235,8 @@ export const translations = {
     FAILED_DELIVERY: 'فشل التوصيل',
     ACTIVE: 'نشط',
     INACTIVE: 'غير نشط',
-    OUT_OF_STOCK: 'نفد من المخزن',
+    // «المخزن» is the building; the stock is «المخزون» — see product-status.ts.
+    OUT_OF_STOCK: 'نفد المخزون',
     // KPIs
     totalOrders: 'إجمالي الطلبات',
     confirmedOrders: 'الطلبات المؤكدة',

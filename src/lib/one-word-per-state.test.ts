@@ -25,6 +25,26 @@ import { SHIPPING_STATUS_AR } from './shipping-workflow';
 
 const root = process.cwd();
 
+/**
+ * EVERY SOURCE FILE, ONCE.
+ *
+ * `sourceFiles` inside the second describe belongs to that closure, and
+ * two later rules needed the same walk. A third copy of a file walker in
+ * a file about not keeping copies would have been its own joke.
+ */
+const allFiles = (): string[] => {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.tsx?$/.test(p) && !p.includes('.test.')) out.push(relative(root, p).split('\\').join('/'));
+    }
+  };
+  walk(join(root, 'src'));
+  return out;
+};
+
 describe('the two vocabularies agree where they overlap', () => {
   it('a name both axes carry has one word', () => {
     // The core state and the shipping status describe ONE parcel. A badge
@@ -179,20 +199,6 @@ describe('no screen keeps its own copy', () => {
 describe('one vocabulary for the confirmation axis', () => {
   const OWNER = 'src/lib/confirmation-workflow.ts';
 
-  /* `sourceFiles` above belongs to another describe's closure. */
-  const allFiles = (): string[] => {
-    const out: string[] = [];
-    const walk = (dir: string) => {
-      for (const name of readdirSync(dir)) {
-        const p = join(dir, name);
-        if (statSync(p).isDirectory()) walk(p);
-        else if (/\.tsx?$/.test(p) && !p.includes('.test.')) out.push(relative(root, p).split('\\').join('/'));
-      }
-    };
-    walk(join(root, 'src'));
-    return out;
-  };
-
   /*
    * WHICH MAP IS A CONFIRMATION VOCABULARY, AND WHICH ONLY SHARES A KEY.
    *
@@ -251,5 +257,98 @@ describe('one vocabulary for the confirmation axis', () => {
     for (const key of CONFIRMATION_STATUSES) {
       expect(CONFIRMATION_STATUS_AR[key], key).toMatch(/[\u0600-\u06FF]/);
     }
+  });
+});
+
+/**
+ * AND THE PRODUCT'S OWN STATUS, WHICH HAD FIVE WORDINGS FOR THREE VALUES.
+ *
+ * The schema says `ACTIVE | INACTIVE | OUT_OF_STOCK`. The screens said:
+ *
+ *   OUT_OF_STOCK  «نفد المخزون» on the products badge
+ *                 «نفد من المخزون» in that same screen's own dropdown
+ *                 «نفد المخزون» in its other dropdown
+ *                 «نفد من المخزن» in i18n — المخزن is the building, not the stock
+ *   ACTIVE        «نشط» in the list, and the bare word `ACTIVE` on the
+ *                 product's own page
+ *
+ * So the badge and the dropdown beside it disagreed about the state they
+ * were both showing, and opening the product showed the database's word.
+ *
+ * THE DISCRIMINATOR IS `OUT_OF_STOCK`, for the same reason `IN_PROGRESS`
+ * serves the confirmation axis: ACTIVE and INACTIVE belong to users, to
+ * couriers and to channels as well, and a rule keyed on those would name
+ * every one of them. Only a product runs out of stock.
+ */
+describe('one vocabulary for the product status', () => {
+  const OWNER = 'src/lib/product-status.ts';
+  /**
+   * `i18n.ts` is the translation table, not a screen — the block above
+   * treats it the same way. It is checked BY VALUE below instead of being
+   * forbidden the literal.
+   */
+  const TRANSLATIONS = 'src/lib/i18n.ts';
+
+  const offenders: string[] = [];
+  for (const file of allFiles()) {
+    if (file === OWNER || file === TRANSLATIONS) continue;
+    const src = readFileSync(join(root, file), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    for (const m of src.matchAll(/OUT_OF_STOCK["']?\s*[:>]\s*["'>]?\s*([\u0600-\u06FF][^<'"`]*)/g)) {
+      offenders.push(`${file}  OUT_OF_STOCK = «${m[1].trim()}»`);
+    }
+  }
+
+  it('and only one file spells it', () => {
+    expect(
+      offenders,
+      `نسخةٌ أخرى من مفردات حالة المنتج:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('and the translation table agrees with the owner, value for value', async () => {
+    const { PRODUCT_STATUS_AR, PRODUCT_STATUSES } = await import('./product-status');
+    const i18n = readFileSync(join(root, TRANSLATIONS), 'utf8');
+    for (const key of PRODUCT_STATUSES) {
+      expect(i18n, `${key} في i18n يخالف المالك`).toContain(`${key}: '${PRODUCT_STATUS_AR[key]}'`);
+    }
+  });
+
+  it('and the stock is «المخزون», not the building it sits in', async () => {
+    const { PRODUCT_STATUS_AR } = await import('./product-status');
+    expect(PRODUCT_STATUS_AR.OUT_OF_STOCK).toBe('نفد المخزون');
+  });
+
+  it('and a value the schema does not name still prints something', async () => {
+    const { productStatusAr } = await import('./product-status');
+    expect(productStatusAr('ACTIVE')).toBe('نشط');
+    // Better the raw value than an empty badge — it is a bug upstream.
+    expect(productStatusAr('WHATEVER')).toBe('WHATEVER');
+    expect(productStatusAr(null)).toBe('—');
+  });
+});
+
+/**
+ * AND THE TOP OF EVERY SCREEN, WHICH `PageHeader` SETTLED.
+ *
+ * Its note records what it replaced: «fifty-five titles across fifty-one
+ * screens… `text-2xl` here, `text-xl` there… the actions above the title on
+ * one and below it on the next». One screen was still drawing its own —
+ * the product's page, at `text-2xl`, breaking to a row at `sm` where every
+ * other screen breaks at `md`.
+ */
+describe('one shape for the top of a screen', () => {
+  it('and the product page is no longer the exception', () => {
+    const src = readFileSync(join(root, 'src/components/screens/ProductDetailScreen.tsx'), 'utf8');
+    expect(src, 'عاد العنوانُ إلى قياسٍ خاصٍّ به').not.toMatch(/<h1[^>]*text-2xl/);
+    expect(src).toMatch(/md:flex-row md:items-start md:justify-between/);
+  });
+
+  it('and the one component still says the size and the order', () => {
+    const header = readFileSync(join(root, 'src/components/ui/PageHeader.tsx'), 'utf8');
+    expect(header).toMatch(/<h1 className="text-xl font-bold/);
+    expect(header).toMatch(/md:flex-row md:items-start md:justify-between/);
   });
 });

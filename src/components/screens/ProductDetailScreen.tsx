@@ -19,6 +19,7 @@ import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine
 import { Money } from '@/components/ui/Money';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { productStatusAr, productStatusTone } from '@/lib/product-status';
 
 export function ProductDetailScreen() {
   const params = useParams();
@@ -140,7 +141,7 @@ export function ProductDetailScreen() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <button
               onClick={() => window.history.back()}
@@ -149,10 +150,10 @@ export function ProductDetailScreen() {
               <RiArrowRightLine className="icon-mirror w-4 h-4" />
               <span>عودة للمنتجات</span>
             </button>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--sys-heading)]">{product.name}</h1>
+            <h1 className="text-xl font-bold text-[var(--sys-heading)]">{product.name}</h1>
             <div className="flex items-center space-x-2 rtl:space-x-reverse mt-1.5">
               <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-lg">{product.sku}</span>
-              <Badge variant={product.status === 'ACTIVE' ? 'success' : 'warning'}>{product.status}</Badge>
+              <Badge variant={productStatusTone(product.status)}>{productStatusAr(product.status)}</Badge>
               <span className="text-xs text-[var(--sys-muted)]">{images.length} صورة</span>
             </div>
             {/* The two numbers this page is opened for. They are also in

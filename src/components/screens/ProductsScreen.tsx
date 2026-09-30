@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Rows } from '@/components/ui/Rows';
 import { HealthChip } from '@/components/ui/HealthChip';
 import type { CatalogueReadiness, ProductGrade } from '@/lib/product-grade';
+import { PRODUCT_STATUS_AR, productStatusAr, productStatusTone } from '@/lib/product-status';
 
 /**
  * What the grades route answers with, so the screen never guesses a shape.
@@ -434,8 +435,8 @@ export function ProductsScreen() {
                     key: 'status',
                     label: 'الحالة',
                     render: (p) => (
-                      <Badge variant={p.status === 'ACTIVE' ? 'success' : 'warning'}>
-                        {p.status === 'ACTIVE' ? 'نشط' : p.status === 'INACTIVE' ? 'غير نشط' : 'نفد المخزون'}
+                      <Badge variant={productStatusTone(p.status)}>
+                        {productStatusAr(p.status)}
                       </Badge>
                     ),
                   },
@@ -620,9 +621,9 @@ export function ProductsScreen() {
                 required
               />
               <Select label="حالة المنتج" value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="ACTIVE">نشط</option>
-                <option value="INACTIVE">غير نشط</option>
-                <option value="OUT_OF_STOCK">نفد من المخزون</option>
+                <option value="ACTIVE">{PRODUCT_STATUS_AR.ACTIVE}</option>
+                <option value="INACTIVE">{PRODUCT_STATUS_AR.INACTIVE}</option>
+                <option value="OUT_OF_STOCK">{PRODUCT_STATUS_AR.OUT_OF_STOCK}</option>
               </Select>
             </div>
 
@@ -780,9 +781,9 @@ export function ProductsScreen() {
             <Input label="رمز SKU *" value={editForm.sku} onChange={(e) => setEditForm({ ...editForm, sku: e.target.value.toUpperCase() })} required />
             <Input label="السعر الأساسي ($)" type="number" step="0.01" value={editForm.basePrice} onChange={(e) => setEditForm({ ...editForm, basePrice: parseFloat(e.target.value) || 0 })} />
             <Select label="الحالة" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
-              <option value="ACTIVE">نشط</option>
-              <option value="INACTIVE">غير نشط</option>
-              <option value="OUT_OF_STOCK">نفد المخزون</option>
+              <option value="ACTIVE">{PRODUCT_STATUS_AR.ACTIVE}</option>
+              <option value="INACTIVE">{PRODUCT_STATUS_AR.INACTIVE}</option>
+              <option value="OUT_OF_STOCK">{PRODUCT_STATUS_AR.OUT_OF_STOCK}</option>
             </Select>
           </div>
 
