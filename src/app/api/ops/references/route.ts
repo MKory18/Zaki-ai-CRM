@@ -22,7 +22,7 @@ export async function GET() {
   try {
     const { user, companyId, countryId, storeId } = await requireContext();
     if (!OPS_PERMISSIONS.some((p) => can(user, p))) {
-      return NextResponse.json({ error: 'Forbidden: missing an operations permission' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing an operations permission', errorAr: 'لا تملك أيّ صلاحيّةٍ من صلاحيّات التشغيل.' }, { status: 403 });
     }
 
     const [providers, regions] = await Promise.all([

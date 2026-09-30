@@ -1,6 +1,6 @@
 import { sellingCurrency } from '@/lib/selling-currency';
 import { NextResponse } from 'next/server';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { inStore } from '@/lib/store-filter';
 import { deleteStoredFile } from '@/lib/storage';
@@ -22,7 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
     }
     if (!viewAuth.allowed) {
-      return NextResponse.json({ error: 'Forbidden: missing required permission products.view' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.view', errorAr: forbiddenAr('Forbidden: missing required permission products.view') }, { status: 403 });
     }
     // The currency of the COUNTRY this store sells into — not the company's.
     // A Syrian store was labelling its prices in Jordanian dinars because the
@@ -64,14 +64,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (editAuth.reason === 'NO_TENANT' || editAuth.reason === 'OUT_OF_SCOPE') {
         return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
       }
-      return NextResponse.json({ error: 'Forbidden: missing required permission products.edit' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.edit', errorAr: forbiddenAr('Forbidden: missing required permission products.edit') }, { status: 403 });
     }
 
     // Price changes are a separate authority (products.change_price)
     if (basePrice !== undefined && Number(basePrice) !== existing.basePrice) {
       const priceAuth = authorize(user, 'products.change_price', existing);
       if (!priceAuth.allowed) {
-        return NextResponse.json({ error: 'Forbidden: products.change_price' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden: products.change_price', errorAr: 'تغيير السعر ليس من صلاحيّاتك. اطلبها من مدير النظام إن كانت من عملك.' }, { status: 403 });
       }
     }
 
@@ -161,7 +161,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       if (deleteAuth.reason === 'NO_TENANT' || deleteAuth.reason === 'OUT_OF_SCOPE') {
         return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
       }
-      return NextResponse.json({ error: 'Forbidden: missing required permission products.delete' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.delete', errorAr: forbiddenAr('Forbidden: missing required permission products.delete') }, { status: 403 });
     }
 
     // Safety: block deletion when orders reference the product

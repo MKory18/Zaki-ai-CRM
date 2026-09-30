@@ -34,7 +34,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await requirePermission('settings.edit');
 
     const pixel = await db.trackingPixel.findFirst({ where: { id, companyId } });
-    if (!pixel) return NextResponse.json({ error: 'Pixel not found' }, { status: 404 });
+    if (!pixel) return NextResponse.json({ error: 'Pixel not found', errorAr: 'البكسل غير موجود. أعد تحميل الصفحة.' }, { status: 404 });
 
     const parsed = updateSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -110,7 +110,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     await requirePermission('settings.edit');
 
     const pixel = await db.trackingPixel.findFirst({ where: { id, companyId } });
-    if (!pixel) return NextResponse.json({ error: 'Pixel not found' }, { status: 404 });
+    if (!pixel) return NextResponse.json({ error: 'Pixel not found', errorAr: 'البكسل غير موجود. أعد تحميل الصفحة.' }, { status: 404 });
 
     await db.trackingPixel.delete({ where: { id } });
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { can } from '@/lib/authorization';
@@ -35,7 +35,7 @@ export async function GET() {
     const user = await requireAuth();
     if (!can(user, 'categories.view') && !can(user, 'roles.edit') && !can(user, 'users.edit')) {
       return NextResponse.json(
-        { error: 'Forbidden: missing required permission categories.view' },
+        { error: 'Forbidden: missing required permission categories.view', errorAr: forbiddenAr('Forbidden: missing required permission categories.view') },
         { status: 403 }
       );
     }
@@ -57,7 +57,7 @@ export async function GET() {
 async function editor() {
   const user = await requireAuth();
   if (!can(user, 'products.edit')) {
-    return { error: NextResponse.json({ error: 'Forbidden: missing products.edit' }, { status: 403 }) };
+    return { error: NextResponse.json({ error: 'Forbidden: missing products.edit', errorAr: forbiddenAr('Forbidden: missing required permission products.edit') }, { status: 403 }) };
   }
   if (!user.companyId) {
     return { error: NextResponse.json({ error: 'لا شركة في السياق' }, { status: 400 }) };

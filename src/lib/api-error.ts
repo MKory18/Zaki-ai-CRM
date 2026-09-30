@@ -44,7 +44,13 @@ const ACCOUNT_AR: Record<string, string> = {
 };
 
 /** «Forbidden: missing required permission orders.view» → a sentence. */
-function forbiddenAr(message: string): string {
+/*
+ * Exported because the inline refusals need the same sentence. A route
+ * that RETURNS `{ error: 'Forbidden: missing required permission x.y' }`
+ * instead of throwing never reaches `apiError`, so it never got one —
+ * and there are nineteen of those.
+ */
+export function forbiddenAr(message: string): string {
   const key = message.match(/missing required permission\s+([\w.]+)/)?.[1];
   if (key) {
     /*

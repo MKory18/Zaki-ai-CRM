@@ -1,7 +1,7 @@
 import { toLatinDigits } from '@/lib/latin-digits';
 import { mayActOnUser, USER_NOT_FOUND } from '@/lib/manageable-user';
 import { NextResponse } from 'next/server';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import crypto from 'crypto';
 import { db } from '@/lib/db';
 import { hashPassword, resolveSingleCompanyId } from '@/lib/auth';
@@ -273,7 +273,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         // business setting what the business pays them.
         if (!can(admin, 'payroll.pay')) {
           return NextResponse.json(
-            { error: 'Forbidden: missing required permission payroll.pay' },
+            { error: 'Forbidden: missing required permission payroll.pay', errorAr: forbiddenAr('Forbidden: missing required permission payroll.pay') },
             { status: 403 }
           );
         }

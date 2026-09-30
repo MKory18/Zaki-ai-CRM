@@ -91,7 +91,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     // SUPER_ADMIN role is full-access by design — nothing to change, ever.
     if (normalizeRoleName(role.name) === normalizeRoleName('SUPER_ADMIN') && (name !== undefined || permissions !== undefined)) {
-      return NextResponse.json({ error: 'Forbidden: SUPER_ADMIN is full-access by design' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: SUPER_ADMIN is full-access by design', errorAr: 'دور مدير النظام مفتوحٌ بالتصميم — لا تُعدّل صلاحيّاتُه. استعمل دوراً أخر لمن تريد تقييده.' }, { status: 403 });
     }
 
     // Reserved-name guard: no role may be RENAMED into a system/privileged

@@ -6,7 +6,7 @@ import { findOrCreateCustomer } from '@/lib/customer-identity';
 import { can, getPermissionScope, requirePermission } from '@/lib/authorization';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit, redactCustomerForAudit } from '@/lib/audit';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { customerFacts } from '@/lib/customer-insights';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
@@ -69,7 +69,7 @@ export async function GET(req: Request) {
     const canViewFull = can(user, 'customers.view');
     if (!canViewFull && !can(user, 'customers.view_basic')) {
       return NextResponse.json(
-        { error: 'Forbidden: missing required permission customers.view' },
+        { error: 'Forbidden: missing required permission customers.view', errorAr: forbiddenAr('Forbidden: missing required permission customers.view') },
         { status: 403 }
       );
     }
@@ -163,7 +163,7 @@ export async function POST(req: Request) {
     const { fullName, phone, altPhone, address, city, country, notes } = body;
 
     if (!fullName || !phone) {
-      return NextResponse.json({ error: 'Full Name and Phone Number are required' }, { status: 400 });
+      return NextResponse.json({ error: 'Full Name and Phone Number are required', errorAr: 'الاسم ورقم الهاتف مطلوبان.' }, { status: 400 });
     }
 
     const normalizedPhone = normalizePhoneNumber(phone);

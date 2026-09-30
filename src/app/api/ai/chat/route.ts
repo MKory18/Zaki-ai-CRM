@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     const { question, period = 'all' } = body;
 
     if (!question) {
-      return NextResponse.json({ error: 'Question is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Question is required', errorAr: 'اكتب السؤال أوّلاً.' }, { status: 400 });
     }
 
     // Pull ground-truth analytics first

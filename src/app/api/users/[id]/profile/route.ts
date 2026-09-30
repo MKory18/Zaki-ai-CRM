@@ -40,13 +40,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         assignedBy: { select: { name: true } },
       },
     });
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!user) return NextResponse.json({ error: 'User not found', errorAr: 'الموطّف غير موجود. أعد تحميل القائمة.' }, { status: 404 });
 
     // Company admins may only view users inside their company (or unclaimed
     // platform accounts). Reading another company's ACTIVE user is blocked:
     if (companyId && user.companyId === null && user.role === 'SUPER_ADMIN') {
       // platform super-admin profile is only readable by platform super admin
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'User not found', errorAr: 'الموطّف غير موجود. أعد تحميل القائمة.' }, { status: 404 });
     }
 
     // Workload scoped to the admin's company — never cross-tenant.

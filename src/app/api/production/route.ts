@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
     if (!productId || !batchNumber || !quantityProduced || quantityProduced <= 0) {
       return NextResponse.json(
-        { error: 'Product, Batch Number, and Quantity Produced (> 0) are required' },
+        { error: 'Product, Batch Number, and Quantity Produced (> 0) are required', errorAr: 'المنتج ورقم التشغيلة والكمية المنتجة مطلوبة، والكمية أكبر من صفر.' },
         { status: 400 }
       );
     }
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
 
     if (existing) {
       return NextResponse.json(
-        { error: 'A production batch with this batch number already exists' },
+        { error: 'A production batch with this batch number already exists', errorAr: 'رقم التشغيلة مستعملٌ. اختر رقماً أخر أو ابحذ عن التشغيلة القائمة.' },
         { status: 400 }
       );
     }

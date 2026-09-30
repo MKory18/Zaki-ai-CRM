@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   try {
     const { user, companyId, storeId } = await requireContext();
     if (!can(user, 'orders.change_status')) {
-      return NextResponse.json({ error: 'Forbidden: cannot manage shipping batches' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: cannot manage shipping batches', errorAr: 'إدارة دفعات الشحن ليست من صلاحيّاتك.' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     let providerId: string | null = null;
     if (deliveryProviderId) {
       const provider = await db.deliveryProvider.findFirst({ where: { id: deliveryProviderId, companyId } });
-      if (!provider) return NextResponse.json({ error: 'Provider not found in your company' }, { status: 404 });
+      if (!provider) return NextResponse.json({ error: 'Provider not found in your company', errorAr: 'شركة الشحن هذه ليست من شركات شركتك.' }, { status: 404 });
       providerId = provider.id;
     }
 

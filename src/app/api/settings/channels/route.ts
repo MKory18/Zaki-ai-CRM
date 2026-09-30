@@ -47,7 +47,7 @@ export async function GET() {
   try {
     const { user, companyId } = await requireCompanyTenant();
     if (!can(user, 'orders.create') && !can(user, 'orders.view') && !can(user, 'settings.view')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحيّاتك. راجع مدير النطام إن كان من عملك.' }, { status: 403 });
     }
 
     const channels = await db.orderChannel.findMany({

@@ -25,7 +25,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { user, companyId, storeId } = await requireContext();
     const { id } = await params;
     if (!can(user, 'orders.view')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحيّاتك. راجع مدير النطام إن كان من عملك.' }, { status: 403 });
     }
 
     const batch = await db.shippingBatch.findFirst({
@@ -62,11 +62,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
     if (!can(user, 'orders.change_status')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحيّاتك. راجع مدير النطام إن كان من عملك.' }, { status: 403 });
     }
 
     const batch = await db.shippingBatch.findFirst({ where: { id, companyId, storeId } });
-    if (!batch) return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
+    if (!batch) return NextResponse.json({ error: 'Batch not found', errorAr: 'الدفعة غير موجودة. أعد تحميل القائمة.' }, { status: 404 });
 
     const body = await req.json();
     const { status, notes, deliveryProviderId } = body as {
@@ -82,7 +82,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (deliveryProviderId !== undefined) {
       if (deliveryProviderId) {
         const provider = await db.deliveryProvider.findFirst({ where: { id: deliveryProviderId, companyId } });
-        if (!provider) return NextResponse.json({ error: 'Provider not found in your company' }, { status: 404 });
+        if (!provider) return NextResponse.json({ error: 'Provider not found in your company', errorAr: 'شركة الشحن هذه ليست من شركات شركتك.' }, { status: 404 });
         updateData.deliveryProviderId = provider.id;
       } else {
         updateData.deliveryProviderId = null;

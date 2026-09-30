@@ -121,7 +121,7 @@ export async function POST(req: Request) {
     const { name, email, phone, commissionRate, password } = body;
 
     if (!name || !email) {
-      return NextResponse.json({ error: 'Name and Email are required' }, { status: 400 });
+      return NextResponse.json({ error: 'Name and Email are required', errorAr: 'الاسم والبريد مطلوبان.' }, { status: 400 });
     }
 
     const existing = await db.user.findUnique({
@@ -129,12 +129,12 @@ export async function POST(req: Request) {
     });
 
     if (existing) {
-      return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
+      return NextResponse.json({ error: 'User with this email already exists', errorAr: 'هذا البريد مستعملٌ لحسابٍ آخر. ابحذ عنه في قائمة الموطّفين.' }, { status: 400 });
     }
 
 // Phase S: no default passwords - a password is mandatory
     if (!password || typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ error: 'Password is required (min 8 chars)' }, { status: 400 });
+      return NextResponse.json({ error: 'Password is required (min 8 chars)', errorAr: 'كلمة المرور مطلوبة — ثمانية أحرف على الأقلّ.' }, { status: 400 });
     }
     const pwdHash = await hashPassword(password);
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { inStore } from '@/lib/store-filter';
 import { requireContext } from '@/lib/geo-context';
@@ -37,7 +37,7 @@ export async function DELETE(
       if (uploadAuth.reason === 'NO_TENANT' || uploadAuth.reason === 'OUT_OF_SCOPE') {
         return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
       }
-      return NextResponse.json({ error: 'Forbidden: missing required permission products.upload_images' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.upload_images', errorAr: forbiddenAr('Forbidden: missing required permission products.upload_images') }, { status: 403 });
     }
 
     const wasPrimary = img.isPrimary;

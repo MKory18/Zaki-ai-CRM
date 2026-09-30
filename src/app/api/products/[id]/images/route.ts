@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { inStore } from '@/lib/store-filter';
 import { requireContext } from '@/lib/geo-context';
@@ -54,7 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (uploadAuth.reason === 'NO_TENANT' || uploadAuth.reason === 'OUT_OF_SCOPE') {
         return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
       }
-      return NextResponse.json({ error: 'Forbidden: missing required permission products.upload_images' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.upload_images', errorAr: forbiddenAr('Forbidden: missing required permission products.upload_images') }, { status: 403 });
     }
 
     const formData = await req.formData();
@@ -165,7 +165,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (uploadAuth.reason === 'NO_TENANT' || uploadAuth.reason === 'OUT_OF_SCOPE') {
         return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
       }
-      return NextResponse.json({ error: 'Forbidden: missing required permission products.upload_images' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.upload_images', errorAr: forbiddenAr('Forbidden: missing required permission products.upload_images') }, { status: 403 });
     }
 
     const { action, imageId, order, altText } = await req.json();

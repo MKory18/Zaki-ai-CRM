@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { performanceSettings } from '@/lib/performance-settings';
 import { currentSpan } from '@/lib/commission-period';
 import { scoreRole } from '@/lib/performance-metrics';
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     const asked = new URL(req.url).searchParams.get('userId') || user.id;
     const own = asked === user.id;
     if (!own && !can(user, 'team.monitor')) {
-      return NextResponse.json({ error: 'Forbidden: missing required permission team.monitor' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission team.monitor', errorAr: forbiddenAr('Forbidden: missing required permission team.monitor') }, { status: 403 });
     }
 
     /**

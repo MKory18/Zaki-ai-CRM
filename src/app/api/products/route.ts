@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requireContext } from '@/lib/geo-context';
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     // list query can filter at the SQL level (no JS filtering).
     const scope = getPermissionScope(user, 'products.view');
     if (!scope) {
-      return NextResponse.json({ error: 'Forbidden: missing required permission products.view' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.view', errorAr: forbiddenAr('Forbidden: missing required permission products.view') }, { status: 403 });
     }
 
     // This store's catalogue. A store is a separate business here: its own
@@ -224,7 +224,7 @@ export async function POST(req: Request) {
     });
 
     if (existing) {
-      return NextResponse.json({ error: 'A product with this SKU already exists' }, { status: 400 });
+      return NextResponse.json({ error: 'A product with this SKU already exists', errorAr: 'رمز المنتج (SKU) مستعملٌ. اختر رمزاً أخر.' }, { status: 400 });
     }
 
     // An id that does not resolve is refused rather than dropped: filing

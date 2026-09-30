@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import { manageableUsersWhere } from '@/lib/manageable-user';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { z } from 'zod';
 import { PASSWORD_MAX, checkPassword } from '@/lib/password-rules';
 import { db } from '@/lib/db';
@@ -83,7 +83,7 @@ if (isPrivilegedRoleName(targetRole.name) && admin.role !== 'SUPER_ADMIN') {
     // rule the geo-access editor enforces — creating the account is not a way
     // around it.
     if ((countryIds.length || storeIds.length) && !can(admin, 'geo.manage')) {
-      return NextResponse.json({ error: 'Forbidden: missing required permission geo.manage' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission geo.manage', errorAr: forbiddenAr('Forbidden: missing required permission geo.manage') }, { status: 403 });
     }
 
     const existing = await db.user.findUnique({ where: { email } });

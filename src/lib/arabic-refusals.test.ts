@@ -113,3 +113,110 @@ describe('the rest of the sweep', () => {
     expect(offenders.length, `مساراتُ طلباتٍ لم تُترجَم بعد:\n${offenders.map((o) => `${o.rel} (${o.msgs.length})`).join('\n')}`).toBeLessThanOrEqual(18);
   });
 });
+
+/**
+ * AND NOW EVERY ROUTE A PERSON'S SCREEN CALLS, NOT ONLY THE ORDERS GROUP.
+ *
+ * `orders-refuse-in-arabic.test.ts` did the ninety-four in
+ * `src/app/api/orders`. Seventy-three were left elsewhere, and only one of
+ * them carried a sentence. Thirty-seven of those seventy-three answer a
+ * MACHINE and are exempt by the list below; the other thirty-six are read by
+ * somebody, and they have one now.
+ *
+ * Nineteen of the thirty-six were `Forbidden: missing required permission x.y`
+ * RETURNED rather than thrown, so they never reached `apiError` and never got
+ * its sentence. They call the same builder now — `forbiddenAr` — so a thrown
+ * refusal and a returned one read alike.
+ */
+describe('every refusal a person can read carries a sentence', () => {
+  /**
+   * WHOSE EYES READ THIS BODY.
+   *
+   * These three families answer software, and their text is a contract with
+   * it rather than a message to anybody:
+   *
+   *   webhooks/  Telegram's servers, Meta's, a courier's. Their retry logic
+   *              reads the status; the body goes to a log.
+   *   media/     an `<img>` tag asking for a file. Nothing renders its body.
+   *   public/    the shopper's page: a missing slug is a 404 for a page, not
+   *              a sentence in the operator's product.
+   *
+   * Translating those would dress a machine's error as a person's, and the
+   * next reader would try to fix the Arabic instead of the integration.
+   */
+  const MACHINE_FACING: [string, string][] = [
+    ['src/app/api/webhooks/', 'Telegram, Meta and the couriers call in; their retry logic reads the status, not the words'],
+    ['src/app/api/media/', 'an <img> tag asking for a file — nothing renders the body of this response'],
+    ['src/app/api/public/', 'the shopper’s own page, where a missing slug is a page 404 rather than a sentence'],
+  ];
+
+  const ORDERS = 'src/app/api/orders/';
+
+  const bare: string[] = [];
+  let personFacing = 0;
+
+  for (const rel of routes('src/app/api')) {
+    if (rel.startsWith(ORDERS)) continue;              // its own guard
+    if (MACHINE_FACING.some(([prefix]) => rel.startsWith(prefix))) continue;
+    const src = read(rel);
+    const spanSrc = src.replace(/\$\{[^}]*\}/g, (x) => ' '.repeat(x.length));
+    for (const m of src.matchAll(/error:\s*(?:'([A-Za-z][^']{6,})'|`([A-Za-z][^`]{6,})`)/g)) {
+      const msg = m[1] ?? m[2];
+      /*
+       * A MESSAGE THAT ALREADY SPEAKS ARABIC IS NOT ENGLISH.
+       *
+       * The regex above matches on the FIRST character being Latin, which
+       * is how a sentence that opens with a vendor's own term reads to it:
+       * «Dataset ID أرقام فقط» is Arabic with a technical name in it, and
+       * the first version of this rule asked it to be translated.
+       */
+      if (/[؀-ۿ]/.test(msg)) continue;
+      personFacing++;
+      /*
+       * THE SAME OBJECT LITERAL, NOT A WINDOW OF CHARACTERS.
+       *
+       * A fixed window around the match is satisfied by a NEIGHBOUR's
+       * sentence: two refusals a few lines apart, delete one's `errorAr`
+       * and the other's is still inside the window. Measured — a mutation
+       * that stripped one sentence from `moderators/route.ts` passed.
+       * The body `{ … }` the `error:` sits in is the actual scope.
+       */
+      /*
+       * …and `${…}` blanked first, or a template literal closes the brace
+       * early: `Export limit exceeded (${totalRows} orders)` ends the span
+       * at its own interpolation, three characters before the `errorAr`
+       * that was sitting right there. Same length, so offsets still line up.
+       */
+      const opens = spanSrc.lastIndexOf('{', m.index!);
+      const closes = spanSrc.indexOf('}', m.index!);
+      const literal = src.slice(opens < 0 ? 0 : opens, closes < 0 ? src.length : closes);
+      if (!literal.includes('errorAr')) bare.push(`${rel}: ${msg.slice(0, 60)}`);
+    }
+  }
+
+  it('found refusals to check — a sweep over nothing proves nothing', () => {
+    expect(personFacing).toBeGreaterThan(25);
+  });
+
+  it('and none of them is English alone', () => {
+    expect(
+      bare,
+      `رفضٌ يقرأه إنسانٌ بلا جملةٍ عربيّة:\n${bare.join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('and what answers a machine says whose machine it is', () => {
+    const all = routes('src/app/api');
+    for (const [prefix, why] of MACHINE_FACING) {
+      expect(why.length, `${prefix}: بلا سبب`).toBeGreaterThan(40);
+      expect(all.some((f) => f.startsWith(prefix)), `${prefix}: لا مسارَ تحته`).toBe(true);
+    }
+  });
+
+  it('and a returned permission refusal reads like a thrown one', async () => {
+    const { forbiddenAr, apiError } = await import('./api-error');
+    const thrown = apiError(new Error('Forbidden: missing required permission products.view'));
+    expect(forbiddenAr('Forbidden: missing required permission products.view')).toBe(thrown.body.errorAr);
+    expect(forbiddenAr('Forbidden: missing required permission products.view')).toContain('عرض المنتجات');
+  });
+});

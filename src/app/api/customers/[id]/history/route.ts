@@ -23,7 +23,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { user, companyId, storeId } = await requireContext();
 
     if (!can(user, 'customers.view') && !can(user, 'customers.view_basic') && !can(user, 'orders.view')) {
-      return NextResponse.json({ error: 'Forbidden: cannot read customer history' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: cannot read customer history', errorAr: 'سجلّ العميل ليس من صلاحيّاتك.' }, { status: 403 });
     }
 
     const customer = await db.customer.findFirst({

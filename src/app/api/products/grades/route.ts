@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { can, getPermissionScope } from '@/lib/authorization';
-import { apiErrorResponse } from '@/lib/api-error';
+import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { maySeeCost } from '@/lib/cost-visibility';
 import { getDateRange } from '@/lib/analytics';
 import { CONFIRMATION_REFUSED, DELIVERED_SHIPPING } from '@/lib/order-state';
@@ -79,7 +79,7 @@ export async function GET(req: Request) {
     // never be returned for a product the caller may not see.
     const scope = getPermissionScope(user, 'products.view');
     if (!scope) {
-      return NextResponse.json({ error: 'Forbidden: missing required permission products.view' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: missing required permission products.view', errorAr: forbiddenAr('Forbidden: missing required permission products.view') }, { status: 403 });
     }
 
     const asked = (new URL(req.url).searchParams.get('ids') ?? '')
