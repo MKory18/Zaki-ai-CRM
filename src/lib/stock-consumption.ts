@@ -35,6 +35,8 @@ export interface ConsumptionResult {
   short: number;
   /** True when a previous call had already done the work. */
   alreadyDone: boolean;
+  /** What those units cost, from the batches they actually came out of. */
+  cost: number;
 }
 
 /**
@@ -64,7 +66,7 @@ export async function consumeOrderStock(
   input: { orderId: string; companyId: string; allowNegativeStock: boolean; userId?: string | null }
 ): Promise<ConsumptionResult> {
   if (await alreadyMoved(tx, input.orderId, SALE)) {
-    return { taken: 0, short: 0, alreadyDone: true };
+    return { taken: 0, short: 0, alreadyDone: true, cost: 0 };
   }
 
   const order = await tx.order.findFirst({
@@ -76,10 +78,11 @@ export async function consumeOrderStock(
       },
     },
   });
-  if (!order) return { taken: 0, short: 0, alreadyDone: false };
+  if (!order) return { taken: 0, short: 0, alreadyDone: false, cost: 0 };
 
   let taken = 0;
   let short = 0;
+  let cost = 0;
 
   for (const line of order.items) {
     // The gift units are goods too. Leaving them in stock is how a shelf
@@ -95,6 +98,7 @@ export async function consumeOrderStock(
     });
     taken += result.taken;
     short += result.short;
+    cost += result.cost;
 
     if (result.taken > 0) {
       await tx.inventoryMovement.create({
@@ -118,7 +122,37 @@ export async function consumeOrderStock(
     data: { reservedQty: 0 },
   });
 
-  return { taken, short, alreadyDone: false };
+  /*
+   * WHAT IT ACTUALLY COST, WRITTEN DOWN AT THE ONE MOMENT IT IS KNOWN.
+   *
+   * `estimatedCostOfGoods` is stamped when the order is WRITTEN, from a
+   * weighted average of what happens to be on the shelf then — and it is
+   * zero whenever the product had no costed batch at that moment, which
+   * is every product imported before its first production run. Every
+   * margin in the product is built on that figure.
+   *
+   * Here the goods have left, and the batches they left say what they
+   * cost. `product-cost.ts` already describes exactly this — «the
+   * CONSUMED cost… the figure that belongs in a closed order's profit» —
+   * and nothing was recording it.
+   *
+   * The name stays `estimatedCostOfGoods` because thirteen readers use
+   * it and renaming a column is not what this is. After delivery it is
+   * no longer an estimate.
+   *
+   * Only when something was actually drawn: an order served from an
+   * empty shelf (negative stock allowed) took no money out of any batch,
+   * and writing zero over the estimate would be replacing a guess with a
+   * falsehood.
+   */
+  if (taken > 0) {
+    await tx.order.update({
+      where: { id: input.orderId },
+      data: { estimatedCostOfGoods: Math.round(cost * 100) / 100 },
+    });
+  }
+
+  return { taken, short, alreadyDone: false, cost: Math.round(cost * 100) / 100 };
 }
 
 /**

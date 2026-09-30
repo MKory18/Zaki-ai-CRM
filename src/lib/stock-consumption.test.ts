@@ -33,7 +33,9 @@ const ORDER = {
 function makeTx(over: Record<string, unknown> = {}) {
   return {
     inventoryMovement: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
-    order: { findFirst: vi.fn().mockResolvedValue(ORDER) },
+    // `update` because delivery now writes down what the goods actually
+    // cost, from the batches they came out of.
+    order: { findFirst: vi.fn().mockResolvedValue(ORDER), update: vi.fn() },
     orderItem: { updateMany: vi.fn() },
     productionBatch: { findFirst: vi.fn().mockResolvedValue({ costPerUnit: 4 }), create: vi.fn().mockResolvedValue({ id: 'b-new' }) },
     ...over,
@@ -42,16 +44,27 @@ function makeTx(over: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  drawDownStock.mockResolvedValue({ taken: 0, short: 0 });
+  drawDownStock.mockResolvedValue({ taken: 0, short: 0, cost: 0 });
   onHandTotal.mockResolvedValue(0);
 });
+
+/**
+ * The mock behind one of the transaction's models.
+ *
+ * `makeTx` is cast to `never` so it can be handed to a function that
+ * wants a Prisma client; reaching back into it for an assertion needs
+ * the shape spelled out once, here, rather than at every call.
+ */
+function on(tx: unknown, model: string, fn: string) {
+  return (tx as Record<string, Record<string, ReturnType<typeof vi.fn>>>)[model][fn];
+}
 
 describe('delivering an order', () => {
   it('takes the gift units out too, not just the paid ones', async () => {
     // 2 paid + 1 free left the warehouse. Leaving the free one in stock is
     // how a shelf ends up holding goods that were given away.
     const tx = makeTx();
-    drawDownStock.mockResolvedValue({ taken: 3, short: 0 });
+    drawDownStock.mockResolvedValue({ taken: 3, short: 0, cost: 15 });
     await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: false });
     expect(drawDownStock.mock.calls[0][1].quantity).toBe(3);
     expect(drawDownStock.mock.calls[1][1].quantity).toBe(1);
@@ -79,7 +92,7 @@ describe('delivering an order', () => {
 
   it('writes the movement as a negative quantity, because stock went down', async () => {
     const tx = makeTx();
-    drawDownStock.mockResolvedValue({ taken: 3, short: 0 });
+    drawDownStock.mockResolvedValue({ taken: 3, short: 0, cost: 15 });
     await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: false });
     expect((tx as any).inventoryMovement.create.mock.calls[0][0].data.quantity).toBe(-3);
   });
@@ -87,14 +100,14 @@ describe('delivering an order', () => {
   it('records no movement for a line that supplied nothing', async () => {
     // A ledger line for zero units is noise that makes a real one harder to find.
     const tx = makeTx();
-    drawDownStock.mockResolvedValue({ taken: 0, short: 3 });
+    drawDownStock.mockResolvedValue({ taken: 0, short: 3, cost: 0 });
     await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: false });
     expect((tx as any).inventoryMovement.create).not.toHaveBeenCalled();
   });
 
   it('reports the shortfall instead of hiding it', async () => {
     const tx = makeTx();
-    drawDownStock.mockResolvedValue({ taken: 1, short: 2 });
+    drawDownStock.mockResolvedValue({ taken: 1, short: 2, cost: 5 });
     const res = await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: true });
     expect(res.short).toBe(4); // two lines, two short each way
   });
@@ -295,5 +308,58 @@ describe('the returns desk passes the damaged count to the shelf', () => {
     const src = stripComments(repoFile('src/app/api/ops/returns/route.ts'));
     expect(src.length).toBeGreaterThan(200);
     expect(src).toMatch(/restoreOrderStock\(tx, \{[\s\S]{0,200}?damagedQty: input\.damagedQty/);
+  });
+});
+
+/**
+ * WHAT THE GOODS ACTUALLY COST, WRITTEN DOWN WHEN THEY LEAVE.
+ *
+ * `estimatedCostOfGoods` is stamped when the order is WRITTEN, from a
+ * weighted average of whatever is on the shelf at that moment — and it is
+ * ZERO whenever the product had no costed batch then, which is every
+ * product imported before its first production run. Every margin in the
+ * product is built on that figure.
+ *
+ * `product-cost.ts` already described the right one and nothing recorded
+ * it: «the CONSUMED cost, recorded when the goods actually leave, taken
+ * from the batches the draw-down emptied — oldest first. That is the
+ * figure that belongs in a closed order's profit, because it is the money
+ * that actually left.»
+ */
+describe('the cost of the goods that actually left', () => {
+  it('is written on the order at delivery', async () => {
+    const tx = makeTx();
+    drawDownStock.mockResolvedValue({ taken: 3, short: 0, cost: 12.75 });
+    const res = await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: false });
+
+    // Two lines in the fixture, so two draw-downs.
+    expect(res.cost).toBe(25.5);
+    expect(on(tx, 'order', 'update')).toHaveBeenCalledWith({
+      where: { id: 'o1' },
+      data: { estimatedCostOfGoods: 25.5 },
+    });
+  });
+
+  it('and is not written when nothing came out of a batch', async () => {
+    // Negative stock allowed: the parcel went out, no batch was touched,
+    // and no money left. Writing zero over the estimate would replace a
+    // guess with a falsehood.
+    const tx = makeTx();
+    drawDownStock.mockResolvedValue({ taken: 0, short: 3, cost: 0 });
+    const res = await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: true });
+
+    expect(res.cost).toBe(0);
+    expect(on(tx, 'order', 'update'), 'كتب صفراً فوق التقدير').not.toHaveBeenCalled();
+  });
+
+  it('and a second delivery of the same order writes nothing again', async () => {
+    // Couriers retry and humans press twice. The ledger already says the
+    // goods left, so there is no second cost to record.
+    const tx = makeTx({ inventoryMovement: { findFirst: vi.fn().mockResolvedValue({ id: 'm1' }), create: vi.fn() } });
+    const res = await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: false });
+
+    expect(res.alreadyDone).toBe(true);
+    expect(res.cost).toBe(0);
+    expect(on(tx, 'order', 'update')).not.toHaveBeenCalled();
   });
 });

@@ -111,13 +111,19 @@ export async function onHandTotal(tx: Tx, companyId: string, productId: string):
 export async function drawDownStock(
   tx: Tx,
   input: { companyId: string; productId: string; quantity: number; allowNegative: boolean }
-): Promise<{ taken: number; short: number }> {
-  if (input.quantity <= 0) return { taken: 0, short: 0 };
+): Promise<{ taken: number; short: number; cost: number }> {
+  if (input.quantity <= 0) return { taken: 0, short: 0, cost: 0 };
 
   const batches = await tx.productionBatch.findMany({
     where: { companyId: input.companyId, productId: input.productId, quantityRemaining: { gt: 0 } },
     orderBy: [{ productionDate: 'asc' }, { createdAt: 'asc' }],
-    select: { id: true, quantityRemaining: true, quantitySold: true },
+    // `costPerUnit` because the money that LEFT is only knowable here.
+    // `product-cost.ts` describes this figure — «the CONSUMED cost… taken
+    // from the batches the draw-down emptied — oldest first… the figure
+    // that belongs in a closed order's profit» — and it was never
+    // returned, so every margin in the product rested on the estimate
+    // taken when the order was written instead.
+    select: { id: true, quantityRemaining: true, quantitySold: true, costPerUnit: true },
   });
 
   const available = batches.reduce((sum, b) => sum + b.quantityRemaining, 0);
@@ -126,6 +132,7 @@ export async function drawDownStock(
   }
 
   let left = input.quantity;
+  let cost = 0;
   for (const batch of batches) {
     if (left <= 0) break;
     const take = Math.min(batch.quantityRemaining, left);
@@ -133,8 +140,16 @@ export async function drawDownStock(
       where: { id: batch.id },
       data: { quantityRemaining: batch.quantityRemaining - take, quantitySold: batch.quantitySold + take },
     });
+    // Each batch at ITS price. An order served from the March run at 3.20
+    // and the June delivery at 4.10 cost both, not an average of them.
+    cost += take * (batch.costPerUnit ?? 0);
     left -= take;
   }
 
-  return { taken: input.quantity - left, short: left };
+  /*
+   * WHAT IS SHORT COSTS NOTHING, because it never left a batch. Pricing
+   * the shortfall at the last batch's rate would invent money for goods
+   * the shelf did not have.
+   */
+  return { taken: input.quantity - left, short: left, cost: Math.round(cost * 100) / 100 };
 }
