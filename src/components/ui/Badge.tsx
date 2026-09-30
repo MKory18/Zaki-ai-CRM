@@ -4,6 +4,7 @@ import React from 'react';
 import clsx from 'clsx';
 import { StatusChip } from './StatusChip';
 import { STATE_LABEL_AR } from '@/lib/order-state';
+import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 import type { StateTone } from '@/lib/order-state';
 
 /**
@@ -75,9 +76,10 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
 const LEGACY_ONLY: Record<string, { ar: string; tone: StateTone }> = {
   CONTACTING: { ar: 'قيد التواصل', tone: 'neutral' },
   REJECTED: { ar: 'مرفوض', tone: 'bad' },
-  READY_FOR_SHIPPING: { ar: 'جاهز للشحن', tone: 'neutral' },
-  OUT_FOR_DELIVERY: { ar: 'خرج للتوصيل', tone: 'warn' },
-  FAILED_DELIVERY: { ar: 'فشل التوصيل', tone: 'bad' },
+  // Three of these are shipping statuses, and the word is theirs.
+  READY_FOR_SHIPPING: { ar: SHIPPING_STATUS_AR.READY_FOR_SHIPPING, tone: 'neutral' },
+  OUT_FOR_DELIVERY: { ar: SHIPPING_STATUS_AR.OUT_FOR_DELIVERY, tone: 'warn' },
+  FAILED_DELIVERY: { ar: SHIPPING_STATUS_AR.FAILED_DELIVERY, tone: 'bad' },
 };
 
 /** Tones for the legacy names that a core state also carries. */

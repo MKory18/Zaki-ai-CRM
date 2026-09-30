@@ -12,6 +12,7 @@ import { DismissButton } from '@/components/ui/DismissButton';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 import { apiFetch } from '@/lib/api-client';
 import { arDateShort } from '@/lib/format';
 import {
@@ -23,18 +24,22 @@ import {
 import { RiArchiveDrawerLine, RiArchiveLine, RiArrowGoBackLine, RiCloseCircleLine, RiHistoryLine, RiMapPinLine, RiNumbersLine, RiShipLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 
 
+/*
+ * THE WORD COMES FROM `SHIPPING_STATUS_AR`; ONLY THE COLOURS ARE HERE.
+ * This map was one of six vocabularies for the same twelve values.
+ */
 const SHIPPING_STATE: Record<string, { ar: string; en: string; cls: string }> = {
-  NOT_READY: { ar: 'غير جاهز', en: 'Not Ready', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
-  READY_FOR_SHIPPING: { ar: 'جاهز للشحن', en: 'Ready for Shipping', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-muted-foreground)]/50' },
-  PACKING: { ar: 'تغليف', en: 'Packing', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
-  READY_FOR_PICKUP: { ar: 'جاهز للاستلام', en: 'Ready for Pickup', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
-  SHIPPED: { ar: 'تم الشحن', en: 'Shipped', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
-  OUT_FOR_DELIVERY: { ar: 'خرج للتوصيل', en: 'Out for Delivery', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
-  DELIVERED: { ar: 'تم التسليم', en: 'Delivered', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
-  FAILED_DELIVERY: { ar: 'فشل التوصيل', en: 'Delivery Failed', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
-  RETURN_REQUESTED: { ar: 'طلب إرجاع', en: 'Return Requested', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
-  RETURNED: { ar: 'مُرتجع', en: 'Returned', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
-  CANCELLED: { ar: 'ملغى', en: 'Cancelled', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
+  NOT_READY: { ar: SHIPPING_STATUS_AR.NOT_READY, en: 'Not Ready', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
+  READY_FOR_SHIPPING: { ar: SHIPPING_STATUS_AR.READY_FOR_SHIPPING, en: 'Ready for Shipping', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-muted-foreground)]/50' },
+  PACKING: { ar: SHIPPING_STATUS_AR.PACKING, en: 'Packing', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
+  READY_FOR_PICKUP: { ar: SHIPPING_STATUS_AR.READY_FOR_PICKUP, en: 'Ready for Pickup', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
+  SHIPPED: { ar: SHIPPING_STATUS_AR.SHIPPED, en: 'Shipped', cls: 'bg-[var(--sys-surface)] text-[var(--sys-foreground)] border-[var(--sys-border-strong)]' },
+  OUT_FOR_DELIVERY: { ar: SHIPPING_STATUS_AR.OUT_FOR_DELIVERY, en: 'Out for Delivery', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
+  DELIVERED: { ar: SHIPPING_STATUS_AR.DELIVERED, en: 'Delivered', cls: 'bg-[var(--sys-success-soft)] text-[var(--sys-success)] border-[var(--sys-success)]/60' },
+  FAILED_DELIVERY: { ar: SHIPPING_STATUS_AR.FAILED_DELIVERY, en: 'Delivery Failed', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
+  RETURN_REQUESTED: { ar: SHIPPING_STATUS_AR.RETURN_REQUESTED, en: 'Return Requested', cls: 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/60' },
+  RETURNED: { ar: SHIPPING_STATUS_AR.RETURNED, en: 'Returned', cls: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]' },
+  CANCELLED: { ar: SHIPPING_STATUS_AR.CANCELLED, en: 'Cancelled', cls: 'bg-[var(--sys-surface-strong)] text-[var(--sys-muted-foreground)] border-[var(--sys-border-strong)]' },
 };
 
 

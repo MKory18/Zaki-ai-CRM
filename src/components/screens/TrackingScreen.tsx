@@ -3,6 +3,7 @@
 import { lateLabel } from '@/lib/transit';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 import { ContactButtons } from '@/components/orders/ContactButtons';
 import { TransferDialog } from '@/components/screens/tracking/TransferDialog';
 import { CollectDialog } from '@/components/screens/tracking/CollectDialog';
@@ -77,15 +78,11 @@ const ALERT_TONE: Record<TrackingAlertKind, { live: string; seen: string }> = {
   },
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  READY_FOR_PICKUP: 'بانتظار الاستلام',
-  SHIPPED: 'تم الشحن',
-  OUT_FOR_DELIVERY: 'خارج للتوصيل',
-  FAILED_DELIVERY: 'تعذر التوصيل',
-  RETURN_REQUESTED: 'طلب إرجاع',
-  DELIVERED: 'تم التسليم',
-  RETURNED: 'مرتجع',
-};
+/*
+ * The words come from `SHIPPING_STATUS_AR`. This screen was the only one
+ * saying «خارج للتوصيل» while five others said «خرج للتوصيل».
+ */
+const STATUS_LABEL: Record<string, string> = SHIPPING_STATUS_AR;
 
 /**
  * The filter is «الكل» or one of the conditions, and the conditions are named

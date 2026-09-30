@@ -201,8 +201,8 @@ export function orderStages(
 
       case 'CLOSED': {
         const ending =
-          state === 'DELIVERED' ? 'سُلّم'
-          : state === 'PARTIALLY_DELIVERED' ? 'سُلّم جزئياً'
+          state === 'DELIVERED' ? 'مسلَّم'
+          : state === 'PARTIALLY_DELIVERED' ? 'مسلَّم جزئياً'
           : state === 'RETURNED' ? 'مرتجع'
           : state === 'CANCELLED' ? 'ملغى'
           : state === 'VOIDED' ? 'مُبطَل'

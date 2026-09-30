@@ -219,14 +219,17 @@ export const translations = {
     // Statuses
     NEW: 'جديد',
     CONTACTING: 'جارٍ الاتصال',
-    NO_ANSWER: 'لا رد',
+    NO_ANSWER: 'لا يرد',
     CONFIRMED: 'مؤكد',
     POSTPONED: 'مؤجل',
     REJECTED: 'مرفوض',
     READY_FOR_SHIPPING: 'جاهز للشحن',
-    SHIPPED: 'تم الشحن',
+    // The words a core state or a shipping status already owns. The
+    // dashboard's counters read from here, and they used to say «تم
+    // التوصيل» beside an orders list that said «مسلَّم».
+    SHIPPED: 'مشحون',
     OUT_FOR_DELIVERY: 'خرج للتوصيل',
-    DELIVERED: 'تم التوصيل',
+    DELIVERED: 'مسلَّم',
     CANCELLED: 'ملغى',
     RETURNED: 'مرتجع',
     FAILED_DELIVERY: 'فشل التوصيل',

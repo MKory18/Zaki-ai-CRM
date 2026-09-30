@@ -495,7 +495,7 @@ export function PerformanceScreen() {
                       {c.provider.name}
                     </span>
                     <Metric label="مُسند" value={c.metrics.assigned} />
-                    <Metric label="مُسلَّم" value={c.metrics.delivered} tone="text-[var(--sys-success)]" />
+                    <Metric label="مسلَّم" value={c.metrics.delivered} tone="text-[var(--sys-success)]" />
                     <Metric label="مرتجع" value={c.metrics.returned} tone="text-[var(--sys-destructive)]" />
                     <Metric
                       label="متوسط التوصيل"

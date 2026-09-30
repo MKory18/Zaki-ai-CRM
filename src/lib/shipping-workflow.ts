@@ -180,3 +180,49 @@ export function attemptForShippingStatus(
 export function canEnterShipping(confirmationStatus: string): boolean {
   return confirmationStatus === 'CONFIRMED';
 }
+
+/**
+ * ONE WORD PER SHIPPING STATUS, AND IT LIVES HERE.
+ *
+ * `order-state.ts` learned this lesson once already, for the core state:
+ * «There were three copies… six of the sixteen states were spelled
+ * differently between the first two». The shipping status never learned
+ * it. It had SIX vocabularies — the shipping card, the tracking screen,
+ * the courier-custody screen, `ui/Badge`, the status route and `i18n` —
+ * and every single value had at least two spellings:
+ *
+ *   DELIVERED          مسلَّم · تم التسليم · سُلّم · مُسلَّم
+ *   SHIPPED            مشحون · تم الشحن
+ *   OUT_FOR_DELIVERY   خرج للتوصيل · خارج للتوصيل
+ *   FAILED_DELIVERY    فشل التوصيل · تعذر التوصيل · تعذّر التوصيل
+ *   RETURN_REQUESTED   طلب إرجاع · طُلب إرجاعه · مطلوب إرجاعه
+ *   READY_FOR_PICKUP   جاهز للاستلام · بانتظار الاستلام
+ *   PACKING            تغليف · قيد التجهيز
+ *
+ * Nobody chose that; each screen chose once. The parcel a warehouse calls
+ * «سُلّم» is the one the tracking screen calls «تم التسليم», and a person
+ * comparing two screens cannot tell whether they are looking at the same
+ * fact.
+ *
+ * HOW EACH WORD WAS PICKED. Where a core state carries the same name, its
+ * word wins — the two axes describe one parcel, and a badge reading
+ * «مسلَّم» above a card reading «تم التسليم» is the defect whichever of
+ * them is «right». Otherwise the spelling already used in the most places
+ * wins. The one exception is PACKING: the status route called it «قيد
+ * التجهيز», which is the core state PREPARING's word, so the two would
+ * have collided — it is «قيد التغليف», which is what it is.
+ */
+export const SHIPPING_STATUS_AR: Record<ShippingStatus, string> = {
+  NOT_READY: 'غير جاهز',
+  READY_FOR_SHIPPING: 'جاهز للشحن',
+  PACKING: 'قيد التغليف',
+  READY_FOR_PICKUP: 'بانتظار الاستلام',
+  SHIPPED: 'مشحون',
+  OUT_FOR_DELIVERY: 'خرج للتوصيل',
+  DELIVERED: 'مسلَّم',
+  PARTIALLY_DELIVERED: 'مسلَّم جزئياً',
+  FAILED_DELIVERY: 'فشل التوصيل',
+  RETURN_REQUESTED: 'طلب إرجاع',
+  RETURNED: 'مرتجع',
+  CANCELLED: 'ملغى',
+};

@@ -6,6 +6,7 @@ import { amount, arDateShort, type Currency } from '@/lib/format';
 import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiQuestionLine, RiWallet3Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 
 /**
  * /finance/agents — what each agent is holding.
@@ -71,14 +72,9 @@ interface Detail {
   totals: Totals;
 }
 
-const STATUS_AR: Record<string, string> = {
-  SHIPPED: 'مشحون',
-  OUT_FOR_DELIVERY: 'خرج للتوصيل',
-  FAILED_DELIVERY: 'فشل التوصيل',
-  RETURN_REQUESTED: 'طُلب إرجاعه',
-  DELIVERED: 'سُلّم',
-  PARTIALLY_DELIVERED: 'سُلّم جزئياً',
-};
+/* The words come from `SHIPPING_STATUS_AR` — this screen called a
+ * delivered parcel «سُلّم» while the badge above it said «مسلَّم». */
+const STATUS_AR: Record<string, string> = SHIPPING_STATUS_AR;
 
 /** Said once, wherever an unrecorded amount has to be explained. */
 const WHY_NO_AMOUNT =

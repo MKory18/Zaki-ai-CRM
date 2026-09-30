@@ -79,7 +79,9 @@ describe('the stages of an order', () => {
       collectedAmount: 19,
     })));
     expect(delivered.CLOSED.status).toBe('CURRENT');
-    expect(delivered.CLOSED.facts).toContainEqual({ label: 'النتيجة', value: 'سُلّم' });
+    // «مسلَّم», the word `STATE_LABEL_AR` owns — this stage used to end
+    // with «سُلّم», one of five spellings the product had for it.
+    expect(delivered.CLOSED.facts).toContainEqual({ label: 'النتيجة', value: 'مسلَّم' });
     expect(delivered.CLOSED.facts).toContainEqual({ label: 'المحصَّل', value: '19' });
 
     const returned = byKey(orderStages(base({
@@ -94,7 +96,7 @@ describe('the stages of an order', () => {
       shippingStatus: 'PARTIALLY_DELIVERED',
       deliveredAt: new Date('2026-09-06T12:00:00Z'),
     })));
-    expect(partial.CLOSED.facts).toContainEqual({ label: 'النتيجة', value: 'سُلّم جزئياً' });
+    expect(partial.CLOSED.facts).toContainEqual({ label: 'النتيجة', value: 'مسلَّم جزئياً' });
   });
 
   it('says a stage was passed over rather than inventing a moment for it', () => {

@@ -51,7 +51,7 @@ const STATUS_VALUE_AR: Record<string, string> = {
   NOT_READY: 'غير جاهز', READY_FOR_SHIPPING: 'جاهز للشحن', PACKING: 'قيد التغليف',
   READY_FOR_PICKUP: 'جاهز للاستلام', SHIPPED: 'مشحون', OUT_FOR_DELIVERY: 'خرج للتوصيل',
   DELIVERED: 'مسلَّم', PARTIALLY_DELIVERED: 'مسلَّم جزئياً', FAILED_DELIVERY: 'فشل التوصيل',
-  RETURN_REQUESTED: 'طُلب إرجاعه', RETURNED: 'مرتجع',
+  RETURN_REQUESTED: 'طلب إرجاع', RETURNED: 'مرتجع',
   PENDING: 'معلّق', PENDING_COLLECTION: 'لم يُحصَّل', COLLECTED: 'محصَّل',
   PARTIALLY_SETTLED: 'مسوّى جزئياً', SETTLED: 'مسوّى', UNSETTLED: 'غير مسوّى',
   REFUNDED: 'مُسترد', APPROVED: 'موافَق عليه', OPEN: 'مفتوح', CORRECTED: 'تم التصحيح',

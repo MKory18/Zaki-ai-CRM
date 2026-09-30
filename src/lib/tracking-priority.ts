@@ -99,7 +99,7 @@ export const URGENCY: Record<UrgencyKey, UrgencyFacts> = {
   },
   FAILED: {
     rank: 2,
-    label: 'تعذّر التوصيل',
+    label: 'فشل التوصيل',
     why: 'المندوب حاول ولم يُسلّم — يحتاج قراراً اليوم: إعادة محاولة، أو تحويل، أو إرجاع.',
     tone: 'bad',
   },

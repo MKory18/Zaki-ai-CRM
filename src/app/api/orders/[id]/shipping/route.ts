@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 import { notify } from '@/lib/notify';
 import { db } from '@/lib/db';
 import { SEALED_BATCH_STATUSES } from '@/lib/order-seal';
@@ -53,19 +54,9 @@ const CONFIRMATION_AR: Record<string, string> = {
   CANCELLED: 'ملغى',
 };
 
-const SHIPPING_AR: Record<string, string> = {
-  NOT_READY: 'غير جاهز',
-  PACKING: 'قيد التجهيز',
-  READY_FOR_SHIPPING: 'جاهز للشحن',
-  READY_FOR_PICKUP: 'بانتظار الاستلام',
-  SHIPPED: 'مشحون',
-  OUT_FOR_DELIVERY: 'خرج للتوصيل',
-  DELIVERED: 'مُسلَّم',
-  PARTIALLY_DELIVERED: 'مُسلَّم جزئياً',
-  FAILED_DELIVERY: 'تعذّر التوصيل',
-  RETURN_REQUESTED: 'مطلوب إرجاعه',
-  RETURNED: 'مرتجع',
-};
+/* The words come from `SHIPPING_STATUS_AR`; this was a sixth copy, and
+ * it called PACKING «قيد التجهيز» — which is the core state PREPARING. */
+const SHIPPING_AR: Record<string, string> = SHIPPING_STATUS_AR;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
