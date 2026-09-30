@@ -32,6 +32,34 @@ const TONES: Record<StateTone, string> = {
   bad: 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] border-[var(--sys-destructive-border)]',
 };
 
+/**
+ * THE FOUR TONES AS THEIR PARTS, for a caller that is not a chip.
+ *
+ * The dashboard's status tiles are a number, a dot and a label — not a
+ * chip — so they cannot use the class string above. They were choosing
+ * their own colours instead, and three of the seven disagreed with
+ * `STATE_TONE`: NEW, CONTACTING and SHIPPED were painted with the accent,
+ * which `order-state.ts` rules out by name — «there is no informational
+ * blue — the action colour is already in the blue family, and a chip
+ * painted the same family as a button is a chip people try to press».
+ *
+ * So the OWNER still decides what a state means; this says what a meaning
+ * looks like, in one place, for both shapes.
+ */
+export const TONE_TEXT: Record<StateTone, string> = {
+  neutral: 'text-[var(--sys-foreground)]',
+  good: 'text-[var(--sys-success)]',
+  warn: 'text-[var(--sys-warning)]',
+  bad: 'text-[var(--sys-destructive)]',
+};
+
+export const TONE_DOT: Record<StateTone, string> = {
+  neutral: 'bg-[var(--sys-muted-foreground)]',
+  good: 'bg-[var(--sys-success)]',
+  warn: 'bg-[var(--sys-warning)]',
+  bad: 'bg-[var(--sys-destructive)]',
+};
+
 export function StatusChip({
   tone = 'neutral',
   title,

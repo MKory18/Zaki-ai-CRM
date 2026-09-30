@@ -15,9 +15,11 @@ import { Money } from '@/components/ui/Money';
 import { IntelligenceStrip } from '@/components/growth/IntelligenceStrip';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LossPanel } from '@/components/dashboard/LossPanel';
-import { healthOf } from '@/lib/health';
+import { healthOf, type Health } from '@/lib/health';
 import { HealthChip } from '@/components/ui/HealthChip';
 import type { Trust } from '@/lib/cod-vitals';
+import { STATE_TONE, type CoreState } from '@/lib/order-state';
+import { TONE_DOT, TONE_TEXT } from '@/components/ui/StatusChip';
 
 const PERIODS = [
   { key: 'today', ar: 'اليوم', en: 'Today' },
@@ -235,14 +237,37 @@ export function DashboardScreen() {
     returnRate: healthOf('returnRate', vitals?.door.returnRate ?? null, vitals?.door.decided),
   };
 
+  /*
+   * THE COLOUR COMES FROM THE STATE, NOT FROM THIS SCREEN.
+   *
+   * These seven tiles chose their own, and three of them disagreed with
+   * `STATE_TONE`: NEW, CONTACTING and SHIPPED were painted with the accent
+   * while the owner calls all three `neutral` — and `order-state.ts` rules
+   * that out by name: «there is no informational blue — the action colour
+   * is already in the blue family, and a chip painted the same family as a
+   * button is a chip people try to press». A person reading «مشحون» in the
+   * accent here and in plain foreground on the orders list is reading two
+   * different claims about the same parcel.
+   */
+  const tile = (
+    label: string,
+    value: number,
+    state: CoreState
+  ): { label: string; value: number; color: string; dot: string; health?: Health } => {
+    const tone = STATE_TONE[state];
+    return { label, value, color: TONE_TEXT[tone], dot: TONE_DOT[tone] };
+  };
+
   const statusTiles = [
-    { label: t.NEW, value: counts.new, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-primary)]' },
-    { label: t.CONTACTING, value: counts.contacting, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-muted-foreground)]' },
-    { label: t.CONFIRMED, value: counts.confirmed, color: 'text-[var(--sys-success)]', dot: 'bg-[var(--sys-success)]' },
-    { label: t.POSTPONED, value: counts.postponed, color: 'text-[var(--sys-warning)]', dot: 'bg-[var(--sys-warning)]' },
-    { label: t.SHIPPED, value: counts.shipped, color: 'text-[var(--sys-primary)]', dot: 'bg-[var(--sys-primary)]' },
-    { label: t.DELIVERED, value: counts.delivered, color: 'text-[var(--sys-success)]', dot: 'bg-[var(--sys-success)]' },
-    { label: t.REJECTED, value: counts.rejected, color: 'text-[var(--sys-destructive)]', dot: 'bg-[var(--sys-destructive)]', health: verdicts.rejectionRate },
+    tile(t.NEW, counts.new, 'NEW'),
+    // «قيد التأكيد» — the legacy CONTACTING column's own state.
+    tile(t.CONTACTING, counts.contacting, 'CLAIMED'),
+    tile(t.CONFIRMED, counts.confirmed, 'CONFIRMED'),
+    tile(t.POSTPONED, counts.postponed, 'POSTPONED'),
+    tile(t.SHIPPED, counts.shipped, 'SHIPPED'),
+    tile(t.DELIVERED, counts.delivered, 'DELIVERED'),
+    // A rejected order derives to CANCELLED, which is where its tone lives.
+    { ...tile(t.REJECTED, counts.rejected, 'CANCELLED'), health: verdicts.rejectionRate },
   ];
 
   // The icon is a COMPONENT, not a character. An emoji here was drawn by
