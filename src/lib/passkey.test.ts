@@ -8,6 +8,7 @@ import {
   b64url,
   newChallenge,
   readAuthData,
+  publicOrigin,
   relyingParty,
   verifyAssertion,
   verifyRegistration,
@@ -39,7 +40,10 @@ const ORIGIN = 'http://localhost:3000';
 /** authenticatorData: 32 bytes of rpIdHash, one of flags, four of counter. */
 function authData(opts: { rpId?: string; up?: boolean; uv?: boolean; counter?: number } = {}): Buffer {
   const rpIdHash = createHash('sha256').update(opts.rpId ?? RP_ID).digest();
-  const flags = Buffer.from([(opts.up === false ? 0 : 0x01) | (opts.uv ? 0x04 : 0)]);
+  // UV defaults ON, like UP: every ceremony in `passkey-browser.ts` asks for
+  // `userVerification: 'required'`, so a fixture without it was modelling a
+  // device this system does not accept. Pass `uv: false` to test the refusal.
+  const flags = Buffer.from([(opts.up === false ? 0 : 0x01) | (opts.uv === false ? 0 : 0x04)]);
   const counter = Buffer.alloc(4);
   counter.writeUInt32BE(opts.counter ?? 1);
   return Buffer.concat([rpIdHash, flags, counter]);
@@ -154,6 +158,30 @@ describe('and every way of faking one is refused, by name', () => {
     expect(bad(a)).toBe('NO_USER_PRESENT');
   });
 
+  /**
+   * A TOUCH IS NOT A PERSON.
+   *
+   * `userPresent` says a finger landed on the key; `userVerified` says the
+   * device checked whose finger it was. This flag was parsed and never
+   * looked at — and the login route skips the password AND the six digits
+   * on the strength of it, so a USB key with no PIN set signed a full
+   * session for a role that may not sign in without a second factor.
+   *
+   * `userVerification: 'required'` is a request the browser carries, not a
+   * promise; the spec puts this check on the relying party.
+   */
+  it('and one where the device never checked WHO touched it', () => {
+    const a = assertion(es256(), COSE_ES256, { challenge: c, auth: authData({ uv: false }) });
+    expect(bad(a)).toBe('NO_USER_VERIFIED');
+  });
+
+  it('while a device that did check is let through', () => {
+    // The other half of the rule: this line must not refuse an honest key,
+    // and every ceremony in `passkey-browser.ts` asks for exactly this.
+    const a = assertion(es256(), COSE_ES256, { challenge: c, auth: authData({ uv: true }) });
+    expect(verifyAssertion(a).ok, 'رُفض توقيعٌ سليم').toBe(true);
+  });
+
   /** A counter that repeats is what a cloned key produces. */
   it('one whose counter did not advance', () => {
     const a = assertion(es256(), COSE_ES256, { challenge: c, auth: authData({ counter: 5 }), storedCounter: 5 });
@@ -222,6 +250,74 @@ describe('who we are, as the browser sees us', () => {
   it('and plain http is refused everywhere but localhost', () => {
     expect(relyingParty('http://example.com')).toBeNull();
     expect(relyingParty('http://localhost:3000')?.rpId).toBe('localhost');
+  });
+});
+
+/**
+ * THE ORIGIN THE BROWSER IS AT, not the socket this process answers on.
+ *
+ * Measured on the production build on 2026-10-02: a request carrying
+ * `Host: app.example.com` and `X-Forwarded-Proto: https` came out of
+ * `new URL(req.url).origin` as `http://localhost:3100`. localhost is the
+ * secure-context exception, so nothing refused it — the API issued a
+ * challenge for `rpId: "localhost"` to a browser on the real domain, and the
+ * browser refused it where no log could see.
+ */
+describe('finding the public origin behind a proxy', () => {
+  const req = (url: string, headers: Record<string, string> = {}) => new Request(url, { headers });
+  const withEnv = (vars: Record<string, string | undefined>, fn: () => void) => {
+    const before = { ...process.env };
+    Object.assign(process.env, vars);
+    for (const [k, v] of Object.entries(vars)) if (v === undefined) delete process.env[k];
+    try {
+      fn();
+    } finally {
+      process.env = before;
+    }
+  };
+
+  it('takes APP_URL first, because it cannot be spoofed by a header', () => {
+    withEnv({ APP_URL: 'https://crm.zakiai.io', TRUST_PROXY: 'true' }, () => {
+      expect(publicOrigin(req('http://localhost:3000/api/x', { host: 'evil.example' })))
+        .toBe('https://crm.zakiai.io');
+    });
+  });
+
+  it('and a malformed APP_URL does not take the feature down', () => {
+    withEnv({ APP_URL: 'not a url', TRUST_PROXY: undefined }, () => {
+      expect(publicOrigin(req('http://localhost:3000/api/x'))).toBe('http://localhost:3000');
+    });
+  });
+
+  it('then the proxy headers, but ONLY when the deployment says to trust them', () => {
+    const r = req('http://localhost:3100/api/x', {
+      host: 'internal:3100',
+      'x-forwarded-host': 'app.example.com',
+      'x-forwarded-proto': 'https',
+    });
+    withEnv({ APP_URL: undefined, NEXT_PUBLIC_APP_URL: undefined, TRUST_PROXY: 'true' }, () => {
+      expect(publicOrigin(r)).toBe('https://app.example.com');
+    });
+    // Without TRUST_PROXY the headers are a stranger's word and are ignored.
+    withEnv({ APP_URL: undefined, NEXT_PUBLIC_APP_URL: undefined, TRUST_PROXY: undefined }, () => {
+      expect(publicOrigin(r)).toBe('http://localhost:3100');
+    });
+  });
+
+  it('and a chain of proxies is read from its first hop', () => {
+    const r = req('http://localhost:3100/api/x', {
+      'x-forwarded-host': 'app.example.com, inner.local',
+      'x-forwarded-proto': 'https, http',
+    });
+    withEnv({ APP_URL: undefined, NEXT_PUBLIC_APP_URL: undefined, TRUST_PROXY: 'true' }, () => {
+      expect(publicOrigin(r)).toBe('https://app.example.com');
+    });
+  });
+
+  it('and the request itself is the answer in development', () => {
+    withEnv({ APP_URL: undefined, NEXT_PUBLIC_APP_URL: undefined, TRUST_PROXY: undefined }, () => {
+      expect(publicOrigin(req('http://localhost:3000/api/x'))).toBe('http://localhost:3000');
+    });
   });
 });
 

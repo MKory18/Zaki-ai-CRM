@@ -38,11 +38,34 @@ describe('signing in with a fingerprint alone', () => {
     expect(src).toMatch(/spent\.count !== 1/);
   });
 
-  it('verifies the signature against this origin, and refuses plain HTTP', () => {
+  it('verifies the signature against the PUBLIC origin, and refuses plain HTTP', () => {
+    /*
+     * It used to read `new URL(req.url).origin`, and this guard pinned that.
+     * Measured on the production build on 2026-10-02: a request carrying
+     * `Host: app.example.com` and `X-Forwarded-Proto: https` — what Coolify's
+     * proxy sends — came out as `http://localhost:3100`. Because localhost is
+     * the secure-context exception, nothing complained: the API issued a
+     * challenge for `rpId: "localhost"` to a browser on the real domain, the
+     * browser refused it client-side, and no server log said why.
+     */
     const src = login();
-    expect(src).toMatch(/relyingParty\(new URL\(req\.url\)\.origin\)/);
+    expect(src).toMatch(/relyingParty\(publicOrigin\(req\)\)/);
+    expect(src).not.toMatch(/relyingParty\(new URL\(req\.url\)\.origin\)/);
     expect(src).toMatch(/INSECURE_CONTEXT/);
     expect(src).toMatch(/expected: \{ challenge: issued\.challenge, origin: rp\.origin, rpId: rp\.rpId \}/);
+  });
+
+  it('and every passkey door resolves that origin the same way', () => {
+    // Four doors issue or check a challenge. One of them reading a different
+    // origin means a key enrolled at one and refused at the next.
+    for (const door of [
+      'src/app/api/auth/passkey/route.ts',
+      'src/app/api/auth/passkey/register/route.ts',
+      'src/app/api/auth/passkey/assert/route.ts',
+      'src/app/api/auth/passkey/login/route.ts',
+    ]) {
+      expect(repoFile(door), door).toMatch(/relyingParty\(publicOrigin\(req\)\)/);
+    }
   });
 
   /**

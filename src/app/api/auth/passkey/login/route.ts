@@ -9,6 +9,7 @@ import {
   CHALLENGE_TTL_MS,
   REFUSAL_AR,
   newChallenge,
+  publicOrigin,
   relyingParty,
   verifyAssertion,
 } from '@/lib/passkey';
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     const ip = getClientIp(req);
     const body = await req.json().catch(() => ({}));
 
-    const rp = relyingParty(new URL(req.url).origin);
+    const rp = relyingParty(publicOrigin(req));
     if (!rp) {
       return NextResponse.json(
         { error: 'الدخول بالبصمة يحتاج اتصالاً آمناً (HTTPS)', code: 'INSECURE_CONTEXT' },

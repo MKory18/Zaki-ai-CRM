@@ -91,6 +91,7 @@ export type PasskeyRefusal =
   | 'WRONG_ORIGIN'
   | 'WRONG_RP'
   | 'NO_USER_PRESENT'
+  | 'NO_USER_VERIFIED'
   | 'BAD_AUTH_DATA'
   | 'COUNTER_REUSED'
   | 'BAD_SIGNATURE'
@@ -102,6 +103,7 @@ export const REFUSAL_AR: Record<PasskeyRefusal, string> = {
   WRONG_CHALLENGE: 'انتهت صلاحية الطلب — حاول من جديد',
   WRONG_ORIGIN: 'التوقيع جاء من موقع آخر',
   WRONG_RP: 'التوقيع لا يخصّ هذا الموقع',
+  NO_USER_VERIFIED: 'الجهاز لم يتحقّق منك — فعّل البصمة أو رمز الجهاز وأعد المحاولة',
   NO_USER_PRESENT: 'لم تُلمَس البصمة على الجهاز',
   BAD_AUTH_DATA: 'بيانات المُصادِق غير صالحة',
   COUNTER_REUSED: 'عدّاد المفتاح لم يتقدّم — قد يكون منسوخاً',
@@ -157,6 +159,28 @@ export function verifyAssertion(input: AssertionInput): Verdict {
   const rpHash = createHash('sha256').update(expected.rpId).digest();
   if (!auth.rpIdHash.equals(rpHash)) return { ok: false, code: 'WRONG_RP' };
   if (!auth.userPresent) return { ok: false, code: 'NO_USER_PRESENT' };
+  /*
+   * AND THE PERSON, NOT ONLY A TOUCH.
+   *
+   * `userPresent` says a finger landed on the key. `userVerified` says the
+   * device checked WHO it belonged to — the fingerprint, the face, the PIN.
+   * The flag was parsed here and never looked at, and that one omission
+   * dissolved the argument the whole feature rests on: the login route
+   * states that a passkey replaces a password AND the six digits because
+   * «`userVerification: 'required'` means the device would not sign without
+   * the thing you are».
+   *
+   * `userVerification: 'required'` is a REQUEST the browser carries. It is
+   * not a promise: the spec puts the check here, on the relying party, and
+   * an authenticator that signs on presence alone — a USB key with no PIN
+   * set — produced an assertion this function accepted. A full session was
+   * then issued to a role that may not sign in without a second factor,
+   * from a key somebody picked up.
+   *
+   * All three ceremonies already ASK for it (`passkey-browser.ts`), so no
+   * honest device is refused by this line.
+   */
+  if (!auth.userVerified) return { ok: false, code: 'NO_USER_VERIFIED' };
 
   /**
    * A counter that repeats is what a cloned key produces. An authenticator
@@ -240,4 +264,47 @@ export function relyingParty(origin: string): { rpId: string; origin: string } |
   } catch {
     return null;
   }
+}
+
+/**
+ * THE ADDRESS THE BROWSER IS ACTUALLY AT — not the one this process is bound to.
+ *
+ * `rpId` is the heart of a passkey: a key is created for one domain and the
+ * browser refuses to use it anywhere else. So the server must name the PUBLIC
+ * domain, and `new URL(req.url).origin` does not.
+ *
+ * Measured on the production build on 2026-10-02: a request carrying
+ * `Host: app.example.com` and `X-Forwarded-Proto: https` — exactly what
+ * Coolify's proxy sends — came out of `req.url` as `http://localhost:3100`.
+ * And because localhost is the secure-context exception, nothing complained:
+ * the API cheerfully issued a challenge for `rpId: "localhost"` to a browser
+ * sitting on the real domain. The browser then refuses the call client-side,
+ * the page says «تعذّر الدخول بالبصمة», and no server log says why. Silent.
+ *
+ * The order matters:
+ *   1. `APP_URL` — an explicit answer, unspoofable, and the variable this
+ *      deployment already sets for the Telegram webhook and conversions.
+ *   2. `TRUST_PROXY=true` — the convention this codebase already uses for the
+ *      client IP, with the same reasoning: forwarded headers are believed
+ *      ONLY where the deployment says a trusted proxy sits in front.
+ *   3. the request itself — right in development, and the old behaviour.
+ */
+export function publicOrigin(req: Request): string {
+  const configured = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL;
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      /* a malformed APP_URL must not take the feature down — fall through */
+    }
+  }
+
+  if (process.env.TRUST_PROXY === 'true') {
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
+    // A comma-separated chain means several proxies; the FIRST is the client's.
+    const proto = (req.headers.get('x-forwarded-proto') || '').split(',')[0].trim();
+    if (host) return `${proto || 'https'}://${host.split(',')[0].trim()}`;
+  }
+
+  return new URL(req.url).origin;
 }

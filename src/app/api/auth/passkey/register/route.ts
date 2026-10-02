@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
-import { REFUSAL_AR, relyingParty, verifyRegistration } from '@/lib/passkey';
+import { REFUSAL_AR, publicOrigin, relyingParty, verifyRegistration } from '@/lib/passkey';
 
 /**
  * POST /api/auth/passkey/register — finish registering a fingerprint.
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const me = await getCurrentUser();
     if (!me) return NextResponse.json({ error: 'غير مسجَّل الدخول' }, { status: 401 });
 
-    const rp = relyingParty(new URL(req.url).origin);
+    const rp = relyingParty(publicOrigin(req));
     if (!rp) return NextResponse.json({ error: 'البصمة تحتاج اتصالاً آمناً (HTTPS)' }, { status: 400 });
 
     const body = await req.json().catch(() => null);

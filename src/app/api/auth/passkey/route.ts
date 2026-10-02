@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
-import { CHALLENGE_TTL_MS, newChallenge, relyingParty } from '@/lib/passkey';
+import { CHALLENGE_TTL_MS, newChallenge, publicOrigin, relyingParty } from '@/lib/passkey';
 
 /**
  * GET    /api/auth/passkey — the keys I have registered.
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     const me = await getCurrentUser();
     if (!me) return NextResponse.json({ error: 'غير مسجَّل الدخول' }, { status: 401 });
 
-    const rp = relyingParty(new URL(req.url).origin);
+    const rp = relyingParty(publicOrigin(req));
     if (!rp) {
       return NextResponse.json(
         { error: 'البصمة تحتاج اتصالاً آمناً (HTTPS)', code: 'INSECURE_CONTEXT' },

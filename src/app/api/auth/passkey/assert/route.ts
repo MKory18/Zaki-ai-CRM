@@ -10,6 +10,7 @@ import {
   CHALLENGE_TTL_MS,
   REFUSAL_AR,
   newChallenge,
+  publicOrigin,
   relyingParty,
   verifyAssertion,
 } from '@/lib/passkey';
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const rp = relyingParty(new URL(req.url).origin);
+    const rp = relyingParty(publicOrigin(req));
     if (!rp) return NextResponse.json({ error: 'البصمة تحتاج اتصالاً آمناً (HTTPS)' }, { status: 400 });
 
     // ── Shape one: hand out a challenge and the keys to answer it with ──
