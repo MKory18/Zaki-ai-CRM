@@ -30,13 +30,13 @@
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
+    "dotenv": "^16.6.1",
     "jose": "^6.2.10",
     "lucide-react": "^1.40.0",
     "next": "16.3.4",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "recharts": "^3.10.1",
     "zod": "^4.5.4"
   },
   "devDependencies": {
@@ -44,7 +44,6 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^24.13.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",

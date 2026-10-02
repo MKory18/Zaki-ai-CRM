@@ -165,12 +165,20 @@ describe('a sparkline', () => {
   });
 
   it('and costs no chart library, because nothing imports one', () => {
-    // `recharts` IS in package.json — nine megabytes of it in node_modules
-    // — and not one file imports it. Unused, it is tree-shaken out and
-    // reaches no bundle, so what this guards is the thing that matters:
-    // that no screen starts importing it to draw a line through nine
-    // points. Removing the dependency is the owner's call, not a stage
-    // about appearance.
+    /*
+     * `recharts` WAS in package.json — nine megabytes in node_modules, and
+     * not one file importing it. This test found that and said removing it
+     * was the owner's call; it was removed on 2026-10-02 under the release
+     * brief's «unused dependencies, with proof they are unused», and took
+     * thirty-seven packages of `d3-*` with it.
+     *
+     * The check stays, and it is worth more now than it was then. Before, an
+     * accidental import would have resolved and shipped nine megabytes
+     * quietly. Now it fails to resolve — but a developer meeting that error
+     * reinstalls the package, which is the moment this line exists for: the
+     * question is not whether the library is present, it is whether a screen
+     * should draw a line through nine points with one.
+     */
     const LIBS = ['recharts', 'chart.js', 'victory', 'apexcharts', 'echarts', 'd3'];
     const offenders: string[] = [];
     const walk = (dir: string) => {
