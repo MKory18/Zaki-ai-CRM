@@ -39,7 +39,22 @@ export function ShopNotFound() {
       // other way, on the very page that already means something went
       // wrong.
       className="flex min-h-[60vh] items-center justify-center px-4 py-16"
-      style={{ background: 'var(--store-page)', color: 'var(--store-text)' }}
+      /*
+       * EVERY STORE VARIABLE CARRIES A FALLBACK, because on this page none of
+       * them is set.
+       *
+       * `StorefrontShell` writes the shop's palette INSIDE the page it wraps.
+       * A 404 never reaches that page — `lp/[slug]/not-found.tsx` renders this
+       * component with no shell above it — so `--store-page` and the rest
+       * resolve to nothing. Measured in the browser on 2026-10-02:
+       * `--store-page` undefined, background `rgba(0,0,0,0)`.
+       *
+       * Today it still READS: the text inherits black and the browser paints
+       * white behind it. But the shop's own colours never appear on the one
+       * page that is already saying something went wrong, and the day a
+       * parent sets a dark background the black text goes with it.
+       */
+      style={{ background: 'var(--store-page, #fafafa)', color: 'var(--store-text, #1f2937)' }}
     >
       <div
         className="w-full max-w-sm space-y-5 p-8 text-center"
@@ -47,13 +62,13 @@ export function ShopNotFound() {
         // step on the dashboard's shape scale, which is why it is written
         // here beside the other store variables rather than as a class.
         style={{
-          background: 'var(--store-card)',
-          border: '1px solid var(--store-border)',
-          borderRadius: 'var(--store-radius)',
+          background: 'var(--store-card, #ffffff)',
+          border: '1px solid var(--store-border, #e5e7eb)',
+          borderRadius: 'var(--store-radius, 12px)',
         }}
       >
         <h1 className="text-lg font-bold">الصفحة غير موجودة</h1>
-        <p className="text-sm" style={{ color: 'var(--store-muted)' }}>
+        <p className="text-sm" style={{ color: 'var(--store-muted, #6b7280)' }}>
           الرابط الذي فتحته لم يعد موجوداً، أو أن المنتج لم يعد معروضاً.
         </p>
         {slug ? (
@@ -61,9 +76,9 @@ export function ShopNotFound() {
             href={`/s/${slug}`}
             className="inline-block px-5 py-2.5 text-sm font-bold"
             style={{
-              background: 'var(--store-accent)',
-              color: 'var(--store-accent-text)',
-              borderRadius: 'var(--store-radius)',
+              background: 'var(--store-accent, #36B5CC)',
+              color: 'var(--store-accent-text, #ffffff)',
+              borderRadius: 'var(--store-radius, 12px)',
             }}
           >
             العودة إلى المتجر
@@ -72,7 +87,7 @@ export function ShopNotFound() {
           // No slug in the path means this was not reached from inside a
           // shop. Offering «العودة إلى المتجر» would be a link to nowhere,
           // so the page says the true thing and stops.
-          <p className="text-sm" style={{ color: 'var(--store-muted)' }}>
+          <p className="text-sm" style={{ color: 'var(--store-muted, #6b7280)' }}>
             تأكّد من الرابط، أو ارجع إلى الصفحة السابقة.
           </p>
         )}

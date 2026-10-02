@@ -1709,6 +1709,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/app/(system)/error.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 1,
+    "tabs": 0
+  },
   "src/app/(system)/forgot-password/page.tsx": {
     "buttons": 1,
     "inputs": 1,

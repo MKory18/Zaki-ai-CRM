@@ -43,6 +43,7 @@ import {
   type JobDefinition,
 } from '../src/lib/jobs/runner';
 import { isDue, scheduleAr } from '../src/lib/jobs/schedule';
+import { alertAboutJob, shouldAlertOnFailure } from '../src/lib/jobs/alerts';
 
 const args = process.argv.slice(2);
 const once = args.includes('--once');
@@ -75,6 +76,32 @@ async function attempt(job: JobDefinition): Promise<number> {
     if (failures >= ALERT_AFTER_FAILURES) {
       log(`✗✗ ${job.name} — فشل ${failures} مرات متتالية: ${message}`);
       log(`   يحتاج تدخّلاً — المحاولة القادمة بعد ${wait}s`);
+
+      /**
+       * AND NOW IT ACTUALLY TELLS SOMEBODY.
+       *
+       * The two `log` lines above were the entire alert for this condition.
+       * A log line in a detached pm2/systemd process is a file nobody opens
+       * unless they already suspect something is wrong — which is the one
+       * job an alert has. So the message goes to Telegram, with a link to
+       * /admin/jobs so whoever reads it at 3am can act from a phone.
+       *
+       * `shouldAlertOnFailure` decides, not this branch: the threshold is
+       * a floor, and above it only every tenth failure is sent, because a
+       * 60-second job that has broken would otherwise send 1,440 identical
+       * messages a day and get the chat muted.
+       *
+       * Awaited, and it never throws (see alerts.ts): an alert that threw
+       * here would be caught as the worker failing and would try to alert
+       * about itself.
+       */
+      if (shouldAlertOnFailure(failures)) {
+        const alert = await alertAboutJob({ jobName: job.name, kind: 'failing', failures, error: message });
+        if (alert.sent) log('   أُرسل تنبيه على تلغرام');
+        else if (alert.reason === 'NOT_CONFIGURED')
+          log('   لم يُرسل تنبيه: TELEGRAM_BOT_TOKEN / TELEGRAM_ALERT_CHAT_ID غير مضبوطين');
+        else if (alert.reason === 'SEND_FAILED') log('   تعذَّر إرسال التنبيه على تلغرام');
+      }
     } else {
       log(`✗ ${job.name} — ${message} (المحاولة القادمة بعد ${wait}s)`);
     }

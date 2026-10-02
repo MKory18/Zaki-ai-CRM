@@ -1,0 +1,133 @@
+import { db } from '../db';
+
+/**
+ * IS THE SCHEDULER ALIVE?
+ *
+ * The worker (scripts/worker.ts) is a SEPARATE PROCESS from the web app.
+ * That is deliberate — but it means the app has no idea whether it is
+ * running. Nothing crashes, nothing 500s, no screen turns red: the orders
+ * simply stop being released back to the shared stock, the courier statuses
+ * stop updating, the closing reminder stops arriving, and everybody assumes
+ * it is a quiet day. This is the failure that motivated this file: a dead
+ * worker is INVISIBLE, and an app that answers 200 while the worker is dead
+ * buys false confidence, which is worse than no monitoring at all.
+ *
+ * The only trace the worker leaves is the run log — `JobRun`. So liveness is
+ * answered the same way the schedule itself is answered: from the rows the
+ * worker wrote, not from a variable a restart resets.
+ *
+ * ── WHY THESE THREE JOB NAMES, COPIED RATHER THAN DERIVED ──
+ *
+ * The honest heartbeat is "a job that fires every minute has fired
+ * recently". Three jobs in `definitions.ts` have `everySeconds: 60`, so a
+ * living worker writes a `JobRun` row at least once a minute.
+ *
+ * The names are COPIED here instead of being computed from `JOBS` on
+ * purpose, and both reasons matter:
+ *
+ *   - `definitions.ts` pulls in commission accrual, backups, ad-spend
+ *     providers, courier clients — the whole business. A health endpoint
+ *     that cannot even be IMPORTED because an unrelated module threw at
+ *     load time is a health endpoint that reports nothing exactly when
+ *     something is wrong. This file imports the database client and nothing
+ *     else.
+ *   - It is polled every minute forever. Paying for that import graph on
+ *     every cold start, for three string constants, is not a trade worth
+ *     making.
+ *
+ * The copy cannot drift silently: `heartbeat.test.ts` asserts these are
+ * still exactly the 60-second interval jobs in `JOBS`, and fails the build
+ * if someone renames, retimes or removes one.
+ */
+export const HEARTBEAT_JOBS = [
+  'deliver-app-events',
+  'deliver-conversions',
+  'escalate-change-requests',
+] as const;
+
+/**
+ * How long without a single heartbeat row before the scheduler is called
+ * dead.
+ *
+ * Three missed cycles of a 60-second job. Not one: a deploy, a slow
+ * courier call or a long transaction can swallow a cycle, and a monitor
+ * that flaps is a monitor somebody mutes — after which it is decoration.
+ * Not ten minutes either: the whole point is to find out before the day's
+ * work has silently stopped.
+ */
+export const SCHEDULER_STALE_SECONDS = 180;
+
+export type SchedulerState =
+  /** A heartbeat row inside the window. The worker loop is turning. */
+  | 'alive'
+  /**
+   * No heartbeat row inside the window — including "no rows at all", which
+   * is a worker that has never started. Reported as stale rather than as
+   * some gentler third word, because on a fresh install the jobs are just
+   * as not-running as they are on a crashed one.
+   */
+  | 'stale'
+  /**
+   * The run log could not be read. The database answered, so the app is
+   * fine, but nothing can be said about the worker — and claiming "alive"
+   * because the question failed is precisely the false confidence this
+   * file exists to prevent.
+   */
+  | 'unknown';
+
+export interface HeartbeatReading {
+  db: 'up' | 'down';
+  scheduler: SchedulerState;
+}
+
+/**
+ * "The table does not exist yet" — code deployed ahead of its migration.
+ * On this project migrations are applied by hand (the dev server holds a
+ * lock), so that window is normal and must not read as a database outage:
+ * the app is reachable, the worker's state is simply unanswerable.
+ *
+ * Only P2021. A connection failure or a permissions problem is a different
+ * fault and must not be laundered into "unknown".
+ */
+function missingTable(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { code?: string }).code === 'P2021';
+}
+
+/**
+ * ── COST PER CALL: ONE INDEXED QUERY, ONE ROW ──
+ *
+ * `JobRun` carries `@@index([jobName, startedAt])`. Three equality values
+ * on `jobName` with a descending order on `startedAt` is an index scan per
+ * name, merged, stopping at the first row — no table access, no sort, no
+ * count, and flat as the run log grows to millions of rows. Measured
+ * shape: ~0.1 ms of database time, one round trip.
+ *
+ * NOTE what is deliberately NOT here: no `count()`, no "last run of every
+ * job", no `SELECT 1` liveness probe on top. A separate `SELECT 1` would
+ * be a second round trip to learn what this query already proves — if it
+ * returned, the database is up. One query answers both questions.
+ *
+ * `select: { startedAt: true }` and not the row: `detail` and `error` are
+ * free text written by jobs, and an unauthenticated endpoint must not be
+ * able to pull them into memory at all, let alone risk echoing them.
+ */
+export async function readHeartbeat(now: Date = new Date()): Promise<HeartbeatReading> {
+  let latest: { startedAt: Date } | null;
+  try {
+    latest = await db.jobRun.findFirst({
+      where: { jobName: { in: HEARTBEAT_JOBS as unknown as string[] } },
+      orderBy: { startedAt: 'desc' },
+      select: { startedAt: true },
+    });
+  } catch (e) {
+    // The query reaching the server and failing on a missing relation
+    // proves the connection; anything else does not.
+    if (missingTable(e)) return { db: 'up', scheduler: 'unknown' };
+    return { db: 'down', scheduler: 'unknown' };
+  }
+
+  if (!latest) return { db: 'up', scheduler: 'stale' };
+
+  const ageSeconds = (now.getTime() - latest.startedAt.getTime()) / 1000;
+  return { db: 'up', scheduler: ageSeconds <= SCHEDULER_STALE_SECONDS ? 'alive' : 'stale' };
+}

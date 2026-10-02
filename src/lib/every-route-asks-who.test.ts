@@ -40,6 +40,10 @@ const PUBLIC: [string, string][] = [
   ['src/app/api/media/', 'an image referenced by a page the world can already open'],
   ['src/app/api/dev-fonts/', 'development only, and refused in a production build'],
   ['src/app/api/store-fonts/', 'a shop page loading its own fonts'],
+  [
+    'src/app/api/health/',
+    'an uptime monitor has no cookie and never will; both handlers are GET-only, answer a closed vocabulary of eight fixed words, and read nothing a login would protect — see the leak rules in src/app/api/health/route.ts',
+  ],
 ];
 
 const strip = (src: string) =>
