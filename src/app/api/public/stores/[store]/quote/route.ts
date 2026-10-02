@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { getStorefront } from '@/lib/storefront';
-import { resolvePublicLines } from '@/lib/public-order';
+import { basketDiscount, resolvePublicLines } from '@/lib/public-order';
 import { computeCod } from '@/lib/money';
 import { publicizeMedia } from '@/lib/public-media';
 import { MAX_CART_LINES, MAX_LINE_QUANTITY } from '@/lib/cart';
@@ -134,13 +134,35 @@ export async function POST(req: Request, ctx: Ctx) {
       return NextResponse.json({ error: 'هذا المتجر لا يقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
     }
 
-    // The order path's own call, with the order path's own inputs.
+    /**
+     * THE ORDER PATH'S OWN CALL, WITH THE ORDER PATH'S OWN INPUTS —
+     * `createPublicOrder` builds exactly this object, argument for argument.
+     *
+     * `discount` IS NOT OPTIONAL HERE, whatever its type says. This comment
+     * claimed «the order path's own inputs» while the call below left the
+     * discount off, and a comment that lies is worse than no comment: the
+     * next reader trusts it and stops looking. An offer with
+     * `sellingPrice: 25` and `discount: 3` quoted the shopper 25 and then
+     * charged 22 at the door — two doors, two figures, and the customer
+     * meets the difference with cash in their hand.
+     *
+     * `basketDiscount` is the order door's own function, imported rather
+     * than reimplemented. A second «what does this basket's discount come
+     * to» would agree on the day it was written and disagree on the next —
+     * which is the whole defect this door already exists to avoid.
+     *
+     * NOTHING ELSE IS PASSED, and that too is parity: `createPublicOrder`
+     * passes no `deliveryFee` and no `priceIncludesDelivery` either, so the
+     * fee is settled when the order is raised, not when a cart is priced.
+     * Adding one here would make this door disagree in the other direction.
+     */
     const money = computeCod({
       lines: resolved.lines.map((l) => ({
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         freeQuantity: l.freeQuantity,
       })),
+      discount: basketDiscount(resolved.lines),
       minorUnit: country.minorUnit,
     });
 
