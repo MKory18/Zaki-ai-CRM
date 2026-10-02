@@ -234,8 +234,66 @@ export async function POST(req: Request) {
       );
     }
 
-    const unit = Number(order.sellingPrice ?? 0);
+    /**
+     * THE GOODS — READ OFF THE ORDER WE ARE TRYING TO WIN BACK.
+     *
+     * This route created an Order and no `OrderItem` at all: the only one of
+     * the six order doors that did not. `assertReadyToShip` refuses a lineless
+     * order by name («الطلب بلا أسطر — لا يمكن تجهيزه»), `reserveOrderLines`
+     * finds nothing to hold, and the preparation screen has no row to pick —
+     * so every win-back offer ever accepted was an order that could never
+     * ship. The customer we deliberately went back to win is recorded as
+     * having ordered and then receives nothing.
+     *
+     * WHERE THE LINES COME FROM, and there is no guessing in it. A win-back
+     * is this order again at a lower price: the row written below already
+     * copies `productId`, `quantity`, `freeQuantity`, `offerId` and the two
+     * product snapshots from it. The lines are the same goods, so they are
+     * the ORIGINAL ORDER'S OWN `OrderItem` rows — which is exactly what
+     * `createReplacement` does for the transfer and the reorder, the two
+     * other doors that raise a fresh order against `replacesOrderId`.
+     *
+     * `unitPrice` IS PER UNIT and is taken as it stands. Measured on this
+     * database: ORD-2026-0056 is 2 × 12.50 with `sellingPrice` 25 and
+     * `lineTotal` 25 — so `sellingPrice` is the order's SUBTOTAL, not a unit
+     * price, and the computation below used to hand it to `computeCod` as a
+     * unit price AND multiply it by the quantity again. ORD-2026-0052 (3 ×
+     * 12, subtotal 36) would have been won back at 108. That is the same
+     * mistake the orders PATCH records fixing — «multiplying a price that is
+     * already the line's total by the quantity again» — and it was invisible
+     * here because a one-unit order gives the right answer.
+     *
+     * AN ORDER WITH NO LINES OF ITS OWN still has to be winnable: the single
+     * product columns are that order's own record of what was bought, and
+     * `OrderLinesCard` already shows them as one line when `items` is empty.
+     * The unit price is the subtotal divided ONCE, the same rule every other
+     * door applies to a figure that is a total for its quantity.
+     */
+    const sourceLines = await db.orderItem.findMany({
+      where: { orderId: order.id },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        productId: true, productName: true, quantity: true, freeQuantity: true, unitPrice: true,
+      },
+    });
     const quantity = order.quantity ?? 1;
+    const lines = sourceLines.length
+      ? sourceLines.map((l) => ({
+          productId: l.productId,
+          productName: l.productName,
+          quantity: l.quantity,
+          freeQuantity: l.freeQuantity,
+          unitPrice: Number(l.unitPrice),
+        }))
+      : [
+          {
+            productId: order.productId,
+            productName: order.productNameSnapshot ?? '',
+            quantity,
+            freeQuantity: order.freeQuantity ?? 0,
+            unitPrice: quantity > 0 ? Number(order.sellingPrice ?? 0) / quantity : Number(order.sellingPrice ?? 0),
+          },
+        ];
     const carried = Number(order.discountAmount ?? 0);
     // The discount is the WHOLE of it, not a second helping on top of what
     // came off before — the ceiling above already subtracted the old one.
@@ -256,7 +314,7 @@ export async function POST(req: Request) {
      * that is a defect even when the two agree today.»
      */
     const money = computeCod({
-      lines: [{ quantity, unitPrice: unit }],
+      lines: lines.map((l) => ({ quantity: l.quantity, unitPrice: l.unitPrice })),
       discount: totalDiscount,
       deliveryFee: 0,
       priceIncludesDelivery: order.priceIncludesDelivery ?? false,
@@ -266,7 +324,7 @@ export async function POST(req: Request) {
 
     const created = await db.$transaction(async (tx) => {
       const refs = await orderRefFields(tx, companyId, country.orderPrefix, 0);
-      return tx.order.create({
+      const fresh = await tx.order.create({
         data: {
           companyId,
           countryId: order.countryId,
@@ -279,7 +337,10 @@ export async function POST(req: Request) {
           offerId: order.offerId,
           quantity,
           freeQuantity: order.freeQuantity,
-          sellingPrice: order.sellingPrice,
+          // The subtotal of the lines written below, so the row and its own
+          // lines can never disagree — the same column the orders PATCH and
+          // `createReplacement` write from `money.subtotal`.
+          sellingPrice: money.subtotal,
           discountAmount: totalDiscount,
           shippingCost: 0,
           totalAmount,
@@ -302,6 +363,43 @@ export async function POST(req: Request) {
         },
         select: { id: true, orderNumber: true },
       });
+
+      /**
+       * AND ITS LINES, IN THE SAME TRANSACTION AS THE ORDER.
+       *
+       * Inside the transaction because an order that exists without its
+       * lines is precisely the defect this closes — a half-written order
+       * must not survive a failure here.
+       *
+       * The shares and the line totals are `computeCod`'s own allocation, as
+       * `POST /api/orders` and `createPublicOrder` write them: a partial
+       * return refunds the wrong amount when a line carries a share it
+       * worked out for itself.
+       *
+       * NOTHING IS RESERVED HERE, and that is the rule rather than an
+       * omission. This order enters at NEW, and stock is held when it is
+       * CONFIRMED — `reserveOrderLines` in `PATCH /api/orders/[id]/
+       * confirmation`. The replacement path reserves at creation because it
+       * is born CONFIRMED with a customer already waiting on a parcel; a
+       * win-back offer nobody has accepted yet must not hold goods.
+       */
+      await tx.orderItem.createMany({
+        data: lines.map((l, i) => ({
+          companyId,
+          orderId: fresh.id,
+          productId: l.productId,
+          productName: l.productName,
+          quantity: l.quantity,
+          freeQuantity: l.freeQuantity,
+          unitPrice: l.unitPrice,
+          discountShare: money.discountShares[i] ?? 0,
+          lineTotal: money.lineTotals[i] ?? 0,
+          addedById: user.id,
+          addedStage: 'INTAKE',
+        })),
+      });
+
+      return fresh;
     });
 
     await db.orderNote.create({
