@@ -181,7 +181,26 @@ export async function POST(req: Request) {
       // Commission is the ledger's and accrues on delivery — see POST /orders.
 
       const refs = await orderRefFields(db, companyId, country.orderPrefix);
-      // ONE COD function (contract PART 5); no delivery fee at intake.
+      /**
+       * ONE COD function (contract PART 5); no delivery fee at intake.
+       *
+       * NO `discount`, AND THAT IS NOT THE PREVIEW'S DEFECT REPEATED. This
+       * door binds no offer: the confirm payload carries no `offerId`, and
+       * `price` above is either the reviewer's confirmed total or the
+       * product's base price. There is no `discount` column in play to pass.
+       *
+       * And passing the chosen offer's discount here would now subtract it
+       * TWICE: the preview already hands the reviewer the net figure (25
+       * with a discount of 3 is suggested as 22), the modal copies that into
+       * `finalPrice`, so a second reduction here would charge 19 for an
+       * offer that promises 22. The reviewer's number is final by design —
+       * they may edit it, and a door that re-reduced an edited figure would
+       * be arguing with the person who typed it.
+       *
+       * Hence this file's `NO_OFFER_BOUND` entry in
+       * `quote/quote-discount.test.ts` stands, with the reason restated
+       * there now that the preview does pass a discount of its own.
+       */
       const money = computeCod({
         lines: [{ quantity: qty, unitPrice: qty > 0 ? price / qty : price }],
         minorUnit: country.minorUnit,
@@ -317,7 +336,46 @@ export async function POST(req: Request) {
       const offers = await activeOffersFor(db, companyId, match.id);
       const qtyOffer = offers.find((o) => o.quantity === (parsed.quantity || 1)) || offers[0];
       if (qtyOffer && (parsed.price === null || parsed.price <= 0)) {
-        suggestedPrice = qtyOffer.price;
+        /**
+         * WHAT THE OFFER PROMISES, NOT WHAT IT ADVERTISES.
+         *
+         * `OfferView.price` is `sellingPrice` — the bundle's advertised
+         * total, before the offer's own `discount`. An offer of 25 with a
+         * discount of 3 charges the customer 22 at every other door
+         * (`createPublicOrder`, the cart quote, `POST /orders`), so showing
+         * the reviewer 25 showed them a number no door would ever charge —
+         * and the modal copies this figure straight into `finalPrice`, from
+         * which the order is raised. «A human confirms it» is not a defence:
+         * their confirmation is what turns the wrong number into a charge,
+         * and they cannot catch an error they are never shown.
+         *
+         * A SECOND READ OF THE OFFER TABLE, DELIBERATELY. `activeOffersFor`
+         * returns the view four PUBLIC surfaces hand to a browser and does
+         * not select this column; widening it would push a money figure into
+         * a shape rendered for shoppers — see the note at `offers.ts:25`,
+         * where the marketing number and the money number are kept apart on
+         * purpose. So the column is read here, server-side, keyed on the
+         * offer id already chosen above and scoped to this company, exactly
+         * as `resolvePublicLines` reads it for a basket. One offer is chosen
+         * here, so that batch is a batch of one.
+         *
+         * AND THE ARITHMETIC IS `computeCod`'S, not this file's. The
+         * subtraction, the clamp (a discount bigger than the price lands on
+         * 0, never below it) and the one rounding rule — the order's own
+         * currency minor unit, 3 for JOD — all live in `money.ts`, which is
+         * the only place money is computed.
+         */
+        const bound = await db.offer.findFirst({
+          where: { id: qtyOffer.id, companyId },
+          select: { discount: true },
+        });
+        // One bundle at the bundle's own total — `price` is never a unit
+        // price, and `finalPrice` downstream is a total too.
+        suggestedPrice = computeCod({
+          lines: [{ quantity: 1, unitPrice: qtyOffer.price }],
+          discount: bound?.discount ?? 0,
+          minorUnit: country.minorUnit,
+        }).cod;
         suggestedOfferName = qtyOffer.name;
       } else if (qtyOffer) {
         suggestedOfferName = qtyOffer.name;

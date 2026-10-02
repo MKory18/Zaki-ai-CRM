@@ -369,10 +369,15 @@ const NO_OFFER_BOUND: Record<string, string> = {
   'src/lib/telegram/order-creation.ts':
     'the price is the operator’s advertised total, parsed from the message; no offer is bound',
   // `const price = p.finalPrice || product.basePrice` — a human-confirmed
-  // figure or the product's base price. The AI's `suggestedPrice` may be
-  // read off an offer, but the order is raised from the confirmed number.
+  // figure or the product's base price, and the confirm payload carries no
+  // `offerId` at all. This file's OTHER `computeCod` call — the preview that
+  // suggests a price — does pass the chosen offer's discount, and that is
+  // why the write path must not: the reviewer is handed the NET figure (25
+  // with a discount of 3 is suggested as 22) and the modal copies it into
+  // `finalPrice`, so reducing it again here would charge 19.
   'src/app/api/orders/ai-intake/route.ts':
-    'the price is the reviewer’s confirmed final price or the base price; no offer is bound',
+    'the write path prices a reviewer-confirmed total with no offer bound; its preview call already ' +
+    'passes the offer’s discount, so subtracting it again here would take it off twice',
 };
 
 describe('every door that computes money passes a discount', () => {
